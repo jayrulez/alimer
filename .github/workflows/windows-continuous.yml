@@ -1,0 +1,14 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-windows:
+    name: build-windows
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v1
