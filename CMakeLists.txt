@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.10)
 # Project declaration
 project (alimer)
 
+# Options
+option(ALIMER_BUILD_SHARED "Build as a shared library instad of executable" OFF)
+
 # Enable folders in IDE (VisualStudio)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -48,6 +51,17 @@ else ()
     set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR})
     set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR})
 endif ()
+
+# third_party
+add_subdirectory(third_party)
+
+# src
+add_subdirectory(src)
+
+# Set VS Startup project.
+if (MSVC)
+    set_property (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT "alimer")
+endif()
 
 # Install files
 # README.md and license
