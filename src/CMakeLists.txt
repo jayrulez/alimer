@@ -37,8 +37,22 @@ define_engine_source_files(NORECURSE Graphics)
 
 add_library(alimer ${SOURCE_FILES} ${HEADER_FILES})
 
-if(NOT EMSCRIPTEN)
+target_include_directories (alimer
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
+if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(alimer
-        SDL2
+        glfw
     )
 endif ()
+
+if (MSVC OR CLANG_CL)
+    target_compile_definitions(alimer PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
+    target_compile_options(alimer PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
+    target_compile_options(alimer PRIVATE /fp:fast)
+    target_compile_options(alimer PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
+else()
+    target_compile_options(alimer PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
+endif()
+

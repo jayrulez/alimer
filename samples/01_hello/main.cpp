@@ -24,25 +24,22 @@
 
 namespace alimer
 {
-    Application::Application(const Configuration& config)
-        : _config(config)
+    class MyApp : public Application
     {
+    public:
+        MyApp(const Configuration& config)
+            : Application(config)
+        {
 
-    }
-
-    Application::~Application()
-    {
-
-    }
-
-    void Application::Run()
-    {
-        if (_running) {
-            //LOGF("Application is already running");
         }
+    };
+}
 
-        if (_exiting) {
-            //LOGF("Application is exiting");
-        }
-    }
+int main(int argc, char** argv)
+{
+    alimer::Configuration config;
+    config.windowTitle = "Sample 01 - Hello";
+    alimer::MyApp app(config);
+    app.Run();
+    return 0;
 }

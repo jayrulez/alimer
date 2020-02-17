@@ -6,6 +6,14 @@ project (alimer)
 
 # Options
 #option(ALIMER_BUILD_SHARED "Build as a shared library instad of executable" OFF)
+option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
+
+if (WIN32)
+    # Link statically against c/c++ lib to avoid missing redistriburable such as
+    # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
+    # a choice to opt for the shared runtime if they want.
+    option(ALIMER_STATIC_RUNTIME  "Link against the static runtime libraries." ON)
+endif()
 
 # Enable folders in IDE (VisualStudio)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -52,11 +60,104 @@ else ()
     set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR})
 endif ()
 
+# OS specific
+if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
+    set (LINUX ON CACHE BOOL "" FORCE)
+endif()
+
+if (ANDROID OR IOS OR EMSCRIPTEN)
+    set (MOBILE ON CACHE BOOL "" FORCE)
+elseif (APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+    set (APPLE ON CACHE BOOL "" FORCE)
+endif ()
+
+# Compiler check
+set(MIN_CLANG_VERSION "6.0")
+
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+elseif (NOT MSVC)
+    message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+elseif (NOT MSVC)
+    message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
+endif()
+
+# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+        set(CLANG_CL ON CACHE BOOL "" FORCE)
+    endif()
+elseif (MSVC)
+    set(MSVC_NATIVE ON CACHE BOOL "" FORCE)
+endif()
+
+# General compiler flags
+if (CLANG_CL OR MSVC)
+    if (ALIMER_STATIC_RUNTIME)
+        set(CRT_FLAGS_RELEASE "/MT")
+        set(CRT_FLAGS_DEBUG "/MTd")
+    else ()
+        set(CRT_FLAGS_RELEASE "/MD")
+        set(CRT_FLAGS_DEBUG "/MDd")
+    endif ()
+
+    # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
+    # Instead generate debug info directly inside obj files.
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+
+     # In RELEASE, also generate PDBs.
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
+
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+
+    # Disable exceptions
+    if(CMAKE_CXX_FLAGS MATCHES "/EHsc")
+		string(REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	endif()
+endif ()
+
+# Add colors to ninja builds
+if (CMAKE_GENERATOR STREQUAL "Ninja")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+endif()
+
+set(CXX_STANDARD "-std=c++14")
+if (WIN32)
+    set(CXX_STANDARD "/std:c++14")
+endif()
+
+if (MSVC_NATIVE)
+    set(CXX_STANDARD "/std:c++latest")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0 /Zc:__cplusplus")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+endif()
+
+if (WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
+endif()
+
 # third_party
 add_subdirectory(third_party)
 
 # src
 add_subdirectory(src)
+
+if (ALIMER_BUILD_SAMPLES)
+    add_subdirectory(samples)
+endif ()
 
 # Install files
 # README.md and license

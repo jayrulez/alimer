@@ -20,14 +20,20 @@
 // THE SOFTWARE.
 //
 
-
 #pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string>
 
 namespace alimer
 {
     struct Configuration
     {
+        std::string windowTitle = "Alimer";
 
+        uint32_t windowWidth = 1280;
+        uint32_t windowHeight = 720;
     };
 
     class Application
@@ -38,7 +44,11 @@ namespace alimer
         /// Destructor.
         virtual ~Application();
 
+        void Run();
+
     protected:
         Configuration _config;
+        bool _running = false;
+        bool _exiting = false;
     };
 }
