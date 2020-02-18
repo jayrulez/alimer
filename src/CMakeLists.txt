@@ -1,13 +1,8 @@
 macro (define_engine_source_files)
-	cmake_parse_arguments(DEFINE_SRC_FILES "NORECURSE" "" "" ${ARGN})
-	if (DEFINE_SRC_FILES_NORECURSE)
-		set (_action GLOB)
-	else ()
-		set (_action GLOB_RECURSE)
-	endif ()
+    cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
 	foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
 		# Get header files
-		file (${_action} _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.hpp ${path}/*.h ${path}/*.inl)
+		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.hpp ${path}/*.h ${path}/*.inl)
 
 		list (APPEND HEADER_FILES ${_files})
 
@@ -15,7 +10,7 @@ macro (define_engine_source_files)
         install (FILES ${_files} DESTINATION ${DEST_INCLUDE_DIR}/${path})
 
 		# Get source files
-		file (${_action} _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.c ${path}/*.cpp)
+		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.c ${path}/*.cpp)
 		list (APPEND SOURCE_FILES ${_files})
 	endforeach ()
 endmacro()
@@ -32,8 +27,19 @@ macro(group_sources)
     endforeach ()
 endmacro()
 
-define_engine_source_files(NORECURSE .)
-define_engine_source_files(NORECURSE Graphics)
+define_engine_source_files(
+    Core
+    Application
+    Graphics
+)
+
+if(WIN32)
+    define_engine_source_files(
+        Application/Windows
+    )
+endif ()
+
+group_sources()
 
 add_library(alimer ${SOURCE_FILES} ${HEADER_FILES})
 

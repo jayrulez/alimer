@@ -20,35 +20,24 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include <stddef.h>
-#include <stdint.h>
-#include <string>
+#include "WinFormsAppContext.h"
+#include "Application/Application.h"
 
 namespace alimer
 {
-    struct Configuration
+    WinFormsAppContext::WinFormsAppContext(Application* app)
+        : AppContext(app)
     {
-        std::string windowTitle = "Alimer";
 
-        uint32_t windowWidth = 1280;
-        uint32_t windowHeight = 720;
-    };
+    }
 
-    class Application
+    WinFormsAppContext::~WinFormsAppContext()
     {
-    public:
-        Application(const Configuration& config);
 
-        /// Destructor.
-        virtual ~Application();
+    }
 
-        void Run();
-
-    protected:
-        Configuration _config;
-        bool _running = false;
-        bool _exiting = false;
-    };
+    AppContext* AppContext::CreateDefault(Application* app)
+    {
+        return new WinFormsAppContext(app);
+    }
 }

@@ -21,13 +21,23 @@
 //
 
 #include "Application.h"
+#include "AppContext.h"
 
 namespace alimer
 {
     Application::Application(const Configuration& config)
+        : Application(nullptr, config)
+    {
+        
+    }
+
+    Application::Application(AppContext* context, const Configuration& config)
         : _config(config)
     {
-
+        _context = context;
+        if (!_context) {
+            _context = AppContext::CreateDefault(this);
+        }
     }
 
     Application::~Application()

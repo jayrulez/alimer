@@ -20,26 +20,16 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Application/AppContext.h"
 
 namespace alimer
 {
-    class MyApp : public Application
+    class WinFormsAppContext final : public AppContext
     {
     public:
-        MyApp(const Configuration& config)
-            : Application(config)
-        {
-
-        }
+        WinFormsAppContext(Application* app);
+        ~WinFormsAppContext() override;
     };
-}
-
-int main(int argc, char** argv)
-{
-    alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
-    app.Run();
-    return 0;
 }

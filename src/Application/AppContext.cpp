@@ -20,26 +20,14 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "AppContext.h"
+#include "Application.h"
 
 namespace alimer
 {
-    class MyApp : public Application
+    AppContext::AppContext(Application* app)
+        : _app(app)
     {
-    public:
-        MyApp(const Configuration& config)
-            : Application(config)
-        {
 
-        }
-    };
-}
-
-int main(int argc, char** argv)
-{
-    alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
-    app.Run();
-    return 0;
+    }
 }

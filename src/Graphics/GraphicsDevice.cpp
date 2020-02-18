@@ -20,26 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "GraphicsDevice.h"
 
 namespace alimer
 {
-    class MyApp : public Application
+    GraphicsDevice::GraphicsDevice()
     {
-    public:
-        MyApp(const Configuration& config)
-            : Application(config)
-        {
 
-        }
-    };
-}
-
-int main(int argc, char** argv)
-{
-    alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
-    app.Run();
-    return 0;
+    }
 }

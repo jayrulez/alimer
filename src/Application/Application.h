@@ -20,26 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
+#include <string>
 
 namespace alimer
 {
-    class MyApp : public Application
+    struct Configuration
+    {
+        std::string windowTitle = "Alimer";
+
+        uint32_t windowWidth = 1280;
+        uint32_t windowHeight = 720;
+    };
+
+    class AppContext;
+    class ALIMER_API Application
     {
     public:
-        MyApp(const Configuration& config)
-            : Application(config)
-        {
+        Application(const Configuration& config);
+        Application(AppContext* context, const Configuration& config);
 
-        }
+        /// Destructor.
+        virtual ~Application();
+
+        void Run();
+
+    protected:
+        Configuration _config;
+        bool _running = false;
+        bool _exiting = false;
+
+    private:
+        AppContext* _context;
     };
-}
-
-int main(int argc, char** argv)
-{
-    alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
-    app.Run();
-    return 0;
 }

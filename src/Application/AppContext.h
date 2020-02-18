@@ -20,26 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
 
 namespace alimer
 {
-    class MyApp : public Application
+    class Application;
+
+    class ALIMER_API AppContext
     {
+    protected:
+        AppContext(Application* app);
+
     public:
-        MyApp(const Configuration& config)
-            : Application(config)
-        {
+        /// Destructor.
+        virtual ~AppContext() = default;
 
-        }
+        /// Create default platform implementation.
+        static AppContext* CreateDefault(Application* app);
+
+    protected:
+        Application* _app;
     };
-}
-
-int main(int argc, char** argv)
-{
-    alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
-    app.Run();
-    return 0;
 }
