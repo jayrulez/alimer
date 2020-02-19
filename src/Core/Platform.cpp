@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Platform.h"
+#include "Core/Platform.h"
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -34,7 +34,7 @@
 #include <unistd.h>
 #endif
 
-namespace alimer
+namespace Alimer
 {
     static eastl::vector<eastl::string> arguments;
 

@@ -3,7 +3,7 @@ function(add_sample sample_name)
 	file(GLOB SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${sample_name}/*.cpp")
 
 	add_executable(${sample_name} ${SOURCE_FILES} ${HEADER_FILES})
-	target_link_libraries(${sample_name} alimer)
+	target_link_libraries(${sample_name} Alimer)
 
 	if(WIN32)
 		set_target_properties(${sample_name} PROPERTIES LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:Windows /INCREMENTAL:NO")

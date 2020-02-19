@@ -24,7 +24,7 @@
 
 #include "Core/Preprocessor.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API GraphicsDevice
     {

@@ -27,33 +27,37 @@
 
 namespace Alimer
 {
-    struct Configuration
+    enum class LogLevel : uint32_t
     {
-        eastl::string windowTitle = "Alimer";
-
-        uint32_t windowWidth = 1280;
-        uint32_t windowHeight = 720;
+        Trace,
+        Debug,
+        Info,
+        Warn,
+        Error,
+        Off
     };
 
-    class AppContext;
-    class ALIMER_API Application
+    class ALIMER_API Logger final
     {
     public:
-        Application(const Configuration& config);
-        Application(AppContext* context, const Configuration& config);
+        Logger(const eastl::string& name);
+        ~Logger();
 
-        /// Destructor.
-        virtual ~Application();
-
-        void Run();
-
-    protected:
-        Configuration _config;
-        bool _running = false;
-        bool _exiting = false;
+        void Log(LogLevel level, const eastl::string& message);
 
     private:
-        AppContext* _context;
-        bool _ownContext;
+        eastl::string _name;
+    };
+
+    class ALIMER_API Log final
+    {
+    public:
+        static Logger* GetDefault();
     };
 }
+
+#define ALIMER_LOGTRACE(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Trace, message)
+#define ALIMER_LOGDEBUG(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Debug, message)
+#define ALIMER_LOGINFO(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Info, message)
+#define ALIMER_LOGWARN(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Warn, message)
+#define ALIMER_LOGERROR(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Error, message)

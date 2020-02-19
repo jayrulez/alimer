@@ -35,8 +35,17 @@
 #include <Windows.h>
 #include <objbase.h>
 #include <shellapi.h>
+//#include <shellscalingapi.h>
 
-namespace alimer
+#ifndef DPI_ENUMS_DECLARED
+typedef enum PROCESS_DPI_AWARENESS {
+    PROCESS_DPI_UNAWARE = 0,
+    PROCESS_SYSTEM_DPI_AWARE = 1,
+    PROCESS_PER_MONITOR_DPI_AWARE = 2
+} PROCESS_DPI_AWARENESS;
+#endif
+
+namespace Alimer
 {
     eastl::string wstr_to_str(const eastl::wstring& wstr)
     {
@@ -55,7 +64,7 @@ namespace alimer
     }
 
     WinFormsAppContext::WinFormsAppContext(Application* app)
-        : AppContext(app)
+        : AppContext(app, true)
     {
         LPWSTR* argv;
         int     argc;
@@ -85,6 +94,50 @@ namespace alimer
             freopen_s(&fp, "conout$", "w", stdout);
             freopen_s(&fp, "conout$", "w", stderr);
         }
+
+        HMODULE user32Dll = LoadLibraryW(L"user32.dll");
+
+        typedef BOOL(WINAPI* PFN_SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);
+        PFN_SetProcessDpiAwarenessContext SetProcessDpiAwarenessContextFunc = reinterpret_cast<PFN_SetProcessDpiAwarenessContext>(GetProcAddress(user32Dll, "SetProcessDpiAwarenessContext"));
+        if (SetProcessDpiAwarenessContextFunc)
+        {
+            SetProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        else
+        {
+            HMODULE shcoreDll = LoadLibraryW(L"shcore.dll");
+            if (shcoreDll)
+            {
+                typedef HRESULT(WINAPI* SetProcessDpiAwarenessFuncType)(PROCESS_DPI_AWARENESS);
+                SetProcessDpiAwarenessFuncType SetProcessDpiAwarenessFunc = reinterpret_cast<SetProcessDpiAwarenessFuncType>(GetProcAddress(shcoreDll, "SetProcessDpiAwareness"));
+
+                if (SetProcessDpiAwarenessFunc)
+                    SetProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
+
+                FreeLibrary(shcoreDll);
+            }
+            else
+            {
+                SetProcessDPIAware();
+            }
+        }
+
+        /*HINSTANCE hInstance = GetModuleHandleW(nullptr);
+
+        // Register class
+        /*WNDCLASSEXW wc;
+        ZeroMemory(&wc, sizeof(wc));
+        wc.cbSize = sizeof(wc);
+        wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+        wc.lpfnWndProc = WndProc;
+        wc.hInstance = hInstance;
+        wc.hIcon = LoadIconW(hInstance, L"IDI_ICON");
+        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+        wc.lpszClassName = L"$safeprojectname$WindowClass";
+        wc.hIconSm = LoadIconW(hInstance, L"IDI_ICON");
+        if (!RegisterClassExW(&wc))
+            return;*/
     }
 
     WinFormsAppContext::~WinFormsAppContext()

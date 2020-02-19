@@ -228,7 +228,7 @@ inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) \
 inline constexpr bool any(EnumType a) \
     { return ((std::underlying_type<EnumType>::type)a) != 0; } 
 
-namespace alimer
+namespace Alimer
 {
     template <typename T>
     void SafeDelete(T*& resource)

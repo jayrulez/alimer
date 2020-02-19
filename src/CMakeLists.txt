@@ -41,28 +41,29 @@ endif ()
 
 group_sources()
 
-add_library(alimer ${SOURCE_FILES} ${HEADER_FILES})
+add_library(Alimer ${SOURCE_FILES} ${HEADER_FILES})
 
-target_include_directories (alimer
+target_include_directories (Alimer
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(alimer
+target_link_libraries(Alimer
     EASTL
 )
 
-if(NOT (EMSCRIPTEN OR ANDROID))
-    target_link_libraries(alimer
+if(NOT (WIN32 OR EMSCRIPTEN OR ANDROID))
+    target_link_libraries(Alimer
         glfw
     )
 endif ()
 
-if (MSVC OR CLANG_CL)
-    target_compile_definitions(alimer PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
-    target_compile_options(alimer PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
-    target_compile_options(alimer PRIVATE /fp:fast)
-    target_compile_options(alimer PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
+if (WIN32)
+    target_compile_definitions(Alimer PRIVATE _UNICODE)
+    target_compile_definitions(Alimer PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
+    target_compile_options(Alimer PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
+    target_compile_options(Alimer PRIVATE /fp:fast)
+    target_compile_options(Alimer PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
 else()
-    target_compile_options(alimer PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
+    target_compile_options(Alimer PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
 endif()
 

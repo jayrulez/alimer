@@ -24,14 +24,14 @@
 
 #include "Core/Preprocessor.h"
 
-namespace alimer
+namespace Alimer
 {
     class Application;
 
     class ALIMER_API AppContext
     {
     protected:
-        AppContext(Application* app);
+        AppContext(Application* app, bool blockingRun);
 
     public:
         /// Destructor.
@@ -40,7 +40,10 @@ namespace alimer
         /// Create default platform implementation.
         static AppContext* CreateDefault(Application* app);
 
+        bool IsBlockingRun() const { _blockingRun; }
+
     protected:
         Application* _app;
+        bool _blockingRun;
     };
 }

@@ -20,40 +20,39 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Preprocessor.h"
-#include <EASTL/string.h>
+#include "Core/Log.h"
+#include <EASTL/vector.h>
 
 namespace Alimer
 {
-    struct Configuration
+    static eastl::vector<Logger*> _loggers;
+#ifdef _DEBUG
+    static LogLevel _logLevel = LogLevel::Debug;
+#else
+    static LogLevel _logLevel = LogLevel::Info;
+#endif
+
+    Logger::Logger(const eastl::string& name)
+        : _name(name)
     {
-        eastl::string windowTitle = "Alimer";
+        _loggers.emplace_back(this);
+    }
 
-        uint32_t windowWidth = 1280;
-        uint32_t windowHeight = 720;
-    };
-
-    class AppContext;
-    class ALIMER_API Application
+    Logger::~Logger()
     {
-    public:
-        Application(const Configuration& config);
-        Application(AppContext* context, const Configuration& config);
 
-        /// Destructor.
-        virtual ~Application();
+    }
 
-        void Run();
+    void Logger::Log(LogLevel level, const eastl::string& message)
+    {
+        if (level != LogLevel::Off && level <= _logLevel)
+        {
+        }
+    }
 
-    protected:
-        Configuration _config;
-        bool _running = false;
-        bool _exiting = false;
-
-    private:
-        AppContext* _context;
-        bool _ownContext;
-    };
+    Logger* Log::GetDefault()
+    {
+        static Logger defaultLogger("Alimer");
+        return &defaultLogger;
+    }
 }

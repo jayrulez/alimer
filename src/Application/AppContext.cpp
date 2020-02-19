@@ -20,13 +20,14 @@
 // THE SOFTWARE.
 //
 
-#include "AppContext.h"
-#include "Application.h"
+#include "Application/AppContext.h"
+#include "Application/Application.h"
 
-namespace alimer
+namespace Alimer
 {
-    AppContext::AppContext(Application* app)
+    AppContext::AppContext(Application* app, bool blockingRun)
         : _app(app)
+        , _blockingRun(blockingRun)
     {
 
     }

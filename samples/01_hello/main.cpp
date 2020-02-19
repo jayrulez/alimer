@@ -22,7 +22,7 @@
 
 #include "Application/Application.h"
 
-namespace alimer
+namespace Alimer
 {
     class MyApp : public Application
     {
@@ -37,9 +37,9 @@ namespace alimer
 
 int main(int argc, char** argv)
 {
-    alimer::Configuration config;
+    Alimer::Configuration config;
     config.windowTitle = "Sample 01 - Hello";
-    alimer::MyApp app(config);
+    Alimer::MyApp app(config);
     app.Run();
     return 0;
 }

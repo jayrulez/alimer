@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "GraphicsDevice.h"
+#include "Graphics/GraphicsDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     GraphicsDevice::GraphicsDevice()
     {

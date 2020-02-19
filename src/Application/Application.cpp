@@ -20,23 +20,24 @@
 // THE SOFTWARE.
 //
 
-#include "Application.h"
-#include "AppContext.h"
+#include "Application/Application.h"
+#include "Application/AppContext.h"
+#include "Core/Log.h"
 
 /* Needed by EASTL. */
 #if !defined(ALIMER_EXPORTS)
 ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
-    return ::operator new(size);
+    return new uint8_t[size];
 }
 
 ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
 {
-    return ::operator new(size);
+    return new uint8_t[size];
 }
 #endif
 
-namespace alimer
+namespace Alimer
 {
     Application::Application(const Configuration& config)
         : Application(nullptr, config)
@@ -66,11 +67,14 @@ namespace alimer
     void Application::Run()
     {
         if (_running) {
-            //LOGF("Application is already running");
+            ALIMER_LOGERROR("Application is already running");
+            return;
         }
 
         if (_exiting) {
             //LOGF("Application is exiting");
         }
+
+       // _context->Run();
     }
 }

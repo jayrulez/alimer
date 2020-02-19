@@ -24,7 +24,7 @@
 
 #include "Application/AppContext.h"
 
-namespace alimer
+namespace Alimer
 {
     class WinFormsAppContext final : public AppContext
     {
