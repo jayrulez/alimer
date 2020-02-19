@@ -23,26 +23,44 @@
 #include "Application.h"
 #include "AppContext.h"
 
+/* Needed by EASTL. */
+#if !defined(ALIMER_EXPORTS)
+ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return ::operator new(size);
+}
+
+ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return ::operator new(size);
+}
+#endif
+
 namespace alimer
 {
     Application::Application(const Configuration& config)
         : Application(nullptr, config)
     {
-        
+
     }
 
     Application::Application(AppContext* context, const Configuration& config)
         : _config(config)
+        , _ownContext(false)
     {
         _context = context;
         if (!_context) {
             _context = AppContext::CreateDefault(this);
+            _ownContext = true;
         }
     }
 
     Application::~Application()
     {
-
+        if (_ownContext)
+        {
+            SafeDelete(_context);
+        }
     }
 
     void Application::Run()

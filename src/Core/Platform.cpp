@@ -23,103 +23,112 @@
 #include "Platform.h"
 
 #if defined(_WIN32)
-    #define NOMINMAX
-    #define WIN32_LEAN_AND_MEAN
-    #include <windows.h>
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #elif defined(__APPLE__)
-    #include <TargetConditionals.h>
+#include <TargetConditionals.h>
 #endif
 
 #if TARGET_OS_MAC || defined(__linux__)
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 namespace alimer
 {
-    namespace platform
+    static eastl::vector<eastl::string> arguments;
+
+    eastl::string GetPlatformName()
     {
-        std::string GetName()
-        {
 #if defined(_XBOX_ONE)
-            return "XboxOne";
+        return "XboxOne";
 #elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-            return "UWP";
+        return "UWP";
 #elif defined(_WIN64) || defined(_WIN32)
-            return "Windows";
+        return "Windows";
 #elif defined(__ANDROID__)
-            return "Android";
+        return "Android";
 #elif defined (__EMSCRIPTEN__)
-            return "Web";
+        return "Web";
 #elif defined(__linux__)
-            return "Linux";
+        return "Linux";
 #elif TARGET_OS_IOS 
-            return "iOS";
+        return "iOS";
 #elif TARGET_OS_TV
-            return "tvOS";
+        return "tvOS";
 #elif TARGET_OS_MAC 
-            return "macOS";
+        return "macOS";
 #else
-            return "(?)";
+        return "(?)";
 #endif
-        }
-
-        PlatformID GetId()
-        {
-#if defined(_XBOX_ONE)
-            return PlatformID::XboxOne;
-#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-            return PlatformID::UWP;
-#elif defined(_WIN64) || defined(_WIN32)
-            return PlatformID::Windows;
-#elif defined(__ANDROID__)
-            return PlatformID::Android;
-#elif defined (__EMSCRIPTEN__)
-            return PlatformID::Web;
-#elif defined(__linux__)
-            return PlatformID::Linux;
-#elif TARGET_OS_IOS 
-            return PlatformID::iOS;
-#elif TARGET_OS_TV
-            return PlatformID::tvOS;
-#elif TARGET_OS_MAC 
-            return PlatformID::macOS;
-#else
-            return PlatformID::Unknown;
-#endif
-        }
-
-        PlatformFamily GetFamily()
-        {
-#if defined(_XBOX_ONE)
-            return PlatformFamily::Console;
-#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-            return PlatformFamily::Console;
-#elif defined(_WIN64) || defined(_WIN32)
-            return PlatformFamily::Desktop;
-#elif defined(__ANDROID__)
-            return PlatformFamily::Mobile;
-#elif defined (__EMSCRIPTEN__)
-            return PlatformFamily::Mobile;
-#elif defined(__linux__)
-            return PlatformFamily::Desktop;
-#elif TARGET_OS_IOS 
-            return PlatformFamily::Mobile;
-#elif TARGET_OS_TV
-            return PlatformFamily::Mobile;
-#elif TARGET_OS_MAC 
-            return PlatformFamily::Desktop;
-#else
-            return PlatformFamily::Unknown;
-#endif
-        }
-
-        ProcessId GetCurrentProcessId()
-        {
-#if defined(_WIN64) || defined(_WIN32)
-            return static_cast<ProcessId>(::GetCurrentProcessId());
-#else
-            return getpid();
-#endif
-        }
     }
-}
+
+    PlatformId GetPlatformId()
+    {
+#if defined(_XBOX_ONE)
+        return PlatformId::XboxOne;
+#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
+        return PlatformId::UWP;
+#elif defined(_WIN64) || defined(_WIN32)
+        return PlatformId::Windows;
+#elif defined(__ANDROID__)
+        return PlatformId::Android;
+#elif defined (__EMSCRIPTEN__)
+        return PlatformId::Web;
+#elif defined(__linux__)
+        return PlatformId::Linux;
+#elif TARGET_OS_IOS 
+        return PlatformId::iOS;
+#elif TARGET_OS_TV
+        return PlatformId::tvOS;
+#elif TARGET_OS_MAC 
+        return PlatformId::macOS;
+#else
+        return PlatformId::Unknown;
+#endif
+    }
+
+    PlatformFamily GetPlatformFamily()
+    {
+#if defined(_XBOX_ONE)
+        return PlatformFamily::Console;
+#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
+        return PlatformFamily::Console;
+#elif defined(_WIN64) || defined(_WIN32)
+        return PlatformFamily::Desktop;
+#elif defined(__ANDROID__)
+        return PlatformFamily::Mobile;
+#elif defined (__EMSCRIPTEN__)
+        return PlatformFamily::Mobile;
+#elif defined(__linux__)
+        return PlatformFamily::Desktop;
+#elif TARGET_OS_IOS 
+        return PlatformFamily::Mobile;
+#elif TARGET_OS_TV
+        return PlatformFamily::Mobile;
+#elif TARGET_OS_MAC 
+        return PlatformFamily::Desktop;
+#else
+        return PlatformFamily::Unknown;
+#endif
+    }
+
+    ProcessId GetCurrentProcessId()
+    {
+#if defined(_WIN64) || defined(_WIN32)
+        return static_cast<ProcessId>(::GetCurrentProcessId());
+#else
+        return getpid();
+#endif
+    }
+
+    void SetArguments(const eastl::vector<eastl::string>& args)
+    {
+        arguments = args;
+    }
+
+    const eastl::vector<eastl::string>& GetArguments()
+    {
+        return arguments;
+    }
+    }

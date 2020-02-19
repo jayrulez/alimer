@@ -23,13 +23,13 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <string>
+#include <EASTL/string.h>
 
 namespace alimer
 {
     struct Configuration
     {
-        std::string windowTitle = "Alimer";
+        eastl::string windowTitle = "Alimer";
 
         uint32_t windowWidth = 1280;
         uint32_t windowHeight = 720;
@@ -54,5 +54,6 @@ namespace alimer
 
     private:
         AppContext* _context;
+        bool _ownContext;
     };
 }

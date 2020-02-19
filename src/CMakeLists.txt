@@ -47,6 +47,10 @@ target_include_directories (alimer
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
+target_link_libraries(alimer
+    EASTL
+)
+
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(alimer
         glfw

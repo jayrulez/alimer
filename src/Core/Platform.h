@@ -23,12 +23,13 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <string>
+#include <EASTL/vector.h>
+#include <EASTL/string.h>
 
 namespace alimer
 {
     /// Identifiers the running platform type.
-    enum class PlatformID : uint32_t
+    enum class PlatformId : uint32_t
     {
         /// Unknown platform.
         Unknown,
@@ -65,20 +66,23 @@ namespace alimer
         Console
     };
 
-    namespace platform
-    {
-        using ProcessId = uint32_t;
+    using ProcessId = uint32_t;
 
-        /// Return the current platform name.
-        ALIMER_API std::string GetName();
+    /// Return the current platform name.
+    ALIMER_API eastl::string GetPlatformName();
 
-        /// Return the current platform ID.
-        ALIMER_API PlatformID GetId();
+    /// Return the current platform ID.
+    ALIMER_API PlatformId GetPlatformId();
 
-        /// Return the current platform family.
-        ALIMER_API PlatformFamily GetFamily();
+    /// Return the current platform family.
+    ALIMER_API PlatformFamily GetPlatformFamily();
 
-        /// Returns the current process id (pid)
-        ALIMER_API ProcessId GetCurrentProcessId();
-    }
+    /// Returns the current process id (pid)
+    ALIMER_API ProcessId GetCurrentProcessId();
+
+    /// Set command line arguments.
+    ALIMER_API void SetArguments(const eastl::vector<eastl::string>& args);
+
+    /// Return previously parsed arguments.
+    ALIMER_API const eastl::vector<eastl::string>& GetArguments();
 }

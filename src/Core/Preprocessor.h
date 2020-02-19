@@ -228,4 +228,41 @@ inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) \
 inline constexpr bool any(EnumType a) \
     { return ((std::underlying_type<EnumType>::type)a) != 0; } 
 
+namespace alimer
+{
+    template <typename T>
+    void SafeDelete(T*& resource)
+    {
+        delete resource;
+        resource = nullptr;
+    }
+
+    template <typename T>
+    void SafeDeleteContainer(T& resource)
+    {
+        for (auto& element : resource)
+        {
+            SafeDelete(element);
+        }
+        resource.clear();
+    }
+
+    template <typename T>
+    void SafeDeleteArray(T*& resource)
+    {
+        delete[] resource;
+        resource = nullptr;
+    }
+
+    template <typename T>
+    void SafeRelease(T& resource)
+    {
+        if (resource)
+        {
+            resource->Release();
+            resource = nullptr;
+        }
+    }
+}
+
 #endif
