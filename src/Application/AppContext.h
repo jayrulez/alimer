@@ -40,6 +40,9 @@ namespace Alimer
         /// Create default platform implementation.
         static AppContext* CreateDefault(Application* app);
 
+        /// Run main loop.
+        virtual void Run() = 0;
+
         bool IsBlockingRun() const { _blockingRun; }
 
     protected:

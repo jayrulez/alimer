@@ -72,9 +72,16 @@ namespace Alimer
         }
 
         if (_exiting) {
-            //LOGF("Application is exiting");
+            ALIMER_LOGERROR("Application is exiting");
+            return;
         }
 
-       // _context->Run();
+
+        _context->Run();
+    }
+
+    void Application::Tick()
+    {
+
     }
 }

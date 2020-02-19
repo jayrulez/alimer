@@ -35,6 +35,7 @@ namespace Alimer
         uint32_t windowHeight = 720;
     };
 
+    class GraphicsDevice;
     class AppContext;
     class ALIMER_API Application
     {
@@ -45,12 +46,17 @@ namespace Alimer
         /// Destructor.
         virtual ~Application();
 
+        /// Run main application loop and setup all required systems.
         void Run();
+
+        /// Tick one frame.
+        void Tick();
 
     protected:
         Configuration _config;
         bool _running = false;
         bool _exiting = false;
+        GraphicsDevice* _graphicsDevice = nullptr;
 
     private:
         AppContext* _context;

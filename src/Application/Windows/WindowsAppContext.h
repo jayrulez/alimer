@@ -22,17 +22,16 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "Application/AppContext.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    class WindowsAppContext final : public AppContext
     {
-    protected:
-        GraphicsDevice();
-
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        WindowsAppContext(Application* app);
+        ~WindowsAppContext() override;
+
+        void Run() override;
     };
 }

@@ -20,16 +20,15 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Application/AppContext.h"
+#include "Application/Window.h"
 
 namespace Alimer
 {
-    class WinFormsAppContext final : public AppContext
+    Window::Window(const eastl::string& title, uint32_t width, uint32_t height)
+        : _title(title)
+        , _width(width)
+        , _height(height)
     {
-    public:
-        WinFormsAppContext(Application* app);
-        ~WinFormsAppContext() override;
-    };
+
+    }
 }

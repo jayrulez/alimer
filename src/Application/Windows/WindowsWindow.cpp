@@ -20,19 +20,39 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "WindowsWindow.h"
+#include "Application/Application.h"
+#include "Core/Platform.h"
 
-#include "Core/Preprocessor.h"
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <objbase.h>
+#include <shellapi.h>
+//#include <shellscalingapi.h>
+
+#ifndef DPI_ENUMS_DECLARED
+typedef enum PROCESS_DPI_AWARENESS {
+    PROCESS_DPI_UNAWARE = 0,
+    PROCESS_SYSTEM_DPI_AWARE = 1,
+    PROCESS_PER_MONITOR_DPI_AWARE = 2
+} PROCESS_DPI_AWARENESS;
+#endif
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    WindowsWindow::WindowsWindow(const eastl::string& title, uint32_t width, uint32_t height)
+        : Window(title, width, height)
     {
-    protected:
-        GraphicsDevice();
+    }
 
-    public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
-    };
+    WindowsWindow::~WindowsWindow()
+    {
+    }
 }

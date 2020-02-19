@@ -22,17 +22,14 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "Application/Window.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    class WindowsWindow final : public Window
     {
-    protected:
-        GraphicsDevice();
-
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        WindowsWindow(const eastl::string& title, uint32_t width, uint32_t height);
+        ~WindowsWindow() override;
     };
 }

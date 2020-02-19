@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "WinFormsAppContext.h"
+#include "WindowsAppContext.h"
 #include "Application/Application.h"
 #include "Core/Platform.h"
 
@@ -63,7 +63,7 @@ namespace Alimer
         return str;
     }
 
-    WinFormsAppContext::WinFormsAppContext(Application* app)
+    WindowsAppContext::WindowsAppContext(Application* app)
         : AppContext(app, true)
     {
         LPWSTR* argv;
@@ -140,13 +140,31 @@ namespace Alimer
             return;*/
     }
 
-    WinFormsAppContext::~WinFormsAppContext()
+    WindowsAppContext::~WindowsAppContext()
     {
         CoUninitialize();
     }
 
+    void WindowsAppContext::Run()
+    {
+        // Main message loop
+        MSG msg = {};
+        while (WM_QUIT != msg.message)
+        {
+            if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessage(&msg);
+            }
+            else
+            {
+                _app->Tick();
+            }
+        }
+    }
+
     AppContext* AppContext::CreateDefault(Application* app)
     {
-        return new WinFormsAppContext(app);
+        return new WindowsAppContext(app);
     }
 }

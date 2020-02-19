@@ -23,16 +23,22 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
+#include <EASTL/string.h>
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API Window
     {
     protected:
-        GraphicsDevice();
+        Window(const eastl::string& title, uint32_t width, uint32_t height);
 
     public:
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        virtual ~Window() = default;
+
+    protected:
+        eastl::string _title;
+        uint32_t _width;
+        uint32_t _height;
     };
 }
