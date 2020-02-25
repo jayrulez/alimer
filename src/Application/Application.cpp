@@ -64,6 +64,11 @@ namespace Alimer
         }
     }
 
+    void Application::InitBeforeRun()
+    {
+
+    }
+
     void Application::Run()
     {
         if (_running) {
@@ -76,12 +81,25 @@ namespace Alimer
             return;
         }
 
-
         _context->Run();
     }
 
     void Application::Tick()
     {
 
+    }
+
+    void Application::GetDefaultWindowSize(uint32_t* width, uint32_t* height) const
+    {
+        if (width)
+            *width = 800;
+
+        if (height)
+            *height = 600;
+    }
+
+    Window* Application::GetMainWindow() const
+    {
+        return _context->GetMainWindow();
     }
 }

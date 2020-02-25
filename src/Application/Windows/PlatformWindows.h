@@ -22,54 +22,49 @@
 
 #pragma once
 
-#include "Application/Window.h"
+
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+#include <EASTL/string.h>
 
 namespace Alimer
 {
-    struct Configuration
+    static inline eastl::string ToUtf8(const eastl::wstring& wstr)
     {
-        eastl::string windowTitle = "Alimer";
+        if (wstr.empty())
+        {
+            return {};
+        }
 
-        uint32_t windowWidth = 1280;
-        uint32_t windowHeight = 720;
-    };
+        auto input_str_length = static_cast<int>(wstr.size());
+        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, nullptr, 0, nullptr, nullptr);
 
-    class GraphicsDevice;
-    class AppContext;
+        eastl::string str(str_len, 0);
+        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, &str[0], str_len, nullptr, nullptr);
 
-    class ALIMER_API Application
+        return str;
+    }
+
+    static inline eastl::wstring ToUtf16(const eastl::string& str)
     {
-        friend class AppContext;
-    public:
-        Application(const Configuration& config);
-        Application(AppContext* context, const Configuration& config);
+        if (str.empty())
+        {
+            return {};
+        }
 
-        /// Destructor.
-        virtual ~Application();
+        auto input_str_length = static_cast<int>(str.size());
+        auto wstr_len = MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, nullptr, 0);
 
-        /// Run main application loop and setup all required systems.
-        void Run();
-
-        /// Tick one frame.
-        void Tick();
-
-        /// Get the default window size.
-        virtual void GetDefaultWindowSize(uint32_t *width, uint32_t* height) const;
-
-        Window* GetMainWindow() const;
-
-    private:
-        /// Called by AppContext
-        void InitBeforeRun();
-
-    protected:
-        Configuration _config;
-        bool _running = false;
-        bool _exiting = false;
-        GraphicsDevice* _graphicsDevice = nullptr;
-
-    private:
-        AppContext* _context;
-        bool _ownContext;
-    };
+        eastl::wstring wstr(wstr_len, 0);
+        MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, &wstr[0], wstr_len);
+        return wstr;
+    }
 }

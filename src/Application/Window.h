@@ -22,23 +22,39 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "Core/Utils.h"
 #include <EASTL/string.h>
 
 namespace Alimer
 {
+    enum class WindowStyle : uint32_t
+    {
+        None = 0,
+        Resizable = 0x01,
+        Fullscreen = 0x02,
+        ExclusiveFullscreen = 0x04,
+        HighDpi = 0x08,
+        Default = Resizable
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
+
     class ALIMER_API Window
     {
     protected:
-        Window(const eastl::string& title, uint32_t width, uint32_t height);
+        Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
 
     public:
         /// Destructor.
         virtual ~Window() = default;
 
     protected:
-        eastl::string _title;
-        uint32_t _width;
-        uint32_t _height;
+        eastl::string title;
+        uint32_t width;
+        uint32_t height;
+        bool resizable = false;
+        bool fullscreen = false;
+        bool exclusiveFullscreen = false;
+        bool highDpi = true;
+        bool visible = false;
     };
 }

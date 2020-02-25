@@ -1,3 +1,9 @@
+# CMake version
+cmake_minimum_required(VERSION 3.10)
+
+# Project declaration
+project (Alimer LANGUAGES C CXX)
+
 macro (define_engine_source_files)
     cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
 	foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
@@ -41,10 +47,11 @@ endif ()
 
 group_sources()
 
-add_library(Alimer ${SOURCE_FILES} ${HEADER_FILES})
+add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
-target_include_directories (Alimer
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+target_include_directories(${PROJECT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
 target_link_libraries(Alimer

@@ -20,19 +20,12 @@
 // THE SOFTWARE.
 //
 
+#include "PlatformWindows.h"
 #include "WindowsAppContext.h"
+#include "WindowsWindow.h"
 #include "Application/Application.h"
 #include "Core/Platform.h"
 
-#define NOMINMAX
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
 #include <objbase.h>
 #include <shellapi.h>
 //#include <shellscalingapi.h>
@@ -47,22 +40,6 @@ typedef enum PROCESS_DPI_AWARENESS {
 
 namespace Alimer
 {
-    eastl::string wstr_to_str(const eastl::wstring& wstr)
-    {
-        if (wstr.empty())
-        {
-            return {};
-        }
-
-        auto wstr_len = static_cast<int>(wstr.size());
-        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, NULL, 0, NULL, NULL);
-
-        eastl::string str(str_len, 0);
-        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, &str[0], str_len, NULL, NULL);
-
-        return str;
-    }
-
     WindowsAppContext::WindowsAppContext(Application* app)
         : AppContext(app, true)
     {
@@ -77,7 +54,7 @@ namespace Alimer
 
         for (auto& arg : arg_strings)
         {
-            args.push_back(wstr_to_str(arg));
+            args.push_back(ToUtf8(arg));
         }
 
         SetArguments(args);
@@ -121,23 +98,6 @@ namespace Alimer
                 SetProcessDPIAware();
             }
         }
-
-        /*HINSTANCE hInstance = GetModuleHandleW(nullptr);
-
-        // Register class
-        /*WNDCLASSEXW wc;
-        ZeroMemory(&wc, sizeof(wc));
-        wc.cbSize = sizeof(wc);
-        wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-        wc.lpfnWndProc = WndProc;
-        wc.hInstance = hInstance;
-        wc.hIcon = LoadIconW(hInstance, L"IDI_ICON");
-        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-        wc.lpszClassName = L"$safeprojectname$WindowClass";
-        wc.hIconSm = LoadIconW(hInstance, L"IDI_ICON");
-        if (!RegisterClassExW(&wc))
-            return;*/
     }
 
     WindowsAppContext::~WindowsAppContext()
@@ -147,6 +107,12 @@ namespace Alimer
 
     void WindowsAppContext::Run()
     {
+        uint32_t width, height;
+        _app->GetDefaultWindowSize(&width, &height);
+        _mainWindow.reset(new WindowsWindow("Alimer", width, height, WindowStyle::Default));
+
+        Initialize();
+
         // Main message loop
         MSG msg = {};
         while (WM_QUIT != msg.message)

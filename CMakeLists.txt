@@ -4,6 +4,11 @@ cmake_minimum_required(VERSION 3.10)
 # Project declaration
 project (alimer)
 
+# Target C++14 without extensions
+set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_CXX_EXTENSIONS OFF)
+
 # Options
 #option(ALIMER_BUILD_SHARED "Build as a shared library instad of executable" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
@@ -95,8 +100,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
         set(CLANG_CL ON CACHE BOOL "" FORCE)
     endif()
-elseif (MSVC)
-    set(MSVC_NATIVE ON CACHE BOOL "" FORCE)
 endif()
 
 # General compiler flags
@@ -134,22 +137,6 @@ if (CMAKE_GENERATOR STREQUAL "Ninja")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options (-fcolor-diagnostics)
     endif ()
-endif()
-
-set(CXX_STANDARD "-std=c++14")
-if (WIN32)
-    set(CXX_STANDARD "/std:c++14")
-endif()
-
-if (MSVC_NATIVE)
-    set(CXX_STANDARD "/std:c++latest")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /W0 /Zc:__cplusplus")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
-endif()
-
-if (WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
 
 # third_party

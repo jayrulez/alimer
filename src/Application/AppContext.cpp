@@ -31,4 +31,9 @@ namespace Alimer
     {
 
     }
+
+    void AppContext::Initialize()
+    {
+        _app->InitBeforeRun();
+    }
 }

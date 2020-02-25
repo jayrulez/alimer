@@ -34,11 +34,13 @@
 #include <unistd.h>
 #endif
 
+using namespace eastl;
+
 namespace Alimer
 {
-    static eastl::vector<eastl::string> arguments;
+    static vector<string> arguments;
 
-    eastl::string GetPlatformName()
+    string GetPlatformName()
     {
 #if defined(_XBOX_ONE)
         return "XboxOne";
@@ -122,13 +124,13 @@ namespace Alimer
 #endif
     }
 
-    void SetArguments(const eastl::vector<eastl::string>& args)
+    void SetArguments(const vector<string>& args)
     {
         arguments = args;
     }
 
-    const eastl::vector<eastl::string>& GetArguments()
+    const vector<string>& GetArguments()
     {
         return arguments;
     }
-    }
+}
