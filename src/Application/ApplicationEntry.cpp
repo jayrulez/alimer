@@ -20,34 +20,29 @@
 // THE SOFTWARE.
 //
 
-#include "WindowsAppContext.h"
+#if !defined(ALIMER_EXPORTS)
+
 #include "Application/Application.h"
 #include "Core/Platform.h"
+#include <EASTL/unique_ptr.h>
 
-#define NOMINMAX
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <objbase.h>
-#include <shellapi.h>
-//#include <shellscalingapi.h>
-
-#ifndef DPI_ENUMS_DECLARED
-typedef enum PROCESS_DPI_AWARENESS {
-    PROCESS_DPI_UNAWARE = 0,
-    PROCESS_SYSTEM_DPI_AWARE = 1,
-    PROCESS_PER_MONITOR_DPI_AWARE = 2
-} PROCESS_DPI_AWARENESS;
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+    #include <shellapi.h>
 #endif
+
+using namespace eastl;
 
 namespace Alimer
 {
-    static inline eastl::string ToUtf8(const eastl::wstring& wstr)
+    // Make sure this is linked in.
+    void ApplicationDummy()
+    {
+    }
+
+#ifdef _WIN32
+    static inline string ToUtf8(const wstring& wstr)
     {
         if (wstr.empty())
         {
@@ -62,31 +57,39 @@ namespace Alimer
 
         return str;
     }
-
-    WindowsAppContext::WindowsAppContext(Application* app)
-        : GLFW_AppContext(app)
-    {
-        // Initialize COM
-        if (CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) == RPC_E_CHANGED_MODE) {
-            CoInitializeEx(NULL, COINIT_MULTITHREADED);
-        }
-
-        if (AllocConsole())
-        {
-            FILE* fp;
-            freopen_s(&fp, "conin$", "r", stdin);
-            freopen_s(&fp, "conout$", "w", stdout);
-            freopen_s(&fp, "conout$", "w", stderr);
-        }
-    }
-
-    WindowsAppContext::~WindowsAppContext()
-    {
-        CoUninitialize();
-    }
-
-    AppContext* AppContext::CreateDefault(Application* app)
-    {
-        return new WindowsAppContext(app);
-    }
+#endif
 }
+
+#ifdef _WIN32
+int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+#else
+int main(int argc, char* argv[])
+#endif
+{
+#ifdef _WIN32
+    ALIMER_UNUSED(hInstance);
+    ALIMER_UNUSED(hPrevInstance);
+    ALIMER_UNUSED(lpCmdLine);
+    ALIMER_UNUSED(nCmdShow);
+
+    LPWSTR* argv;
+    int     argc;
+    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    // Ignore the first argument containing the application full path
+    vector<wstring> arg_strings(argv + 1, argv + argc);
+    vector<string>  args;
+
+    for (auto& arg : arg_strings)
+    {
+        args.push_back(Alimer::ToUtf8(arg));
+    }
+
+    Alimer::Platform::SetArguments(args);
+#endif
+
+    auto app = unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(args));
+    app->Run();
+    return EXIT_SUCCESS;
+}
+
+#endif /* !defined(ALIMER_EXPORTS) */

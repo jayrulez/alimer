@@ -1,13 +1,24 @@
 function(add_sample sample_name)
-	file(GLOB HEADER_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${sample_name}/*.cpp")
-	file(GLOB SOURCE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${sample_name}/*.cpp")
+	file(GLOB SOURCE_FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/${sample_name}/*.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${sample_name}/*.cpp"
+    )
 
-	add_executable(${sample_name} ${SOURCE_FILES} ${HEADER_FILES})
+    if (ANDROID)
+        add_library(${sample_name} SHARED ${SOURCE_FILES})
+    elseif (WIN32)
+        add_executable(${sample_name} WIN32 ${SOURCE_FILES})
+    else ()
+	    add_executable(${sample_name} ${SOURCE_FILES})
+    endif ()
 	target_link_libraries(${sample_name} Alimer)
 
-	if(WIN32)
-		set_target_properties(${sample_name} PROPERTIES LINK_FLAGS "/ENTRY:mainCRTStartup /SUBSYSTEM:Windows /INCREMENTAL:NO")
-	endif ()
+    install(TARGETS ${sample_name}
+        LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
+        RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
+        ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}
+        BUNDLE  DESTINATION ${DEST_BIN_DIR_CONFIG}
+    )
 
 	set_property(TARGET ${sample_name} PROPERTY FOLDER "Samples")
 endfunction()

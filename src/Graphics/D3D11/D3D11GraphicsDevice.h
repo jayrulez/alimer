@@ -22,22 +22,16 @@
 
 #pragma once
 
-#include "Core/Utils.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API D3D11GraphicsDevice final : public GraphicsDevice
     {
-    protected:
-        GraphicsDevice();
-
     public:
+        /// Constructor.
+        D3D11GraphicsDevice();
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
-
-        static GraphicsDevice* Create();
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        ~D3D11GraphicsDevice() override;
     };
 }

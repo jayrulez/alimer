@@ -39,6 +39,7 @@ define_engine_source_files(
     Graphics
 )
 
+# Application sources per backend/platform
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(
         Application/GLFW
@@ -51,9 +52,29 @@ if(WIN32)
     )
 endif ()
 
+# Graphics sources
+if (ALIMER_GRAPHICS_D3D11)
+    define_engine_source_files(
+        Graphics/D3D
+        Graphics/D3D11
+    )
+endif()
+
+if (ALIMER_GRAPHICS_D3D11)
+    define_engine_source_files(
+        Graphics/D3D
+        Graphics/D3D12
+    )
+endif()
+
 group_sources()
 
-add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+if (ALIMER_BUILD_SHARED)
+    add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ALIMER_EXPORTS)
+else ()
+    add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+endif ()
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -70,13 +91,34 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
+if (CLANG_CL OR MSVC)
+     target_compile_options(${PROJECT_NAME} PUBLIC /MP)
+endif ()
+
 if (WIN32)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
     target_compile_definitions(${PROJECT_NAME} PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
     target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
-    target_compile_options(${PROJECT_NAME} PRIVATE /fp:fast)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _HAS_ITERATOR_DEBUGGING=$<CONFIG:DEBUG> _SECURE_SCL=$<CONFIG:DEBUG>)
+
+    # Enable unicode strings
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _UNICODE)
+
+    # Disable RTTI
     target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
+    
+	target_compile_options(${PROJECT_NAME} PUBLIC
+        /fp:fast    # Fast floating precision
+        /W3         # Set warning level 3
+        /WX         # Treat all other warnings as errors
+    )
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
 endif()
 
+# SDK installation
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}
+    LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
+    RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
+    ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}
+)

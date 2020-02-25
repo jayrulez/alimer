@@ -20,24 +20,17 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Utils.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    D3D11GraphicsDevice::D3D11GraphicsDevice()
     {
-    protected:
-        GraphicsDevice();
 
-    public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+    }
 
-        static GraphicsDevice* Create();
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
+    {
 
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
-    };
+    }
 }

@@ -58,5 +58,8 @@ namespace Alimer
         bool exclusiveFullscreen = false;
         bool highDpi = true;
         bool visible = true;
+
+    private:
+        ALIMER_DISABLE_COPY_MOVE(Window);
     };
 }

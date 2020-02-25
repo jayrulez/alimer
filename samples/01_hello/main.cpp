@@ -33,13 +33,13 @@ namespace Alimer
 
         }
     };
-}
 
-int main(int argc, char** argv)
-{
-    Alimer::Configuration config;
-    config.windowTitle = "Sample 01 - Hello";
-    Alimer::MyApp app(config);
-    app.Run();
-    return 0;
+    Application* ApplicationCreate(const eastl::vector<eastl::string>& args)
+    {
+        ApplicationDummy();
+
+        Alimer::Configuration config;
+        config.windowTitle = "Sample 01 - Hello";
+        return new MyApp(config);
+    }
 }

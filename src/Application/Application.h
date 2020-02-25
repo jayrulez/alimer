@@ -23,6 +23,8 @@
 #pragma once
 
 #include "Application/Window.h"
+#include "Graphics/GraphicsDevice.h"
+#include <EASTL/vector.h>
 
 namespace Alimer
 {
@@ -34,7 +36,6 @@ namespace Alimer
         uint32_t windowHeight = 720;
     };
 
-    class GraphicsDevice;
     class AppContext;
 
     class ALIMER_API Application
@@ -66,10 +67,16 @@ namespace Alimer
         Configuration _config;
         bool _running = false;
         bool _exiting = false;
-        GraphicsDevice* _graphicsDevice = nullptr;
+        GraphicsDevice* graphicsDevice = nullptr;
 
     private:
         AppContext* _context;
         bool _ownContext;
     };
+
+    extern Application* ApplicationCreate(const eastl::vector<eastl::string>& args);
+
+    // Call this to ensure application-main is linked in correctly without having to mess around
+    // with -Wl,--whole-archive.
+    ALIMER_API void ApplicationDummy();
 }

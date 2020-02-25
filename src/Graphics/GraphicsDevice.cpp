@@ -21,11 +21,17 @@
 //
 
 #include "Graphics/GraphicsDevice.h"
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
     GraphicsDevice::GraphicsDevice()
     {
 
+    }
+
+    GraphicsDevice* GraphicsDevice::Create()
+    {
+        return new D3D11GraphicsDevice();
     }
 }

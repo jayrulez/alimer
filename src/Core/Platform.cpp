@@ -38,9 +38,9 @@ using namespace eastl;
 
 namespace Alimer
 {
-    static vector<string> arguments;
+    vector<string> Platform::arguments = {};
 
-    string GetPlatformName()
+    string Platform::GetName()
     {
 #if defined(_XBOX_ONE)
         return "XboxOne";
@@ -65,7 +65,7 @@ namespace Alimer
 #endif
     }
 
-    PlatformId GetPlatformId()
+    PlatformId Platform::GetId()
     {
 #if defined(_XBOX_ONE)
         return PlatformId::XboxOne;
@@ -90,7 +90,7 @@ namespace Alimer
 #endif
     }
 
-    PlatformFamily GetPlatformFamily()
+    PlatformFamily Platform::GetFamily()
     {
 #if defined(_XBOX_ONE)
         return PlatformFamily::Console;
@@ -115,7 +115,7 @@ namespace Alimer
 #endif
     }
 
-    ProcessId GetCurrentProcessId()
+    ProcessId Platform::GetCurrentProcessId()
     {
 #if defined(_WIN64) || defined(_WIN32)
         return static_cast<ProcessId>(::GetCurrentProcessId());
@@ -124,12 +124,12 @@ namespace Alimer
 #endif
     }
 
-    void SetArguments(const vector<string>& args)
+    void Platform::SetArguments(const vector<string>& args)
     {
         arguments = args;
     }
 
-    const vector<string>& GetArguments()
+    const vector<string>& Platform::GetArguments()
     {
         return arguments;
     }

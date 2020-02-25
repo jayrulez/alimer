@@ -58,6 +58,8 @@ namespace Alimer
 
     Application::~Application()
     {
+        SafeDelete(graphicsDevice);
+
         if (_ownContext)
         {
             SafeDelete(_context);
@@ -66,7 +68,7 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-
+        graphicsDevice = GraphicsDevice::Create();
     }
 
     void Application::Run()

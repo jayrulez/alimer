@@ -10,8 +10,29 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
-#option(ALIMER_BUILD_SHARED "Build as a shared library instad of executable" OFF)
+if (WIN32)
+	option(ALIMER_GRAPHICS_D3D11 "Include Direct3D11 backend" ON)
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend (experimental)" ON)
+    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend (experimental)" ON)
+elseif (WINDOWS_STORE)
+	option(ALIMER_GRAPHICS_D3D11 "Include Direct3D11 backend" ON)
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend (experimental)" ON)
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+	set(ALIMER_GRAPHICS_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set(ALIMER_GRAPHICS_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+elseif (ANDROID)
+	set(ALIMER_GRAPHICS_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+elseif (EMSCRIPTEN)
+	set(ALIMER_GRAPHICS_OPENGL ON CACHE BOOL "Include OpenGL renderer")
+else()
+	message(FATAL_ERROR "Unknown platform ${CMAKE_SYSTEM_NAME}")
+endif ()
+
+option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
+
+
 
 if (WIN32)
     # Link statically against c/c++ lib to avoid missing redistriburable such as

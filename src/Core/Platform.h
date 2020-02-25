@@ -68,21 +68,28 @@ namespace Alimer
 
     using ProcessId = uint32_t;
 
-    /// Return the current platform name.
-    ALIMER_API eastl::string GetPlatformName();
+    class ALIMER_API Platform
+    {
+    public:
+        /// Return the current platform name.
+        ALIMER_API eastl::string GetName();
 
-    /// Return the current platform ID.
-    ALIMER_API PlatformId GetPlatformId();
+        /// Return the current platform ID.
+        ALIMER_API PlatformId GetId();
 
-    /// Return the current platform family.
-    ALIMER_API PlatformFamily GetPlatformFamily();
+        /// Return the current platform family.
+        ALIMER_API PlatformFamily GetFamily();
 
-    /// Returns the current process id (pid)
-    ALIMER_API ProcessId GetCurrentProcessId();
+        /// Returns the current process id (pid)
+        ALIMER_API ProcessId GetCurrentProcessId();
 
-    /// Set command line arguments.
-    ALIMER_API void SetArguments(const eastl::vector<eastl::string>& args);
+        /// Set command line arguments.
+        static void SetArguments(const eastl::vector<eastl::string>& args);
 
-    /// Return previously parsed arguments.
-    ALIMER_API const eastl::vector<eastl::string>& GetArguments();
+        /// Return previously parsed arguments.
+        static const eastl::vector<eastl::string>& GetArguments();
+
+    private:
+        static eastl::vector<eastl::string> arguments;
+    };
 }
