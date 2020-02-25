@@ -20,12 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "PlatformWindows.h"
 #include "WindowsAppContext.h"
-#include "WindowsWindow.h"
 #include "Application/Application.h"
 #include "Core/Platform.h"
 
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #include <objbase.h>
 #include <shellapi.h>
 //#include <shellscalingapi.h>
@@ -40,8 +47,24 @@ typedef enum PROCESS_DPI_AWARENESS {
 
 namespace Alimer
 {
+    static inline eastl::string ToUtf8(const eastl::wstring& wstr)
+    {
+        if (wstr.empty())
+        {
+            return {};
+        }
+
+        auto input_str_length = static_cast<int>(wstr.size());
+        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, nullptr, 0, nullptr, nullptr);
+
+        eastl::string str(str_len, 0);
+        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, &str[0], str_len, nullptr, nullptr);
+
+        return str;
+    }
+
     WindowsAppContext::WindowsAppContext(Application* app)
-        : AppContext(app, true)
+        : GLFW_AppContext(app)
     {
         LPWSTR* argv;
         int     argc;
@@ -71,62 +94,11 @@ namespace Alimer
             freopen_s(&fp, "conout$", "w", stdout);
             freopen_s(&fp, "conout$", "w", stderr);
         }
-
-        HMODULE user32Dll = LoadLibraryW(L"user32.dll");
-
-        typedef BOOL(WINAPI* PFN_SetProcessDpiAwarenessContext)(DPI_AWARENESS_CONTEXT);
-        PFN_SetProcessDpiAwarenessContext SetProcessDpiAwarenessContextFunc = reinterpret_cast<PFN_SetProcessDpiAwarenessContext>(GetProcAddress(user32Dll, "SetProcessDpiAwarenessContext"));
-        if (SetProcessDpiAwarenessContextFunc)
-        {
-            SetProcessDpiAwarenessContextFunc(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-        }
-        else
-        {
-            HMODULE shcoreDll = LoadLibraryW(L"shcore.dll");
-            if (shcoreDll)
-            {
-                typedef HRESULT(WINAPI* SetProcessDpiAwarenessFuncType)(PROCESS_DPI_AWARENESS);
-                SetProcessDpiAwarenessFuncType SetProcessDpiAwarenessFunc = reinterpret_cast<SetProcessDpiAwarenessFuncType>(GetProcAddress(shcoreDll, "SetProcessDpiAwareness"));
-
-                if (SetProcessDpiAwarenessFunc)
-                    SetProcessDpiAwarenessFunc(PROCESS_PER_MONITOR_DPI_AWARE);
-
-                FreeLibrary(shcoreDll);
-            }
-            else
-            {
-                SetProcessDPIAware();
-            }
-        }
     }
 
     WindowsAppContext::~WindowsAppContext()
     {
         CoUninitialize();
-    }
-
-    void WindowsAppContext::Run()
-    {
-        uint32_t width, height;
-        _app->GetDefaultWindowSize(&width, &height);
-        _mainWindow.reset(new WindowsWindow("Alimer", width, height, WindowStyle::Default));
-
-        Initialize();
-
-        // Main message loop
-        MSG msg = {};
-        while (WM_QUIT != msg.message)
-        {
-            if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-            else
-            {
-                _app->Tick();
-            }
-        }
     }
 
     AppContext* AppContext::CreateDefault(Application* app)

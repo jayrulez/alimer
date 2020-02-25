@@ -1,6 +1,7 @@
 # EASTL
 add_subdirectory(EABase)
 add_subdirectory(EASTL)
+set_property(TARGET EASTL PROPERTY FOLDER "ThirdParty")
 
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))

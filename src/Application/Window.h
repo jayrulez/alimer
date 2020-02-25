@@ -47,6 +47,8 @@ namespace Alimer
         /// Destructor.
         virtual ~Window() = default;
 
+        virtual bool ShouldClose() const = 0;
+
     protected:
         eastl::string title;
         uint32_t width;
@@ -55,6 +57,6 @@ namespace Alimer
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
         bool highDpi = true;
-        bool visible = false;
+        bool visible = true;
     };
 }

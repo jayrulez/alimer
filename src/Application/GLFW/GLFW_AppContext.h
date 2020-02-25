@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include "Application/GLFW/GLFW_AppContext.h"
+#include "Application/AppContext.h"
 
 namespace Alimer
 {
-    class WindowsAppContext final : public GLFW_AppContext
+    class GLFW_AppContext : public AppContext
     {
     public:
-        WindowsAppContext(Application* app);
-        ~WindowsAppContext() override;
+        GLFW_AppContext(Application* app);
+        ~GLFW_AppContext() override;
+
+        void Run() override;
     };
 }

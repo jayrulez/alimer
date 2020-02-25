@@ -92,10 +92,10 @@ namespace Alimer
     void Application::GetDefaultWindowSize(uint32_t* width, uint32_t* height) const
     {
         if (width)
-            *width = 800;
+            *width = 1280;
 
         if (height)
-            *height = 600;
+            *height = 720;
     }
 
     Window* Application::GetMainWindow() const

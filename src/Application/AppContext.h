@@ -54,5 +54,6 @@ namespace Alimer
         Application* _app;
         eastl::unique_ptr<Window> _mainWindow;
         bool _blockingRun;
+        bool exitRequested = false;
     };
 }

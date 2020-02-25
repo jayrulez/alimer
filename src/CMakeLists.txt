@@ -39,6 +39,12 @@ define_engine_source_files(
     Graphics
 )
 
+if(NOT (EMSCRIPTEN OR ANDROID))
+    define_engine_source_files(
+        Application/GLFW
+    )
+endif ()
+
 if(WIN32)
     define_engine_source_files(
         Application/Windows
@@ -54,23 +60,23 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(Alimer
+target_link_libraries(${PROJECT_NAME}
     EASTL
 )
 
-if(NOT (WIN32 OR EMSCRIPTEN OR ANDROID))
-    target_link_libraries(Alimer
+if(NOT (EMSCRIPTEN OR ANDROID))
+    target_link_libraries(${PROJECT_NAME}
         glfw
     )
 endif ()
 
 if (WIN32)
-    target_compile_definitions(Alimer PRIVATE _UNICODE)
-    target_compile_definitions(Alimer PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
-    target_compile_options(Alimer PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
-    target_compile_options(Alimer PRIVATE /fp:fast)
-    target_compile_options(Alimer PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
+    target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
+    target_compile_options(${PROJECT_NAME} PRIVATE /fp:fast)
+    target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
 else()
-    target_compile_options(Alimer PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
+    target_compile_options(${PROJECT_NAME} PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
 endif()
 

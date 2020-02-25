@@ -23,24 +23,20 @@
 #pragma once
 
 #include "Application/Window.h"
-#include "PlatformWindows.h"
+
+struct GLFWwindow;
 
 namespace Alimer
 {
-    class WindowsWindow final : public Window
+    class GLFW_Window : public Window
     {
     public:
-        WindowsWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
-        ~WindowsWindow() override;
+        GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
+        ~GLFW_Window() override;
+
+        bool ShouldClose() const override;
 
     private:
-        void SwitchFullscreen(bool newFullscreen);
-
-        DWORD windowExStyle = WS_EX_APPWINDOW;
-        DWORD windowStyle;
-
-        HINSTANCE hInstance;
-        HWND hWnd = nullptr;
-        HMONITOR monitor = nullptr;
+        GLFWwindow* window = nullptr;
     };
 }

@@ -45,7 +45,5 @@ target_include_directories(EASTL PUBLIC
 #-------------------------------------------------------------------------------------------
 target_link_libraries(EASTL EABase)
 
-set_property(TARGET EASTL PROPERTY FOLDER "third_party")
-
 # Install
 install (DIRECTORY include/ DESTINATION ${DEST_THIRDPARTY_HEADERS_DIR}/ FILES_MATCHING PATTERN *.h)
