@@ -22,31 +22,19 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
-#include <EASTL/set.h>
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    /// Vulkan graphics backend.
+    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
     {
-    protected:
-        GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-
     public:
+        static bool IsAvailable();
+
+        /// Constructor.
+        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
-
-        static eastl::set<GraphicsBackend> GetAvailableBackends();
-
-        static GraphicsDevice* Create(const GraphicsDeviceDescriptor* descriptor);
-
-    protected:
-        GraphicsDeviceFlags flags;
-
-        /// GPU device power preference.
-        GPUPowerPreference powerPreference;
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        ~VulkanGraphicsDevice() override;
     };
 }

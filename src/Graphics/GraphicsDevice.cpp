@@ -20,18 +20,101 @@
 // THE SOFTWARE.
 //
 
+#include "config.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#endif
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#endif
 
 namespace Alimer
 {
-    GraphicsDevice::GraphicsDevice()
+    GraphicsDevice::GraphicsDevice(const GraphicsDeviceDescriptor* descriptor)
+        : flags(descriptor->flags)
+        , powerPreference(descriptor->powerPreference)
     {
 
     }
 
-    GraphicsDevice* GraphicsDevice::Create()
+    eastl::set<GraphicsBackend> GraphicsDevice::GetAvailableBackends()
     {
-        return new D3D11GraphicsDevice();
+        static eastl::set<GraphicsBackend> availableBackends;
+
+        if (availableBackends.empty())
+        {
+            availableBackends.insert(GraphicsBackend::Null);
+
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (VulkanGraphicsDevice::IsAvailable()) {
+                availableBackends.insert(GraphicsBackend::Vulkan);
+            }
+#endif
+#if defined(ALIMER_GRAPHICS_D3D12)
+            if (D3D12GraphicsDevice::IsAvailable()) {
+                availableBackends.insert(GraphicsBackend::Direct3D12);
+        }
+#endif
+        }
+
+        return availableBackends;
+    }
+
+    GraphicsDevice* GraphicsDevice::Create(const GraphicsDeviceDescriptor* descriptor)
+    {
+        ALIMER_ASSERT(descriptor);
+
+        GraphicsBackend backend = descriptor->preferredBackend;
+        if (backend == GraphicsBackend::Default)
+        {
+            auto availableDrivers = GetAvailableBackends();
+
+            if (availableDrivers.find(GraphicsBackend::Metal) != availableDrivers.end())
+                backend = GraphicsBackend::Metal;
+            else if (availableDrivers.find(GraphicsBackend::Vulkan) != availableDrivers.end())
+                backend = GraphicsBackend::Vulkan;
+            else if (availableDrivers.find(GraphicsBackend::Direct3D12) != availableDrivers.end())
+                backend = GraphicsBackend::Direct3D12;
+            else
+                backend = GraphicsBackend::Null;
+        }
+
+        GraphicsDevice* device = nullptr;
+        switch (backend)
+        {
+#if defined(ALIMER_GRAPHICS_VULKAN)
+        case GraphicsBackend::Vulkan:
+            if (VulkanGraphicsDevice::IsAvailable()) {
+                device = new VulkanGraphicsDevice(descriptor);
+                ALIMER_LOGINFO("Created Vulkan GraphicsDevice");
+            }
+            break;
+#endif /* defined(ALIMER_GRAPHICS_VULKAN) */
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+        case GraphicsBackend::Direct3D12:
+            if (D3D12GraphicsDevice::IsAvailable()) {
+                device = new D3D12GraphicsDevice(descriptor);
+                ALIMER_LOGINFO("Created Direct3D12 GraphicsDevice");
+            }
+            break;
+#endif /* defined(ALIMER_GRAPHICS_D3D12) */
+
+#if defined(ALIMER_GRAPHICS_METAL)
+        case GraphicsBackend::Metal:
+            if (MetalGraphicsDevice::IsAvailable()) {
+                device = new MetalGraphicsDevice();
+            }
+            break;
+#endif /* defined(ALIMER_GRAPHICS_METAL) */
+
+        default:
+            break;
+        }
+
+        return device;
     }
 }

@@ -68,7 +68,8 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        graphicsDevice = GraphicsDevice::Create();
+        GraphicsDeviceDescriptor deviceDesc = {};
+        graphicsDevice = GraphicsDevice::Create(&deviceDesc);
     }
 
     void Application::Run()

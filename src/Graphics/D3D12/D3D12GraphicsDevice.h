@@ -22,16 +22,36 @@
 
 #pragma once
 
+#include "D3D12Backend.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API D3D11GraphicsDevice final : public GraphicsDevice
+    /// Direct3D12 graphics backend.
+    class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
+
         /// Constructor.
-        D3D11GraphicsDevice();
+        D3D12GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
         /// Destructor.
-        ~D3D11GraphicsDevice() override;
+        ~D3D12GraphicsDevice() override;
+
+        IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory.Get(); }
+        ID3D12Device*           GetD3DDevice() const { return d3dDevice.Get(); }
+        D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
+
+    private:
+        static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+
+        static bool GetAdapter(ComPtr<IDXGIFactory4> factory4, IDXGIAdapter1** ppAdapter);
+        void CreateDeviceResources();
+        void InitCapabilities(IDXGIAdapter1* adapter);
+
+        UINT dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory4> dxgiFactory;
+        ComPtr<ID3D12Device> d3dDevice;
+        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
     };
 }

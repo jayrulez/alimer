@@ -20,17 +20,36 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11GraphicsDevice.h"
+#ifndef ALIMER_API_H
+#define ALIMER_API_H
 
-namespace Alimer
-{
-    D3D11GraphicsDevice::D3D11GraphicsDevice()
-    {
+/* Version */
+#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
+#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
+#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
+#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
+#define ALIMER_VERSION_ALIAS "WIP"
 
-    }
+/* Build configuration */
+#cmakedefine ALIMER_LOGGING
+#cmakedefine ALIMER_PROFILING
+#cmakedefine ALIMER_THREADING
+#cmakedefine ALIMER_NETWORK
+#cmakedefine ALIMER_PLUGINS
 
-    D3D11GraphicsDevice::~D3D11GraphicsDevice()
-    {
+/* Graphics */
+#cmakedefine ALIMER_GRAPHICS_VULKAN
+#cmakedefine ALIMER_GRAPHICS_D3D12
+#cmakedefine ALIMER_GRAPHICS_METAL
 
-    }
-}
+/* Audio */
+#cmakedefine ALIMER_ENABLE_AUDIO
+#cmakedefine ALIMER_AUDIO_XAUDIO2
+#cmakedefine ALIMER_AUDIO_OPENAL
+
+/* Physics */
+#cmakedefine ALIMER_ENABLE_PHYSICS
+#cmakedefine ALIMER_PHYSICS_PHYSX
+#cmakedefine ALIMER_PHYSICS_BULLET
+
+#endif

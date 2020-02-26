@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,52 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
-#include <EASTL/set.h>
+#include "Core/Utils.h"
+#include "Graphics/PixelFormat.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    /// Enum describing the GraphicsDevice backend.
+    enum class GraphicsBackend : uint32_t {
+        /// Default best platform supported backend.
+        Default,
+        /// Null backend.
+        Null,
+        /// Vulkan backend.
+        Vulkan,
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Metal backend.
+        Metal
+    };
+
+    enum class GPUPowerPreference : uint32_t {
+        DontCare,
+        LowPower,
+        HighPerformance
+    };
+
+    enum class GraphicsDeviceFlags : uint32_t {
+        None = 0x0,
+        /// Enable debug runtime.
+        DebugRuntime = 0x1,
+        /// Enable GPU based validation.
+        GPUBasedValidation = 0x2,
+        /// Enable RenderDoc integration.
+        RenderDoc = 0x4
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
+
+    /// GraphicsDevice descriptor.
+    struct GraphicsDeviceDescriptor
     {
-    protected:
-        GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
+        GraphicsBackend preferredBackend = GraphicsBackend::Default;
 
-    public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
-
-        static eastl::set<GraphicsBackend> GetAvailableBackends();
-
-        static GraphicsDevice* Create(const GraphicsDeviceDescriptor* descriptor);
-
-    protected:
-        GraphicsDeviceFlags flags;
+        /// Device flags.
+        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
 
         /// GPU device power preference.
         GPUPowerPreference powerPreference;
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
-}
+
+} 

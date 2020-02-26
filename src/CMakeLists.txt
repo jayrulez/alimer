@@ -33,6 +33,7 @@ macro(group_sources)
     endforeach ()
 endmacro()
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 define_engine_source_files(
     Core
     Application
@@ -53,16 +54,14 @@ if(WIN32)
 endif ()
 
 # Graphics sources
-if (ALIMER_GRAPHICS_D3D11)
+if (ALIMER_GRAPHICS_VULKAN)
     define_engine_source_files(
-        Graphics/D3D
-        Graphics/D3D11
+        Graphics/Vulkan
     )
 endif()
 
-if (ALIMER_GRAPHICS_D3D11)
+if (ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(
-        Graphics/D3D
         Graphics/D3D12
     )
 endif()
@@ -88,6 +87,12 @@ target_link_libraries(${PROJECT_NAME}
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME}
         glfw
+    )
+endif ()
+
+if (ALIMER_GRAPHICS_VULKAN)
+    target_link_libraries(${PROJECT_NAME}
+        #vma
     )
 endif ()
 

@@ -20,33 +20,23 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Types.h"
-#include <EASTL/set.h>
+#include "VulkanGraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice
+    bool VulkanGraphicsDevice::IsAvailable()
     {
-    protected:
-        GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
+        return false;
+    }
 
-    public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+    VulkanGraphicsDevice::VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor)
+        : GraphicsDevice(descriptor)
+    {
 
-        static eastl::set<GraphicsBackend> GetAvailableBackends();
+    }
 
-        static GraphicsDevice* Create(const GraphicsDeviceDescriptor* descriptor);
+    VulkanGraphicsDevice::~VulkanGraphicsDevice()
+    {
 
-    protected:
-        GraphicsDeviceFlags flags;
-
-        /// GPU device power preference.
-        GPUPowerPreference powerPreference;
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
-    };
+    }
 }

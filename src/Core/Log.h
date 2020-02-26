@@ -27,12 +27,14 @@
 
 namespace Alimer
 {
+    static constexpr uint32_t kMaxLogMessage = 4096;
+
     enum class LogLevel : uint32_t
     {
         Trace,
         Debug,
         Info,
-        Warn,
+        Warning,
         Error,
         Off
     };
@@ -43,10 +45,18 @@ namespace Alimer
         Logger(const eastl::string& name);
         ~Logger();
 
+        bool IsEnabled() const { return _enabled; }
+        void SetEnabled(bool value);
+        bool IsLevelEnabled(LogLevel level) const;
+
+        void Log(LogLevel level, const char* message);
         void Log(LogLevel level, const eastl::string& message);
+        void LogFormat(LogLevel level, const char* format, ...);
 
     private:
         eastl::string _name;
+        bool _enabled = true;
+        LogLevel _level;
     };
 
     class ALIMER_API Log final
@@ -59,5 +69,11 @@ namespace Alimer
 #define ALIMER_LOGTRACE(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Trace, message)
 #define ALIMER_LOGDEBUG(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Debug, message)
 #define ALIMER_LOGINFO(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Info, message)
-#define ALIMER_LOGWARN(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Warn, message)
+#define ALIMER_LOGWARN(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Warning, message)
 #define ALIMER_LOGERROR(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Error, message)
+
+#define ALIMER_LOGTRACEF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Trace, message, ##__VA_ARGS__)
+#define ALIMER_LOGDEBUGF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Debug, message, ##__VA_ARGS__)
+#define ALIMER_LOGINFOF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Info, message, ##__VA_ARGS__)
+#define ALIMER_LOGWARNF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Warning, message, ##__VA_ARGS__)
+#define ALIMER_LOGERRORF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Error, message, ##__VA_ARGS__)
