@@ -29,8 +29,17 @@ endif ()
 
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
+option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
-
+if (ANDROID OR IOS OR EMSCRIPTEN)
+    set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
+    set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable C# editor" FORCE)
+else ()
+    option(ALIMER_BUILD_TOOLS "Build tools" ON)
+    if (WIN32)    
+        option(ALIMER_BUILD_EDITOR "Build C# Editor" ON)
+    endif ()
+endif ()
 
 if (WIN32)
     # Link statically against c/c++ lib to avoid missing redistriburable such as
@@ -168,10 +177,17 @@ if (ALIMER_BUILD_SAMPLES)
     add_subdirectory(samples)
 endif ()
 
+# Set VS Startup project.
+if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
+    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Alimer.Studio")
+endif()
+
 # Install files
-# README.md and license
-install (FILES
-    ${ALIMER_ROOT_DIR}/README.md
-    ${ALIMER_ROOT_DIR}/LICENSE
-    DESTINATION .
-)
+if (NOT ALIMER_SKIP_INSTALL)
+    # README.md and license
+    install (FILES
+        ${ALIMER_ROOT_DIR}/README.md
+        ${ALIMER_ROOT_DIR}/LICENSE
+        DESTINATION .
+    )
+endif ()
