@@ -12,20 +12,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: '3.x'
-          architecture: 'x64'
-
       - name: Set up Ninja
         run: choco install ninja
         shell: cmd
-      - name: Display Versions
-        run: |
-          python -c "import sys; print(sys.version)"
-          ninja --version
-          cmake --version
       - name: Build script
         run: python alimer.py --generator vs2019-ninja --continuous
 

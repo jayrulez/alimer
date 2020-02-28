@@ -265,9 +265,17 @@ if __name__ == "__main__":
             batCmd.AddCommand("set CXX=cl.exe")
     
         if (target == "html5"):
-            emscriptenSDKDir = os.environ.get('EMSCRIPTEN')
-            emscriptenToolchain = os.path.join(emscriptenSDKDir, "cmake/Modules/Platform/Emscripten.cmake")
-            batCmd.AddCommand("cmake -G \"Ninja\" -DCMAKE_TOOLCHAIN_FILE=\"%s\" -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (emscriptenToolchain, configuration))
+            if "windows" == hostPlatform:
+                emscriptenSDKDir = os.environ.get('EMSDK')
+                emsdk_env = os.path.join(emscriptenSDKDir, "emsdk_env.bat")
+                emsdk_toolchain_file = os.path.join(emscriptenSDKDir, "upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
+
+                batCmd.AddCommand("call \"%s\"" % (emsdk_env))
+                batCmd.AddCommand("cmake -G \"Ninja\" -DCMAKE_TOOLCHAIN_FILE=\"%s\" -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (emsdk_toolchain_file, configuration))
+            else:
+                batCmd.AddCommand("source ${EMSDK}/emsdk_env.sh")
+                batCmd.AddCommand("cmake -G \"Ninja\" -DCMAKE_TOOLCHAIN_FILE=${EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (configuration))
+
             # Generate files to run servers
             if not os.path.exists(os.path.join(buildDir, "bin")):
                 os.mkdir(os.path.join(buildDir, "bin"))

@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project declaration
-project (alimer)
+project (Alimer)
 
 # Target C++14 without extensions
 set (CMAKE_CXX_STANDARD 14)
