@@ -22,7 +22,7 @@
 
 #include "GLFW_Window.h"
 #include "Core/Platform.h"
-#include "Core/Log.h"
+#include "Diagnostics/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -71,8 +71,18 @@ namespace Alimer
         glfwDestroyWindow(window);
     }
 
+    void GLFW_Window::BackendSetTitle()
+    {
+        glfwSetWindowTitle(window, title.c_str());
+    }
+
     bool GLFW_Window::ShouldClose() const
     {
         return glfwWindowShouldClose(window);
+    }
+
+    bool GLFW_Window::IsMinimized() const
+    {
+        return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
     }
 }

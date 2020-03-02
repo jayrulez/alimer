@@ -44,8 +44,8 @@
 #include <wrl/client.h>
 #include <wrl/event.h>
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
+#include "Diagnostics/Assert.h"
+#include "Diagnostics/Log.h"
 #include "Graphics/Types.h"
 
 #include <d3d12.h>

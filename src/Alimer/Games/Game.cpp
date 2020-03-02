@@ -22,7 +22,7 @@
 
 #include "Games/Game.h"
 #include "Input/InputManager.h"
-#include "Core/Log.h"
+#include "Diagnostics/Log.h"
 
 /* Needed by EASTL. */
 #if !defined(ALIMER_EXPORTS)
@@ -69,6 +69,9 @@ namespace Alimer
             //Stop();
             return;
         }
+
+        time.ResetElapsedTime();
+        BeginRun();
     }
 
     void Game::Initialize()
@@ -77,6 +80,47 @@ namespace Alimer
         {
             gameSystem->Initialize();
         }
+    }
+
+    void Game::BeginRun()
+    {
+
+    }
+
+    void Game::EndRun()
+    {
+
+    }
+
+    bool Game::BeginDraw()
+    {
+        if (!graphicsDevice->BeginFrame())
+            return false;
+
+        for (auto gameSystem : gameSystems)
+        {
+            gameSystem->BeginDraw();
+        }
+
+        return true;
+    }
+
+    void Game::Draw(const GameTime& gameTime)
+    {
+        for (auto gameSystem : gameSystems)
+        {
+            gameSystem->Draw(time);
+        }
+    }
+
+    void Game::EndDraw()
+    {
+        for (auto gameSystem : gameSystems)
+        {
+            gameSystem->EndDraw();
+        }
+
+        graphicsDevice->EndFrame();
     }
 
     int Game::Run()
@@ -117,6 +161,32 @@ namespace Alimer
 
     void Game::Tick()
     {
+        time.Tick([&]()
+        {
+            Update(time);
+        });
 
+        Render();
+    }
+
+    void Game::Update(const GameTime& gameTime)
+    {
+        for (auto gameSystem : gameSystems)
+        {
+            gameSystem->Update(gameTime);
+        }
+    }
+
+    void Game::Render()
+    {
+        // Don't try to render anything before the first Update.
+        if (!exiting
+            && time.GetFrameCount() > 0
+            && !mainWindow->IsMinimized()
+            && BeginDraw())
+        {
+            Draw(time);
+            EndDraw();
+        }
     }
 }

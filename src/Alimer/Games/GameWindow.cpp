@@ -22,9 +22,11 @@
 
 #include "Games/GameWindow.h"
 
+using namespace eastl;
+
 namespace Alimer
 {
-    GameWindow::GameWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
+    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
         : title(newTitle)
         , width(newWidth)
         , height(newHeight)
@@ -33,5 +35,11 @@ namespace Alimer
         , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
     {
 
+    }
+
+    void GameWindow::SetTitle(const string& newTitle)
+    {
+        title = newTitle;
+        BackendSetTitle();
     }
 }

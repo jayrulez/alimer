@@ -34,7 +34,9 @@ namespace Alimer
         GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
         ~GLFW_Window() override;
 
+        void BackendSetTitle() override;
         bool ShouldClose() const override;
+        bool IsMinimized() const override;
 
     private:
         GLFWwindow* window = nullptr;

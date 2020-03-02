@@ -20,33 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "VulkanGraphicsDevice.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
 
 namespace Alimer
 {
-    bool VulkanGraphicsDevice::IsAvailable()
+    class ALIMER_API Stopwatch final
     {
-        return false;
-    }
+    public:
+        static constexpr uint64_t TicksPerMillisecond = 10000;
+        static constexpr uint64_t TicksPerSecond = 10000000;
 
-    VulkanGraphicsDevice::VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor)
-        : GraphicsDevice(descriptor)
-    {
+        /// Constructor.
+        Stopwatch();
+        /// Destructor.
+        ~Stopwatch();
 
-    }
+        void Reset();
+        void Start();
+        void Stop();
+        void Restart();
 
-    VulkanGraphicsDevice::~VulkanGraphicsDevice()
-    {
+        bool IsRunning() const { return isRunning; }
+        uint64_t GetElapsedTicks() const;
+        uint64_t GetElapsedMilliseconds() const;
 
-    }
+        static uint64_t GetFrequency();
+        static uint64_t GetTimestamp();
 
-    bool VulkanGraphicsDevice::BeginFrame()
-    {
-        return true;
-    }
-
-    void VulkanGraphicsDevice::EndFrame()
-    {
-
-    }
+    private:
+        
+        bool isRunning = false;
+        uint64_t elapsed = 0;
+        uint64_t startTimeStamp = 0;
+    };
 }

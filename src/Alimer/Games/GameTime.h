@@ -23,9 +23,12 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
+#include <functional>
 
 namespace Alimer
 {
+    class Game;
+
     class ALIMER_API GameTime final
     {
 
@@ -33,6 +36,56 @@ namespace Alimer
         GameTime();
          ~GameTime() = default;
 
+         void Tick(const std::function<void()> update);
+
+         // Get elapsed time since the previous Update call.
+         uint64_t GetElapsedTicks() const { return elapsedTicks; }
+         double GetElapsedSeconds() const { return TicksToSeconds(elapsedTicks); }
+
+         // Get total time since the start of the program.
+         uint64_t GetTotalTicks() const { return totalTicks; }
+         double GetTotalSeconds() const { return TicksToSeconds(totalTicks); }
+
+         // Get total number of updates since start of the program.
+         uint32_t GetFrameCount() const { return frameCount; }
+
+         // Get the current framerate.
+         uint32_t GetFramesPerSecond() const { return framesPerSecond; }
+
+         // Set whether to use fixed or variable timestep mode.
+         void SetFixedTimeStep(bool isFixedTimestep) { isFixedTimeStep = isFixedTimestep; }
+
+         // Set how often to call Update when in fixed timestep mode.
+         void SetTargetElapsedTicks(uint64_t targetElapsed) { targetElapsedTicks = targetElapsed; }
+         void SetTargetElapsedSeconds(double targetElapsed) { targetElapsedTicks = SecondsToTicks(targetElapsed); }
+
+         void ResetElapsedTime();
+
+         // Integer format represents time using 10,000,000 ticks per second.
+         static constexpr uint64_t TicksPerSecond = 10000000;
+
+         static double TicksToSeconds(uint64_t ticks) { return static_cast<double>(ticks) / TicksPerSecond; }
+         static uint64_t SecondsToTicks(double seconds) { return static_cast<uint64_t>(seconds * TicksPerSecond); }
+
     private:
+        // Source timing data uses QPC units.
+        uint64_t qpcFrequency;
+        uint64_t qpcLastTime;
+        uint64_t qpcMaxDelta;
+
+        // Derived timing data uses a canonical tick format.
+        uint64_t elapsedTicks = 0;
+        uint64_t totalTicks = 0;
+        uint64_t leftOverTicks = 0;
+
+        // Members for tracking the framerate.
+        uint32_t frameCount = 0;
+        uint32_t framesPerSecond = 0;
+        uint32_t framesThisSecond = 0;
+        uint64_t qpcSecondCounter = 0;
+
+        // Members for configuring fixed timestep mode.
+        bool isFixedTimeStep = false;
+        uint64_t targetElapsedTicks;
     };
 }

@@ -22,7 +22,7 @@
 
 #include "GLFW_Window.h"
 #include "Games/Game.h"
-#include "Core/Log.h"
+#include "Diagnostics/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 

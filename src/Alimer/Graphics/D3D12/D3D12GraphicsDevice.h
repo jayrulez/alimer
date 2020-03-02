@@ -38,6 +38,9 @@ namespace Alimer
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
+        bool BeginFrame() override;
+        void EndFrame() override;
+
         IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory.Get(); }
         ID3D12Device*           GetD3DDevice() const { return d3dDevice.Get(); }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }

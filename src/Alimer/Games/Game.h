@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
+#include "Games/GameTime.h"
 #include "Games/GameWindow.h"
 #include "Games/GameSystem.h"
 #include "Graphics/GraphicsDevice.h"
@@ -46,8 +47,8 @@ namespace Alimer
         ALIMER_OBJECT(Game, Object);
 
     public:
+        /// Constructor.
         Game(const Configuration& config_);
-
         /// Destructor.
         virtual ~Game();
 
@@ -69,16 +70,29 @@ namespace Alimer
         /// Setup after window and graphics setup, by default initializes all GameSystems.
         virtual void Initialize();
 
+        virtual void BeginRun();
+        virtual void EndRun();
+
+        virtual void Update(const GameTime& gameTime);
+
+        virtual bool BeginDraw();
+        virtual void Draw(const GameTime& gameTime);
+        virtual void EndDraw();
+
     private:
         /// Called by platform backend.
         void InitBeforeRun();
         void PlatformRun();
+        
+        void Render();
 
     protected:
         int exitCode = 0;
         Configuration config;
         bool running = false;
         bool exiting = false;
+        // Rendering loop timer.
+        GameTime time;
         eastl::unique_ptr<GameWindow> mainWindow;
         eastl::vector<GameSystem*> gameSystems;
         GraphicsDevice* graphicsDevice = nullptr;

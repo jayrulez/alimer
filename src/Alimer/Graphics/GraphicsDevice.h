@@ -40,6 +40,9 @@ namespace Alimer
 
         static GraphicsDevice* Create(const GraphicsDeviceDescriptor* descriptor);
 
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+
     protected:
         GraphicsDeviceFlags flags;
 

@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
+#include "Games/GameTime.h"
 
 namespace Alimer
 {
@@ -37,5 +38,9 @@ namespace Alimer
         virtual ~GameSystem() = default;
 
         virtual void Initialize() {}
+        virtual void Update(const GameTime& gameTime) {}
+        virtual void BeginDraw() {}
+        virtual void Draw(const GameTime& gameTime) {}
+        virtual void EndDraw() {}
     };
 }

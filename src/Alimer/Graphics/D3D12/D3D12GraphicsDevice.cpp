@@ -296,4 +296,15 @@ namespace Alimer
             d3dFeatureLevel = d3dMinFeatureLevel;
         }
     }
+
+
+    bool D3D12GraphicsDevice::BeginFrame()
+    {
+        return true;
+    }
+
+    void D3D12GraphicsDevice::EndFrame()
+    {
+
+    }
 }

@@ -36,5 +36,8 @@ namespace Alimer
         VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
         /// Destructor.
         ~VulkanGraphicsDevice() override;
+
+        bool BeginFrame() override;
+        void EndFrame() override;
     };
 }

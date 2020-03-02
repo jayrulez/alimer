@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
+#include "Diagnostics/Log.h"
 #include <EASTL/vector.h>
 
 #if defined(__APPLE__)

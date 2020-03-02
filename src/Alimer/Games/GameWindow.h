@@ -50,6 +50,17 @@ namespace Alimer
 
         virtual bool ShouldClose() const = 0;
 
+        /// Set the window title.
+        void SetTitle(const eastl::string& newTitle);
+
+        /// Return the window title.
+        const eastl::string& GetTitle() const { return title; }
+
+        virtual bool IsMinimized() const = 0;
+
+    private:
+        virtual void BackendSetTitle() {};
+
     protected:
         eastl::string title;
         uint32_t width;
