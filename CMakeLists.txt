@@ -36,9 +36,7 @@ if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable C# editor" FORCE)
 else ()
     option(ALIMER_BUILD_TOOLS "Build tools" ON)
-    if (MSVC)
-        option(ALIMER_BUILD_EDITOR "Build C# Editor" ON)
-    endif ()
+    option(ALIMER_BUILD_EDITOR "Build Editor" ON)
 endif ()
 
 if (WIN32)
@@ -179,7 +177,7 @@ endif ()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
-    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Alimer.Studio")
+    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Editor")
 endif()
 
 # Install files
