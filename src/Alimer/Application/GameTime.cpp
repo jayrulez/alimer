@@ -20,20 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "Application/AppContext.h"
-#include "Application/Application.h"
+#include "Application/GameTime.h"
 
 namespace Alimer
 {
-    AppContext::AppContext(Application* app, bool blockingRun)
-        : _app(app)
-        , _blockingRun(blockingRun)
+    GameTime::GameTime()
     {
 
-    }
-
-    void AppContext::Initialize()
-    {
-        _app->InitBeforeRun();
     }
 }

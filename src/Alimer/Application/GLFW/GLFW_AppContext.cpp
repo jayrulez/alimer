@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "GLFW_AppContext.h"
 #include "GLFW_Window.h"
-#include "Application/Application.h"
+#include "Application/Game.h"
 #include "Core/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -33,17 +32,7 @@ namespace Alimer
         ALIMER_LOGERROR(description);
     }
 
-    GLFW_AppContext::GLFW_AppContext(Application* app)
-        : AppContext(app, true)
-    {
-    }
-
-    GLFW_AppContext::~GLFW_AppContext()
-    {
-        glfwTerminate();
-    }
-
-    void GLFW_AppContext::Run()
+    void Game::PlatformRun()
     {
         glfwSetErrorCallback(OnGlfwError);
 
@@ -57,19 +46,18 @@ namespace Alimer
         }
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        mainWindow.reset(new GLFW_Window(config.windowTitle, config.windowWidth, config.windowHeight, WindowStyle::Default));
 
-        uint32_t width, height;
-        _app->GetDefaultWindowSize(&width, &height);
-        _mainWindow.reset(new GLFW_Window("Alimer", width, height, WindowStyle::Default));
-
-        Initialize();
+        InitBeforeRun();
 
         // Main message loop
-        while (!_mainWindow->ShouldClose() && !exitRequested)
+        while (!mainWindow->ShouldClose() && !exiting)
         {
             // Check for window messages to process.
             glfwPollEvents();
-            _app->Tick();
+            Tick();
         }
+
+        glfwTerminate();
     }
 }

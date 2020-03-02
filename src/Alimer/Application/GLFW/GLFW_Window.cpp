@@ -21,7 +21,6 @@
 //
 
 #include "GLFW_Window.h"
-#include "Application/Application.h"
 #include "Core/Platform.h"
 #include "Core/Log.h"
 #define GLFW_INCLUDE_NONE
@@ -30,7 +29,7 @@
 namespace Alimer
 {
     GLFW_Window::GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : Window(newTitle, newWidth, newHeight, style)
+        : GameWindow(newTitle, newWidth, newHeight, style)
     {
         GLFWmonitor* monitor = nullptr;
         if (fullscreen)

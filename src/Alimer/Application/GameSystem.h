@@ -22,14 +22,22 @@
 
 #pragma once
 
-#include "Application/GLFW/GLFW_AppContext.h"
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    class WindowsAppContext final : public GLFW_AppContext
+    class ALIMER_API GameSystem : public Object
     {
+        friend class AppContext;
+
+        ALIMER_OBJECT(GameSystem, Object);
+
     public:
-        WindowsAppContext(Application* app);
-        ~WindowsAppContext() override;
+        GameSystem();
+
+        /// Destructor.
+        virtual ~GameSystem() = default;
+
+        virtual void Initialize() {}
     };
 }

@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Window.h"
+#include "Application/GameWindow.h"
 
 namespace Alimer
 {
-    Window::Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
+    GameWindow::GameWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
         : title(newTitle)
         , width(newWidth)
         , height(newHeight)

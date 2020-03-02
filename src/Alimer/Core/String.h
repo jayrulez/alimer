@@ -22,16 +22,14 @@
 
 #pragma once
 
-#include "Application/AppContext.h"
+#include "Core/Preprocessor.h"
+#include <EASTL/string.h>
 
 namespace Alimer
 {
-    class GLFW_AppContext : public AppContext
-    {
-    public:
-        GLFW_AppContext(Application* app);
-        ~GLFW_AppContext() override;
-
-        void Run() override;
-    };
+    ALIMER_API extern const eastl::string EMPTY_STRING;
+#if defined(_WIN32)
+    ALIMER_API eastl::string ToUtf8(const eastl::wstring& wstr);
+    ALIMER_API eastl::wstring ToUtf16(const eastl::string& str);
+#endif
 }

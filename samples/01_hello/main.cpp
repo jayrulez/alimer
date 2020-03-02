@@ -20,27 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Application/Game.h"
 
 namespace Alimer
 {
-    class MyApp : public Application
+    class MyGame : public Game
     {
-        ALIMER_OBJECT(MyApp, Application);
+        ALIMER_OBJECT(MyGame, Game);
     public:
-        MyApp(const Configuration& config)
-            : Application(config)
+        MyGame(const Configuration& config)
+            : Game(config)
         {
 
         }
     };
 
-    Application* ApplicationCreate(const eastl::vector<eastl::string>& args)
+    Game* GameCreate(const eastl::vector<eastl::string>& args)
     {
-        ApplicationDummy();
+        GameDummy();
 
         Alimer::Configuration config;
         config.windowTitle = "Sample 01 - Hello";
-        return new MyApp(config);
+        return new MyGame(config);
     }
 }

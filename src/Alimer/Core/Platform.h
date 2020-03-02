@@ -89,6 +89,9 @@ namespace Alimer
         /// Return previously parsed arguments.
         static const eastl::vector<eastl::string>& GetArguments();
 
+        /// Opens console window.
+        static void OpenConsole();
+
     private:
         static eastl::vector<eastl::string> arguments;
     };

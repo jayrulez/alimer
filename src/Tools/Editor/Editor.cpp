@@ -25,7 +25,7 @@
 namespace Alimer
 {
     Editor::Editor(const Configuration& config)
-        : Application(config)
+        : Game(config)
     {
 
     }
@@ -35,9 +35,9 @@ namespace Alimer
 
     }
 
-    Application* ApplicationCreate(const eastl::vector<eastl::string>& args)
+    Game* GameCreate(const eastl::vector<eastl::string>& args)
     {
-        ApplicationDummy();
+        GameDummy();
 
         Alimer::Configuration config;
         config.windowTitle = "Alimer Studio";

@@ -20,24 +20,28 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#if !defined(ALIMER_EXPORTS)
 
+#include "Application/Game.h"
+#include "Core/Platform.h"
 
-#define NOMINMAX
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+    #include <shellapi.h>
+#endif
 
-#include <EASTL/string.h>
+using namespace eastl;
 
 namespace Alimer
 {
-    static inline eastl::string ToUtf8(const eastl::wstring& wstr)
+    // Make sure this is linked in.
+    void GameDummy()
+    {
+    }
+
+#ifdef _WIN32
+    static inline string ToUtf8(const wstring& wstr)
     {
         if (wstr.empty())
         {
@@ -52,19 +56,39 @@ namespace Alimer
 
         return str;
     }
-
-    static inline eastl::wstring ToUtf16(const eastl::string& str)
-    {
-        if (str.empty())
-        {
-            return {};
-        }
-
-        auto input_str_length = static_cast<int>(str.size());
-        auto wstr_len = MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, nullptr, 0);
-
-        eastl::wstring wstr(wstr_len, 0);
-        MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, &wstr[0], wstr_len);
-        return wstr;
-    }
+#endif
 }
+
+#ifdef _WIN32
+int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+#else
+int main(int argc, char* argv[])
+#endif
+{
+#ifdef _WIN32
+    ALIMER_UNUSED(hInstance);
+    ALIMER_UNUSED(hPrevInstance);
+    ALIMER_UNUSED(lpCmdLine);
+    ALIMER_UNUSED(nCmdShow);
+
+    LPWSTR* argv;
+    int     argc;
+    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    // Ignore the first argument containing the application full path
+    vector<wstring> arg_strings(argv + 1, argv + argc);
+    vector<string>  args;
+
+    for (auto& arg : arg_strings)
+    {
+        args.push_back(Alimer::ToUtf8(arg));
+    }
+
+    Alimer::Platform::SetArguments(args);
+#endif
+
+    auto app = unique_ptr<Alimer::Game>(Alimer::GameCreate(args));
+    app->Run();
+    return EXIT_SUCCESS;
+}
+
+#endif /* !defined(ALIMER_EXPORTS) */

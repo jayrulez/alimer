@@ -23,8 +23,10 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Application/Window.h"
+#include "Application/GameWindow.h"
+#include "Application/GameSystem.h"
 #include "Graphics/GraphicsDevice.h"
+#include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 
 namespace Alimer
@@ -39,48 +41,50 @@ namespace Alimer
 
     class AppContext;
 
-    class ALIMER_API Application : public Object
+    class ALIMER_API Game : public Object
     {
-        friend class AppContext;
-
-        ALIMER_OBJECT(Application, Object);
+        ALIMER_OBJECT(Game, Object);
 
     public:
-        Application(const Configuration& config);
-        Application(AppContext* context, const Configuration& config);
+        Game(const Configuration& config_);
 
         /// Destructor.
-        virtual ~Application();
+        virtual ~Game();
 
         /// Run main application loop and setup all required systems.
-        void Run();
+        int Run();
 
         /// Tick one frame.
         void Tick();
 
-        /// Get the default window size.
-        virtual void GetDefaultWindowSize(uint32_t *width, uint32_t* height) const;
+        /// Get the main (primary window)
+        GameWindow* GetMainWindow() const { return mainWindow.get(); }
 
-        Window* GetMainWindow() const;
+    protected:
+        /// Setup before modules initialization. 
+        virtual void Setup() {}
+
+        /// Setup after window and graphics setup, by default initializes all GameSystems.
+        virtual void Initialize();
 
     private:
         /// Called by AppContext
         void InitBeforeRun();
+        void PlatformRun();
 
     protected:
-        Configuration _config;
-        bool _running = false;
-        bool _exiting = false;
+        int exitCode = 0;
+        Configuration config;
+        bool running = false;
+        bool exiting = false;
+        eastl::unique_ptr<GameWindow> mainWindow;
+        eastl::vector<GameSystem*> gameSystems;
         GraphicsDevice* graphicsDevice = nullptr;
-
-    private:
-        AppContext* _context;
-        bool _ownContext;
     };
 
-    extern Application* ApplicationCreate(const eastl::vector<eastl::string>& args);
+    extern Game* GameCreate(const eastl::vector<eastl::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.
-    ALIMER_API void ApplicationDummy();
+    ALIMER_API void GameDummy();
 }

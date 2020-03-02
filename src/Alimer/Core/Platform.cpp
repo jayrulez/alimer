@@ -133,4 +133,16 @@ namespace Alimer
     {
         return arguments;
     }
+
+    void Platform::OpenConsole()
+    {
+#if defined(_WIN32)
+        if (AllocConsole()) {
+            FILE* fp;
+            freopen_s(&fp, "conin$", "r", stdin);
+            freopen_s(&fp, "conout$", "w", stdout);
+            freopen_s(&fp, "conout$", "w", stderr);
+        }
+#endif
+    }
 }

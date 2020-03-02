@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
-#include "Application/AppContext.h"
+#include "Application/Game.h"
 #include "Core/Log.h"
 
 /* Needed by EASTL. */
@@ -39,70 +38,83 @@ ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentO
 
 namespace Alimer
 {
-    Application::Application(const Configuration& config)
-        : Application(nullptr, config)
+    Game::Game(const Configuration& config_)
+        : config(config_)
     {
 
     }
 
-    Application::Application(AppContext* context, const Configuration& config)
-        : _config(config)
-        , _ownContext(false)
-    {
-        _context = context;
-        if (!_context) {
-            _context = AppContext::CreateDefault(this);
-            _ownContext = true;
-        }
-    }
-
-    Application::~Application()
+    Game::~Game()
     {
         SafeDelete(graphicsDevice);
 
-        if (_ownContext)
+        for(auto gameSystem : gameSystems)
         {
-            SafeDelete(_context);
+            SafeDelete(gameSystem);
         }
+
+        gameSystems.clear();
     }
 
-    void Application::InitBeforeRun()
+    void Game::InitBeforeRun()
     {
         GraphicsDeviceDescriptor deviceDesc = {};
         graphicsDevice = GraphicsDevice::Create(&deviceDesc);
+
+        Initialize();
+        if (exitCode || exiting)
+        {
+            //Stop();
+            return;
+        }
     }
 
-    void Application::Run()
+    void Game::Initialize()
     {
-        if (_running) {
+        for (auto gameSystem : gameSystems)
+        {
+            gameSystem->Initialize();
+        }
+    }
+
+    int Game::Run()
+    {
+        if (running) {
             ALIMER_LOGERROR("Application is already running");
-            return;
+            return EXIT_FAILURE;
         }
 
-        if (_exiting) {
+        if (exiting) {
             ALIMER_LOGERROR("Application is exiting");
-            return;
+            return EXIT_FAILURE;
         }
 
-        _context->Run();
+#if !defined(__GNUC__) && _HAS_EXCEPTIONS
+        try
+#endif
+        {
+            Setup();
+
+            if (exitCode)
+                return exitCode;
+
+            running = true;
+            exiting = false;
+            PlatformRun();
+        }
+#if !defined(__GNUC__) && _HAS_EXCEPTIONS
+        catch (std::bad_alloc&)
+        {
+            //ErrorDialog(GetTypeName(), "An out-of-memory error occurred. The application will now exit.");
+            return EXIT_FAILURE;
+        }
+#endif
+
+        return exitCode;
     }
 
-    void Application::Tick()
+    void Game::Tick()
     {
 
-    }
-
-    void Application::GetDefaultWindowSize(uint32_t* width, uint32_t* height) const
-    {
-        if (width)
-            *width = 1280;
-
-        if (height)
-            *height = 720;
-    }
-
-    Window* Application::GetMainWindow() const
-    {
-        return _context->GetMainWindow();
     }
 }

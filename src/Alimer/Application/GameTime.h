@@ -23,37 +23,16 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/unique_ptr.h>
 
 namespace Alimer
 {
-    class Application;
-    class Window;
-
-    class ALIMER_API AppContext
+    class ALIMER_API GameTime final
     {
-    protected:
-        AppContext(Application* app, bool blockingRun);
 
     public:
-        /// Destructor.
-        virtual ~AppContext() = default;
+        GameTime();
+         ~GameTime() = default;
 
-        /// Create default platform implementation.
-        static AppContext* CreateDefault(Application* app);
-
-        /// Run main loop.
-        virtual void Run() = 0;
-
-        bool IsBlockingRun() const { _blockingRun; }
-        inline Window* GetMainWindow() const { return _mainWindow.get(); }
-
-    protected:
-        void Initialize();
-
-        Application* _app;
-        eastl::unique_ptr<Window> _mainWindow;
-        bool _blockingRun;
-        bool exitRequested = false;
+    private:
     };
 }
