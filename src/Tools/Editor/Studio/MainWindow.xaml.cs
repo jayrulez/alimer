@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System.Windows;
 
 namespace Alimer.Studio
@@ -10,6 +11,13 @@ namespace Alimer.Studio
         public MainWindow()
         {
             InitializeComponent();
+
+            Title += JsonConvert.SerializeObject(new MyObject { Name = "CIAO" });
+        }
+
+        class MyObject
+        {
+            public string Name { get; set; }
         }
     }
 }
