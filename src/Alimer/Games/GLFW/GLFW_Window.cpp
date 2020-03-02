@@ -23,8 +23,16 @@
 #include "GLFW_Window.h"
 #include "Core/Platform.h"
 #include "Diagnostics/Log.h"
+#if defined(_WIN32)
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+#   define GLFW_EXPOSE_NATIVE_X11
+#elif defined(__APPLE__)
+#   define GLFW_EXPOSE_NATIVE_COCOA
+#endif
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 namespace Alimer
 {
@@ -84,5 +92,20 @@ namespace Alimer
     bool GLFW_Window::IsMinimized() const
     {
         return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
+    }
+
+    void* GLFW_Window::GetNativeHandle() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return glfwGetWin32Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return glfwGetCocoaWindow(window);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandWindow(window);
+#else
+        return nullptr;
+#endif
     }
 }

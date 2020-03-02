@@ -21,6 +21,7 @@
 //
 
 #include "Games/GameWindow.h"
+#include "Graphics/GraphicsDevice.h"
 
 using namespace eastl;
 
@@ -41,5 +42,14 @@ namespace Alimer
     {
         title = newTitle;
         BackendSetTitle();
+    }
+
+    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
+    {
+        device = newDevice;
+        SwapChainDescriptor descriptor = {};
+        descriptor.width = width;
+        descriptor.height = height;
+        device->CreateSwapChain(GetNativeHandle(), &descriptor);
     }
 }

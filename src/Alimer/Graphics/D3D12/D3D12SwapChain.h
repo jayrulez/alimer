@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,32 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        static bool IsAvailable();
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* nativeHandle, const SwapChainDescriptor* descriptor);
+        ~D3D12SwapChain() override;
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+        void Destroy();
 
-        bool BeginFrame() override;
-        void EndFrame() override;
+    private:
+        void BackendResize() override;
+        bool BackendPresent() override;
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+        D3D12GraphicsDevice* device;
+        UINT backBufferCount;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND hwnd;
+#else
+        IUnknown* window;
+#endif
+
+        ComPtr<IDXGISwapChain3> handle;
     };
 }

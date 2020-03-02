@@ -37,6 +37,7 @@ namespace Alimer
         void BackendSetTitle() override;
         bool ShouldClose() const override;
         bool IsMinimized() const override;
+        void* GetNativeHandle() const override;
 
     private:
         GLFWwindow* window = nullptr;

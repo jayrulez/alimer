@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,32 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
+#include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
+        : width(descriptor->width)
+        , height(descriptor->height)
+        , vsync(descriptor->vsync)
+        , colorFormat(descriptor->colorFormat)
+        , depthStencilFormat(descriptor->depthStencilFormat)
     {
-    public:
-        static bool IsAvailable();
+    }
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        if (width == newWidth && height == newHeight)
+            return;
 
-        bool BeginFrame() override;
-        void EndFrame() override;
+        width = newWidth;
+        height = newHeight;
+        BackendResize();
+    }
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
-    };
+    bool SwapChain::Present()
+    {
+        return BackendPresent();
+    }
 }

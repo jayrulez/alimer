@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,23 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
+#include "Diagnostics/Assert.h"
+#include "Graphics/GraphicsResource.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-    public:
-        static bool IsAvailable();
+        ALIMER_ASSERT(device);
+        //device->AddGPUResource(this);
+    }
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
-
-        bool BeginFrame() override;
-        void EndFrame() override;
-
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
-    };
+    GraphicsResource::~GraphicsResource()
+    {
+        ALIMER_ASSERT(device);
+        //device->RemoveGPUResource(this);
+    }
 }

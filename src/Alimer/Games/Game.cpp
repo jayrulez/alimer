@@ -62,6 +62,7 @@ namespace Alimer
     {
         GraphicsDeviceDescriptor deviceDesc = {};
         graphicsDevice = GraphicsDevice::Create(&deviceDesc);
+        mainWindow->SetGraphicsDevice(graphicsDevice);
 
         Initialize();
         if (exitCode || exiting)

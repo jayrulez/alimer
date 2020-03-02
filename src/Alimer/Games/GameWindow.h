@@ -38,6 +38,8 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
+    class GraphicsDevice;
+
     /// Defines an OS Game Window.
     class ALIMER_API GameWindow
     {
@@ -56,7 +58,12 @@ namespace Alimer
         /// Return the window title.
         const eastl::string& GetTitle() const { return title; }
 
+        /// Return whether the window is minimized.
         virtual bool IsMinimized() const = 0;
+
+        virtual void* GetNativeHandle() const = 0;
+
+        void SetGraphicsDevice(GraphicsDevice* newDevice);
 
     private:
         virtual void BackendSetTitle() {};
@@ -72,6 +79,8 @@ namespace Alimer
         bool visible = true;
 
     private:
+        GraphicsDevice* device = nullptr;
+
         ALIMER_DISABLE_COPY_MOVE(GameWindow);
     };
 }

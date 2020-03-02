@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,17 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsBuffer.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    class D3D12GraphicsBuffer final : public GraphicsBuffer
     {
     public:
-        static bool IsAvailable();
+        D3D12GraphicsBuffer(D3D12GraphicsDevice* device, const BufferDescriptor* descriptor);
+        ~D3D12GraphicsBuffer() override;
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
-
-        bool BeginFrame() override;
-        void EndFrame() override;
-
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+        void Destroy() override;
     };
 }

@@ -88,6 +88,7 @@ namespace Alimer
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
 
+    class D3D12GraphicsDevice;
 
 #if ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);

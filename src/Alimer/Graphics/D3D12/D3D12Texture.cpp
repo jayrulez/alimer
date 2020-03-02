@@ -20,26 +20,24 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/GraphicsDevice.h"
+#include "D3D12Texture.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor)
+        : Texture(device, descriptor)
     {
-    public:
-        static bool IsAvailable();
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+    }
 
-        bool BeginFrame() override;
-        void EndFrame() override;
+    D3D12Texture::~D3D12Texture()
+    {
+        Destroy();
+    }
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
-    };
+    void D3D12Texture::Destroy()
+    {
+
+    }
 }

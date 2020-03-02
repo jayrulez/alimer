@@ -21,6 +21,7 @@
 //
 
 #include "D3D12GraphicsDevice.h"
+#include "D3D12SwapChain.h"
 
 namespace Alimer
 {
@@ -253,6 +254,26 @@ namespace Alimer
 
         ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
+        BOOL allowTearing = FALSE;
+        ComPtr<IDXGIFactory5> factory5;
+        HRESULT hr = dxgiFactory.As(&factory5);
+        if (SUCCEEDED(hr))
+        {
+            hr = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+        }
+
+        if (FAILED(hr) || !allowTearing)
+        {
+            isTearingSupported = false;
+#ifdef _DEBUG
+            OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
+#endif
+        }
+        else
+        {
+            isTearingSupported = true;
+        }
+
         // Get adapter and create device.
         {
             ComPtr<IDXGIAdapter1> adapter;
@@ -306,5 +327,11 @@ namespace Alimer
     void D3D12GraphicsDevice::EndFrame()
     {
 
+    }
+
+
+    SwapChain* D3D12GraphicsDevice::CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor)
+    {
+        return new D3D12SwapChain(this, nativeHandle, descriptor);
     }
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,32 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
+#include "Graphics/Texture.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    static GraphicsResource::Type GetResourceType(const TextureDescriptor* desc)
     {
-    public:
-        static bool IsAvailable();
+        if (desc->type == TextureType::Type1D) {
+            return GraphicsResource::Type::Texture1D;
+        }
+        else if (desc->type == TextureType::Type2D) {
+            return GraphicsResource::Type::Texture2D;
+        }
+        else if (desc->type == TextureType::Type3D) {
+            return GraphicsResource::Type::Texture3D;
+        }
+        else if (desc->type == TextureType::TypeCube) {
+            return GraphicsResource::Type::TextureCube;
+        }
 
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+        return GraphicsResource::Type::Buffer;
+    }
 
-        bool BeginFrame() override;
-        void EndFrame() override;
+    Texture::Texture(GraphicsDevice* device, const TextureDescriptor* descriptor)
+        : GraphicsResource(device, GetResourceType(descriptor))
+    {
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
-    };
+    }
 }

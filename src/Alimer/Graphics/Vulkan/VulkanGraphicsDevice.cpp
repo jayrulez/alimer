@@ -49,4 +49,9 @@ namespace Alimer
     {
 
     }
+
+    SwapChain* VulkanGraphicsDevice::CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor)
+    {
+        return nullptr;
+    }
 }

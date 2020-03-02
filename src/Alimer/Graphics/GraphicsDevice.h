@@ -27,6 +27,10 @@
 
 namespace Alimer
 {
+    class Texture;
+    class SwapChain;
+    class GraphicsBuffer;
+
     class ALIMER_API GraphicsDevice
     {
     protected:
@@ -42,6 +46,11 @@ namespace Alimer
 
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
+
+        SwapChain* CreateSwapChain(void* nativeHandle, const SwapChainDescriptor* descriptor);
+
+    private:
+        virtual SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) = 0;
 
     protected:
         GraphicsDeviceFlags flags;

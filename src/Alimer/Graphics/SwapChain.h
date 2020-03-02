@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,32 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Types.h"
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    class SwapChain : public Object
     {
-    public:
-        static bool IsAvailable();
+        ALIMER_OBJECT(SwapChain, Object);
 
+    protected:
         /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+        SwapChain(const SwapChainDescriptor* descriptor);
 
-        bool BeginFrame() override;
-        void EndFrame() override;
+    public:
+        void Resize(uint32_t newWidth, uint32_t newHeight);
+        bool Present();
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+    private:
+        virtual void BackendResize() = 0;
+        virtual bool BackendPresent() = 0;
+
+    protected:
+        uint32_t width;
+        uint32_t height;
+        bool vsync = true;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
+        PixelFormat depthStencilFormat = PixelFormat::Undefined;
     };
-}
+} 

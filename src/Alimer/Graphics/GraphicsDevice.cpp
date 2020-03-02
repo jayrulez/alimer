@@ -117,4 +117,12 @@ namespace Alimer
 
         return device;
     }
+
+    SwapChain* GraphicsDevice::CreateSwapChain(void* nativeHandle, const SwapChainDescriptor* descriptor)
+    {
+        ALIMER_ASSERT(nativeHandle);
+        ALIMER_ASSERT(descriptor);
+
+        return CreateSwapChainCore(nativeHandle, descriptor);
+    }
 }
