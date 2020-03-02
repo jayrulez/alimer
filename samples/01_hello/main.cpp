@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Game.h"
+#include "Games/Game.h"
 
 namespace Alimer
 {

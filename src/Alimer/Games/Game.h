@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Application/GameWindow.h"
-#include "Application/GameSystem.h"
+#include "Games/GameWindow.h"
+#include "Games/GameSystem.h"
 #include "Graphics/GraphicsDevice.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
@@ -39,7 +39,7 @@ namespace Alimer
         uint32_t windowHeight = 720;
     };
 
-    class AppContext;
+    class InputManager;
 
     class ALIMER_API Game : public Object
     {
@@ -60,6 +60,8 @@ namespace Alimer
         /// Get the main (primary window)
         GameWindow* GetMainWindow() const { return mainWindow.get(); }
 
+        inline InputManager* GetInput() const noexcept { return input; }
+
     protected:
         /// Setup before modules initialization. 
         virtual void Setup() {}
@@ -68,7 +70,7 @@ namespace Alimer
         virtual void Initialize();
 
     private:
-        /// Called by AppContext
+        /// Called by platform backend.
         void InitBeforeRun();
         void PlatformRun();
 
@@ -80,6 +82,7 @@ namespace Alimer
         eastl::unique_ptr<GameWindow> mainWindow;
         eastl::vector<GameSystem*> gameSystems;
         GraphicsDevice* graphicsDevice = nullptr;
+        InputManager* input;
     };
 
     extern Game* GameCreate(const eastl::vector<eastl::string>& args);

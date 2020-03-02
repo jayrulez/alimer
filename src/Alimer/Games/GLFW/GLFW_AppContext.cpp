@@ -20,18 +20,44 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameWindow.h"
+#include "GLFW_Window.h"
+#include "Games/Game.h"
+#include "Core/Log.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
-    {
+    static void OnGlfwError(int code, const char* description) {
+        ALIMER_LOGERROR(description);
+    }
 
+    void Game::PlatformRun()
+    {
+        glfwSetErrorCallback(OnGlfwError);
+
+#ifdef __APPLE__
+        glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+#endif
+
+        if (!glfwInit()) {
+            ALIMER_LOGERROR("Failed to initialize GLFW");
+            return;
+        }
+
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        mainWindow.reset(new GLFW_Window(config.windowTitle, config.windowWidth, config.windowHeight, WindowStyle::Default));
+
+        InitBeforeRun();
+
+        // Main message loop
+        while (!mainWindow->ShouldClose() && !exiting)
+        {
+            // Check for window messages to process.
+            glfwPollEvents();
+            Tick();
+        }
+
+        glfwTerminate();
     }
 }

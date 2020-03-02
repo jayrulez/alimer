@@ -108,7 +108,7 @@ namespace Alimer
         eastl::wstring errorString = GetDXErrorString(hr);
 
         eastl::string message;
-        for (uint64_t i = 0; i < errorString.length(); ++i) {
+        for (eastl_size_t i = 0; i < errorString.length(); ++i) {
             message.append(1, static_cast<char>(errorString[i]));
         }
 

@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Game.h"
+#include "Games/Game.h"
+#include "Input/InputManager.h"
 #include "Core/Log.h"
 
 /* Needed by EASTL. */
@@ -40,8 +41,9 @@ namespace Alimer
 {
     Game::Game(const Configuration& config_)
         : config(config_)
+        , input(new InputManager())
     {
-
+        gameSystems.push_back(input);
     }
 
     Game::~Game()

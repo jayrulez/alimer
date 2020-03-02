@@ -20,44 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "GLFW_Window.h"
-#include "Application/Game.h"
-#include "Core/Log.h"
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#pragma once
+
+#include "Games/GameSystem.h"
 
 namespace Alimer
 {
-    static void OnGlfwError(int code, const char* description) {
-        ALIMER_LOGERROR(description);
-    }
-
-    void Game::PlatformRun()
+    class ALIMER_API InputManager final : public GameSystem
     {
-        glfwSetErrorCallback(OnGlfwError);
+        ALIMER_OBJECT(InputManager, GameSystem);
+    public:
+        /// Constructor.
+        InputManager();
+        /// Destructor.
+        ~InputManager();
 
-#ifdef __APPLE__
-        glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
-#endif
-
-        if (!glfwInit()) {
-            ALIMER_LOGERROR("Failed to initialize GLFW");
-            return;
-        }
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        mainWindow.reset(new GLFW_Window(config.windowTitle, config.windowWidth, config.windowHeight, WindowStyle::Default));
-
-        InitBeforeRun();
-
-        // Main message loop
-        while (!mainWindow->ShouldClose() && !exiting)
-        {
-            // Check for window messages to process.
-            glfwPollEvents();
-            Tick();
-        }
-
-        glfwTerminate();
-    }
+    private:
+    };
 }

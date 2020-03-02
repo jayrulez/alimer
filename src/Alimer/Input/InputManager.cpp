@@ -20,23 +20,17 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Application/GameWindow.h"
-
-struct GLFWwindow;
+#include "Input/InputManager.h"
 
 namespace Alimer
 {
-    class GLFW_Window : public GameWindow
+    InputManager::InputManager()
     {
-    public:
-        GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
-        ~GLFW_Window() override;
 
-        bool ShouldClose() const override;
+    }
 
-    private:
-        GLFWwindow* window = nullptr;
-    };
+    InputManager::~InputManager()
+    {
+
+    }
 }

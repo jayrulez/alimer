@@ -22,18 +22,21 @@
 
 #pragma once
 
-#include "Games/Game.h"
+#include "Games/GameWindow.h"
+
+struct GLFWwindow;
 
 namespace Alimer
 {
-    class Editor final : public Game
+    class GLFW_Window : public GameWindow
     {
-        ALIMER_OBJECT(Editor, Game);
     public:
-        /// Constructor.
-        Editor(const Configuration& config);
+        GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
+        ~GLFW_Window() override;
 
-        /// Destructor.
-        ~Editor();
+        bool ShouldClose() const override;
+
+    private:
+        GLFWwindow* window = nullptr;
     };
 }

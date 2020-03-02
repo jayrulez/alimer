@@ -20,24 +20,12 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Object.h"
+#include "Games/GameTime.h"
 
 namespace Alimer
 {
-    class ALIMER_API GameSystem : public Object
+    GameTime::GameTime()
     {
-        friend class AppContext;
 
-        ALIMER_OBJECT(GameSystem, Object);
-
-    public:
-        GameSystem();
-
-        /// Destructor.
-        virtual ~GameSystem() = default;
-
-        virtual void Initialize() {}
-    };
+    }
 }

@@ -20,20 +20,18 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Games/Game.h"
+#include "Games/GameWindow.h"
 
 namespace Alimer
 {
-    class Editor final : public Game
+    GameWindow::GameWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
+        : title(newTitle)
+        , width(newWidth)
+        , height(newHeight)
+        , resizable(any(style& WindowStyle::Resizable))
+        , fullscreen(any(style& WindowStyle::Fullscreen))
+        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
     {
-        ALIMER_OBJECT(Editor, Game);
-    public:
-        /// Constructor.
-        Editor(const Configuration& config);
 
-        /// Destructor.
-        ~Editor();
-    };
+    }
 }

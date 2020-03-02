@@ -20,12 +20,22 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameSystem.h"
+#pragma once
+
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    GameSystem::GameSystem()
+    class ALIMER_API GameSystem : public Object
     {
+        ALIMER_OBJECT(GameSystem, Object);
 
-    }
+    public:
+        GameSystem();
+
+        /// Destructor.
+        virtual ~GameSystem() = default;
+
+        virtual void Initialize() {}
+    };
 }

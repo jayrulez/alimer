@@ -36,14 +36,15 @@ endmacro()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 define_engine_source_files(
     Core
-    Application
     Graphics
+    Input
+    Games
 )
 
-# Application sources per backend/platform
+# Sources per backend/platform
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(
-        Application/GLFW
+        Games/GLFW
     )
 endif ()
 

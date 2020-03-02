@@ -22,7 +22,7 @@
 
 #if !defined(ALIMER_EXPORTS)
 
-#include "Application/Game.h"
+#include "Games/Game.h"
 #include "Core/Platform.h"
 
 #ifdef _WIN32

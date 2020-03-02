@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
+#include "Games/GameSystem.h"
 
 namespace Alimer
 {
-    GameTime::GameTime()
+    GameSystem::GameSystem()
     {
 
     }
