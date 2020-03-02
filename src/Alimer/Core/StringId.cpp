@@ -20,19 +20,50 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-#include "Application/Application.h"
+#include "Core/StringId.h"
+#include "Core/Hash.h"
+
+using namespace eastl;
 
 namespace Alimer
 {
-    class Editor final : public Application
-    {
-        ALIMER_OBJECT(Editor, Application);
-    public:
-        /// Constructor.
-        Editor(const Configuration& config);
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
+    const StringId32 StringId32::Zero;
+    const StringId64 StringId64::Zero;
 
-        /// Destructor.
-        ~Editor();
-    };
+    /* StringId32 */
+    StringId32::StringId32(const char* str) noexcept
+    {
+        value = murmur32(str, (uint32_t)strlen(str), 0);
+    }
+
+    StringId32::StringId32(const eastl::string& str) noexcept
+    {
+        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
+    }
+
+    string StringId32::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%08X", value);
+        return string(tempBuffer);
+    }
+
+    /* StringId64 */
+    StringId64::StringId64(const char* str) noexcept
+    {
+        value = murmur64(str, (uint64_t)strlen(str), 0);
+    }
+
+    StringId64::StringId64(const eastl::string& str) noexcept
+    {
+        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
+    }
+
+    string StringId64::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%16" PRIx64, value);
+        return string(tempBuffer);
+    }
 }

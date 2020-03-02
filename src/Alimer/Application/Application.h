@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Object.h"
 #include "Application/Window.h"
 #include "Graphics/GraphicsDevice.h"
 #include <EASTL/vector.h>
@@ -38,9 +39,12 @@ namespace Alimer
 
     class AppContext;
 
-    class ALIMER_API Application
+    class ALIMER_API Application : public Object
     {
         friend class AppContext;
+
+        ALIMER_OBJECT(Application, Object);
+
     public:
         Application(const Configuration& config);
         Application(AppContext* context, const Configuration& config);

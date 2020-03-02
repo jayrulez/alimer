@@ -21,18 +21,11 @@
 //
 
 #pragma once
-#include "Application/Application.h"
+
+#include "Core/Preprocessor.h"
 
 namespace Alimer
 {
-    class Editor final : public Application
-    {
-        ALIMER_OBJECT(Editor, Application);
-    public:
-        /// Constructor.
-        Editor(const Configuration& config);
-
-        /// Destructor.
-        ~Editor();
-    };
+    ALIMER_API uint32_t murmur32(const void* key, uint32_t len, uint32_t seed);
+    ALIMER_API uint64_t murmur64(const void* key, uint64_t len, uint64_t seed);
 }

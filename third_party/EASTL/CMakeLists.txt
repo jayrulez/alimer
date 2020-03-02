@@ -21,6 +21,10 @@ add_library(EASTL ${EASTL_SOURCES} doc/EASTL.natvis)
 target_compile_definitions(EASTL PUBLIC  
 	EASTL_OPENSOURCE=1
 	EASTL_RTTI_ENABLED=0
+    EASTL_SIZE_T_32BIT=1
+    EASTDC_THREADING_SUPPORTED=0
+    EA_USE_CPP11_CONCURRENCY=1
+    EASTDC_GLOBALPTR_SUPPORT_ENABLED=0
 )
 
 target_compile_definitions(EASTL PRIVATE 
@@ -29,7 +33,7 @@ target_compile_definitions(EASTL PRIVATE
 
 if (MSVC)
     target_compile_definitions(EASTL PRIVATE -D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
-elseif (UNIX)
+elseif (UNIX OR EMSCRIPTEN)
     target_compile_options(EASTL PUBLIC -Wno-literal-suffix)
 endif ()
 

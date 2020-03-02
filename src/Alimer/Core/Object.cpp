@@ -20,27 +20,57 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    class MyApp : public Application
+    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
+        : type(typeName_)
+        , typeName(typeName_)
+        , baseTypeInfo(baseTypeInfo_)
     {
-        ALIMER_OBJECT(MyApp, Application);
-    public:
-        MyApp(const Configuration& config)
-            : Application(config)
+
+    }
+
+    bool TypeInfo::IsTypeOf(StringId32 type) const
+    {
+        const TypeInfo* current = this;
+        while (current)
         {
+            if (current->GetType() == type)
+                return true;
 
+            current = current->GetBaseTypeInfo();
         }
-    };
 
-    Application* ApplicationCreate(const eastl::vector<eastl::string>& args)
+        return false;
+    }
+
+    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
     {
-        ApplicationDummy();
+        if (typeInfo == nullptr)
+            return false;
 
-        Alimer::Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyApp(config);
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current == typeInfo || current->GetType() == typeInfo->GetType())
+                return true;
+
+            current = current->GetBaseTypeInfo();
+        }
+
+        return false;
+    }
+
+    /* Object */
+    bool Object::IsInstanceOf(StringId32 type) const
+    {
+        return GetTypeInfo()->IsTypeOf(type);
+    }
+
+    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    {
+        return GetTypeInfo()->IsTypeOf(typeInfo);
     }
 }
