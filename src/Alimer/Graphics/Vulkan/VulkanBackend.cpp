@@ -20,32 +20,13 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
+
+#include <volk.h>
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+#undef VMA_IMPLEMENTATION
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
-    {
-    public:
-        static bool IsAvailable();
-
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
-
-        void Destroy();
-        void WaitIdle() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
-
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
-
-    private:
-        VkDevice device = VK_NULL_HANDLE;
-    };
 }

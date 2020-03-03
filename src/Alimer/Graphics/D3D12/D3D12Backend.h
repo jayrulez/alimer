@@ -44,6 +44,7 @@
 #include <wrl/client.h>
 #include <wrl/event.h>
 
+#include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
 #include "Graphics/Types.h"

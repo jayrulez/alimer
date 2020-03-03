@@ -37,7 +37,18 @@ namespace Alimer
 
     VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {
+        WaitIdle();
+        Destroy();
+    }
 
+    void VulkanGraphicsDevice::Destroy()
+    {
+
+    }
+
+    void VulkanGraphicsDevice::WaitIdle()
+    {
+        VK_CHECK(vkDeviceWaitIdle(device));
     }
 
     bool VulkanGraphicsDevice::BeginFrame()

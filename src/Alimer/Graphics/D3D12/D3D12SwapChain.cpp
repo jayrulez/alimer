@@ -129,7 +129,7 @@ namespace Alimer
             swapChainFullscreenDesc.Windowed = TRUE;
 
             ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
-                device->GetD3DGraphicsQueue(),
+                device->GetD3DCommandQueue(CommandQueueType::Graphics),
                 hwnd,
                 &swapChainDesc,
                 &swapChainFullscreenDesc,
@@ -141,7 +141,7 @@ namespace Alimer
             ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 #else
             ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
-                device->GetD3DGraphicsQueue(),
+                device->GetD3DCommandQueue(CommandQueueType::Graphics),
                 window,
                 &swapChainDesc,
                 nullptr,

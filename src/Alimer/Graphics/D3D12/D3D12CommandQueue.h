@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,39 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
-#include "VulkanBackend.h"
+#include "Graphics/GraphicsBuffer.h"
+#include "D3D12Backend.h"
+#include <mutex>
 
 namespace Alimer
 {
-    /// Vulkan graphics backend.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    class D3D12CommandQueue final 
     {
     public:
-        static bool IsAvailable();
-
-        /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanGraphicsDevice() override;
+        D3D12CommandQueue(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
+        ~D3D12CommandQueue();
 
         void Destroy();
-        void WaitIdle() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+        uint64_t IncrementFence(void);
+        bool IsFenceComplete(uint64_t fenceValue);
+        void WaitForFence(uint64_t fenceValue);
+        void WaitForIdle(void) { WaitForFence(IncrementFence()); }
+        ID3D12CommandQueue* GetHandle() { return d3d12CommandQueue; }
+        uint64_t GetNextFenceValue() { return nextFenceValue; }
 
     private:
-        VkDevice device = VK_NULL_HANDLE;
+        D3D12GraphicsDevice* device;
+        CommandQueueType queueType;
+        const D3D12_COMMAND_LIST_TYPE commandListType;
+        ID3D12CommandQueue* d3d12CommandQueue;
+
+        // Lifetime of these objects is managed by the descriptor cache
+        ID3D12Fence* d3d12Fence;
+        uint64_t nextFenceValue;
+        uint64_t lastCompletedFenceValue;
+        HANDLE fenceEventHandle;
+        std::mutex fenceMutex;
+        std::mutex eventMutex;
     };
 }

@@ -41,13 +41,15 @@ namespace Alimer
         Metal
     };
 
-    enum class GPUPowerPreference : uint32_t {
+    enum class GPUPowerPreference : uint32_t
+    {
         DontCare,
         LowPower,
         HighPerformance
     };
 
-    enum class GraphicsDeviceFlags : uint32_t {
+    enum class GraphicsDeviceFlags : uint32_t
+    {
         None = 0x0,
         /// Enable debug runtime.
         DebugRuntime = 0x1,
@@ -57,6 +59,13 @@ namespace Alimer
         RenderDoc = 0x4
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
+
+    enum class CommandQueueType : uint32_t
+    {
+        Graphics,
+        Compute,
+        Copy
+    };
 
     /// Defines the type of Texture
     enum class TextureType : uint32_t

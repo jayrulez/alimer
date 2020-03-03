@@ -21,6 +21,7 @@
 //
 
 #include "D3D12GraphicsDevice.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
 
 namespace Alimer
@@ -105,7 +106,55 @@ namespace Alimer
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
+        WaitIdle();
+        Destroy();
+    }
 
+    void D3D12GraphicsDevice::Destroy()
+    {
+        SafeDelete(graphicsQueue);
+        SafeDelete(computeQueue);
+        SafeDelete(copyQueue);
+
+        // Allocator
+        D3D12MA::Stats stats;
+        allocator->CalculateStats(&stats);
+
+        if (stats.Total.UsedBytes > 0) {
+            ALIMER_LOGERRORF("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
+        }
+
+        SafeRelease(allocator);
+
+#if !defined(NDEBUG)
+        ULONG refCount = d3dDevice->Release();
+        if (refCount > 0)
+        {
+            ALIMER_LOGDEBUGF("Direct3D12: There are %d unreleased references left on the device", refCount);
+
+            ID3D12DebugDevice* debugDevice;
+            if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(&debugDevice))))
+            {
+                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
+                debugDevice->Release();
+            }
+        }
+#else
+        apiData->d3dDevice->Release();
+#endif
+
+        dxgiFactory.Reset();
+
+#ifdef _DEBUG
+        {
+            IDXGIDebug1* dxgiDebug;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
+            {
+                dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug->Release();
+            }
+        }
+#endif
     }
 
     bool D3D12GraphicsDevice::GetAdapter(ComPtr<IDXGIFactory4> factory4, IDXGIAdapter1** ppAdapter)
@@ -274,7 +323,7 @@ namespace Alimer
             isTearingSupported = true;
         }
 
-        // Get adapter and create device.
+        // Get adapter, create device and allocator.
         {
             ComPtr<IDXGIAdapter1> adapter;
             GetAdapter(dxgiFactory, adapter.GetAddressOf());
@@ -283,11 +332,38 @@ namespace Alimer
             ThrowIfFailed(D3D12CreateDevice(
                 adapter.Get(),
                 d3dMinFeatureLevel,
-                IID_PPV_ARGS(d3dDevice.ReleaseAndGetAddressOf())
+                IID_PPV_ARGS(&d3dDevice)
             ));
 
             d3dDevice->SetName(L"AlimerDevice");
             InitCapabilities(adapter.Get());
+
+            // Create memory allocator
+            D3D12MA::ALLOCATOR_DESC desc = {};
+            desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+            desc.pDevice = d3dDevice;
+            desc.pAdapter = adapter.Get();
+
+            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
+
+            switch (allocator->GetD3D12Options().ResourceHeapTier)
+            {
+            case D3D12_RESOURCE_HEAP_TIER_1:
+                ALIMER_LOGDEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
+                break;
+            case D3D12_RESOURCE_HEAP_TIER_2:
+                ALIMER_LOGDEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
+                break;
+            default:
+                break;
+            }
+        }
+
+        // Create command queue's
+        {
+            graphicsQueue = new D3D12CommandQueue(this, CommandQueueType::Graphics);
+            computeQueue = new D3D12CommandQueue(this, CommandQueueType::Compute);
+            copyQueue = new D3D12CommandQueue(this, CommandQueueType::Copy);
         }
     }
 
@@ -318,6 +394,12 @@ namespace Alimer
         }
     }
 
+    void D3D12GraphicsDevice::WaitIdle()
+    {
+        graphicsQueue->WaitForIdle();
+        computeQueue->WaitForIdle();
+        copyQueue->WaitForIdle();
+    }
 
     bool D3D12GraphicsDevice::BeginFrame()
     {
@@ -333,5 +415,31 @@ namespace Alimer
     SwapChain* D3D12GraphicsDevice::CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor)
     {
         return new D3D12SwapChain(this, nativeHandle, descriptor);
+    }
+
+    D3D12CommandQueue* D3D12GraphicsDevice::GetQueue(CommandQueueType queueType) const
+    {
+        switch (queueType)
+        {
+        case CommandQueueType::Compute:
+            return computeQueue;
+        case CommandQueueType::Copy:
+            return copyQueue;
+        default:
+            return graphicsQueue;
+        }
+    }
+
+    ID3D12CommandQueue* D3D12GraphicsDevice::GetD3DCommandQueue(CommandQueueType queueType) const
+    {
+        switch (queueType)
+        {
+        case CommandQueueType::Compute:
+            return computeQueue->GetHandle();
+        case CommandQueueType::Copy:
+            return copyQueue->GetHandle();
+        default:
+            return graphicsQueue->GetHandle();
+        }
     }
 }

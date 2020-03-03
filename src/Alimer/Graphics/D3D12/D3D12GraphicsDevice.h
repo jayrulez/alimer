@@ -22,11 +22,14 @@
 
 #pragma once
 
-#include "D3D12Backend.h"
 #include "Graphics/GraphicsDevice.h"
+#include "D3D12Backend.h"
+#include <D3D12MemAlloc.h>
 
 namespace Alimer
 {
+    class D3D12CommandQueue;
+
     /// Direct3D12 graphics backend.
     class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
@@ -38,16 +41,24 @@ namespace Alimer
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
+        void Destroy();
+        void WaitIdle() override;
         bool BeginFrame() override;
         void EndFrame() override;
 
         SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
 
         IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory.Get(); }
-        ID3D12Device*           GetD3DDevice() const { return d3dDevice.Get(); }
+        ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
-        ID3D12CommandQueue*     GetD3DGraphicsQueue() const { return d3dGraphicsQueue.Get(); }
+
+        D3D12CommandQueue* GetGraphicsQueue(void) { return graphicsQueue; }
+        D3D12CommandQueue* GetComputeQueue(void) { return computeQueue; }
+        D3D12CommandQueue* GetCopyQueue(void) { return copyQueue; }
+
+        D3D12CommandQueue* GetQueue(CommandQueueType queueType = CommandQueueType::Graphics) const;
+        ID3D12CommandQueue* GetD3DCommandQueue(CommandQueueType queueType = CommandQueueType::Graphics) const;
 
     private:
         static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -59,8 +70,12 @@ namespace Alimer
         UINT dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
-        ComPtr<ID3D12Device> d3dDevice;
+        ID3D12Device* d3dDevice = nullptr;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-        ComPtr<ID3D12CommandQueue> d3dGraphicsQueue;
+        D3D12MA::Allocator* allocator = nullptr;
+
+        D3D12CommandQueue* graphicsQueue;
+        D3D12CommandQueue* computeQueue;
+        D3D12CommandQueue* copyQueue;
     };
 }

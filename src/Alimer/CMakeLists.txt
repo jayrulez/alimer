@@ -88,7 +88,14 @@ endif ()
 
 if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(${PROJECT_NAME}
-        #vma
+        volk
+        vma
+    )
+endif ()
+
+if (ALIMER_GRAPHICS_D3D12)
+    target_link_libraries(${PROJECT_NAME}
+        D3D12MemoryAllocator
     )
 endif ()
 
