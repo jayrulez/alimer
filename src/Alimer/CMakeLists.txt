@@ -105,19 +105,10 @@ if (CLANG_CL OR MSVC)
 endif ()
 
 if (WIN32)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS _CRT_SECURE_NO_DEPRECATE)
-    target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _HAS_ITERATOR_DEBUGGING=$<CONFIG:DEBUG> _SECURE_SCL=$<CONFIG:DEBUG>)
-	target_compile_definitions(${PROJECT_NAME} PUBLIC _HAS_EXCEPTIONS=0)
-
     # Enable unicode strings
     target_compile_definitions(${PROJECT_NAME} PUBLIC _UNICODE)
 
-    # Disable RTTI
-    target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:/GR->)
-    
 	target_compile_options(${PROJECT_NAME} PUBLIC
-        /fp:fast    # Fast floating precision
         /W3         # Set warning level 3
         /WX         # Treat all other warnings as errors
     )
