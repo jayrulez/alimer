@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,48 +20,15 @@
 // THE SOFTWARE.
 //
 
-#include "Core/StringId.h"
+#include "Math/Quaternion.h"
 #include "Core/String.h"
-#include "Core/Hash.h"
 
 namespace Alimer
 {
-    const StringId32 StringId32::Zero;
-    const StringId64 StringId64::Zero;
-
-    /* StringId32 */
-    StringId32::StringId32(const char* str) noexcept
-    {
-        value = murmur32(str, (uint32_t)strlen(str), 0);
-    }
-
-    StringId32::StringId32(const eastl::string& str) noexcept
-    {
-        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
-    }
-
-    eastl::string StringId32::ToString() const
+    eastl::string Quaternion::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%08X", value);
-        return eastl::string(tempBuffer);
-    }
-
-    /* StringId64 */
-    StringId64::StringId64(const char* str) noexcept
-    {
-        value = murmur64(str, (uint64_t)strlen(str), 0);
-    }
-
-    StringId64::StringId64(const eastl::string& str) noexcept
-    {
-        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
-    }
-
-    eastl::string StringId64::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%16" PRIx64, value);
+        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
         return eastl::string(tempBuffer);
     }
 }

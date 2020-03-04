@@ -69,6 +69,10 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/bin")
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 
+# Configure additional cmake modules
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(alimer)
+
 # Install paths
 set (DEST_BASE_INCLUDE_DIR include)
 set (DEST_INCLUDE_DIR ${DEST_BASE_INCLUDE_DIR}/alimer)
@@ -188,4 +192,7 @@ if (NOT ALIMER_SKIP_INSTALL)
         ${ALIMER_ROOT_DIR}/LICENSE
         DESTINATION .
     )
+
+    # CMake modules
+    install (DIRECTORY ${CMAKE_SOURCE_DIR}/cmake/ DESTINATION cmake/cmake/)
 endif ()

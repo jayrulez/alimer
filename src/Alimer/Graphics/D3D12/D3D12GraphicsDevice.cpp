@@ -140,7 +140,7 @@ namespace Alimer
             }
         }
 #else
-        apiData->d3dDevice->Release();
+        SafeRelease(d3dDevice);
 #endif
 
         dxgiFactory.Reset();

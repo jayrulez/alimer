@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,48 +20,62 @@
 // THE SOFTWARE.
 //
 
-#include "Core/StringId.h"
+#include "Math/Vector.h"
 #include "Core/String.h"
-#include "Core/Hash.h"
+#include "Diagnostics/Assert.h"
 
 namespace Alimer
 {
-    const StringId32 StringId32::Zero;
-    const StringId64 StringId64::Zero;
+    /* Vector2 */
+    const Vector2 Vector2::Zero = { 0.0f, 0.0f };
+    const Vector2 Vector2::One = { 1.0f, 1.0f };
+    const Vector2 Vector2::UnitX = { 1.0f, 0.0f };
+    const Vector2 Vector2::UnitY = { 0.0f, 1.0f };
 
-    /* StringId32 */
-    StringId32::StringId32(const char* str) noexcept
+    float Vector2::Cross(const Vector2& lhs, const Vector2& rhs)
     {
-        value = murmur32(str, (uint32_t)strlen(str), 0);
+        return lhs.x * rhs.y - lhs.y * rhs.x;
     }
 
-    StringId32::StringId32(const eastl::string& str) noexcept
+    void Vector2::Normalize(Vector2* result) const noexcept
     {
-        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
+        ALIMER_ASSERT(result);
+
+        if (result != this)
+        {
+            result->x = x;
+            result->y = y;
+        }
+
+        float lenSquared = LengthSquared();
+        if (!Alimer::Equals(lenSquared, 1.0f) && lenSquared > 0.0f)
+        {
+            float invLen = 1.0f / sqrtf(lenSquared);
+            result->x *= invLen;
+            result->y *= invLen;
+        }
     }
 
-    eastl::string StringId32::ToString() const
+    eastl::string Vector2::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%08X", value);
+        sprintf(tempBuffer, "%g %g", x, y);
         return eastl::string(tempBuffer);
     }
 
-    /* StringId64 */
-    StringId64::StringId64(const char* str) noexcept
-    {
-        value = murmur64(str, (uint64_t)strlen(str), 0);
-    }
-
-    StringId64::StringId64(const eastl::string& str) noexcept
-    {
-        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
-    }
-
-    eastl::string StringId64::ToString() const
+    /* Vector3 */
+    eastl::string Vector3::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%16" PRIx64, value);
+        sprintf(tempBuffer, "%g %g %g", x, y, z);
+        return eastl::string(tempBuffer);
+    }
+
+    /* Vector4 */
+    eastl::string Vector4::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
         return eastl::string(tempBuffer);
     }
 }

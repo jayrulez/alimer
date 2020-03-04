@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,40 @@
 
 namespace Alimer
 {
-    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
+    /// Class specifying a two-dimensional size.
+    class ALIMER_API Size2D
+    {
+    public:
+        /// Specifies the width of the size.
+        uint32_t width;
+        /// Specifies the height of the size.
+        uint32_t height;
 
-    ALIMER_API extern const eastl::string EMPTY_STRING;
-#if defined(_WIN32)
-    ALIMER_API eastl::string ToUtf8(const eastl::wstring& wstr);
-    ALIMER_API eastl::wstring ToUtf16(const eastl::string& str);
-#endif
-}
+        /// Constructor.
+        Size2D() noexcept
+            : width(0)
+            , height(0)
+        {
+        }
+    };
+
+    /// Class specifying a three-dimensional size.
+    class ALIMER_API Size3D
+    {
+    public:
+        /// Specifies the width of the size.
+        uint32_t width;
+        /// Specifies the height of the size.
+        uint32_t height;
+        /// Specifies the depth; of the size.
+        uint32_t depth;
+
+        /// Constructor.
+        Size3D() noexcept
+            : width(0)
+            , height(0)
+            , depth(0)
+        {
+        }
+    };
+} 

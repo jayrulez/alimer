@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,26 @@
 
 namespace Alimer
 {
-    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
+    /// Class specifying a floating-point RGBA color.
+    class ALIMER_API Color final
+    {
+    public:
+        /// Specifies the red component of the color.
+        float r;
+        /// Specifies the green component of the color.
+        float g;
+        /// Specifies the blue component of the color.
+        float b;
+        /// Specifies the alpha component of the color.
+        float a;
 
-    ALIMER_API extern const eastl::string EMPTY_STRING;
-#if defined(_WIN32)
-    ALIMER_API eastl::string ToUtf8(const eastl::wstring& wstr);
-    ALIMER_API eastl::wstring ToUtf16(const eastl::string& str);
-#endif
-}
+        /// Constructor.
+        Color() noexcept
+            : r(0.0f)
+            , g(0.0f)
+            , b(0.0f)
+            , a(1.0f)
+        {
+        }
+    };
+} 
