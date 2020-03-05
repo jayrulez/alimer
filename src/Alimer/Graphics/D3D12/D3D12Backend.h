@@ -134,4 +134,18 @@ namespace Alimer
     }
 
 #endif
+
+
+    static inline D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
+    {
+        switch (queueType)
+        {
+        case CommandQueueType::Compute:
+            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        case CommandQueueType::Copy:
+            return D3D12_COMMAND_LIST_TYPE_COPY;
+        default:
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        }
+    }
 }

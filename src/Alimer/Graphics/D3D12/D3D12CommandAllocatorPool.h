@@ -23,43 +23,31 @@
 #pragma once
 
 #include "Graphics/GraphicsBuffer.h"
-#include "D3D12CommandAllocatorPool.h"
+#include "D3D12Backend.h"
+#include <EASTL/vector.h>
+#include <EASTL/queue.h>
+#include <mutex>
 
 namespace Alimer
 {
-    class D3D12CommandAllocatorPool;
-
-    class D3D12CommandQueue final 
+    class D3D12CommandAllocatorPool final
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
-        ~D3D12CommandQueue();
+        D3D12CommandAllocatorPool(ID3D12Device* device_, CommandQueueType queueType_);
+        ~D3D12CommandAllocatorPool();
 
         void Destroy();
 
-        uint64_t IncrementFence(void);
-        bool IsFenceComplete(uint64_t fenceValue);
-        void WaitForFence(uint64_t fenceValue);
-        void WaitForIdle(void) { WaitForFence(IncrementFence()); }
-        ID3D12CommandQueue* GetHandle() { return d3d12CommandQueue; }
-        uint64_t GetNextFenceValue() { return nextFenceValue; }
-
-        ID3D12CommandAllocator* RequestAllocator();
+        ID3D12CommandAllocator* RequestAllocator(uint64_t fenceValue);
+        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
 
     private:
-        D3D12GraphicsDevice* device;
+        ID3D12Device* device;
         CommandQueueType queueType;
         const D3D12_COMMAND_LIST_TYPE commandListType;
-        ID3D12CommandQueue* d3d12CommandQueue;
 
-        // Lifetime of these objects is managed by the descriptor cache
-        ID3D12Fence* d3d12Fence;
-        uint64_t nextFenceValue;
-        uint64_t lastCompletedFenceValue;
-        HANDLE fenceEventHandle;
-
-        D3D12CommandAllocatorPool allocatorPool;
-        std::mutex fenceMutex;
-        std::mutex eventMutex;
+        eastl::vector<ID3D12CommandAllocator*> allocators;
+        eastl::queue<eastl::pair<uint64_t, ID3D12CommandAllocator*>> freeAllocators;
+        std::mutex allocatorMutex;
     };
 }

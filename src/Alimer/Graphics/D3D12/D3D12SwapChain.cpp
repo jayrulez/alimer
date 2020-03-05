@@ -51,7 +51,9 @@ namespace Alimer
 
     void D3D12SwapChain::Destroy()
     {
-
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        handle->SetFullscreenState(FALSE, nullptr);
+#endif
     }
 
     void D3D12SwapChain::BackendResize()

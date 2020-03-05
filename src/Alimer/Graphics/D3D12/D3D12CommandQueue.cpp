@@ -26,25 +26,13 @@
 
 namespace Alimer
 {
-    static D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
-    {
-        switch (queueType)
-        {
-        case CommandQueueType::Compute:
-            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        case CommandQueueType::Copy:
-            return D3D12_COMMAND_LIST_TYPE_COPY;
-        default:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        }
-    }
-
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device_, CommandQueueType queueType_)
         : device(device_)
         , queueType(queueType_)
         , commandListType(GetD3D12CommandListType(queueType_))
         , nextFenceValue((uint64_t)commandListType << 56 | 1)
         , lastCompletedFenceValue((uint64_t)commandListType << 56)
+        , allocatorPool(device_->GetD3DDevice(), queueType_)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Type = commandListType;
@@ -87,7 +75,7 @@ namespace Alimer
 
     void D3D12CommandQueue::Destroy()
     {
-        //allocatorPool.Shutdown();
+        allocatorPool.Destroy();
         CloseHandle(fenceEventHandle);
 
         SafeRelease(d3d12Fence);
@@ -137,7 +125,6 @@ namespace Alimer
     ID3D12CommandAllocator* D3D12CommandQueue::RequestAllocator()
     {
         uint64_t completedFenceValue = d3d12Fence->GetCompletedValue();
-        //return allocatorPool.RequestAllocator(completedFenceValue);
-        return nullptr;
+        return allocatorPool.RequestAllocator(completedFenceValue);
     }
 }
