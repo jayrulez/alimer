@@ -22,7 +22,10 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
+#include "D3D12CommandContext.h"
 #include "D3D12SwapChain.h"
+#include "D3D12Texture.h"
+#include "D3D12GraphicsBuffer.h"
 
 namespace Alimer
 {
@@ -112,6 +115,8 @@ namespace Alimer
 
     void D3D12GraphicsDevice::Destroy()
     {
+        mainContext.reset();
+
         SafeDelete(graphicsQueue);
         SafeDelete(computeQueue);
         SafeDelete(copyQueue);
@@ -359,11 +364,13 @@ namespace Alimer
             }
         }
 
-        // Create command queue's
+        // Create command queue's and default context.
         {
             graphicsQueue = new D3D12CommandQueue(this, CommandQueueType::Graphics);
             computeQueue = new D3D12CommandQueue(this, CommandQueueType::Compute);
             copyQueue = new D3D12CommandQueue(this, CommandQueueType::Copy);
+
+            mainContext.reset(new D3D12GraphicsContext(this, CommandQueueType::Graphics));
         }
     }
 

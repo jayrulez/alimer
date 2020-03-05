@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,49 @@
 // THE SOFTWARE.
 //
 
-#include "Games/GameWindow.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
-using namespace eastl;
+#pragma once
+
+#include "Graphics/Types.h"
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
-    {
+    class GraphicsDevice;
 
-    }
-
-    void GameWindow::SetTitle(const string& newTitle)
+    /// Command context class for recording copy GPU commands.
+    class CopyContext
     {
-        title = newTitle;
-        BackendSetTitle();
-    }
+    public:
+        /// Destructor.
+        virtual ~CopyContext();
 
-    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
-    {
-        device = newDevice;
-        SwapChainDescriptor descriptor = {};
-        descriptor.width = width;
-        descriptor.height = height;
-        swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
-    }
+    protected:
+        /// Constructor.
+        CopyContext(GraphicsDevice* device);
 
-    void GameWindow::Present()
+        GraphicsDevice* device;
+    };
+
+    /// Command context class for recording compute GPU commands.
+    class ALIMER_API ComputeContext : public CopyContext
     {
-        swapChain->Present();
-    }
+    public:
+        /// Destructor.
+        virtual ~ComputeContext();
+
+    protected:
+        /// Constructor.
+        ComputeContext(GraphicsDevice* device);
+    };
+
+    /// Command context class for recording graphics GPU commands.
+    class ALIMER_API GraphicsContext : public ComputeContext
+    {
+    public:
+        /// Destructor.
+        virtual ~GraphicsContext();
+
+    protected:
+        /// Constructor.
+        GraphicsContext(GraphicsDevice* device);
+    };
 }

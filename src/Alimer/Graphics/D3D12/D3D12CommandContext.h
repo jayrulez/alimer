@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,23 @@
 // THE SOFTWARE.
 //
 
-#include "Games/GameWindow.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
-using namespace eastl;
+#pragma once
+
+#include "Graphics/CommandContext.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
+    class D3D12GraphicsContext final : public GraphicsContext
     {
+    public:
+        D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
+        ~D3D12GraphicsContext() override;
 
-    }
+        void Destroy();
 
-    void GameWindow::SetTitle(const string& newTitle)
-    {
-        title = newTitle;
-        BackendSetTitle();
-    }
-
-    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
-    {
-        device = newDevice;
-        SwapChainDescriptor descriptor = {};
-        descriptor.width = width;
-        descriptor.height = height;
-        swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
-    }
-
-    void GameWindow::Present()
-    {
-        swapChain->Present();
-    }
+    private:
+        ID3D12GraphicsCommandList* commandList = nullptr;
+        ID3D12CommandAllocator* currentAllocator = nullptr;
+    };
 }

@@ -39,6 +39,7 @@ namespace Alimer
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
     class GraphicsDevice;
+    class SwapChain;
 
     /// Defines an OS Game Window.
     class ALIMER_API GameWindow
@@ -65,6 +66,8 @@ namespace Alimer
 
         void SetGraphicsDevice(GraphicsDevice* newDevice);
 
+        void Present();
+
     private:
         virtual void BackendSetTitle() {};
 
@@ -80,6 +83,7 @@ namespace Alimer
 
     private:
         GraphicsDevice* device = nullptr;
+        SwapChain* swapChain = nullptr;
 
         ALIMER_DISABLE_COPY_MOVE(GameWindow);
     };

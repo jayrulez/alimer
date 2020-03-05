@@ -20,41 +20,31 @@
 // THE SOFTWARE.
 //
 
-#include "Games/GameWindow.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
-using namespace eastl;
+#include "D3D12CommandContext.h"
+#include "D3D12CommandQueue.h"
+#include "D3D12GraphicsDevice.h"
+#include <algorithm>
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
+    D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_)
+        : GraphicsContext(device_)
     {
-
+        currentAllocator = device_->GetQueue(queueType_)->RequestAllocator();
+        //ThrowIfFailed(device_->GetD3DDevice()->CreateCommandList(1, Type, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+        //commandList->SetName(L"CommandList");
     }
 
-    void GameWindow::SetTitle(const string& newTitle)
+    D3D12GraphicsContext::~D3D12GraphicsContext()
     {
-        title = newTitle;
-        BackendSetTitle();
+        Destroy();
     }
 
-    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
+    void D3D12GraphicsContext::Destroy()
     {
-        device = newDevice;
-        SwapChainDescriptor descriptor = {};
-        descriptor.width = width;
-        descriptor.height = height;
-        swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
-    }
-
-    void GameWindow::Present()
-    {
-        swapChain->Present();
+        if (commandList != nullptr)
+        {
+            commandList->Release();
+        }
     }
 }

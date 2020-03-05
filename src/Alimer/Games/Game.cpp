@@ -121,6 +121,7 @@ namespace Alimer
             gameSystem->EndDraw();
         }
 
+        mainWindow->Present();
         graphicsDevice->EndFrame();
     }
 

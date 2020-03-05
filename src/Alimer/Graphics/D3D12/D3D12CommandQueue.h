@@ -43,6 +43,8 @@ namespace Alimer
         ID3D12CommandQueue* GetHandle() { return d3d12CommandQueue; }
         uint64_t GetNextFenceValue() { return nextFenceValue; }
 
+        ID3D12CommandAllocator* RequestAllocator();
+
     private:
         D3D12GraphicsDevice* device;
         CommandQueueType queueType;

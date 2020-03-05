@@ -133,4 +133,11 @@ namespace Alimer
             lastCompletedFenceValue = fenceValue;
         }
     }
+
+    ID3D12CommandAllocator* D3D12CommandQueue::RequestAllocator()
+    {
+        uint64_t completedFenceValue = d3d12Fence->GetCompletedValue();
+        //return allocatorPool.RequestAllocator(completedFenceValue);
+        return nullptr;
+    }
 }

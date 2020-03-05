@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "Games/GameWindow.h"
+#include "Graphics/CommandContext.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
-using namespace eastl;
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
+    /* CopyContext */
+    CopyContext::CopyContext(GraphicsDevice* device)
+        : device{ device }
+    {
+        ALIMER_ASSERT(device);
+    }
+
+    CopyContext::~CopyContext() = default;
+
+    /* ComputeContext */
+    ComputeContext::ComputeContext(GraphicsDevice* device)
+        : CopyContext(device)
     {
 
     }
 
-    void GameWindow::SetTitle(const string& newTitle)
+    ComputeContext::~ComputeContext() = default;
+
+    /* GraphicsContext */
+    GraphicsContext::GraphicsContext(GraphicsDevice* device)
+        : ComputeContext(device)
     {
-        title = newTitle;
-        BackendSetTitle();
+
     }
 
-    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
-    {
-        device = newDevice;
-        SwapChainDescriptor descriptor = {};
-        descriptor.width = width;
-        descriptor.height = height;
-        swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
-    }
-
-    void GameWindow::Present()
-    {
-        swapChain->Present();
-    }
+    GraphicsContext::~GraphicsContext() = default;
 }

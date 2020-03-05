@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
+#include "Graphics/CommandContext.h"
+#include <EASTL/unique_ptr.h>
 #include <EASTL/set.h>
 
 namespace Alimer
@@ -48,6 +49,12 @@ namespace Alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
+        /**
+        * Get the main GraphicsContext.
+        * The main context is managed completely by the device. The user should just queue commands into it, the device will take care of allocation, submission and synchronization
+        */
+        GraphicsContext* GetMainContext() const { return mainContext.get(); }
+
         SwapChain* CreateSwapChain(void* nativeHandle, const SwapChainDescriptor* descriptor);
 
     private:
@@ -58,6 +65,8 @@ namespace Alimer
 
         /// GPU device power preference.
         GPUPowerPreference powerPreference;
+
+        eastl::unique_ptr<GraphicsContext> mainContext;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
