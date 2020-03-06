@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,27 @@
 
 #pragma once
 
-#include "Games/GameWindow.h"
+#include "agpu.h"
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 
-struct GLFWwindow;
+#define COUNTOF(x) (sizeof(x) / sizeof(x[0]))
+#define _AGPU_ALLOC(type) ((type*) malloc(sizeof(type)))
+#define _AGPU_ALLOCN(type, n) ((type*) malloc(sizeof(type) * n))
+#define _AGPU_FREE(p) free(p)
+#define _GPU_ALLOC_HANDLE(type) ((type##_t*) calloc(1, sizeof(type##_t)))
 
-namespace Alimer
-{
-    class GLFW_Window : public GameWindow
-    {
-    public:
-        GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
-        ~GLFW_Window() override;
+typedef struct agpu_renderer {
+    agpu_backend(*get_backend)(void);
+    bool (*initialize)(const agpu_config* config);
+    void (*shutdown)(void);
+    void (*wait_idle)(void);
+    void (*commit_frame)(void);
+} agpu_renderer;
 
-        void BackendSetTitle() override;
-        bool ShouldClose() const override;
-        bool IsMinimized() const override;
-        void* GetNativeHandle() const override;
-        void Present() override;
 
-    private:
-        GLFWwindow* window = nullptr;
-    };
-}
+bool agpu_gl_supported(void);
+agpu_renderer* agpu_create_gl_backend(void);
+bool agpu_vk_supported(void);
+agpu_renderer* agpu_create_vk_backend(void);

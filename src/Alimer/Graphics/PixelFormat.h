@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Diagnostics/Assert.h"
+#include <agpu.h>
 #include <EASTL/string.h>
 
 namespace Alimer

@@ -32,6 +32,10 @@ namespace Alimer
         ALIMER_LOGERROR(description);
     }
 
+    static void* agpu_get_gl_proc_address(const char* function) {
+        return (void*)glfwGetProcAddress(function);
+    }
+
     void Game::PlatformRun()
     {
         glfwSetErrorCallback(OnGlfwError);
@@ -45,8 +49,18 @@ namespace Alimer
             return;
         }
 
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        //glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         mainWindow.reset(new GLFW_Window(config.windowTitle, config.windowWidth, config.windowHeight, WindowStyle::Default));
+
+        agpu_config config = {};
+        config.get_gl_proc_address = agpu_get_gl_proc_address;
+        if (!agpu_init(&config)) {
+
+        }
 
         InitBeforeRun();
 

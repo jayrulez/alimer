@@ -61,6 +61,8 @@ namespace Alimer
             ALIMER_LOGERROR("GLFW: Failed to create window.");
         }
 
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1);
         glfwSetWindowUserPointer(window, this);
 
         /*glfwSetWindowCloseCallback(window, window_close_callback);
@@ -92,6 +94,11 @@ namespace Alimer
     bool GLFW_Window::IsMinimized() const
     {
         return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
+    }
+
+    void GLFW_Window::Present()
+    {
+        glfwSwapBuffers(window);
     }
 
     void* GLFW_Window::GetNativeHandle() const

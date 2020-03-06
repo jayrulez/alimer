@@ -48,9 +48,10 @@ namespace Alimer
 
     Game::~Game()
     {
+        agpu_shutdown();
         SafeDelete(graphicsDevice);
 
-        for(auto gameSystem : gameSystems)
+        for (auto gameSystem : gameSystems)
         {
             SafeDelete(gameSystem);
         }
@@ -95,8 +96,7 @@ namespace Alimer
 
     bool Game::BeginDraw()
     {
-        if (!graphicsDevice->BeginFrame())
-            return false;
+        //agpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -121,8 +121,8 @@ namespace Alimer
             gameSystem->EndDraw();
         }
 
+        agpu_commit_frame();
         mainWindow->Present();
-        graphicsDevice->EndFrame();
     }
 
     int Game::Run()
@@ -164,9 +164,9 @@ namespace Alimer
     void Game::Tick()
     {
         time.Tick([&]()
-        {
-            Update(time);
-        });
+            {
+                Update(time);
+            });
 
         Render();
     }

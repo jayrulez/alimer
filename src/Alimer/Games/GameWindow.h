@@ -66,7 +66,7 @@ namespace Alimer
 
         void SetGraphicsDevice(GraphicsDevice* newDevice);
 
-        void Present();
+        virtual void Present();
 
     private:
         virtual void BackendSetTitle() {};
