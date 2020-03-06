@@ -128,6 +128,10 @@ void agpu_wait_idle(void) {
     s_renderer->wait_idle();
 }
 
-void agpu_commit_frame(void) {
-    s_renderer->commit_frame();
+void agpu_begin_frame(void) {
+    s_renderer->begin_frame();
+}
+
+void agpu_end_frame(void) {
+    s_renderer->end_frame();
 }

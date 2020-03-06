@@ -26,6 +26,7 @@
 #include "Games/GameTime.h"
 #include "Games/GameWindow.h"
 #include "Games/GameSystem.h"
+#include "Math/Size.h"
 #include "Graphics/GraphicsDevice.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
@@ -36,8 +37,7 @@ namespace Alimer
     {
         eastl::string windowTitle = "Alimer";
 
-        uint32_t windowWidth = 1280;
-        uint32_t windowHeight = 720;
+        SizeU windowSize = { 1280, 720 };
     };
 
     class InputManager;

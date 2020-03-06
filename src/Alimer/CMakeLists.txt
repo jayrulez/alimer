@@ -50,13 +50,6 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
-# Graphics sources
-if (ALIMER_GRAPHICS_VULKAN)
-    define_engine_source_files(
-        Graphics/Vulkan
-    )
-endif()
-
 if (ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(
         Graphics/D3D12
@@ -85,13 +78,6 @@ target_link_libraries(${PROJECT_NAME}
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME}
         glfw
-    )
-endif ()
-
-if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(${PROJECT_NAME}
-        volk
-        vma
     )
 endif ()
 

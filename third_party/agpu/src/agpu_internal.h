@@ -38,7 +38,8 @@ typedef struct agpu_renderer {
     bool (*initialize)(const agpu_config* config);
     void (*shutdown)(void);
     void (*wait_idle)(void);
-    void (*commit_frame)(void);
+    void (*begin_frame)(void);
+    void (*end_frame)(void);
 } agpu_renderer;
 
 

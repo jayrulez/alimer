@@ -36,16 +36,19 @@
 
 namespace Alimer
 {
-    GLFW_Window::GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
-        : GameWindow(newTitle, newWidth, newHeight, style)
+    GLFW_Window::GLFW_Window(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style)
+        : GameWindow(newTitle, newSize, style)
+        , opengl(opengl_)
     {
+        int window_width = (int) newSize.width;
+        int window_height = (int)newSize.height;
         GLFWmonitor* monitor = nullptr;
         if (fullscreen)
         {
             monitor = glfwGetPrimaryMonitor();
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            newWidth = mode->width;
-            newHeight = mode->height;
+            window_width = mode->width;
+            window_height = mode->height;
         }
         else
         {
@@ -54,15 +57,13 @@ namespace Alimer
             //glfwWindowHint(GLFW_DECORATED, any(style & WindowStyle::Decorated) ? GLFW_TRUE : GLFW_FALSE);
         }
 
-        window = glfwCreateWindow(newWidth, newHeight, newTitle.c_str(), NULL, nullptr);
+        window = glfwCreateWindow(window_width, window_height, newTitle.c_str(), NULL, nullptr);
 
         if (!window)
         {
             ALIMER_LOGERROR("GLFW: Failed to create window.");
         }
 
-        glfwMakeContextCurrent(window);
-        glfwSwapInterval(1);
         glfwSetWindowUserPointer(window, this);
 
         /*glfwSetWindowCloseCallback(window, window_close_callback);
@@ -74,6 +75,12 @@ namespace Alimer
 
         glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
         glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, 1);
+
+
+        if (opengl) {
+            glfwMakeContextCurrent(window);
+            glfwSwapInterval(1);
+        }
     }
 
     GLFW_Window::~GLFW_Window()
@@ -98,7 +105,9 @@ namespace Alimer
 
     void GLFW_Window::Present()
     {
-        glfwSwapBuffers(window);
+        if (opengl) {
+            glfwSwapBuffers(window);
+        }
     }
 
     void* GLFW_Window::GetNativeHandle() const

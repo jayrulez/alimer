@@ -31,7 +31,7 @@ namespace Alimer
     class GLFW_Window : public GameWindow
     {
     public:
-        GLFW_Window(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
+        GLFW_Window(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
         ~GLFW_Window() override;
 
         void BackendSetTitle() override;
@@ -41,6 +41,7 @@ namespace Alimer
         void Present() override;
 
     private:
+        bool opengl;
         GLFWwindow* window = nullptr;
     };
 }

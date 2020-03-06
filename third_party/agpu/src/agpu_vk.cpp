@@ -27,6 +27,7 @@
 #endif
 
 #if defined(_WIN32)
+#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #ifndef VK_USE_PLATFORM_WIN32_KHR
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -40,6 +41,7 @@
 #define GPU_CHECK(c, s) if (!(c)) { GPU_THROW(s); }
 
 #include <vulkan/vulkan.h>
+#define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 #define VK_CHECK(f) do { VkResult r = (f); GPU_CHECK(r >= 0, vk_get_error_string(r)); } while (0)
@@ -206,7 +208,7 @@ static void vk_destroy_frame(gpu_frame* frame);
 static void vk_backend_shutdown(void);
 
 /* Swapchain functions */
-static bool gpu_create_swapchain(VkSurfaceKHR surface, const gpu_swapchain_desc* desc, gpu_swapchain* result);
+static bool gpu_create_swapchain(VkSurfaceKHR surface, const agpu_swapchain_desc* desc, gpu_swapchain* result);
 static void gpu_destroy_swapchain(gpu_swapchain swapchain);
 
 static agpu_backend vk_get_backend(void) {
@@ -383,7 +385,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
         surface_create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         surface_create_info.pNext = NULL;
         surface_create_info.flags = 0;
-        surface_create_info.hinstance = (HINSTANCE)vk_state.config.swapchain_desc->native_display;
+        surface_create_info.hinstance = GetModuleHandle(NULL);
         surface_create_info.hwnd = (HWND)vk_state.config.swapchain_desc->native_handle;
 #elif defined(__APPLE__)
 #elif defined(__ANDROID__)
@@ -524,17 +526,17 @@ static bool vk_backend_initialize(const agpu_config* config) {
 
     if (vk_state.compute_queue_family == VK_QUEUE_FAMILY_IGNORED) {
         vk_state.compute_queue_family = vk_state.graphics_queue_family;
-        compute_queue_index = min(queue_props[vk_state.graphics_queue_family].queueCount - 1, universal_queue_index);
+        compute_queue_index = VMA_MIN(queue_props[vk_state.graphics_queue_family].queueCount - 1, universal_queue_index);
         universal_queue_index++;
     }
 
     if (vk_state.transfer_queue_family == VK_QUEUE_FAMILY_IGNORED) {
         vk_state.transfer_queue_family = vk_state.graphics_queue_family;
-        transfer_queue_index = min(queue_props[vk_state.graphics_queue_family].queueCount - 1, universal_queue_index);
+        transfer_queue_index = VMA_MIN(queue_props[vk_state.graphics_queue_family].queueCount - 1, universal_queue_index);
         universal_queue_index++;
     }
     else if (vk_state.transfer_queue_family == vk_state.compute_queue_family) {
-        transfer_queue_index = min(queue_props[vk_state.compute_queue_family].queueCount - 1, 1u);
+        transfer_queue_index = VMA_MIN(queue_props[vk_state.compute_queue_family].queueCount - 1, 1u);
     }
 
     static const float graphics_queue_prio = 0.5f;
@@ -547,7 +549,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
 
     queue_info[queue_family_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queue_info[queue_family_count].queueFamilyIndex = vk_state.graphics_queue_family;
-    queue_info[queue_family_count].queueCount = min(universal_queue_index, queue_props[vk_state.graphics_queue_family].queueCount);
+    queue_info[queue_family_count].queueCount = VMA_MIN(universal_queue_index, queue_props[vk_state.graphics_queue_family].queueCount);
     queue_info[queue_family_count].pQueuePriorities = prio;
     queue_family_count++;
 
@@ -555,7 +557,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
     {
         queue_info[queue_family_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queue_info[queue_family_count].queueFamilyIndex = vk_state.compute_queue_family;
-        queue_info[queue_family_count].queueCount = min(vk_state.transfer_queue_family == vk_state.compute_queue_family ? 2u : 1u,
+        queue_info[queue_family_count].queueCount = VMA_MIN(vk_state.transfer_queue_family == vk_state.compute_queue_family ? 2u : 1u,
             queue_props[vk_state.compute_queue_family].queueCount);
         queue_info[queue_family_count].pQueuePriorities = prio + 1;
         queue_family_count++;
@@ -574,19 +576,20 @@ static bool vk_backend_initialize(const agpu_config* config) {
     VkPhysicalDeviceFeatures device_features;
     memset(&device_features, 0, sizeof(device_features));
 
-    const char* device_exts[] = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-        VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-        //VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
-        //VK_NV_RAY_TRACING_EXTENSION_NAME,
-    };
+    VmaVector<const char*, VmaStlAllocator<const char*> > device_exts(VmaStlAllocator<char>(nullptr));
+    if (!vk_state.headless) {
+        device_exts.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
+
+    device_exts.push_back(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+
 
     VkDeviceCreateInfo deviceCreateInfo = {};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.queueCreateInfoCount = queue_family_count;
     deviceCreateInfo.pQueueCreateInfos = queue_info;
-    deviceCreateInfo.enabledExtensionCount = COUNTOF(device_exts);
-    deviceCreateInfo.ppEnabledExtensionNames = device_exts;
+    deviceCreateInfo.enabledExtensionCount = (uint32_t)device_exts.size();
+    deviceCreateInfo.ppEnabledExtensionNames = device_exts.data();
     deviceCreateInfo.pEnabledFeatures = &device_features;
 
     if (vkCreateDevice(vk_state.physical_device, &deviceCreateInfo, NULL, &vk_state.device)) {
@@ -730,10 +733,7 @@ static void vk_backend_wait_idle(void) {
     VK_CHECK(vkDeviceWaitIdle(vk_state.device));
 }
 
-static void vk_backend_commit_frame(void) {
-}
-
-void gpu_begin_frame(void) {
+static void vk_backend_begin_frame(void) {
     gpu_frame* frame = &vk_state.frames[vk_state.frame];
 
     // Wait for GPU to process the frame, then reset its scratchpad pool and purge condemned resources
@@ -748,9 +748,8 @@ void gpu_begin_frame(void) {
     VK_CHECK(vkBeginCommandBuffer(frame->command_buffer, &begin_info));
 }
 
-void gpu_end_frame(void) {
+static void vk_backend_end_frame(void) {
     gpu_frame* frame = &vk_state.frames[vk_state.frame];
-
     VK_CHECK(vkEndCommandBuffer(frame->command_buffer));
 
     // Submit pending graphics commands.
@@ -803,7 +802,7 @@ void gpu_destroy_buffer(gpu_buffer buffer) {
 }
 
 /* Swapchain */
-bool gpu_create_swapchain(VkSurfaceKHR surface, const gpu_swapchain_desc* desc, gpu_swapchain* result) {
+bool gpu_create_swapchain(VkSurfaceKHR surface, const agpu_swapchain_desc* desc, gpu_swapchain* result) {
     VkResult vk_result = VK_SUCCESS;
     gpu_swapchain swapchain = _GPU_ALLOC_HANDLE(gpu_swapchain);
     *result = swapchain;
@@ -883,8 +882,8 @@ bool gpu_create_swapchain(VkSurfaceKHR surface, const gpu_swapchain_desc* desc, 
 
     // Clamp the target width, height to boundaries.
     VkExtent2D swapchain_size;
-    swapchain_size.width = max(min(desc->width, surface_caps.maxImageExtent.width), surface_caps.minImageExtent.width);
-    swapchain_size.height = max(min(desc->height, surface_caps.maxImageExtent.height), surface_caps.minImageExtent.height);
+    swapchain_size.width = VMA_MAX(VMA_MIN(desc->width, surface_caps.maxImageExtent.width), surface_caps.minImageExtent.width);
+    swapchain_size.height = VMA_MAX(VMA_MIN(desc->height, surface_caps.maxImageExtent.height), surface_caps.minImageExtent.height);
 
     // Enable transfer destination on swap chain images if supported
     VkImageUsageFlags image_usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -957,9 +956,15 @@ static void gpu_destroy_swapchain(gpu_swapchain swapchain) {
 
 static VkBool32 vulkan_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context) {
 
+    bool error = severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     if (vk_state.config.callback) {
-        bool error = severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         vk_state.config.callback(vk_state.config.context, data->pMessage, error);
+    }
+    else {
+        if (error)
+        {
+            GPU_THROW(data->pMessage);
+        }
     }
 
     return false;
@@ -1011,8 +1016,8 @@ static void vk_destroy_frame(gpu_frame* frame) {
         case VK_OBJECT_TYPE_IMAGE: vmaDestroyImage(vk_state.memory_allocator, (VkImage)ref->handle, (VmaAllocation)ref->handle2); break;
         case VK_OBJECT_TYPE_IMAGE_VIEW: vkDestroyImageView(vk_state.device, (VkImageView)ref->handle, nullptr); break;
         case VK_OBJECT_TYPE_SAMPLER: vkDestroySampler(vk_state.device, (VkSampler)ref->handle, nullptr); break;
-        case VK_OBJECT_TYPE_RENDER_PASS: vkDestroyRenderPass(vk_state.device, (VkRenderPass) ref->handle, nullptr); break;
-        case VK_OBJECT_TYPE_FRAMEBUFFER: vkDestroyFramebuffer(vk_state.device, (VkFramebuffer) ref->handle, nullptr); break;
+        case VK_OBJECT_TYPE_RENDER_PASS: vkDestroyRenderPass(vk_state.device, (VkRenderPass)ref->handle, nullptr); break;
+        case VK_OBJECT_TYPE_FRAMEBUFFER: vkDestroyFramebuffer(vk_state.device, (VkFramebuffer)ref->handle, nullptr); break;
         case VK_OBJECT_TYPE_SWAPCHAIN_KHR: vkDestroySwapchainKHR(vk_state.device, (VkSwapchainKHR)ref->handle, nullptr); break;
         default: GPU_THROW("Unreachable"); break;
         }
@@ -1030,6 +1035,7 @@ agpu_renderer* agpu_create_vk_backend(void) {
     renderer.initialize = vk_backend_initialize;
     renderer.shutdown = vk_backend_shutdown;
     renderer.wait_idle = vk_backend_wait_idle;
-    renderer.commit_frame = vk_backend_commit_frame;
+    renderer.begin_frame = vk_backend_begin_frame;
+    renderer.end_frame = vk_backend_end_frame;
     return &renderer;
 }

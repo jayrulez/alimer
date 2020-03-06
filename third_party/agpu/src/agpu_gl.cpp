@@ -141,7 +141,10 @@ static void gl_backend_wait_idle(void) {
 
 }
 
-static void gl_backend_commit_frame(void) {
+static void gl_backend_begin_frame(void) {
+}
+
+static void gl_backend_end_frame(void) {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -156,6 +159,7 @@ agpu_renderer* agpu_create_gl_backend(void) {
     renderer.initialize = gl_backend_initialize;
     renderer.shutdown = gl_backend_shutdown;
     renderer.wait_idle = gl_backend_wait_idle;
-    renderer.commit_frame = gl_backend_commit_frame;
+    renderer.begin_frame = gl_backend_begin_frame;
+    renderer.end_frame = gl_backend_end_frame;
     return &renderer;
 }

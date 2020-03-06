@@ -58,12 +58,11 @@ typedef enum agpu_backend {
     AGPU_BACKEND_COUNT
 } agpu_backend;
 
-typedef struct gpu_swapchain_desc {
+typedef struct agpu_swapchain_desc {
     uint32_t width;
     uint32_t height;
     void* native_handle;
-    void* native_display;
-} gpu_swapchain_desc;
+} agpu_swapchain_desc;
 
 typedef struct gpu_buffer_desc {
     uint64_t size;
@@ -77,7 +76,7 @@ typedef struct agpu_config {
     void* (*get_gl_proc_address)(const char*);
     void (*callback)(void* context, const char* message, int level);
     void* context;
-    const gpu_swapchain_desc* swapchain_desc;
+    const agpu_swapchain_desc* swapchain_desc;
 } agpu_config;
 
 AGPU_API bool agpu_is_backend_supported(agpu_backend backend);
@@ -86,7 +85,8 @@ AGPU_API agpu_backend agpu_get_default_platform_backend();
 AGPU_API bool agpu_init(const agpu_config* config);
 AGPU_API void agpu_shutdown(void);
 AGPU_API void agpu_wait_idle(void);
-AGPU_API void agpu_commit_frame(void);
+AGPU_API void agpu_begin_frame(void);
+AGPU_API void agpu_end_frame(void);
 
 AGPU_API bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result);
 AGPU_API void gpu_destroy_buffer(gpu_buffer buffer);

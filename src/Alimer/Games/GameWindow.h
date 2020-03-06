@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Utils.h"
-#include <EASTL/string.h>
+#include "Math/Size.h"
 
 namespace Alimer
 {
@@ -45,13 +45,15 @@ namespace Alimer
     class ALIMER_API GameWindow
     {
     protected:
-        GameWindow(const eastl::string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style);
+        GameWindow(const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
 
     public:
         /// Destructor.
         virtual ~GameWindow() = default;
 
         virtual bool ShouldClose() const = 0;
+
+        inline const SizeU& GetSize() const noexcept { return size; }
 
         /// Set the window title.
         void SetTitle(const eastl::string& newTitle);
@@ -73,8 +75,7 @@ namespace Alimer
 
     protected:
         eastl::string title;
-        uint32_t width;
-        uint32_t height;
+        SizeU size;
         bool resizable = false;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;

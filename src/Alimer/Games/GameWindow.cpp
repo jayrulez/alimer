@@ -27,10 +27,9 @@ using namespace eastl;
 
 namespace Alimer
 {
-    GameWindow::GameWindow(const string& newTitle, uint32_t newWidth, uint32_t newHeight, WindowStyle style)
+    GameWindow::GameWindow(const string& newTitle, const SizeU& newSize, WindowStyle style)
         : title(newTitle)
-        , width(newWidth)
-        , height(newHeight)
+        , size(newSize)
         , resizable(any(style& WindowStyle::Resizable))
         , fullscreen(any(style& WindowStyle::Fullscreen))
         , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
@@ -48,8 +47,8 @@ namespace Alimer
     {
         device = newDevice;
         SwapChainDescriptor descriptor = {};
-        descriptor.width = width;
-        descriptor.height = height;
+        descriptor.width = size.width;
+        descriptor.height = size.height;
         swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
     }
 

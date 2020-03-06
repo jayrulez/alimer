@@ -49,15 +49,38 @@ namespace Alimer
             return;
         }
 
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        //glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        mainWindow.reset(new GLFW_Window(config.windowTitle, config.windowWidth, config.windowHeight, WindowStyle::Default));
+        bool opengl = true;
+        if (agpu_is_backend_supported(AGPU_BACKEND_VULKAN)) {
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            opengl = false;
+        }
+        else {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        }
+
+        mainWindow.reset(new GLFW_Window(opengl, config.windowTitle, config.windowSize, WindowStyle::Default));
+
+        agpu_swapchain_desc swapchain_desc = {};
+        swapchain_desc.width = mainWindow->GetSize().width;
+        swapchain_desc.height = mainWindow->GetSize().height;
+        swapchain_desc.native_handle = mainWindow->GetNativeHandle();
 
         agpu_config config = {};
-        config.get_gl_proc_address = agpu_get_gl_proc_address;
+#if defined(_DEBUG)
+        config.debug = true;
+#endif
+        if (opengl)
+        {
+            config.get_gl_proc_address = agpu_get_gl_proc_address;
+        }
+        else
+        {
+            config.swapchain_desc = &swapchain_desc;
+        }
+
         if (!agpu_init(&config)) {
 
         }

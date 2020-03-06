@@ -22,45 +22,60 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "Diagnostics/Assert.h"
 #include <EASTL/string.h>
 
 namespace Alimer
 {
     /// Class specifying a two-dimensional size.
-    class ALIMER_API Size2D
+    template <typename T>
+    class TSize final
     {
     public:
-        /// Specifies the width of the size.
-        uint32_t width;
-        /// Specifies the height of the size.
-        uint32_t height;
+        static constexpr size_t SIZE = 2;
 
-        /// Constructor.
-        Size2D() noexcept
-            : width(0)
-            , height(0)
+        TSize() = default;
+        TSize(const TSize&) = default;
+
+        explicit constexpr TSize(T v)
         {
+            width = v;
+            height = v;
+        }
+
+        template <typename U>
+        explicit constexpr TSize(const TSize<U>& u)
+        {
+            width = T(u.width);
+            height = T(u.height);
+        }
+
+        constexpr TSize(T width_, T height_)
+        {
+            width = width_;
+            height = height_;
+        }
+
+        union
+        {
+            T data[2];
+            struct
+            {
+                T width, height;
+            };
+        };
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return v[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return v[i];
         }
     };
-
-    /// Class specifying a three-dimensional size.
-    class ALIMER_API Size3D
-    {
-    public:
-        /// Specifies the width of the size.
-        uint32_t width;
-        /// Specifies the height of the size.
-        uint32_t height;
-        /// Specifies the depth; of the size.
-        uint32_t depth;
-
-        /// Constructor.
-        Size3D() noexcept
-            : width(0)
-            , height(0)
-            , depth(0)
-        {
-        }
-    };
+    using Size = TSize<float>;
+    using SizeU = TSize<uint32_t>;
 } 

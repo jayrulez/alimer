@@ -96,7 +96,7 @@ namespace Alimer
 
     bool Game::BeginDraw()
     {
-        //agpu_begin_frame();
+        agpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -121,7 +121,7 @@ namespace Alimer
             gameSystem->EndDraw();
         }
 
-        agpu_commit_frame();
+        agpu_end_frame();
         mainWindow->Present();
     }
 

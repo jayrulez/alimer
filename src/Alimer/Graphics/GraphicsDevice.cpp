@@ -23,10 +23,6 @@
 #include "config.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_GRAPHICS_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
-#endif
-
 #if defined(ALIMER_GRAPHICS_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
@@ -48,11 +44,6 @@ namespace Alimer
         {
             availableBackends.insert(GraphicsBackend::Null);
 
-#if defined(ALIMER_GRAPHICS_VULKAN)
-            if (VulkanGraphicsDevice::IsAvailable()) {
-                availableBackends.insert(GraphicsBackend::Vulkan);
-            }
-#endif
 #if defined(ALIMER_GRAPHICS_D3D12)
             if (D3D12GraphicsDevice::IsAvailable()) {
                 availableBackends.insert(GraphicsBackend::Direct3D12);
@@ -85,14 +76,6 @@ namespace Alimer
         GraphicsDevice* device = nullptr;
         switch (backend)
         {
-#if defined(ALIMER_GRAPHICS_VULKAN)
-        case GraphicsBackend::Vulkan:
-            if (VulkanGraphicsDevice::IsAvailable()) {
-                device = new VulkanGraphicsDevice(descriptor);
-                ALIMER_LOGINFO("Created Vulkan GraphicsDevice");
-            }
-            break;
-#endif /* defined(ALIMER_GRAPHICS_VULKAN) */
 
 #if defined(ALIMER_GRAPHICS_D3D12)
         case GraphicsBackend::Direct3D12:
