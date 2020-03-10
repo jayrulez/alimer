@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/type_traits.h>
+#include <type_traits>
 
 namespace Alimer
 {
@@ -61,7 +61,6 @@ namespace Alimer
         }
     }
 }
-
 
 #define ALIMER_DISABLE_COPY(ClassType) \
     ClassType(const ClassType&) = delete; ClassType& operator=(const ClassType&) = delete; \

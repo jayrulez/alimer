@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Math/Math.h"
-#include "Core/Preprocessor.h"
+#include "Diagnostics/Assert.h"
 #include <EASTL/string.h>
 
 namespace Alimer
@@ -166,30 +166,69 @@ namespace Alimer
     };
 
     /// Class specifying a three-dimensional Vector.
-    class ALIMER_API Vector3
+    template <typename T>
+    class tvec3 final
     {
     public:
-        /// Specifies the x-component of the vector.
-        float x;
-        /// Specifies the y-component of the vector.
-        float y;
-        /// Specifies the z-component of the vector.
-        float z;
+        static constexpr size_t SIZE = 3;
 
-        /// Constructor.
-        Vector3() noexcept
-            : x(0.0f)
-            , y(0.0f)
-            , z(0.0f)
+        union
         {
+            T data[SIZE];
+            struct
+            {
+                T x, y, z;
+            };
+        };
 
+        tvec3() = default;
+        tvec3(const tvec3&) = default;
+        tvec3& operator=(const tvec3&) = default;
+        tvec3(tvec3&&) = default;
+        tvec3& operator=(tvec3&&) = default;
+
+        constexpr explicit tvec3(T v) noexcept
+        {
+            x = v;
+            y = v;
+            z = v;
         }
 
-        /// Return float data.
-        const float* Data() const { return &x; }
+        constexpr tvec3(T x_, T y_, T z_) noexcept
+        {
+            x = x_;
+            y = y_;
+            z = z_;
+        }
 
-        /// Return as string.
-        eastl::string ToString() const;
+        template <typename U>
+        constexpr tvec3(const tvec3<U>& u) noexcept
+        {
+            x = T(u.x);
+            y = T(u.y);
+            z = T(u.z);
+        }
+
+        /*inline tvec3(const tvec2<T>& v, T z_) noexcept
+        {
+            x = v.x;
+            y = v.y;
+            z = z_;
+        }*/
+
+        /// Return float data.
+        const T* Data() const { return &x; }
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
     };
 
     /// Class specifying a four-dimensional Vector.
@@ -221,4 +260,7 @@ namespace Alimer
         /// Return as string.
         eastl::string ToString() const;
     };
+
+    using float3 = tvec3<float>;
+    using dvec3 = tvec3<double>;
 }

@@ -63,14 +63,6 @@ namespace Alimer
         return eastl::string(tempBuffer);
     }
 
-    /* Vector3 */
-    eastl::string Vector3::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g", x, y, z);
-        return eastl::string(tempBuffer);
-    }
-
     /* Vector4 */
     eastl::string Vector4::ToString() const
     {

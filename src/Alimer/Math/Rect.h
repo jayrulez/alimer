@@ -23,55 +23,94 @@
 #pragma once
 
 #include "Math/Math.h"
-#include <EASTL/string.h>
+#include "Math/Size.h"
 
 namespace Alimer
 {
-    /// Class specifying a two-dimensional floating-point rectangle.
-    class ALIMER_API Rect
+    /// Class specifying a two-dimensional rectangle.
+    template <typename T>
+    class TRect final
     {
     public:
-        /// Specifies the x-coordinate of the rectangle.
-        float x;
-        /// Specifies the y-coordinate of the rectangle.
-        float y;
-        /// Specifies the width of the rectangle.
-        float width;
-        /// Specifies the height of the rectangle.
-        float height;
+        static constexpr size_t SIZE = 4;
 
-        /// Constructor.
-        Rect() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f) {}
-        constexpr Rect(float x_, float y_, float width_, float height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                /// Specifies the x-coordinate of the rectangle.
+                T x;
+                /// Specifies the y-coordinate of the rectangle.
+                T y;
+                /// Specifies the width of the rectangle.
+                T width;
+                /// Specifies the height of the rectangle.
+                T height;
+            };
+        };
 
-        Rect(const Rect&) = default;
-        Rect& operator=(const Rect&) = default;
+        TRect() = default;
+        TRect(const TRect&) = default;
+        TRect& operator=(const TRect&) = default;
 
-        Rect(Rect&&) = default;
-        Rect& operator=(Rect&&) = default;
+        TRect(TRect&&) = default;
+        TRect& operator=(TRect&&) = default;
+
+        explicit constexpr TRect(T v)
+        {
+            x = T(0);
+            y = T(0);
+            width = v;
+            height = v;
+        }
+
+        template <typename U>
+        explicit constexpr TRect(const TRect<U>& u)
+        {
+            x = T(u.x);
+            y = T(u.y);
+            width = T(u.width);
+            height = T(u.height);
+        }
+
+        constexpr TRect(T x_, T y_, T width_, T height_)
+        {
+            x = x_;
+            y = y_;
+            width = width_;
+            height = height_;
+        }
+
+        constexpr TRect(T width_, T height_)
+        {
+            x = T(0);
+            y = T(0);
+            width = width_;
+            height = height_;
+        }
+
+        constexpr TRect(const TSize<T>& size)
+        {
+            x = T(0);
+            y = T(0);
+            width = size.width;
+            height = size.height;
+        }
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
     };
 
-    /// Class specifying a two-dimensional integer rectangle.
-    class ALIMER_API RectI
-    {
-    public:
-        /// Specifies the x-coordinate of the rectangle.
-        int32_t x;
-        /// Specifies the y-coordinate of the rectangle.
-        int32_t y;
-        /// Specifies the width of the rectangle.
-        int32_t width;
-        /// Specifies the height of the rectangle.
-        int32_t height;
-
-        /// Constructor.
-        RectI() noexcept : x(0), y(0), width(0), height(0) {}
-        constexpr RectI(int32_t x_, int32_t y_, int32_t width_, int32_t height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
-
-        RectI(const RectI&) = default;
-        RectI& operator=(const RectI&) = default;
-
-        RectI(RectI&&) = default;
-        RectI& operator=(RectI&&) = default;
-    };
+    using Rect = TRect<float>;
+    using RectI = TRect<int32_t>;
+    using RectU = TRect<uint32_t>;
 } 

@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Diagnostics/Assert.h"
-#include <EASTL/string.h>
 
 namespace Alimer
 {
@@ -34,8 +33,24 @@ namespace Alimer
     public:
         static constexpr size_t SIZE = 2;
 
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                /// Specifies the width of the size.
+                T width;
+                /// Specifies the height of the size.
+                T height;
+            };
+        };
+
         TSize() = default;
         TSize(const TSize&) = default;
+        TSize& operator=(const TSize&) = default;
+
+        TSize(TSize&&) = default;
+        TSize& operator=(TSize&&) = default;
 
         explicit constexpr TSize(T v)
         {
@@ -56,26 +71,18 @@ namespace Alimer
             height = height_;
         }
 
-        union
-        {
-            T data[2];
-            struct
-            {
-                T width, height;
-            };
-        };
-
         // array access
         inline constexpr T const& operator[](size_t i) const noexcept {
             ALIMER_ASSERT(i < SIZE);
-            return v[i];
+            return data[i];
         }
 
         inline constexpr T& operator[](size_t i) noexcept {
             ALIMER_ASSERT(i < SIZE);
-            return v[i];
+            return data[i];
         }
     };
     using Size = TSize<float>;
+    using SizeI = TSize<int32_t>;
     using SizeU = TSize<uint32_t>;
 } 

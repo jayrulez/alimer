@@ -24,6 +24,7 @@
 
 #include "Core/Utils.h"
 #include "Math/Size.h"
+#include <EASTL/string.h>
 
 namespace Alimer
 {
