@@ -22,7 +22,7 @@
 /// MurmurHash2, by Austin Appleby
 #include "Core/Hash.h"
 
-namespace Alimer
+namespace alimer
 {
     uint32_t murmur32(const void* key, uint32_t len, uint32_t seed)
     {

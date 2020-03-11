@@ -27,16 +27,21 @@
 #include "Games/GameWindow.h"
 #include "Games/GameSystem.h"
 #include "Math/Size.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Types.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 
-namespace Alimer
+namespace alimer
 {
     struct Configuration
     {
+        /// The name of the application.
+        eastl::string applicationName = "Alimer";
+
+        /// Main window title.
         eastl::string windowTitle = "Alimer";
 
+        /// Main window size.
         SizeU windowSize = { 1280, 720 };
     };
 
@@ -99,9 +104,9 @@ namespace Alimer
         InputManager* input;
     };
 
-    extern Game* GameCreate(const eastl::vector<eastl::string>& args);
+    extern Game* application_create(const eastl::vector<eastl::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.
-    ALIMER_API void GameDummy();
+    ALIMER_API void application_dummy();
 }

@@ -33,10 +33,10 @@
 
 using namespace eastl;
 
-namespace Alimer
+namespace alimer
 {
     // Make sure this is linked in.
-    void GameDummy()
+    void application_dummy()
     {
     }
 
@@ -80,13 +80,14 @@ int main(int argc, char* argv[])
 
     for (auto& arg : arg_strings)
     {
-        args.push_back(Alimer::ToUtf8(arg));
+        args.push_back(alimer::ToUtf8(arg));
     }
 
-    Alimer::Platform::SetArguments(args);
+    alimer::Platform::SetArguments(args);
+    alimer::Platform::OpenConsole();
 #endif
 
-    auto app = unique_ptr<Alimer::Game>(Alimer::GameCreate(args));
+    auto app = unique_ptr<alimer::Game>(alimer::application_create(args));
     app->Run();
     return EXIT_SUCCESS;
 }

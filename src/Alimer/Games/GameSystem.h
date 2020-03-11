@@ -25,7 +25,7 @@
 #include "Core/Object.h"
 #include "Games/GameTime.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API GameSystem : public Object
     {

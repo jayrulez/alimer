@@ -25,7 +25,7 @@
 #include "Graphics/Types.h"
 #include "Core/Object.h"
 
-namespace Alimer
+namespace alimer
 {
 
     using GpuHandle = uint64_t;

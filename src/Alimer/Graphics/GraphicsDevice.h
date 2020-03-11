@@ -22,53 +22,65 @@
 
 #pragma once
 
+#include "Graphics/BackendTypes.h"
 #include "Graphics/CommandContext.h"
 #include <EASTL/unique_ptr.h>
-#include <EASTL/set.h>
 
-namespace Alimer
+namespace alimer
 {
     class Texture;
     class SwapChain;
     class GraphicsBuffer;
 
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice final
     {
-    protected:
-        GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
-
     public:
+        /// Constructor.
+        GraphicsDevice(const eastl::string& applicationName,
+                       GraphicsDeviceFlags flags = GraphicsDeviceFlags::None,
+                       GPUPowerPreference powerPreference = GPUPowerPreference::DontCare,
+                       bool headless = false);
+
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        ~GraphicsDevice();
 
-        static eastl::set<GraphicsBackend> GetAvailableBackends();
+        GraphicsDevice(const GraphicsDevice&) = delete;
+        GraphicsDevice(GraphicsDevice&&) = delete;
+        GraphicsDevice& operator=(const GraphicsDevice&) = delete;
+        GraphicsDevice& operator=(GraphicsDevice&&) = delete;
 
-        static GraphicsDevice* Create(const GraphicsDeviceDescriptor* descriptor);
+        /// Called by validation layer.
+        void notify_validation_error(const char* message);
 
-        virtual void WaitIdle() = 0;
-        virtual bool BeginFrame() = 0;
-        virtual void EndFrame() = 0;
-
-        /**
-        * Get the main GraphicsContext.
-        * The main context is managed completely by the device. The user should just queue commands into it, the device will take care of allocation, submission and synchronization
-        */
-        GraphicsContext* GetMainContext() const { return mainContext.get(); }
-
-        SwapChain* CreateSwapChain(void* nativeHandle, const SwapChainDescriptor* descriptor);
+        void wait_idle();
+        bool begin_frame();
+        void end_frame();
 
     private:
-        virtual SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) = 0;
+        bool backend_create();
+        void backend_destroy();
 
-    protected:
+        /// The application name.
+        eastl::string applicationName;
+
+        /// Device flags.
         GraphicsDeviceFlags flags;
 
         /// GPU device power preference.
         GPUPowerPreference powerPreference;
 
-        eastl::unique_ptr<GraphicsContext> mainContext;
+        /// Enable headless mode.
+        bool headless;
 
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+#if defined(ALIMER_VULKAN)
+        VulkanDeviceFeatures features{};
+        VkInstance instance{ VK_NULL_HANDLE };
+        VkDebugUtilsMessengerEXT debug_messenger{ VK_NULL_HANDLE };
+
+        VkDevice device{ VK_NULL_HANDLE };
+        //VolkDeviceTable deviceTable;
+#elif defined(ALIMER_D3D12)
+#endif
+
     };
 }

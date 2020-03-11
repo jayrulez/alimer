@@ -126,7 +126,7 @@ namespace Alimer
         allocator->CalculateStats(&stats);
 
         if (stats.Total.UsedBytes > 0) {
-            ALIMER_LOGERRORF("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
+            ALIMER_LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
         }
 
         SafeRelease(allocator);
@@ -135,7 +135,7 @@ namespace Alimer
         ULONG refCount = d3dDevice->Release();
         if (refCount > 0)
         {
-            ALIMER_LOGDEBUGF("Direct3D12: There are %d unreleased references left on the device", refCount);
+            ALIMER_LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
             if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(&debugDevice))))

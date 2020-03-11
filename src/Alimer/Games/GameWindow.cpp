@@ -25,7 +25,7 @@
 #include "Graphics/SwapChain.h"
 using namespace eastl;
 
-namespace Alimer
+namespace alimer
 {
     GameWindow::GameWindow(const string& newTitle, const SizeU& newSize, WindowStyle style)
         : title(newTitle)
@@ -49,7 +49,7 @@ namespace Alimer
         SwapChainDescriptor descriptor = {};
         descriptor.width = size.width;
         descriptor.height = size.height;
-        swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
+        //swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
     }
 
     void GameWindow::Present()

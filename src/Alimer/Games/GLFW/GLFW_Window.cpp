@@ -34,7 +34,7 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-namespace Alimer
+namespace alimer
 {
     GLFW_Window::GLFW_Window(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style)
         : GameWindow(newTitle, newSize, style)

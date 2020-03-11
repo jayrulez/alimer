@@ -38,9 +38,8 @@
 #cmakedefine ALIMER_PLUGINS
 
 /* Graphics */
-#cmakedefine ALIMER_GRAPHICS_VULKAN
-#cmakedefine ALIMER_GRAPHICS_D3D12
-#cmakedefine ALIMER_GRAPHICS_METAL
+#cmakedefine ALIMER_VULKAN
+#cmakedefine ALIMER_D3D12
 
 /* Audio */
 #cmakedefine ALIMER_ENABLE_AUDIO

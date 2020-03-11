@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a floating-point RGBA color.
     class ALIMER_API Color final

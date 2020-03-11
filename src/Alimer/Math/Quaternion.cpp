@@ -23,7 +23,7 @@
 #include "Math/Quaternion.h"
 #include "Core/String.h"
 
-namespace Alimer
+namespace alimer
 {
     eastl::string Quaternion::ToString() const
     {

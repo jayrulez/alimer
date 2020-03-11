@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <type_traits>
 
-namespace Alimer
+namespace alimer
 {
     template <typename T>
     void SafeDelete(T*& resource)

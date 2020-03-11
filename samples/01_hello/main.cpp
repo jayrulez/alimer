@@ -22,7 +22,7 @@
 
 #include "Games/Game.h"
 
-namespace Alimer
+namespace alimer
 {
     class MyGame : public Game
     {
@@ -35,11 +35,11 @@ namespace Alimer
         }
     };
 
-    Game* GameCreate(const eastl::vector<eastl::string>& args)
+    Game* application_create(const eastl::vector<eastl::string>& args)
     {
-        GameDummy();
+        application_dummy();
 
-        Alimer::Configuration config;
+        Configuration config;
         config.windowTitle = "Sample 01 - Hello";
         return new MyGame(config);
     }

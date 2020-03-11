@@ -23,7 +23,7 @@
 #include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
         : width(descriptor->width)

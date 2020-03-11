@@ -26,7 +26,7 @@
 #include <EASTL/vector.h>
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Identifiers the running platform type.
     enum class PlatformId : uint32_t

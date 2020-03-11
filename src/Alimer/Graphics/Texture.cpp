@@ -23,7 +23,7 @@
 #include "Graphics/Texture.h"
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     static GraphicsResource::Type GetResourceType(const TextureDescriptor* desc)
     {

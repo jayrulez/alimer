@@ -23,7 +23,7 @@
 
 #include "Core/Preprocessor.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class AssertFailBehavior : uint8_t
     {
@@ -53,8 +53,8 @@ namespace Alimer
 		{ \
 			if (!(cond)) \
 			{ \
-				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
-					Alimer::AssertFailBehavior::Halt) \
+				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
+					alimer::AssertFailBehavior::Halt) \
 					ALIMER_BREAKPOINT(); \
 			} \
 		} while(0)
@@ -64,8 +64,8 @@ namespace Alimer
 		{ \
 			if (!(cond)) \
 			{ \
-				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-					Alimer::AssertFailBehavior::Halt) \
+				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+					alimer::AssertFailBehavior::Halt) \
 					ALIMER_BREAKPOINT(); \
 			} \
 		} while(0)
@@ -73,8 +73,8 @@ namespace Alimer
 #   define ALIMER_ASSERT_FAIL(msg, ...) \
 		do \
 		{ \
-			if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-				Alimer::AssertFailBehavior::Halt) \
+			if (alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+				alimer::AssertFailBehavior::Halt) \
 			    ALIMER_BREAKPOINT(); \
 		} while(0)
 

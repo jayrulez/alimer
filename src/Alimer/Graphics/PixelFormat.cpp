@@ -22,7 +22,7 @@
 
 #include "Graphics/PixelFormat.h"
 
-namespace Alimer
+namespace alimer
 {
     const PixelFormatDesc FormatDesc[] =
     {

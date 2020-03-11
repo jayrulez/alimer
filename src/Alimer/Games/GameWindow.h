@@ -26,7 +26,7 @@
 #include "Math/Size.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     enum class WindowStyle : uint32_t
     {

@@ -24,7 +24,7 @@
 
 #include "Core/Preprocessor.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API Stopwatch final
     {

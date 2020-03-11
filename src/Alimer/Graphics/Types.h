@@ -25,7 +25,7 @@
 #include "Core/Utils.h"
 #include "Graphics/PixelFormat.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Enum describing the GraphicsDevice backend.
     enum class GraphicsBackend : uint32_t {
@@ -99,18 +99,6 @@ namespace Alimer
         RenderTarget = 0x04,
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
-
-    /// GraphicsDevice descriptor.
-    struct GraphicsDeviceDescriptor
-    {
-        GraphicsBackend preferredBackend = GraphicsBackend::Default;
-
-        /// Device flags.
-        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
-
-        /// GPU device power preference.
-        GPUPowerPreference powerPreference;
-    };
 
     /// Describes a Graphics buffer.
     struct BufferDescriptor

@@ -23,7 +23,7 @@
 #include "Graphics/CommandContext.h"
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     /* CopyContext */
     CopyContext::CopyContext(GraphicsDevice* device)

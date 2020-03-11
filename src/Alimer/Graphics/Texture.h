@@ -24,7 +24,7 @@
 
 #include "Graphics/GraphicsResource.h"
 
-namespace Alimer
+namespace alimer
 {
     class Texture : public GraphicsResource
     {

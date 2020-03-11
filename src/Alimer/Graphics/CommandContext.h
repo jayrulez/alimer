@@ -24,7 +24,7 @@
 
 #include "Graphics/Types.h"
 
-namespace Alimer
+namespace alimer
 {
     class GraphicsDevice;
 

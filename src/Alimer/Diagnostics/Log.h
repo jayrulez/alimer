@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     static constexpr uint32_t kMaxLogMessage = 4096;
 
@@ -66,14 +66,14 @@ namespace Alimer
     };
 }
 
-#define ALIMER_LOGTRACE(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Trace, message)
-#define ALIMER_LOGDEBUG(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Debug, message)
-#define ALIMER_LOGINFO(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Info, message)
-#define ALIMER_LOGWARN(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Warning, message)
-#define ALIMER_LOGERROR(message) Alimer::Log::GetDefault()->Log(Alimer::LogLevel::Error, message)
+#define ALIMER_LOGTRACE(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Trace, message)
+#define ALIMER_LOGDEBUG(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Debug, message)
+#define ALIMER_LOGINFO(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Info, message)
+#define ALIMER_LOGWARN(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Warning, message)
+#define ALIMER_LOGERROR(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Error, message)
 
-#define ALIMER_LOGTRACEF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Trace, message, ##__VA_ARGS__)
-#define ALIMER_LOGDEBUGF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Debug, message, ##__VA_ARGS__)
-#define ALIMER_LOGINFOF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Info, message, ##__VA_ARGS__)
-#define ALIMER_LOGWARNF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Warning, message, ##__VA_ARGS__)
-#define ALIMER_LOGERRORF(message, ...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Error, message, ##__VA_ARGS__)
+#define ALIMER_LOGT(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Trace, message, ##__VA_ARGS__)
+#define ALIMER_LOGD(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Debug, message, ##__VA_ARGS__)
+#define ALIMER_LOGI(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Info, message, ##__VA_ARGS__)
+#define ALIMER_LOGW(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Warning, message, ##__VA_ARGS__)
+#define ALIMER_LOGE(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Error, message, ##__VA_ARGS__)

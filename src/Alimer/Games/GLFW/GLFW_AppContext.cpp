@@ -26,7 +26,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-namespace Alimer
+namespace alimer
 {
     static void OnGlfwError(int code, const char* description) {
         ALIMER_LOGERROR(description);

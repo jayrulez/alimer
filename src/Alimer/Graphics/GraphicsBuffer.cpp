@@ -23,7 +23,7 @@
 #include "Graphics/GraphicsBuffer.h"
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor)
         : GraphicsResource(device, Type::Buffer)

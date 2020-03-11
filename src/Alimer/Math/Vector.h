@@ -26,7 +26,7 @@
 #include "Diagnostics/Assert.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a two-dimensional Vector.
     class ALIMER_API Vector2
@@ -129,7 +129,7 @@ namespace Alimer
         void Normalize()
         {
             float lenSquared = LengthSquared();
-            if (!Alimer::Equals(lenSquared, 1.0f) && lenSquared > 0.0f)
+            if (!alimer::Equals(lenSquared, 1.0f) && lenSquared > 0.0f)
             {
                 float invLen = 1.0f / sqrtf(lenSquared);
                 x *= invLen;
@@ -150,7 +150,7 @@ namespace Alimer
         static float Cross(const Vector2& lhs, const Vector2& rhs);
 
         /// Test for equality with another vector with epsilon.
-        bool Equals(const Vector2& rhs, float eps = M_EPSILON) const { return Alimer::Equals(x, rhs.x, eps) && Alimer::Equals(y, rhs.y, eps); }
+        bool Equals(const Vector2& rhs, float eps = M_EPSILON) const { return alimer::Equals(x, rhs.x, eps) && alimer::Equals(y, rhs.y, eps); }
 
         /// Return float data.
         const float* Data() const { return &x; }

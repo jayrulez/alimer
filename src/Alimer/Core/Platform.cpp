@@ -36,7 +36,7 @@
 
 using namespace eastl;
 
-namespace Alimer
+namespace alimer
 {
     vector<string> Platform::arguments = {};
 

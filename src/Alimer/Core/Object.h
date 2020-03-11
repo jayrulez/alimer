@@ -25,7 +25,7 @@
 #include "Core/StringId.h"
 #include <EASTL/vector.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Type info.
     class ALIMER_API TypeInfo final
@@ -96,9 +96,9 @@ namespace Alimer
     public: \
         using ClassName = typeName; \
         using BaseClassName = baseTypeName; \
-        virtual Alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
+        virtual alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
         virtual const eastl::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
-        virtual const Alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
-        static Alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
+        virtual const alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
+        static alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
         static const eastl::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
-        static const Alimer::TypeInfo* GetTypeInfoStatic() { static const Alimer::TypeInfo typeInfoStatic(#typeName, BaseClassName::GetTypeInfoStatic()); return &typeInfoStatic; } \
+        static const alimer::TypeInfo* GetTypeInfoStatic() { static const alimer::TypeInfo typeInfoStatic(#typeName, BaseClassName::GetTypeInfoStatic()); return &typeInfoStatic; } \

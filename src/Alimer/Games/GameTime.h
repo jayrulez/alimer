@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <functional>
 
-namespace Alimer
+namespace alimer
 {
     class Game;
 

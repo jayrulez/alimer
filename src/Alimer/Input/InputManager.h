@@ -24,7 +24,7 @@
 
 #include "Games/GameSystem.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API InputManager final : public GameSystem
     {

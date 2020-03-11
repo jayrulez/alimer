@@ -26,7 +26,7 @@
 
 struct GLFWwindow;
 
-namespace Alimer
+namespace alimer
 {
     class GLFW_Window : public GameWindow
     {

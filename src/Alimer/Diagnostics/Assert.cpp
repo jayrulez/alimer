@@ -28,7 +28,7 @@
 #include <Windows.h>
 #endif
 
-namespace Alimer
+namespace alimer
 {
     AssertFailBehavior DefaultHandler(const char* condition,
         const char* msg,

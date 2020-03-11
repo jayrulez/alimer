@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
 

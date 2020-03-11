@@ -25,7 +25,7 @@
 #include "Diagnostics/Assert.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Defines pixel format.
     enum class PixelFormat : uint32_t

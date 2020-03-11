@@ -21,6 +21,7 @@
 //
 
 #include "Games/Game.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Input/InputManager.h"
 #include "Diagnostics/Log.h"
 
@@ -37,7 +38,7 @@ ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentO
 }
 #endif
 
-namespace Alimer
+namespace alimer
 {
     Game::Game(const Configuration& config_)
         : config(config_)
@@ -60,8 +61,11 @@ namespace Alimer
 
     void Game::InitBeforeRun()
     {
-        GraphicsDeviceDescriptor deviceDesc = {};
-        graphicsDevice = GraphicsDevice::Create(&deviceDesc);
+        GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
+#ifdef _DEBUG
+        deviceFlags |= GraphicsDeviceFlags::DebugRuntime;
+#endif
+        graphicsDevice = new GraphicsDevice(config.applicationName, deviceFlags);
         mainWindow->SetGraphicsDevice(graphicsDevice);
 
         Initialize();
@@ -95,7 +99,7 @@ namespace Alimer
 
     bool Game::BeginDraw()
     {
-        graphicsDevice->BeginFrame();
+        graphicsDevice->begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -120,7 +124,7 @@ namespace Alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->EndFrame();
+        graphicsDevice->end_frame();
         mainWindow->Present();
     }
 

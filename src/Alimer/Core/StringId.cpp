@@ -24,7 +24,7 @@
 #include "Core/String.h"
 #include "Core/Hash.h"
 
-namespace Alimer
+namespace alimer
 {
     const StringId32 StringId32::Zero;
     const StringId64 StringId64::Zero;

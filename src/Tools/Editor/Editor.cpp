@@ -22,7 +22,7 @@
 
 #include "Editor.h"
 
-namespace Alimer
+namespace alimer
 {
     Editor::Editor(const Configuration& config)
         : Game(config)
@@ -35,11 +35,11 @@ namespace Alimer
 
     }
 
-    Game* GameCreate(const eastl::vector<eastl::string>& args)
+    Game* application_create(const eastl::vector<eastl::string>& args)
     {
-        GameDummy();
+        application_dummy();
 
-        Alimer::Configuration config;
+        Configuration config;
         config.windowTitle = "Alimer Studio";
         return new Editor(config);
     }

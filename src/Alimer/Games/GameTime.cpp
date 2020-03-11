@@ -25,7 +25,7 @@
 #include "Diagnostics/Stopwatch.h"
 #include <cmath>
 
-namespace Alimer
+namespace alimer
 {
     GameTime::GameTime()
         : targetElapsedTicks(TicksPerSecond / 60)

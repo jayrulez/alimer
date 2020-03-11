@@ -25,7 +25,7 @@
 #include "Core/Preprocessor.h"
 #include <EASTL/string.h>
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a two-dimensional point.
     class ALIMER_API Point2D

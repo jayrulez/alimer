@@ -31,7 +31,7 @@
 
 using namespace eastl;
 
-namespace Alimer
+namespace alimer
 {
     const string EMPTY_STRING{};
 

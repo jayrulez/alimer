@@ -22,7 +22,7 @@
 
 #include "Math/Point.h"
 
-namespace Alimer
+namespace alimer
 {
 }
 

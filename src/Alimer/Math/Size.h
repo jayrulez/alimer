@@ -24,7 +24,7 @@
 
 #include "Diagnostics/Assert.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a two-dimensional size.
     template <typename T>

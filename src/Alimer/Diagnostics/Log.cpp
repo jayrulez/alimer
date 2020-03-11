@@ -47,10 +47,9 @@
 #   include <emscripten.h>
 #endif
 
-namespace Alimer
+namespace alimer
 {
     static eastl::vector<Logger*> _loggers;
-
 
     Logger::Logger(const eastl::string& name)
         : _name(name)
@@ -219,7 +218,7 @@ namespace Alimer
 
     Logger* Log::GetDefault()
     {
-        static Logger defaultLogger("Alimer");
+        static Logger defaultLogger("alimer");
         return &defaultLogger;
     }
 }

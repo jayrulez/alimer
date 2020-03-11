@@ -38,7 +38,7 @@
 #include <time.h>
 #endif
 
-namespace Alimer
+namespace alimer
 {
     struct TimerGlobalInitializer
     {

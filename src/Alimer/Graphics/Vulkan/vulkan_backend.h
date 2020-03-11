@@ -27,11 +27,24 @@
 #include "Diagnostics/Log.h"
 #include "Graphics/Types.h"
 
-
 #include <vk_mem_alloc.h>
 #include <volk.h>
 
-namespace Alimer
+namespace alimer
 {
-    class VulkanGraphicsDevice;
+    extern eastl::string to_string(VkResult result);
 }
+
+/// Helper macro to test the result of Vulkan calls which can return an error.
+#define VK_CHECK(x)                                                                 \
+	do                                                                              \
+	{                                                                               \
+		VkResult result = x;                                                        \
+		if (result != VK_SUCCESS)                                                   \
+		{                                                                           \
+			ALIMER_LOGE("Detected Vulkan error: %s", alimer::to_string(result));    \
+			abort();                                                                \
+		}                                                                           \
+	} while (0)
+
+#define VK_THROW(result, str) ALIMER_LOGE("%s : %s", str, alimer::to_string(result)); 

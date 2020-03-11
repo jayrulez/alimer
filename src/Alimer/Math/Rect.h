@@ -25,7 +25,7 @@
 #include "Math/Math.h"
 #include "Math/Size.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a two-dimensional rectangle.
     template <typename T>

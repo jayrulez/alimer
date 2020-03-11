@@ -50,11 +50,9 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
-if (ALIMER_GRAPHICS_VULKAN)
+if (ALIMER_VULKAN)
     define_engine_source_files(Graphics/Vulkan)
-endif()
-
-if (ALIMER_GRAPHICS_D3D12)
+elseif (ALIMER_D3D12)
     define_engine_source_files(Graphics/D3D12)
 endif()
 
@@ -72,26 +70,28 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
     EASTL
 )
 
 if(NOT (EMSCRIPTEN OR ANDROID))
-    target_link_libraries(${PROJECT_NAME}
+    target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
     )
 endif ()
 
-if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(${PROJECT_NAME}
+if (ALIMER_VULKAN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
         volk
         vma
     )
-endif ()
-
-if (ALIMER_GRAPHICS_D3D12)
-    target_link_libraries(${PROJECT_NAME}
+elseif (ALIMER_D3D12)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
         D3D12MemoryAllocator
+        d3dcompiler
+        D3D12
+        D3D11
+        DXGI
     )
 endif ()
 

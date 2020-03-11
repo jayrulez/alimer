@@ -24,7 +24,7 @@
 #include "Core/String.h"
 #include "Diagnostics/Assert.h"
 
-namespace Alimer
+namespace alimer
 {
     /* Vector2 */
     const Vector2 Vector2::Zero = { 0.0f, 0.0f };
@@ -48,7 +48,7 @@ namespace Alimer
         }
 
         float lenSquared = LengthSquared();
-        if (!Alimer::Equals(lenSquared, 1.0f) && lenSquared > 0.0f)
+        if (!alimer::Equals(lenSquared, 1.0f) && lenSquared > 0.0f)
         {
             float invLen = 1.0f / sqrtf(lenSquared);
             result->x *= invLen;

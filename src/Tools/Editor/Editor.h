@@ -24,7 +24,7 @@
 
 #include "Games/Game.h"
 
-namespace Alimer
+namespace alimer
 {
     class Editor final : public Game
     {
