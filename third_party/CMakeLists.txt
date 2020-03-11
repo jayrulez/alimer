@@ -15,8 +15,8 @@ if(NOT (EMSCRIPTEN OR ANDROID))
 endif ()
 
 
-if (ALIMER_GRAPHICS_VULKAN)
-    # vulkan
+if (ALIMER_VULKAN)
+    # vulkan headers
     add_library(vulkan INTERFACE)
     set (VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/khronos)
     target_sources (vulkan INTERFACE 
@@ -64,9 +64,7 @@ if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(volk PUBLIC vulkan)
     target_include_directories(volk PUBLIC ${VOLK_DIR})
     set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
-endif ()
-
-if (ALIMER_GRAPHICS_D3D12)
+elseif (ALIMER_D3D12)
     # D3D12MemoryAllocator
     set(D3D12_MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator")
     set(D3D12_MA_FILES

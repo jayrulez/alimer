@@ -108,8 +108,12 @@ endif()
 # third_party
 add_subdirectory(third_party)
 
-# src
-add_subdirectory(src)
+# engine
+add_subdirectory(engine)
+
+if (ALIMER_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif ()
 
 if (ALIMER_BUILD_SAMPLES)
     add_subdirectory(samples)

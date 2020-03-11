@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project declaration
-project (Alimer LANGUAGES C CXX)
+project (alimer LANGUAGES C CXX)
 
 macro (define_engine_source_files)
     cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
