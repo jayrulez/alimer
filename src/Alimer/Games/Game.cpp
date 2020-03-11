@@ -48,7 +48,6 @@ namespace Alimer
 
     Game::~Game()
     {
-        agpu_shutdown();
         SafeDelete(graphicsDevice);
 
         for (auto gameSystem : gameSystems)
@@ -96,7 +95,7 @@ namespace Alimer
 
     bool Game::BeginDraw()
     {
-        agpu_begin_frame();
+        graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -121,7 +120,7 @@ namespace Alimer
             gameSystem->EndDraw();
         }
 
-        agpu_end_frame();
+        graphicsDevice->EndFrame();
         mainWindow->Present();
     }
 

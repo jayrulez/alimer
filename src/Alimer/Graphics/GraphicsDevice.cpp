@@ -23,6 +23,10 @@
 #include "config.h"
 #include "Graphics/GraphicsDevice.h"
 
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#endif
+
 #if defined(ALIMER_GRAPHICS_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
@@ -45,9 +49,8 @@ namespace Alimer
             availableBackends.insert(GraphicsBackend::Null);
 
 #if defined(ALIMER_GRAPHICS_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable()) {
+            if (D3D12GraphicsDevice::IsAvailable())
                 availableBackends.insert(GraphicsBackend::Direct3D12);
-        }
 #endif
         }
 
