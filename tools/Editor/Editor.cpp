@@ -40,7 +40,7 @@ namespace alimer
         application_dummy();
 
         Configuration config;
-        config.windowTitle = "Alimer Studio";
+        config.window_title = "Alimer Studio";
         return new Editor(config);
     }
 }

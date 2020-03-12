@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,35 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "config.h"
-#include "graphics/graphics.h"
+#include "graphics/Types.h"
 
-#if defined(ALIMER_VULKAN)
-#include "graphics/vulkan/vulkan_backend.h"
-#endif
-
-#if defined(ALIMER_D3D12)
-//#include "graphics/d3d12/vulkan_backend.h"
-#endif
+using namespace eastl;
 
 namespace alimer
 {
-    namespace graphics
+    string ToString(GPUBackend type)
     {
-        Device::Device(Backend::Enum backend)
-            : backend{ backend }
-        {
-        }
+        static const char* s_backend_names[] = {
+            "Null", "Vulkan", "Direct3D12", "Metal", "Count"
+        };
 
-        Device* Device::create(Backend::Enum preferredBackend)
-        {
-            if (preferredBackend == Backend::Count) {
+        return s_backend_names[(uint32_t)type];
+    }
+}
 
-
-            }
-
-            return nullptr;
-        }
-    } // namespace graphics
-
-} // namespace alimer

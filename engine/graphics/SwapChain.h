@@ -22,26 +22,33 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
+#include "graphics/Types.h"
 #include "Core/Object.h"
 
 namespace alimer
 {
+    enum class SwapChainResizeResult
+    {
+        Success,
+        NoSurface,
+        Error
+    };
+
     class SwapChain : public Object
     {
         ALIMER_OBJECT(SwapChain, Object);
 
     protected:
         /// Constructor.
-        SwapChain(const SwapChainDescriptor* descriptor);
+        SwapChain(const SwapChainDescriptor& descriptor);
 
     public:
-        void Resize(uint32_t newWidth, uint32_t newHeight);
-        bool Present();
+        SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
+        void Present();
 
     private:
-        virtual void BackendResize() = 0;
-        virtual bool BackendPresent() = 0;
+        virtual SwapChainResizeResult BackendResize() = 0;
+        virtual void BackendPresent() = 0;
 
     protected:
         uint32_t width;

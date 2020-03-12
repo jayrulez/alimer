@@ -21,8 +21,8 @@
 //
 
 #include "Games/GameWindow.h"
-#include "graphics/graphics.h"
-#include "Graphics/SwapChain.h"
+#include "graphics/GPUDevice.h"
+#include "graphics/SwapChain.h"
 using namespace eastl;
 
 namespace alimer
@@ -43,17 +43,17 @@ namespace alimer
         BackendSetTitle();
     }
 
-    void GameWindow::SetGraphicsDevice(GraphicsDevice* newDevice)
+    void GameWindow::SetDevice(GPUDevice* newDevice)
     {
         device = newDevice;
-        SwapChainDescriptor descriptor = {};
-        descriptor.width = size.width;
-        descriptor.height = size.height;
-        //swapChain = device->CreateSwapChain(GetNativeHandle(), &descriptor);
+        SwapChainDescriptor desc = {};
+        desc.width = size.width;
+        desc.height = size.height;
+        swapChain = device->CreateSwapChain(GetNativeHandle(), desc);
     }
 
     void GameWindow::Present()
     {
-        //swapChain->Present();
+        swapChain->Present();
     }
 }

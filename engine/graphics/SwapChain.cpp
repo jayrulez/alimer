@@ -20,35 +20,33 @@
 // THE SOFTWARE.
 //
 
-#if 0
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/SwapChain.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : width(descriptor->width)
-        , height(descriptor->height)
-        , vsync(descriptor->vsync)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+    SwapChain::SwapChain(const SwapChainDescriptor& descriptor)
+        : width(descriptor.width)
+        , height(descriptor.height)
+        , vsync(descriptor.vsync)
+        , colorFormat(descriptor.colorFormat)
+        , depthStencilFormat(descriptor.depthStencilFormat)
     {
     }
 
-    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    SwapChainResizeResult SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         if (width == newWidth && height == newHeight)
-            return;
+            return SwapChainResizeResult::Success;
 
         width = newWidth;
         height = newHeight;
-        BackendResize();
+        return BackendResize();
     }
 
-    bool SwapChain::Present()
+    void SwapChain::Present()
     {
-        return BackendPresent();
+        BackendPresent();
     }
 }
-#endif // 0
 

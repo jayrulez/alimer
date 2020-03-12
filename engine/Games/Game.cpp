@@ -21,7 +21,7 @@
 //
 
 #include "Games/Game.h"
-#include "graphics/graphics.h"
+#include "graphics/GPUDevice.h"
 #include "Input/InputManager.h"
 #include "Diagnostics/Log.h"
 
@@ -49,24 +49,31 @@ namespace alimer
 
     Game::~Game()
     {
-        SafeDelete(graphicsDevice);
-
         for (auto gameSystem : gameSystems)
         {
             SafeDelete(gameSystem);
         }
 
         gameSystems.clear();
+        gpuDevice.reset();
     }
 
     void Game::InitBeforeRun()
     {
-        GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
+        DeviceDesc deviceDesc = {};
+        deviceDesc.application_name = config.application_name.c_str();
 #ifdef _DEBUG
-        deviceFlags |= GraphicsDeviceFlags::DebugRuntime;
+        deviceDesc.validation = true;
 #endif
-        graphicsDevice = graphics::Device::create(graphics::Backend::Vulkan);
-        //mainWindow->SetGraphicsDevice(graphicsDevice);
+        gpuDevice.reset(GPUDevice::Create(GPUBackend::Vulkan));
+        if (!gpuDevice->Init(deviceDesc)) {
+            headless = true;
+            gpuDevice.reset();
+        }
+        else
+        {
+            mainWindow->SetDevice(gpuDevice.get());
+        }
 
         Initialize();
         if (exitCode || exiting)
@@ -125,7 +132,7 @@ namespace alimer
         }
 
         //graphicsDevice->end_frame();
-        //mainWindow->Present();
+        mainWindow->Present();
     }
 
     int Game::Run()
@@ -162,7 +169,7 @@ namespace alimer
 #endif
 
         return exitCode;
-    }
+        }
 
     void Game::Tick()
     {
@@ -194,4 +201,4 @@ namespace alimer
             EndDraw();
         }
     }
-}
+    }

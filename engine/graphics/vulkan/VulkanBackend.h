@@ -20,26 +20,10 @@
 // THE SOFTWARE.
 //
 
-#if 0
-#include "Diagnostics/Assert.h"
-#include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
+#pragma once
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
-        : device{ device }
-        , type{ type }
-    {
-        ALIMER_ASSERT(device);
-        //device->AddGPUResource(this);
-    }
-
-    GraphicsResource::~GraphicsResource()
-    {
-        ALIMER_ASSERT(device);
-        //device->RemoveGPUResource(this);
-    }
+    class GPUDevice;
+    GPUDevice* CreateVulkanGPUDevice();
 }
-#endif // 0
-

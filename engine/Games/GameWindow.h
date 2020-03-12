@@ -24,6 +24,7 @@
 
 #include "Core/Utils.h"
 #include "math/Size.h"
+#include <EASTL/shared_ptr.h>
 #include <EASTL/string.h>
 
 namespace alimer
@@ -39,7 +40,7 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
-    class GraphicsDevice;
+    class GPUDevice;
     class SwapChain;
 
     /// Defines an OS Game Window.
@@ -67,7 +68,7 @@ namespace alimer
 
         virtual void* GetNativeHandle() const = 0;
 
-        void SetGraphicsDevice(GraphicsDevice* newDevice);
+        void SetDevice(GPUDevice* newDevice);
 
         virtual void Present();
 
@@ -84,8 +85,8 @@ namespace alimer
         bool visible = true;
 
     private:
-        GraphicsDevice* device = nullptr;
-        SwapChain* swapChain = nullptr;
+        GPUDevice* device = nullptr;
+        eastl::shared_ptr<SwapChain> swapChain;
 
         ALIMER_DISABLE_COPY_MOVE(GameWindow);
     };

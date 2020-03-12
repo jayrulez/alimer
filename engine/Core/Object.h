@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/StringId.h"
+#include <EASTL/shared_ptr.h>
 #include <EASTL/vector.h>
 
 namespace alimer
@@ -60,7 +61,7 @@ namespace alimer
     };
 
     /// Base class for objects with type identification, subsystem access
-    class ALIMER_API Object
+    class ALIMER_API Object : public eastl::enable_shared_from_this< Object>
     {
     public:
         /// Constructor.

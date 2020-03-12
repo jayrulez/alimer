@@ -20,27 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Games/Game.h"
+#include "config.h"
+#include "graphics/GPUDevice.h"
+
+#if defined(ALIMER_VULKAN)
+#include "graphics/vulkan/VulkanBackend.h"
+#endif
+
+#if defined(ALIMER_D3D12)
+//#include "graphics/d3d12/vulkan_backend.h"
+#endif
 
 namespace alimer
 {
-    class MyGame : public Game
+    bool GPUDevice::Init(const DeviceDesc& desc)
     {
-        ALIMER_OBJECT(MyGame, Game);
-    public:
-        MyGame(const Configuration& config)
-            : Game(config)
-        {
+        return BackendInit(desc);
+    }
+
+    GPUDevice* GPUDevice::Create(GPUBackend preferredBackend)
+    {
+        GPUDevice* newInstance = nullptr;
+        if (preferredBackend == GPUBackend::Count) {
+
 
         }
-    };
 
-    Game* application_create(const eastl::vector<eastl::string>& args)
+        newInstance = CreateVulkanGPUDevice();
+        return newInstance;
+    }
+
+    void GPUDevice::NotifyValidationError(const char* message)
     {
-        application_dummy();
 
-        Configuration config;
-        config.window_title = "Sample 01 - Hello";
-        return new MyGame(config);
     }
 }

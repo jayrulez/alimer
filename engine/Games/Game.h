@@ -27,27 +27,22 @@
 #include "Games/GameWindow.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
-#include "Graphics/Types.h"
+#include "graphics/types.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 
 namespace alimer
 {
-    namespace graphics
-    {
-        class Device;
-    }
-
     struct Configuration
     {
         /// The name of the application.
-        eastl::string applicationName = "Alimer";
+        eastl::string application_name = "Alimer";
 
         /// Main window title.
-        eastl::string windowTitle = "Alimer";
+        eastl::string window_title = "Alimer";
 
         /// Main window size.
-        SizeU windowSize = { 1280, 720 };
+        SizeU window_size = { 1280, 720 };
     };
 
     class InputManager;
@@ -105,8 +100,9 @@ namespace alimer
         GameTime time;
         eastl::unique_ptr<GameWindow> mainWindow;
         eastl::vector<GameSystem*> gameSystems;
-        graphics::Device* graphicsDevice = nullptr;
+        eastl::unique_ptr<GPUDevice> gpuDevice;
         InputManager* input;
+        bool headless{ false };
     };
 
     extern Game* application_create(const eastl::vector<eastl::string>& args);

@@ -20,38 +20,24 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
-#include "Diagnostics/Log.h"
-#include "graphics/graphics.h"
-#include <vk_mem_alloc.h>
-#include <volk.h>
+#include "graphics/GPUResource.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    extern eastl::string to_string(VkResult result);
-
-    namespace graphics
+    GPUResource::GPUResource(GPUDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-        class VulkanDevice final : public Device
-        {
+        ALIMER_ASSERT(device);
+        //device->AddGPUResource(this);
+    }
 
-        };
+    GPUResource::~GPUResource()
+    {
+        ALIMER_ASSERT(device);
+        //device->RemoveGPUResource(this);
     }
 }
 
-/// Helper macro to test the result of Vulkan calls which can return an error.
-#define VK_CHECK(x)                                                                 \
-	do                                                                              \
-	{                                                                               \
-		VkResult result = x;                                                        \
-		if (result != VK_SUCCESS)                                                   \
-		{                                                                           \
-			ALIMER_LOGE("Detected Vulkan error: %s", alimer::to_string(result));    \
-			abort();                                                                \
-		}                                                                           \
-	} while (0)
-
-#define VK_THROW(result, str) ALIMER_LOGE("%s : %s", str, alimer::to_string(result)); 

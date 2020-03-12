@@ -27,16 +27,12 @@
 
 namespace alimer
 {
+    class GPUDevice;
 
-    using GpuHandle = uint64_t;
-    using GpuAllocation = uint64_t;
-    static constexpr GpuHandle kGpuNullHandle = 0;
-
-    class GraphicsDevice;
-    /// Defines a Graphics resource.
-    class GraphicsResource : public Object
+    /// Defines a GPU resource.
+    class GPUResource : public Object
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
+        ALIMER_OBJECT(GPUResource, Object);
 
     public:
         /// Resource types. 
@@ -57,23 +53,20 @@ namespace alimer
         };
 
     protected:
-        GraphicsResource(GraphicsDevice* device, Type type);
-        virtual ~GraphicsResource();
+        GPUResource(GPUDevice* device, Type type);
+        virtual ~GPUResource();
 
     public:
         /// Release the GPU resource.
         virtual void Destroy() {}
 
-        inline GpuHandle GetHandle() const { return handle; }
-
     protected:
-        GraphicsDevice* device;
+        GPUDevice* device;
         Type type;
-        GpuHandle handle = { kGpuNullHandle };
-        /* Size in bytes of the resource. */
+        /// Size in bytes of the resource.
         uint64_t size{ 0 };
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsResource);
+        ALIMER_DISABLE_COPY_MOVE(GPUResource);
     };
 } 

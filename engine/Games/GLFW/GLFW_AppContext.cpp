@@ -54,7 +54,7 @@ namespace alimer
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         }
 
-        mainWindow.reset(new GLFW_Window(opengl, config.windowTitle, config.windowSize, WindowStyle::Default));
+        mainWindow.reset(new GLFW_Window(opengl, config.window_title, config.window_size, WindowStyle::Default));
 
         InitBeforeRun();
 
