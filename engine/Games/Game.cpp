@@ -21,7 +21,7 @@
 //
 
 #include "Games/Game.h"
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/graphics.h"
 #include "Input/InputManager.h"
 #include "Diagnostics/Log.h"
 
@@ -65,8 +65,8 @@ namespace alimer
 #ifdef _DEBUG
         deviceFlags |= GraphicsDeviceFlags::DebugRuntime;
 #endif
-        graphicsDevice = new GraphicsDevice(config.applicationName, deviceFlags);
-        mainWindow->SetGraphicsDevice(graphicsDevice);
+        graphicsDevice = graphics::Device::create(graphics::Backend::Vulkan);
+        //mainWindow->SetGraphicsDevice(graphicsDevice);
 
         Initialize();
         if (exitCode || exiting)
@@ -99,7 +99,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        graphicsDevice->begin_frame();
+        //graphicsDevice->begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -124,8 +124,8 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->end_frame();
-        mainWindow->Present();
+        //graphicsDevice->end_frame();
+        //mainWindow->Present();
     }
 
     int Game::Run()

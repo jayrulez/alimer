@@ -20,17 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Viewport.h"
-#include "Core/String.h"
-#include "Diagnostics/Assert.h"
+#if 0
+#include "Graphics/CommandContext.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    float Viewport::AspectRatio() const noexcept
+    /* CopyContext */
+    CopyContext::CopyContext(GraphicsDevice* device)
+        : device{ device }
     {
-        if (width == 0.0f || height == 0.0f)
-            return 0.0f;
-
-        return (width / height);
+        ALIMER_ASSERT(device);
     }
+
+    CopyContext::~CopyContext() = default;
+
+    /* ComputeContext */
+    ComputeContext::ComputeContext(GraphicsDevice* device)
+        : CopyContext(device)
+    {
+
+    }
+
+    ComputeContext::~ComputeContext() = default;
+
+    /* GraphicsContext */
+    GraphicsContext::GraphicsContext(GraphicsDevice* device)
+        : ComputeContext(device)
+    {
+
+    }
+
+    GraphicsContext::~GraphicsContext() = default;
 }
+
+#endif // 0

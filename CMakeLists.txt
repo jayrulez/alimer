@@ -11,18 +11,15 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
 if (WIN32)
-	set(ALIMER_GRAPHICS_API Vulkan CACHE STRING  "Select Graphics API [Vulkan | D3D12]") 
-	set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS Vulkan D3D12)
+	option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
+    option(ALIMER_VULKAN "Include Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-	set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use D3D12 Graphics API" FORCE)
+    set (ALIMER_D3D12 ON CACHE BOOL "Use Direct3D12 Graphics backend" FORCE)
 elseif (EMSCRIPTEN)
-	set(ALIMER_GRAPHICS_API WGPU CACHE STRING "Use WebGPU Graphics API" FORCE)
+    set (ALIMER_WGPU ON CACHE BOOL "Use WebGPU Graphics backend" FORCE)
 else()
-	set(ALIMER_GRAPHICS_API Vulkan CACHE STRING  "Select Graphics API [Vulkan | OpenGL]") 
-	set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS Vulkan OpenGL)
+	set (ALIMER_VULKAN ON CACHE BOOL "Use Vulkan Graphics backend" FORCE)
 endif ()
-string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
-set (ALIMER_${ALIMER_GRAPHICS_API_UPPER} ON)
 
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
@@ -87,7 +84,7 @@ endif ()
 
 # OS specific
 if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
-    set (LINUX ON CACHE BOOL "" FORCE)
+    
 endif()
 
 if (ANDROID OR IOS OR EMSCRIPTEN)
@@ -121,7 +118,13 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-message (STATUS "Graphics API:          ${ALIMER_GRAPHICS_API} (ALIMER_${ALIMER_GRAPHICS_API_UPPER})")
+if (ALIMER_VULKAN)
+    message (STATUS "Graphics API:          Vulkan")
+endif ()
+
+if (ALIMER_D3D12)
+    message (STATUS "Graphics API:          Direct3D12")
+endif ()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

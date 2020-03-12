@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/PixelFormat.h"
+#include "graphics/PixelFormat.h"
 
 namespace alimer
 {

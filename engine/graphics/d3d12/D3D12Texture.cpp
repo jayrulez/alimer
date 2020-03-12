@@ -20,27 +20,24 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsDevice.h"
+#include "D3D12Texture.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(const eastl::string& applicationName, GraphicsDeviceFlags flags, GPUPowerPreference powerPreference, bool headless)
-        : applicationName{ applicationName }
-        , flags{ flags }
-        , powerPreference{ powerPreference }
-        , headless{ headless }
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor)
+        : Texture(device, descriptor)
     {
-        backend_create();
+
     }
 
-    GraphicsDevice::~GraphicsDevice()
+    D3D12Texture::~D3D12Texture()
     {
-        wait_idle();
-        backend_destroy();
+        Destroy();
     }
 
-    void GraphicsDevice::notify_validation_error(const char* message)
+    void D3D12Texture::Destroy()
     {
-        /* TODO: callback. */
+
     }
 }

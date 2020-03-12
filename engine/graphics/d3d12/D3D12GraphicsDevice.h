@@ -26,7 +26,7 @@
 #include "D3D12Backend.h"
 #include <D3D12MemAlloc.h>
 
-namespace Alimer
+namespace alimer
 {
     class D3D12CommandQueue;
 

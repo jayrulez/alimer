@@ -20,32 +20,15 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "math/Quaternion.h"
+#include "Core/String.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : width(descriptor->width)
-        , height(descriptor->height)
-        , vsync(descriptor->vsync)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+    eastl::string Quaternion::ToString() const
     {
-    }
-
-    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        if (width == newWidth && height == newHeight)
-            return;
-
-        width = newWidth;
-        height = newHeight;
-        BackendResize();
-    }
-
-    bool SwapChain::Present()
-    {
-        return BackendPresent();
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
+        return eastl::string(tempBuffer);
     }
 }

@@ -26,13 +26,18 @@
 #include "Games/GameTime.h"
 #include "Games/GameWindow.h"
 #include "Games/GameSystem.h"
-#include "Math/Size.h"
+#include "math/Size.h"
 #include "Graphics/Types.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 
 namespace alimer
 {
+    namespace graphics
+    {
+        class Device;
+    }
+
     struct Configuration
     {
         /// The name of the application.
@@ -100,7 +105,7 @@ namespace alimer
         GameTime time;
         eastl::unique_ptr<GameWindow> mainWindow;
         eastl::vector<GameSystem*> gameSystems;
-        GraphicsDevice* graphicsDevice = nullptr;
+        graphics::Device* graphicsDevice = nullptr;
         InputManager* input;
     };
 

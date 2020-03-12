@@ -21,7 +21,7 @@
 //
 
 #include "Games/GameWindow.h"
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/graphics.h"
 #include "Graphics/SwapChain.h"
 using namespace eastl;
 
@@ -54,6 +54,6 @@ namespace alimer
 
     void GameWindow::Present()
     {
-        swapChain->Present();
+        //swapChain->Present();
     }
 }

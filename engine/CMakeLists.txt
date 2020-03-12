@@ -37,8 +37,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 define_engine_source_files(
     Core
     Diagnostics
-    Math
-    Graphics
+    math
+    graphics
     Input
     Games
 )
@@ -51,9 +51,11 @@ if(NOT (EMSCRIPTEN OR ANDROID))
 endif ()
 
 if (ALIMER_VULKAN)
-    define_engine_source_files(Graphics/Vulkan)
-elseif (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D12)
+    define_engine_source_files(graphics/vulkan)
+endif()
+
+if (ALIMER_D3D12)
+    #define_engine_source_files(graphics/d3d12)
 endif()
 
 group_sources()
@@ -85,13 +87,11 @@ if (ALIMER_VULKAN)
         volk
         vma
     )
-elseif (ALIMER_D3D12)
+endif ()
+
+if (ALIMER_D3D12)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         D3D12MemoryAllocator
-        d3dcompiler
-        D3D12
-        D3D11
-        DXGI
     )
 endif ()
 

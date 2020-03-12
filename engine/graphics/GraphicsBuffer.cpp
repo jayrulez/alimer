@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,24 +20,17 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Texture.h"
-#include "D3D12GraphicsDevice.h"
+#if 0
+#include "Graphics/GraphicsBuffer.h"
+#include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor)
-        : Texture(device, descriptor)
-    {
-
-    }
-
-    D3D12Texture::~D3D12Texture()
-    {
-        Destroy();
-    }
-
-    void D3D12Texture::Destroy()
+    GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor)
+        : GraphicsResource(device, Type::Buffer)
     {
 
     }
 }
+
+#endif // 0

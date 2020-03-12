@@ -27,20 +27,7 @@
 
 namespace alimer
 {
-    /// Enum describing the GraphicsDevice backend.
-    enum class GraphicsBackend : uint32_t {
-        /// Default best platform supported backend.
-        Default,
-        /// Null backend.
-        Null,
-        /// Vulkan backend.
-        Vulkan,
-        /// Direct3D 12 backend.
-        Direct3D12,
-        /// Metal backend.
-        Metal
-    };
-
+    
     enum class GPUPowerPreference : uint32_t
     {
         DontCare,

@@ -20,34 +20,26 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#if 0
+#include "Diagnostics/Assert.h"
+#include "Graphics/GraphicsResource.h"
+#include "Graphics/GraphicsDevice.h"
 
-#include "Graphics/SwapChain.h"
-#include "D3D12Backend.h"
-
-namespace Alimer
+namespace alimer
 {
-    class D3D12SwapChain final : public SwapChain
+    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-    public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, void* nativeHandle, const SwapChainDescriptor* descriptor);
-        ~D3D12SwapChain() override;
+        ALIMER_ASSERT(device);
+        //device->AddGPUResource(this);
+    }
 
-        void Destroy();
-
-    private:
-        void BackendResize() override;
-        bool BackendPresent() override;
-
-        D3D12GraphicsDevice* device;
-        UINT backBufferCount;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND hwnd;
-#else
-        IUnknown* window;
-#endif
-
-        ComPtr<IDXGISwapChain3> handle;
-    };
+    GraphicsResource::~GraphicsResource()
+    {
+        ALIMER_ASSERT(device);
+        //device->RemoveGPUResource(this);
+    }
 }
+#endif // 0
+

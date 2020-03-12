@@ -20,23 +20,17 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "math/Viewport.h"
+#include "Core/String.h"
+#include "Diagnostics/Assert.h"
 
-#include "Graphics/CommandContext.h"
-#include "D3D12Backend.h"
-
-namespace Alimer
+namespace alimer
 {
-    class D3D12GraphicsContext final : public GraphicsContext
+    float Viewport::AspectRatio() const noexcept
     {
-    public:
-        D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
-        ~D3D12GraphicsContext() override;
+        if (width == 0.0f || height == 0.0f)
+            return 0.0f;
 
-        void Destroy();
-
-    private:
-        ID3D12GraphicsCommandList* commandList = nullptr;
-        ID3D12CommandAllocator* currentAllocator = nullptr;
-    };
+        return (width / height);
+    }
 }

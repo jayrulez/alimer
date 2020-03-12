@@ -20,23 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "Diagnostics/Assert.h"
-#include "Graphics/GraphicsResource.h"
+#if 0
+#include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
-        : device{ device }
-        , type{ type }
+    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
+        : width(descriptor->width)
+        , height(descriptor->height)
+        , vsync(descriptor->vsync)
+        , colorFormat(descriptor->colorFormat)
+        , depthStencilFormat(descriptor->depthStencilFormat)
     {
-        ALIMER_ASSERT(device);
-        //device->AddGPUResource(this);
     }
 
-    GraphicsResource::~GraphicsResource()
+    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
-        ALIMER_ASSERT(device);
-        //device->RemoveGPUResource(this);
+        if (width == newWidth && height == newHeight)
+            return;
+
+        width = newWidth;
+        height = newHeight;
+        BackendResize();
+    }
+
+    bool SwapChain::Present()
+    {
+        return BackendPresent();
     }
 }
+#endif // 0
+

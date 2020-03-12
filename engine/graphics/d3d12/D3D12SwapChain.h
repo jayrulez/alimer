@@ -20,15 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Quaternion.h"
-#include "Core/String.h"
+#pragma once
+
+#include "Graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    eastl::string Quaternion::ToString() const
+    class D3D12SwapChain final : public SwapChain
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return eastl::string(tempBuffer);
-    }
+    public:
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* nativeHandle, const SwapChainDescriptor* descriptor);
+        ~D3D12SwapChain() override;
+
+        void Destroy();
+
+    private:
+        void BackendResize() override;
+        bool BackendPresent() override;
+
+        D3D12GraphicsDevice* device;
+        UINT backBufferCount;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND hwnd;
+#else
+        IUnknown* window;
+#endif
+
+        ComPtr<IDXGISwapChain3> handle;
+    };
 }

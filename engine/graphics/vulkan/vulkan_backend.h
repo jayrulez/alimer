@@ -25,14 +25,21 @@
 #include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
-#include "Graphics/Types.h"
-
+#include "graphics/graphics.h"
 #include <vk_mem_alloc.h>
 #include <volk.h>
 
 namespace alimer
 {
     extern eastl::string to_string(VkResult result);
+
+    namespace graphics
+    {
+        class VulkanDevice final : public Device
+        {
+
+        };
+    }
 }
 
 /// Helper macro to test the result of Vulkan calls which can return an error.

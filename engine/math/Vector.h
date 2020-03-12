@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Math/Math.h"
+#include "math/Math.h"
 #include "Diagnostics/Assert.h"
 #include <EASTL/string.h>
 

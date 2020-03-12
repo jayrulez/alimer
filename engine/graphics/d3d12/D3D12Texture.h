@@ -20,14 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsBuffer.h"
-#include "Graphics/GraphicsDevice.h"
+#pragma once
+
+#include "Graphics/Texture.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor)
-        : GraphicsResource(device, Type::Buffer)
+    class D3D12Texture final : public Texture
     {
+    public:
+        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor);
+        ~D3D12Texture() override;
 
-    }
+        void Destroy() override;
+    };
 }

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Math/Rect.h"
+#include "math/Rect.h"
 
 namespace alimer
 {

@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Utils.h"
-#include "Math/Size.h"
+#include "math/Size.h"
 #include <EASTL/string.h>
 
 namespace alimer

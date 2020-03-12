@@ -24,7 +24,7 @@
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
-namespace Alimer
+namespace alimer
 {
     D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* nativeHandle, const SwapChainDescriptor* descriptor)
         : SwapChain(descriptor)

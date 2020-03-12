@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Vector.h"
+#include "math/Vector.h"
 #include "Core/String.h"
 #include "Diagnostics/Assert.h"
 

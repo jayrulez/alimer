@@ -20,35 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/CommandContext.h"
-#include "Graphics/GraphicsDevice.h"
+#include "math/Point.h"
 
 namespace alimer
 {
-    /* CopyContext */
-    CopyContext::CopyContext(GraphicsDevice* device)
-        : device{ device }
-    {
-        ALIMER_ASSERT(device);
-    }
-
-    CopyContext::~CopyContext() = default;
-
-    /* ComputeContext */
-    ComputeContext::ComputeContext(GraphicsDevice* device)
-        : CopyContext(device)
-    {
-
-    }
-
-    ComputeContext::~ComputeContext() = default;
-
-    /* GraphicsContext */
-    GraphicsContext::GraphicsContext(GraphicsDevice* device)
-        : ComputeContext(device)
-    {
-
-    }
-
-    GraphicsContext::~GraphicsContext() = default;
 }
+

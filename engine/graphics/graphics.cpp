@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,19 +20,35 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "config.h"
+#include "graphics/graphics.h"
 
-#include "Graphics/Texture.h"
-#include "D3D12Backend.h"
+#if defined(ALIMER_VULKAN)
+#include "graphics/vulkan/vulkan_backend.h"
+#endif
 
-namespace Alimer
+#if defined(ALIMER_D3D12)
+//#include "graphics/d3d12/vulkan_backend.h"
+#endif
+
+namespace alimer
 {
-    class D3D12Texture final : public Texture
+    namespace graphics
     {
-    public:
-        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor);
-        ~D3D12Texture() override;
+        Device::Device(Backend::Enum backend)
+            : backend{ backend }
+        {
+        }
 
-        void Destroy() override;
-    };
-}
+        Device* Device::create(Backend::Enum preferredBackend)
+        {
+            if (preferredBackend == Backend::Count) {
+
+
+            }
+
+            return nullptr;
+        }
+    } // namespace graphics
+
+} // namespace alimer

@@ -47,7 +47,7 @@
 #include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
-#include "Graphics/Types.h"
+#include "graphics/Types.h"
 
 #include <d3d12.h>
 
@@ -70,7 +70,7 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-namespace Alimer
+namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
     // DXGI functions

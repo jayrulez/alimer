@@ -20,32 +20,23 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
-#include "Graphics/GraphicsDevice.h"
+#pragma once
+
+#include "Graphics/CommandContext.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    static GraphicsResource::Type GetResourceType(const TextureDescriptor* desc)
+    class D3D12GraphicsContext final : public GraphicsContext
     {
-        if (desc->type == TextureType::Type1D) {
-            return GraphicsResource::Type::Texture1D;
-        }
-        else if (desc->type == TextureType::Type2D) {
-            return GraphicsResource::Type::Texture2D;
-        }
-        else if (desc->type == TextureType::Type3D) {
-            return GraphicsResource::Type::Texture3D;
-        }
-        else if (desc->type == TextureType::TypeCube) {
-            return GraphicsResource::Type::TextureCube;
-        }
+    public:
+        D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
+        ~D3D12GraphicsContext() override;
 
-        return GraphicsResource::Type::Buffer;
-    }
+        void Destroy();
 
-    Texture::Texture(GraphicsDevice* device, const TextureDescriptor* descriptor)
-        : GraphicsResource(device, GetResourceType(descriptor))
-    {
-
-    }
+    private:
+        ID3D12GraphicsCommandList* commandList = nullptr;
+        ID3D12CommandAllocator* currentAllocator = nullptr;
+    };
 }

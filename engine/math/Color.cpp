@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Point.h"
+#include "math/Color.h"
 
 namespace alimer
 {
 }
-
