@@ -23,12 +23,16 @@
 #include "config.h"
 #include "graphics/GPUDevice.h"
 
-#if defined(ALIMER_VULKAN)
-#include "graphics/vulkan/VulkanBackend.h"
-#endif
-
 #if defined(ALIMER_D3D12)
 //#include "graphics/d3d12/vulkan_backend.h"
+#endif
+
+#if defined(ALIMER_D3D11)
+#   include "graphics/d3d11/D3D11GPUDevice.h"
+#endif
+
+#if defined(ALIMER_VULKAN)
+#   include "graphics/vulkan/VulkanGPUDevice.h"
 #endif
 
 namespace alimer
@@ -40,14 +44,32 @@ namespace alimer
 
     GPUDevice* GPUDevice::Create(GPUBackend preferredBackend)
     {
-        GPUDevice* newInstance = nullptr;
         if (preferredBackend == GPUBackend::Count) {
-
-
+            preferredBackend = GPUBackend::Direct3D11;
         }
 
-        newInstance = CreateVulkanGPUDevice();
-        return newInstance;
+        GPUDevice* gpuDevice = nullptr;
+        switch (preferredBackend)
+        {
+#if defined(ALIMER_D3D11)
+        case GPUBackend::Direct3D11:
+            if (D3D11GPUDevice::IsAvailable())
+                gpuDevice = new D3D11GPUDevice();
+            break;
+#endif
+
+#if defined(ALIMER_VULKAN)
+        case GPUBackend::Vulkan:
+            if (VulkanGPUDevice::IsAvailable())
+                gpuDevice = new VulkanGPUDevice();
+            break;
+#endif
+
+        default:
+            break;
+        }
+
+        return gpuDevice;
     }
 
     void GPUDevice::NotifyValidationError(const char* message)

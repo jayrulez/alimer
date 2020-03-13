@@ -50,12 +50,16 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
+if (ALIMER_D3D11)
+    define_engine_source_files(graphics/d3d_common)
+    define_engine_source_files(graphics/d3d11)
+endif()
+if (ALIMER_D3D12)
+    define_engine_source_files(graphics/d3d_common)
+    #define_engine_source_files(graphics/d3d12)
+endif()
 if (ALIMER_VULKAN)
     define_engine_source_files(graphics/vulkan)
-endif()
-
-if (ALIMER_D3D12)
-    #define_engine_source_files(graphics/d3d12)
 endif()
 
 group_sources()
@@ -82,18 +86,18 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
+if (ALIMER_D3D12)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        D3D12MemoryAllocator
+    )
+endif()
+
 if (ALIMER_VULKAN)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         volk
         vma
     )
-endif ()
-
-if (ALIMER_D3D12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        D3D12MemoryAllocator
-    )
-endif ()
+endif()
 
 if (CLANG_CL OR MSVC)
      target_compile_options(${PROJECT_NAME} PUBLIC /MP)

@@ -25,6 +25,21 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
         set(CLANG_CL ON CACHE BOOL "" FORCE)
     endif()
+elseif (MSVC)
+    set(MSVC_NATIVE ON CACHE BOOL "" FORCE)
+endif()
+
+# Choose C++ standard.
+set(CXX_STANDARD "-std=c++17")
+if (WIN32)
+    set(CXX_STANDARD "/std:c++17")
+endif()
+
+if (MSVC_NATIVE)
+    set(CXX_STANDARD "/std:c++latest")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /Zc:__cplusplus")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 
 # Define standard configurations
@@ -47,6 +62,8 @@ add_compile_options(-D_HAS_ITERATOR_DEBUGGING=$<CONFIG:DEBUG> -D_SECURE_SCL=$<CO
 add_compile_options(-D_HAS_EXCEPTIONS=0)
 
 if (WIN32 OR WINDOWS_STORE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
+
     # Disable C++ exceptions
     replace_compile_flags("/EHsc" "")
 
@@ -80,3 +97,34 @@ if (WIN32 OR WINDOWS_STORE)
 		add_compile_options(/MP)
 	endif()
 endif()
+
+# Add colors to ninja builds
+if (CMAKE_GENERATOR STREQUAL "Ninja")
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options (-fdiagnostics-color=always)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options (-fcolor-diagnostics)
+    endif ()
+endif()
+
+# Install paths
+set (DEST_BASE_INCLUDE_DIR include)
+set (DEST_INCLUDE_DIR ${DEST_BASE_INCLUDE_DIR}/alimer)
+set (DEST_THIRDPARTY_HEADERS_DIR ${DEST_INCLUDE_DIR}/ThirdParty)
+set (DEST_ARCHIVE_DIR lib)
+if (ANDROID)
+    set (DEST_LIBRARY_DIR ${DEST_ARCHIVE_DIR})
+else ()
+    set (DEST_LIBRARY_DIR bin)
+endif ()
+set (DEST_BIN_DIR bin)
+
+if (MSVC OR "${CMAKE_GENERATOR}" STREQUAL "Xcode")
+    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR}/$<CONFIG>)
+    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR}/$<CONFIG>)
+    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR}/$<CONFIG>)
+else ()
+    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR})
+    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR})
+    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR})
+endif ()

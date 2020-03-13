@@ -22,42 +22,11 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "Core/Object.h"
-#include <EASTL/vector.h>
+#include "graphics/Types.h"
+#include "graphics/d3d_common/D3DCommon.h"
+#include <d3d11_1.h>
 
 namespace alimer
 {
-    enum class SwapChainResizeResult
-    {
-        Success,
-        NoSurface,
-        Error
-    };
-
-    class Texture;
-
-    class SwapChain : public Object
-    {
-        ALIMER_OBJECT(SwapChain, Object);
-
-    protected:
-        /// Constructor.
-        SwapChain(const SwapChainDescriptor& descriptor);
-
-    public:
-        virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
-        virtual void Present() = 0;
-
-        const SizeU& GetExtent() const;
-
-    protected:
-        SizeU extent{};
-        bool tripleBuffer;
-        bool vsync;
-        bool srgb;
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
-        eastl::vector<Texture*> textures;
-    };
-} 
+    class D3D11GPUDevice;
+}

@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Utils.h"
-#include "Graphics/PixelFormat.h"
+#include "graphics/PixelFormat.h"
 
 namespace alimer
 {
@@ -34,6 +34,8 @@ namespace alimer
         Null,
         /// Vulkan backend.
         Vulkan,
+        /// Direct3D 11.1+ backend.
+        Direct3D11,
         /// Direct3D 12 backend.
         Direct3D12,
         /// Metal backend.
@@ -121,8 +123,6 @@ namespace alimer
     /// Describes a SwapChain.
     struct SwapChainDescriptor
     {
-        uint32_t width;
-        uint32_t height;
         bool tripleBuffer = false;
         bool vsync = true;
         bool srgb = false;

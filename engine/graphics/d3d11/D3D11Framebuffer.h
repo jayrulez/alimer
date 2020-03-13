@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,42 +22,20 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "Core/Object.h"
-#include <EASTL/vector.h>
+#include "graphics/Framebuffer.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    enum class SwapChainResizeResult
+    class ALIMER_API D3D11Framebuffer final : public Framebuffer
     {
-        Success,
-        NoSurface,
-        Error
-    };
-
-    class Texture;
-
-    class SwapChain : public Object
-    {
-        ALIMER_OBJECT(SwapChain, Object);
-
-    protected:
-        /// Constructor.
-        SwapChain(const SwapChainDescriptor& descriptor);
-
     public:
-        virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
-        virtual void Present() = 0;
+        /// Constructor.
+        D3D11Framebuffer(D3D11GPUDevice* device);
+        /// Destructor.
+        ~D3D11Framebuffer() override;
 
-        const SizeU& GetExtent() const;
+    private:
 
-    protected:
-        SizeU extent{};
-        bool tripleBuffer;
-        bool vsync;
-        bool srgb;
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
-        eastl::vector<Texture*> textures;
     };
-} 
+}

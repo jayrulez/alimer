@@ -40,7 +40,7 @@ namespace alimer
         application_dummy();
 
         Configuration config;
-        config.window_title = "Sample 01 - Hello";
+        config.windowTitle = "Sample 01 - Hello";
         return new MyGame(config);
     }
 }

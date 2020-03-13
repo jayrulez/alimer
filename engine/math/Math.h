@@ -36,7 +36,6 @@
 
 namespace alimer
 {
-    static constexpr float M_PI = 3.14159265358979323846264338327950288f;
     static constexpr float M_EPSILON = 0.000001f;
     static constexpr float M_DEGTORAD = M_PI / 180.0f;
     static constexpr float M_DEGTORAD_2 = M_PI / 360.0f;    // M_DEGTORAD / 2.0f

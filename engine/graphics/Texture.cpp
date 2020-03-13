@@ -25,26 +25,8 @@
 
 namespace alimer
 {
-    static GPUResource::Type GetResourceType(const TextureDescriptor* desc)
-    {
-        if (desc->type == TextureType::Type1D) {
-            return GPUResource::Type::Texture1D;
-        }
-        else if (desc->type == TextureType::Type2D) {
-            return GPUResource::Type::Texture2D;
-        }
-        else if (desc->type == TextureType::Type3D) {
-            return GPUResource::Type::Texture3D;
-        }
-        else if (desc->type == TextureType::TypeCube) {
-            return GPUResource::Type::TextureCube;
-        }
-
-        return GPUResource::Type::Buffer;
-    }
-
     Texture::Texture(GPUDevice* device, const TextureDescriptor* descriptor)
-        : GPUResource(device, GetResourceType(descriptor))
+        : GPUResource(device, Type::Texture)
     {
 
     }

@@ -47,8 +47,6 @@ namespace alimer
     {
         device = newDevice;
         SwapChainDescriptor desc = {};
-        desc.width = size.width;
-        desc.height = size.height;
         swapChain = device->CreateSwapChain(GetNativeHandle(), desc);
     }
 

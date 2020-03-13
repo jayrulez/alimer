@@ -61,11 +61,11 @@ namespace alimer
     void Game::InitBeforeRun()
     {
         DeviceDesc deviceDesc = {};
-        deviceDesc.application_name = config.application_name.c_str();
+        deviceDesc.applicationName = config.applicationName.c_str();
 #ifdef _DEBUG
         deviceDesc.validation = true;
 #endif
-        gpuDevice.reset(GPUDevice::Create(GPUBackend::Vulkan));
+        gpuDevice.reset(GPUDevice::Create(config.gpuBackend));
         if (!gpuDevice->Init(deviceDesc)) {
             headless = true;
             gpuDevice.reset();

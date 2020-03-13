@@ -4,21 +4,19 @@ cmake_minimum_required(VERSION 3.10)
 # Project declaration
 project (Alimer)
 
-# Target C++14 without extensions
-set (CMAKE_CXX_STANDARD 14)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_EXTENSIONS OFF)
-
 # Options
 if (WIN32)
-	option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
+    option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
+    option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
     option(ALIMER_VULKAN "Include Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-    set (ALIMER_D3D12 ON CACHE BOOL "Use Direct3D12 Graphics backend" FORCE)
+    option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
+    option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
 elseif (EMSCRIPTEN)
-    set (ALIMER_WGPU ON CACHE BOOL "Use WebGPU Graphics backend" FORCE)
+    set(ALIMER_OPENGL ON CACHE BOOL "Use OpenGL backend" FORCE)
 else()
-	set (ALIMER_VULKAN ON CACHE BOOL "Use Vulkan Graphics backend" FORCE)
+    option(ALIMER_OPENGL "Include Vulkan backend" ON)
+	option(ALIMER_VULKAN "Include Vulkan backend" ON)
 endif ()
 
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
@@ -60,48 +58,6 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(alimer)
 
-# Install paths
-set (DEST_BASE_INCLUDE_DIR include)
-set (DEST_INCLUDE_DIR ${DEST_BASE_INCLUDE_DIR}/alimer)
-set (DEST_THIRDPARTY_HEADERS_DIR ${DEST_INCLUDE_DIR}/ThirdParty)
-set (DEST_ARCHIVE_DIR lib)
-if (ANDROID)
-    set (DEST_LIBRARY_DIR ${DEST_ARCHIVE_DIR})
-else ()
-    set (DEST_LIBRARY_DIR bin)
-endif ()
-set (DEST_BIN_DIR bin)
-
-if (MSVC OR "${CMAKE_GENERATOR}" STREQUAL "Xcode")
-    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR}/$<CONFIG>)
-    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR}/$<CONFIG>)
-    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR}/$<CONFIG>)
-else ()
-    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR})
-    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR})
-    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR})
-endif ()
-
-# OS specific
-if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN)
-    
-endif()
-
-if (ANDROID OR IOS OR EMSCRIPTEN)
-    set (MOBILE ON CACHE BOOL "" FORCE)
-elseif (APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-    set (APPLE ON CACHE BOOL "" FORCE)
-endif ()
-
-# Add colors to ninja builds
-if (CMAKE_GENERATOR STREQUAL "Ninja")
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        add_compile_options (-fdiagnostics-color=always)
-    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-        add_compile_options (-fcolor-diagnostics)
-    endif ()
-endif()
-
 # third_party
 add_subdirectory(third_party)
 
@@ -118,13 +74,16 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
+if (ALIMER_D3D121)
+    message (STATUS "Graphics API:          Direct3D11")
+endif ()
+if (ALIMER_D3D12)
+    message (STATUS "Graphics API:          Direct3D12")
+endif ()
 if (ALIMER_VULKAN)
     message (STATUS "Graphics API:          Vulkan")
 endif ()
 
-if (ALIMER_D3D12)
-    message (STATUS "Graphics API:          Direct3D12")
-endif ()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

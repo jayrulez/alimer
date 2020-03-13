@@ -42,14 +42,9 @@ namespace alimer
             Unknown,
             /// Buffer. Can be bound to all shader-stages
             Buffer,
-            /// 1D texture. Can be bound as render-target, shader-resource and UAV
-            Texture1D,
-            /// 2D texture. Can be bound as render-target, shader-resource and UAV
-            Texture2D,
-            /// 3D texture. Can be bound as render-target, shader-resource and UAV
-            Texture3D,
-            /// Texture-cube. Can be bound as render-target, shader-resource and UAV
-            TextureCube
+            ///Texture. Can be bound as render-target, shader-resource and UAV
+            Texture,
+            Framebuffer
         };
 
     protected:

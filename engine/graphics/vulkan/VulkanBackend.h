@@ -22,8 +22,54 @@
 
 #pragma once
 
+#include <vk_mem_alloc.h>
+#include <volk.h>
+#include <EASTL/string.h>
+
 namespace alimer
 {
-    class GPUDevice;
-    GPUDevice* CreateVulkanGPUDevice();
+    class VulkanGPUDevice;
+
+    struct VulkanDeviceFeatures
+    {
+        uint32_t apiVersion;
+
+        /// VK_KHR_get_surface_capabilities2
+        bool surface_capabilities2 = false;
+
+        /// VK_KHR_get_physical_device_properties2
+        bool physical_device_properties2 = false;
+        /// VK_KHR_external_memory_capabilities + VK_KHR_external_semaphore_capabilities
+        bool external = false;
+        /// VK_EXT_debug_utils
+        bool debug_utils = false;
+
+        /// Device - VK_KHR_get_memory_requirements2
+        bool get_memory_requirements2 = false;
+
+        /// Device - VK_KHR_dedicated_allocation
+        bool dedicated = false;
+
+        /// Device - VK_KHR_bind_memory2
+        bool bind_memory2 = false;
+
+        /// Device - VK_EXT_memory_budget
+        bool memory_budget = false;
+    };
+
+    eastl::string to_string(VkResult result);
 }
+
+/// Helper macro to test the result of Vulkan calls which can return an error.
+#define VK_CHECK(x)                                                                 \
+	do                                                                              \
+	{                                                                               \
+		VkResult result = x;                                                        \
+		if (result != VK_SUCCESS)                                                   \
+		{                                                                           \
+			ALIMER_LOGE("Detected Vulkan error: %s", alimer::to_string(result));    \
+			abort();                                                                \
+		}                                                                           \
+	} while (0)
+
+#define VK_THROW(result, str) ALIMER_LOGE("%s : %s", str, alimer::to_string(result)); 

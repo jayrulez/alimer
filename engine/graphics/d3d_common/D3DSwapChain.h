@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,42 +22,36 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "Core/Object.h"
-#include <EASTL/vector.h>
+#include "graphics/SwapChain.h"
+#include "D3DCommon.h"
+#include <vector>
 
 namespace alimer
 {
-    enum class SwapChainResizeResult
+    class D3DSwapChain : public SwapChain
     {
-        Success,
-        NoSurface,
-        Error
-    };
-
-    class Texture;
-
-    class SwapChain : public Object
-    {
-        ALIMER_OBJECT(SwapChain, Object);
-
-    protected:
-        /// Constructor.
-        SwapChain(const SwapChainDescriptor& descriptor);
-
     public:
-        virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
-        virtual void Present() = 0;
+        /// Constructor.
+        D3DSwapChain(IDXGIFactory2* factory, IUnknown* deviceOrCommandQueue, void* nativeWindow, const SwapChainDescriptor& desc);
 
-        const SizeU& GetExtent() const;
+        // Destructor
+        ~D3DSwapChain() override;
 
-    protected:
-        SizeU extent{};
-        bool tripleBuffer;
-        bool vsync;
-        bool srgb;
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
-        eastl::vector<Texture*> textures;
+    private:
+        SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) override;
+        void Present() override;
+
+        IDXGIFactory2* factory;
+        IUnknown* deviceOrCommandQueue;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window;
+#else
+        IUnknown* window;
+#endif
+        DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+        UINT backBufferCount = 2;
+        bool flipPresentSupported = true;
+        bool tearingSupported = false;
+        IDXGISwapChain1* _handle = nullptr;
     };
-} 
+}

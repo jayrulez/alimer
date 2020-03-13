@@ -26,26 +26,12 @@
 namespace alimer
 {
     SwapChain::SwapChain(const SwapChainDescriptor& descriptor)
-        : extent(descriptor.width, descriptor.height)
-        , tripleBuffer(descriptor.tripleBuffer)
+        : tripleBuffer(descriptor.tripleBuffer)
         , vsync(descriptor.vsync)
         , srgb(descriptor.srgb)
         , colorFormat(PixelFormat::Undefined)
         , depthStencilFormat(descriptor.depthStencilFormat)
     {
-    }
-
-    SwapChainResizeResult SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        if (extent.width == newWidth && extent.height == newHeight)
-            return SwapChainResizeResult::Success;
-
-        return BackendResize();
-    }
-
-    void SwapChain::Present()
-    {
-        BackendPresent();
     }
 
     const SizeU& SwapChain::GetExtent() const

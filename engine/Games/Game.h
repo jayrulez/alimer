@@ -36,13 +36,16 @@ namespace alimer
     struct Configuration
     {
         /// The name of the application.
-        eastl::string application_name = "Alimer";
+        eastl::string applicationName = "Alimer";
+
+        /// The preferred GPU backend.
+        GPUBackend gpuBackend = GPUBackend::Count;
 
         /// Main window title.
-        eastl::string window_title = "Alimer";
+        eastl::string windowTitle = "Alimer";
 
         /// Main window size.
-        SizeU window_size = { 1280, 720 };
+        SizeU windowSize = { 1280, 720 };
     };
 
     class InputManager;

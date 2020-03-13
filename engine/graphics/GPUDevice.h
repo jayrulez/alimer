@@ -35,9 +35,9 @@ namespace alimer
     struct DeviceDesc
     {
         /// Application name.
-        const char* application_name;
+        const char* applicationName;
         /// GPU device power preference.
-        DevicePowerPreference power_preference;
+        DevicePowerPreference powerPreference;
         /// Enable validation (debug layer).
         bool validation;
         /// Enable headless mode.

@@ -23,41 +23,18 @@
 #pragma once
 
 #include "graphics/Texture.h"
-#include "Core/Object.h"
-#include <EASTL/vector.h>
+#include "math/Size.h"
 
 namespace alimer
 {
-    enum class SwapChainResizeResult
+    class Framebuffer : public GPUResource
     {
-        Success,
-        NoSurface,
-        Error
-    };
-
-    class Texture;
-
-    class SwapChain : public Object
-    {
-        ALIMER_OBJECT(SwapChain, Object);
+        ALIMER_OBJECT(Framebuffer, GPUResource);
 
     protected:
         /// Constructor.
-        SwapChain(const SwapChainDescriptor& descriptor);
+        Framebuffer(GPUDevice* device);
 
-    public:
-        virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
-        virtual void Present() = 0;
-
-        const SizeU& GetExtent() const;
-
-    protected:
-        SizeU extent{};
-        bool tripleBuffer;
-        bool vsync;
-        bool srgb;
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
-        eastl::vector<Texture*> textures;
+    private:
     };
 } 
