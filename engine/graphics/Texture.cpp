@@ -20,35 +20,33 @@
 // THE SOFTWARE.
 //
 
-#if 0
-#include "Graphics/Texture.h"
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/Texture.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    static GraphicsResource::Type GetResourceType(const TextureDescriptor* desc)
+    static GPUResource::Type GetResourceType(const TextureDescriptor* desc)
     {
         if (desc->type == TextureType::Type1D) {
-            return GraphicsResource::Type::Texture1D;
+            return GPUResource::Type::Texture1D;
         }
         else if (desc->type == TextureType::Type2D) {
-            return GraphicsResource::Type::Texture2D;
+            return GPUResource::Type::Texture2D;
         }
         else if (desc->type == TextureType::Type3D) {
-            return GraphicsResource::Type::Texture3D;
+            return GPUResource::Type::Texture3D;
         }
         else if (desc->type == TextureType::TypeCube) {
-            return GraphicsResource::Type::TextureCube;
+            return GPUResource::Type::TextureCube;
         }
 
-        return GraphicsResource::Type::Buffer;
+        return GPUResource::Type::Buffer;
     }
 
-    Texture::Texture(GraphicsDevice* device, const TextureDescriptor* descriptor)
-        : GraphicsResource(device, GetResourceType(descriptor))
+    Texture::Texture(GPUDevice* device, const TextureDescriptor* descriptor)
+        : GPUResource(device, GetResourceType(descriptor))
     {
 
     }
 }
-#endif // 0
 

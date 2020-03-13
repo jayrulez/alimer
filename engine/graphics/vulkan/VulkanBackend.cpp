@@ -24,8 +24,9 @@
 #include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/Texture.h"
 #include "graphics/SwapChain.h"
+#include "graphics/GPUDevice.h"
 #include <EASTL/algorithm.h>
 #include <EASTL/vector.h>
 
@@ -231,6 +232,29 @@ namespace alimer
         return {};
     }
 
+    static VkPresentModeKHR ChooseSwapPresentMode(
+        const vector<VkPresentModeKHR>& availablePresentModes, bool vsyncEnabled)
+    {
+        // Try to match the correct present mode to the vsync state.
+        vector<VkPresentModeKHR> desiredModes;
+        if (vsyncEnabled) desiredModes = { VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
+        else desiredModes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
+
+        // Iterate over all available present mdoes and match to one of the desired ones.
+        for (const auto& availablePresentMode : availablePresentModes)
+        {
+            for (auto mode : desiredModes)
+            {
+                if (availablePresentMode == mode)
+                    return availablePresentMode;
+            }
+        }
+
+        // If no match was found, return the first present mode or default to FIFO.
+        if (availablePresentModes.size() > 0) return availablePresentModes[0];
+        else return VK_PRESENT_MODE_FIFO_KHR;
+    }
+
     static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT                  messageType,
@@ -315,6 +339,13 @@ namespace alimer
         bool memory_budget = false;
     };
 
+    class VulkanTexture final : public Texture
+    {
+    public:
+        VulkanTexture(VulkanGPUDevice* device, const TextureDescriptor* descriptor);
+        ~VulkanTexture() override;
+    };
+
     class VulkanSwapChain final : public SwapChain
     {
     public:
@@ -341,7 +372,7 @@ namespace alimer
         VkPhysicalDevice GetPhysicalDevice() const { return physical_device; }
         VkDevice GetDevice() const { return device; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
-        
+
     private:
         bool BackendInit(const DeviceDesc& desc) override;
         void BackendShutdown() override;
@@ -354,7 +385,6 @@ namespace alimer
         VkPhysicalDevice physical_device{ VK_NULL_HANDLE };
 
         VkDevice device{ VK_NULL_HANDLE };
-        VolkDeviceTable deviceTable;
 
         uint32_t graphicsQueueFamily = VK_QUEUE_FAMILY_IGNORED;
         uint32_t computeQueueFamily = VK_QUEUE_FAMILY_IGNORED;
@@ -367,6 +397,17 @@ namespace alimer
     };
 
     /* Implementation */
+    /*------------- VulkanTexture -------------*/
+    VulkanTexture::VulkanTexture(VulkanGPUDevice* device, const TextureDescriptor* descriptor)
+        : Texture(device, descriptor)
+    {
+
+    }
+
+    VulkanTexture::~VulkanTexture()
+    {
+    }
+
     /*------------- VulkanSwapChain -------------*/
     VulkanSwapChain::VulkanSwapChain(VulkanGPUDevice* device, void* nativeWindow, const SwapChainDescriptor& descriptor)
         : SwapChain(descriptor)
@@ -450,6 +491,165 @@ namespace alimer
             formats.resize(format_count);
             if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, formats.data()) != VK_SUCCESS)
                 return SwapChainResizeResult::Error;
+        }
+
+        VkSurfaceFormatKHR format;
+        if (format_count == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+        {
+            format = formats[0];
+            format.format = VK_FORMAT_B8G8R8A8_UNORM;
+        }
+        else
+        {
+            if (format_count == 0)
+            {
+                ALIMER_LOGE("Vulkan: Surface has no formats.");
+                return SwapChainResizeResult::Error;
+            }
+
+            bool found = false;
+            for (uint32_t i = 0; i < format_count; i++)
+            {
+                if (srgb)
+                {
+                    if (formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||
+                        formats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
+                        formats[i].format == VK_FORMAT_A8B8G8R8_SRGB_PACK32)
+                    {
+                        format = formats[i];
+                        found = true;
+                    }
+                }
+                else
+                {
+                    if (formats[i].format == VK_FORMAT_R8G8B8A8_UNORM ||
+                        formats[i].format == VK_FORMAT_B8G8R8A8_UNORM ||
+                        formats[i].format == VK_FORMAT_A8B8G8R8_UNORM_PACK32)
+                    {
+                        format = formats[i];
+                        found = true;
+                    }
+                }
+            }
+
+            if (!found)
+                format = formats[0];
+        }
+
+        uint32_t imageCount = (tripleBuffer) ? 3 : surfaceCapabilities.minImageCount + 1;
+        if (surfaceCapabilities.maxImageCount > 0 &&
+            imageCount > surfaceCapabilities.maxImageCount)
+        {
+            imageCount = surfaceCapabilities.maxImageCount;
+        }
+
+        // Clamp the target width, height to boundaries.
+        extent.width =
+            max(min(extent.width, surfaceCapabilities.maxImageExtent.width), surfaceCapabilities.minImageExtent.width);
+        extent.height =
+            max(min(extent.height, surfaceCapabilities.maxImageExtent.height), surfaceCapabilities.minImageExtent.height);
+
+        // Enable transfer source and destination on swap chain images if supported
+        VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (surfaceCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        }
+        if (surfaceCapabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        }
+
+        VkSurfaceTransformFlagBitsKHR preTransform;
+        if ((surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) != 0) {
+            // We prefer a non-rotated transform
+            preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        }
+        else {
+            preTransform = surfaceCapabilities.currentTransform;
+        }
+
+        VkCompositeAlphaFlagBitsKHR compositeMode = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+            compositeMode = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+            compositeMode = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR)
+            compositeMode = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+        if (surfaceCapabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+            compositeMode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+
+        /* Choose present mode. */
+        uint32_t num_present_modes;
+        vector<VkPresentModeKHR> presentModes;
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &num_present_modes, nullptr) != VK_SUCCESS)
+            return SwapChainResizeResult::Error;
+        presentModes.resize(num_present_modes);
+        if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &num_present_modes, presentModes.data()) != VK_SUCCESS)
+            return SwapChainResizeResult::Error;
+
+        VkPresentModeKHR presentMode = ChooseSwapPresentMode(presentModes, vsync);
+        VkSwapchainKHR oldSwapchain = handle;
+
+        VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = format.format;
+        createInfo.imageColorSpace = format.colorSpace;
+        createInfo.imageExtent.width = extent.width;
+        createInfo.imageExtent.height = extent.height;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = imageUsage;
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.preTransform = preTransform;
+        createInfo.compositeAlpha = compositeMode;
+        createInfo.presentMode = presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = oldSwapchain;
+
+        VkResult  result = vkCreateSwapchainKHR(device->GetDevice(), &createInfo, nullptr, &handle);
+        if (result != VK_SUCCESS)
+        {
+            VK_THROW(result, "Cannot create Swapchain");
+            return SwapChainResizeResult::Error;
+        }
+
+        if (oldSwapchain != VK_NULL_HANDLE)
+        {
+            vkDestroySwapchainKHR(device->GetDevice(), oldSwapchain, nullptr);
+        }
+
+        switch (createInfo.imageFormat)
+        {
+        case VK_FORMAT_R8G8B8A8_SRGB:
+            colorFormat = PixelFormat::RGBA8UNormSrgb;
+            break;
+
+        case VK_FORMAT_B8G8R8A8_SRGB:
+        case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+            colorFormat = PixelFormat::BGRA8UNormSrgb;
+            break;
+
+        case VK_FORMAT_R8G8B8A8_UNORM:
+            colorFormat = PixelFormat::RGBA8UNorm;
+            break;
+
+        default:
+            colorFormat = PixelFormat::BGRA8UNorm;
+            break;
+        }
+
+        if (vkGetSwapchainImagesKHR(device->GetDevice(), handle, &imageCount, nullptr) != VK_SUCCESS)
+        {
+            return SwapChainResizeResult::Error;
+        }
+
+        eastl::vector<VkImage> swapchainImages;
+        textures.resize(imageCount);
+        if (vkGetSwapchainImagesKHR(device->GetDevice(), handle, &imageCount, swapchainImages.data()) != VK_SUCCESS)
+            return SwapChainResizeResult::Error;
+
+        for (uint32_t i = 0; i < imageCount; ++i)
+        {
+
         }
 
         return SwapChainResizeResult::Success;
@@ -555,7 +755,7 @@ namespace alimer
                 {
                     instanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                     features.surface_capabilities2 = true;
-                }
+            }
             }
 
             if (hasExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
@@ -625,7 +825,7 @@ namespace alimer
                     vkCreateDebugUtilsMessengerEXT(instance, &debugMessengerCreateInfo, nullptr, &debug_messenger)
                 );
             }
-                }
+        }
 
         // Enumerate physical device and create logical one.
         {
@@ -868,10 +1068,9 @@ namespace alimer
                 return false;
             }
 
-            volkLoadDeviceTable(&deviceTable, device);
-            deviceTable.vkGetDeviceQueue(device, graphicsQueueFamily, graphicsQueueIndex, &graphicsQueue);
-            deviceTable.vkGetDeviceQueue(device, computeQueueFamily, compute_queue_index, &computeQueue);
-            deviceTable.vkGetDeviceQueue(device, copyQueueFamily, transfer_queue_index, &copyQueue);
+            vkGetDeviceQueue(device, graphicsQueueFamily, graphicsQueueIndex, &graphicsQueue);
+            vkGetDeviceQueue(device, computeQueueFamily, compute_queue_index, &computeQueue);
+            vkGetDeviceQueue(device, copyQueueFamily, transfer_queue_index, &copyQueue);
         }
 
         // Create VMA allocator.
@@ -933,7 +1132,7 @@ namespace alimer
         }
 
         return true;
-            }
+    }
 
     void VulkanGPUDevice::BackendShutdown()
     {
@@ -978,4 +1177,4 @@ namespace alimer
     {
         return new VulkanGPUDevice();
     }
-        }
+}

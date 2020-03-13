@@ -38,17 +38,13 @@ namespace alimer
             T data[SIZE];
             struct
             {
-                /// Specifies the width of the size.
-                T width;
-                /// Specifies the height of the size.
-                T height;
+                T width, height;
             };
         };
 
         TSize() = default;
         TSize(const TSize&) = default;
         TSize& operator=(const TSize&) = default;
-
         TSize(TSize&&) = default;
         TSize& operator=(TSize&&) = default;
 
@@ -82,7 +78,67 @@ namespace alimer
             return data[i];
         }
     };
+
+    /// Class specifying a three-dimensional size.
+    template <typename T>
+    class TSize3 final
+    {
+    public:
+        static constexpr size_t SIZE = 3;
+
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                T width, height, depth;
+            };
+        };
+
+        TSize3() = default;
+        TSize3(const TSize3&) = default;
+        TSize3& operator=(const TSize3&) = default;
+        TSize3(TSizeTSize3) = default;
+        TSize3& operator=(TSize3&&) = default;
+
+        explicit constexpr TSize3(T v)
+        {
+            width = v;
+            height = v;
+            depth = v;
+        }
+
+        template <typename U>
+        explicit constexpr TSize3(const TSize3<U>& u)
+        {
+            width = T(u.width);
+            height = T(u.height);
+            depth = T(u.depth);
+        }
+
+        constexpr TSize3(T width_, T height_, T depth_)
+        {
+            width = width_;
+            height = height_;
+            depth = depth_;
+        }
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+    };
+
     using Size = TSize<float>;
     using SizeI = TSize<int32_t>;
     using SizeU = TSize<uint32_t>;
+    using Size3 = TSize3<float>;
+    using Size3I = TSize3<int32_t>;
+    using Size3U = TSize3<uint32_t>;
 } 

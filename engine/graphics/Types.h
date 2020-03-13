@@ -123,8 +123,9 @@ namespace alimer
     {
         uint32_t width;
         uint32_t height;
+        bool tripleBuffer = false;
         bool vsync = true;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
+        bool srgb = false;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
     };
 

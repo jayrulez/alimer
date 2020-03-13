@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "graphics/Types.h"
+#include "graphics/Texture.h"
 #include "Core/Object.h"
+#include <EASTL/vector.h>
 
 namespace alimer
 {
@@ -33,6 +34,8 @@ namespace alimer
         NoSurface,
         Error
     };
+
+    class Texture;
 
     class SwapChain : public Object
     {
@@ -46,15 +49,19 @@ namespace alimer
         SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
         void Present();
 
+        const SizeU& GetExtent() const;
+
     private:
         virtual SwapChainResizeResult BackendResize() = 0;
         virtual void BackendPresent() = 0;
 
     protected:
-        uint32_t width;
-        uint32_t height;
-        bool vsync = true;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
-        PixelFormat depthStencilFormat = PixelFormat::Undefined;
+        SizeU extent;
+        bool tripleBuffer;
+        bool vsync;
+        bool srgb;
+        PixelFormat colorFormat;
+        PixelFormat depthStencilFormat;
+        eastl::vector<Texture*> textures;
     };
 } 
