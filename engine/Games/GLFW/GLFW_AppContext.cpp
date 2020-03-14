@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "GLFW_Window.h"
+#include "window/window.h"
 #include "Games/Game.h"
 #include "Diagnostics/Log.h"
 #define GLFW_INCLUDE_NONE
@@ -54,12 +54,12 @@ namespace alimer
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         }
 
-        mainWindow.reset(new GLFW_Window(opengl, config.windowTitle, config.windowSize, WindowStyle::Default));
+        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Default));
 
         InitBeforeRun();
 
         // Main message loop
-        while (!mainWindow->ShouldClose() && !exiting)
+        while (mainWindow->IsOpen() && !exiting)
         {
             // Check for window messages to process.
             glfwPollEvents();

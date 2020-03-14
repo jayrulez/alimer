@@ -21,6 +21,7 @@
 //
 
 #include "VulkanGPUDevice.h"
+#include "VulkanFramebuffer.h"
 #include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
@@ -97,29 +98,6 @@ namespace alimer
         return {};
     }
 
-    static VkPresentModeKHR ChooseSwapPresentMode(
-        const vector<VkPresentModeKHR>& availablePresentModes, bool vsyncEnabled)
-    {
-        // Try to match the correct present mode to the vsync state.
-        vector<VkPresentModeKHR> desiredModes;
-        if (vsyncEnabled) desiredModes = { VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
-        else desiredModes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
-
-        // Iterate over all available present mdoes and match to one of the desired ones.
-        for (const auto& availablePresentMode : availablePresentModes)
-        {
-            for (auto mode : desiredModes)
-            {
-                if (availablePresentMode == mode)
-                    return availablePresentMode;
-            }
-        }
-
-        // If no match was found, return the first present mode or default to FIFO.
-        if (availablePresentModes.size() > 0) return availablePresentModes[0];
-        else return VK_PRESENT_MODE_FIFO_KHR;
-    }
-
     static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
         VkDebugUtilsMessageTypeFlagsEXT                  messageType,
@@ -193,7 +171,7 @@ namespace alimer
         available = true;
         return available;
     }
-    
+
     VulkanGPUDevice::VulkanGPUDevice()
         : GPUDevice()
     {
@@ -220,7 +198,7 @@ namespace alimer
         bool api_version_12 = false;
         bool api_version_11 = false;
         VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-        appInfo.pApplicationName = desc.applicationName;
+        appInfo.pApplicationName = desc.application_name;
         appInfo.applicationVersion = 0;
         appInfo.pEngineName = "Alimer";
         appInfo.engineVersion = 0;
@@ -253,7 +231,7 @@ namespace alimer
 
             vector<const char*> instanceExtensions;
             // Try to enable headless surface extension if it exists
-            if (desc.headless)
+            if (any(desc.flags & GPUDeviceFlags::Headless))
             {
                 if (!hasExtension(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME))
                 {
@@ -261,6 +239,7 @@ namespace alimer
                 }
                 else
                 {
+                    vk_features.headless = true;
                     ALIMER_LOGI("%s is available, enabling it", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
                     instanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
                 }
@@ -290,7 +269,7 @@ namespace alimer
                 {
                     instanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                     vk_features.surface_capabilities2 = true;
-            }
+                }
             }
 
             if (hasExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
@@ -316,7 +295,7 @@ namespace alimer
 
             vector<const char*> instanceLayers;
 
-            if (desc.validation)
+            if (any(desc.flags & GPUDeviceFlags::Validation))
             {
                 uint32_t layerCount;
                 VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
@@ -344,7 +323,7 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (desc.validation && vk_features.debug_utils)
+            if (any(desc.flags & GPUDeviceFlags::Validation))
             {
                 VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
                 debugMessengerCreateInfo.messageSeverity =
@@ -553,10 +532,8 @@ namespace alimer
             };
 
             vector<const char*> enabledDeviceExtensions;
-            if (!desc.headless)
-            {
+            if (!vk_features.headless)
                 enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-            }
 
             if (hasDeviceExtension(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
             {
@@ -703,14 +680,38 @@ namespace alimer
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-    shared_ptr<SwapChain> VulkanGPUDevice::CreateSwapChain(void* nativeWindow, const SwapChainDescriptor& desc)
+    VkSurfaceKHR VulkanGPUDevice::createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height)
     {
-        return nullptr;
-        //return make_shared<VulkanSwapChain>(this, nativeWindow, desc);
+        VkResult result = VK_SUCCESS;
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+        instanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+        VkWin32SurfaceCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+        createInfo.hinstance = GetModuleHandle(NULL);
+        createInfo.hwnd = reinterpret_cast<HWND>(nativeWindowHandle);
+        result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
+
+        if (result != VK_SUCCESS)
+        {
+            VK_THROW(result, "Failed to create surface");
+        }
+
+        RECT rect;
+        BOOL success = GetClientRect(createInfo.hwnd, &rect);
+        ALIMER_ASSERT_MSG(success, "GetWindowRect error.");
+        *width = rect.right - rect.left;
+        *height = rect.bottom - rect.top;
+#endif
+
+        return surface;
     }
 
-    GPUDevice* CreateVulkanGPUDevice()
+    shared_ptr<Framebuffer> VulkanGPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
     {
-        return new VulkanGPUDevice();
+        uint32_t width, height;
+        VkSurfaceKHR surface = createSurface(descriptor->nativeWindowHandle, &width, &height);
+        return make_shared<VulkanFramebuffer>(this, surface, width, height, descriptor);
     }
 }

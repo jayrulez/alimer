@@ -22,26 +22,23 @@
 
 #pragma once
 
-#include "Games/GameWindow.h"
-
-struct GLFWwindow;
+#include "graphics/Framebuffer.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class GLFW_Window : public GameWindow
+    class ALIMER_API VulkanFramebuffer final : public Framebuffer
     {
     public:
-        GLFW_Window(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~GLFW_Window() override;
-
-        void BackendSetTitle() override;
-        bool ShouldClose() const override;
-        bool IsMinimized() const override;
-        void* GetNativeHandle() const override;
-        void Present() override;
+        /// Constructor.
+        VulkanFramebuffer(VulkanGPUDevice* device, VkSurfaceKHR surface, uint32_t width, uint32_t height, const SwapChainDescriptor* descriptor);
+        /// Destructor.
+        ~VulkanFramebuffer() override;
 
     private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
+        FramebufferResizeResult BackendResize();
+
+        VkSurfaceKHR surface{ VK_NULL_HANDLE };
+        VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
     };
 }

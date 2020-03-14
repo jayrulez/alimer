@@ -123,8 +123,10 @@ namespace alimer
     /// Describes a SwapChain.
     struct SwapChainDescriptor
     {
+        /// Native window handle.
+        void* nativeWindowHandle;
+
         bool tripleBuffer = false;
-        bool vsync = true;
         bool srgb = false;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
     };

@@ -44,13 +44,15 @@ namespace alimer
         //bool BeginFrame() override;
         //void EndFrame() override;
 
-        eastl::shared_ptr<SwapChain> CreateSwapChain(void* nativeWindow, const SwapChainDescriptor& desc) override;
-
         const VulkanDeviceFeatures& GetVulkanFeatures() const { return vk_features; }
         VkInstance GetInstance() const { return instance; }
         VkPhysicalDevice GetPhysicalDevice() const { return physical_device; }
         VkDevice GetDevice() const { return device; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
+
+    private:
+        VkSurfaceKHR createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
+        eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
     private:
         VulkanDeviceFeatures vk_features{};

@@ -20,38 +20,64 @@
 // THE SOFTWARE.
 //
 
-#include "Games/GameWindow.h"
+#include "window/window.h"
 #include "graphics/GPUDevice.h"
 #include "graphics/SwapChain.h"
+
+#if defined(ALIMER_GLFW)
+#include "window/glfw/glfw_window.h"
+#endif
+
 using namespace eastl;
 
 namespace alimer
 {
-    GameWindow::GameWindow(const string& newTitle, const SizeU& newSize, WindowStyle style)
+    Window::Window(const string& newTitle, const SizeU& newSize, WindowStyle style)
         : title(newTitle)
         , size(newSize)
         , resizable(any(style& WindowStyle::Resizable))
         , fullscreen(any(style& WindowStyle::Fullscreen))
         , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
+        , impl(new WindowImpl(false, newTitle, newSize, style))
     {
 
     }
 
-    void GameWindow::SetTitle(const string& newTitle)
+    Window::~Window()
+    {
+        Close();
+    }
+
+    void Window::Close()
+    {
+        // Delete the window implementation
+        delete impl;
+        impl = nullptr;
+    }
+
+    bool Window::IsOpen() const
+    {
+        return impl != nullptr && impl->IsOpen();
+    }
+
+    void Window::SetTitle(const string& newTitle)
     {
         title = newTitle;
-        BackendSetTitle();
+        impl->SetTitle(title.c_str());
     }
 
-    void GameWindow::SetDevice(GPUDevice* newDevice)
+    bool Window::IsMinimized() const
     {
-        device = newDevice;
-        SwapChainDescriptor desc = {};
-        swapChain = device->CreateSwapChain(GetNativeHandle(), desc);
+        return impl->IsMinimized();
     }
 
-    void GameWindow::Present()
+    native_handle Window::get_native_handle() const
     {
-        swapChain->Present();
+        return impl->get_native_handle();
+    }
+
+    native_display Window::get_native_display() const
+    {
+        return impl->get_native_display();
     }
 }

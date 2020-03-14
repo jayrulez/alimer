@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "GLFW_Window.h"
+#include "glfw_window.h"
 #include "Core/Platform.h"
 #include "Diagnostics/Log.h"
 #if defined(_WIN32)
@@ -36,13 +36,15 @@
 
 namespace alimer
 {
-    GLFW_Window::GLFW_Window(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style)
-        : GameWindow(newTitle, newSize, style)
-        , opengl(opengl_)
+    WindowImpl::WindowImpl(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style)
+        : opengl(opengl_)
     {
         int window_width = (int) newSize.width;
         int window_height = (int)newSize.height;
         GLFWmonitor* monitor = nullptr;
+
+        const bool fullscreen = any(style & WindowStyle::Fullscreen);
+        const bool resizable = any(style & WindowStyle::Resizable);
         if (fullscreen)
         {
             monitor = glfwGetPrimaryMonitor();
@@ -53,7 +55,7 @@ namespace alimer
         else
         {
             glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
-            glfwWindowHint(GLFW_VISIBLE, visible ? GLFW_TRUE : GLFW_FALSE);
+            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
             //glfwWindowHint(GLFW_DECORATED, any(style & WindowStyle::Decorated) ? GLFW_TRUE : GLFW_FALSE);
         }
 
@@ -83,34 +85,32 @@ namespace alimer
         }
     }
 
-    GLFW_Window::~GLFW_Window()
+    WindowImpl::~WindowImpl()
     {
         glfwDestroyWindow(window);
     }
 
-    void GLFW_Window::BackendSetTitle()
+    void WindowImpl::SetTitle(const char* title)
     {
-        glfwSetWindowTitle(window, title.c_str());
+        glfwSetWindowTitle(window, title);
     }
 
-    bool GLFW_Window::ShouldClose() const
+    bool WindowImpl::IsOpen() const
     {
-        return glfwWindowShouldClose(window);
+        return !glfwWindowShouldClose(window);
     }
 
-    bool GLFW_Window::IsMinimized() const
+    bool WindowImpl::IsMinimized() const
     {
         return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
     }
 
-    void GLFW_Window::Present()
+    void WindowImpl::swap_buffers()
     {
-        if (opengl) {
-            glfwSwapBuffers(window);
-        }
+        glfwSwapBuffers(window);
     }
 
-    void* GLFW_Window::GetNativeHandle() const
+    native_handle WindowImpl::get_native_handle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
         return glfwGetWin32Window(window);
@@ -120,6 +120,21 @@ namespace alimer
         return glfwGetCocoaWindow(window);
 #elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
         return glfwGetWaylandWindow(window);
+#else
+        return nullptr;
+#endif
+    }
+
+    native_display WindowImpl::get_native_display() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Display();
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandDisplay();
 #else
         return nullptr;
 #endif

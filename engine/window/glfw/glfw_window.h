@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,30 +22,27 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "math/Size.h"
+#include "window/window.h"
+
+struct GLFWwindow;
 
 namespace alimer
 {
-    enum class FramebufferResizeResult
+    class WindowImpl final
     {
-        Success,
-        NoSurface,
-        Error
-    };
-
-    class Framebuffer : public GPUResource
-    {
-        ALIMER_OBJECT(Framebuffer, GPUResource);
-
-    protected:
-        /// Constructor.
-        Framebuffer(GPUDevice* device);
-
     public:
-        const SizeU& getExtent() const;
+        WindowImpl(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
+        ~WindowImpl();
 
-    protected:
-        SizeU extent{};
+        void SetTitle(const char* title);
+        bool IsMinimized() const;
+        bool IsOpen() const;
+        void swap_buffers();
+        native_handle get_native_handle() const;
+        native_display get_native_display() const;
+
+    private:
+        bool opengl;
+        GLFWwindow* window = nullptr;
     };
-} 
+}

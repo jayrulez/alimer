@@ -61,18 +61,18 @@ namespace alimer
     void Game::InitBeforeRun()
     {
         DeviceDesc deviceDesc = {};
-        deviceDesc.applicationName = config.applicationName.c_str();
+        deviceDesc.application_name = config.applicationName.c_str();
 #ifdef _DEBUG
-        deviceDesc.validation = true;
+        deviceDesc.flags |= GPUDeviceFlags::Validation;
 #endif
+        deviceDesc.backbuffer_width = mainWindow->GetSize().width;
+        deviceDesc.backbuffer_height = mainWindow->GetSize().height;
+        deviceDesc.native_display = mainWindow->get_native_display();
+        deviceDesc.native_window_handle = mainWindow->get_native_handle();
         gpuDevice.reset(GPUDevice::Create(config.gpuBackend));
         if (!gpuDevice->Init(deviceDesc)) {
             headless = true;
             gpuDevice.reset();
-        }
-        else
-        {
-            mainWindow->SetDevice(gpuDevice.get());
         }
 
         Initialize();
@@ -106,7 +106,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        //graphicsDevice->begin_frame();
+        gpuDevice->begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -131,8 +131,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //graphicsDevice->end_frame();
-        mainWindow->Present();
+        gpuDevice->end_frame();
     }
 
     int Game::Run()

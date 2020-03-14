@@ -39,17 +39,18 @@ namespace alimer
 {
     bool GPUDevice::Init(const DeviceDesc& desc)
     {
+        vsync = any(desc.flags & GPUDeviceFlags::VSync);
         return BackendInit(desc);
     }
 
-    GPUDevice* GPUDevice::Create(GPUBackend preferredBackend)
+    GPUDevice* GPUDevice::Create(GPUBackend preferred_backend)
     {
-        if (preferredBackend == GPUBackend::Count) {
-            preferredBackend = GPUBackend::Direct3D11;
+        if (preferred_backend == GPUBackend::Count) {
+            preferred_backend = GPUBackend::Direct3D11;
         }
 
         GPUDevice* gpuDevice = nullptr;
-        switch (preferredBackend)
+        switch (preferred_backend)
         {
 #if defined(ALIMER_D3D11)
         case GPUBackend::Direct3D11:
@@ -75,5 +76,10 @@ namespace alimer
     void GPUDevice::NotifyValidationError(const char* message)
     {
 
+    }
+
+    eastl::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)
+    {
+        return createFramebufferCore(descriptor);
     }
 }

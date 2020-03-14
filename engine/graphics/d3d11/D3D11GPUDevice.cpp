@@ -21,6 +21,7 @@
 //
 
 #include "D3D11GPUDevice.h"
+#include "D3D11Framebuffer.h"
 
 namespace alimer
 {
@@ -158,7 +159,7 @@ namespace alimer
         UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-        if (desc.validation)
+        if (any(desc.flags & GPUDeviceFlags::Validation))
         {
             if (SdkLayersAvailable())
             {
@@ -226,7 +227,7 @@ namespace alimer
 #endif
 
 #ifndef NDEBUG
-        if (desc.validation)
+        if (any(desc.flags & GPUDeviceFlags::Validation))
         {
             ComPtr<ID3D11Debug> d3dDebug;
             if (SUCCEEDED(device.As(&d3dDebug)))
@@ -258,6 +259,13 @@ namespace alimer
 
         // Init caps and features.
         InitCapabilities(adapter.Get());
+
+        if (desc.native_window_handle != nullptr)
+        {
+            SwapChainDescriptor swapChainDesc = {};
+            swapChainDesc.nativeWindowHandle = desc.native_window_handle;
+            createFramebuffer(&swapChainDesc);
+        }
 
         return true;
     }
@@ -343,8 +351,33 @@ namespace alimer
         d3dContext->Flush();
     }
 
-    eastl::shared_ptr<SwapChain> D3D11GPUDevice::CreateSwapChain(void* nativeWindow, const SwapChainDescriptor& desc)
+    bool D3D11GPUDevice::begin_frame()
     {
-        return nullptr;
+        return true;
+    }
+
+    void D3D11GPUDevice::end_frame()
+    {
+        HRESULT hr = S_OK;
+        UINT syncInterval = vsync ? 1 : 0;
+        UINT presentFlags = (isTearingSupported && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+
+        for (auto swap_chain : swap_chains)
+        {
+            hr = swap_chain->present(syncInterval, presentFlags);
+            if (hr == DXGI_ERROR_DEVICE_REMOVED
+                || hr == DXGI_ERROR_DEVICE_HUNG
+                || hr == DXGI_ERROR_DEVICE_RESET
+                || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
+                || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+            {
+            }
+        }
+    }
+
+    eastl::shared_ptr<Framebuffer> D3D11GPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
+    {
+        swap_chains.push_back(eastl::make_shared<D3D11Framebuffer>(this, descriptor));
+        return swap_chains.back();
     }
 }

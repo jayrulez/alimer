@@ -31,11 +31,24 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3D11Framebuffer(D3D11GPUDevice* device);
+        D3D11Framebuffer(D3D11GPUDevice* device, const SwapChainDescriptor* descriptor);
         /// Destructor.
         ~D3D11Framebuffer() override;
 
-    private:
+        HRESULT present(UINT sync_interval, UINT flags);
 
+    private:
+        FramebufferResizeResult BackendResize();
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = nullptr;
+#else
+        IUnknown* window = nullptr;
+#endif
+
+        UINT backBufferCount = 2;
+        bool flipPresentSupported = true;
+        bool tearingSupported = false;
+        IDXGISwapChain1* handle = nullptr;
     };
 }

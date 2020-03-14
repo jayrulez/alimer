@@ -27,7 +27,7 @@ namespace alimer
 {
     SwapChain::SwapChain(const SwapChainDescriptor& descriptor)
         : tripleBuffer(descriptor.tripleBuffer)
-        , vsync(descriptor.vsync)
+        , vsync(true)
         , srgb(descriptor.srgb)
         , colorFormat(PixelFormat::Undefined)
         , depthStencilFormat(descriptor.depthStencilFormat)

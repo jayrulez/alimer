@@ -24,7 +24,7 @@
 
 #include "Core/Object.h"
 #include "Games/GameTime.h"
-#include "Games/GameWindow.h"
+#include "window/window.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
@@ -48,6 +48,7 @@ namespace alimer
         SizeU windowSize = { 1280, 720 };
     };
 
+    class GPUDevice;
     class InputManager;
 
     class ALIMER_API Game : public Object
@@ -67,7 +68,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        GameWindow* GetMainWindow() const { return mainWindow.get(); }
+        Window* GetMainWindow() const { return mainWindow.get(); }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -101,7 +102,7 @@ namespace alimer
         bool exiting = false;
         // Rendering loop timer.
         GameTime time;
-        eastl::unique_ptr<GameWindow> mainWindow;
+        eastl::unique_ptr<Window> mainWindow;
         eastl::vector<GameSystem*> gameSystems;
         eastl::unique_ptr<GPUDevice> gpuDevice;
         InputManager* input;

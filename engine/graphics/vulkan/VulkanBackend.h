@@ -33,10 +33,10 @@ namespace alimer
     struct VulkanDeviceFeatures
     {
         uint32_t apiVersion;
+        bool headless = false;
 
         /// VK_KHR_get_surface_capabilities2
         bool surface_capabilities2 = false;
-
         /// VK_KHR_get_physical_device_properties2
         bool physical_device_properties2 = false;
         /// VK_KHR_external_memory_capabilities + VK_KHR_external_semaphore_capabilities

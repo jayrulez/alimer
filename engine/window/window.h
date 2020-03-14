@@ -24,7 +24,6 @@
 
 #include "Core/Utils.h"
 #include "math/Size.h"
-#include <EASTL/shared_ptr.h>
 #include <EASTL/string.h>
 
 namespace alimer
@@ -40,20 +39,25 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
-    class GPUDevice;
-    class SwapChain;
+    class WindowImpl;
 
-    /// Defines an OS Game Window.
-    class ALIMER_API GameWindow
+    using native_handle = void*;
+    using native_display = void*;
+
+
+    /// Defines an OS Window.
+    class ALIMER_API Window final
     {
-    protected:
-        GameWindow(const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
-
     public:
-        /// Destructor.
-        virtual ~GameWindow() = default;
+        Window(const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
 
-        virtual bool ShouldClose() const = 0;
+        /// Destructor.
+        ~Window();
+
+        void Close();
+
+        /// Return whether or not the window is open,
+        bool IsOpen() const;
 
         inline const SizeU& GetSize() const noexcept { return size; }
 
@@ -64,16 +68,10 @@ namespace alimer
         const eastl::string& GetTitle() const { return title; }
 
         /// Return whether the window is minimized.
-        virtual bool IsMinimized() const = 0;
+        bool IsMinimized() const;
 
-        virtual void* GetNativeHandle() const = 0;
-
-        void SetDevice(GPUDevice* newDevice);
-
-        virtual void Present();
-
-    private:
-        virtual void BackendSetTitle() {};
+        native_handle get_native_handle() const;
+        native_display get_native_display() const;
 
     protected:
         eastl::string title;
@@ -85,9 +83,8 @@ namespace alimer
         bool visible = true;
 
     private:
-        GPUDevice* device = nullptr;
-        eastl::shared_ptr<SwapChain> swapChain;
-
-        ALIMER_DISABLE_COPY_MOVE(GameWindow);
+        WindowImpl* impl;
+        
+        ALIMER_DISABLE_COPY_MOVE(Window);
     };
 }

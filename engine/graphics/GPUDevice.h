@@ -22,26 +22,48 @@
 
 #pragma once
 
-#include "graphics/Types.h"
+#include "graphics/Framebuffer.h"
 #include "graphics/CommandContext.h"
+#include <EASTL/vector.h>
 #include <EASTL/shared_ptr.h>
 
 namespace alimer
 {
     class Texture;
-    class SwapChain;
     class GraphicsBuffer;
+
+    enum class GPUDeviceFlags : uint32_t
+    {
+        None = 0,
+        /// Enable vsync
+        VSync = 0x01,
+        /// Enable validation (debug layer).
+        Validation = 0x02,
+        /// Enable headless mode.
+        Headless = 0x04,
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GPUDeviceFlags);
  
     struct DeviceDesc
     {
         /// Application name.
-        const char* applicationName;
+        const char* application_name;
+
         /// GPU device power preference.
         DevicePowerPreference powerPreference;
-        /// Enable validation (debug layer).
-        bool validation;
-        /// Enable headless mode.
-        bool headless;
+
+        /// Device flags.
+        GPUDeviceFlags flags = GPUDeviceFlags::VSync;
+
+        /// The backbuffer width.
+        uint32_t backbuffer_width;
+        /// The backbuffer height.
+        uint32_t backbuffer_height;
+
+        /// Native display type.
+        void* native_display;
+        /// Native window handle.
+        void* native_window_handle;
     };
 
     /// Defines the GPU device class.
@@ -55,7 +77,7 @@ namespace alimer
         virtual ~GPUDevice() = default;
 
         /// Create new Device with given preferred backend, fallback to supported one.
-        static GPUDevice* Create(GPUBackend preferredBackend = GPUBackend::Count);
+        static GPUDevice* Create(GPUBackend preferred_backend = GPUBackend::Count);
 
         /// Init device with description
         bool Init(const DeviceDesc& desc);
@@ -64,10 +86,10 @@ namespace alimer
         void NotifyValidationError(const char* message);
 
         virtual void WaitIdle() = 0;
-        //bool begin_frame();
-        //void end_frame();
+        virtual bool begin_frame() { return true; }
+        virtual void end_frame() {}
 
-        virtual eastl::shared_ptr<SwapChain> CreateSwapChain(void* nativeWindow, const SwapChainDescriptor& desc) = 0;
+        eastl::shared_ptr<Framebuffer> createFramebuffer(const SwapChainDescriptor* descriptor);
 
         /// Query device features.
         inline const GPUDeviceInfo& QueryInfo() const { return info; }
@@ -78,15 +100,20 @@ namespace alimer
         /// Query device limits.
         inline const GPUDeviceLimits& QueryLimits() const { return limits; }
 
+        bool IsVSyncEnabled() const { return vsync; }
+
     private:
         virtual bool BackendInit(const DeviceDesc& desc) = 0;
         virtual void BackendShutdown() = 0;
+        virtual eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
 
-    private:
+    protected:
         GPUDeviceInfo info;
         GPUDeviceFeatures features{};
         GPUDeviceLimits limits{};
-
+        bool vsync{ false };
+       
+    private:
         ALIMER_DISABLE_COPY_MOVE(GPUDevice);
     };
 }

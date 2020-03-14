@@ -38,6 +38,7 @@ define_engine_source_files(
     Core
     Diagnostics
     math
+    window
     graphics
     Input
     Games
@@ -46,6 +47,7 @@ define_engine_source_files(
 # Sources per backend/platform
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(
+        window/glfw
         Games/GLFW
     )
 endif ()
@@ -81,6 +83,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 if(NOT (EMSCRIPTEN OR ANDROID))
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
     target_link_libraries(${PROJECT_NAME} PRIVATE
         glfw
     )

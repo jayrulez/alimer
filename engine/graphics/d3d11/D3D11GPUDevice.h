@@ -27,6 +27,8 @@
 
 namespace alimer
 {
+    class D3D11Framebuffer;
+
     /// Direct3D11 graphics backend.
     class ALIMER_API D3D11GPUDevice final : public GPUDevice
     {
@@ -41,13 +43,13 @@ namespace alimer
         bool BackendInit(const DeviceDesc& desc) override;
         void BackendShutdown() override;
         void WaitIdle() override;
-        //bool BeginFrame() override;
-        //void EndFrame() override;
+        bool begin_frame() override;
+        void end_frame() override;
 
-        eastl::shared_ptr<SwapChain> CreateSwapChain(void* nativeWindow, const SwapChainDescriptor& desc) override;
+        eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
         IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory.Get(); }
-        ID3D11Device1*           GetD3DDevice() const { return d3dDevice.Get(); }
+        ID3D11Device1*          GetD3DDevice() const { return d3dDevice.Get(); }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
 
@@ -62,5 +64,7 @@ namespace alimer
         ComPtr<ID3D11Device1>               d3dDevice;
         ComPtr<ID3D11DeviceContext1>        d3dContext;
         D3D_FEATURE_LEVEL                   d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
+
+        eastl::vector<eastl::shared_ptr<D3D11Framebuffer>> swap_chains;
     };
 }
