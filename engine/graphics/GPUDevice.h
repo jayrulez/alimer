@@ -24,8 +24,8 @@
 
 #include "graphics/Framebuffer.h"
 #include "graphics/CommandContext.h"
-#include <EASTL/vector.h>
-#include <EASTL/shared_ptr.h>
+#include <vector>
+#include <memory>
 
 namespace alimer
 {
@@ -89,7 +89,7 @@ namespace alimer
         virtual bool begin_frame() { return true; }
         virtual void end_frame() {}
 
-        eastl::shared_ptr<Framebuffer> createFramebuffer(const SwapChainDescriptor* descriptor);
+        std::shared_ptr<Framebuffer> createFramebuffer(const SwapChainDescriptor* descriptor);
 
         /// Query device features.
         inline const GPUDeviceInfo& QueryInfo() const { return info; }
@@ -105,7 +105,7 @@ namespace alimer
     private:
         virtual bool BackendInit(const DeviceDesc& desc) = 0;
         virtual void BackendShutdown() = 0;
-        virtual eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
+        virtual std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
 
     protected:
         GPUDeviceInfo info;

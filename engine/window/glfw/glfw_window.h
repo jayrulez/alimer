@@ -31,10 +31,10 @@ namespace alimer
     class WindowImpl final
     {
     public:
-        WindowImpl(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
+        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
         ~WindowImpl();
 
-        void SetTitle(const char* title);
+        void set_title(const char* title);
         bool IsMinimized() const;
         bool IsOpen() const;
         void swap_buffers();

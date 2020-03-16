@@ -375,9 +375,9 @@ namespace alimer
         }
     }
 
-    eastl::shared_ptr<Framebuffer> D3D11GPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
+    std::shared_ptr<Framebuffer> D3D11GPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
     {
-        swap_chains.push_back(eastl::make_shared<D3D11Framebuffer>(this, descriptor));
+        swap_chains.push_back(std::make_shared<D3D11Framebuffer>(this, descriptor));
         return swap_chains.back();
     }
 }

@@ -2,11 +2,13 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project declaration
-project (Alimer)
-
-# Target C++17
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_STANDARD_REQUIRED ON)
+project (
+    Alimer
+    VERSION "0.1.0"
+    DESCRIPTION "Cross-platform modern C++ 2D and 3D game engine."
+    HOMEPAGE_URL "https://github.com/amerkoleci/alimer"
+    LANGUAGES C CXX
+)
 
 # Options
 if (WIN32)

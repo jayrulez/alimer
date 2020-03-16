@@ -36,7 +36,7 @@
 
 namespace alimer
 {
-    WindowImpl::WindowImpl(bool opengl_, const eastl::string& newTitle, const SizeU& newSize, WindowStyle style)
+    WindowImpl::WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style)
         : opengl(opengl_)
     {
         int window_width = (int) newSize.width;
@@ -90,7 +90,7 @@ namespace alimer
         glfwDestroyWindow(window);
     }
 
-    void WindowImpl::SetTitle(const char* title)
+    void WindowImpl::set_title(const char* title)
     {
         glfwSetWindowTitle(window, title);
     }

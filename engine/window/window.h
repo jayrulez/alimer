@@ -24,7 +24,7 @@
 
 #include "Core/Utils.h"
 #include "math/Size.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {
@@ -39,17 +39,16 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
-    class WindowImpl;
-
     using native_handle = void*;
     using native_display = void*;
 
+    class WindowImpl;
 
     /// Defines an OS Window.
     class ALIMER_API Window final
     {
     public:
-        Window(const eastl::string& newTitle, const SizeU& newSize, WindowStyle style);
+        Window(const std::string& newTitle, const SizeU& newSize, WindowStyle style);
 
         /// Destructor.
         ~Window();
@@ -62,10 +61,10 @@ namespace alimer
         inline const SizeU& GetSize() const noexcept { return size; }
 
         /// Set the window title.
-        void SetTitle(const eastl::string& newTitle);
+        void set_title(const std::string& newTitle);
 
         /// Return the window title.
-        const eastl::string& GetTitle() const { return title; }
+        const std::string& get_title() const { return title; }
 
         /// Return whether the window is minimized.
         bool IsMinimized() const;
@@ -74,7 +73,7 @@ namespace alimer
         native_display get_native_display() const;
 
     protected:
-        eastl::string title;
+        std::string title;
         SizeU size;
         bool resizable = false;
         bool fullscreen = false;

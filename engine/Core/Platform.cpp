@@ -34,7 +34,7 @@
 #include <unistd.h>
 #endif
 
-using namespace eastl;
+using namespace std;
 
 namespace alimer
 {

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "math/Math.h"
+#include "math/math.h"
 #include "math/Size.h"
 
 namespace alimer

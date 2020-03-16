@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {
@@ -42,7 +42,7 @@ namespace alimer
     class ALIMER_API Logger final
     {
     public:
-        Logger(const eastl::string& name);
+        Logger(const std::string& name);
         ~Logger();
 
         bool IsEnabled() const { return _enabled; }
@@ -50,11 +50,11 @@ namespace alimer
         bool IsLevelEnabled(LogLevel level) const;
 
         void Log(LogLevel level, const char* message);
-        void Log(LogLevel level, const eastl::string& message);
+        void Log(LogLevel level, const std::string& message);
         void LogFormat(LogLevel level, const char* format, ...);
 
     private:
-        eastl::string _name;
+        std::string _name;
         bool _enabled = true;
         LogLevel _level;
     };

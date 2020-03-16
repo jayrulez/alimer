@@ -21,7 +21,7 @@
 //
 
 #include "Diagnostics/Log.h"
-#include <EASTL/vector.h>
+#include <vector>
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -47,11 +47,13 @@
 #   include <emscripten.h>
 #endif
 
+using namespace std;
+
 namespace alimer
 {
-    static eastl::vector<Logger*> _loggers;
+    static vector<Logger*> _loggers;
 
-    Logger::Logger(const eastl::string& name)
+    Logger::Logger(const string& name)
         : _name(name)
 #ifdef _DEBUG
         , _level{ LogLevel::Debug }
@@ -138,7 +140,7 @@ namespace alimer
             if (bufferSize == 0)
                 return;
 
-            eastl::vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
+            vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
             if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer.data(), static_cast<int>(buffer.size())) == 0)
                 return;
 
@@ -191,7 +193,7 @@ namespace alimer
         }
     }
 
-    void Logger::Log(LogLevel level, const eastl::string& message)
+    void Logger::Log(LogLevel level, const string& message)
     {
         Log(level, message.c_str());
     }

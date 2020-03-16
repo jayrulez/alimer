@@ -25,8 +25,9 @@
 #include "Core/Utils.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
-#include <EASTL/algorithm.h>
-#include <EASTL/vector.h>
+#include "math/math.h"
+#include <algorithm>
+#include <vector>
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -36,7 +37,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
-using namespace eastl;
+using namespace std;
+
 namespace alimer
 {
     bool hasLayers(const vector<const char*>& required, const vector<VkLayerProperties>& available)
@@ -469,19 +471,19 @@ namespace alimer
             if (computeQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
                 computeQueueFamily = graphicsQueueFamily;
-                compute_queue_index = eastl::min(queue_props[graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                compute_queue_index = min(queue_props[graphicsQueueFamily].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
 
             if (copyQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
                 copyQueueFamily = graphicsQueueFamily;
-                transfer_queue_index = eastl::min(queue_props[graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                transfer_queue_index = min(queue_props[graphicsQueueFamily].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
             else if (copyQueueFamily == computeQueueFamily)
             {
-                transfer_queue_index = eastl::min(queue_props[computeQueueFamily].queueCount - 1, 1u);
+                transfer_queue_index = min(queue_props[computeQueueFamily].queueCount - 1, 1u);
             }
 
             static const float graphicsQueuePrio = 0.5f;
@@ -493,7 +495,7 @@ namespace alimer
             VkDeviceQueueCreateInfo queueCreateInfo[3] = {};
             queueCreateInfo[queue_family_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueCreateInfo[queue_family_count].queueFamilyIndex = graphicsQueueFamily;
-            queueCreateInfo[queue_family_count].queueCount = eastl::min(universal_queue_index, queue_props[graphicsQueueFamily].queueCount);
+            queueCreateInfo[queue_family_count].queueCount = min(universal_queue_index, queue_props[graphicsQueueFamily].queueCount);
             queueCreateInfo[queue_family_count].pQueuePriorities = prio;
             queue_family_count++;
 
@@ -501,7 +503,7 @@ namespace alimer
             {
                 queueCreateInfo[queue_family_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                 queueCreateInfo[queue_family_count].queueFamilyIndex = computeQueueFamily;
-                queueCreateInfo[queue_family_count].queueCount = eastl::min(copyQueueFamily == computeQueueFamily ? 2u : 1u,
+                queueCreateInfo[queue_family_count].queueCount = min(copyQueueFamily == computeQueueFamily ? 2u : 1u,
                     queue_props[computeQueueFamily].queueCount);
                 queueCreateInfo[queue_family_count].pQueuePriorities = prio + 1;
                 queue_family_count++;

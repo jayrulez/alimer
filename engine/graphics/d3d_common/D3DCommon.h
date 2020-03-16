@@ -26,7 +26,9 @@
 #include "Diagnostics/Log.h"
 #include "graphics/PixelFormat.h"
 
-#define NOMINMAX
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif 
 
 #if defined(_WIN32)
     #define NODRAWTEXT
@@ -77,23 +79,23 @@ namespace alimer
 
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
-    inline eastl::wstring GetDXErrorString(HRESULT hr)
+    inline std::wstring GetDXErrorString(HRESULT hr)
     {
         const uint32_t errStringSize = 1024;
         wchar_t errorString[errStringSize];
         DXGetErrorDescriptionW(hr, errorString, errStringSize);
 
-        eastl::wstring message = L"DirectX Error: ";
+        std::wstring message = L"DirectX Error: ";
         message += errorString;
         return message;
     }
 
-    inline eastl::string GetDXErrorStringAnsi(HRESULT hr)
+    inline std::string GetDXErrorStringAnsi(HRESULT hr)
     {
-        eastl::wstring errorString = GetDXErrorString(hr);
+        std::wstring errorString = GetDXErrorString(hr);
 
-        eastl::string message;
-        for (eastl_size_t i = 0; i < errorString.length(); ++i) {
+        std::string message;
+        for (size_t i = 0; i < errorString.length(); ++i) {
             message.append(1, static_cast<char>(errorString[i]));
         }
 
@@ -247,7 +249,7 @@ namespace alimer
         }
     }
 
-    static inline eastl::string D3DFeatureLevelToVersion(D3D_FEATURE_LEVEL featureLevel)
+    static inline std::string D3DFeatureLevelToVersion(D3D_FEATURE_LEVEL featureLevel)
     {
         switch (featureLevel)
         {

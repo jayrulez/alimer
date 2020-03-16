@@ -22,11 +22,11 @@
 
 #include "graphics/Types.h"
 
-using namespace eastl;
+using namespace std;
 
 namespace alimer
 {
-    string ToString(GPUBackend type)
+    string to_string(GPUBackend type)
     {
         static const char* s_backend_names[] = {
             "Null", "Vulkan", "Direct3D12", "Metal", "Count"

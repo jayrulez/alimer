@@ -24,7 +24,7 @@
 
 #include <vk_mem_alloc.h>
 #include <volk.h>
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {
@@ -57,7 +57,7 @@ namespace alimer
         bool memory_budget = false;
     };
 
-    eastl::string to_string(VkResult result);
+    std::string to_string(VkResult result);
 }
 
 /// Helper macro to test the result of Vulkan calls which can return an error.

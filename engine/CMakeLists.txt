@@ -35,6 +35,7 @@ endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 define_engine_source_files(
+    .
     Core
     Diagnostics
     math
@@ -76,10 +77,6 @@ endif ()
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-)
-
-target_link_libraries(${PROJECT_NAME} PUBLIC
-    EASTL
 )
 
 if(NOT (EMSCRIPTEN OR ANDROID))

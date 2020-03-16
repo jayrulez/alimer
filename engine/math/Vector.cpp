@@ -56,18 +56,18 @@ namespace alimer
         }
     }
 
-    eastl::string Vector2::ToString() const
+    std::string Vector2::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g", x, y);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 
     /* Vector4 */
-    eastl::string Vector4::ToString() const
+    std::string Vector4::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 }

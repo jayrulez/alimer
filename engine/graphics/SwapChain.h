@@ -24,7 +24,7 @@
 
 #include "graphics/Texture.h"
 #include "Core/Object.h"
-#include <EASTL/vector.h>
+#include <vector>
 
 namespace alimer
 {
@@ -58,6 +58,6 @@ namespace alimer
         bool srgb;
         PixelFormat colorFormat;
         PixelFormat depthStencilFormat;
-        eastl::vector<Texture*> textures;
+        std::vector<Texture*> textures;
     };
 } 

@@ -24,7 +24,7 @@
 
 namespace alimer
 {
-    eastl::string to_string(VkResult result)
+    std::string to_string(VkResult result)
     {
         if (result == VK_SUCCESS)
         {

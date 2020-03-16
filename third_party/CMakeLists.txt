@@ -1,8 +1,3 @@
-# EASTL
-add_subdirectory(EABase)
-add_subdirectory(EASTL)
-set_property(TARGET EASTL PROPERTY FOLDER "third_party")
-
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

@@ -52,7 +52,7 @@ namespace alimer
 
     private:
         VkSurfaceKHR createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
-        eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
+        std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
     private:
         VulkanDeviceFeatures vk_features{};

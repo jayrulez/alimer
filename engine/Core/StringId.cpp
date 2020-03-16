@@ -23,6 +23,7 @@
 #include "Core/StringId.h"
 #include "Core/String.h"
 #include "Core/Hash.h"
+#include <inttypes.h> // PRIx64
 
 namespace alimer
 {
@@ -35,16 +36,16 @@ namespace alimer
         value = murmur32(str, (uint32_t)strlen(str), 0);
     }
 
-    StringId32::StringId32(const eastl::string& str) noexcept
+    StringId32::StringId32(const std::string& str) noexcept
     {
         value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
     }
 
-    eastl::string StringId32::ToString() const
+    std::string StringId32::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%08X", value);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 
     /* StringId64 */
@@ -53,15 +54,15 @@ namespace alimer
         value = murmur64(str, (uint64_t)strlen(str), 0);
     }
 
-    StringId64::StringId64(const eastl::string& str) noexcept
+    StringId64::StringId64(const std::string& str) noexcept
     {
         value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
     }
 
-    eastl::string StringId64::ToString() const
+    std::string StringId64::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%16" PRIx64, value);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 }

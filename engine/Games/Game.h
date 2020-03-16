@@ -28,21 +28,21 @@
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
-#include <EASTL/unique_ptr.h>
-#include <EASTL/vector.h>
+#include <vector>
+#include <memory>
 
 namespace alimer
 {
     struct Configuration
     {
         /// The name of the application.
-        eastl::string applicationName = "Alimer";
+        std::string applicationName = "Alimer";
 
         /// The preferred GPU backend.
         GPUBackend gpuBackend = GPUBackend::Count;
 
         /// Main window title.
-        eastl::string windowTitle = "Alimer";
+        std::string windowTitle = "Alimer";
 
         /// Main window size.
         SizeU windowSize = { 1280, 720 };
@@ -102,14 +102,14 @@ namespace alimer
         bool exiting = false;
         // Rendering loop timer.
         GameTime time;
-        eastl::unique_ptr<Window> mainWindow;
-        eastl::vector<GameSystem*> gameSystems;
-        eastl::unique_ptr<GPUDevice> gpuDevice;
+        std::unique_ptr<Window> mainWindow;
+        std::vector<GameSystem*> gameSystems;
+        std::unique_ptr<GPUDevice> gpuDevice;
         InputManager* input;
         bool headless{ false };
     };
 
-    extern Game* application_create(const eastl::vector<eastl::string>& args);
+    extern Game* application_create(const std::vector<std::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.

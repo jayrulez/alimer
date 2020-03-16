@@ -35,7 +35,7 @@ namespace alimer
 
     }
 
-    Game* application_create(const eastl::vector<eastl::string>& args)
+    Game* application_create(const std::vector<std::string>& args)
     {
         application_dummy();
 

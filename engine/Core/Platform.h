@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/vector.h>
-#include <EASTL/string.h>
+#include <vector>
+#include <string>
 
 namespace alimer
 {
@@ -72,7 +72,7 @@ namespace alimer
     {
     public:
         /// Return the current platform name.
-        ALIMER_API eastl::string GetName();
+        ALIMER_API std::string GetName();
 
         /// Return the current platform ID.
         ALIMER_API PlatformId GetId();
@@ -84,15 +84,15 @@ namespace alimer
         ALIMER_API ProcessId GetCurrentProcessId();
 
         /// Set command line arguments.
-        static void SetArguments(const eastl::vector<eastl::string>& args);
+        static void SetArguments(const std::vector<std::string>& args);
 
         /// Return previously parsed arguments.
-        static const eastl::vector<eastl::string>& GetArguments();
+        static const std::vector<std::string>& GetArguments();
 
         /// Opens console window.
         static void OpenConsole();
 
     private:
-        static eastl::vector<eastl::string> arguments;
+        static std::vector<std::string> arguments;
     };
 }

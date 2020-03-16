@@ -24,6 +24,7 @@
 
 #include "Games/Game.h"
 #include "Core/Platform.h"
+#include "Core/String.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
@@ -31,7 +32,7 @@
     #include <shellapi.h>
 #endif
 
-using namespace eastl;
+using namespace std;
 
 namespace alimer
 {
@@ -39,24 +40,6 @@ namespace alimer
     void application_dummy()
     {
     }
-
-#ifdef _WIN32
-    static inline string ToUtf8(const wstring& wstr)
-    {
-        if (wstr.empty())
-        {
-            return {};
-        }
-
-        auto input_str_length = static_cast<int>(wstr.size());
-        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, nullptr, 0, nullptr, nullptr);
-
-        eastl::string str(str_len, 0);
-        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, &str[0], str_len, nullptr, nullptr);
-
-        return str;
-    }
-#endif
 }
 
 #ifdef _WIN32
@@ -80,7 +63,7 @@ int main(int argc, char* argv[])
 
     for (auto& arg : arg_strings)
     {
-        args.push_back(alimer::ToUtf8(arg));
+        args.push_back(alimer::to_utf8(arg));
     }
 
     alimer::Platform::SetArguments(args);

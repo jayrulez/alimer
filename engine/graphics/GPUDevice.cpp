@@ -78,7 +78,7 @@ namespace alimer
 
     }
 
-    eastl::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)
+    std::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)
     {
         return createFramebufferCore(descriptor);
     }

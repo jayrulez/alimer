@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Core/StringId.h"
-#include <EASTL/shared_ptr.h>
-#include <EASTL/vector.h>
+#include <memory>
+#include <vector>
 
 namespace alimer
 {
@@ -47,7 +47,7 @@ namespace alimer
         /// Return type.
         StringId32 GetType() const { return type; }
         /// Return type name.
-        const eastl::string& GetTypeName() const { return typeName; }
+        const std::string& GetTypeName() const { return typeName; }
         /// Return base type info.
         const TypeInfo* GetBaseTypeInfo() const { return baseTypeInfo; }
 
@@ -55,13 +55,13 @@ namespace alimer
         /// Type.
         StringId32 type;
         /// Type name.
-        eastl::string typeName;
+        std::string typeName;
         /// Base class type info.
         const TypeInfo* baseTypeInfo;
     };
 
     /// Base class for objects with type identification, subsystem access
-    class ALIMER_API Object : public eastl::enable_shared_from_this< Object>
+    class ALIMER_API Object : public std::enable_shared_from_this< Object>
     {
     public:
         /// Constructor.
@@ -72,7 +72,7 @@ namespace alimer
         /// Return type hash.
         virtual StringId32 GetType() const = 0;
         /// Return type name.
-        virtual const eastl::string& GetTypeName() const = 0;
+        virtual const std::string& GetTypeName() const = 0;
         /// Return type info.
         virtual const TypeInfo* GetTypeInfo() const = 0;
 
@@ -89,7 +89,7 @@ namespace alimer
         /// Cast the object to specified most derived class.
         template<typename T> const T* Cast() const { return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr; }
     private:
-        static eastl::vector<eastl::string> arguments;
+        static std::vector<std::string> arguments;
     };
 }
 
@@ -98,8 +98,8 @@ namespace alimer
         using ClassName = typeName; \
         using BaseClassName = baseTypeName; \
         virtual alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
-        virtual const eastl::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
+        virtual const std::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
         virtual const alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
         static alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
-        static const eastl::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
+        static const std::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
         static const alimer::TypeInfo* GetTypeInfoStatic() { static const alimer::TypeInfo typeInfoStatic(#typeName, BaseClassName::GetTypeInfoStatic()); return &typeInfoStatic; } \

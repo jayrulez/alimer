@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "math/Math.h"
+#include "math/math.h"
 #include "Diagnostics/Assert.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {
@@ -156,7 +156,7 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        eastl::string ToString() const;
+        std::string ToString() const;
 
         // Constants
         static const Vector2 Zero;
@@ -258,7 +258,7 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        eastl::string ToString() const;
+        std::string ToString() const;
     };
 
     using float3 = tvec3<float>;

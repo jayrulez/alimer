@@ -24,8 +24,9 @@
 #include "VulkanGPUDevice.h"
 #include "Diagnostics/Assert.h"
 #include "Diagnostics/Log.h"
+#include "math/math.h"
 
-using namespace eastl;
+using namespace std;
 
 namespace alimer
 {
@@ -280,7 +281,7 @@ namespace alimer
             return FramebufferResizeResult::Error;
         }
 
-        eastl::vector<VkImage> swapchainImages;
+        vector<VkImage> swapchainImages;
         //textures.resize(imageCount);
         if (vkGetSwapchainImagesKHR(vkGPUDevice->GetDevice(), swapchain, &imageCount, swapchainImages.data()) != VK_SUCCESS)
             return FramebufferResizeResult::Error;

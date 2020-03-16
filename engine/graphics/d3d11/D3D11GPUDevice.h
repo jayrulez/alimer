@@ -46,7 +46,7 @@ namespace alimer
         bool begin_frame() override;
         void end_frame() override;
 
-        eastl::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
+        std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
         IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory.Get(); }
         ID3D11Device1*          GetD3DDevice() const { return d3dDevice.Get(); }
@@ -65,6 +65,6 @@ namespace alimer
         ComPtr<ID3D11DeviceContext1>        d3dContext;
         D3D_FEATURE_LEVEL                   d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
 
-        eastl::vector<eastl::shared_ptr<D3D11Framebuffer>> swap_chains;
+        std::vector<std::shared_ptr<D3D11Framebuffer>> swap_chains;
     };
 }

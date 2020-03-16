@@ -99,7 +99,7 @@ namespace alimer
     {
         uint64_t size;
         //BufferUsage usage;
-        eastl::string name;
+        std::string name;
     };
 
     /// Describes a GPU Texture.
@@ -117,7 +117,7 @@ namespace alimer
         TextureSampleCount  samples = TextureSampleCount::Count1;
         TextureUsage usage = TextureUsage::ShaderRead;
         //TextureLayout initialLayout = TextureLayout::General;
-        eastl::string name;
+        std::string name;
     };
 
     /// Describes a SwapChain.
@@ -138,16 +138,16 @@ namespace alimer
         GPUBackend backend;
 
         /// Rendering API name.
-        eastl::string backendName;
+        std::string backendName;
 
         /// The hardware gpu device vendor name.
-        eastl::string vendorName;
+        std::string vendorName;
 
         /// The hardware gpu device vendor id.
         uint32_t vendorId;
 
         /// The hardware gpu device name.
-        eastl::string deviceName;
+        std::string deviceName;
     };
 
     /// Describes GPUDevice features.
@@ -209,5 +209,5 @@ namespace alimer
         uint32_t        maxComputeWorkGroupSize[3];
     };
 
-    ALIMER_API eastl::string ToString(GPUBackend type);
+    ALIMER_API std::string to_string(GPUBackend type);
 } 

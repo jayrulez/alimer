@@ -28,7 +28,7 @@
 #include "window/glfw/glfw_window.h"
 #endif
 
-using namespace eastl;
+using namespace std;
 
 namespace alimer
 {
@@ -60,10 +60,10 @@ namespace alimer
         return impl != nullptr && impl->IsOpen();
     }
 
-    void Window::SetTitle(const string& newTitle)
+    void Window::set_title(const string& newTitle)
     {
         title = newTitle;
-        impl->SetTitle(title.c_str());
+        impl->set_title(title.c_str());
     }
 
     bool Window::IsMinimized() const

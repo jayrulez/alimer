@@ -24,47 +24,48 @@
 #include "Core/Hash.h"
 
 #if defined(_WIN32)
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#   define WIN32_LEAN_AND_MEAN
+#   include <windows.h>
 #endif
 
-using namespace eastl;
+#include <vector>
+using namespace std;
 
 namespace alimer
 {
-    const string EMPTY_STRING{};
+    const std::string EMPTY_STRING{};
 
-#if defined(_WIN32)
-    string ToUtf8(const wstring& wstr)
+#ifdef _WIN32
+    string to_utf8(const wchar_t* wstr, size_t len)
     {
-        if (wstr.empty())
-        {
-            return {};
-        }
-
-        auto input_str_length = static_cast<int>(wstr.size());
-        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, nullptr, 0, nullptr, nullptr);
-
-        string str(str_len, 0);
-        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], input_str_length, &str[0], str_len, nullptr, nullptr);
-
-        return str;
+        vector<char> char_buffer;
+        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, len, nullptr, 0, nullptr, nullptr);
+        if (ret < 0)
+            return "";
+        char_buffer.resize(ret);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, len, char_buffer.data(), char_buffer.size(), nullptr, nullptr);
+        return string(char_buffer.data(), char_buffer.size());
     }
 
-    wstring ToUtf16(const string& str)
+    string to_utf8(const wstring& wstr)
     {
-        if (str.empty())
-        {
-            return {};
-        }
+        return to_utf8(wstr.data(), wstr.size());
+    }
 
-        auto input_str_length = static_cast<int>(str.size());
-        auto wstr_len = MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, nullptr, 0);
+    wstring to_utf16(const char* str, size_t len)
+    {
+        vector<wchar_t> wchar_buffer;
+        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, len, nullptr, 0);
+        if (ret < 0)
+            return L"";
+        wchar_buffer.resize(ret);
+        MultiByteToWideChar(CP_UTF8, 0, str, len, wchar_buffer.data(), wchar_buffer.size());
+        return wstring(wchar_buffer.data(), wchar_buffer.size());
+    }
 
-        wstring wstr(wstr_len, 0);
-        MultiByteToWideChar(CP_UTF8, 0, &str[0], input_str_length, &wstr[0], wstr_len);
-        return wstr;
+    wstring to_utf16(const string& str)
+    {
+        return to_utf16(str.data(), str.size());
     }
 #endif
 }
