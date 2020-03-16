@@ -20,26 +20,8 @@ elseif (NOT MSVC)
     message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
-# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    if ("${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-        set(CLANG_CL ON CACHE BOOL "" FORCE)
-    endif()
-elseif (MSVC)
-    set(MSVC_NATIVE ON CACHE BOOL "" FORCE)
-endif()
-
-# Choose C++ standard.
-set(CXX_STANDARD "-std=c++17")
-if (WIN32)
-    set(CXX_STANDARD "/std:c++17")
-endif()
-
-if (MSVC_NATIVE)
-    set(CXX_STANDARD "/std:c++latest")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} /Zc:__cplusplus")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+if (NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 
 # Define standard configurations
@@ -77,7 +59,7 @@ if (WIN32 OR WINDOWS_STORE)
 	endif()
 
     # Use security checks only in debug
-	if ( WINDOWS_STORE)
+	if(WINDOWS_STORE)
         add_compile_options($<$<CONFIG:DEBUG>:/sdl> $<$<NOT:$<CONFIG:DEBUG>>:/sdl->)
 	else()
 		add_compile_options($<$<CONFIG:DEBUG>:/GS> $<$<NOT:$<CONFIG:DEBUG>>:/GS->)
@@ -86,16 +68,11 @@ if (WIN32 OR WINDOWS_STORE)
     # Enable function-level linking
 	add_compile_options(/Gy)
 
-    # Use fast floating point model
-	add_compile_options(/fp:fast)
-
 	# Disable run-time type information (RTTI)
 	replace_compile_flags("/GR" "/GR-")
 
     # Enable multi-processor compilation for Visual Studio 2012 and above
-	if (CLANG_CL OR MSVC)
-		add_compile_options(/MP)
-	endif()
+    add_compile_options(/MP)
 endif()
 
 # Add colors to ninja builds

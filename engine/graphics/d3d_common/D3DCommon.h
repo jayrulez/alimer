@@ -301,7 +301,9 @@ namespace alimer
 inline void ThrowIfFailed(HRESULT hr)
 {
     if (FAILED(hr)) {
-        LOGE(alimer::GetDXErrorStringAnsi(hr));
+        static char s_str[64] = {};
+        sprintf_s(s_str, "Failure with HRESULT of %08X", static_cast<unsigned int>(hr));
+        ALIMER_LOGERROR(s_str);
     }
 }
 

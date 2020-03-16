@@ -102,20 +102,48 @@ if (ALIMER_VULKAN)
     )
 endif()
 
-if (CLANG_CL OR MSVC)
-     target_compile_options(${PROJECT_NAME} PUBLIC /MP)
-endif ()
+if (MSVC)
+    set(OPTIMIZATION_FLAGS
+        /fp:fast
+    )
+elseif(EMSCRIPTEN)
+    # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
+    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
+else()
+    set(OPTIMIZATION_FLAGS
+        -ffast-math
+        -ffp-contract=fast
+        # TODO: aggressive vectorization is currently broken on Android
+        #        -fslp-vectorize-aggressive
+        -fvisibility=hidden
+        -fvisibility-inlines-hidden
+        -fstrict-vtable-pointers
+    )
+endif()
+
+if (MSVC)
+    set(ALIMER_WARNINGS /W3)
+else()
+    set(ALIMER_WARNINGS
+        -Wall -Wextra -Wno-unused-parameter
+        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+        -Wgnu-conditional-omitted-operand
+        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+        -Wover-aligned
+    )
+endif()
+
+
+target_compile_options(${PROJECT_NAME} PRIVATE
+        ${ALIMER_WARNINGS}
+        $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
+        $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
+        $<$<PLATFORM_ID:Linux>:-fPIC>
+)
 
 if (WIN32)
     # Enable unicode strings
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _UNICODE)
-
-	target_compile_options(${PROJECT_NAME} PUBLIC
-        /W3         # Set warning level 3
-        /WX         # Treat all other warnings as errors
-    )
-else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -ffast-math $<$<PLATFORM_ID:Linux>:-fPIC>)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
 endif()
 
 # SDK installation
