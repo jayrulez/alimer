@@ -39,11 +39,11 @@ namespace alimer
     string to_utf8(const wchar_t* wstr, size_t len)
     {
         vector<char> char_buffer;
-        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, len, nullptr, 0, nullptr, nullptr);
+        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
-            return "";
+            return EMPTY_STRING;
         char_buffer.resize(ret);
-        WideCharToMultiByte(CP_UTF8, 0, wstr, len, char_buffer.data(), char_buffer.size(), nullptr, nullptr);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
         return string(char_buffer.data(), char_buffer.size());
     }
 
@@ -55,11 +55,11 @@ namespace alimer
     wstring to_utf16(const char* str, size_t len)
     {
         vector<wchar_t> wchar_buffer;
-        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, len, nullptr, 0);
+        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str, len, wchar_buffer.data(), wchar_buffer.size());
+        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), wchar_buffer.size());
         return wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 

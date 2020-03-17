@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {

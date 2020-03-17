@@ -123,7 +123,7 @@ namespace alimer
             default: return;
             }
 
-            eastl::vector<char> output(str.begin(), str.end());
+            vector<char> output(str.begin(), str.end());
             output.push_back('\n');
 
             size_t offset = 0;

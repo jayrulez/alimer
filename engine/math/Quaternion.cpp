@@ -25,10 +25,10 @@
 
 namespace alimer
 {
-    eastl::string Quaternion::ToString() const
+    std::string Quaternion::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 }

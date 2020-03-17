@@ -25,19 +25,6 @@
 #include "Input/InputManager.h"
 #include "Diagnostics/Log.h"
 
-/* Needed by EASTL. */
-#if !defined(ALIMER_EXPORTS)
-ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return new uint8_t[size];
-}
-
-ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return new uint8_t[size];
-}
-#endif
-
 namespace alimer
 {
     Game::Game(const Configuration& config_)

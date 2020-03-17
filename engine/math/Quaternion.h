@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace alimer
 {
@@ -47,6 +47,6 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        eastl::string ToString() const;
+        std::string ToString() const;
     };
 } 
