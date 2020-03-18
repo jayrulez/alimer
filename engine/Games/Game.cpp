@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 //
 
+#include "window/os.h"
+#include "graphics/GPUDevice.h"
 #include "Games/Game.h"
 #include "graphics/GPUDevice.h"
 #include "Input/InputManager.h"
@@ -31,7 +33,19 @@ namespace alimer
         : config(config_)
         , input(new InputManager())
     {
+        os::init();
+
         gameSystems.push_back(input);
+
+        // Create GPU device first.
+        bool validation = false;
+#ifdef _DEBUG
+        validation = true;
+#endif
+        gpuDevice = GPUDevice::create(config.gpuBackend, validation, config.headless);
+        if (!gpuDevice) {
+            headless = true;
+        }
     }
 
     Game::~Game()
@@ -43,27 +57,16 @@ namespace alimer
 
         gameSystems.clear();
         gpuDevice.reset();
+        os::shutdown();
     }
 
     void Game::InitBeforeRun()
     {
-        DeviceDesc deviceDesc = {};
-        deviceDesc.application_name = config.applicationName.c_str();
-#ifdef _DEBUG
-        deviceDesc.flags |= GPUDeviceFlags::Validation;
-#endif
-        deviceDesc.backbuffer_width = mainWindow->GetSize().width;
-        deviceDesc.backbuffer_height = mainWindow->GetSize().height;
-        deviceDesc.native_display = mainWindow->get_native_display();
-        deviceDesc.native_window_handle = mainWindow->get_native_handle();
-        gpuDevice.reset(GPUDevice::Create(config.gpuBackend));
-        if (!gpuDevice->Init(deviceDesc)) {
-            headless = true;
-            gpuDevice.reset();
-        }
+        // Create main window.
+        mainWindow.reset(new Window(gpuDevice.get(), config.windowTitle, config.windowSize, WindowStyle::Default));
 
         Initialize();
-        if (exitCode || exiting)
+        if (exitCode)
         {
             //Stop();
             return;
@@ -128,11 +131,6 @@ namespace alimer
             return EXIT_FAILURE;
         }
 
-        if (exiting) {
-            ALIMER_LOGERROR("Application is exiting");
-            return EXIT_FAILURE;
-        }
-
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         try
 #endif
@@ -143,9 +141,25 @@ namespace alimer
                 return exitCode;
 
             running = true;
-            exiting = false;
-            PlatformRun();
-        }
+
+            InitBeforeRun();
+
+            // Main message loop
+            while (running)
+            {
+                Event evt{};
+                while (pollEvent(evt))
+                {
+                    if (evt.type == EventType::Quit)
+                    {
+                        running = false;
+                        break;
+                    }
+                }
+
+                Tick();
+            }
+    }
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         catch (std::bad_alloc&)
         {
@@ -155,7 +169,7 @@ namespace alimer
 #endif
 
         return exitCode;
-        }
+}
 
     void Game::Tick()
     {
@@ -178,7 +192,7 @@ namespace alimer
     void Game::Render()
     {
         // Don't try to render anything before the first Update.
-        if (!exiting
+        if (running
             && time.GetFrameCount() > 0
             && !mainWindow->IsMinimized()
             && BeginDraw())

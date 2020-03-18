@@ -20,42 +20,45 @@
 // THE SOFTWARE.
 //
 
-#include "window/window.h"
+#include "window/Window.h"
 #include "graphics/GPUDevice.h"
 #include "graphics/SwapChain.h"
 
-#if defined(ALIMER_GLFW)
-#include "window/glfw/glfw_window.h"
+#if defined(GLFW_BACKEND)
+#   include "glfw/glfw_window.h"
+#elif defined(SDL_BACKEND)
+#   include "sdl/WindowImplSDL.hpp"
 #endif
 
 using namespace std;
 
 namespace alimer
 {
-    Window::Window(const string& newTitle, const SizeU& newSize, WindowStyle style)
-        : title(newTitle)
+    Window::Window(GPUDevice* device, const string& newTitle, const SizeU& newSize, WindowStyle style)
+        : device{ device }
+        , title(newTitle)
         , size(newSize)
         , resizable(any(style& WindowStyle::Resizable))
         , fullscreen(any(style& WindowStyle::Fullscreen))
         , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
         , impl(new WindowImpl(false, newTitle, newSize, style))
     {
-
+        ALIMER_ASSERT_MSG(device, "Invalid GPUDevice instance");
     }
 
     Window::~Window()
     {
-        Close();
+        close();
     }
 
-    void Window::Close()
+    void Window::close()
     {
         // Delete the window implementation
         delete impl;
         impl = nullptr;
     }
 
-    bool Window::IsOpen() const
+    bool Window::isOpen() const
     {
         return impl != nullptr && impl->IsOpen();
     }

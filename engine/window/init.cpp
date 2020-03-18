@@ -20,28 +20,23 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "init.h"
 
-#include "glfw_config.h"
-#include "window/window.h"
+#if defined(GLFW_BACKEND)
+#   include "glfw/init.h"
+#elif defined(SDL_BACKEND)
+#   include "sdl/EventImplSDL.hpp"
+#endif
 
-namespace alimer
+namespace os
 {
-    class WindowImpl final
+    auto init() -> bool
     {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
+        return impl::init();
+    }
 
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
-
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
+    void shutdown() noexcept
+    {
+        impl::shutdown();
+    }
 }

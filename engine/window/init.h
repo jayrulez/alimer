@@ -22,26 +22,8 @@
 
 #pragma once
 
-#include "glfw_config.h"
-#include "window/window.h"
-
-namespace alimer
+namespace os
 {
-    class WindowImpl final
-    {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
-
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
-
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
+    auto init() -> bool;
+    void shutdown() noexcept;
 }

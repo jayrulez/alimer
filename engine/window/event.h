@@ -22,26 +22,26 @@
 
 #pragma once
 
-#include "glfw_config.h"
-#include "window/window.h"
+#include "Core/Utils.h"
+#include "math/Size.h"
+#include <string>
 
 namespace alimer
 {
-    class WindowImpl final
+    /// Defines the even type.
+    enum class EventType : uint8_t
     {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
-
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
-
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
+        Unkwnown = 0,
+        Quit,
     };
+
+    /// Defines an OS Event.
+    struct Event
+    {
+        EventType type;
+    };
+
+    ALIMER_API void pushEvent(Event&& e);
+    ALIMER_API void pushEvent(const Event& e);
+    ALIMER_API bool pollEvent(Event& e) noexcept;
 }

@@ -224,7 +224,7 @@ namespace alimer
         if (vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &num_present_modes, presentModes.data()) != VK_SUCCESS)
             return FramebufferResizeResult::Error;
 
-        VkPresentModeKHR presentMode = ChooseSwapPresentMode(presentModes, vkGPUDevice->IsVSyncEnabled());
+        VkPresentModeKHR presentMode = ChooseSwapPresentMode(presentModes, true);
         VkSwapchainKHR oldSwapchain = swapchain;
 
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };

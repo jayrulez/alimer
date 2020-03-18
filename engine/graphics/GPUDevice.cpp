@@ -21,6 +21,8 @@
 //
 
 #include "config.h"
+#include "Diagnostics/Log.h"
+#include "Diagnostics/Assert.h"
 #include "graphics/GPUDevice.h"
 
 #if defined(ALIMER_D3D12)
@@ -35,45 +37,70 @@
 #   include "graphics/vulkan/VulkanGPUDevice.h"
 #endif
 
+using namespace std;
+
 namespace alimer
 {
-    bool GPUDevice::Init(const DeviceDesc& desc)
+    set<GPUBackend> GPUDevice::getAvailableBackends()
     {
-        vsync = any(desc.flags & GPUDeviceFlags::VSync);
-        return BackendInit(desc);
-    }
+        static set<GPUBackend> availableBackends;
 
-    GPUDevice* GPUDevice::Create(GPUBackend preferred_backend)
-    {
-        if (preferred_backend == GPUBackend::Count) {
-            preferred_backend = GPUBackend::Direct3D11;
-        }
-
-        GPUDevice* gpuDevice = nullptr;
-        switch (preferred_backend)
+        if (availableBackends.empty())
         {
-#if defined(ALIMER_D3D11)
-        case GPUBackend::Direct3D11:
-            if (D3D11GPUDevice::IsAvailable())
-                gpuDevice = new D3D11GPUDevice();
-            break;
+            availableBackends.insert(GPUBackend::Null);
+
+#if defined(ALIMER_D3D12)
+            //availableBackends.insert(GPUBackend::Direct3D12);
 #endif
 
 #if defined(ALIMER_VULKAN)
+            if (VulkanGPUDevice::isAvailable())
+                availableBackends.insert(GPUBackend::Vulkan);
+#endif
+        }
+
+        return availableBackends;
+    }
+
+    unique_ptr<GPUDevice> GPUDevice::create(GPUBackend preferredBackend, bool validation, bool headless)
+    {
+        GPUBackend backend = preferredBackend;
+        if (preferredBackend == GPUBackend::Count)
+        {
+            auto availableBackends = getAvailableBackends();
+
+            if (availableBackends.find(GPUBackend::Metal) != availableBackends.end())
+                backend = GPUBackend::Metal;
+            else if (availableBackends.find(GPUBackend::Direct3D12) != availableBackends.end())
+                backend = GPUBackend::Direct3D12;
+            else if (availableBackends.find(GPUBackend::Vulkan) != availableBackends.end())
+                backend = GPUBackend::Vulkan;
+            else
+                backend = GPUBackend::Null;
+        }
+
+        unique_ptr<GPUDevice> device;
+        switch (backend)
+        {
+#if defined(ALIMER_VULKAN)
         case GPUBackend::Vulkan:
-            if (VulkanGPUDevice::IsAvailable())
-                gpuDevice = new VulkanGPUDevice();
+            ALIMER_LOGINFO("Using Vulkan render driver");
+            device = make_unique<VulkanGPUDevice>(validation, headless);
             break;
 #endif
 
+        case GPUBackend::Direct3D12:
+            break;
+        case GPUBackend::Metal:
+            break;
         default:
             break;
         }
 
-        return gpuDevice;
+        return device;
     }
 
-    void GPUDevice::NotifyValidationError(const char* message)
+    void GPUDevice::notifyValidationError(const char* message)
     {
 
     }

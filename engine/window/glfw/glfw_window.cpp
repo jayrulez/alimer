@@ -39,6 +39,15 @@ namespace alimer
     WindowImpl::WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style)
         : opengl(opengl_)
     {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        const bool opengl = false;
+        if (opengl) {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        }
+
         int window_width = (int) newSize.width;
         int window_height = (int)newSize.height;
         GLFWmonitor* monitor = nullptr;

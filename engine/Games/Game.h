@@ -24,7 +24,7 @@
 
 #include "Core/Object.h"
 #include "Games/GameTime.h"
-#include "window/window.h"
+#include "window/Window.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
@@ -35,11 +35,11 @@ namespace alimer
 {
     struct Configuration
     {
-        /// The name of the application.
-        std::string applicationName = "Alimer";
-
         /// The preferred GPU backend.
         GPUBackend gpuBackend = GPUBackend::Count;
+
+        /// Run engine in headless mode.
+        bool headless = false;
 
         /// Main window title.
         std::string windowTitle = "Alimer";
@@ -99,7 +99,6 @@ namespace alimer
         int exitCode = 0;
         Configuration config;
         bool running = false;
-        bool exiting = false;
         // Rendering loop timer.
         GameTime time;
         std::unique_ptr<Window> mainWindow;

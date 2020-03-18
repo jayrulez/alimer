@@ -34,24 +34,12 @@ namespace alimer
         Null,
         /// Vulkan backend.
         Vulkan,
-        /// Direct3D 11.1+ backend.
-        Direct3D11,
         /// Direct3D 12 backend.
         Direct3D12,
         /// Metal backend.
         Metal,
         /// Default best platform supported backend.
         Count
-    };
-
-    enum class DevicePowerPreference : uint32_t
-    {
-        /// Prefer discrete GPU.
-        HighPerformance,
-        /// Prefer integrated GPU.
-        LowPower,
-        /// No GPU preference. 
-        DontCare
     };
 
     enum class CommandQueueType : uint32_t

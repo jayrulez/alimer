@@ -23,25 +23,28 @@
 #pragma once
 
 #include "glfw_config.h"
-#include "window/window.h"
 
-namespace alimer
+namespace os
 {
-    class WindowImpl final
+    namespace clipboard
     {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
+        namespace impl
+        {
+            inline std::string get_text() noexcept
+            {
+                const char* text = glfwGetClipboardString(nullptr);
+                if (text)
+                {
+                    return text;
+                }
 
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
+                return {};
+            }
 
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
+            inline void set_text(const std::string& text)
+            {
+                glfwSetClipboardString(nullptr, text.c_str());
+            }
+        }
+    }
 }

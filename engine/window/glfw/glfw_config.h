@@ -22,26 +22,13 @@
 
 #pragma once
 
-#include "glfw_config.h"
-#include "window/window.h"
-
-namespace alimer
-{
-    class WindowImpl final
-    {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
-
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
-
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
-}
+#if defined(_WIN32)
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+#   define GLFW_EXPOSE_NATIVE_X11
+#elif defined(__APPLE__)
+#   define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>

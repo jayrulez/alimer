@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "window/Event.h"
 #include "Core/Utils.h"
 #include "math/Size.h"
 #include <string>
@@ -42,21 +43,24 @@ namespace alimer
     using native_handle = void*;
     using native_display = void*;
 
+    class GPUDevice;
     class WindowImpl;
 
     /// Defines an OS Window.
     class ALIMER_API Window final
     {
     public:
-        Window(const std::string& newTitle, const SizeU& newSize, WindowStyle style);
+        /// Constructor.
+        Window(GPUDevice* device, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
 
         /// Destructor.
         ~Window();
 
-        void Close();
+        /// Close the window.
+        void close();
 
         /// Return whether or not the window is open,
-        bool IsOpen() const;
+        bool isOpen() const;
 
         inline const SizeU& GetSize() const noexcept { return size; }
 
@@ -72,7 +76,8 @@ namespace alimer
         native_handle get_native_handle() const;
         native_display get_native_display() const;
 
-    protected:
+    private:
+        GPUDevice* device;
         std::string title;
         SizeU size;
         bool resizable = false;
@@ -80,8 +85,6 @@ namespace alimer
         bool exclusiveFullscreen = false;
         bool highDpi = true;
         bool visible = true;
-
-    private:
         WindowImpl* impl;
         
         ALIMER_DISABLE_COPY_MOVE(Window);

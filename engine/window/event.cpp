@@ -20,28 +20,54 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "window/Event.h"
+#include <cstring>
+#include <deque>
 
-#include "glfw_config.h"
-#include "window/window.h"
+#if defined(GLFW_BACKEND)
+#include "glfw/event.h"
+#elif defined(SDL_BACKEND)
+#include "sdl/event.hpp"
+#endif
 
 namespace alimer
 {
-    class WindowImpl final
+    namespace
     {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
+        auto get_event_queue() noexcept -> std::deque<Event>&
+        {
+            static std::deque<Event> eventQueue;
+            return eventQueue;
+        }
 
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
+        bool popEvent(Event& e) noexcept
+        {
+            auto& event_queue = get_event_queue();
+            // Pop the first event of the queue, if it is not empty
+            if (!event_queue.empty())
+            {
+                e = event_queue.front();
+                event_queue.pop_front();
+                return true;
+            }
+            return false;
+        }
+    }
 
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
+    void pushEvent(const Event& e)
+    {
+        get_event_queue().emplace_back(e);
+    }
+
+    void pushEvent(Event&& e)
+    {
+        get_event_queue().emplace_back(std::move(e));
+    }
+
+    bool pollEvent(Event& e) noexcept
+    {
+        impl::pump_events();
+
+        return popEvent(e);
+    }
 }

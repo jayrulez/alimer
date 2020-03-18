@@ -49,7 +49,6 @@ define_engine_source_files(
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(
         window/glfw
-        Games/GLFW
     )
 endif ()
 
@@ -74,16 +73,22 @@ else ()
     add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
 
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+)
+
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
+
 if(NOT (EMSCRIPTEN OR ANDROID))
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        glfw
-    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
 
 if (ALIMER_D3D12)

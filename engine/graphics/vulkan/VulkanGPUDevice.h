@@ -31,16 +31,15 @@ namespace alimer
     class ALIMER_API VulkanGPUDevice final : public GPUDevice
     {
     public:
-        static bool IsAvailable();
+        static bool isAvailable();
 
         /// Constructor.
-        VulkanGPUDevice();
+        VulkanGPUDevice(bool validation, bool headless);
         /// Destructor.
         ~VulkanGPUDevice() override;
 
-        bool BackendInit(const DeviceDesc& desc) override;
-        void BackendShutdown() override;
-        void WaitIdle() override;
+        void backendShutdown() override;
+        void waitIdle() override;
         //bool BeginFrame() override;
         //void EndFrame() override;
 

@@ -59,7 +59,7 @@ namespace alimer
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), wchar_buffer.size());
+        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
         return wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 

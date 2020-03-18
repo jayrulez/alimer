@@ -20,52 +20,18 @@
 // THE SOFTWARE.
 //
 
-#include "window/window.h"
-#include "Games/Game.h"
-#include "Diagnostics/Log.h"
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#pragma once
+
+#include "../event.h"
+#include "glfw_config.h"
 
 namespace alimer
 {
-    static void OnGlfwError(int code, const char* description) {
-        ALIMER_LOGERROR(description);
-    }
-
-    void Game::PlatformRun()
+    namespace impl
     {
-        glfwSetErrorCallback(OnGlfwError);
-
-#ifdef __APPLE__
-        glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
-#endif
-
-        if (!glfwInit()) {
-            ALIMER_LOGERROR("Failed to initialize GLFW");
-            return;
-        }
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        const bool opengl = false;
-        if (opengl) {
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        }
-
-        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Default));
-
-        InitBeforeRun();
-
-        // Main message loop
-        while (mainWindow->IsOpen() && !exiting)
+        void pump_events() noexcept
         {
-            // Check for window messages to process.
             glfwPollEvents();
-            Tick();
         }
-
-        glfwTerminate();
     }
 }

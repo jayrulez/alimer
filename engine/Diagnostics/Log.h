@@ -66,13 +66,12 @@ namespace alimer
     };
 }
 
-#define ALIMER_LOGTRACE(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Trace, message)
 #define ALIMER_LOGDEBUG(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Debug, message)
 #define ALIMER_LOGINFO(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Info, message)
 #define ALIMER_LOGWARN(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Warning, message)
 #define ALIMER_LOGERROR(message) alimer::Log::GetDefault()->Log(alimer::LogLevel::Error, message)
 
-#define ALIMER_LOGT(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Trace, message, ##__VA_ARGS__)
+#define ALIMER_TRACE(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Trace, message, ##__VA_ARGS__)
 #define ALIMER_LOGD(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Debug, message, ##__VA_ARGS__)
 #define ALIMER_LOGI(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Info, message, ##__VA_ARGS__)
 #define ALIMER_LOGW(message, ...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Warning, message, ##__VA_ARGS__)

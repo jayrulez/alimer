@@ -25,46 +25,13 @@
 #include "graphics/Framebuffer.h"
 #include "graphics/CommandContext.h"
 #include <vector>
+#include <set>
 #include <memory>
 
 namespace alimer
 {
     class Texture;
     class GraphicsBuffer;
-
-    enum class GPUDeviceFlags : uint32_t
-    {
-        None = 0,
-        /// Enable vsync
-        VSync = 0x01,
-        /// Enable validation (debug layer).
-        Validation = 0x02,
-        /// Enable headless mode.
-        Headless = 0x04,
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GPUDeviceFlags);
- 
-    struct DeviceDesc
-    {
-        /// Application name.
-        const char* application_name;
-
-        /// GPU device power preference.
-        DevicePowerPreference powerPreference;
-
-        /// Device flags.
-        GPUDeviceFlags flags = GPUDeviceFlags::VSync;
-
-        /// The backbuffer width.
-        uint32_t backbuffer_width;
-        /// The backbuffer height.
-        uint32_t backbuffer_height;
-
-        /// Native display type.
-        void* native_display;
-        /// Native window handle.
-        void* native_window_handle;
-    };
 
     /// Defines the GPU device class.
     class ALIMER_API GPUDevice
@@ -76,16 +43,16 @@ namespace alimer
         /// Destructor.
         virtual ~GPUDevice() = default;
 
-        /// Create new Device with given preferred backend, fallback to supported one.
-        static GPUDevice* Create(GPUBackend preferred_backend = GPUBackend::Count);
+        /// Get set of available GPU backend supported implementation.
+        static std::set<GPUBackend> getAvailableBackends();
 
-        /// Init device with description
-        bool Init(const DeviceDesc& desc);
+        /// Create new GPUDevice with given preferred backend, fallback to supported one.
+        static std::unique_ptr<GPUDevice> create(GPUBackend preferredBackend = GPUBackend::Count, bool validation = false, bool headless = false);
 
         /// Called by validation layer.
-        void NotifyValidationError(const char* message);
+        void notifyValidationError(const char* message);
 
-        virtual void WaitIdle() = 0;
+        virtual void waitIdle() = 0;
         virtual bool begin_frame() { return true; }
         virtual void end_frame() {}
 
@@ -100,18 +67,14 @@ namespace alimer
         /// Query device limits.
         inline const GPUDeviceLimits& QueryLimits() const { return limits; }
 
-        bool IsVSyncEnabled() const { return vsync; }
-
     private:
-        virtual bool BackendInit(const DeviceDesc& desc) = 0;
-        virtual void BackendShutdown() = 0;
+        virtual void backendShutdown() = 0;
         virtual std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
 
     protected:
         GPUDeviceInfo info;
         GPUDeviceFeatures features{};
         GPUDeviceLimits limits{};
-        bool vsync{ false };
        
     private:
         ALIMER_DISABLE_COPY_MOVE(GPUDevice);

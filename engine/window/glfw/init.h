@@ -23,25 +23,33 @@
 #pragma once
 
 #include "glfw_config.h"
-#include "window/window.h"
+#include "window/Event.h"
 
-namespace alimer
+namespace os
 {
-    class WindowImpl final
+    namespace impl
     {
-    public:
-        WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
-        ~WindowImpl();
+        inline bool init()
+        {
+#ifdef __APPLE__
+            glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+#endif
 
-        void set_title(const char* title);
-        bool IsMinimized() const;
-        bool IsOpen() const;
-        void swap_buffers();
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
+            auto result = glfwInit();
+            if (result == GLFW_FALSE)
+            {
+                //TODO_ERROR_HANDLER(result);
+                return false;
+            }
 
-    private:
-        bool opengl;
-        GLFWwindow* window = nullptr;
-    };
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+            return true;
+        }
+
+        inline void shutdown() noexcept
+        {
+            glfwTerminate();
+        }
+    }
 }

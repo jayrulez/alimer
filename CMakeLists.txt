@@ -12,11 +12,9 @@ project (
 
 # Options
 if (WIN32)
-    option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
     option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
     option(ALIMER_VULKAN "Include Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-    option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
     option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
 elseif (EMSCRIPTEN)
     set(ALIMER_OPENGL ON CACHE BOOL "Use OpenGL backend" FORCE)
@@ -80,9 +78,6 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-if (ALIMER_D3D121)
-    message (STATUS "Graphics API:          Direct3D11")
-endif ()
 if (ALIMER_D3D12)
     message (STATUS "Graphics API:          Direct3D12")
 endif ()
