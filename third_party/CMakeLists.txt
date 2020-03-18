@@ -57,7 +57,10 @@ if (ALIMER_VULKAN)
     # vma
     add_library(vma INTERFACE)
     set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma)
-    target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
+    target_sources(vma INTERFACE 
+        ${VMA_DIR}/vk_mem_alloc.h
+        ${VMA_DIR}/vk_mem_alloc.natvis
+    )
     target_include_directories(vma INTERFACE ${VMA_DIR})
     target_link_libraries(vma INTERFACE vulkan)
 
