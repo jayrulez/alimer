@@ -41,7 +41,7 @@ namespace alimer
         EventType type;
     };
 
-    ALIMER_API void pushEvent(Event&& e);
-    ALIMER_API void pushEvent(const Event& e);
-    ALIMER_API bool pollEvent(Event& e) noexcept;
+    ALIMER_API void push_event(Event&& e);
+    ALIMER_API void push_event(const Event& e);
+    ALIMER_API bool poll_event(Event& e) noexcept;
 }

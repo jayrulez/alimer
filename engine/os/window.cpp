@@ -20,9 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "window/Window.h"
-#include "graphics/GPUDevice.h"
-#include "graphics/SwapChain.h"
+#include "os/window.h"
 
 #if defined(GLFW_BACKEND)
 #   include "glfw/glfw_window.h"
@@ -34,16 +32,17 @@ using namespace std;
 
 namespace alimer
 {
-    Window::Window(GPUDevice* device, const string& newTitle, const SizeU& newSize, WindowStyle style)
-        : device{ device }
-        , title(newTitle)
-        , size(newSize)
-        , resizable(any(style& WindowStyle::Resizable))
-        , fullscreen(any(style& WindowStyle::Fullscreen))
-        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
-        , impl(new WindowImpl(false, newTitle, newSize, style))
+    Window::Window(const string& title, const math::usize& newSize, WindowStyle style)
     {
-        ALIMER_ASSERT_MSG(device, "Invalid GPUDevice instance");
+        create(title, centered, centered, newSize.width, newSize.height, style);
+    }
+
+    bool Window::create(const std::string& title, int32_t x, int32_t y, uint32_t w, uint32_t h, WindowStyle style)
+    {
+        close();
+
+        impl = new WindowImpl(false, title, x, y, w, h, style);
+        return impl != nullptr;
     }
 
     Window::~Window()
@@ -53,25 +52,41 @@ namespace alimer
 
     void Window::close()
     {
-        // Delete the window implementation
-        delete impl;
-        impl = nullptr;
+        if (impl != nullptr)
+        {
+            delete impl;
+            impl = nullptr;
+        }
     }
 
-    bool Window::isOpen() const
+    auto Window::get_id() const noexcept -> uint32_t
     {
-        return impl != nullptr && impl->IsOpen();
+        return impl->get_id();
     }
 
-    void Window::set_title(const string& newTitle)
+    auto Window::is_open() const noexcept -> bool
     {
-        title = newTitle;
-        impl->set_title(title.c_str());
+        return impl != nullptr && impl->is_open();
     }
 
-    bool Window::IsMinimized() const
+    auto Window::is_minimized() const noexcept -> bool
     {
-        return impl->IsMinimized();
+        return impl->is_minimized();
+    }
+
+    auto Window::get_size() const noexcept -> math::usize
+    {
+        return impl->get_size();
+    }
+
+    auto Window::get_title() const noexcept -> std::string
+    {
+        return impl->get_title();
+    }
+
+    void Window::set_title(const std::string& title) noexcept
+    {
+        impl->set_title(title);
     }
 
     native_handle Window::get_native_handle() const

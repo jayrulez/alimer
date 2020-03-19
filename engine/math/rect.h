@@ -23,13 +23,13 @@
 #pragma once
 
 #include "math/math.h"
-#include "math/Size.h"
+#include "math/size.h"
 
-namespace alimer
+namespace math
 {
     /// Class specifying a two-dimensional rectangle.
     template <typename T>
-    class TRect final
+    class trect final
     {
     public:
         static constexpr size_t SIZE = 4;
@@ -39,34 +39,15 @@ namespace alimer
             T data[SIZE];
             struct
             {
-                /// Specifies the x-coordinate of the rectangle.
-                T x;
-                /// Specifies the y-coordinate of the rectangle.
-                T y;
-                /// Specifies the width of the rectangle.
-                T width;
-                /// Specifies the height of the rectangle.
-                T height;
+                T x, y, width, height;
             };
         };
 
-        TRect() = default;
-        TRect(const TRect&) = default;
-        TRect& operator=(const TRect&) = default;
-
-        TRect(TRect&&) = default;
-        TRect& operator=(TRect&&) = default;
-
-        explicit constexpr TRect(T v)
-        {
-            x = T(0);
-            y = T(0);
-            width = v;
-            height = v;
-        }
+        constexpr trect() = default;
+        constexpr trect(const trect&) = default;
 
         template <typename U>
-        explicit constexpr TRect(const TRect<U>& u)
+        explicit constexpr trect(const trect<U>& u)
         {
             x = T(u.x);
             y = T(u.y);
@@ -74,7 +55,7 @@ namespace alimer
             height = T(u.height);
         }
 
-        constexpr TRect(T x_, T y_, T width_, T height_)
+        constexpr trect(T x_, T y_, T width_, T height_)
         {
             x = x_;
             y = y_;
@@ -82,7 +63,7 @@ namespace alimer
             height = height_;
         }
 
-        constexpr TRect(T width_, T height_)
+        constexpr trect(T width_, T height_)
         {
             x = T(0);
             y = T(0);
@@ -90,7 +71,7 @@ namespace alimer
             height = height_;
         }
 
-        constexpr TRect(const TSize<T>& size)
+        constexpr trect(const tsize2<T>& size)
         {
             x = T(0);
             y = T(0);
@@ -110,7 +91,6 @@ namespace alimer
         }
     };
 
-    using Rect = TRect<float>;
-    using RectI = TRect<int32_t>;
-    using RectU = TRect<uint32_t>;
+    using rect = trect<int32_t>;
+    using urect = trect<uint32_t>;
 } 

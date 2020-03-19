@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/Texture.h"
-#include "math/Size.h"
+#include "math/size.h"
 
 namespace alimer
 {
@@ -43,9 +43,9 @@ namespace alimer
         Framebuffer(GPUDevice* device);
 
     public:
-        const SizeU& getExtent() const;
+        const math::usize& getExtent() const;
 
     protected:
-        SizeU extent{};
+        math::usize extent{};
     };
 } 

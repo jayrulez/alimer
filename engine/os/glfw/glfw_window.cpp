@@ -36,46 +36,60 @@
 
 namespace alimer
 {
-    WindowImpl::WindowImpl(bool opengl_, const std::string& newTitle, const SizeU& newSize, WindowStyle style)
+
+    WindowImpl::WindowImpl(bool opengl_, const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowStyle style)
         : opengl(opengl_)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        const bool opengl = false;
-        if (opengl) {
+        if (opengl_) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         }
 
-        int window_width = (int) newSize.width;
-        int window_height = (int)newSize.height;
-        GLFWmonitor* monitor = nullptr;
+        auto visible = any(style & WindowStyle::Hidden) ? GLFW_FALSE : GLFW_TRUE;
+        glfwWindowHint(GLFW_VISIBLE, visible);
 
-        const bool fullscreen = any(style & WindowStyle::Fullscreen);
-        const bool resizable = any(style & WindowStyle::Resizable);
-        if (fullscreen)
+        auto decorated = any(style & WindowStyle::Borderless) ? GLFW_FALSE : GLFW_TRUE;
+        glfwWindowHint(GLFW_DECORATED, decorated);
+
+        auto resizable = any(style & WindowStyle::Resizable) ? GLFW_TRUE : GLFW_FALSE;
+        glfwWindowHint(GLFW_RESIZABLE, resizable);
+
+        auto maximized = any(style & WindowStyle::Minimized) ? GLFW_TRUE : GLFW_FALSE;
+        glfwWindowHint(GLFW_MAXIMIZED, maximized);
+
+        GLFWmonitor* monitor = nullptr;
+        if (any(style & WindowStyle::Fullscreen))
         {
             monitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            window_width = mode->width;
-            window_height = mode->height;
         }
-        else
+
+        if (any(style & WindowStyle::FullscreenDesktop))
         {
-            glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
-            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-            //glfwWindowHint(GLFW_DECORATED, any(style & WindowStyle::Decorated) ? GLFW_TRUE : GLFW_FALSE);
+            monitor = glfwGetPrimaryMonitor();
+            auto mode = glfwGetVideoMode(monitor);
+
+            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        window = glfwCreateWindow(window_width, window_height, newTitle.c_str(), NULL, nullptr);
-
-        if (!window)
+        window_ = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title.c_str(), monitor, nullptr);
+        if (!window_)
         {
             ALIMER_LOGERROR("GLFW: Failed to create window.");
         }
 
-        glfwSetWindowUserPointer(window, this);
+        glfwDefaultWindowHints();
+
+        title_ = title;
+        id_ = impl::register_window(this);
+        glfwSetWindowUserPointer(window_, this);
 
         /*glfwSetWindowCloseCallback(window, window_close_callback);
         glfwSetWindowSizeCallback(window, window_size_callback);
@@ -84,51 +98,30 @@ namespace alimer
         glfwSetCursorPosCallback(window, cursor_position_callback);
         glfwSetMouseButtonCallback(window, mouse_button_callback);*/
 
-        glfwSetInputMode(window, GLFW_STICKY_KEYS, 1);
-        glfwSetInputMode(window, GLFW_STICKY_MOUSE_BUTTONS, 1);
-
+        set_position(x, y);
 
         if (opengl) {
-            glfwMakeContextCurrent(window);
+            glfwMakeContextCurrent(window_);
             glfwSwapInterval(1);
         }
     }
 
     WindowImpl::~WindowImpl()
     {
-        glfwDestroyWindow(window);
-    }
-
-    void WindowImpl::set_title(const char* title)
-    {
-        glfwSetWindowTitle(window, title);
-    }
-
-    bool WindowImpl::IsOpen() const
-    {
-        return !glfwWindowShouldClose(window);
-    }
-
-    bool WindowImpl::IsMinimized() const
-    {
-        return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
-    }
-
-    void WindowImpl::swap_buffers()
-    {
-        glfwSwapBuffers(window);
+        impl::unregister_window(id_);
+        glfwDestroyWindow(window_);
     }
 
     native_handle WindowImpl::get_native_handle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return glfwGetWin32Window(window);
+        return glfwGetWin32Window(window_);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Window(window);
+        return (void*)(uintptr_t)glfwGetX11Window(window_);
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return glfwGetCocoaWindow(window);
+        return glfwGetCocoaWindow(window_);
 #elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandWindow(window);
+        return glfwGetWaylandWindow(window_);
 #else
         return nullptr;
 #endif

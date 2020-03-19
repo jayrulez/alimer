@@ -34,7 +34,7 @@ namespace alimer
     {
     }
 
-    const SizeU& SwapChain::GetExtent() const
+    const math::usize& SwapChain::GetExtent() const
     {
         return extent;
     }

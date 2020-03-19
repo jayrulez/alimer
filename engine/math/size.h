@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,54 +20,55 @@
 // THE SOFTWARE.
 //
 
-#include "window/Event.h"
-#include <cstring>
-#include <deque>
+#pragma once
 
-#if defined(GLFW_BACKEND)
-#include "glfw/event.h"
-#elif defined(SDL_BACKEND)
-#include "sdl/event.hpp"
-#endif
+#include <stdint.h>
+#include <assert.h>
 
-namespace alimer
+namespace math
 {
-    namespace
+    template <typename T>
+    struct tsize2
     {
-        auto get_event_queue() noexcept -> std::deque<Event>&
-        {
-            static std::deque<Event> eventQueue;
-            return eventQueue;
-        }
+    public:
+        static constexpr size_t SIZE = 2;
 
-        bool popEvent(Event& e) noexcept
+        union
         {
-            auto& event_queue = get_event_queue();
-            // Pop the first event of the queue, if it is not empty
-            if (!event_queue.empty())
+            T data[2];
+            struct
             {
-                e = event_queue.front();
-                event_queue.pop_front();
-                return true;
-            }
-            return false;
+                T width, height;
+            };
+        };
+
+        constexpr tsize2() = default;
+        constexpr tsize2(const tsize2&) = default;
+
+        template <typename U>
+        explicit constexpr tsize2(const tsize2<U> & u)
+        {
+            width = T(u.width);
+            height = T(u.height);
         }
-    }
 
-    void pushEvent(const Event& e)
-    {
-        get_event_queue().emplace_back(e);
-    }
+        constexpr tsize2(T width_, T height_)
+        {
+            width = width_;
+            height = height_;
+        }
 
-    void pushEvent(Event&& e)
-    {
-        get_event_queue().emplace_back(std::move(e));
-    }
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
 
-    bool pollEvent(Event& e) noexcept
-    {
-        impl::pump_events();
+        inline constexpr T& operator[](size_t i) noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
+    };
 
-        return popEvent(e);
-    }
-}
+    using size = tsize2<int32_t>;
+    using usize = tsize2<uint32_t>;
+} 

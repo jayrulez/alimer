@@ -24,7 +24,7 @@
 
 #include "Core/Object.h"
 #include "Games/GameTime.h"
-#include "window/Window.h"
+#include "os/window.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
@@ -45,7 +45,7 @@ namespace alimer
         std::string windowTitle = "Alimer";
 
         /// Main window size.
-        SizeU windowSize = { 1280, 720 };
+        math::usize windowSize = { 1280, 720 };
     };
 
     class GPUDevice;
@@ -68,7 +68,8 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        Window* GetMainWindow() const { return mainWindow.get(); }
+        inline auto& get_main_window() { return main_window; }
+        inline auto& get_main_window() const { return main_window; }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -91,7 +92,6 @@ namespace alimer
     private:
         /// Called by platform backend.
         void InitBeforeRun();
-        void PlatformRun();
         
         void Render();
 
@@ -101,7 +101,7 @@ namespace alimer
         bool running = false;
         // Rendering loop timer.
         GameTime time;
-        std::unique_ptr<Window> mainWindow;
+        Window main_window;
         std::vector<GameSystem*> gameSystems;
         std::unique_ptr<GPUDevice> gpuDevice;
         InputManager* input;

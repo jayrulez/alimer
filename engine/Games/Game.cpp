@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "window/os.h"
+#include "os/os.h"
 #include "graphics/GPUDevice.h"
 #include "Games/Game.h"
 #include "graphics/GPUDevice.h"
@@ -63,7 +63,7 @@ namespace alimer
     void Game::InitBeforeRun()
     {
         // Create main window.
-        mainWindow.reset(new Window(gpuDevice.get(), config.windowTitle, config.windowSize, WindowStyle::Default));
+        main_window.create(config.windowTitle, centered, centered, config.windowSize.width, config.windowSize.height, WindowStyle::Resizable);
 
         Initialize();
         if (exitCode)
@@ -148,7 +148,7 @@ namespace alimer
             while (running)
             {
                 Event evt{};
-                while (pollEvent(evt))
+                while (poll_event(evt))
                 {
                     if (evt.type == EventType::Quit)
                     {
@@ -194,7 +194,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !mainWindow->IsMinimized()
+            && !main_window.is_minimized()
             && BeginDraw())
         {
             Draw(time);

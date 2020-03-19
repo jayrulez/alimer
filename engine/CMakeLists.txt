@@ -39,7 +39,7 @@ define_engine_source_files(
     Core
     Diagnostics
     math
-    window
+    os
     graphics
     Input
     Games
@@ -48,7 +48,7 @@ define_engine_source_files(
 # Sources per backend/platform
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(
-        window/glfw
+        os/glfw
     )
 endif ()
 

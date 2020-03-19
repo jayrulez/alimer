@@ -22,34 +22,28 @@
 
 #pragma once
 
+#include "../event.h"
 #include "glfw_config.h"
-#include "window/Event.h"
+#include "glfw_window.h"
 
-namespace os
+namespace alimer
 {
     namespace impl
     {
-        inline bool init()
+        void pump_events() noexcept
         {
-#ifdef __APPLE__
-            glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
-#endif
+            glfwPollEvents();
 
-            auto result = glfwInit();
-            if (result == GLFW_FALSE)
+            // Fire quit event when all windows are closed.
+            auto& windows = get_windows();
+            auto all_closed = std::all_of(std::begin(windows), std::end(windows),
+                [](const auto& e) { return glfwWindowShouldClose(e->get_impl()); });
+            if (all_closed)
             {
-                //TODO_ERROR_HANDLER(result);
-                return false;
+                Event evt = {};
+                evt.type = EventType::Quit;
+                push_event(evt);
             }
-
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-            return true;
-        }
-
-        inline void shutdown() noexcept
-        {
-            glfwTerminate();
         }
     }
 }

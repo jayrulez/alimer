@@ -22,9 +22,8 @@
 
 #pragma once
 
-#include "window/Event.h"
 #include "Core/Utils.h"
-#include "math/Size.h"
+#include "math/size.h"
 #include <string>
 
 namespace alimer
@@ -32,18 +31,20 @@ namespace alimer
     enum class WindowStyle : uint32_t
     {
         None = 0,
-        Resizable = 0x01,
-        Fullscreen = 0x02,
-        ExclusiveFullscreen = 0x04,
-        HighDpi = 0x08,
-        Default = Resizable
+        Fullscreen = 1 << 0,
+        FullscreenDesktop = 1 << 1,
+        Hidden = 1 << 2,
+        Borderless = 1 << 3,
+        Resizable = 1 << 4,
+        Minimized = 1 << 5,
+        Maximized = 1 << 6,
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
+    constexpr static const int32_t centered = std::numeric_limits<int32_t>::max();
     using native_handle = void*;
     using native_display = void*;
 
-    class GPUDevice;
     class WindowImpl;
 
     /// Defines an OS Window.
@@ -51,42 +52,44 @@ namespace alimer
     {
     public:
         /// Constructor.
-        Window(GPUDevice* device, const std::string& newTitle, const SizeU& newSize, WindowStyle style);
+        Window() = default;
+
+        /// Constructor.
+        Window(const std::string& title, const math::usize& newSize, WindowStyle style);
 
         /// Destructor.
         ~Window();
 
+        /// Create the window.
+        bool create(const std::string& title, int32_t x, int32_t y, uint32_t w, uint32_t h, WindowStyle style);
+
         /// Close the window.
         void close();
 
-        /// Return whether or not the window is open,
-        bool isOpen() const;
+        /// Return the window id.
+        auto get_id() const noexcept -> uint32_t;
 
-        inline const SizeU& GetSize() const noexcept { return size; }
-
-        /// Set the window title.
-        void set_title(const std::string& newTitle);
-
-        /// Return the window title.
-        const std::string& get_title() const { return title; }
+        /// Return whether or not the window is open.
+        auto is_open() const noexcept -> bool;
 
         /// Return whether the window is minimized.
-        bool IsMinimized() const;
+        auto is_minimized() const noexcept -> bool;
+
+        /// Get the window size.
+        auto get_size() const noexcept->math::usize;
+
+        /// Return the window title.
+        auto get_title() const noexcept->std::string;
+
+        /// Set the window title.
+        void set_title(const std::string& title) noexcept;
 
         native_handle get_native_handle() const;
         native_display get_native_display() const;
 
     private:
-        GPUDevice* device;
-        std::string title;
-        SizeU size;
-        bool resizable = false;
-        bool fullscreen = false;
-        bool exclusiveFullscreen = false;
-        bool highDpi = true;
-        bool visible = true;
-        WindowImpl* impl;
-        
+        WindowImpl* impl = nullptr;
+
         ALIMER_DISABLE_COPY_MOVE(Window);
     };
 }

@@ -31,7 +31,7 @@ namespace alimer
 
     }
 
-    const SizeU& Framebuffer::getExtent() const
+    const math::usize& Framebuffer::getExtent() const
     {
         return extent;
     }

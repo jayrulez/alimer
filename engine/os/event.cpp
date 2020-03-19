@@ -20,18 +20,54 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "event.h"
+#include <cstring>
+#include <deque>
 
-#include "../event.h"
-#include "glfw_config.h"
+#if defined(GLFW_BACKEND)
+#include "glfw/event.h"
+#elif defined(SDL_BACKEND)
+#include "sdl/event.hpp"
+#endif
 
 namespace alimer
 {
-    namespace impl
+    namespace
     {
-        void pump_events() noexcept
+        auto get_event_queue() noexcept -> std::deque<Event>&
         {
-            glfwPollEvents();
+            static std::deque<Event> eventQueue;
+            return eventQueue;
         }
+
+        bool popEvent(Event& e) noexcept
+        {
+            auto& event_queue = get_event_queue();
+            // Pop the first event of the queue, if it is not empty
+            if (!event_queue.empty())
+            {
+                e = event_queue.front();
+                event_queue.pop_front();
+                return true;
+            }
+            return false;
+        }
+    }
+
+    void push_event(const Event& e)
+    {
+        get_event_queue().emplace_back(e);
+    }
+
+    void push_event(Event&& e)
+    {
+        get_event_queue().emplace_back(std::move(e));
+    }
+
+    bool poll_event(Event& e) noexcept
+    {
+        impl::pump_events();
+
+        return popEvent(e);
     }
 }
