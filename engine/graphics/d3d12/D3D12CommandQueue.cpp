@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
@@ -128,3 +129,5 @@ namespace Alimer
         return allocatorPool.RequestAllocator(completedFenceValue);
     }
 }
+#endif // TODO
+

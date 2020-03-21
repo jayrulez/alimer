@@ -28,7 +28,7 @@
 namespace alimer
 {
     template <typename T>
-    struct tsize2
+    struct tvec2
     {
     public:
         static constexpr size_t SIZE = 2;
@@ -38,24 +38,24 @@ namespace alimer
             T data[2];
             struct
             {
-                T width, height;
+                T x, y;
             };
         };
 
-        constexpr tsize2() = default;
-        constexpr tsize2(const tsize2&) = default;
+        constexpr tvec2() = default;
+        constexpr tvec2(const tvec2&) = default;
 
         template <typename U>
-        explicit constexpr tsize2(const tsize2<U> & u)
+        explicit constexpr tvec2(const tvec2 <U> & u)
         {
-            width = T(u.width);
-            height = T(u.height);
+            x = T(u.x);
+            y = T(u.y);
         }
 
-        constexpr tsize2(T width_, T height_)
+        constexpr tvec2(T x_, T y_)
         {
-            width = width_;
-            height = height_;
+            x = x_;
+            y = y_;
         }
 
         inline constexpr T const& operator[](size_t i) const noexcept {
@@ -67,8 +67,22 @@ namespace alimer
             assert(i < SIZE);
             return v[i];
         }
+
+        inline constexpr tvec2 xx() const { return tvec2(x, x); }
+        inline constexpr tvec2 xy() const { return tvec2(x, y); }
+        inline constexpr tvec2 yx() const { return tvec2(y, x); }
+        inline constexpr tvec2 yy() const { return tvec2(y, y); }
     };
 
-    using size = tsize2<int32_t>;
-    using usize = tsize2<uint32_t>;
+    using point = tvec2<int32_t>;
+    using double2 = tvec2<double>;
+    using float2 = tvec2<float>;
+    //using half2 = tvec2<half>;
+    using int2 = tvec2<int32_t>;
+    using uint2 = tvec2<uint32_t>;
+    using short2 = tvec2<int16_t>;
+    using ushort2 = tvec2<uint16_t>;
+    using byte2 = tvec2<int8_t>;
+    using ubyte2 = tvec2<uint8_t>;
+    using bool2 = tvec2<bool>;
 } 

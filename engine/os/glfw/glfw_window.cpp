@@ -23,30 +23,19 @@
 #include "glfw_window.h"
 #include "Core/Platform.h"
 #include "Diagnostics/Log.h"
-#if defined(_WIN32)
-#   define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(__linux__)
-#   define GLFW_EXPOSE_NATIVE_X11
-#elif defined(__APPLE__)
-#   define GLFW_EXPOSE_NATIVE_COCOA
-#endif
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 
 namespace alimer
 {
 
-    WindowImpl::WindowImpl(bool opengl_, const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowStyle style)
-        : opengl(opengl_)
+    WindowImpl::WindowImpl(const std::string& title, const point& pos, const usize& size, WindowStyle style)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        if (opengl_) {
+        /*if (opengl_) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
             glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        }
+        }*/
 
         auto visible = any(style & WindowStyle::Hidden) ? GLFW_FALSE : GLFW_TRUE;
         glfwWindowHint(GLFW_VISIBLE, visible);
@@ -79,7 +68,7 @@ namespace alimer
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        window_ = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title.c_str(), monitor, nullptr);
+        window_ = glfwCreateWindow(static_cast<int>(size.width), static_cast<int>(size.height), title.c_str(), monitor, nullptr);
         if (!window_)
         {
             ALIMER_LOGERROR("GLFW: Failed to create window.");
@@ -98,47 +87,12 @@ namespace alimer
         glfwSetCursorPosCallback(window, cursor_position_callback);
         glfwSetMouseButtonCallback(window, mouse_button_callback);*/
 
-        set_position(x, y);
-
-        if (opengl) {
-            glfwMakeContextCurrent(window_);
-            glfwSwapInterval(1);
-        }
+        set_position(pos.x, pos.y);
     }
 
     WindowImpl::~WindowImpl()
     {
         impl::unregister_window(id_);
         glfwDestroyWindow(window_);
-    }
-
-    native_handle WindowImpl::get_native_handle() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return glfwGetWin32Window(window_);
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Window(window_);
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return glfwGetCocoaWindow(window_);
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandWindow(window_);
-#else
-        return nullptr;
-#endif
-    }
-
-    native_display WindowImpl::get_native_display() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Display();
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandDisplay();
-#else
-        return nullptr;
-#endif
     }
 }

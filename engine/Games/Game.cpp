@@ -21,6 +21,7 @@
 //
 
 #include "os/os.h"
+#include "graphics/gpu.h"
 #include "graphics/GPUDevice.h"
 #include "Games/Game.h"
 #include "graphics/GPUDevice.h"
@@ -57,13 +58,31 @@ namespace alimer
 
         gameSystems.clear();
         gpuDevice.reset();
+        gpu_shutdown();
         os::shutdown();
     }
 
     void Game::InitBeforeRun()
     {
         // Create main window.
-        main_window.create(config.windowTitle, centered, centered, config.windowSize.width, config.windowSize.height, WindowStyle::Resizable);
+        main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
+
+        gpu_swapchain_desc swapchain_desc = {};
+        swapchain_desc.width = main_window.get_size().width;
+        swapchain_desc.height = main_window.get_size().height;
+        swapchain_desc.native_display = main_window.get_native_display();
+        swapchain_desc.native_handle = main_window.get_native_handle();
+
+        gpu_config config = {};
+#ifdef _DEBUG
+        config.validation = true;
+#endif
+        config.swapchain = &swapchain_desc;
+
+        if (!gpu_init(&config))
+        {
+            headless = true;
+       }
 
         Initialize();
         if (exitCode)
@@ -147,10 +166,10 @@ namespace alimer
             // Main message loop
             while (running)
             {
-                Event evt{};
-                while (poll_event(evt))
+                os::Event evt{};
+                while (os::poll_event(evt))
                 {
-                    if (evt.type == EventType::Quit)
+                    if (evt.type == os::Event::Type::Quit)
                     {
                         running = false;
                         break;

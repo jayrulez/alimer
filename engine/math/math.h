@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
 #include <stdint.h>
 #include <cmath>
 

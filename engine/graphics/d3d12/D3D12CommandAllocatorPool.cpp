@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12CommandAllocatorPool.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
@@ -31,7 +32,7 @@ namespace Alimer
         , queueType(queueType_)
         , commandListType(GetD3D12CommandListType(queueType_))
     {
-        
+
     }
 
     D3D12CommandAllocatorPool::~D3D12CommandAllocatorPool()
@@ -95,3 +96,5 @@ namespace Alimer
         freeAllocators.push(eastl::make_pair(fenceValue, commandAllocator));
     }
 }
+
+#endif // TODO

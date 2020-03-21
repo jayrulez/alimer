@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Utils.h"
+#include "math/vec2.h"
 #include "math/size.h"
 #include <string>
 
@@ -55,19 +56,22 @@ namespace alimer
         Window() = default;
 
         /// Constructor.
-        Window(const std::string& title, const math::usize& newSize, WindowStyle style);
+        Window(const std::string& title, const usize& newSize, WindowStyle style);
 
         /// Destructor.
         ~Window();
 
         /// Create the window.
-        bool create(const std::string& title, int32_t x, int32_t y, uint32_t w, uint32_t h, WindowStyle style);
+        bool create(const std::string& title, const point& pos, const usize& size, WindowStyle style);
 
         /// Close the window.
         void close();
 
+        native_handle get_native_handle() const;
+        native_display get_native_display() const;
+
         /// Return the window id.
-        auto get_id() const noexcept -> uint32_t;
+        auto get_id() const noexcept->uint32_t;
 
         /// Return whether or not the window is open.
         auto is_open() const noexcept -> bool;
@@ -75,17 +79,17 @@ namespace alimer
         /// Return whether the window is minimized.
         auto is_minimized() const noexcept -> bool;
 
+        /// Return whether the window is maximized.
+        auto is_maximized() const noexcept -> bool;
+
         /// Get the window size.
-        auto get_size() const noexcept->math::usize;
+        auto get_size() const noexcept->usize;
 
         /// Return the window title.
         auto get_title() const noexcept->std::string;
 
         /// Set the window title.
         void set_title(const std::string& title) noexcept;
-
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
 
     private:
         WindowImpl* impl = nullptr;

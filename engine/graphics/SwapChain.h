@@ -49,10 +49,10 @@ namespace alimer
         virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
         virtual void Present() = 0;
 
-        const math::usize& GetExtent() const;
+        const usize& GetExtent() const;
 
     protected:
-        math::usize extent{};
+        usize extent{};
         bool tripleBuffer;
         bool vsync;
         bool srgb;

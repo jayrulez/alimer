@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "glfw_config.h"
+#include "os_glfw.h"
 #include "os/window.h"
 #include <algorithm>
 #include <vector>
@@ -131,12 +131,42 @@ namespace alimer
     class WindowImpl final
     {
     public:
-        WindowImpl(bool opengl_, const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowStyle style);
+        WindowImpl(const std::string& title, const point& pos, const usize& size, WindowStyle style);
         ~WindowImpl();
 
         auto get_id() const noexcept -> uint32_t
         {
             return id_;
+        }
+
+        native_handle get_native_handle() const
+        {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+            return glfwGetWin32Window(window_);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+            return (void*)(uintptr_t)glfwGetX11Window(window_);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+            return glfwGetCocoaWindow(window_);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+            return glfwGetWaylandWindow(window_);
+#else
+            return nullptr;
+#endif
+        }
+
+        native_display get_native_display() const
+        {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+            return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+            return (void*)(uintptr_t)glfwGetX11Display();
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+            return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+            return glfwGetWaylandDisplay();
+#else
+            return nullptr;
+#endif
         }
 
         auto is_open() const noexcept -> bool
@@ -149,12 +179,17 @@ namespace alimer
             return glfwGetWindowAttrib(window_, GLFW_ICONIFIED) == GLFW_TRUE;
         }
 
-        auto get_size() const noexcept -> math::usize
+        auto is_maximized() const noexcept -> bool
+        {
+            return glfwGetWindowAttrib(window_, GLFW_MAXIMIZED) == GLFW_TRUE;
+        }
+
+        auto get_size() const noexcept -> usize
         {
             int w;
             int h;
             glfwGetWindowSize(window_, &w, &h);
-            math::usize result{};
+            usize result{};
             result.width = static_cast<uint32_t>(w);
             result.height = static_cast<uint32_t>(h);
             return result;
@@ -188,11 +223,7 @@ namespace alimer
             return window_;
         }
 
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
-
     private:
-        bool opengl;
         uint32_t id_{};
         GLFWwindow* window_ = nullptr;
         std::string title_{};

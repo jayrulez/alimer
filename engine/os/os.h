@@ -22,6 +22,33 @@
 
 #pragma once
 
-#include "init.h"   
-#include "clipboard.h"
-#include "event.h"
+#include <cstdint>
+#include <string>
+
+namespace alimer
+{
+    namespace os
+    {
+        auto init() -> bool;
+        void shutdown() noexcept;
+
+        /// Defines an OS Event.
+        struct Event
+        {
+            enum class Type : uint8_t
+            {
+                Unkwnown = 0,
+                Quit,
+            };
+
+            Type type;
+        };
+
+        void push_event(Event&& e);
+        void push_event(const Event& e);
+        auto poll_event(Event& e) noexcept -> bool;
+
+        std::string get_clipboard_text() noexcept;
+        void set_clipboard_text(const std::string& text);
+    } // namespace os
+} // namespace alimer

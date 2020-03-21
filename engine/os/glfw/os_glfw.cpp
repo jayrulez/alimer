@@ -20,30 +20,70 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "../event.h"
-#include "glfw_config.h"
+#include "os_glfw.h"
 #include "glfw_window.h"
 
 namespace alimer
 {
-    namespace impl
+    namespace os
     {
+        static void on_glfw_error(int code, const char* description) {
+            //ALIMER_THROW(description);
+        }
+
+        auto init() -> bool
+        {
+            glfwSetErrorCallback(on_glfw_error);
+
+#ifdef __APPLE__
+            glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+#endif
+
+            int result = glfwInit();
+            if (result == GLFW_FALSE)
+            {
+                //TODO_ERROR_HANDLER(result);
+                return false;
+            }
+
+            return true;
+        }
+
+        void shutdown() noexcept
+        {
+            glfwTerminate();
+        }
+
         void pump_events() noexcept
         {
             glfwPollEvents();
 
             // Fire quit event when all windows are closed.
-            auto& windows = get_windows();
+            auto& windows = impl::get_windows();
             auto all_closed = std::all_of(std::begin(windows), std::end(windows),
                 [](const auto& e) { return glfwWindowShouldClose(e->get_impl()); });
             if (all_closed)
             {
                 Event evt = {};
-                evt.type = EventType::Quit;
+                evt.type = Event::Type::Quit;
                 push_event(evt);
             }
+        }
+
+        std::string get_clipboard_text() noexcept
+        {
+            const char* text = glfwGetClipboardString(nullptr);
+            if (text)
+            {
+                return text;
+            }
+
+            return {};
+        }
+
+        void set_clipboard_text(const std::string& text)
+        {
+            glfwSetClipboardString(nullptr, text.c_str());
         }
     }
 }

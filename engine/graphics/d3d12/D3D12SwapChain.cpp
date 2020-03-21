@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12SwapChain.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
@@ -42,7 +43,7 @@ namespace alimer
 #endif
 
         BackendResize();
-    }
+        }
 
     D3D12SwapChain::~D3D12SwapChain()
     {
@@ -171,4 +172,6 @@ namespace alimer
 
         return true;
     }
-}
+    }
+
+#endif // TODO

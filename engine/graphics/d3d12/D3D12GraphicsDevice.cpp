@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TOOD
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
@@ -160,7 +161,7 @@ namespace Alimer
             }
         }
 #endif
-    }
+        }
 
     bool D3D12GraphicsDevice::GetAdapter(ComPtr<IDXGIFactory4> factory4, IDXGIAdapter1** ppAdapter)
     {
@@ -200,7 +201,7 @@ namespace Alimer
                     break;
                 }
             }
-        }
+    }
 #endif
         if (!adapter)
         {
@@ -450,3 +451,5 @@ namespace Alimer
         }
     }
 }
+
+#endif // 0

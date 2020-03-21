@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,36 +22,22 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
-#include <string>
+#include "../os.h"
+#if defined(_WIN32)
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+#   define GLFW_EXPOSE_NATIVE_X11
+#elif defined(__APPLE__)
+#   define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 
 namespace alimer
 {
-    /// Class specifying a two-dimensional point.
-    class ALIMER_API Point2D
+    namespace os
     {
-    public:
-        /// Specifies the x-coordinate of the point.
-        int32_t x;
-        /// Specifies the y-coordinate of the point.
-        int32_t y;
-
-        /// Constructor.
-        Point2D() noexcept : x(0), y(0) {}
-    };
-
-    /// Class specifying a three-dimensional point.
-    class ALIMER_API Point3D
-    {
-    public:
-        /// Specifies the x-coordinate of the point.
-        int32_t x;
-        /// Specifies the y-coordinate of the point.
-        int32_t y;
-        /// Specifies the z-coordinate of the point.
-        int32_t z;
-
-        /// Constructor.
-        Point3D() noexcept : x(0), y(0), z(0) {}
-    };
-} 
+        void pump_events() noexcept;
+    }
+}

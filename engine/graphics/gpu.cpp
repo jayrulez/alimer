@@ -20,9 +20,43 @@
 // THE SOFTWARE.
 //
 
-#include "math/Point.h"
+#include "gpu_backend.h"
 
-namespace alimer
+namespace gpu
 {
+#if defined(GPU_D3D12_BACKEND)
+    extern bool d3d12_supported();
+    extern Device* create_d3d12_backend();
+#endif
+}
+
+static gpu::Device* s_device = nullptr;
+
+bool gpu_init(const gpu_config* config)
+{
+    assert(config);
+
+    if (s_device != nullptr) {
+        return true;
+    }
+
+    gpu::Device* new_device = nullptr;
+    new_device = gpu::create_d3d12_backend();
+    if (new_device != nullptr
+        && new_device->init(config)) {
+        s_device = new_device;
+        return true;
+    }
+
+    return false;
+}
+
+void gpu_shutdown()
+{
+    if (s_device != nullptr) {
+        s_device->shutdown();
+        delete s_device;
+        s_device = nullptr;
+    }
 }
 

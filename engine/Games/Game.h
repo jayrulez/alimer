@@ -45,7 +45,7 @@ namespace alimer
         std::string windowTitle = "Alimer";
 
         /// Main window size.
-        math::usize windowSize = { 1280, 720 };
+        usize windowSize = { 1280, 720 };
     };
 
     class GPUDevice;

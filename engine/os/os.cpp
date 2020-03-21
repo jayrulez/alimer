@@ -20,54 +20,57 @@
 // THE SOFTWARE.
 //
 
-#include "event.h"
+#include "os.h"
 #include <cstring>
 #include <deque>
 
 #if defined(GLFW_BACKEND)
-#include "glfw/event.h"
+#include "glfw/os_glfw.h"
 #elif defined(SDL_BACKEND)
-#include "sdl/event.hpp"
+#include "sdl/os_sdl.hpp"
 #endif
 
 namespace alimer
 {
-    namespace
+    namespace os
     {
-        auto get_event_queue() noexcept -> std::deque<Event>&
+        namespace
         {
-            static std::deque<Event> eventQueue;
-            return eventQueue;
-        }
-
-        bool popEvent(Event& e) noexcept
-        {
-            auto& event_queue = get_event_queue();
-            // Pop the first event of the queue, if it is not empty
-            if (!event_queue.empty())
+            auto get_event_queue() noexcept -> std::deque<Event>&
             {
-                e = event_queue.front();
-                event_queue.pop_front();
-                return true;
+                static std::deque<Event> eventQueue;
+                return eventQueue;
             }
-            return false;
+
+            bool popEvent(Event& e) noexcept
+            {
+                auto& event_queue = get_event_queue();
+                // Pop the first event of the queue, if it is not empty
+                if (!event_queue.empty())
+                {
+                    e = event_queue.front();
+                    event_queue.pop_front();
+                    return true;
+                }
+                return false;
+            }
         }
-    }
 
-    void push_event(const Event& e)
-    {
-        get_event_queue().emplace_back(e);
-    }
+        void push_event(const Event& e)
+        {
+            get_event_queue().emplace_back(e);
+        }
 
-    void push_event(Event&& e)
-    {
-        get_event_queue().emplace_back(std::move(e));
-    }
+        void push_event(Event&& e)
+        {
+            get_event_queue().emplace_back(std::move(e));
+        }
 
-    bool poll_event(Event& e) noexcept
-    {
-        impl::pump_events();
+        auto poll_event(Event& e) noexcept -> bool
+        {
+            pump_events();
 
-        return popEvent(e);
-    }
-}
+            return popEvent(e);
+        }
+    } // namespace os
+} // namespace alimer

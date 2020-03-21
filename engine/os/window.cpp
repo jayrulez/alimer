@@ -32,16 +32,16 @@ using namespace std;
 
 namespace alimer
 {
-    Window::Window(const string& title, const math::usize& newSize, WindowStyle style)
+    Window::Window(const string& title, const usize& newSize, WindowStyle style)
     {
-        create(title, centered, centered, newSize.width, newSize.height, style);
+        create(title, { centered, centered }, newSize, style);
     }
 
-    bool Window::create(const std::string& title, int32_t x, int32_t y, uint32_t w, uint32_t h, WindowStyle style)
+    bool Window::create(const std::string& title, const point& pos, const usize& size, WindowStyle style)
     {
         close();
 
-        impl = new WindowImpl(false, title, x, y, w, h, style);
+        impl = new WindowImpl(title, pos, size, style);
         return impl != nullptr;
     }
 
@@ -59,6 +59,16 @@ namespace alimer
         }
     }
 
+    native_handle Window::get_native_handle() const
+    {
+        return impl->get_native_handle();
+    }
+
+    native_display Window::get_native_display() const
+    {
+        return impl->get_native_display();
+    }
+
     auto Window::get_id() const noexcept -> uint32_t
     {
         return impl->get_id();
@@ -74,7 +84,12 @@ namespace alimer
         return impl->is_minimized();
     }
 
-    auto Window::get_size() const noexcept -> math::usize
+    auto Window::is_maximized() const noexcept -> bool
+    {
+        return impl->is_maximized();
+    }
+
+    auto Window::get_size() const noexcept -> usize
     {
         return impl->get_size();
     }
@@ -87,15 +102,5 @@ namespace alimer
     void Window::set_title(const std::string& title) noexcept
     {
         impl->set_title(title);
-    }
-
-    native_handle Window::get_native_handle() const
-    {
-        return impl->get_native_handle();
-    }
-
-    native_display Window::get_native_display() const
-    {
-        return impl->get_native_display();
     }
 }

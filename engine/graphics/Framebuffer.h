@@ -43,9 +43,9 @@ namespace alimer
         Framebuffer(GPUDevice* device);
 
     public:
-        const math::usize& getExtent() const;
+        const usize& getExtent() const;
 
     protected:
-        math::usize extent{};
+        usize extent{};
     };
 } 
