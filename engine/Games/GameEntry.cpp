@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
 
     for (auto& arg : arg_strings)
     {
-        args.push_back(alimer::to_utf8(arg));
+        args.push_back(alimer::ToUtf8(arg));
     }
 
     alimer::Platform::SetArguments(args);

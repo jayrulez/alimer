@@ -49,6 +49,7 @@ namespace alimer
     };
 
     class GPUDevice;
+    class SwapChain;
     class InputManager;
 
     class ALIMER_API Game : public Object
@@ -104,6 +105,8 @@ namespace alimer
         Window main_window;
         std::vector<GameSystem*> gameSystems;
         std::unique_ptr<GPUDevice> gpuDevice;
+        SharedPtr<SwapChain> mainWindowSwapChain;
+
         InputManager* input;
         bool headless{ false };
     };

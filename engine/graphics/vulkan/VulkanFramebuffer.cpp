@@ -72,7 +72,7 @@ namespace alimer
         VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR };
         surfaceInfo.surface = surface;
 
-        auto vkGPUDevice = static_cast<VulkanGPUDevice*>(device);
+        auto vkGPUDevice = StaticCast<VulkanGPUDevice>(device);
         VkPhysicalDevice gpu = vkGPUDevice->GetPhysicalDevice();
         if (vkGPUDevice->GetVulkanFeatures().surface_capabilities2)
         {

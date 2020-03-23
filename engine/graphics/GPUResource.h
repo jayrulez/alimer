@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
+#include "graphics/Types.h"
 #include "core/Object.h"
 
 namespace alimer
@@ -59,7 +59,7 @@ namespace alimer
         bool IsAllocated() const { return isAllocated; }
 
     protected:
-        GPUDevice* device;
+        WeakPtr<GPUDevice> device;
         Type type;
         /// Size in bytes of the resource.
         uint64_t size{ 0 };

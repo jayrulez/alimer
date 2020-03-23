@@ -22,32 +22,19 @@
 
 #pragma once
 
-#include "Graphics/SwapChain.h"
+#include "graphics/d3d/D3DSwapChain.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12SwapChain final : public SwapChain
+    class D3D12SwapChain final : public D3DSwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, void* nativeHandle, const SwapChainDescriptor* descriptor);
+        D3D12SwapChain(D3D12GPUDevice* device, const SwapChainDescriptor* descriptor);
         ~D3D12SwapChain() override;
 
         void Destroy();
 
     private:
-        void BackendResize() override;
-        bool BackendPresent() override;
-
-        D3D12GraphicsDevice* device;
-        UINT backBufferCount;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND hwnd;
-#else
-        IUnknown* window;
-#endif
-
-        ComPtr<IDXGISwapChain3> handle;
     };
 }

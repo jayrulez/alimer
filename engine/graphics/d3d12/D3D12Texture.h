@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
+#include "graphics/Texture.h"
 #include "D3D12Backend.h"
 
 namespace alimer

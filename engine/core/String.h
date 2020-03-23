@@ -32,9 +32,9 @@ namespace alimer
     ALIMER_API extern const std::string EMPTY_STRING;
 
 #ifdef _WIN32
-    ALIMER_API std::string to_utf8(const wchar_t* wstr, size_t len);
-    ALIMER_API std::string to_utf8(const std::wstring& wstr);
-    ALIMER_API std::wstring to_utf16(const char* str, size_t len);
-    ALIMER_API std::wstring to_utf16(const std::string& str);
+    ALIMER_API std::string ToUtf8(const wchar_t* wstr, size_t len);
+    ALIMER_API std::string ToUtf8(const std::wstring& wstr);
+    ALIMER_API std::wstring ToUtf16(const char* str, size_t len);
+    ALIMER_API std::wstring ToUtf16(const std::string& str);
 #endif
 }

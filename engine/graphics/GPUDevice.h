@@ -30,12 +30,15 @@
 
 namespace alimer
 {
+    class GPUBuffer;
     class Texture;
-    class GraphicsBuffer;
+    class SwapChain;
 
     /// Defines the GPU device class.
-    class ALIMER_API GPUDevice
+    class ALIMER_API GPUDevice : public Object
     {
+        ALIMER_OBJECT(GPUDevice, Object);
+
     public:
         /// Constructor.
         GPUDevice() = default;
@@ -50,15 +53,19 @@ namespace alimer
         static std::unique_ptr<GPUDevice> create(GPUBackend preferredBackend = GPUBackend::Count, bool validation = false, bool headless = false);
 
         /// Called by validation layer.
-        void notifyValidationError(const char* message);
+        void NotifyValidationError(const char* message);
 
         virtual void WaitIdle() = 0;
-        virtual bool begin_frame() { return true; }
-        virtual void end_frame() {}
+        virtual void CommitFrame() {}
+
+        /// Create new SwapChain
+        virtual SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) = 0;
 
         virtual SharedPtr<Texture> CreateTexture() = 0;
+        SharedPtr<GPUBuffer> CreateBuffer(const BufferDescriptor* descriptor, const void* initialData = nullptr);
         std::shared_ptr<Framebuffer> createFramebuffer(const SwapChainDescriptor* descriptor);
 
+        /// Get the backend type.
         GPUBackend GetBackendType() const { return info.backend; }
 
         /// Get device features.
@@ -71,6 +78,7 @@ namespace alimer
         inline const GPUDeviceLimits& GetLimits() const { return limits; }
 
     private:
+        virtual GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) = 0;
         //virtual std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
 
     protected:

@@ -25,33 +25,43 @@
 
 namespace alimer
 {
+    RefCounted::RefCounted()
+        : refCount(new RefCount())
+    {
+        // Hold a weak ref to self to avoid possible double delete of the refcount
+        (refCount->weakRefs)++;
+    }
+
     RefCounted::~RefCounted()
     {
-        if (refCount)
+        ALIMER_ASSERT(refCount);
+        ALIMER_ASSERT(refCount->refs == 0);
+        ALIMER_ASSERT(refCount->weakRefs > 0);
+
+        // Mark object as expired, release the self weak ref and delete the refcount if no other weak refs exist
+        refCount->refs = static_cast<uint32_t>(-1);
+        (refCount->weakRefs)--;
+        if (!refCount->weakRefs)
         {
-            ALIMER_ASSERT(refCount->refs == 0);
-            if (refCount->weakRefs == 0)
-                delete refCount;
-            else
-                refCount->expired = true;
+            delete refCount;
         }
+
+        refCount = nullptr;
     }
 
     uint32_t RefCounted::AddRef()
     {
-        if (!refCount)
-            refCount = new RefCount();
-
         // TODO: Atomics
-        ++(refCount->refs);
+        ALIMER_ASSERT(refCount->refs >= 0);
+        (refCount->refs)++;
         return refCount->refs;
     }
 
     uint32_t RefCounted::Release()
     {
-        ALIMER_ASSERT(refCount && refCount->refs > 0);
-        --(refCount->refs);
-        if (refCount->refs == 0)
+        ALIMER_ASSERT(refCount->refs > 0);
+        (refCount->refs)--;
+        if (!refCount->refs)
         {
             delete this;
             return 0;
@@ -62,19 +72,12 @@ namespace alimer
 
     uint32_t RefCounted::Refs() const
     {
-        return refCount ? refCount->refs : 0;
+        return refCount->refs;
     }
 
     uint32_t RefCounted::WeakRefs() const
     {
-        return refCount ? refCount->weakRefs : 0;
-    }
-
-    RefCount* RefCounted::RefCountPtr()
-    {
-        if (!refCount)
-            refCount = new RefCount();
-
-        return refCount;
+        // Subtract one to not return the internally held reference
+        return refCount->weakRefs - 1;
     }
 }

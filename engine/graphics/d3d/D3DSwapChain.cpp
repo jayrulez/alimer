@@ -26,13 +26,14 @@
 
 namespace alimer
 {
-    D3DSwapChain::D3DSwapChain(IDXGIFactory2* factory, IUnknown* deviceOrCommandQueue, void* nativeWindow, const SwapChainDescriptor& desc)
-        : SwapChain(desc)
-        , factory{ factory }
-        , deviceOrCommandQueue{ deviceOrCommandQueue }
+    D3DSwapChain::D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, const SwapChainDescriptor* descriptor)
+        : SwapChain(device, descriptor)
+        , factory(factory_)
+        , deviceOrCommandQueue(deviceOrCommandQueue_)
+        , syncInterval(descriptor->presentMode == PresentMode::Immediate ? 0 : 1)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        window = (HWND)nativeWindow;
+        window = reinterpret_cast<HWND>(descriptor->nativeWindowHandle);
         ALIMER_ASSERT(IsWindow(window));
 
         RECT rect;
@@ -44,21 +45,52 @@ namespace alimer
         window = (IUnknown*)nativeWindow;
 #endif
 
+        if (!syncInterval)
+        {
+            // Determines whether tearing support is available for fullscreen borderless windows.
+            IDXGIFactory5* factory5;
+            HRESULT hr = factory->QueryInterface(&factory5);
+            if (SUCCEEDED(hr))
+            {
+                BOOL allowTearing = FALSE;
+                HRESULT tearingSupportHR = factory5->CheckFeatureSupport(
+                    DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)
+                    );
+
+                if (SUCCEEDED(tearingSupportHR) && allowTearing)
+                {
+                    tearingSupported = true;
+                    presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+                    swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+                }
+                factory5->Release();
+            }
+        }
+
         Resize(extent.width, extent.height);
     }
 
     D3DSwapChain::~D3DSwapChain()
     {
-        if (_handle) {
-            _handle->Release();
-            _handle = nullptr;
+        Destroy();
+    }
+
+    void D3DSwapChain::Destroy()
+    {
+        if (handle)
+        {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            handle->SetFullscreenState(FALSE, nullptr);
+#endif
+            handle->Release();
+            handle = nullptr;
         }
     }
 
     SwapChainResizeResult D3DSwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         HRESULT hr = S_OK;
-        if (_handle)
+        if (handle != nullptr)
         {
 
         }
@@ -75,61 +107,18 @@ namespace alimer
             swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
             swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            swapChainDesc.Flags = swapChainFlags;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            IDXGIFactory4* factory4;
-            if (FAILED(factory->QueryInterface(&factory4)))
-            {
-                flipPresentSupported = false;
-#ifdef _DEBUG
-                OutputDebugStringA("INFO: Flip swap effects not supported");
-#endif
-                factory4->Release();
-            }
-
-            if (!flipPresentSupported)
-            {
-                swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-            }
-#endif
-
-            swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-            if (!vsync)
-            {
-                // Determines whether tearing support is available for fullscreen borderless windows.
-                IDXGIFactory5* factory5;
-                HRESULT hr = factory->QueryInterface(&factory5);
-                if (SUCCEEDED(hr))
-                {
-                    BOOL allowTearing = FALSE;
-                    HRESULT tearingSupportHR = factory5->CheckFeatureSupport(
-                        DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)
-                    );
-
-                    if (SUCCEEDED(tearingSupportHR) && allowTearing)
-                    {
-                        tearingSupported = true;
-                    }
-                    factory5->Release();
-                }
-
-                if (tearingSupported)
-                {
-                    swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-                }
-            }
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            DXGI_SWAP_CHAIN_FULLSCREEN_DESC swap_chain_fullscreen_desc = {};
-            memset(&swap_chain_fullscreen_desc, 0, sizeof(swap_chain_fullscreen_desc));
-            swap_chain_fullscreen_desc.Windowed = TRUE;
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            fsSwapChainDesc.Windowed = TRUE;
 
             hr = factory->CreateSwapChainForHwnd(deviceOrCommandQueue,
                 window,
                 &swapChainDesc,
-                &swap_chain_fullscreen_desc,
+                &fsSwapChainDesc,
                 nullptr,
-                (IDXGISwapChain1**)&_handle
+                &handle
             );
 
             // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
@@ -151,10 +140,7 @@ namespace alimer
 
     void D3DSwapChain::Present()
     {
-        UINT syncInterval = vsync ? 1 : 0;
-        UINT presentFlags = (tearingSupported && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
-
-        HRESULT hr = _handle->Present(syncInterval, presentFlags);
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
         if (hr == DXGI_ERROR_DEVICE_REMOVED
             || hr == DXGI_ERROR_DEVICE_HUNG
             || hr == DXGI_ERROR_DEVICE_RESET

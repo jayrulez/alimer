@@ -25,12 +25,12 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor& descriptor)
-        : tripleBuffer(descriptor.tripleBuffer)
-        , vsync(true)
-        , srgb(descriptor.srgb)
-        , colorFormat(PixelFormat::Undefined)
-        , depthStencilFormat(descriptor.depthStencilFormat)
+    SwapChain::SwapChain(GPUDevice* device_, const SwapChainDescriptor* descriptor)
+        : device(device_)
+        , extent(descriptor->width, descriptor->height)
+        , colorFormat(descriptor->colorFormat)
+        , depthStencilFormat(descriptor->depthStencilFormat)
+        , presentMode(descriptor->presentMode)
     {
     }
 

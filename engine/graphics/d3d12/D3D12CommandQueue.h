@@ -22,17 +22,17 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
+#include "graphics/Types.h"
 #include "D3D12CommandAllocatorPool.h"
 
-namespace Alimer
+namespace alimer
 {
     class D3D12CommandAllocatorPool;
 
     class D3D12CommandQueue final 
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
+        D3D12CommandQueue(D3D12GPUDevice* device_, CommandQueueType queueType_);
         ~D3D12CommandQueue();
 
         void Destroy();
@@ -47,7 +47,7 @@ namespace Alimer
         ID3D12CommandAllocator* RequestAllocator();
 
     private:
-        D3D12GraphicsDevice* device;
+        D3D12GPUDevice* device;
         CommandQueueType queueType;
         const D3D12_COMMAND_LIST_TYPE commandListType;
         ID3D12CommandQueue* d3d12CommandQueue;

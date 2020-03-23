@@ -27,6 +27,12 @@
 
 namespace alimer
 {
+    static constexpr uint32_t kMaxColorAttachments = 8u;
+    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
+    static constexpr uint32_t kMaxVertexAttributes = 16u;
+    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+
     /// Enum describing the Device backend.
     enum class GPUBackend : uint32_t
     {
@@ -72,6 +78,21 @@ namespace alimer
         Count32 = 32,
     };
 
+    enum class BufferUsage : uint32_t
+    {
+        None = 0,
+        MapRead = 1 << 0,
+        MapWrite = 1 << 1,
+        CopySrc = 1 << 2,
+        CopyDst = 1 << 3,
+        Index   = 1 << 4,
+        Vertex  = 1 << 5,
+        Uniform = 1 << 6,
+        Storage = 1 << 7,
+        Indirect = 1 << 8,
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
+
     /// Defines the usage of Texture.
     enum class TextureUsage : uint32_t
     {
@@ -82,12 +103,19 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
+    enum class PresentMode : uint32_t
+    {
+        Immediate,
+        Mailbox,
+        Fifo
+    };
+
     /// Describes a Graphics buffer.
     struct BufferDescriptor
     {
+        const char* label = nullptr;
+        BufferUsage usage;
         uint64_t size;
-        //BufferUsage usage;
-        std::string name;
     };
 
     /// Describes a GPU Texture.
@@ -114,9 +142,12 @@ namespace alimer
         /// Native window handle.
         void* nativeWindowHandle;
 
-        bool tripleBuffer = false;
-        bool srgb = false;
+        uint32_t width;
+        uint32_t height;
+
+        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
+        PresentMode presentMode = PresentMode::Fifo;
     };
 
     /// GraphicsDevice information .

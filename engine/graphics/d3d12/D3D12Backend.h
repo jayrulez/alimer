@@ -34,6 +34,13 @@
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
+// Forward declare memory allocator classes
+namespace D3D12MA
+{
+    class Allocator;
+    class Allocation;
+};
+
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 

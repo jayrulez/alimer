@@ -36,7 +36,7 @@ namespace alimer
     const std::string EMPTY_STRING{};
 
 #ifdef _WIN32
-    string to_utf8(const wchar_t* wstr, size_t len)
+    string ToUtf8(const wchar_t* wstr, size_t len)
     {
         vector<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
@@ -47,12 +47,12 @@ namespace alimer
         return string(char_buffer.data(), char_buffer.size());
     }
 
-    string to_utf8(const wstring& wstr)
+    string ToUtf8(const wstring& wstr)
     {
-        return to_utf8(wstr.data(), wstr.size());
+        return ToUtf8(wstr.data(), wstr.size());
     }
 
-    wstring to_utf16(const char* str, size_t len)
+    wstring ToUtf16(const char* str, size_t len)
     {
         vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
@@ -63,9 +63,9 @@ namespace alimer
         return wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    wstring to_utf16(const string& str)
+    wstring ToUtf16(const string& str)
     {
-        return to_utf16(str.data(), str.size());
+        return ToUtf16(str.data(), str.size());
     }
 #endif
 }

@@ -22,6 +22,7 @@
 
 #include "VulkanGPUDevice.h"
 #include "VulkanFramebuffer.h"
+#include "graphics/SwapChain.h"
 #include "core/Utils.h"
 #include "core/Assert.h"
 #include "core/Log.h"
@@ -647,7 +648,19 @@ namespace alimer
         return surface;
     }
 
+    SharedPtr<SwapChain> VulkanGPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
+    {
+        ALIMER_ASSERT(descriptor);
+        return nullptr;
+    }
+
     SharedPtr<Texture> VulkanGPUDevice::CreateTexture()
+    {
+        return nullptr;
+    }
+
+
+    GPUBuffer* VulkanGPUDevice::CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData)
     {
         return nullptr;
     }

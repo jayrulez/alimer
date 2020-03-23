@@ -51,7 +51,10 @@ namespace alimer
 
     private:
         VkSurfaceKHR createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
+
+        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
         SharedPtr<Texture> CreateTexture() override;
+        GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
         //std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
     private:

@@ -21,10 +21,9 @@
 //
 
 #include "os/os.h"
-#include "graphics/gpu.h"
-#include "graphics/GPUDevice.h"
 #include "Games/Game.h"
 #include "graphics/GPUDevice.h"
+#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -57,8 +56,10 @@ namespace alimer
         }
 
         gameSystems.clear();
+        // Wait for all pending operations to finish.
+        gpuDevice->WaitIdle();
+        mainWindowSwapChain.Reset();
         gpuDevice.reset();
-        gpu_shutdown();
         os::shutdown();
     }
 
@@ -67,22 +68,12 @@ namespace alimer
         // Create main window.
         main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
 
-        gpu_swapchain_desc swapchain_desc = {};
-        swapchain_desc.width = main_window.get_size().width;
-        swapchain_desc.height = main_window.get_size().height;
-        swapchain_desc.native_display = main_window.get_native_display();
-        swapchain_desc.native_handle = main_window.get_native_handle();
-
-        gpu_config config = {};
-#ifdef _DEBUG
-        config.validation = true;
-#endif
-        config.swapchain = &swapchain_desc;
-
-        if (!gpu_init(&config))
-        {
-            headless = true;
-       }
+        // Create swap chain.
+        SwapChainDescriptor swapChainDesc = {};
+        swapChainDesc.nativeWindowHandle = main_window.get_native_handle();
+        swapChainDesc.width = main_window.get_size().width;
+        swapChainDesc.height = main_window.get_size().height;
+        mainWindowSwapChain = gpuDevice->CreateSwapChain(&swapChainDesc);
 
         Initialize();
         if (exitCode)
@@ -115,8 +106,6 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        gpuDevice->begin_frame();
-
         for (auto gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
@@ -140,7 +129,8 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        gpuDevice->end_frame();
+        mainWindowSwapChain->Present();
+        gpuDevice->CommitFrame();
     }
 
     int Game::Run()

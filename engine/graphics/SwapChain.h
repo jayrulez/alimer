@@ -43,7 +43,7 @@ namespace alimer
 
     protected:
         /// Constructor.
-        SwapChain(const SwapChainDescriptor& descriptor);
+        SwapChain(GPUDevice* device_, const SwapChainDescriptor* descriptor);
 
     public:
         virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
@@ -52,12 +52,11 @@ namespace alimer
         const usize& GetExtent() const;
 
     protected:
+        WeakPtr<GPUDevice> device;
         usize extent{};
-        bool tripleBuffer;
-        bool vsync;
-        bool srgb;
         PixelFormat colorFormat;
         PixelFormat depthStencilFormat;
+        PresentMode presentMode;
         std::vector<Texture*> textures;
     };
 } 

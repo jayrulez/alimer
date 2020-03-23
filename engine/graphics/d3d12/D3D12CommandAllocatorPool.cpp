@@ -20,12 +20,11 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12CommandAllocatorPool.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GPUDevice.h"
 #include <algorithm>
 
-namespace Alimer
+namespace alimer
 {
     D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device_, CommandQueueType queueType_)
         : device(device_)
@@ -42,7 +41,7 @@ namespace Alimer
 
     void D3D12CommandAllocatorPool::Destroy()
     {
-        for (eastl_size_t i = 0; i < allocators.size(); ++i)
+        for (size_t i = 0; i < allocators.size(); ++i)
         {
             allocators[i]->Release();
         }
@@ -93,8 +92,6 @@ namespace Alimer
         std::lock_guard<std::mutex> LockGuard(allocatorMutex);
 
         // That fence value indicates we are free to reset the allocator
-        freeAllocators.push(eastl::make_pair(fenceValue, commandAllocator));
+        freeAllocators.push(std::make_pair(fenceValue, commandAllocator));
     }
 }
-
-#endif // TODO

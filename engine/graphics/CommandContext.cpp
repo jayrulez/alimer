@@ -21,8 +21,8 @@
 //
 
 #if 0
-#include "Graphics/CommandContext.h"
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/CommandContext.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {

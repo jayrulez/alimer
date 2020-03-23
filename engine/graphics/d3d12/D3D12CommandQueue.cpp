@@ -20,14 +20,13 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12CommandQueue.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GPUDevice.h"
 #include <algorithm>
 
-namespace Alimer
+namespace alimer
 {
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device_, CommandQueueType queueType_)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GPUDevice* device_, CommandQueueType queueType_)
         : device(device_)
         , queueType(queueType_)
         , commandListType(GetD3D12CommandListType(queueType_))
@@ -129,5 +128,4 @@ namespace Alimer
         return allocatorPool.RequestAllocator(completedFenceValue);
     }
 }
-#endif // TODO
 

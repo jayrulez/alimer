@@ -32,10 +32,12 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3DSwapChain(IDXGIFactory2* factory, IUnknown* deviceOrCommandQueue, void* nativeWindow, const SwapChainDescriptor& desc);
+        D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, const SwapChainDescriptor* descriptor);
 
         // Destructor
         ~D3DSwapChain() override;
+
+        void Destroy();
 
     private:
         SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) override;
@@ -48,10 +50,14 @@ namespace alimer
 #else
         IUnknown* window;
 #endif
+        uint32_t syncInterval;
+        uint32_t presentFlags = 0;
+        uint32_t swapChainFlags = 0;
+
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
         UINT backBufferCount = 2;
         bool flipPresentSupported = true;
         bool tearingSupported = false;
-        IDXGISwapChain1* _handle = nullptr;
+        IDXGISwapChain1* handle = nullptr;
     };
 }

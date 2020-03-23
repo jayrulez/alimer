@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
+#include "graphics/Types.h"
 #include "D3D12Backend.h"
-#include <EASTL/vector.h>
-#include <EASTL/queue.h>
+#include <vector>
+#include <queue>
 #include <mutex>
 
-namespace Alimer
+namespace alimer
 {
     class D3D12CommandAllocatorPool final
     {
@@ -46,8 +46,8 @@ namespace Alimer
         CommandQueueType queueType;
         const D3D12_COMMAND_LIST_TYPE commandListType;
 
-        eastl::vector<ID3D12CommandAllocator*> allocators;
-        eastl::queue<eastl::pair<uint64_t, ID3D12CommandAllocator*>> freeAllocators;
+        std::vector<ID3D12CommandAllocator*> allocators;
+        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> freeAllocators;
         std::mutex allocatorMutex;
     };
 }

@@ -24,6 +24,7 @@
 #include "core/Log.h"
 #include "core/Assert.h"
 #include "graphics/GPUDevice.h"
+#include "graphics/GPUBuffer.h"
 
 #if defined(ALIMER_D3D12)
 #include "graphics/d3d12/D3D12GPUDevice.h"
@@ -108,9 +109,16 @@ namespace alimer
         return device;
     }
 
-    void GPUDevice::notifyValidationError(const char* message)
+    void GPUDevice::NotifyValidationError(const char* message)
     {
 
+    }
+
+    SharedPtr<GPUBuffer> GPUDevice::CreateBuffer(const BufferDescriptor* descriptor, const void* initialData)
+    {
+        ALIMER_ASSERT(descriptor);
+        GPUBuffer* buffer = CreateBufferCore(descriptor, initialData);
+        return buffer;
     }
 
     std::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)

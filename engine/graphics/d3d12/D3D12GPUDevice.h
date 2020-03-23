@@ -24,7 +24,6 @@
 
 #include "graphics/GPUDevice.h"
 #include "D3D12Backend.h"
-#include <D3D12MemAlloc.h>
 
 namespace alimer
 {
@@ -43,15 +42,13 @@ namespace alimer
 
         void Destroy();
         void WaitIdle() override;
-        //bool BeginFrame() override;
-        //void EndFrame() override;
-
-        //SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+        void CommitFrame() override;
 
         IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory; }
+        bool                    IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
-        bool                    IsTearingSupported() const { return isTearingSupported; }
+        D3D12MA::Allocator*     GetMemoryAllocator() const { return allocator; }
 
         D3D12CommandQueue* GetGraphicsQueue(void) { return graphicsQueue; }
         D3D12CommandQueue* GetComputeQueue(void) { return computeQueue; }
@@ -66,11 +63,14 @@ namespace alimer
         void CreateDeviceResources();
         bool GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
+
+        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
         SharedPtr<Texture> CreateTexture() override;
+        GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
 
         bool validation;
         UINT dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
+        SharedPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
