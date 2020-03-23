@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "graphics/GPUDevice.h"
 #include "D3D12Backend.h"
 #include <D3D12MemAlloc.h>
 
@@ -30,25 +30,25 @@ namespace alimer
 {
     class D3D12CommandQueue;
 
-    /// Direct3D12 graphics backend.
-    class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
+    /// Direct3D12 GPU backend.
+    class ALIMER_API D3D12GPUDevice final : public GPUDevice
     {
     public:
         static bool IsAvailable();
 
         /// Constructor.
-        D3D12GraphicsDevice(const GraphicsDeviceDescriptor* descriptor);
+        D3D12GPUDevice(bool validation);
         /// Destructor.
-        ~D3D12GraphicsDevice() override;
+        ~D3D12GPUDevice() override;
 
         void Destroy();
         void WaitIdle() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
+        //bool BeginFrame() override;
+        //void EndFrame() override;
 
-        SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
+        //SwapChain* CreateSwapChainCore(void* nativeHandle, const SwapChainDescriptor* descriptor) override;
 
-        IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory; }
         ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
@@ -63,12 +63,14 @@ namespace alimer
     private:
         static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
-        static bool GetAdapter(ComPtr<IDXGIFactory4> factory4, IDXGIAdapter1** ppAdapter);
         void CreateDeviceResources();
+        bool GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
+        SharedPtr<Texture> CreateTexture() override;
 
+        bool validation;
         UINT dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory;
+        IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;

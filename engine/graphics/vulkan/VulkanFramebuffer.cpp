@@ -22,8 +22,8 @@
 
 #include "VulkanFramebuffer.h"
 #include "VulkanGPUDevice.h"
-#include "Diagnostics/Assert.h"
-#include "Diagnostics/Log.h"
+#include "core/Assert.h"
+#include "core/Log.h"
 #include "math/math.h"
 
 using namespace std;

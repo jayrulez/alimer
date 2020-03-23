@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Utils.h"
+#include "core/Utils.h"
 #include "graphics/PixelFormat.h"
 
 namespace alimer
@@ -122,7 +122,6 @@ namespace alimer
     /// GraphicsDevice information .
     struct GPUDeviceInfo
     {
-        /// Rendering backend type.
         GPUBackend backend;
 
         /// Rendering API name.

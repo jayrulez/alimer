@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Diagnostics/Assert.h"
+#include "core/Assert.h"
 #include "graphics/GPUResource.h"
 #include "graphics/GPUDevice.h"
 

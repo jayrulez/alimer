@@ -23,7 +23,7 @@
 #pragma once
 
 #include "math/math.h"
-#include "Diagnostics/Assert.h"
+#include "core/Assert.h"
 #include <string>
 
 namespace alimer

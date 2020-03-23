@@ -21,7 +21,7 @@
 //
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "core/Preprocessor.h"
 
 namespace alimer
 {

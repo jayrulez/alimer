@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Object.h"
+#include "core/Object.h"
 #include "Games/GameTime.h"
 #include "os/window.h"
 #include "Games/GameSystem.h"

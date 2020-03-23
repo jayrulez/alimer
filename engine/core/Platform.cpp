@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Platform.h"
+#include "core/Platform.h"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN

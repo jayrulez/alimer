@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 /// MurmurHash2, by Austin Appleby
-#include "Core/Hash.h"
+#include "core/Hash.h"
 
 namespace alimer
 {

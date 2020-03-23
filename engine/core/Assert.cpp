@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Diagnostics/Assert.h"
+#include "core/Assert.h"
 #include <cstdio>
 
 #if defined(_WIN64)

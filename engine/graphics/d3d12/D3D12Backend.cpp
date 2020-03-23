@@ -20,21 +20,8 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Preprocessor.h"
-#include <string>
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
-
-    ALIMER_API extern const std::string EMPTY_STRING;
-
-#ifdef _WIN32
-    ALIMER_API std::string to_utf8(const wchar_t* wstr, size_t len);
-    ALIMER_API std::string to_utf8(const std::wstring& wstr);
-    ALIMER_API std::wstring to_utf16(const char* str, size_t len);
-    ALIMER_API std::wstring to_utf16(const std::string& str);
-#endif
 }

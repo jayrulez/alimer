@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,26 +27,14 @@
 
 namespace alimer
 {
-    /// Class specifying a four-dimensional quaternion.
-    class ALIMER_API Quaternion
-    {
-    public:
-        /// Specifies the x-component of the quaternion.
-        float x = 0.0f;
-        /// Specifies the y-component of the quaternion.
-        float y = 0.0f;
-        /// Specifies the z-component of the quaternion.
-        float z = 0.0f;
-        /// Specifies the w-component of the quaternion.
-        float w = 1.0f;
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
 
-        /// Constructor.
-        Quaternion() noexcept = default;
+    ALIMER_API extern const std::string EMPTY_STRING;
 
-        /// Return float data.
-        const float* Data() const { return &x; }
-
-        /// Return as string.
-        std::string ToString() const;
-    };
-} 
+#ifdef _WIN32
+    ALIMER_API std::string to_utf8(const wchar_t* wstr, size_t len);
+    ALIMER_API std::string to_utf8(const std::wstring& wstr);
+    ALIMER_API std::wstring to_utf16(const char* str, size_t len);
+    ALIMER_API std::wstring to_utf16(const std::string& str);
+#endif
+}

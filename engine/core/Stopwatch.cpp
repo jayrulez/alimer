@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Diagnostics/Stopwatch.h"
+#include "core/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
 #define WIN32_LEAN_AND_MEAN

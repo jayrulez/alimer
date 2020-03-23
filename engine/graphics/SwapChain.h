@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/Texture.h"
-#include "Core/Object.h"
+#include "core/Object.h"
 #include <vector>
 
 namespace alimer

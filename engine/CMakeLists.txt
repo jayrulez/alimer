@@ -36,8 +36,7 @@ endmacro()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 define_engine_source_files(
     .
-    Core
-    Diagnostics
+    core
     math
     os
     graphics
@@ -51,6 +50,11 @@ if(NOT (EMSCRIPTEN OR ANDROID))
         os/glfw
     )
 endif ()
+
+if (ALIMER_D3D12)
+    define_engine_source_files(graphics/d3d)
+    define_engine_source_files(graphics/d3d12)
+endif()
 
 if (ALIMER_VULKAN)
     define_engine_source_files(graphics/vulkan)

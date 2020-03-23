@@ -21,12 +21,12 @@
 //
 
 #include "config.h"
-#include "Diagnostics/Log.h"
-#include "Diagnostics/Assert.h"
+#include "core/Log.h"
+#include "core/Assert.h"
 #include "graphics/GPUDevice.h"
 
 #if defined(ALIMER_D3D12)
-//#include "graphics/d3d12/vulkan_backend.h"
+#include "graphics/d3d12/D3D12GPUDevice.h"
 #endif
 
 #if defined(ALIMER_D3D11)
@@ -50,7 +50,10 @@ namespace alimer
             availableBackends.insert(GPUBackend::Null);
 
 #if defined(ALIMER_D3D12)
-            //availableBackends.insert(GPUBackend::Direct3D12);
+            if (D3D12GPUDevice::IsAvailable())
+            {
+                availableBackends.insert(GPUBackend::Direct3D12);
+            }
 #endif
 
 #if defined(ALIMER_VULKAN)
@@ -89,8 +92,13 @@ namespace alimer
             break;
 #endif
 
+#if defined(ALIMER_D3D12)
         case GPUBackend::Direct3D12:
+            ALIMER_LOGINFO("Using Direct3D12 render driver");
+            device = make_unique<D3D12GPUDevice>(validation);
             break;
+#endif
+
         case GPUBackend::Metal:
             break;
         default:
@@ -107,6 +115,7 @@ namespace alimer
 
     std::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)
     {
-        return createFramebufferCore(descriptor);
+        return nullptr;
+        //return createFramebufferCore(descriptor);
     }
 }

@@ -25,7 +25,7 @@
 
 namespace alimer
 {
-    Texture::Texture(GPUDevice* device, const TextureDescriptor* descriptor)
+    Texture::Texture(GPUDevice* device)
         : GPUResource(device, Type::Texture)
     {
 

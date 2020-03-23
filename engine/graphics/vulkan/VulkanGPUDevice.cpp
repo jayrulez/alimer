@@ -22,9 +22,9 @@
 
 #include "VulkanGPUDevice.h"
 #include "VulkanFramebuffer.h"
-#include "Core/Utils.h"
-#include "Diagnostics/Assert.h"
-#include "Diagnostics/Log.h"
+#include "core/Utils.h"
+#include "core/Assert.h"
+#include "core/Log.h"
 #include "math/math.h"
 #include <algorithm>
 #include <vector>
@@ -581,11 +581,11 @@ namespace alimer
 
     VulkanGPUDevice::~VulkanGPUDevice()
     {
-        waitIdle();
-        backendShutdown();
+        WaitIdle();
+        Destroy();
     }
 
-    void VulkanGPUDevice::backendShutdown()
+    void VulkanGPUDevice::Destroy()
     {
         if (instance == VK_NULL_HANDLE) {
             return;
@@ -614,7 +614,7 @@ namespace alimer
         instance = VK_NULL_HANDLE;
     }
 
-    void VulkanGPUDevice::waitIdle()
+    void VulkanGPUDevice::WaitIdle()
     {
         VK_CHECK(vkDeviceWaitIdle(device));
     }
@@ -647,13 +647,18 @@ namespace alimer
         return surface;
     }
 
-    shared_ptr<Framebuffer> VulkanGPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
+    SharedPtr<Texture> VulkanGPUDevice::CreateTexture()
+    {
+        return nullptr;
+    }
+
+    /*shared_ptr<Framebuffer> VulkanGPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
     {
         uint32_t width, height;
         VkSurfaceKHR surface = createSurface(descriptor->nativeWindowHandle, &width, &height);
         return make_shared<VulkanFramebuffer>(this, surface, width, height, descriptor);
     }
-
+    */
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,

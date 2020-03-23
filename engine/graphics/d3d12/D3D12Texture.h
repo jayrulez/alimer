@@ -30,7 +30,7 @@ namespace alimer
     class D3D12Texture final : public Texture
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor);
+        D3D12Texture(D3D12GPUDevice* device);
         ~D3D12Texture() override;
 
         void Destroy() override;

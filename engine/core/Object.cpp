@@ -20,27 +20,57 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "core/Object.h"
-#include "Games/GameTime.h"
 
 namespace alimer
 {
-    class ALIMER_API GameSystem : public Object
+    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
+        : type(typeName_)
+        , typeName(typeName_)
+        , baseTypeInfo(baseTypeInfo_)
     {
-        ALIMER_OBJECT(GameSystem, Object);
 
-    public:
-        GameSystem();
+    }
 
-        /// Destructor.
-        virtual ~GameSystem() = default;
+    bool TypeInfo::IsTypeOf(StringId32 type) const
+    {
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current->GetType() == type)
+                return true;
 
-        virtual void Initialize() {}
-        virtual void Update(const GameTime& gameTime) {}
-        virtual void BeginDraw() {}
-        virtual void Draw(const GameTime& gameTime) {}
-        virtual void EndDraw() {}
-    };
+            current = current->GetBaseTypeInfo();
+        }
+
+        return false;
+    }
+
+    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
+    {
+        if (typeInfo == nullptr)
+            return false;
+
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current == typeInfo || current->GetType() == typeInfo->GetType())
+                return true;
+
+            current = current->GetBaseTypeInfo();
+        }
+
+        return false;
+    }
+
+    /* Object */
+    bool Object::IsInstanceOf(StringId32 type) const
+    {
+        return GetTypeInfo()->IsTypeOf(type);
+    }
+
+    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    {
+        return GetTypeInfo()->IsTypeOf(typeInfo);
+    }
 }

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Utils.h"
+#include "core/Utils.h"
 #include "math/vec2.h"
 #include "math/size.h"
 #include <string>

@@ -21,8 +21,8 @@
 //
 
 #include "glfw_window.h"
-#include "Core/Platform.h"
-#include "Diagnostics/Log.h"
+#include "core/Platform.h"
+#include "core/Log.h"
 
 namespace alimer
 {

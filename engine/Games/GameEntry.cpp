@@ -23,8 +23,8 @@
 #if !defined(ALIMER_EXPORTS)
 
 #include "Games/Game.h"
-#include "Core/Platform.h"
-#include "Core/String.h"
+#include "core/Platform.h"
+#include "core/String.h"
 
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN

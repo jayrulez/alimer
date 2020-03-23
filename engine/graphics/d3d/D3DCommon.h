@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Diagnostics/Assert.h"
-#include "Diagnostics/Log.h"
+#include "core/Assert.h"
+#include "core/Log.h"
 #include "graphics/PixelFormat.h"
 
 #ifndef NOMINMAX
@@ -40,8 +40,6 @@
     #define WIN32_LEAN_AND_MEAN
     #include <Windows.h>
 #endif
-
-#include <wrl/client.h>
 
 #include <d3dcommon.h>
 #include <dxgiformat.h>
@@ -67,9 +65,11 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 
 namespace alimer
 {
-    // Type alias for ComPtr template
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
 
 #if defined(_DEBUG)
     // Declare debug guids to avoid linking with "dxguid.lib"
@@ -78,6 +78,16 @@ namespace alimer
 #endif
 
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
+
+    template <typename T>
+    void SafeRelease(T& resource)
+    {
+        if (resource)
+        {
+            resource->Release();
+            resource = nullptr;
+        }
+    }
 
     inline std::wstring GetDXErrorString(HRESULT hr)
     {

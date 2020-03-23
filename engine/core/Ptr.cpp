@@ -19,58 +19,62 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// Implementation based on Urho3D RefCounted: https://github.com/urho3d/Urho3D/blob/master/LICENSE
 
-#include "Core/Object.h"
+#include "core/Ptr.h"
 
 namespace alimer
 {
-    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
-        : type(typeName_)
-        , typeName(typeName_)
-        , baseTypeInfo(baseTypeInfo_)
+    RefCounted::~RefCounted()
     {
-
+        if (refCount)
+        {
+            ALIMER_ASSERT(refCount->refs == 0);
+            if (refCount->weakRefs == 0)
+                delete refCount;
+            else
+                refCount->expired = true;
+        }
     }
 
-    bool TypeInfo::IsTypeOf(StringId32 type) const
+    uint32_t RefCounted::AddRef()
     {
-        const TypeInfo* current = this;
-        while (current)
-        {
-            if (current->GetType() == type)
-                return true;
+        if (!refCount)
+            refCount = new RefCount();
 
-            current = current->GetBaseTypeInfo();
+        // TODO: Atomics
+        ++(refCount->refs);
+        return refCount->refs;
+    }
+
+    uint32_t RefCounted::Release()
+    {
+        ALIMER_ASSERT(refCount && refCount->refs > 0);
+        --(refCount->refs);
+        if (refCount->refs == 0)
+        {
+            delete this;
+            return 0;
         }
 
-        return false;
+        return refCount->refs;
     }
 
-    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
+    uint32_t RefCounted::Refs() const
     {
-        if (typeInfo == nullptr)
-            return false;
-
-        const TypeInfo* current = this;
-        while (current)
-        {
-            if (current == typeInfo || current->GetType() == typeInfo->GetType())
-                return true;
-
-            current = current->GetBaseTypeInfo();
-        }
-
-        return false;
+        return refCount ? refCount->refs : 0;
     }
 
-    /* Object */
-    bool Object::IsInstanceOf(StringId32 type) const
+    uint32_t RefCounted::WeakRefs() const
     {
-        return GetTypeInfo()->IsTypeOf(type);
+        return refCount ? refCount->weakRefs : 0;
     }
 
-    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    RefCount* RefCounted::RefCountPtr()
     {
-        return GetTypeInfo()->IsTypeOf(typeInfo);
+        if (!refCount)
+            refCount = new RefCount();
+
+        return refCount;
     }
 }

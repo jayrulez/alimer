@@ -20,14 +20,13 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12Texture.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GPUDevice.h"
 
 namespace alimer
 {
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor)
-        : Texture(device, descriptor)
+    D3D12Texture::D3D12Texture(D3D12GPUDevice* device)
+        : Texture(device)
     {
 
     }
@@ -42,5 +41,4 @@ namespace alimer
 
     }
 }
-#endif // TODO
 

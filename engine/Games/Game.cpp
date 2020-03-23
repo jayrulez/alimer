@@ -26,7 +26,7 @@
 #include "Games/Game.h"
 #include "graphics/GPUDevice.h"
 #include "Input/InputManager.h"
-#include "Diagnostics/Log.h"
+#include "core/Log.h"
 
 namespace alimer
 {

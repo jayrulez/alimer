@@ -38,8 +38,8 @@ namespace alimer
         /// Destructor.
         ~VulkanGPUDevice() override;
 
-        void backendShutdown() override;
-        void waitIdle() override;
+        void Destroy();
+        void WaitIdle() override;
         //bool BeginFrame() override;
         //void EndFrame() override;
 
@@ -51,7 +51,8 @@ namespace alimer
 
     private:
         VkSurfaceKHR createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
-        std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
+        SharedPtr<Texture> CreateTexture() override;
+        //std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
     private:
         VulkanDeviceFeatures vk_features{};

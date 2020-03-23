@@ -52,24 +52,26 @@ namespace alimer
         /// Called by validation layer.
         void notifyValidationError(const char* message);
 
-        virtual void waitIdle() = 0;
+        virtual void WaitIdle() = 0;
         virtual bool begin_frame() { return true; }
         virtual void end_frame() {}
 
+        virtual SharedPtr<Texture> CreateTexture() = 0;
         std::shared_ptr<Framebuffer> createFramebuffer(const SwapChainDescriptor* descriptor);
 
-        /// Query device features.
-        inline const GPUDeviceInfo& QueryInfo() const { return info; }
+        GPUBackend GetBackendType() const { return info.backend; }
+
+        /// Get device features.
+        inline const GPUDeviceInfo& GetInfo() const { return info; }
 
         /// Query device features.
-        inline const GPUDeviceFeatures& QueryFeatures() const { return features; }
+        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
 
         /// Query device limits.
-        inline const GPUDeviceLimits& QueryLimits() const { return limits; }
+        inline const GPUDeviceLimits& GetLimits() const { return limits; }
 
     private:
-        virtual void backendShutdown() = 0;
-        virtual std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
+        //virtual std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) = 0;
 
     protected:
         GPUDeviceInfo info;

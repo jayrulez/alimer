@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/Types.h"
-#include "Core/Object.h"
+#include "core/Object.h"
 
 namespace alimer
 {
@@ -55,11 +55,15 @@ namespace alimer
         /// Release the GPU resource.
         virtual void Destroy() {}
 
+        /// Return value indicating if the resource has been allocated.
+        bool IsAllocated() const { return isAllocated; }
+
     protected:
         GPUDevice* device;
         Type type;
         /// Size in bytes of the resource.
         uint64_t size{ 0 };
+        bool isAllocated = false;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GPUResource);

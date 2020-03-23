@@ -31,9 +31,9 @@ namespace alimer
     {
         ALIMER_OBJECT(Texture, GPUResource);
 
-    public:
+    protected:
         /// Constructor.
-        Texture(GPUDevice* device, const TextureDescriptor* descriptor);
+        Texture(GPUDevice* device);
 
     private:
     };

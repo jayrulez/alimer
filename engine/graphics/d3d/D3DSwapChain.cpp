@@ -21,8 +21,8 @@
 //
 
 #include "D3DSwapChain.h"
-#include "Diagnostics/Log.h"
-#include "Diagnostics/Assert.h"
+#include "core/Log.h"
+#include "core/Assert.h"
 
 namespace alimer
 {

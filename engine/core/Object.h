@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include "Core/StringId.h"
+#include "core/Ptr.h"
+#include "core/StringId.h"
 #include <memory>
 #include <vector>
 
@@ -61,7 +62,7 @@ namespace alimer
     };
 
     /// Base class for objects with type identification, subsystem access
-    class ALIMER_API Object : public std::enable_shared_from_this< Object>
+    class ALIMER_API Object : public RefCounted
     {
     public:
         /// Constructor.

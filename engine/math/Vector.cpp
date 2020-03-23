@@ -21,8 +21,8 @@
 //
 
 #include "math/Vector.h"
-#include "Core/String.h"
-#include "Diagnostics/Assert.h"
+#include "core/String.h"
+#include "core/Assert.h"
 
 namespace alimer
 {

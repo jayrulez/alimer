@@ -22,7 +22,7 @@
 
 #include "Games/GameTime.h"
 #include "Games/Game.h"
-#include "Diagnostics/Stopwatch.h"
+#include "core/Stopwatch.h"
 #include <cmath>
 
 namespace alimer
