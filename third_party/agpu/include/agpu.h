@@ -46,7 +46,22 @@
 #    define AGPU_API extern _AGPU_API_DECL
 #endif
 
-typedef struct gpu_buffer_t* gpu_buffer;
+
+enum {
+    AGPU_MAX_COLOR_ATTACHMENTS = 8u,
+    AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+    AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+    AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+    AGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
+    // Maximum object that can be created.
+    AGPU_MAX_COMMAND_BUFFERS = 16u,
+    AGPU_MAX_TEXTURES = 4096u,
+    AGPU_MAX_BUFFERS = 4096u,
+    AGPU_MAX_SAMPLERS = 4096u,
+    AGPU_MAX_SHADERS = 512u,
+    AGPU_MAX_FRAMEBUFFERS = 256u,
+    AGPU_MAX_PIPELINES = 256u,
+};
 
 typedef enum agpu_backend {
     AGPU_BACKEND_DEFAULT = 0,
@@ -58,25 +73,152 @@ typedef enum agpu_backend {
     AGPU_BACKEND_COUNT
 } agpu_backend;
 
+typedef enum agpu_queue_type {
+    AGPU_QUEUE_TYPE_GRAPHICS = 0,
+    AGPU_QUEUE_TYPE_COMPUTE,
+    AGPU_QUEUE_TYPE_COPY,
+    AGPU_QUEUE_TYPE_COUNT,
+    AGPU_QUEUE_TYPE_FORCE_U32 = 0x7FFFFFFF
+} agpu_queue_type;
+
+/// Defines pixel format.
+typedef enum agpu_pixel_format {
+    AGPU_PIXEL_FORMAT_UNDEFINED = 0,
+    // 8-bit pixel formats
+    AGPU_PIXEL_FORMAT_R8_UNORM,
+    AGPU_PIXEL_FORMAT_R8_SNORM,
+    AGPU_PIXEL_FORMAT_R8_UINT,
+    AGPU_PIXEL_FORMAT_R8_SINT,
+
+    // 16-bit pixel formats
+    AGPU_PIXEL_FORMAT_R16_UNORM,
+    AGPU_PIXEL_FORMAT_R16_SNORM,
+    AGPU_PIXEL_FORMAT_R16_UINT,
+    AGPU_PIXEL_FORMAT_R16_SINT,
+    AGPU_PIXEL_FORMAT_R16_FLOAT,
+    AGPU_PIXEL_FORMAT_RG8_UNORM,
+    AGPU_PIXEL_FORMAT_RG8_SNORM,
+    AGPU_PIXEL_FORMAT_RG8_UINT,
+    AGPU_PIXEL_FORMAT_RG8_SINT,
+
+    // 32-bit pixel formats
+    AGPU_PIXEL_FORMAT_R32_UINT,
+    AGPU_PIXEL_FORMAT_R32_SINT,
+    AGPU_PIXEL_FORMAT_R32_FLOAT,
+    AGPU_PIXEL_FORMAT_RG16_UNORM,
+    AGPU_PIXEL_FORMAT_RG16_SNORM,
+    AGPU_PIXEL_FORMAT_RG16_UINT,
+    AGPU_PIXEL_FORMAT_RG16_SINT,
+    AGPU_PIXEL_FORMAT_RG16_FLOAT,
+    AGPU_PIXEL_FORMAT_RGBA8_UNORM,
+    AGPU_PIXEL_FORMAT_RGBA8_UNORM_SRGB,
+    AGPU_PIXEL_FORMAT_RGBA8_SNORM,
+    AGPU_PIXEL_FORMAT_RGBA8_UINT,
+    AGPU_PIXEL_FORMAT_RGBA8_SINT,
+    AGPU_PIXEL_FORMAT_BGRA8_UNORM,
+    AGPU_PIXEL_FORMAT_BGRA8_UNORM_SRGB,
+
+    // Packed 32-Bit Pixel formats
+    AGPU_PIXEL_FORMAT_RGB10A2_UNORM,
+    AGPU_PIXEL_FORMAT_RG11B10_FLOAT,
+
+    // 64-Bit Pixel Formats
+    AGPU_PIXEL_FORMAT_RG32_UINT,
+    AGPU_PIXEL_FORMAT_RG32_SINT,
+    AGPU_PIXEL_FORMAT_RG32_FLOAT,
+    AGPU_PIXEL_FORMAT_RGBA16_UNORM,
+    AGPU_PIXEL_FORMAT_RGBA16_SNORM,
+    AGPU_PIXEL_FORMAT_RGBA16_UINT,
+    AGPU_PIXEL_FORMAT_RGBA16_SINT,
+    AGPU_PIXEL_FORMAT_RGBA16_FLOAT,
+
+    // 128-Bit Pixel Formats
+    AGPU_PIXEL_FORMAT_RGBA32_UINT,
+    AGPU_PIXEL_FORMAT_RGBA32_SINT,
+    AGPU_PIXEL_FORMAT_RGBA32_FLOAT,
+
+    // Depth-stencil
+    AGPU_PIXEL_FORMAT_D16_UNORM,
+    AGPU_PIXEL_FORMAT_D32_FLOAT,
+    AGPU_PIXEL_FORMAT_D24_UNORM_S8_UINT,
+    AGPU_PIXEL_FORMAT_D32_FLOAT_S8_UINT,
+
+    // Compressed formats
+    AGPU_PIXEL_FORMAT_BC1_RGBA_UNORM,
+    AGPU_PIXEL_FORMAT_BC1_RGBA_UNORM_SRGB,
+    AGPU_PIXEL_FORMAT_BC2_RGBA_UNORM,
+    AGPU_PIXEL_FORMAT_BC2_RGBA_UNORM_SRGB,
+    AGPU_PIXEL_FORMAT_BC3_RGBA_UNORM,
+    AGPU_PIXEL_FORMAT_BC3_RGBA_UNORM_SRGB,
+    AGPU_PIXEL_FORMAT_BC4_R_UNORM,
+    AGPU_PIXEL_FORMAT_BC4_R_SNORM,
+    AGPU_PIXEL_FORMAT_BC5_RG_UNORM,
+    AGPU_PIXEL_FORMAT_BC5_RG_SNORM,
+    AGPU_PIXEL_FORMAT_BC6H_RGB_FLOAT,
+    AGPU_PIXEL_FORMAT_BC6H_RGB_UFLOAT,
+    AGPU_PIXEL_FORMAT_BC7_RGBA_UNORM,
+    AGPU_PIXEL_FORMAT_BC7_RGBA_UNORM_SRGB,
+
+    // Compressed PVRTC Pixel Formats
+    AGPU_PIXEL_FORMAT_PVRTC_RGB2,
+    AGPU_PIXEL_FORMAT_PVRTC_RGBA2,
+    AGPU_PIXEL_FORMAT_PVRTC_RGB4,
+    AGPU_PIXEL_FORMAT_PVRTC_RGBA4,
+
+    // Compressed ETC Pixel Formats
+    AGPU_PIXEL_FORMAT_ETC2_RGB8,
+    AGPU_PIXEL_FORMAT_ETC2_RGB8_SRGB,
+    AGPU_PIXEL_FORMAT_ETC2_RGB8A1,
+    AGPU_PIXEL_FORMAT_ETC2_RGB8A1_SRGB,
+
+    // Compressed ASTC Pixel Formats
+    AGPU_PIXEL_FORMAT_ASTC4x4,
+    AGPU_PIXEL_FORMAT_ASTC5x5,
+    AGPU_PIXEL_FORMAT_ASTC6x6,
+    AGPU_PIXEL_FORMAT_ASTC8x5,
+    AGPU_PIXEL_FORMAT_ASTC8x6,
+    AGPU_PIXEL_FORMAT_ASTC8x8,
+    AGPU_PIXEL_FORMAT_ASTC10x10,
+    AGPU_PIXEL_FORMAT_ASTC12x12,
+    /// Pixel format count.
+    AGPU_PIXEL_FORMAT_COUNT
+} agpu_pixel_format;
+
+typedef enum agpu_config_flags_bits {
+    AGPU_CONFIG_FLAGS_NONE = 0,
+    AGPU_CONFIG_FLAGS_HEADLESS = 0x1,
+    AGPU_CONFIG_FLAGS_VALIDATION = 0x2,
+    AGPU_CONFIG_FLAGS_GPU_BASED_VALIDATION = 0x4,
+} agpu_config_flags_bits;
+typedef uint32_t agpu_config_flags;
+
 typedef struct agpu_swapchain_desc {
+    /// Native display type.
+    void* native_display;
+    /// Native window handle.
+    void* native_handle;
+
     uint32_t width;
     uint32_t height;
-    void* native_handle;
+
+    agpu_pixel_format   color_format;
+    agpu_pixel_format   depth_stencil_format;
 } agpu_swapchain_desc;
 
-typedef struct gpu_buffer_desc {
+typedef struct agpu_buffer_desc {
     uint64_t size;
     uint32_t usage;
     const char* name;
-} gpu_buffer_desc;
+} agpu_buffer_desc;
 
 typedef struct agpu_config {
     agpu_backend preferred_backend;
-    bool debug;
-    void* (*get_gl_proc_address)(const char*);
+    agpu_config_flags flags;
+    //void* (*get_gl_proc_address)(const char*);
     void (*callback)(void* context, const char* message, int level);
     void* context;
-    const agpu_swapchain_desc* swapchain_desc;
+    uint32_t max_inflight_frames;
+    const agpu_swapchain_desc* swapchain;
 } agpu_config;
 
 AGPU_API bool agpu_is_backend_supported(agpu_backend backend);
@@ -88,5 +230,5 @@ AGPU_API void agpu_wait_idle(void);
 AGPU_API void agpu_begin_frame(void);
 AGPU_API void agpu_end_frame(void);
 
-AGPU_API bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result);
-AGPU_API void gpu_destroy_buffer(gpu_buffer buffer);
+//AGPU_API bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result);
+//AGPU_API void gpu_destroy_buffer(gpu_buffer buffer);

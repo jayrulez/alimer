@@ -22,15 +22,23 @@
 
 #include "agpu_internal.h"
 
+#if defined(GPU_VK_BACKEND)
 #ifndef VK_NO_PROTOTYPES
-#define VK_NO_PROTOTYPES
+#   define VK_NO_PROTOTYPES
 #endif
 
 #if defined(_WIN32)
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
+
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif
+
+#ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+#endif
+
 #ifndef VK_USE_PLATFORM_WIN32_KHR
-#define VK_USE_PLATFORM_WIN32_KHR
+#   define VK_USE_PLATFORM_WIN32_KHR
 #endif
 #define VK_CREATE_SURFACE_FN vkCreateWin32SurfaceKHR
 #else
@@ -40,10 +48,13 @@
 #define GPU_THROW(s) if (vk_state.config.callback) { vk_state.config.callback(vk_state.config.context, s, true); }
 #define GPU_CHECK(c, s) if (!(c)) { GPU_THROW(s); }
 
+#include <vector>
 #include <vulkan/vulkan.h>
+static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+static PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
+
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 #define VK_CHECK(f) do { VkResult r = (f); GPU_CHECK(r >= 0, vk_get_error_string(r)); } while (0)
 
 // Functions that don't require an instance
@@ -64,7 +75,6 @@ static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
     X(vkGetPhysicalDeviceQueueFamilyProperties);\
     X(vkCreateDevice);\
     X(vkDestroyDevice);\
-    X(vkGetDeviceProcAddr);\
     X(vkDestroySurfaceKHR);\
     X(vkGetPhysicalDeviceSurfaceCapabilitiesKHR);\
     X(vkGetPhysicalDeviceSurfaceFormatsKHR);\
@@ -171,6 +181,7 @@ typedef struct gpu_swapchain_t* gpu_swapchain;
 static struct {
     agpu_config config;
     bool headless;
+    uint32_t max_inflight_frames;
 
 #if defined(_WIN32)
     HMODULE library;
@@ -218,9 +229,11 @@ static agpu_backend vk_get_backend(void) {
 static bool vk_backend_initialize(const agpu_config* config) {
     // Copy settings
     memcpy(&vk_state.config, config, sizeof(*config));
-    if (!vk_state.config.swapchain_desc) {
+    if (vk_state.config.flags & AGPU_CONFIG_FLAGS_HEADLESS) {
         vk_state.headless = true;
     }
+
+    vk_state.max_inflight_frames = _gpu_min(config->max_inflight_frames, 3);
 
     vk_state.graphics_queue_family = VK_QUEUE_FAMILY_IGNORED;
     vk_state.compute_queue_family = VK_QUEUE_FAMILY_IGNORED;
@@ -265,7 +278,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
     uint32_t layersCount = 0;
     const char* layers[8] = { 0 };
 
-    if (vk_state.config.debug) {
+    if (vk_state.config.flags & AGPU_CONFIG_FLAGS_VALIDATION) {
         uint32_t num_layer_props;
         VkLayerProperties queried_layers[64];
         vkEnumerateInstanceLayerProperties(&num_layer_props, queried_layers);
@@ -359,7 +372,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
 #endif
 
     // Debug callbacks
-    if (vk_state.config.debug && supports_debug_utils) {
+    if (vk_state.config.flags & AGPU_CONFIG_FLAGS_VALIDATION && supports_debug_utils) {
         VkDebugUtilsMessengerCreateInfoEXT messengerInfo = {};
 
         messengerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -386,7 +399,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
         surface_create_info.pNext = NULL;
         surface_create_info.flags = 0;
         surface_create_info.hinstance = GetModuleHandle(NULL);
-        surface_create_info.hwnd = (HWND)vk_state.config.swapchain_desc->native_handle;
+        surface_create_info.hwnd = (HWND)vk_state.config.swapchain->native_handle;
 #elif defined(__APPLE__)
 #elif defined(__ANDROID__)
         const VkAndroidSurfaceCreateInfoKHR surface_create_info = {
@@ -462,8 +475,8 @@ static bool vk_backend_initialize(const agpu_config* config) {
 
     uint32_t queue_count;
     vkGetPhysicalDeviceQueueFamilyProperties(vk_state.physical_device, &queue_count, NULL);
-    VkQueueFamilyProperties* queue_props = _AGPU_ALLOCN(VkQueueFamilyProperties, queue_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(vk_state.physical_device, &queue_count, queue_props);
+    std::vector<VkQueueFamilyProperties> queue_props(queue_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(vk_state.physical_device, &queue_count, queue_props.data());
 
     for (uint32_t i = 0; i < queue_count; i++)
     {
@@ -647,7 +660,7 @@ static bool vk_backend_initialize(const agpu_config* config) {
 
     /* Create main Swapchain if required. */
     if (!vk_state.headless) {
-        if (!gpu_create_swapchain(vk_state.surface, config->swapchain_desc, &vk_state.swapchains[0])) {
+        if (!gpu_create_swapchain(vk_state.surface, config->swapchain, &vk_state.swapchains[0])) {
             return false;
         }
     }
@@ -764,7 +777,7 @@ static void vk_backend_end_frame(void) {
 }
 
 /* Buffer */
-bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result) {
+/*bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result) {
     gpu_buffer buffer = _GPU_ALLOC_HANDLE(gpu_buffer);
     *result = buffer;
 
@@ -799,12 +812,12 @@ void gpu_destroy_buffer(gpu_buffer buffer) {
     }
 
     free(buffer);
-}
+}*/
 
 /* Swapchain */
 bool gpu_create_swapchain(VkSurfaceKHR surface, const agpu_swapchain_desc* desc, gpu_swapchain* result) {
     VkResult vk_result = VK_SUCCESS;
-    gpu_swapchain swapchain = _GPU_ALLOC_HANDLE(gpu_swapchain);
+    gpu_swapchain swapchain = new gpu_swapchain_t();
     *result = swapchain;
 
     if (swapchain == NULL) {
@@ -823,8 +836,8 @@ bool gpu_create_swapchain(VkSurfaceKHR surface, const agpu_swapchain_desc* desc,
         return false;
     }
 
-    VkSurfaceFormatKHR* formats = _AGPU_ALLOCN(VkSurfaceFormatKHR, format_count);
-    if (vkGetPhysicalDeviceSurfaceFormatsKHR(vk_state.physical_device, surface, &format_count, formats) != VK_SUCCESS) {
+    std::vector<VkSurfaceFormatKHR> formats(format_count);
+    if (vkGetPhysicalDeviceSurfaceFormatsKHR(vk_state.physical_device, surface, &format_count, formats.data()) != VK_SUCCESS) {
         return false;
     }
 
@@ -983,7 +996,7 @@ static const char* vk_get_error_string(VkResult result) {
 }
 
 static void vk_set_name(void* handle, VkObjectType type, const char* name) {
-    if (name && vk_state.config.debug) {
+    if (name && vk_state.config.flags & AGPU_CONFIG_FLAGS_VALIDATION) {
         VkDebugUtilsObjectNameInfoEXT info = {
             VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             nullptr,
@@ -1039,3 +1052,16 @@ agpu_renderer* agpu_create_vk_backend(void) {
     renderer.end_frame = vk_backend_end_frame;
     return &renderer;
 }
+
+#else
+
+bool agpu_vk_supported(void) {
+    return false;
+}
+
+agpu_renderer* agpu_create_vk_backend(void) {
+    return nullptr;
+}
+
+
+#endif /* defined(GPU_VK_BACKEND) */

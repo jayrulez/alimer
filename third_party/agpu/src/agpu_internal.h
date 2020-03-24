@@ -26,12 +26,53 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <new>
 
+#define _gpu_def(val, def) (((val) == 0) ? (def) : (val))
+#define _gpu_min(a,b) ((a<b)?a:b)
+#define _gpu_max(a,b) ((a>b)?a:b)
+#define _gpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define COUNTOF(x) (sizeof(x) / sizeof(x[0]))
-#define _AGPU_ALLOC(type) ((type*) malloc(sizeof(type)))
-#define _AGPU_ALLOCN(type, n) ((type*) malloc(sizeof(type) * n))
-#define _AGPU_FREE(p) free(p)
-#define _GPU_ALLOC_HANDLE(type) ((type##_t*) calloc(1, sizeof(type##_t)))
+
+template <typename T, uint32_t MAX_COUNT>
+struct Pool
+{
+    void init()
+    {
+        values = (T*)mem;
+        for (int i = 0; i < MAX_COUNT; ++i) {
+            new (&values[i]) int(i + 1);
+        }
+        new (&values[MAX_COUNT - 1]) int(-1);
+        first_free = 0;
+    }
+
+    int alloc()
+    {
+        if (first_free == -1) return -1;
+
+        const int id = first_free;
+        first_free = *((int*)&values[id]);
+        new (&values[id]) T;
+        return id;
+    }
+
+    void dealloc(uint32_t idx)
+    {
+        values[idx].~T();
+        *((int*)&values[idx]) = first_free;
+        first_free = idx;
+    }
+
+    alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
+    T* values;
+    int first_free;
+
+    T& operator[](int idx) { return values[idx]; }
+    bool isFull() const { return first_free == -1; }
+
+    static constexpr uint32_t CAPACITY = MAX_COUNT;
+};
 
 typedef struct agpu_renderer {
     agpu_backend(*get_backend)(void);
@@ -42,8 +83,9 @@ typedef struct agpu_renderer {
     void (*end_frame)(void);
 } agpu_renderer;
 
-
 bool agpu_gl_supported(void);
 agpu_renderer* agpu_create_gl_backend(void);
 bool agpu_vk_supported(void);
 agpu_renderer* agpu_create_vk_backend(void);
+bool agpu_d3d12_supported(void);
+agpu_renderer* agpu_create_d3d12_backend(void);

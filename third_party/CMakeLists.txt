@@ -1,3 +1,6 @@
+add_subdirectory(agpu)
+set_property(TARGET agpu PROPERTY FOLDER "third_party")
+
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

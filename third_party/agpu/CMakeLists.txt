@@ -50,44 +50,14 @@ option(AGPU_INSTALL "Generate installation target" ON)
 
 set(AGPU_THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-# third_party
-if (AGPU_BACKEND_VULKAN)
-    # vulkan
-    add_library(vulkan INTERFACE)
-    set (VULKAN_INCLUDE_DIR ${AGPU_THIRD_PARTY_DIR}/khronos)
-    target_sources (vulkan INTERFACE 
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_sdk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_core.h
-    )
-    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
-    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
-
-    if(ANDROID)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
-    elseif(WIN32)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
-    elseif(APPLE)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
-    elseif(UNIX)
-        # See whether X11 is available. If not, fall back to direct-to-display mode.
-        find_package(X11 QUIET)
-        if (X11_FOUND)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
-        else()
-            set(DIRECT_TO_DISPLAY TRUE)
-            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
-        endif()
-    endif()
-endif ()
-
 # agpu
 set(SOURCE_FILES 
     include/agpu.h
-    src/agpu.cpp
     src/agpu_internal.h
+    src/agpu.cpp
+    src/agpu_gl.cpp
+    src/agpu_vk.cpp
+    src/agpu_d3d12.cpp
 )
 
 add_library(agpu STATIC ${SOURCE_FILES})
@@ -99,25 +69,24 @@ target_include_directories(agpu PUBLIC
 )
 
 if (AGPU_BACKEND_OPENGL)
-    target_sources(agpu PRIVATE
-        src/agpu_gl.cpp
-    )
-
-    target_include_directories(agpu PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos
-    )
+    #target_compile_definitions(agpu PRIVATE GPU_GL_BACKEND)
+    #target_include_directories(agpu PRIVATE
+    #    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos
+    #)
 endif ()
 
 if (AGPU_BACKEND_VULKAN)
-    set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vma)
-    target_sources(agpu PRIVATE
-        src/agpu_vk.cpp
-        "${VMA_DIR}/vk_mem_alloc.h"
-    )
+    target_compile_definitions(agpu PRIVATE GPU_VK_BACKEND)
+    target_link_libraries(agpu PRIVATE vma)
+endif ()
 
-    target_include_directories(agpu PRIVATE
-        ${VMA_DIR}
-    )
+if (AGPU_BACKEND_D3D11 OR AGPU_BACKEND_D3D12)
+    target_link_libraries(agpu PRIVATE dxguid)
+endif ()
+
+if (AGPU_BACKEND_D3D12)
+    target_compile_definitions(agpu PRIVATE GPU_D3D12_BACKEND)
+    target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
 endif ()
 
 if (MSVC)

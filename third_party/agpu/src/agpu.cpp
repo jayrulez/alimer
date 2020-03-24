@@ -36,8 +36,8 @@ bool agpu_is_backend_supported(agpu_backend backend) {
         return agpu_vk_supported();
         //case AGPU_BACKEND_DIRECT3D11:
         //    return vgpu_d3d11_supported();
-        //case AGPU_BACKEND_DIRECT3D12:
-        //    return vgpu_d3d12_supported();
+    case AGPU_BACKEND_DIRECT3D12:
+        return agpu_d3d12_supported();
     case AGPU_BACKEND_OPENGL:
         return agpu_gl_supported();
     default:
@@ -91,6 +91,13 @@ bool agpu_init(const agpu_config* config) {
         break;
     case AGPU_BACKEND_VULKAN:
         renderer = agpu_create_vk_backend();
+        if (!renderer) {
+            //vgpuLogError("OpenGL backend is not supported");
+        }
+        break;
+
+    case AGPU_BACKEND_DIRECT3D12:
+        renderer = agpu_create_d3d12_backend();
         if (!renderer) {
             //vgpuLogError("OpenGL backend is not supported");
         }

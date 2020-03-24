@@ -22,6 +22,7 @@
 
 #include "agpu_internal.h"
 
+#if defined(GPU_GL_BACKEND)
 #if AGPU_GLES
 #   include "GLES/gl.h"
 #   include "GLES2/gl2.h"
@@ -163,3 +164,15 @@ agpu_renderer* agpu_create_gl_backend(void) {
     renderer.end_frame = gl_backend_end_frame;
     return &renderer;
 }
+
+#else
+
+bool agpu_gl_supported(void) {
+    return false;
+}
+
+agpu_renderer* agpu_create_gl_backend(void) {
+    return nullptr;
+}
+
+#endif /* defined(GPU_GL_BACKEND) */
