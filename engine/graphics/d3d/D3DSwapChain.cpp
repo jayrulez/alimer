@@ -26,10 +26,11 @@
 
 namespace alimer
 {
-    D3DSwapChain::D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, const SwapChainDescriptor* descriptor)
+    D3DSwapChain::D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor)
         : SwapChain(device, descriptor)
         , factory(factory_)
         , deviceOrCommandQueue(deviceOrCommandQueue_)
+        , backBufferCount(backBufferCount_)
         , syncInterval(descriptor->presentMode == PresentMode::Immediate ? 0 : 1)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -59,7 +60,6 @@ namespace alimer
 
                 if (SUCCEEDED(tearingSupportHR) && allowTearing)
                 {
-                    tearingSupported = true;
                     presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
                     swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
                 }
@@ -90,9 +90,16 @@ namespace alimer
     SwapChainResizeResult D3DSwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         HRESULT hr = S_OK;
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+
         if (handle != nullptr)
         {
+            ThrowIfFailed(handle->GetDesc1(&swapChainDesc));
 
+            HRESULT hr = handle->ResizeBuffers(
+                swapChainDesc.BufferCount,
+                newWidth, newHeight,
+                swapChainDesc.Format, swapChainDesc.Flags);
         }
         else
         {
@@ -134,6 +141,11 @@ namespace alimer
             );
 #endif
         }
+
+        ThrowIfFailed(handle->GetDesc1(&swapChainDesc));
+        extent.width = swapChainDesc.Width;
+        extent.height = swapChainDesc.Height;
+        AfterReset();
 
         return SwapChainResizeResult::Success;
     }

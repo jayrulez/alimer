@@ -34,7 +34,7 @@ namespace alimer
         ~D3D12SwapChain() override;
 
         void Destroy();
-
+        void AfterReset();
     private:
     };
 }

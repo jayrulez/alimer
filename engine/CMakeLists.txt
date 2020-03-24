@@ -51,15 +51,6 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     )
 endif ()
 
-if (ALIMER_D3D12)
-    define_engine_source_files(graphics/d3d)
-    define_engine_source_files(graphics/d3d12)
-endif()
-
-if (ALIMER_VULKAN)
-    define_engine_source_files(graphics/vulkan)
-endif()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -80,27 +71,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
+target_link_libraries(${PROJECT_NAME} PUBLIC agpu)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
-
-if (ALIMER_D3D12)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE GPU_D3D12_BACKEND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        D3D12MemoryAllocator
-    )
-endif()
-
-if (ALIMER_VULKAN)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE GPU_VULKAN_BACKEND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        volk
-        vma
-    )
-endif()
 
 if (MSVC)
     set(OPTIMIZATION_FLAGS

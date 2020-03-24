@@ -32,7 +32,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, const SwapChainDescriptor* descriptor);
+        D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor);
 
         // Destructor
         ~D3DSwapChain() override;
@@ -42,6 +42,7 @@ namespace alimer
     private:
         SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) override;
         void Present() override;
+        virtual void AfterReset() = 0;
 
         IDXGIFactory2* factory;
         IUnknown* deviceOrCommandQueue;
@@ -54,10 +55,9 @@ namespace alimer
         uint32_t presentFlags = 0;
         uint32_t swapChainFlags = 0;
 
+    protected:
+        uint32_t backBufferCount;
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
-        UINT backBufferCount = 2;
-        bool flipPresentSupported = true;
-        bool tearingSupported = false;
         IDXGISwapChain1* handle = nullptr;
     };
 }

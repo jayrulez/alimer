@@ -34,18 +34,7 @@ namespace alimer
         , input(new InputManager())
     {
         os::init();
-
         gameSystems.push_back(input);
-
-        // Create GPU device first.
-        bool validation = false;
-#ifdef _DEBUG
-        validation = true;
-#endif
-        gpuDevice = GPUDevice::create(config.gpuBackend, validation, config.headless);
-        if (!gpuDevice) {
-            headless = true;
-        }
     }
 
     Game::~Game()
@@ -56,10 +45,7 @@ namespace alimer
         }
 
         gameSystems.clear();
-        // Wait for all pending operations to finish.
-        gpuDevice->WaitIdle();
-        mainWindowSwapChain.Reset();
-        gpuDevice.reset();
+        agpu_shutdown();
         os::shutdown();
     }
 
@@ -68,12 +54,23 @@ namespace alimer
         // Create main window.
         main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
 
-        // Create swap chain.
-        SwapChainDescriptor swapChainDesc = {};
-        swapChainDesc.nativeWindowHandle = main_window.get_native_handle();
-        swapChainDesc.width = main_window.get_size().width;
-        swapChainDesc.height = main_window.get_size().height;
-        mainWindowSwapChain = gpuDevice->CreateSwapChain(&swapChainDesc);
+        // Init agpu with main window.
+        agpu_swapchain_desc swapchain_desc = {};
+        swapchain_desc.width = main_window.get_size().width;
+        swapchain_desc.height = main_window.get_size().height;
+        swapchain_desc.native_display = main_window.get_native_display();
+        swapchain_desc.native_handle = main_window.get_native_handle();
+
+        agpu_config config = {};
+#ifdef _DEBUG
+        config.flags |= AGPU_CONFIG_FLAGS_VALIDATION;
+#endif
+        config.swapchain = &swapchain_desc;
+
+        if (!agpu_init(&config))
+        {
+            headless = true;
+        }
 
         Initialize();
         if (exitCode)
@@ -106,6 +103,8 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
+        agpu_begin_frame();
+
         for (auto gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
@@ -129,8 +128,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        mainWindowSwapChain->Present();
-        gpuDevice->CommitFrame();
+        agpu_end_frame();
     }
 
     int Game::Run()

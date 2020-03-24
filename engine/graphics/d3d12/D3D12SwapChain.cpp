@@ -26,7 +26,7 @@
 namespace alimer
 {
     D3D12SwapChain::D3D12SwapChain(D3D12GPUDevice* device, const SwapChainDescriptor* descriptor)
-        : D3DSwapChain(device, device->GetDXGIFactory(), device->GetD3DCommandQueue(), descriptor)
+        : D3DSwapChain(device, device->GetDXGIFactory(), device->GetD3DCommandQueue(), 2u, descriptor)
     {
     }
 
@@ -38,5 +38,28 @@ namespace alimer
     void D3D12SwapChain::Destroy()
     {
         D3DSwapChain::Destroy();
+    }
+
+    void D3DSwapChain::AfterReset()
+    {
+        for (uint32_t i = 0; i < backBufferCount; i++)
+        {
+            //backBuffers[i].RTV = DX12::RTVDescriptorHeap.AllocatePersistent().Handles[0];
+            ID3D12Resource* backbuffer;
+            ThrowIfFailed(handle->GetBuffer(i, __uuidof(ID3D12Resource), (void**)&backbuffer));
+
+#if defined(_DEBUG)
+            wchar_t name[25] = {};
+            swprintf_s(name, L"Render target %u", i);
+            backbuffer->SetName(name);
+#endif
+        }
+
+        //m_backBufferIndex = handle->GetCurrentBackBufferIndex();
+    }
+
+    void D3D12SwapChain::AfterReset()
+    {
+
     }
 }

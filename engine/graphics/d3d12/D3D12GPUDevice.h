@@ -79,5 +79,9 @@ namespace alimer
         D3D12CommandQueue* graphicsQueue;
         D3D12CommandQueue* computeQueue;
         D3D12CommandQueue* copyQueue;
+
+        ID3D12Fence* frameFence = nullptr;
+        HANDLE frameFenceEvent = nullptr;
+        uint64_t numFrames=0;
     };
 }

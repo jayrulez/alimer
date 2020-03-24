@@ -364,6 +364,14 @@ namespace alimer
             copyQueue = new D3D12CommandQueue(this, CommandQueueType::Copy);
             //mainContext.reset(new D3D12GraphicsContext(this, CommandQueueType::Graphics));
         }
+
+        // Create frame fence.
+        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        if (frameFenceEvent == nullptr)
+        {
+            ALIMER_LOGERROR("CreateEventEx failed");
+        }
     }
 
     void D3D12GPUDevice::InitCapabilities(IDXGIAdapter1* adapter)
@@ -435,7 +443,15 @@ namespace alimer
 
     void D3D12GPUDevice::CommitFrame()
     {
-        //MoveToNextFrame();
+        graphicsQueue->GetHandle()->Signal(frameFence, ++numFrames);
+
+        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+
+        if ((numFrames - GPUFrameCount) >= 2)
+        {
+            frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
+            WaitForSingleObject(frameFenceEvent, INFINITE);
+        }
 
         if (!dxgiFactory->IsCurrent())
         {
