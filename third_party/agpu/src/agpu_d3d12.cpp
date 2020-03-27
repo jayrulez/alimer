@@ -77,7 +77,7 @@ typedef struct {
 } d3d12_swapchain;
 
 typedef struct {
-    ID3D12Fence*    handle;
+    ID3D12Fence* handle;
     HANDLE          eventHandle;
     uint64_t        cpu_value;
 } d3d12_fence;
@@ -275,6 +275,7 @@ static bool d3d12_backend_initialize(const agpu_config* config) {
             OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
         }
 
+#ifdef _DEBUG
         IDXGIInfoQueue* dxgiInfoQueue;
         if (SUCCEEDED(agpuDXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
         {
@@ -294,6 +295,7 @@ static bool d3d12_backend_initialize(const agpu_config* config) {
             dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
             dxgiInfoQueue->Release();
         }
+#endif
     }
 
     if (FAILED(agpuCreateDXGIFactory2(d3d12.factory_flags, IID_PPV_ARGS(&d3d12.dxgi_factory))))
@@ -777,7 +779,7 @@ static void d3d12_init_swap_chain(d3d12_swapchain* swapchain, const agpu_swapcha
 }
 
 void d3d12_destroy_swapchain(d3d12_swapchain* swapchain) {
-    if (swapchain->handle == nullptr) 
+    if (swapchain->handle == nullptr)
         return;
 
     /*if (swapChain->depthStencilTexture.isValid()) {
