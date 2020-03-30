@@ -50,7 +50,7 @@ namespace alimer
         static std::set<GPUBackend> getAvailableBackends();
 
         /// Create new GPUDevice with given preferred backend, fallback to supported one.
-        static std::unique_ptr<GPUDevice> create(GPUBackend preferredBackend = GPUBackend::Count, bool validation = false, bool headless = false);
+        static std::unique_ptr<GPUDevice> Create(GPUBackend preferredBackend = GPUBackend::Count, GPUDeviceFlags flags = GPUDeviceFlags::None);
 
         /// Called by validation layer.
         void NotifyValidationError(const char* message);

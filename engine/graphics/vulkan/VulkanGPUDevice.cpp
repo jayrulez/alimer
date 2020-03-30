@@ -106,7 +106,7 @@ namespace alimer
 
     static VKAPI_ATTR VkBool32 vulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context);
 
-    bool VulkanGPUDevice::isAvailable()
+    bool VulkanGPUDevice::IsAvailable()
     {
         static bool availableInitialized = false;
         static bool available = false;
@@ -126,10 +126,10 @@ namespace alimer
         return available;
     }
 
-    VulkanGPUDevice::VulkanGPUDevice(bool validation, bool headless)
+    VulkanGPUDevice::VulkanGPUDevice(GPUDeviceFlags flags)
         : GPUDevice()
     {
-        ALIMER_ASSERT(isAvailable());
+        ALIMER_ASSERT(IsAvailable());
 
         // Setup application info and create VkInstance.
         vk_features.apiVersion = volkGetInstanceVersion();
@@ -147,83 +147,93 @@ namespace alimer
         else {
             appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 55);
         }
+        const bool headless = any(flags & GPUDeviceFlags::Headless);
 
-        uint32_t extensionCount;
-        VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr));
-
-        vector<VkExtensionProperties> queriedExtensions(extensionCount);
-        VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, queriedExtensions.data()));
-
-        const auto hasExtension = [&](const char* name) -> bool {
-            auto itr = find_if(begin(queriedExtensions), end(queriedExtensions), [name](const VkExtensionProperties& e) -> bool {
-                return strcmp(e.extensionName, name) == 0;
-                });
-            return itr != end(queriedExtensions);
-        };
-
-        vector<const char*> instanceExtensions;
-        // Try to enable headless surface extension if it exists
-        if (headless)
+        // Enumerate supported extensions and setup instance extensions.
+        std::vector<const char*> enabledInstanceExtensions;
         {
-            if (!hasExtension(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME))
+            uint32_t instanceExtensionCount;
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
+
+            vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
+
+            for (auto& available_extension : availableInstanceExtensions)
             {
-                ALIMER_LOGW("%s is not available, disabling swapchain creation", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+                {
+                    vk_features.debug_utils = true;
+                    //ALIMER_LOGI("{} is available, enabling it", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                }
+                else if (strcmp(available_extension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
+                {
+                    vk_features.headless = true;
+                }
+                else if (strcmp(available_extension.extensionName, VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) == 0)
+                {
+                    vk_features.surface_capabilities2 = true;
+                }
+                else if (strcmp(available_extension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+                {
+                    vk_features.physical_device_properties2 = true;
+                    enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+                }
+            }
+
+            // Try to enable headless surface extension if it exists
+            if (headless)
+            {
+                if (!vk_features.headless)
+                {
+                    ALIMER_LOGW("%s is not available, disabling swapchain creation", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                }
+                else
+                {
+                    ALIMER_LOGI("%s is available, enabling it", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                    enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                }
             }
             else
             {
-                vk_features.headless = true;
-                ALIMER_LOGI("%s is available, enabling it", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-                instanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-            }
-        }
-        else
-        {
-            instanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-            // Enable surface extensions depending on os
+                enabledInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+                // Enable surface extensions depending on os
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-            instanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
-            instanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(_DIRECT2DISPLAY)
-            instanceExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            instanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-            instanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
-            instanceExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
                 // TODO: Support VK_EXT_metal_surface
-            instanceExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #endif
 
-            if (hasExtension(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME))
-            {
-                instanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-                vk_features.surface_capabilities2 = true;
+                if (vk_features.surface_capabilities2)
+                {
+                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                }
             }
         }
 
-        if (hasExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
-        {
-            vk_features.physical_device_properties2 = true;
-            instanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-        }
+        const bool validation =
+            any(flags & GPUDeviceFlags::Validation) |
+            any(flags & GPUDeviceFlags::GpuBasedValidation);
 
-        if (vk_features.physical_device_properties2
+        /*if (vk_features.physical_device_properties2
             && hasExtension(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME)
             && hasExtension(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME))
         {
             instanceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
             instanceExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
             vk_features.external = true;
-        }
-
-        if (hasExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
-        {
-            instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            vk_features.debug_utils = true;
-        }
+        }*/
 
         vector<const char*> instanceLayers;
 
@@ -242,8 +252,8 @@ namespace alimer
         createInfo.pApplicationInfo = &appInfo;
         createInfo.enabledLayerCount = static_cast<uint32_t>(instanceLayers.size());
         createInfo.ppEnabledLayerNames = instanceLayers.data();
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions.size());
-        createInfo.ppEnabledExtensionNames = instanceExtensions.data();
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
+        createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
 
         // Create the Vulkan instance
         VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);

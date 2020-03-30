@@ -70,6 +70,10 @@ namespace alimer
             }
         }
 
+        void* get_proc_address(const char* function) {
+            return (void*)glfwGetProcAddress(function);
+        }
+
         std::string get_clipboard_text() noexcept
         {
             const char* text = glfwGetClipboardString(nullptr);

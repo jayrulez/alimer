@@ -48,6 +48,8 @@ namespace alimer
         void push_event(const Event& e);
         auto poll_event(Event& e) noexcept -> bool;
 
+        void* get_proc_address(const char* function);
+
         std::string get_clipboard_text() noexcept;
         void set_clipboard_text(const std::string& text);
     } // namespace os

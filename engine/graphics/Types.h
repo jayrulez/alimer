@@ -25,6 +25,12 @@
 #include "core/Utils.h"
 #include "graphics/PixelFormat.h"
 
+#ifndef GPU_DEBUG
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#       define GPU_DEBUG
+#   endif
+#endif 
+
 namespace alimer
 {
     static constexpr uint32_t kMaxColorAttachments = 8u;
@@ -47,6 +53,15 @@ namespace alimer
         /// Default best platform supported backend.
         Count
     };
+
+    enum class GPUDeviceFlags : uint32_t
+    {
+        None = 0,
+        Headless = 0x1,
+        Validation = 0x2,
+        GpuBasedValidation = 0x4
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GPUDeviceFlags);
 
     enum class CommandQueueType : uint32_t
     {

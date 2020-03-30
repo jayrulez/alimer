@@ -46,10 +46,12 @@ define_engine_source_files(
 
 # Sources per backend/platform
 if(NOT (EMSCRIPTEN OR ANDROID))
-    define_engine_source_files(
-        os/glfw
-    )
+    define_engine_source_files(os/glfw)
 endif ()
+
+if(ALIMER_VULKAN)
+    define_engine_source_files(graphics/vulkan)
+endif()
 
 group_sources()
 
@@ -71,13 +73,16 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC agpu)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
+
+if(ALIMER_VULKAN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
+endif()
 
 if (MSVC)
     set(OPTIMIZATION_FLAGS
@@ -109,7 +114,6 @@ else()
         -Wover-aligned
     )
 endif()
-
 
 target_compile_options(${PROJECT_NAME} PRIVATE
         ${ALIMER_WARNINGS}

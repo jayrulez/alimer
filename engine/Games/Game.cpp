@@ -45,7 +45,7 @@ namespace alimer
         }
 
         gameSystems.clear();
-        agpu_shutdown();
+        gpuDevice.reset();
         os::shutdown();
     }
 
@@ -54,14 +54,23 @@ namespace alimer
         // Create main window.
         main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
 
-        // Init agpu with main window.
-        agpu_swapchain_desc swapchain_desc = {};
+        // Init graphics with main window.
+        GPUDeviceFlags deviceFlags = GPUDeviceFlags::None;
+#if defined(GPU_DEBUG)
+        deviceFlags |= GPUDeviceFlags::Validation;
+#endif
+        gpuDevice = GPUDevice::Create(config.gpuBackend, deviceFlags);
+
+        /*agpu_swapchain_desc swapchain_desc = {};
         swapchain_desc.width = main_window.get_size().width;
         swapchain_desc.height = main_window.get_size().height;
         swapchain_desc.native_display = main_window.get_native_display();
         swapchain_desc.native_handle = main_window.get_native_handle();
 
         agpu_config config = {};
+        //config.preferred_backend = AGPU_BACKEND_OPENGL;
+        //config.get_gl_proc_address = os::get_proc_address;
+        config.preferred_backend = AGPU_BACKEND_VULKAN;
 #ifdef _DEBUG
         config.flags |= AGPU_CONFIG_FLAGS_VALIDATION;
 #endif
@@ -70,7 +79,7 @@ namespace alimer
         if (!agpu_init(&config))
         {
             headless = true;
-        }
+        }*/
 
         Initialize();
         if (exitCode)
@@ -103,7 +112,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        agpu_begin_frame();
+        //gpuDevice->beginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -128,7 +137,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        agpu_end_frame();
+        gpuDevice->CommitFrame();
     }
 
     int Game::Run()

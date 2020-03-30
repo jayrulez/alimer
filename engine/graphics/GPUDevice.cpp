@@ -26,16 +26,12 @@
 #include "graphics/GPUDevice.h"
 #include "graphics/GPUBuffer.h"
 
-#if defined(ALIMER_D3D12)
-#include "graphics/d3d12/D3D12GPUDevice.h"
-#endif
-
-#if defined(ALIMER_D3D11)
-#   include "graphics/d3d11/D3D11GPUDevice.h"
-#endif
-
 #if defined(ALIMER_VULKAN)
 #   include "graphics/vulkan/VulkanGPUDevice.h"
+#endif
+
+#if defined(ALIMER_D3D12)
+//#include "graphics/d3d12/D3D12GPUDevice.h"
 #endif
 
 using namespace std;
@@ -50,23 +46,23 @@ namespace alimer
         {
             availableBackends.insert(GPUBackend::Null);
 
-#if defined(ALIMER_D3D12)
-            if (D3D12GPUDevice::IsAvailable())
-            {
-                availableBackends.insert(GPUBackend::Direct3D12);
-            }
+#if defined(ALIMER_VULKAN)
+            if (VulkanGPUDevice::IsAvailable())
+                availableBackends.insert(GPUBackend::Vulkan);
 #endif
 
-#if defined(ALIMER_VULKAN)
-            if (VulkanGPUDevice::isAvailable())
-                availableBackends.insert(GPUBackend::Vulkan);
+#if defined(ALIMER_D3D12)
+            /*if (D3D12GPUDevice::IsAvailable())
+            {
+                availableBackends.insert(GPUBackend::Direct3D12);
+            }*/
 #endif
         }
 
         return availableBackends;
     }
 
-    unique_ptr<GPUDevice> GPUDevice::create(GPUBackend preferredBackend, bool validation, bool headless)
+    unique_ptr<GPUDevice> GPUDevice::Create(GPUBackend preferredBackend, GPUDeviceFlags flags)
     {
         GPUBackend backend = preferredBackend;
         if (preferredBackend == GPUBackend::Count)
@@ -89,16 +85,16 @@ namespace alimer
 #if defined(ALIMER_VULKAN)
         case GPUBackend::Vulkan:
             ALIMER_LOGINFO("Using Vulkan render driver");
-            device = make_unique<VulkanGPUDevice>(validation, headless);
+            device = make_unique<VulkanGPUDevice>(flags);
             break;
 #endif
-
+            /*
 #if defined(ALIMER_D3D12)
         case GPUBackend::Direct3D12:
             ALIMER_LOGINFO("Using Direct3D12 render driver");
             device = make_unique<D3D12GPUDevice>(validation);
             break;
-#endif
+#endif*/
 
         case GPUBackend::Metal:
             break;
