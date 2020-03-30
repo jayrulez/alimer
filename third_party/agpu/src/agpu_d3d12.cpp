@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#if defined(GPU_D3D12_BACKEND)
 #include "agpu_internal.h"
-
+#if defined(GPU_D3D12_BACKEND)
 #ifndef NOMINMAX
 #   define NOMINMAX
 #endif 
@@ -796,7 +795,6 @@ void d3d12_destroy_swapchain(d3d12_swapchain* swapchain) {
 }
 
 bool agpu_d3d12_supported(void) {
-
     if (d3d12.available_initialized) {
         return d3d12.available;
     }

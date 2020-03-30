@@ -46,6 +46,11 @@
 #    define AGPU_API extern _AGPU_API_DECL
 #endif
 
+#ifndef AGPU_DEBUG
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#       define AGPU_DEBUG
+#   endif
+#endif 
 
 enum {
     AGPU_MAX_COLOR_ATTACHMENTS = 8u,
@@ -214,7 +219,7 @@ typedef struct agpu_buffer_desc {
 typedef struct agpu_config {
     agpu_backend preferred_backend;
     agpu_config_flags flags;
-    //void* (*get_gl_proc_address)(const char*);
+    void* (*get_gl_proc_address)(const char*);
     void (*callback)(void* context, const char* message, int level);
     void* context;
     uint32_t max_inflight_frames;

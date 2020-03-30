@@ -23,10 +23,31 @@
 #pragma once
 
 #include "agpu.h"
-#include <stdlib.h>
+
+#if defined(_WIN32)
+#   include <malloc.h>
+#else
+#   include <alloca.h>
+#endif
+
 #include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <new>
+
+#if defined(_WIN32)
+#   if defined(alloca)
+#       undef alloca
+#   endif
+#   define alloca _alloca
+#endif
+
+#define _AGPU_ALLOCA(type)     ((type*) alloca(sizeof(type)))
+#define _AGPU_ALLOCAN(type, count) ((type*) alloca(sizeof(type) * count))
+
+#ifndef __cplusplus
+#  define nullptr ((void*)0)
+#endif
 
 #define _gpu_def(val, def) (((val) == 0) ? (def) : (val))
 #define _gpu_min(a,b) ((a<b)?a:b)
@@ -34,6 +55,8 @@
 #define _gpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
+#ifdef __cplusplus
+#include <new>
 template <typename T, uint32_t MAX_COUNT>
 struct Pool
 {
@@ -73,6 +96,7 @@ struct Pool
 
     static constexpr uint32_t CAPACITY = MAX_COUNT;
 };
+#endif
 
 typedef struct agpu_renderer {
     agpu_backend(*get_backend)(void);

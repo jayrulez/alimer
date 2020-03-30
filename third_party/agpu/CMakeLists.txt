@@ -48,8 +48,6 @@ endif ()
 
 option(AGPU_INSTALL "Generate installation target" ON)
 
-set(AGPU_THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
-
 # agpu
 set(SOURCE_FILES 
     include/agpu.h
@@ -69,7 +67,7 @@ target_include_directories(agpu PUBLIC
 )
 
 if (AGPU_BACKEND_OPENGL)
-    #target_compile_definitions(agpu PRIVATE GPU_GL_BACKEND)
+    target_compile_definitions(agpu PRIVATE GPU_GL_BACKEND)
     #target_include_directories(agpu PRIVATE
     #    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos
     #)
@@ -77,7 +75,7 @@ endif ()
 
 if (AGPU_BACKEND_VULKAN)
     target_compile_definitions(agpu PRIVATE GPU_VK_BACKEND)
-    target_link_libraries(agpu PRIVATE vma)
+    target_link_libraries(agpu PRIVATE volk vma)
 endif ()
 
 if (AGPU_BACKEND_D3D11 OR AGPU_BACKEND_D3D12)

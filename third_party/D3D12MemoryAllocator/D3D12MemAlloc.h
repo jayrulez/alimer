@@ -24,7 +24,7 @@
 
 /** \mainpage D3D12 Memory Allocator
 
-<b>Version 2.0.0-development</b> (2020-01-27)
+<b>Version 2.0.0-development</b> (2020-03-24)
 
 Copyright (c) 2019-2020 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
@@ -335,6 +335,27 @@ Features deliberately excluded from the scope of this library:
     #include <dxgi.h>
 #endif
 
+/*
+When defined to value other than 0, the library will try to use
+D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT or D3D12_SMALL_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
+for created textures when possible, which can save memory because some small textures
+may get their alignment 4K and their size a multiply of 4K instead of 64K.
+
+#define D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT 0
+    Disables small texture alignment.
+#define D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT 1
+    Enables conservative algorithm that will use small alignment only for some textures
+    that are surely known to support it.
+#define D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT 2
+    Enables query for small alignment to D3D12 (based on Microsoft sample) which will
+    enable small alignment for more textures, but will also generate D3D Debug Layer
+    error #721 on call to ID3D12Device::GetResourceAllocationInfo, which you should just
+    ignore.
+*/
+#ifndef D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT
+    #define D3D12MA_USE_SMALL_RESOURCE_PLACEMENT_ALIGNMENT 1
+#endif
+
 /// \cond INTERNAL
 
 #define D3D12MA_CLASS_NO_COPY(className) \
@@ -419,6 +440,23 @@ struct ALLOCATION_DESC
     It must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
     */
     D3D12_HEAP_TYPE HeapType;
+    /** \brief Additional heap flags to be used when allocating memory.
+
+    In most cases it can be 0.
+    
+    - If you use D3D12MA::Allocator::CreateResource(), you don't need to care.
+      In case of D3D12MA::Allocator::GetD3D12Options()`.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1`,
+      necessary flag `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
+      or `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` is added automatically.
+    - If you use D3D12MA::Allocator::AllocateMemory() and
+      D3D12MA::Allocator::GetD3D12Options()`.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1`,
+      you must specify one of those `ALLOW_ONLY` flags. When it's `TIER_2`, you can leave it 0.
+    - If configuration macro `D3D12MA_ALLOW_SHADER_ATOMICS` is set to 1 (which is the default),
+      `D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS` is added automatically wherever it might be needed.
+    - You can specify additional flags if needed. Then the memory will always be allocated as
+      separate block using `D3D12Device::CreateCommittedResource` or `CreateHeap`, not as part of an existing larget block.
+    */
+    D3D12_HEAP_FLAGS ExtraHeapFlags;
 };
 
 /** \brief Represents single memory allocation.
@@ -486,6 +524,25 @@ public:
     */
     LPCWSTR GetName() const { return m_Name; }
 
+    /** \brief Returns `TRUE` if the memory of the allocation was filled with zeros when the allocation was created.
+
+    Returns `TRUE` only if the allocator is sure that the entire memory where the
+    allocation was created was filled with zeros at the moment the allocation was made.
+    
+    Returns `FALSE` if the memory could potentially contain garbage data.
+    If it's a render-target or depth-stencil texture, it then needs proper
+    initialization with `ClearRenderTargetView`, `ClearDepthStencilView`, `DiscardResource`,
+    or a copy operation, as described on page:
+    [ID3D12Device::CreatePlacedResource method - Notes on the required resource initialization](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createplacedresource#notes-on-the-required-resource-initialization).
+    Please note that rendering a fullscreen triangle or quad to the texture as
+    a render target is not a proper way of initialization!
+
+    See also articles:
+    ["Coming to DirectX 12: More control over memory allocation"](https://devblogs.microsoft.com/directx/coming-to-directx-12-more-control-over-memory-allocation/),
+    ["Initializing DX12 Textures After Allocation and Aliasing"](https://asawicki.info/news_1724_initializing_dx12_textures_after_allocation_and_aliasing).
+    */
+    BOOL WasZeroInitialized() const { return m_PackedData.WasZeroInitialized(); }
+
 private:
     friend class AllocatorPimpl;
     friend class BlockVector;
@@ -493,19 +550,17 @@ private:
     template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
     template<typename T> friend class PoolAllocator;
 
-    AllocatorPimpl* m_Allocator;
     enum Type
     {
         TYPE_COMMITTED,
         TYPE_PLACED,
         TYPE_HEAP,
         TYPE_COUNT
-    } m_Type;
+    };
+
+    AllocatorPimpl* m_Allocator;
     UINT64 m_Size;
     ID3D12Resource* m_Resource;
-    D3D12_RESOURCE_DIMENSION m_ResourceDimension;
-    D3D12_RESOURCE_FLAGS m_ResourceFlags;
-    D3D12_TEXTURE_LAYOUT m_TextureLayout;
     UINT m_CreationFrameIndex;
     wchar_t* m_Name;
 
@@ -529,7 +584,33 @@ private:
         } m_Heap;
     };
 
-    Allocation(AllocatorPimpl* allocator, UINT64 size);
+    struct PackedData
+    {
+    public:
+        PackedData() :
+            m_Type(0), m_ResourceDimension(0), m_ResourceFlags(0), m_TextureLayout(0), m_WasZeroInitialized(0) { }
+
+        Type GetType() const { return (Type)m_Type; }
+        D3D12_RESOURCE_DIMENSION GetResourceDimension() const { return (D3D12_RESOURCE_DIMENSION)m_ResourceDimension; }
+        D3D12_RESOURCE_FLAGS GetResourceFlags() const { return (D3D12_RESOURCE_FLAGS)m_ResourceFlags; }
+        D3D12_TEXTURE_LAYOUT GetTextureLayout() const { return (D3D12_TEXTURE_LAYOUT)m_TextureLayout; }
+        BOOL WasZeroInitialized() const { return (BOOL)m_WasZeroInitialized; }
+
+        void SetType(Type type);
+        void SetResourceDimension(D3D12_RESOURCE_DIMENSION resourceDimension);
+        void SetResourceFlags(D3D12_RESOURCE_FLAGS resourceFlags);
+        void SetTextureLayout(D3D12_TEXTURE_LAYOUT textureLayout);
+        void SetWasZeroInitialized(BOOL wasZeroInitialized) { m_WasZeroInitialized = wasZeroInitialized ? 1 : 0; }
+
+    private:
+        UINT m_Type : 2;               // enum Type
+        UINT m_ResourceDimension : 3;  // enum D3D12_RESOURCE_DIMENSION
+        UINT m_ResourceFlags : 7;      // flags D3D12_RESOURCE_FLAGS
+        UINT m_TextureLayout : 2;      // enum D3D12_TEXTURE_LAYOUT
+        UINT m_WasZeroInitialized : 1; // BOOL
+    } m_PackedData;
+
+    Allocation(AllocatorPimpl* allocator, UINT64 size, BOOL wasZeroInitialized);
     ~Allocation();
     void InitCommitted(D3D12_HEAP_TYPE heapType);
     void InitPlaced(UINT64 offset, UINT64 alignment, NormalBlock* block);
@@ -659,7 +740,7 @@ struct Budget
     also occupying the memory, like swapchain, pipeline state objects, descriptor heaps, command lists, or
     memory blocks allocated outside of this library, if any.
     */
-    UINT64 Usage;
+    UINT64 UsageBytes;
 
     /** \brief Estimated amount of memory available to the program, in bytes.
 
@@ -667,10 +748,10 @@ struct Budget
 
     It might be different (most probably smaller) than memory sizes reported in `DXGI_ADAPTER_DESC` due to factors
     external to the program, like other programs also consuming system resources.
-    Difference `Budget - Usage` is the amount of additional memory that can probably
+    Difference `BudgetBytes - UsageBytes` is the amount of additional memory that can probably
     be allocated without problems. Exceeding the budget may result in various problems.
     */
-    UINT64 Budget;
+    UINT64 BudgetBytes;
 };
 
 /**
@@ -733,12 +814,13 @@ public:
     This function is similar to `ID3D12Device::CreateHeap`, but it may really assign
     part of a larger, existing heap to the allocation.
 
-    If ResourceHeapTier = 1, `heapFlags` must be one of these values, depending on type
+    If ResourceHeapTier = 1, `heapFlags` must contain one of these values, depending on type
     of resources you are going to create in this memory:
     `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`,
     `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
     `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`.
-    If ResourceHeapTier = 2, `heapFlags` may be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES`.
+    If ResourceHeapTier = 2, `heapFlags` may be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0.
+    Additional flags in `heapFlags` are allowed as well.
 
     `pAllocInfo->SizeInBytes` must be multiply of 64KB.
     `pAllocInfo->Alignment` must be one of the legal values as described in documentation of `D3D12_HEAP_DESC`.
@@ -748,9 +830,39 @@ public:
     */
     HRESULT AllocateMemory(
         const ALLOCATION_DESC* pAllocDesc,
-        D3D12_HEAP_FLAGS heapFlags,
         const D3D12_RESOURCE_ALLOCATION_INFO* pAllocInfo,
         Allocation** ppAllocation);
+
+    /** \brief Creates a new resource in place of an existing allocation. This is useful for memory aliasing.
+
+    \param pAllocation Existing allocation indicating the memory where the new resource should be created.
+        It can be created using D3D12MA::Allocator::CreateResource and already have a resource bound to it,
+        or can be a raw memory allocated with D3D12MA::Allocator::AllocateMemory.
+        It must not be created as committed so that `ID3D12Heap` is available and not implicit.
+    \param AllocationLocalOffset Additional offset in bytes to be applied when allocating the resource.
+        Local from the start of `pAllocation`, not the beginning of the whole `ID3D12Heap`!
+        If the new resource should start from the beginning of the `pAllocation` it should be 0.
+    \param pResourceDesc Description of the new resource to be created.
+    \param InitialResourceState
+    \param pOptimizedClearValue
+    \param riidResource
+    \param[out] ppvResource Returns pointer to the new resource.
+        The resource is not bound with `pAllocation`.
+        This pointer must not be null - you must get the resource pointer and `Release` it when no longer needed.
+
+    Memory requirements of the new resource are checked for validation.
+    If its size exceeds the end of `pAllocation` or required alignment is not fulfilled
+    considering `pAllocation->GetOffset() + AllocationLocalOffset`, the function
+    returns `E_INVALIDARG`.
+    */
+    HRESULT CreateAliasingResource(
+        Allocation* pAllocation,
+        UINT64 AllocationLocalOffset,
+        const D3D12_RESOURCE_DESC* pResourceDesc,
+        D3D12_RESOURCE_STATES InitialResourceState,
+        const D3D12_CLEAR_VALUE *pOptimizedClearValue,
+        REFIID riidResource,
+        void** ppvResource);
 
     /** \brief Sets the index of the current frame.
 
@@ -777,6 +889,7 @@ public:
 
     /// Builds and returns statistics as a string in JSON format.
     /** @param[out] ppStatsString Must be freed using Allocator::FreeStatsString.
+    @param DetailedMap `TRUE` to include full list of allocations (can make the string quite long), `FALSE` to only return statistics.
     */
     void BuildStatsString(WCHAR** ppStatsString, BOOL DetailedMap);
 

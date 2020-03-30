@@ -25,8 +25,9 @@
 static agpu_renderer* s_renderer = nullptr;
 
 bool agpu_is_backend_supported(agpu_backend backend) {
-    if (backend == AGPU_BACKEND_DEFAULT)
+    if (backend == AGPU_BACKEND_DEFAULT) {
         backend = agpu_get_default_platform_backend();
+    }
 
     switch (backend)
     {
@@ -120,8 +121,6 @@ bool agpu_init(const agpu_config* config) {
 
     //s_logCallback = descriptor->logCallback;
     return false;
-
-    return true;
 }
 
 void agpu_shutdown(void) {
