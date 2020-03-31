@@ -52,10 +52,10 @@ option(AGPU_INSTALL "Generate installation target" ON)
 set(SOURCE_FILES 
     include/agpu.h
     src/agpu_internal.h
-    src/agpu.cpp
-    src/agpu_gl.cpp
-    src/agpu_vk.cpp
-    src/agpu_d3d12.cpp
+    src/agpu.c
+    src/agpu_backend_gl.c
+    #src/agpu_vk.cpp
+    #src/agpu_d3d12.cpp
 )
 
 add_library(agpu STATIC ${SOURCE_FILES})
@@ -67,7 +67,7 @@ target_include_directories(agpu PUBLIC
 )
 
 if (AGPU_BACKEND_OPENGL)
-    target_compile_definitions(agpu PRIVATE GPU_GL_BACKEND)
+    target_compile_definitions(agpu PRIVATE AGPU_BACKEND_GL)
     #target_include_directories(agpu PRIVATE
     #    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos
     #)

@@ -12,15 +12,15 @@ project (
 
 # Options
 if (WIN32)
-    option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
-    option(ALIMER_VULKAN "Include Vulkan backend" ON)
+    set(AGPU_API vk CACHE STRING  "Select GPU API [vk | d3d12]") 
+	set_property(CACHE AGPU_API PROPERTY STRINGS vk d3d12)
 elseif (WINDOWS_STORE)
-    option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
+    set(AGPU_API d3d12 CACHE STRING "Use d3d12 GPU API" FORCE)
 elseif (EMSCRIPTEN)
-    set(ALIMER_OPENGL ON CACHE BOOL "Use OpenGL backend" FORCE)
+    set(AGPU_API wgpu CACHE STRING "Use WebGPU GPU API" FORCE)
 else()
-    option(ALIMER_OPENGL "Include Vulkan backend" ON)
-	option(ALIMER_VULKAN "Include Vulkan backend" ON)
+    set(AGPU_API vk CACHE STRING  "Select GPU API [vk | gl]") 
+	set_property(CACHE AGPU_API PROPERTY STRINGS vk gl)
 endif ()
 
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
@@ -78,13 +78,7 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-if (ALIMER_D3D12)
-    message (STATUS "Graphics API:          Direct3D12")
-endif ()
-if (ALIMER_VULKAN)
-    message (STATUS "Graphics API:          Vulkan")
-endif ()
-
+message (STATUS "GPU API:          ${AGPU_API}")
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

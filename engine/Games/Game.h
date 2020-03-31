@@ -105,7 +105,6 @@ namespace alimer
         Window main_window;
         std::vector<GameSystem*> gameSystems;
         InputManager* input;
-        std::unique_ptr<GPUDevice> gpuDevice;
         bool headless{ false };
     };
 

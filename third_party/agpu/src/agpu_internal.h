@@ -55,6 +55,12 @@
 #define _gpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
+#ifndef AGPU_DEBUG
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#       define AGPU_DEBUG
+#   endif
+#endif 
+
 #ifdef __cplusplus
 #include <new>
 template <typename T, uint32_t MAX_COUNT>
@@ -107,8 +113,11 @@ typedef struct agpu_renderer {
     void (*end_frame)(void);
 } agpu_renderer;
 
+#if defined(AGPU_BACKEND_GL)
 bool agpu_gl_supported(void);
 agpu_renderer* agpu_create_gl_backend(void);
+#endif
+
 bool agpu_vk_supported(void);
 agpu_renderer* agpu_create_vk_backend(void);
 bool agpu_d3d12_supported(void);

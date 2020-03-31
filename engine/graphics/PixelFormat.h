@@ -23,6 +23,7 @@
 #pragma once
 
 #include "core/Assert.h"
+#include "gpu/agpu.h"
 #include <string>
 
 namespace alimer

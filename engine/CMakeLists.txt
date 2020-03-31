@@ -34,6 +34,29 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+
+string(TOLOWER "${AGPU_API}" AGPU_BACKEND_FILE)
+set(GPU_HEADER_FILES
+    gpu/agpu.h
+)
+
+set(GPU_SOURCE_FILES
+    gpu/agpu.c
+)
+
+if (${AGPU_API} STREQUAL "vk")
+    set(GPU_SOURCE_FILES ${GPU_SOURCE_FILES}
+        gpu/vk/vk.h
+        gpu/vk/vk.c
+        gpu/vk/vk_mem_alloc.h
+        gpu/vk/vk_mem_alloc.cpp
+        gpu/agpu_vk.c
+    )
+endif ()
+
+set(HEADER_FILES ${HEADER_FILES} ${GPU_HEADER_FILES})
+set(SOURCE_FILES ${SOURCE_FILES} ${GPU_SOURCE_FILES})
+
 define_engine_source_files(
     .
     core
@@ -48,10 +71,6 @@ define_engine_source_files(
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
-
-if(ALIMER_VULKAN)
-    define_engine_source_files(graphics/vulkan)
-endif()
 
 group_sources()
 
@@ -75,13 +94,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE AGPU_BACKEND_${AGPU_API_UPPER})
+
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
 
-if(ALIMER_VULKAN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
+if (${AGPU_API} STREQUAL "vk")
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
 endif()
 
 if (MSVC)

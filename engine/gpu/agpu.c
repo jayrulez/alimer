@@ -20,9 +20,15 @@
 // THE SOFTWARE.
 //
 
-#include "agpu_internal.h"
+#include "agpu.h"
 
-static agpu_renderer* s_renderer = nullptr;
+void agpu_log(const char* message, agpu_log_level level) {
+    /*if (state.desc.callback) {
+        state.desc.callback(state.desc.context, s, AGPU_LOG_LEVEL_ERROR);
+    }*/
+}
+
+/*static agpu_renderer* s_renderer = nullptr;
 
 bool agpu_is_backend_supported(agpu_backend backend) {
     if (backend == AGPU_BACKEND_DEFAULT) {
@@ -39,8 +45,11 @@ bool agpu_is_backend_supported(agpu_backend backend) {
         //    return vgpu_d3d11_supported();
     case AGPU_BACKEND_DIRECT3D12:
         return agpu_d3d12_supported();
+#if defined(AGPU_BACKEND_GL)
     case AGPU_BACKEND_OPENGL:
         return agpu_gl_supported();
+#endif // defined(AGPU_BACKEND_GL)
+
     default:
         return false;
     }
@@ -103,13 +112,15 @@ bool agpu_init(const agpu_config* config) {
             //vgpuLogError("OpenGL backend is not supported");
         }
         break;
-
+#if defined(AGPU_BACKEND_GL)
     case AGPU_BACKEND_OPENGL:
         renderer = agpu_create_gl_backend();
         if (!renderer) {
             //vgpuLogError("OpenGL backend is not supported");
         }
         break;
+#endif // defined(AGPU_BACKEND_GL)
+
     default:
         break;
     }
@@ -140,4 +151,4 @@ void agpu_begin_frame(void) {
 
 void agpu_end_frame(void) {
     s_renderer->end_frame();
-}
+}*/

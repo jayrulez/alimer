@@ -1,6 +1,3 @@
-#add_subdirectory(agpu)
-#set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
-
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -26,7 +23,7 @@ if (ALIMER_D3D12)
     set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
 endif ()
 
-if (ALIMER_VULKAN)
+if (${AGPU_API} STREQUAL "vk")
     # vulkan headers
     add_library(vulkan INTERFACE)
     set (VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/khronos)
@@ -56,26 +53,4 @@ if (ALIMER_VULKAN)
             target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
         endif()
     endif()
-
-    # vma
-    add_library(vma INTERFACE)
-    set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma)
-    target_sources(vma INTERFACE 
-        ${VMA_DIR}/vk_mem_alloc.h
-        ${VMA_DIR}/vk_mem_alloc.natvis
-    )
-    target_include_directories(vma INTERFACE ${VMA_DIR})
-    target_link_libraries(vma INTERFACE vulkan)
-
-    # volk
-    set(VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk")
-    set(VOLK_FILES
-        "${VOLK_DIR}/volk.c"
-        "${VOLK_DIR}/volk.h"
-    )
-
-    add_library(volk STATIC ${VOLK_FILES})
-    target_link_libraries(volk PUBLIC vulkan)
-    target_include_directories(volk PUBLIC ${VOLK_DIR})
-    set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
 endif ()

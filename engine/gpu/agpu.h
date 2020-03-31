@@ -45,6 +45,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+typedef struct agpu_device_t* agpu_device;
+
 enum {
     AGPU_MAX_COLOR_ATTACHMENTS = 8u,
     AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
@@ -60,6 +62,15 @@ enum {
     AGPU_MAX_FRAMEBUFFERS = 256u,
     AGPU_MAX_PIPELINES = 256u,
 };
+
+typedef enum agpu_log_level {
+    AGPU_LOG_LEVEL_VERBOSE = 0,
+    AGPU_LOG_LEVEL_INFO = 1,
+    AGPU_LOG_LEVEL_WARNING = 2,
+    AGPU_LOG_LEVEL_ERROR = 3,
+    _AGPU_LOG_LEVEL_COUNT,
+    _AGPU_LOG_LEVEL__FORCE_U32 = 0x7FFFFFFF
+} agpu_log_level;
 
 typedef enum agpu_backend {
     AGPU_BACKEND_DEFAULT = 0,
@@ -185,8 +196,7 @@ typedef enum agpu_pixel_format {
 typedef enum agpu_config_flags_bits {
     AGPU_CONFIG_FLAGS_NONE = 0,
     AGPU_CONFIG_FLAGS_HEADLESS = 0x1,
-    AGPU_CONFIG_FLAGS_VALIDATION = 0x2,
-    AGPU_CONFIG_FLAGS_GPU_BASED_VALIDATION = 0x4,
+    AGPU_CONFIG_FLAGS_VALIDATION = 0x2
 } agpu_config_flags_bits;
 typedef uint32_t agpu_config_flags;
 
@@ -209,26 +219,24 @@ typedef struct agpu_buffer_desc {
     const char* name;
 } agpu_buffer_desc;
 
-typedef struct agpu_config {
-    agpu_backend preferred_backend;
+typedef void(*agpu_log_callback)(void* context, const char* message, agpu_log_level level);
+
+typedef struct agpu_desc {
     agpu_config_flags flags;
-    void* (*get_gl_proc_address)(const char*);
-    void (*callback)(void* context, const char* message, int level);
+    //void* (*get_gl_proc_address)(const char*);
+    agpu_log_callback callback;
     void* context;
     uint32_t max_inflight_frames;
     const agpu_swapchain_desc* swapchain;
-} agpu_config;
+} agpu_desc;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #if !defined(AGPU_SKIP_DECLARATIONS)
-
-    AGPU_EXPORT bool agpu_is_backend_supported(agpu_backend backend);
-    AGPU_EXPORT agpu_backend agpu_get_default_platform_backend();
-
-    AGPU_EXPORT bool agpu_init(const agpu_config* config);
+    AGPU_EXPORT void agpu_log(const char* message, agpu_log_level level);
+    AGPU_EXPORT bool agpu_init(const char* application_name, const agpu_desc* desc);
     AGPU_EXPORT void agpu_shutdown(void);
     AGPU_EXPORT void agpu_wait_idle(void);
     AGPU_EXPORT void agpu_begin_frame(void);
