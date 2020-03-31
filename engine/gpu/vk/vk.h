@@ -40,6 +40,12 @@ extern "C" {
     extern PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
     extern PFN_vkGetPhysicalDeviceSparseImageFormatProperties vkGetPhysicalDeviceSparseImageFormatProperties;
 
+    extern PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
+    extern PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
+    extern PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+
 #if defined(_WIN32)
     extern PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR vkGetPhysicalDeviceWin32PresentationSupportKHR;
     extern PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
@@ -50,6 +56,10 @@ extern "C" {
     extern PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT;
     extern PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
     extern PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT;
+
+    /* Device functions */
+    extern PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+    extern PFN_vkGetDeviceQueue vkGetDeviceQueue;
 
     bool agpu_vk_init_loader();
     uint32_t agpu_vk_get_instance_version(void);

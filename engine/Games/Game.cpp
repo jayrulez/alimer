@@ -57,6 +57,9 @@ namespace alimer
 
         // Init graphics with main window.
         agpu_desc gpu_desc = {};
+#ifdef _DEBUG
+        gpu_desc.flags |= AGPU_CONFIG_FLAGS_VALIDATION;
+#endif
         if (!agpu_init("alimer", &gpu_desc)) {
             headless = true;
         }

@@ -21,11 +21,61 @@
 //
 
 #include "agpu.h"
+#include <stdio.h> 
+#include <stdarg.h>
+#include <string.h>
+
+#define AGPU_MAX_LOG_MESSAGE (4096)
+
+static void agpu_default_log_callback(void* user_data, const char* message, agpu_log_level level);
+static agpu_log_callback s_log_function = agpu_default_log_callback;
+static void* s_log_user_data = NULL;
+
+void agpu_get_log_callback_function(agpu_log_callback* callback, void** user_data) {
+    if (callback) {
+        *callback = s_log_function;
+    }
+    if (user_data) {
+        *user_data = s_log_user_data;
+    }
+}
+
+void agpu_set_log_callback_function(agpu_log_callback callback, void* user_data) {
+    s_log_function = callback;
+    s_log_user_data = user_data;
+}
+
+void agpu_default_log_callback(void* user_data, const char* message, agpu_log_level level) {
+
+}
 
 void agpu_log(const char* message, agpu_log_level level) {
-    /*if (state.desc.callback) {
-        state.desc.callback(state.desc.context, s, AGPU_LOG_LEVEL_ERROR);
-    }*/
+    if (s_log_function) {
+        s_log_function(s_log_user_data, message, level);
+    }
+}
+
+void agpu_log_message_v(agpu_log_level level, const char* format, va_list args) {
+    if (s_log_function) {
+        char message[AGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, AGPU_MAX_LOG_MESSAGE, format, args);
+        size_t len = strlen(message);
+        if ((len > 0) && (message[len - 1] == '\n')) {
+            message[--len] = '\0';
+            if ((len > 0) && (message[len - 1] == '\r')) {  /* catch "\r\n", too. */
+                message[--len] = '\0';
+            }
+        }
+    }
+}
+
+void agpu_log_format(agpu_log_level level, const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        agpu_log_message_v(level, format, args);
+        va_end(args);
+    }
 }
 
 /*static agpu_renderer* s_renderer = nullptr;

@@ -45,7 +45,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct agpu_device_t* agpu_device;
+typedef struct gpu_swapchain gpu_swapchain;
 
 enum {
     AGPU_MAX_COLOR_ATTACHMENTS = 8u,
@@ -69,7 +69,7 @@ typedef enum agpu_log_level {
     AGPU_LOG_LEVEL_WARNING = 2,
     AGPU_LOG_LEVEL_ERROR = 3,
     _AGPU_LOG_LEVEL_COUNT,
-    _AGPU_LOG_LEVEL__FORCE_U32 = 0x7FFFFFFF
+    _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
 } agpu_log_level;
 
 typedef enum agpu_backend {
@@ -82,12 +82,21 @@ typedef enum agpu_backend {
     AGPU_BACKEND_COUNT
 } agpu_backend;
 
+typedef enum agpu_adapter_type {
+    AGPU_ADAPTER_TYPE_DISCRETE_GPU = 0,
+    AGPU_ADAPTER_TYPE_INTEGRATED_GPU = 1,
+    AGPU_ADAPTER_TYPE_CPU = 2,
+    AGPU_ADAPTER_TYPE_UNKNOW = 3,
+    _AGPU_ADAPTER_TYPE_COUNT,
+    _AGPU_ADAPTER_TYPE_FORCE_U32 = 0x7FFFFFFF
+} agpu_adapter_type;
+
 typedef enum agpu_queue_type {
     AGPU_QUEUE_TYPE_GRAPHICS = 0,
     AGPU_QUEUE_TYPE_COMPUTE,
     AGPU_QUEUE_TYPE_COPY,
-    AGPU_QUEUE_TYPE_COUNT,
-    AGPU_QUEUE_TYPE_FORCE_U32 = 0x7FFFFFFF
+    _AGPU_QUEUE_TYPE_COUNT,
+    _AGPU_QUEUE_TYPE_FORCE_U32 = 0x7FFFFFFF
 } agpu_queue_type;
 
 /// Defines pixel format.
@@ -219,13 +228,12 @@ typedef struct agpu_buffer_desc {
     const char* name;
 } agpu_buffer_desc;
 
-typedef void(*agpu_log_callback)(void* context, const char* message, agpu_log_level level);
+typedef void(*agpu_log_callback)(void* user_data, const char* message, agpu_log_level level);
 
 typedef struct agpu_desc {
     agpu_config_flags flags;
+    agpu_adapter_type preferred_adapter;
     //void* (*get_gl_proc_address)(const char*);
-    agpu_log_callback callback;
-    void* context;
     uint32_t max_inflight_frames;
     const agpu_swapchain_desc* swapchain;
 } agpu_desc;
@@ -235,7 +243,14 @@ extern "C" {
 #endif
 
 #if !defined(AGPU_SKIP_DECLARATIONS)
+    /// Get the current log output function.
+    AGPU_EXPORT void agpu_get_log_callback_function(agpu_log_callback* callback, void** user_data);
+    /// Set the current log output function.
+    AGPU_EXPORT void agpu_set_log_callback_function(agpu_log_callback callback, void* user_data);
+
     AGPU_EXPORT void agpu_log(const char* message, agpu_log_level level);
+    AGPU_EXPORT void agpu_log_format(agpu_log_level level, const char* format, ...);
+
     AGPU_EXPORT bool agpu_init(const char* application_name, const agpu_desc* desc);
     AGPU_EXPORT void agpu_shutdown(void);
     AGPU_EXPORT void agpu_wait_idle(void);
