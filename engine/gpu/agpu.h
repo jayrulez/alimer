@@ -45,9 +45,13 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct gpu_swapchain gpu_swapchain;
+typedef struct agpu_device agpu_device;
+typedef struct agpu_context agpu_context;
+typedef struct agpu_buffer agpu_buffer;
+typedef struct gpu_swapchain { uint32_t id; } gpu_swapchain;
 
 enum {
+    AGPU_INVALID_ID = 0,
     AGPU_MAX_COLOR_ATTACHMENTS = 8u,
     AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
     AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
@@ -204,19 +208,15 @@ typedef enum agpu_pixel_format {
 
 typedef enum agpu_config_flags_bits {
     AGPU_CONFIG_FLAGS_NONE = 0,
-    AGPU_CONFIG_FLAGS_HEADLESS = 0x1,
-    AGPU_CONFIG_FLAGS_VALIDATION = 0x2
+    AGPU_CONFIG_FLAGS_VALIDATION = 0x1
 } agpu_config_flags_bits;
 typedef uint32_t agpu_config_flags;
 
 typedef struct agpu_swapchain_desc {
-    /// Native display type.
-    void* native_display;
     /// Native window handle.
-    void* native_handle;
+    uintptr_t native_handle;
 
-    uint32_t width;
-    uint32_t height;
+    uint32_t image_count;
 
     agpu_pixel_format   color_format;
     agpu_pixel_format   depth_stencil_format;
@@ -228,12 +228,66 @@ typedef struct agpu_buffer_desc {
     const char* name;
 } agpu_buffer_desc;
 
+typedef struct agpu_features {
+    bool  independent_blend;
+    bool  compute_shader;
+    bool  geometry_shader;
+    bool  tessellation_shader;
+    bool  multi_viewport;
+    bool  index_uint32;
+    bool  multi_draw_indirect;
+    bool  fill_mode_non_solid;
+    bool  sampler_anisotropy;
+    bool  texture_compression_BC;
+    bool  texture_compression_PVRTC;
+    bool  texture_compression_ETC2;
+    bool  texture_compression_ASTC;
+    //bool  texture1D;
+    bool  texture_3D;
+    bool  texture_2D_array;
+    bool  texture_cube_array;
+    bool  raytracing;
+} agpu_features;
+
+typedef struct agpu_limits {
+    uint32_t        max_vertex_attributes;
+    uint32_t        max_vertex_bindings;
+    uint32_t        max_vertex_attribute_offset;
+    uint32_t        max_vertex_binding_stride;
+    uint32_t        max_texture_size_1d;
+    uint32_t        max_texture_size_2d;
+    uint32_t        max_texture_size_3d;
+    uint32_t        max_texture_size_cube;
+    uint32_t        max_texture_array_layers;
+    uint32_t        max_color_attachments;
+    uint32_t        max_uniform_buffer_size;
+    uint64_t        min_uniform_buffer_offset_alignment;
+    uint32_t        max_storage_buffer_size;
+    uint64_t        min_storage_buffer_offset_alignment;
+    uint32_t        max_sampler_anisotropy;
+    uint32_t        max_viewports;
+    uint32_t        max_viewport_width;
+    uint32_t        max_viewport_height;
+    uint32_t        max_tessellation_patch_size;
+    float           point_size_range_min;
+    float           point_size_range_max;
+    float           line_width_range_min;
+    float           line_width_range_max;
+    uint32_t        max_compute_shared_memory_size;
+    uint32_t        max_compute_work_group_count_x;
+    uint32_t        max_compute_work_group_count_y;
+    uint32_t        max_compute_work_group_count_z;
+    uint32_t        max_compute_work_group_invocations;
+    uint32_t        max_compute_work_group_size_x;
+    uint32_t        max_compute_work_group_size_y;
+    uint32_t        max_compute_work_group_size_z;
+} agpu_limits;
+
 typedef void(*agpu_log_callback)(void* user_data, const char* message, agpu_log_level level);
 
 typedef struct agpu_desc {
     agpu_config_flags flags;
     agpu_adapter_type preferred_adapter;
-    //void* (*get_gl_proc_address)(const char*);
     uint32_t max_inflight_frames;
     const agpu_swapchain_desc* swapchain;
 } agpu_desc;
@@ -242,7 +296,6 @@ typedef struct agpu_desc {
 extern "C" {
 #endif
 
-#if !defined(AGPU_SKIP_DECLARATIONS)
     /// Get the current log output function.
     AGPU_EXPORT void agpu_get_log_callback_function(agpu_log_callback* callback, void** user_data);
     /// Set the current log output function.
@@ -251,16 +304,18 @@ extern "C" {
     AGPU_EXPORT void agpu_log(const char* message, agpu_log_level level);
     AGPU_EXPORT void agpu_log_format(agpu_log_level level, const char* format, ...);
 
-    AGPU_EXPORT bool agpu_init(const char* application_name, const agpu_desc* desc);
-    AGPU_EXPORT void agpu_shutdown(void);
-    AGPU_EXPORT void agpu_wait_idle(void);
-    AGPU_EXPORT void agpu_begin_frame(void);
-    AGPU_EXPORT void agpu_end_frame(void);
+    AGPU_EXPORT agpu_device* agpu_create_device(const char* application_name, const agpu_desc* desc);
+    AGPU_EXPORT void agpu_destroy_device(agpu_device* device);
+    AGPU_EXPORT void agpu_wait_idle(agpu_device* device);
+    AGPU_EXPORT void agpu_begin_frame(agpu_device* device);
+    AGPU_EXPORT void agpu_end_frame(agpu_device* device);
 
-//AGPU_EXPORT bool gpu_create_buffer(const gpu_buffer_desc* desc, gpu_buffer* result);
-//AGPU_EXPORT void gpu_destroy_buffer(gpu_buffer buffer);
+    AGPU_EXPORT agpu_backend agpu_query_backend(agpu_device* device);
+    AGPU_EXPORT agpu_features agpu_query_features(agpu_device* device);
+    AGPU_EXPORT agpu_limits agpu_query_limits(agpu_device* device);
 
-#endif  // !defined(AGPU_SKIP_DECLARATIONS)
+    AGPU_EXPORT agpu_buffer* agpu_create_buffer(agpu_device* device, const agpu_buffer_desc* desc);
+    AGPU_EXPORT void agpu_destroy_buffer(agpu_device* device, agpu_buffer* buffer);
 
 #ifdef __cplusplus
 } // extern "C"

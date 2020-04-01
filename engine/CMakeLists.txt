@@ -38,6 +38,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 string(TOLOWER "${AGPU_API}" AGPU_BACKEND_FILE)
 set(GPU_HEADER_FILES
     gpu/agpu.h
+    gpu/agpu_backend.h
 )
 
 set(GPU_SOURCE_FILES
@@ -85,6 +86,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
+    C_STANDARD 99
+    C_EXTENSIONS OFF
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -101,7 +104,8 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
 
-if (${AGPU_API} STREQUAL "vk")
+if (AGPU_VULKAN)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GPU_VK_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
 endif()
 
@@ -155,3 +159,4 @@ install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
     ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}
 )
+

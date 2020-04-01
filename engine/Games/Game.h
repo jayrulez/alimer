@@ -104,6 +104,7 @@ namespace alimer
         GameTime time;
         Window main_window;
         std::vector<GameSystem*> gameSystems;
+        agpu_device* gpu_device = nullptr;
         InputManager* input;
         bool headless{ false };
     };

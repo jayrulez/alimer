@@ -45,8 +45,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        agpu_wait_idle();
-        agpu_shutdown();
+        agpu_wait_idle(gpu_device);
+        agpu_destroy_device(gpu_device);
         os::shutdown();
     }
 
@@ -56,11 +56,18 @@ namespace alimer
         main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
 
         // Init graphics with main window.
+        agpu_swapchain_desc swapchain_desc;
+        swapchain_desc.native_handle = (uintptr_t)main_window.get_native_handle();
+        //swapchain_desc.width = main_window.get_size().width;
+        //swapchain_desc.height = main_window.get_size().height;
         agpu_desc gpu_desc = {};
 #ifdef _DEBUG
         gpu_desc.flags |= AGPU_CONFIG_FLAGS_VALIDATION;
 #endif
-        if (!agpu_init("alimer", &gpu_desc)) {
+        gpu_desc.swapchain = &swapchain_desc;
+
+        gpu_device = agpu_create_device("alimer", &gpu_desc);
+        if (!gpu_device) {
             headless = true;
         }
 
@@ -95,7 +102,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        //gpuDevice->beginFrame();
+        agpu_begin_frame(gpu_device);
 
         for (auto gameSystem : gameSystems)
         {
@@ -120,7 +127,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //gpuDevice->CommitFrame();
+        agpu_end_frame(gpu_device);
     }
 
     int Game::Run()

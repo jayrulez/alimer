@@ -1,6 +1,12 @@
 # CMake version
 cmake_minimum_required(VERSION 3.10)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_C_EXTENSIONS 99)
+
 # Project declaration
 project (
     Alimer
@@ -12,10 +18,15 @@ project (
 
 # Options
 if (WIN32)
+    option(AGPU_D3D11 "Include Direct3D11 GPU backend" ON)
+    option(AGPU_D3D12 "Include Direct3D12 GPU backend" ON)
+    option(AGPU_VULKAN "Include Vulkan GPU backend" ON)
+
     set(AGPU_API vk CACHE STRING  "Select GPU API [vk | d3d12]") 
 	set_property(CACHE AGPU_API PROPERTY STRINGS vk d3d12)
 elseif (WINDOWS_STORE)
-    set(AGPU_API d3d12 CACHE STRING "Use d3d12 GPU API" FORCE)
+    option(AGPU_D3D11 "Include Direct3D11 GPU backend" ON)
+    option(AGPU_D3D12 "Include Direct3D12 GPU backend" ON)
 elseif (EMSCRIPTEN)
     set(AGPU_API wgpu CACHE STRING "Use WebGPU GPU API" FORCE)
 else()

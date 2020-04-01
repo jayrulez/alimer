@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "agpu.h"
+#include "agpu_backend.h"
 #include <stdio.h> 
 #include <stdarg.h>
 #include <string.h>
@@ -76,6 +76,52 @@ void agpu_log_format(agpu_log_level level, const char* format, ...) {
         agpu_log_message_v(level, format, args);
         va_end(args);
     }
+}
+
+static const agpu_driver* drivers[] = {
+#if defined(GPU_VK_BACKEND)
+    &vulkan_driver,
+#endif
+};
+
+agpu_device* agpu_create_device(const char* application_name, const agpu_desc* desc) {
+    return drivers[0]->create_device(application_name, desc);
+}
+
+void agpu_destroy_device(agpu_device* device) {
+    device->destroy_device(device);
+}
+
+void agpu_wait_idle(agpu_device* device) {
+    device->wait_idle(device->renderer);
+}
+
+void agpu_begin_frame(agpu_device* device) {
+    device->begin_frame(device->renderer);
+}
+
+void agpu_end_frame(agpu_device* device) {
+    device->end_frame(device->renderer);
+}
+
+agpu_backend agpu_query_backend(agpu_device* device) {
+    return device->query_backend();
+}
+
+agpu_features agpu_query_features(agpu_device* device) {
+    return device->query_features(device->renderer);
+}
+
+agpu_limits agpu_query_limits(agpu_device* device) {
+    return device->query_limits(device->renderer);
+}
+
+agpu_buffer* agpu_create_buffer(agpu_device* device, const agpu_buffer_desc* desc) {
+    return device->create_buffer(device->renderer, desc);
+}
+
+void agpu_destroy_buffer(agpu_device* device, agpu_buffer* buffer) {
+    device->destroy_buffer(device->renderer, buffer);
 }
 
 /*static agpu_renderer* s_renderer = nullptr;
