@@ -65,6 +65,7 @@ X(vkQueueSubmit)\
 X(vkDeviceWaitIdle)\
 X(vkCreateCommandPool)\
 X(vkDestroyCommandPool)\
+X(vkResetCommandPool)\
 X(vkAllocateCommandBuffers)\
 X(vkFreeCommandBuffers)\
 X(vkBeginCommandBuffer)\
@@ -90,6 +91,8 @@ X(vkMapMemory)\
 X(vkUnmapMemory)\
 X(vkFlushMappedMemoryRanges)\
 X(vkInvalidateMappedMemoryRanges)\
+X(vkCreateSemaphore)\
+X(vkDestroySemaphore)\
 X(vkCreateSampler)\
 X(vkDestroySampler)\
 X(vkCreateRenderPass)\

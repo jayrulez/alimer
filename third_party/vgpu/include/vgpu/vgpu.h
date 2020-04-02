@@ -49,21 +49,28 @@ typedef struct agpu_device agpu_device;
 typedef struct vgpu_context vgpu_context;
 typedef struct vgpu_buffer vgpu_buffer;
 typedef struct vgpu_texture vgpu_texture;
+typedef struct vgpu_command_buffer vgpu_command_buffer;
 
 enum {
     VGPU_MAX_COLOR_ATTACHMENTS = 8u,
     VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
     VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
     VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
-    VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u
+    VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
+
+    /// Maximum commands buffers per frame.
+    VGPU_MAX_SUBMITTED_COMMAND_BUFFERS = 16u,
 };
 
 typedef enum vgpu_log_level {
-    VGPU_LOG_LEVEL_VERBOSE = 0,
-    VGPU_LOG_LEVEL_INFO = 1,
-    VGPU_LOG_LEVEL_WARNING = 2,
-    VGPU_LOG_LEVEL_ERROR = 3,
-    _VGPU_LOG_LEVEL_COUNT,
+    VGPU_LOG_LEVEL_OFF = 0,
+    VGPU_LOG_LEVEL_VERBOSE,
+    VGPU_LOG_LEVEL_DEBUG,
+    VGPU_LOG_LEVEL_INFO,
+    VGPU_LOG_LEVEL_WARN,
+    VGPU_LOG_LEVEL_ERROR,
+    VGPU_LOG_LEVEL_CRITICAL,
+    VGPU_LOG_LEVEL_COUNT,
     _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
 } vgpu_log_level;
 
@@ -194,8 +201,30 @@ typedef enum vgpu_pixel_format {
     VGPU_PIXEL_FORMAT_ASTC10x10,
     VGPU_PIXEL_FORMAT_ASTC12x12,
     /// Pixel format count.
-    VGPU_PIXEL_FORMAT_COUNT
+    VGPU_PIXEL_FORMAT_COUNT,
+    _VGPU_PIXEL_FORMAT_FORCE_U32 = 0x7FFFFFFF
 } vgpu_pixel_format;
+
+/// Defines pixel format type.
+typedef enum vgpu_pixel_format_type {
+    /// Unknown format Type
+    VGPU_PIXEL_FORMAT_TYPE_UNKNOWN = 0,
+    /// _FLOATing-point formats.
+    VGPU_PIXEL_FORMAT_TYPE_FLOAT,
+    /// Unsigned normalized formats.
+    VGPU_PIXEL_FORMAT_TYPE_UNORM,
+    /// Unsigned normalized SRGB formats
+    VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,
+    /// Signed normalized formats.
+    VGPU_PIXEL_FORMAT_TYPE_SNORM,
+    /// Unsigned integer formats.
+    VGPU_PIXEL_FORMAT_TYPE_UINT,
+    /// Signed integer formats.
+    VGPU_PIXEL_FORMAT_TYPE_SINT,
+    /// PixelFormat type count.
+    VGPU_PIXEL_FORMAT_TYPE_COUNT,
+    _VGPU_PIXEL_FORMAT_TYPE_FORCE_U32 = 0x7FFFFFFF
+} vgpu_pixel_format_type;
 
 typedef enum vgpu_present_mode {
     VGPU_PRESENT_MODE_IMMEDIATE = 0,
@@ -218,11 +247,37 @@ typedef enum vgpu_buffer_usage {
 } vgpu_buffer_usage;
 typedef uint32_t vgpu_buffer_usage_flags;
 
+typedef enum vgpu_texture_type {
+    VGPU_TEXTURE_TYPE_2D,
+    VGPU_TEXTURE_TYPE_3D,
+    VGPU_TEXTURE_TYPE_CUBE,
+    VGPU_TEXTURE_TYPE_COUNT,
+    _VGPU_TEXTURE_TYPE_COUNT_FORCE_U32 = 0x7FFFFFFF
+} vgpu_texture_type;
+
+typedef enum vgpu_texture_usage {
+    VGPU_TEXTURE_USAGE_NONE = 0,
+    VGPU_TEXTURE_USAGE_COPY_SRC = 0x01,
+    VGPU_TEXTURE_USAGE_COPY_DEST = 0x02,
+    VGPU_TEXTURE_USAGE_SAMPLED = 0x04,
+    VGPU_TEXTURE_USAGE_STORAGE = 0x08,
+    VGPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT = 0x10,
+    _VGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
+} vgpu_texture_usage;
+typedef uint32_t vgpu_texture_usage_flags;
+
 typedef enum vgpu_config_flags_bits {
     VGPU_CONFIG_FLAGS_NONE = 0,
     VGPU_CONFIG_FLAGS_VALIDATION = 0x1
 } vgpu_config_flags_bits;
 typedef uint32_t vgpu_config_flags;
+
+/* Structs */
+typedef struct vgpu_extent3d {
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+} vgpu_extent3d;
 
 typedef struct vgpu_context_desc {
     /// Native window handle.
@@ -248,6 +303,16 @@ typedef struct vgpu_buffer_desc {
     vgpu_buffer_usage_flags usage;
     const char* name;
 } vgpu_buffer_desc;
+
+typedef struct vgpu_texture_desc {
+    vgpu_texture_type type;
+    vgpu_texture_usage_flags usage;
+    vgpu_extent3d extent;
+    vgpu_pixel_format format;
+    uint32_t mip_levels;
+    uint32_t sample_count;
+    const char* name;
+} vgpu_texture_desc;
 
 typedef struct agpu_features {
     bool  independent_blend;
@@ -321,7 +386,7 @@ extern "C" {
     /// Set the current log output function.
     VGPU_EXPORT void vgpu_set_log_callback_function(vgpu_log_callback callback, void* user_data);
 
-    VGPU_EXPORT void vgpu_log(const char* message, vgpu_log_level level);
+    VGPU_EXPORT void vgpu_log(vgpu_log_level level, const char* message);
     VGPU_EXPORT void vgpu_log_format(vgpu_log_level level, const char* format, ...);
 
     VGPU_EXPORT agpu_device* vgpu_create_device(const char* application_name, const agpu_desc* desc);
@@ -340,6 +405,16 @@ extern "C" {
 
     VGPU_EXPORT vgpu_buffer* vgpu_create_buffer(agpu_device* device, const vgpu_buffer_desc* desc);
     VGPU_EXPORT void vgpu_destroy_buffer(agpu_device* device, vgpu_buffer* buffer);
+
+    VGPU_EXPORT vgpu_texture* vgpu_create_texture(agpu_device* device, const vgpu_texture_desc* desc);
+    VGPU_EXPORT void vgpu_destroy_texture(agpu_device* device, vgpu_texture* texture);
+
+    /// Check if the format has a depth component.
+    VGPU_EXPORT bool vgpu_is_depth_format(vgpu_pixel_format format);
+    /// Check if the format has a stencil component.
+    VGPU_EXPORT bool vgpu_is_stencil_format(vgpu_pixel_format format);
+    /// Check if the format has depth or stencil components.
+    VGPU_EXPORT bool vgpu_is_depth_stencil_format(vgpu_pixel_format format);
 
 #ifdef __cplusplus
 } // extern "C"

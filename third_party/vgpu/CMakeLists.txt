@@ -54,6 +54,39 @@ else()
 	message(FATAL_ERROR "Unknown platform ${CMAKE_SYSTEM_NAME}")
 endif ()
 
+# Setup third party libs used
+if (VGPU_BACKEND_VULKAN)
+    # vulkan headers
+    add_library(vulkan INTERFACE)
+    set (VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos)
+    target_sources (vulkan INTERFACE 
+        ${VULKAN_INCLUDE_DIR}/vulkan/vk_platform.h
+        ${VULKAN_INCLUDE_DIR}/vulkan/vk_sdk_platform.h
+        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h
+        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_core.h
+    )
+    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
+    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
+
+    if(ANDROID)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
+    elseif(WIN32)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
+    elseif(APPLE)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
+    elseif(UNIX)
+        # See whether X11 is available. If not, fall back to direct-to-display mode.
+        find_package(X11 QUIET)
+        if (X11_FOUND)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
+        else()
+            set(DIRECT_TO_DISPLAY TRUE)
+            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
+        endif()
+    endif()
+endif ()
+
 # agpu
 set(SOURCE_FILES 
     include/vgpu/vgpu.h
