@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_C_EXTENSIONS 99)
 
 # Project declaration
 project (
@@ -17,23 +15,6 @@ project (
 )
 
 # Options
-if (WIN32)
-    option(AGPU_D3D11 "Include Direct3D11 GPU backend" ON)
-    option(AGPU_D3D12 "Include Direct3D12 GPU backend" ON)
-    option(AGPU_VULKAN "Include Vulkan GPU backend" ON)
-
-    set(AGPU_API vk CACHE STRING  "Select GPU API [vk | d3d12]") 
-	set_property(CACHE AGPU_API PROPERTY STRINGS vk d3d12)
-elseif (WINDOWS_STORE)
-    option(AGPU_D3D11 "Include Direct3D11 GPU backend" ON)
-    option(AGPU_D3D12 "Include Direct3D12 GPU backend" ON)
-elseif (EMSCRIPTEN)
-    set(AGPU_API wgpu CACHE STRING "Use WebGPU GPU API" FORCE)
-else()
-    set(AGPU_API vk CACHE STRING  "Select GPU API [vk | gl]") 
-	set_property(CACHE AGPU_API PROPERTY STRINGS vk gl)
-endif ()
-
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
@@ -89,7 +70,6 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-message (STATUS "GPU API:          ${AGPU_API}")
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

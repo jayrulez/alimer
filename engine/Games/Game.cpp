@@ -45,8 +45,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        agpu_wait_idle(gpu_device);
-        agpu_destroy_device(gpu_device);
+        vgpu_wait_idle(gpu_device);
+        vgpu_destroy_device(gpu_device);
         os::shutdown();
     }
 
@@ -56,17 +56,19 @@ namespace alimer
         main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
 
         // Init graphics with main window.
-        agpu_swapchain_desc swapchain_desc;
-        swapchain_desc.native_handle = (uintptr_t)main_window.get_native_handle();
+        vgpu_context_desc main_context_desc = {};
+        main_context_desc.native_handle = (uintptr_t)main_window.get_native_handle();
+        main_context_desc.srgb = true;
+        main_context_desc.present_mode = VGPU_PRESENT_MODE_FIFO;
         //swapchain_desc.width = main_window.get_size().width;
         //swapchain_desc.height = main_window.get_size().height;
         agpu_desc gpu_desc = {};
 #ifdef _DEBUG
-        gpu_desc.flags |= AGPU_CONFIG_FLAGS_VALIDATION;
+        gpu_desc.flags |= VGPU_CONFIG_FLAGS_VALIDATION;
 #endif
-        gpu_desc.swapchain = &swapchain_desc;
+        gpu_desc.main_context_desc = &main_context_desc;
 
-        gpu_device = agpu_create_device("alimer", &gpu_desc);
+        gpu_device = vgpu_create_device("alimer", &gpu_desc);
         if (!gpu_device) {
             headless = true;
         }
@@ -102,7 +104,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        agpu_begin_frame(gpu_device);
+        vgpu_begin_frame(gpu_device);
 
         for (auto gameSystem : gameSystems)
         {
@@ -127,7 +129,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        agpu_end_frame(gpu_device);
+        vgpu_end_frame(gpu_device);
     }
 
     int Game::Run()

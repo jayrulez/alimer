@@ -21,82 +21,94 @@
 #
 
 cmake_minimum_required(VERSION 3.10)
-project(agpu)
+project(vgpu VERSION 1.0.0 LANGUAGES C)
+
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(VGPU_STANDALONE TRUE)
+endif()
 
 # Options
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+option(VGPU_BUILD_EXAMPLES "Build the vgpu example programs" ${VGPU_STANDALONE})
+option(VGPU_INSTALL "Generate installation target" ON)
+
 if (WIN32 OR WINDOWS_STORE)
-	option(AGPU_BACKEND_D3D11 "Include Direct3D11 backend" ON)
-    option(AGPU_BACKEND_D3D12 "Include Direct3D12 backend (experimental)" ON)
+	option(VGPU_BACKEND_D3D11 "Include Direct3D11 backend" ON)
+    option(VGPU_BACKEND_D3D12 "Include Direct3D12 backend (experimental)" ON)
     if (WIN32)
-        option(AGPU_BACKEND_OPENGL "Include OpenGL backend" ON)
-        option(AGPU_BACKEND_VULKAN "Include Vulkan backend (experimental)" ON)
+        option(VGPU_BACKEND_OPENGL "Include OpenGL backend" ON)
+        option(VGPU_BACKEND_VULKAN "Include Vulkan backend (experimental)" ON)
     endif ()
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	set(AGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+	set(VGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-	set(AGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+	set(VGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Android")
-	set(AGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
+	set(VGPU_BACKEND_VULKAN ON CACHE BOOL "Include Vulkan renderer")
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Durango")
-	option(AGPU_BACKEND_D3D11 "Include Direct3D11 backend" ON)
-    option(AGPU_BACKEND_D3D12 "Include Direct3D12 backend (experimental)" ON)
+	option(VGPU_BACKEND_D3D11 "Include Direct3D11 backend" ON)
+    option(VGPU_BACKEND_D3D12 "Include Direct3D12 backend (experimental)" ON)
 elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
-	set(AGPU_BACKEND_OPENGL ON CACHE BOOL "Include OpenGL renderer")
+	set(VGPU_BACKEND_OPENGL ON CACHE BOOL "Include OpenGL renderer")
 else()
 	message(FATAL_ERROR "Unknown platform ${CMAKE_SYSTEM_NAME}")
 endif ()
 
-option(AGPU_INSTALL "Generate installation target" ON)
-
 # agpu
 set(SOURCE_FILES 
-    include/agpu.h
-    src/agpu_internal.h
-    src/agpu.c
-    src/agpu_backend_gl.c
+    include/vgpu/vgpu.h
+    src/vgpu_backend.h
+    src/vgpu.c
+    #src/agpu_backend_gl.c
     #src/agpu_vk.cpp
     #src/agpu_d3d12.cpp
 )
 
-add_library(agpu STATIC ${SOURCE_FILES})
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    C_STANDARD 99
+    C_EXTENSIONS OFF
+)
 
 # Public include paths
-target_include_directories(agpu PUBLIC 
+target_include_directories(${PROJECT_NAME} PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>
 )
 
-if (AGPU_BACKEND_OPENGL)
-    target_compile_definitions(agpu PRIVATE AGPU_BACKEND_GL)
-    #target_include_directories(agpu PRIVATE
-    #    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos
-    #)
-endif ()
+if (VGPU_BACKEND_VULKAN)
+    target_sources(${PROJECT_NAME} PRIVATE
+        src/vk/vk.h
+        src/vk/vk.c
+        src/vk/vk_mem_alloc.h
+        src/vk/vk_mem_alloc.cpp
+        src/vgpu_vk.c
+    )
 
-if (AGPU_BACKEND_VULKAN)
-    target_compile_definitions(agpu PRIVATE GPU_VK_BACKEND)
-    target_link_libraries(agpu PRIVATE volk vma)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE VGPU_VK_BACKEND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
 endif ()
 
 if (AGPU_BACKEND_D3D11 OR AGPU_BACKEND_D3D12)
-    target_link_libraries(agpu PRIVATE dxguid)
+    #target_link_libraries(agpu PRIVATE dxguid)
 endif ()
 
 if (AGPU_BACKEND_D3D12)
-    target_compile_definitions(agpu PRIVATE GPU_D3D12_BACKEND)
-    target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
+    #target_compile_definitions(agpu PRIVATE GPU_D3D12_BACKEND)
+    #target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
 endif ()
 
 if (MSVC)
-	target_compile_options(agpu PRIVATE
+	target_compile_options(${PROJECT_NAME} PRIVATE
         /W3     # Set warning level 3
         /WX     # Treat all other warnings as errors
     )
 endif ()
 
-if (AGPU_INSTALL)
-    install(TARGETS agpu
-        EXPORT agpu
+if (VGPU_INSTALL)
+    install(TARGETS ${PROJECT_NAME}
+        EXPORT ${PROJECT_NAME}
         RUNTIME DESTINATION "bin"
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"

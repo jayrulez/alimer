@@ -20,18 +20,18 @@
 // THE SOFTWARE.
 //
 
-#include "agpu_backend.h"
+#include "vgpu_backend.h"
 #include <stdio.h> 
 #include <stdarg.h>
 #include <string.h>
 
 #define AGPU_MAX_LOG_MESSAGE (4096)
 
-static void agpu_default_log_callback(void* user_data, const char* message, agpu_log_level level);
-static agpu_log_callback s_log_function = agpu_default_log_callback;
+static void vgpu_default_log_callback(void* user_data, const char* message, vgpu_log_level level);
+static vgpu_log_callback s_log_function = vgpu_default_log_callback;
 static void* s_log_user_data = NULL;
 
-void agpu_get_log_callback_function(agpu_log_callback* callback, void** user_data) {
+void vgpu_get_log_callback_function(vgpu_log_callback* callback, void** user_data) {
     if (callback) {
         *callback = s_log_function;
     }
@@ -40,22 +40,22 @@ void agpu_get_log_callback_function(agpu_log_callback* callback, void** user_dat
     }
 }
 
-void agpu_set_log_callback_function(agpu_log_callback callback, void* user_data) {
+void vgpu_set_log_callback_function(vgpu_log_callback callback, void* user_data) {
     s_log_function = callback;
     s_log_user_data = user_data;
 }
 
-void agpu_default_log_callback(void* user_data, const char* message, agpu_log_level level) {
+void vgpu_default_log_callback(void* user_data, const char* message, vgpu_log_level level) {
 
 }
 
-void agpu_log(const char* message, agpu_log_level level) {
+void vgpu_log(const char* message, vgpu_log_level level) {
     if (s_log_function) {
         s_log_function(s_log_user_data, message, level);
     }
 }
 
-void agpu_log_message_v(agpu_log_level level, const char* format, va_list args) {
+void vgpu_log_message_v(vgpu_log_level level, const char* format, va_list args) {
     if (s_log_function) {
         char message[AGPU_MAX_LOG_MESSAGE];
         vsnprintf(message, AGPU_MAX_LOG_MESSAGE, format, args);
@@ -69,58 +69,70 @@ void agpu_log_message_v(agpu_log_level level, const char* format, va_list args) 
     }
 }
 
-void agpu_log_format(agpu_log_level level, const char* format, ...) {
+void vgpu_log_format(vgpu_log_level level, const char* format, ...) {
     if (s_log_function) {
         va_list args;
         va_start(args, format);
-        agpu_log_message_v(level, format, args);
+        vgpu_log_message_v(level, format, args);
         va_end(args);
     }
 }
 
 static const agpu_driver* drivers[] = {
-#if defined(GPU_VK_BACKEND)
+#if defined(VGPU_VK_BACKEND)
     &vulkan_driver,
 #endif
 };
 
-agpu_device* agpu_create_device(const char* application_name, const agpu_desc* desc) {
+agpu_device* vgpu_create_device(const char* application_name, const agpu_desc* desc) {
     return drivers[0]->create_device(application_name, desc);
 }
 
-void agpu_destroy_device(agpu_device* device) {
+void vgpu_destroy_device(agpu_device* device) {
     device->destroy_device(device);
 }
 
-void agpu_wait_idle(agpu_device* device) {
+void vgpu_wait_idle(agpu_device* device) {
     device->wait_idle(device->renderer);
 }
 
-void agpu_begin_frame(agpu_device* device) {
+void vgpu_begin_frame(agpu_device* device) {
     device->begin_frame(device->renderer);
 }
 
-void agpu_end_frame(agpu_device* device) {
+void vgpu_end_frame(agpu_device* device) {
     device->end_frame(device->renderer);
 }
 
-agpu_backend agpu_query_backend(agpu_device* device) {
+vgpu_context* vgpu_create_context(agpu_device* device, const vgpu_context_desc* desc) {
+    return device->create_context(device->renderer, desc);
+}
+
+void vgpu_destroy_context(agpu_device* device, vgpu_context* context) {
+    device->destroy_context(device->renderer, context);
+}
+
+void vgpu_set_context(agpu_device* device, vgpu_context* context) {
+    device->set_context(device->renderer, context);
+}
+
+vgpu_backend vgpu_query_backend(agpu_device* device) {
     return device->query_backend();
 }
 
-agpu_features agpu_query_features(agpu_device* device) {
+agpu_features vgpu_query_features(agpu_device* device) {
     return device->query_features(device->renderer);
 }
 
-agpu_limits agpu_query_limits(agpu_device* device) {
+agpu_limits vgpu_query_limits(agpu_device* device) {
     return device->query_limits(device->renderer);
 }
 
-agpu_buffer* agpu_create_buffer(agpu_device* device, const agpu_buffer_desc* desc) {
+vgpu_buffer* vgpu_create_buffer(agpu_device* device, const vgpu_buffer_desc* desc) {
     return device->create_buffer(device->renderer, desc);
 }
 
-void agpu_destroy_buffer(agpu_device* device, agpu_buffer* buffer) {
+void vgpu_destroy_buffer(agpu_device* device, vgpu_buffer* buffer) {
     device->destroy_buffer(device->renderer, buffer);
 }
 

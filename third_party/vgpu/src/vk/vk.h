@@ -46,7 +46,10 @@ X(vkDestroyDebugReportCallbackEXT)\
 X(vkCreateDebugUtilsMessengerEXT)\
 X(vkDestroyDebugUtilsMessengerEXT)\
 X(vkGetPhysicalDeviceFeatures2)\
-X(vkGetPhysicalDeviceFeatures2KHR)
+X(vkGetPhysicalDeviceFeatures2KHR)\
+X(vkGetPhysicalDeviceSurfaceCapabilities2KHR)\
+X(vkGetPhysicalDeviceSurfaceFormats2KHR)\
+X(vkGetPhysicalDeviceSurfacePresentModes2EXT)
 
 #if defined(_WIN32)
 #define VK_FOREACH_INSTANCE_SURFACE(X)\
