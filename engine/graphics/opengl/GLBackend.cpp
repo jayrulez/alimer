@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
-#include "graphics/GPUDevice.h"
+#include "GLBackend.h"
+#include "core/Log.h"
+#include "core/Assert.h"
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
-    {
-
-    }
-
-    const usize& Framebuffer::getExtent() const
-    {
-        return extent;
-    }
+    
 }
-

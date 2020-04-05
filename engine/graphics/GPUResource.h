@@ -48,7 +48,7 @@ namespace alimer
         };
 
     protected:
-        GPUResource(GPUDevice* device, Type type);
+        GPUResource(Type type);
         virtual ~GPUResource();
 
     public:
@@ -59,7 +59,6 @@ namespace alimer
         bool IsAllocated() const { return isAllocated; }
 
     protected:
-        WeakPtr<GPUDevice> device;
         Type type;
         /// Size in bytes of the resource.
         uint64_t size{ 0 };

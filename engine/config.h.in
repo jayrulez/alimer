@@ -37,10 +37,6 @@
 #cmakedefine ALIMER_NETWORK
 #cmakedefine ALIMER_PLUGINS
 
-/* Graphics defines */
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_D3D12
-
 /* Audio */
 #cmakedefine ALIMER_ENABLE_AUDIO
 #cmakedefine ALIMER_AUDIO_XAUDIO2

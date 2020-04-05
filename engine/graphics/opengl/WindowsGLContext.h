@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
-#include "graphics/GPUDevice.h"
+#pragma once
+
+#include "GLContext.h"
+#ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif
+#include <Windows.h>
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
+    class WindowsGLContext final : public GLContext
     {
+    public:
+        WindowsGLContext(HINSTANCE hInstance_, HWND hwnd_, bool validation, bool depth, bool stencil, bool srgb, uint32_t sampleCount);
+        ~WindowsGLContext() override;
 
-    }
+        void* GetGLProcAddress(const char* name) override;
+        void MakeCurrent() override;
+        void SwapBuffers() override;
 
-    const usize& Framebuffer::getExtent() const
-    {
-        return extent;
-    }
+    private:
+        HMODULE opengl32dll;
+        HINSTANCE hInstance;
+        HWND hwnd;
+        HDC hdc;
+        HGLRC context = 0;
+        PIXELFORMATDESCRIPTOR pfd = {};
+    };
 }
-

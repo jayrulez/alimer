@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
-#include "graphics/GPUDevice.h"
+#pragma once
+
+#include "graphics/Types.h"
+#include "GLBackend.h"
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
+    class GLContext
     {
+    public:
+        GLContext() = default;
+        virtual ~GLContext() = default;
 
-    }
+        static GLContext* Create(void* nativeHandle, bool validation, bool depth, bool stencil, bool srgb, uint32_t sampleCount);
 
-    const usize& Framebuffer::getExtent() const
-    {
-        return extent;
-    }
+        virtual void* GetGLProcAddress(const char* name) = 0;
+        virtual void MakeCurrent() = 0;
+        virtual void SwapBuffers() = 0;
+
+        template <typename T>
+        T GetProcAddress(const char* name) const noexcept
+        {
+            return reinterpret_cast<T>(GetGLProcAddress(name));
+        }
+
+    protected:
+        GLVersion version{};
+    };
 }
-

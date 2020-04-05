@@ -139,7 +139,7 @@ namespace alimer
             return id_;
         }
 
-        native_handle get_native_handle() const
+        NativeHandle GetNativeHandle() const
         {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
             return glfwGetWin32Window(window_);
@@ -154,7 +154,7 @@ namespace alimer
 #endif
         }
 
-        native_display get_native_display() const
+        NativeDisplay GetNativeDisplay() const
         {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
             return nullptr;

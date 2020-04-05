@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
+#pragma once
+
 #include "graphics/GPUDevice.h"
+#include "GLBackend.h"
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
-    {
+    class GLContext;
 
-    }
-
-    const usize& Framebuffer::getExtent() const
+    /// Defines the OpenGL GPUDevice.
+    class ALIMER_API GLGPUDevice final : public GPUDevice
     {
-        return extent;
-    }
+    public:
+        /// Constructor.
+        GLGPUDevice(Window* window_, const Desc& desc_);
+
+        /// Destructor.
+        ~GLGPUDevice() override;
+
+        PFNGLCLEARPROC glClear = nullptr;
+        PFNGLCLEARCOLORPROC glClearColor = nullptr;
+
+    private:
+        bool BackendInit() override;
+        void Commit() override;
+
+        template<typename FT>
+        void LoadGLFunction(FT& functionPointer, const char* functionName)
+        {
+            functionPointer = reinterpret_cast<FT> (context->GetGLProcAddress(functionName));
+        }
+
+        GLContext* context = nullptr;
+    };
 }
-

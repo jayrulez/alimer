@@ -45,31 +45,25 @@ namespace alimer
         }
 
         gameSystems.clear();
-        vgpu_wait_idle(gpu_device);
-        vgpu_destroy_device(gpu_device);
+        gpuDevice->Shutdown();
+        gpuDevice.reset();
         os::shutdown();
     }
 
     void Game::InitBeforeRun()
     {
         // Create main window.
-        main_window.create(config.windowTitle, { centered, centered }, config.windowSize, WindowStyle::Resizable);
+        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics with main window.
-        vgpu_context_desc main_context_desc = {};
-        main_context_desc.native_handle = (uintptr_t)main_window.get_native_handle();
-        main_context_desc.srgb = true;
-        main_context_desc.present_mode = VGPU_PRESENT_MODE_FIFO;
-        //swapchain_desc.width = main_window.get_size().width;
-        //swapchain_desc.height = main_window.get_size().height;
-        agpu_desc gpu_desc = {};
+        GPUDevice::Desc gpuDeviceDesc = {};
 #ifdef _DEBUG
-        gpu_desc.flags |= VGPU_CONFIG_FLAGS_VALIDATION;
+        gpuDeviceDesc.flags |= GPUDeviceFlags::Validation;
 #endif
-        gpu_desc.main_context_desc = &main_context_desc;
 
-        gpu_device = vgpu_create_device("alimer", &gpu_desc);
-        if (!gpu_device) {
+        gpuDevice = GPUDevice::Create(mainWindow.get(), gpuDeviceDesc);
+        if (!gpuDevice)
+        {
             headless = true;
         }
 
@@ -104,7 +98,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        vgpu_begin_frame(gpu_device);
+        //vgpu_begin_frame(gpu_device);
 
         for (auto gameSystem : gameSystems)
         {
@@ -129,7 +123,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_end_frame(gpu_device);
+        gpuDevice->Commit();
     }
 
     int Game::Run()
@@ -167,7 +161,7 @@ namespace alimer
 
                 Tick();
             }
-    }
+        }
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         catch (std::bad_alloc&)
         {
@@ -177,7 +171,7 @@ namespace alimer
 #endif
 
         return exitCode;
-}
+    }
 
     void Game::Tick()
     {
@@ -202,11 +196,11 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !main_window.is_minimized()
+            && !mainWindow->is_minimized()
             && BeginDraw())
         {
             Draw(time);
             EndDraw();
         }
     }
-    }
+}

@@ -43,7 +43,7 @@ namespace alimer
 
     protected:
         /// Constructor.
-        SwapChain(GPUDevice* device_, const SwapChainDescriptor* descriptor);
+        SwapChain(const SwapChainDescriptor* descriptor);
 
     public:
         virtual SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) = 0;
@@ -52,7 +52,6 @@ namespace alimer
         const usize& GetExtent() const;
 
     protected:
-        WeakPtr<GPUDevice> device;
         usize extent{};
         PixelFormat colorFormat;
         PixelFormat depthStencilFormat;

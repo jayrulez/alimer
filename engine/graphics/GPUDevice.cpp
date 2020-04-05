@@ -23,6 +23,7 @@
 #include "config.h"
 #include "core/Log.h"
 #include "core/Assert.h"
+#include "os/window.h"
 #include "graphics/GPUDevice.h"
 #include "graphics/GPUBuffer.h"
 
@@ -34,11 +35,24 @@
 //#include "graphics/d3d12/D3D12GPUDevice.h"
 #endif
 
+#if defined(ALIMER_OPENGL)
+#   include "graphics/opengl/GLGPUDevice.h"
+#endif
+
 using namespace std;
 
 namespace alimer
 {
-    set<GPUBackend> GPUDevice::getAvailableBackends()
+    GPUDevicePtr gpuDevice;
+
+    GPUDevice::GPUDevice(Window* window_, const Desc& desc_)
+        : window(window_)
+        , desc(desc_)
+    {
+
+    }
+
+    set<GPUBackend> GPUDevice::GetAvailableBackends()
     {
         static set<GPUBackend> availableBackends;
 
@@ -57,17 +71,27 @@ namespace alimer
                 availableBackends.insert(GPUBackend::Direct3D12);
             }*/
 #endif
+
+#if defined(ALIMER_OPENGL)
+            availableBackends.insert(GPUBackend::OpenGL);
+#endif
         }
 
         return availableBackends;
     }
 
-    unique_ptr<GPUDevice> GPUDevice::Create(GPUBackend preferredBackend, GPUDeviceFlags flags)
+    GPUDevicePtr GPUDevice::Create(Window* window, const Desc& desc)
     {
-        GPUBackend backend = preferredBackend;
-        if (preferredBackend == GPUBackend::Count)
+        if (gpuDevice)
         {
-            auto availableBackends = getAvailableBackends();
+            ALIMER_LOGE("Only single GPU instance is allowed.");
+            return nullptr;
+        }
+
+        GPUBackend backend = desc.preferredBackend;
+        if (desc.preferredBackend == GPUBackend::Count)
+        {
+            auto availableBackends = GetAvailableBackends();
 
             if (availableBackends.find(GPUBackend::Metal) != availableBackends.end())
                 backend = GPUBackend::Metal;
@@ -75,11 +99,12 @@ namespace alimer
                 backend = GPUBackend::Direct3D12;
             else if (availableBackends.find(GPUBackend::Vulkan) != availableBackends.end())
                 backend = GPUBackend::Vulkan;
+            else if (availableBackends.find(GPUBackend::OpenGL) != availableBackends.end())
+                backend = GPUBackend::OpenGL;
             else
                 backend = GPUBackend::Null;
         }
 
-        unique_ptr<GPUDevice> device;
         switch (backend)
         {
 #if defined(ALIMER_VULKAN)
@@ -95,6 +120,12 @@ namespace alimer
             device = make_unique<D3D12GPUDevice>(validation);
             break;
 #endif*/
+#if defined(ALIMER_OPENGL)
+        case GPUBackend::OpenGL:
+            ALIMER_LOGINFO("Using OpenGL render driver");
+            gpuDevice = make_shared<GLGPUDevice>(window, desc);
+            break;
+#endif
 
         case GPUBackend::Metal:
             break;
@@ -102,24 +133,28 @@ namespace alimer
             break;
         }
 
-        return device;
+        if (gpuDevice->Initialize() == false)
+        {
+            gpuDevice = nullptr;
+        }
+
+        return gpuDevice;
+    }
+
+    bool GPUDevice::Initialize()
+    {
+        if (BackendInit() == false) return false;
+
+        return true;
+    }
+
+    void GPUDevice::Shutdown()
+    {
+
     }
 
     void GPUDevice::NotifyValidationError(const char* message)
     {
 
-    }
-
-    SharedPtr<GPUBuffer> GPUDevice::CreateBuffer(const BufferDescriptor* descriptor, const void* initialData)
-    {
-        ALIMER_ASSERT(descriptor);
-        GPUBuffer* buffer = CreateBufferCore(descriptor, initialData);
-        return buffer;
-    }
-
-    std::shared_ptr<Framebuffer> GPUDevice::createFramebuffer(const SwapChainDescriptor* descriptor)
-    {
-        return nullptr;
-        //return createFramebufferCore(descriptor);
     }
 }

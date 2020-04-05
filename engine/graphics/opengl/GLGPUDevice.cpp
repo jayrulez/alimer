@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,48 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
-#include "graphics/GPUDevice.h"
+#include "core/Log.h"
+#include "core/Assert.h"
+#include "GLGPUDevice.h"
+#include "GLContext.h"
+#include "os/window.h"
+
+#define LOAD(name) LoadGLFunction(name, #name)
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
+    namespace
     {
-
+        
     }
 
-    const usize& Framebuffer::getExtent() const
+    GLGPUDevice::GLGPUDevice(Window* window_, const Desc& desc_)
+        : GPUDevice(window_, desc_)
     {
-        return extent;
+    }
+
+    GLGPUDevice::~GLGPUDevice()
+    {
+        SafeDelete(context);
+    }
+
+    bool GLGPUDevice::BackendInit()
+    {
+        bool validation = any(desc.flags & GPUDeviceFlags::Validation) ||
+            any(desc.flags & GPUDeviceFlags::GpuBasedValidation);
+
+        context = GLContext::Create(window->GetNativeHandle(), validation, true, false, desc.colorSrgb, desc.sampleCount);
+
+        LOAD(glClear);
+        LOAD(glClearColor);
+
+        return true;
+    }
+
+    void GLGPUDevice::Commit()
+    {
+        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        context->SwapBuffers();
     }
 }
-

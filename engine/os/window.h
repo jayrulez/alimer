@@ -43,8 +43,8 @@ namespace alimer
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
     constexpr static const int32_t centered = std::numeric_limits<int32_t>::max();
-    using native_handle = void*;
-    using native_display = void*;
+    using NativeHandle = void*;
+    using NativeDisplay = void*;
 
     class WindowImpl;
 
@@ -67,8 +67,8 @@ namespace alimer
         /// Close the window.
         void close();
 
-        native_handle get_native_handle() const;
-        native_display get_native_display() const;
+        NativeHandle GetNativeHandle() const;
+        NativeDisplay GetNativeDisplay() const;
 
         /// Return the window id.
         auto get_id() const noexcept->uint32_t;

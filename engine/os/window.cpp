@@ -59,14 +59,14 @@ namespace alimer
         }
     }
 
-    native_handle Window::get_native_handle() const
+    NativeHandle Window::GetNativeHandle() const
     {
-        return impl->get_native_handle();
+        return impl->GetNativeHandle();
     }
 
-    native_display Window::get_native_display() const
+    NativeDisplay Window::GetNativeDisplay() const
     {
-        return impl->get_native_display();
+        return impl->GetNativeDisplay();
     }
 
     auto Window::get_id() const noexcept -> uint32_t

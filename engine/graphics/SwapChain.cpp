@@ -25,9 +25,8 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(GPUDevice* device_, const SwapChainDescriptor* descriptor)
-        : device(device_)
-        , extent(descriptor->width, descriptor->height)
+    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
+        : extent(descriptor->width, descriptor->height)
         , colorFormat(descriptor->colorFormat)
         , depthStencilFormat(descriptor->depthStencilFormat)
         , presentMode(descriptor->presentMode)

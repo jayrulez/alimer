@@ -48,7 +48,6 @@ namespace alimer
         usize windowSize = { 1280, 720 };
     };
 
-    class GPUDevice;
     class SwapChain;
     class InputManager;
 
@@ -69,8 +68,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        inline auto& get_main_window() { return main_window; }
-        inline auto& get_main_window() const { return main_window; }
+        inline Window* GetMainWindow() const { return mainWindow.get(); }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -102,9 +100,8 @@ namespace alimer
         bool running = false;
         // Rendering loop timer.
         GameTime time;
-        Window main_window;
+        std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
-        agpu_device* gpu_device = nullptr;
         InputManager* input;
         bool headless{ false };
     };

@@ -26,17 +26,14 @@
 
 namespace alimer
 {
-    GPUResource::GPUResource(GPUDevice* device, Type type)
-        : device{ device }
-        , type{ type }
+    GPUResource::GPUResource(Type type)
+        : type{ type }
     {
-        ALIMER_ASSERT(device);
         //device->AddGPUResource(this);
     }
 
     GPUResource::~GPUResource()
     {
-        ALIMER_ASSERT(device);
         //device->RemoveGPUResource(this);
     }
 }

@@ -2,7 +2,8 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project declaration
-project (alimer LANGUAGES C CXX)
+project(alimer LANGUAGES C CXX)
+set(TARGET alimer)
 
 macro (define_engine_source_files)
     cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
@@ -53,6 +54,10 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
 
+if (ALIMER_OPENGL)
+    define_engine_source_files(graphics/opengl)
+endif ()
+
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -73,13 +78,21 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC vgpu)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
 
 if(NOT (EMSCRIPTEN OR ANDROID))
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
+
+if (ALIMER_OPENGL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_OPENGL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE alimer_khronos_platform)
+
+    if (WIN32)
+        target_link_libraries(${TARGET} PRIVATE opengl32 gdi32)
+    endif()
+endif()
 
 if (MSVC)
     set(OPTIMIZATION_FLAGS

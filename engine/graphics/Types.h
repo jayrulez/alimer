@@ -50,6 +50,8 @@ namespace alimer
         Direct3D12,
         /// Metal backend.
         Metal,
+        /// OpenGL backend.
+        OpenGL,
         /// Default best platform supported backend.
         Count
     };
@@ -165,7 +167,7 @@ namespace alimer
         PresentMode presentMode = PresentMode::Fifo;
     };
 
-    /// GraphicsDevice information .
+    /// GraphicsDevice information.
     struct GPUDeviceInfo
     {
         GPUBackend backend;
