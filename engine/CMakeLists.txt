@@ -54,6 +54,10 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
 
+if (ALIMER_VULKAN)
+    define_engine_source_files(graphics/vulkan)
+endif ()
+
 if (ALIMER_D3D11 OR ALIMER_D3D12)
     define_engine_source_files(graphics/d3d)
 endif ()
@@ -66,9 +70,9 @@ if (ALIMER_D3D12)
     define_engine_source_files(graphics/d3d12)
 endif ()
 
-if (ALIMER_OPENGL)
-    define_engine_source_files(graphics/opengl)
-endif ()
+#if (ALIMER_OPENGL)
+    #define_engine_source_files(graphics/opengl)
+#endif ()
 
 group_sources()
 
@@ -97,6 +101,11 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
 
+if (ALIMER_VULKAN)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_VULKAN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+endif()
+
 if (ALIMER_D3D11)
     #target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_D3D11)
 endif()
@@ -106,12 +115,12 @@ if (ALIMER_D3D12)
 endif()
 
 if (ALIMER_OPENGL)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_OPENGL)
-    target_link_libraries(${PROJECT_NAME} PRIVATE alimer_khronos_platform)
+    #target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_OPENGL)
+    #target_link_libraries(${PROJECT_NAME} PRIVATE alimer_khronos_platform)
 
-    if (WIN32)
-        target_link_libraries(${TARGET} PRIVATE opengl32 gdi32)
-    endif()
+    #if (WIN32)
+    #    target_link_libraries(${TARGET} PRIVATE opengl32 gdi32)
+    #endif()
 endif()
 
 if (MSVC)

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,42 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "core/Utils.h"
+#include "math/size.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
+    /// Defines a graphics surface type.
+    enum class GraphicsSurfaceType : uint32_t
     {
-    }
+        Win32
+    };
 
-    const usize& SwapChain::GetExtent() const
+    /// Defines the graphics surface which can be rendered on by a graphics device.
+    class ALIMER_API GraphicsSurface
     {
-        return extent;
-    }
+    public:
+        /// Constructor.
+        GraphicsSurface() = default;
+
+        /// Destructor.
+        virtual ~GraphicsSurface() = default;
+
+        /// Get the surface size.
+        virtual usize GetSize() const = 0;
+
+        /// Get the surface type.
+        virtual GraphicsSurfaceType GetType() const = 0;
+
+        /// Get the surface handle.
+        virtual void* GetHandle() const = 0;
+
+        /// Get the surface display type.
+        virtual void* GetDisplay() const = 0;
+
+    private:
+        ALIMER_DISABLE_COPY_MOVE(GraphicsSurface);
+    };
 }
-

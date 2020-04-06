@@ -20,21 +20,30 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "graphics/GraphicsProvider.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
+    class ALIMER_API D3D12GraphicsProvider final : public GraphicsProvider
     {
-    }
+    public:
+         static bool IsAvailable();
 
-    const usize& SwapChain::GetExtent() const
-    {
-        return extent;
-    }
+         D3D12GraphicsProvider(GraphicsProviderFlags flags);
+         ~D3D12GraphicsProvider();
+
+         std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
+
+         IDXGIFactory4* GetDXGIFactory() const { return factory; }
+         bool IsTearingSupported() const { return isTearingSupported; }
+
+
+    private:
+        UINT dxgiFactoryFlags = 0;
+        IDXGIFactory4* factory = nullptr;
+        bool isTearingSupported = false;
+    };
 }
-

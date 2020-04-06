@@ -21,12 +21,12 @@
 //
 
 #include "graphics/Framebuffer.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GPUDevice* device)
-        : GPUResource(Type::Framebuffer)
+    Framebuffer::Framebuffer(GraphicsDevice* device)
+        : GraphicsResource(device, Type::Framebuffer)
     {
 
     }

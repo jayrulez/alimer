@@ -36,7 +36,7 @@ namespace alimer
     struct Configuration
     {
         /// The preferred GPU backend.
-        GPUBackend gpuBackend = GPUBackend::Count;
+        GPUBackend preferredGraphicsBackend = GPUBackend::Count;
 
         /// Run engine in headless mode.
         bool headless = false;
@@ -48,8 +48,9 @@ namespace alimer
         usize windowSize = { 1280, 720 };
     };
 
-    class SwapChain;
     class InputManager;
+    class GraphicsProvider;
+    class GraphicsDevice;
 
     class ALIMER_API Game : public Object
     {
@@ -103,6 +104,7 @@ namespace alimer
         std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
         InputManager* input;
+        std::unique_ptr<GraphicsProvider> graphicsProvider;
         bool headless{ false };
     };
 

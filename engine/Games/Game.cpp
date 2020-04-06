@@ -22,7 +22,7 @@
 
 #include "os/os.h"
 #include "Games/Game.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsProvider.h"
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
@@ -35,6 +35,12 @@ namespace alimer
     {
         os::init();
         gameSystems.push_back(input);
+
+        GraphicsProviderFlags flags = GraphicsProviderFlags::None;
+#ifdef _DEBUG
+        flags |= GraphicsProviderFlags::Validation;
+#endif
+        graphicsProvider = GraphicsProvider::Create(flags, config.preferredGraphicsBackend);
     }
 
     Game::~Game()
@@ -45,8 +51,7 @@ namespace alimer
         }
 
         gameSystems.clear();
-        gpuDevice->Shutdown();
-        gpuDevice.reset();
+        graphicsProvider.reset();
         os::shutdown();
     }
 
@@ -56,16 +61,15 @@ namespace alimer
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics with main window.
-        GPUDevice::Desc gpuDeviceDesc = {};
-#ifdef _DEBUG
-        gpuDeviceDesc.flags |= GPUDeviceFlags::Validation;
-#endif
+        auto gpuAdapters = graphicsProvider->EnumerateGraphicsAdapters();
+        //gpuAdapters[0]->CreateDevice();
+        /*GPUDevice::Desc gpuDeviceDesc = {};
 
         gpuDevice = GPUDevice::Create(mainWindow.get(), gpuDeviceDesc);
         if (!gpuDevice)
         {
             headless = true;
-        }
+        }*/
 
         Initialize();
         if (exitCode)
@@ -123,7 +127,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        gpuDevice->Commit();
+        //gpuDevice->Commit();
     }
 
     int Game::Run()

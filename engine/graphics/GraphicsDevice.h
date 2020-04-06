@@ -34,31 +34,31 @@ namespace alimer
     class GPUBuffer;
     class Texture;
     class SwapChain;
-    class GPUDevice;
-    using GPUDevicePtr = std::shared_ptr<GPUDevice>;
+    class GraphicsDevice;
+    using GraphicsDevicePtr = std::shared_ptr<GraphicsDevice>;
 
-    /// Defines the GPU device class.
-    class ALIMER_API GPUDevice 
+    /* TODO: Expose GraphicsContext */
+    /* TODO: Expose resource creation context */
+
+    /// Defines the logical graphics device class.
+    class ALIMER_API GraphicsDevice
     {
     public:
         /// Device descriptor.
         struct Desc
         {
-            GPUBackend preferredBackend = GPUBackend::Count;
-            GPUDeviceFlags flags = GPUDeviceFlags::None;
-            GPUAdapterType preferredAdapterType = GPUAdapterType::DiscreteGPU;
             bool colorSrgb = true;
             uint32_t sampleCount = 1;
         };
 
         /// Destructor.
-        virtual ~GPUDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
         /// Get set of available GPU backend supported implementation.
         static std::set<GPUBackend> GetAvailableBackends();
 
         /// Create new GPUDevice with given preferred backend, fallback to supported one.
-        static GPUDevicePtr Create(Window* window, const Desc& desc);
+        static GraphicsDevicePtr Create(Window* window, const Desc& desc);
 
         void Shutdown();
 
@@ -86,7 +86,7 @@ namespace alimer
 
     protected:
         /// Constructor.
-        GPUDevice(Window* window_, const Desc& desc_);
+        GraphicsDevice(Window* window_, const Desc& desc_);
 
         Window* window;
         Desc desc;
@@ -95,9 +95,6 @@ namespace alimer
         GPUDeviceLimits limits{};
        
     private:
-        ALIMER_DISABLE_COPY_MOVE(GPUDevice);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
-
-
-    ALIMER_API extern GPUDevicePtr gpuDevice;
 }

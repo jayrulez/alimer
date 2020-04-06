@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "VulkanFramebuffer.h"
 #include "VulkanGPUDevice.h"
 #include "core/Assert.h"
@@ -294,3 +295,5 @@ namespace alimer
         return FramebufferResizeResult::Success;
     }
 }
+
+#endif // TODO

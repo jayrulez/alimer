@@ -20,11 +20,12 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "config.h"
 #include "core/Log.h"
 #include "core/Assert.h"
 #include "os/window.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 #include "graphics/GPUBuffer.h"
 
 #if defined(ALIMER_VULKAN)
@@ -175,3 +176,5 @@ namespace alimer
 
     }
 }
+
+#endif // TODO

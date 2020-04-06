@@ -20,8 +20,9 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Texture.h"
-#include "D3D12GPUDevice.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
@@ -41,4 +42,6 @@ namespace alimer
 
     }
 }
+#endif // TODO
+
 

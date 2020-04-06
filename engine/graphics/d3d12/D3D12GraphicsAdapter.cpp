@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,49 @@
 // THE SOFTWARE.
 //
 
+#include "D3D12GraphicsAdapter.h"
+#include "D3D12GraphicsProvider.h"
 #include "core/Assert.h"
-#include "graphics/GPUResource.h"
-#include "graphics/GPUDevice.h"
+#include "core/String.h"
 
 namespace alimer
 {
-    GPUResource::GPUResource(Type type)
-        : type{ type }
+    D3D12GraphicsAdapter::D3D12GraphicsAdapter(D3D12GraphicsProvider* provider_, IDXGIAdapter1* adapter_)
+        : GraphicsAdapter(provider_)
+        , adapter(adapter_)
     {
-        //device->AddGPUResource(this);
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
+
+        vendorId = desc.VendorId;
+        deviceId = desc.DeviceId;
+
+        std::wstring deviceName(desc.Description);
+        name = alimer::ToUtf8(deviceName);
     }
 
-    GPUResource::~GPUResource()
+    D3D12GraphicsAdapter::~D3D12GraphicsAdapter()
     {
-        //device->RemoveGPUResource(this);
+        SafeRelease(adapter);
+    }
+
+    uint32_t D3D12GraphicsAdapter::GetVendorId() const
+    {
+        return vendorId;
+    }
+
+    uint32_t D3D12GraphicsAdapter::GetDeviceId() const
+    {
+        return deviceId;
+    }
+
+    GraphicsAdapterType D3D12GraphicsAdapter::GetType() const
+    {
+        return type;
+    }
+
+    const std::string& D3D12GraphicsAdapter::GetName() const
+    {
+        return name;
     }
 }
-

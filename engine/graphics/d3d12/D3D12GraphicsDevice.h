@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
 
 namespace alimer
@@ -50,9 +50,7 @@ namespace alimer
             resource = nullptr;
         }
 
-        IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory; }
-        bool                    IsTearingSupported() const { return isTearingSupported; }
-        ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
+           ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         D3D12MA::Allocator*     GetMemoryAllocator() const { return allocator; }
 
@@ -63,8 +61,6 @@ namespace alimer
     private:
         static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
-        bool BackendInit() override;
-        void BackendShutdown() override;
         bool GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);

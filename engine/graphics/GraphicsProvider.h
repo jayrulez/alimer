@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,49 +22,33 @@
 
 #pragma once
 
-#include "graphics/Types.h"
-#include "core/Object.h"
+#include "graphics/GraphicsAdapter.h"
+#include <vector>
+#include <set>
+#include <memory>
 
 namespace alimer
 {
-    class GPUDevice;
-
-    /// Defines a GPU resource.
-    class GPUResource : public Object
+    /// Defines a graphics provider class which enumerates the physical adapters.
+    class ALIMER_API GraphicsProvider
     {
-        ALIMER_OBJECT(GPUResource, Object);
-
     public:
-        /// Resource types. 
-        enum class Type
-        {
-            /// Unknown resource type.
-            Unknown,
-            /// Buffer. Can be bound to all shader-stages
-            Buffer,
-            ///Texture. Can be bound as render-target, shader-resource and UAV
-            Texture,
-            Framebuffer
-        };
+        /// Constructor.
+        GraphicsProvider() = default;
 
-    protected:
-        GPUResource(Type type);
-        virtual ~GPUResource();
+        /// Destructor.
+        virtual ~GraphicsProvider() = default;
 
-    public:
-        /// Release the GPU resource.
-        virtual void Destroy() {}
+        /// Get set of available graphics providers.
+        static std::set<GPUBackend> GetAvailableProviders();
 
-        /// Return value indicating if the resource has been allocated.
-        bool IsAllocated() const { return isAllocated; }
+        /// Create new GPUDevice with given preferred backend, fallback to supported one.
+        static std::unique_ptr<GraphicsProvider> Create(GraphicsProviderFlags flags = GraphicsProviderFlags::None,  GPUBackend preferredBackend = GPUBackend::Count);
 
-    protected:
-        Type type;
-        /// Size in bytes of the resource.
-        uint64_t size{ 0 };
-        bool isAllocated = false;
+        /// Enumerate all graphics adapter.
+        virtual std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GPUResource);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsProvider);
     };
-} 
+}

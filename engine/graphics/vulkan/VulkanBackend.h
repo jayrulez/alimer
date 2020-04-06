@@ -22,27 +22,20 @@
 
 #pragma once
 
-#include <vk_mem_alloc.h>
-#include <volk.h>
+#include "volk.h"
+#include "vk_mem_alloc.h"
 #include <string>
 
 namespace alimer
 {
-    class VulkanGPUDevice;
+    class VulkanGraphicsProvider;
+    class VulkanGraphicsDevice;
 
     struct VulkanDeviceFeatures
     {
-        uint32_t apiVersion;
-        bool headless = false;
-
-        /// VK_KHR_get_surface_capabilities2
-        bool surface_capabilities2 = false;
-        /// VK_KHR_get_physical_device_properties2
-        bool physical_device_properties2 = false;
+        
         /// VK_KHR_external_memory_capabilities + VK_KHR_external_semaphore_capabilities
         bool external = false;
-        /// VK_EXT_debug_utils
-        bool debug_utils = false;
 
         /// Device - VK_KHR_get_memory_requirements2
         bool get_memory_requirements2 = false;

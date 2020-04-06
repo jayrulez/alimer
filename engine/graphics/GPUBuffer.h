@@ -22,16 +22,16 @@
 
 #pragma once
 
-#include "graphics/GPUResource.h"
+#include "graphics/GraphicsResource.h"
 
 namespace alimer
 {
-    class GPUBuffer : public GPUResource
+    class GPUBuffer : public GraphicsResource
     {
-        ALIMER_OBJECT(GPUBuffer, GPUResource);
+        ALIMER_OBJECT(GPUBuffer, GraphicsResource);
     public:
         /// Constructor.
-        GPUBuffer(GPUDevice* device, const BufferDescriptor* descriptor);
+        GPUBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor);
 
     private:
     };

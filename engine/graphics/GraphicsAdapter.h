@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,47 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "core/Utils.h"
+#include "graphics/Types.h"
+#include <string>
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
-    {
-    }
+    class GraphicsProvider;
 
-    const usize& SwapChain::GetExtent() const
+    /// Defines the physical graphics adapter class.
+    class ALIMER_API GraphicsAdapter
     {
-        return extent;
-    }
+    public:
+        /// Destructor.
+        virtual ~GraphicsAdapter() = default;
+
+        inline GraphicsProvider* GetProvider() const { return provider; }
+
+        /// Gets the adapter PCI Vendor ID (VID).
+        virtual uint32_t GetVendorId() const = 0;
+
+        /// Gets the adapter PCI Device ID (DID).
+        virtual uint32_t GetDeviceId() const = 0;
+
+        /// Get the type of the adapter.
+        virtual GraphicsAdapterType GetType() const = 0;
+
+        /// Gets the name of the adapter.
+        virtual const std::string& GetName() const = 0;
+
+    protected:
+        /// Constructor.
+        GraphicsAdapter::GraphicsAdapter(GraphicsProvider* provider_)
+            : provider(provider_)
+        {
+        }
+       
+    private:
+        GraphicsProvider* provider;
+
+        ALIMER_DISABLE_COPY_MOVE(GraphicsAdapter);
+    };
 }
-

@@ -22,19 +22,50 @@
 
 #pragma once
 
-#include "graphics/GraphicsResource.h"
-#include "math/Size.h"
+#include "graphics/Types.h"
+#include "core/Object.h"
 
 namespace alimer
 {
-    class Texture : public GraphicsResource
+    class GraphicsDevice;
+
+    /// Defines a graphics resource created by graphics device.
+    class GraphicsResource : public Object
     {
-        ALIMER_OBJECT(Texture, GraphicsResource);
+        ALIMER_OBJECT(GraphicsResource, Object);
+
+    public:
+        /// Resource types. 
+        enum class Type
+        {
+            /// Unknown resource type.
+            Unknown,
+            /// Buffer. Can be bound to all shader-stages
+            Buffer,
+            ///Texture. Can be bound as render-target, shader-resource and UAV
+            Texture,
+            Framebuffer
+        };
 
     protected:
-        /// Constructor.
-        Texture(GraphicsDevice* device);
+        GraphicsResource(GraphicsDevice* device_, Type type_);
+        virtual ~GraphicsResource();
+
+    public:
+        /// Release the GPU resource.
+        virtual void Destroy() {}
+
+        /// Return value indicating if the resource has been allocated.
+        bool IsAllocated() const { return isAllocated; }
+
+    protected:
+        GraphicsDevice* device;
+        Type type;
+        /// Size in bytes of the resource.
+        uint64_t size{ 0 };
+        bool isAllocated = false;
 
     private:
+        ALIMER_DISABLE_COPY_MOVE(GraphicsResource);
     };
 } 

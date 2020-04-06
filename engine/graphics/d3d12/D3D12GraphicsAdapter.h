@@ -20,21 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "graphics/GraphicsAdapter.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
-    {
-    }
+    class D3D12GraphicsProvider;
 
-    const usize& SwapChain::GetExtent() const
+    class D3D12GraphicsAdapter final : public GraphicsAdapter
     {
-        return extent;
-    }
+    public:
+        D3D12GraphicsAdapter(D3D12GraphicsProvider* provider_, IDXGIAdapter1* adapter_);
+        ~D3D12GraphicsAdapter() override;
+
+        uint32_t GetVendorId() const override;
+        uint32_t GetDeviceId() const override;
+        GraphicsAdapterType GetType() const override;
+        const std::string& GetName() const override;
+
+    private:
+        IDXGIAdapter1* adapter;
+
+        uint32_t vendorId;
+        uint32_t deviceId;
+        GraphicsAdapterType type;
+        std::string name;
+    };
 }
-

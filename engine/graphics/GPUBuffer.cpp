@@ -21,12 +21,12 @@
 //
 
 #include "graphics/GPUBuffer.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    GPUBuffer::GPUBuffer(GPUDevice* device, const BufferDescriptor* descriptor)
-        : GPUResource(Type::Buffer)
+    GPUBuffer::GPUBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor)
+        : GraphicsResource(device, Type::Buffer)
     {
 
     }

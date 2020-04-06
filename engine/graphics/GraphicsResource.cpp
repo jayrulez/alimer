@@ -20,21 +20,22 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#include "core/Assert.h"
+#include "graphics/GraphicsResource.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
+    GraphicsResource::GraphicsResource(GraphicsDevice* device_, Type type_)
+        : device(device_)
+        , type(type_)
     {
+        //device->AddGPUResource(this);
     }
 
-    const usize& SwapChain::GetExtent() const
+    GraphicsResource::~GraphicsResource()
     {
-        return extent;
+        //device->RemoveGPUResource(this);
     }
 }
 

@@ -58,16 +58,16 @@ namespace alimer
         Count
     };
 
-    enum class GPUDeviceFlags : uint32_t
+    enum class GraphicsProviderFlags : uint32_t
     {
         None = 0,
         Headless = 0x1,
         Validation = 0x2,
         GPUBasedValidation = 0x4
     };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GPUDeviceFlags);
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsProviderFlags);
 
-    enum class GPUAdapterType : uint32_t
+    enum class GraphicsAdapterType : uint32_t
     {
         DiscreteGPU,
         IntegratedGPU,

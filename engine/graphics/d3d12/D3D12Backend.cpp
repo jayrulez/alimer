@@ -21,11 +21,21 @@
 //
 
 #include "D3D12Backend.h"
-#include "D3D12GPUDevice.h"
+//#include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+    // D3D12 functions.
+    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
+    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
+    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
+    PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer = nullptr;
+    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
+    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
+#endif
+
     D3D12GPUFence::D3D12GPUFence(D3D12GPUDevice* device_)
         : device(device_)
     {
@@ -38,7 +48,7 @@ namespace alimer
 
     void D3D12GPUFence::Init(uint64_t initialValue)
     {
-        ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&handle));
+        //ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&handle));
         fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
         ALIMER_ASSERT(fenceEvent != INVALID_HANDLE_VALUE);
     }
@@ -49,7 +59,7 @@ namespace alimer
             return;
 
         CloseHandle(fenceEvent);
-        device->DeferredRelease(handle);
+        //device->DeferredRelease(handle);
     }
 
     void D3D12GPUFence::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)

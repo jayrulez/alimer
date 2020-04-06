@@ -34,13 +34,13 @@ namespace alimer
         Error
     };
 
-    class Framebuffer : public GPUResource
+    class Framebuffer : public GraphicsResource
     {
-        ALIMER_OBJECT(Framebuffer, GPUResource);
+        ALIMER_OBJECT(Framebuffer, GraphicsResource);
 
     protected:
         /// Constructor.
-        Framebuffer(GPUDevice* device);
+        Framebuffer(GraphicsDevice* device);
 
     public:
         const usize& getExtent() const;

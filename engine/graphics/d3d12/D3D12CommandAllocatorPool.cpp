@@ -21,7 +21,6 @@
 //
 
 #include "D3D12CommandAllocatorPool.h"
-#include "D3D12GPUDevice.h"
 #include <algorithm>
 
 namespace alimer

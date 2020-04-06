@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,31 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "graphics/GraphicsAdapter.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
+    class ALIMER_API VulkanGraphicsAdapter final : public GraphicsAdapter
     {
-    }
+    public:
+        /// Constructor.
+        VulkanGraphicsAdapter(VulkanGraphicsProvider * provider_, VkPhysicalDevice handle_);
+        /// Destructor.
+        ~VulkanGraphicsAdapter() override;
 
-    const usize& SwapChain::GetExtent() const
-    {
-        return extent;
-    }
+        uint32_t GetVendorId() const override;
+        uint32_t GetDeviceId() const override;
+        GraphicsAdapterType GetType() const override;
+        const std::string& GetName() const override;
+
+    private:
+        VkPhysicalDevice handle;
+        VkPhysicalDeviceProperties properties;
+
+        GraphicsAdapterType type;
+        std::string name;
+    };
 }
-

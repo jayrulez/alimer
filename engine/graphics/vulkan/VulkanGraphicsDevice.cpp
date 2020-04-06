@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "VulkanGPUDevice.h"
+#if TODO_VK
+#include "VulkanGraphicsDevice.h"
 #include "VulkanFramebuffer.h"
 #include "graphics/SwapChain.h"
 #include "core/Utils.h"
@@ -29,9 +30,6 @@
 #include "math/math.h"
 #include <algorithm>
 #include <vector>
-
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
 
 #if ALIMER_WINDOWS || ALIMER_LINUX || ALIMER_OSX
 #define GLFW_INCLUDE_NONE
@@ -42,90 +40,6 @@ using namespace std;
 
 namespace alimer
 {
-    namespace
-    {
-        bool hasLayers(const vector<const char*>& required, const vector<VkLayerProperties>& available)
-        {
-            for (auto layer : required)
-            {
-                bool found = false;
-                for (auto& available_layer : available)
-                {
-                    if (strcmp(available_layer.layerName, layer) == 0)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        vector<const char*> getOptimalValidationLayers(const vector<VkLayerProperties>& supported_instance_layers)
-        {
-            vector<vector<const char*>> validationLayerPriorityList =
-            {
-                // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
-                {"VK_LAYER_KHRONOS_validation"},
-
-                // Otherwise we fallback to using the LunarG meta layer
-                {"VK_LAYER_LUNARG_standard_validation"},
-
-                // Otherwise we attempt to enable the individual layers that compose the LunarG meta layer since it doesn't exist
-                {
-                    "VK_LAYER_GOOGLE_threading",
-                    "VK_LAYER_LUNARG_parameter_validation",
-                    "VK_LAYER_LUNARG_object_tracker",
-                    "VK_LAYER_LUNARG_core_validation",
-                    "VK_LAYER_GOOGLE_unique_objects",
-                },
-
-                // Otherwise as a last resort we fallback to attempting to enable the LunarG core layer
-                {"VK_LAYER_LUNARG_core_validation"} };
-
-            for (auto& validation_layers : validationLayerPriorityList)
-            {
-                if (hasLayers(validation_layers, supported_instance_layers))
-                {
-                    return validation_layers;
-                }
-
-                ALIMER_LOGW("Couldn't enable validation layers (see log for error) - falling back");
-            }
-
-            // Else return nothing
-            return {};
-        }
-    }
-
-    static VKAPI_ATTR VkBool32 vulkanDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context);
-
-    bool VulkanGPUDevice::IsAvailable()
-    {
-        static bool availableInitialized = false;
-        static bool available = false;
-        if (availableInitialized) {
-            return available;
-        }
-
-        availableInitialized = true;
-        VkResult result = volkInitialize();
-        if (result != VK_SUCCESS)
-        {
-            ALIMER_LOGW("Failed to initialize volk, vulkan backend is not available.");
-            return false;
-        }
-
-        available = true;
-        return available;
-    }
-
     VulkanGPUDevice::VulkanGPUDevice(GPUDeviceFlags flags)
         : GPUDevice()
     {
@@ -133,166 +47,11 @@ namespace alimer
 
         // Setup application info and create VkInstance.
         vk_features.apiVersion = volkGetInstanceVersion();
-        VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-        appInfo.pApplicationName = "Alimer";
-        appInfo.applicationVersion = 0;
-        appInfo.pEngineName = "Alimer";
-        appInfo.engineVersion = 0;
-        if (vk_features.apiVersion >= VK_API_VERSION_1_2) {
-            appInfo.apiVersion = VK_API_VERSION_1_2;
-        }
-        else if (vk_features.apiVersion >= VK_API_VERSION_1_1) {
-            appInfo.apiVersion = VK_API_VERSION_1_1;
-        }
-        else {
-            appInfo.apiVersion = VK_MAKE_VERSION(1, 0, 55);
-        }
-        const bool headless = any(flags & GPUDeviceFlags::Headless);
-
-        // Enumerate supported extensions and setup instance extensions.
-        std::vector<const char*> enabledInstanceExtensions;
-        {
-            uint32_t instanceExtensionCount;
-            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
-
-            vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
-            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
-
-            for (auto& available_extension : availableInstanceExtensions)
-            {
-                if (strcmp(available_extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-                {
-                    vk_features.debug_utils = true;
-                    //ALIMER_LOGI("{} is available, enabling it", VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                }
-                else if (strcmp(available_extension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
-                {
-                    vk_features.headless = true;
-                }
-                else if (strcmp(available_extension.extensionName, VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) == 0)
-                {
-                    vk_features.surface_capabilities2 = true;
-                }
-                else if (strcmp(available_extension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
-                {
-                    vk_features.physical_device_properties2 = true;
-                    enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-                }
-            }
-
-            // Try to enable headless surface extension if it exists
-            if (headless)
-            {
-                if (!vk_features.headless)
-                {
-                    ALIMER_LOGW("%s is not available, disabling swapchain creation", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-                }
-                else
-                {
-                    ALIMER_LOGI("%s is available, enabling it", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-                    enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-                }
-            }
-            else
-            {
-                enabledInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-                // Enable surface extensions depending on os
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-                enabledInstanceExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_WIN32_KHR)
-                enabledInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(_DIRECT2DISPLAY)
-                enabledInstanceExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-                enabledInstanceExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-                enabledInstanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_IOS_MVK)
-                enabledInstanceExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-                // TODO: Support VK_EXT_metal_surface
-                enabledInstanceExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
-#endif
-
-                if (vk_features.surface_capabilities2)
-                {
-                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-                }
-            }
-        }
-
-        const bool validation =
-            any(flags & GPUDeviceFlags::Validation) |
-            any(flags & GPUDeviceFlags::GpuBasedValidation);
-
-        /*if (vk_features.physical_device_properties2
-            && hasExtension(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME)
-            && hasExtension(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME))
-        {
-            instanceExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-            instanceExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
-            vk_features.external = true;
-        }*/
-
-        vector<const char*> instanceLayers;
-
-        if (validation)
-        {
-            uint32_t layerCount;
-            VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
-
-            vector<VkLayerProperties> queriedLayers(layerCount);
-            VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, queriedLayers.data()));
-
-            instanceLayers = getOptimalValidationLayers(queriedLayers);
-        }
-
-        VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-        createInfo.pApplicationInfo = &appInfo;
-        createInfo.enabledLayerCount = static_cast<uint32_t>(instanceLayers.size());
-        createInfo.ppEnabledLayerNames = instanceLayers.data();
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
-        createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
-
-        // Create the Vulkan instance
-        VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
-
-        if (result != VK_SUCCESS)
-        {
-            VK_THROW(result, "Could not create Vulkan instance");
-        }
-
-        volkLoadInstance(instance);
-
-        if (validation)
-        {
-            VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-            debugMessengerCreateInfo.messageSeverity =
-                VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-            debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-            debugMessengerCreateInfo.pfnUserCallback = vulkanDebugCallback;
-            debugMessengerCreateInfo.pUserData = this;
-            VK_CHECK(
-                vkCreateDebugUtilsMessengerEXT(instance, &debugMessengerCreateInfo, nullptr, &debug_messenger)
-            );
-        }
+        
 
         // Enumerate physical device and create logical one.
         {
-            uint32_t deviceCount;
-            if (vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr) != VK_SUCCESS) {
-                return;
-            }
-
-            vector<VkPhysicalDevice> physicalDevices(deviceCount);
-            if (vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()) != VK_SUCCESS) {
-                return;
-            }
+            
 
             // Pick a suitable physical device based on user's preference.
             uint32_t best_device_score = 0;
@@ -615,14 +374,6 @@ namespace alimer
         if (device != VK_NULL_HANDLE) {
             vkDestroyDevice(device, nullptr);
         }
-
-        if (debug_messenger != VK_NULL_HANDLE) {
-            vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
-            debug_messenger = VK_NULL_HANDLE;
-        }
-
-        vkDestroyInstance(instance, nullptr);
-        instance = VK_NULL_HANDLE;
     }
 
     void VulkanGPUDevice::WaitIdle()
@@ -737,3 +488,5 @@ namespace alimer
         return VK_FALSE;
     }
 }
+
+#endif // TODO_VK
