@@ -28,11 +28,15 @@
 #include "graphics/GPUBuffer.h"
 
 #if defined(ALIMER_VULKAN)
-#   include "graphics/vulkan/VulkanGPUDevice.h"
+#include "graphics/vulkan/VulkanGPUDevice.h"
+#endif
+
+#if defined(ALIMER_D3D11)
+#include "graphics/d3d11/D3D11GPUDevice.h"
 #endif
 
 #if defined(ALIMER_D3D12)
-//#include "graphics/d3d12/D3D12GPUDevice.h"
+#include "graphics/d3d12/D3D12GPUDevice.h"
 #endif
 
 #if defined(ALIMER_OPENGL)
@@ -66,10 +70,13 @@ namespace alimer
 #endif
 
 #if defined(ALIMER_D3D12)
-            /*if (D3D12GPUDevice::IsAvailable())
-            {
+            if (D3D12GPUDevice::IsAvailable())
                 availableBackends.insert(GPUBackend::Direct3D12);
-            }*/
+#endif
+
+#if defined(ALIMER_D3D11)
+            if (D3D11GPUDevice::IsAvailable())
+                availableBackends.insert(GPUBackend::Direct3D11);
 #endif
 
 #if defined(ALIMER_OPENGL)
@@ -99,6 +106,8 @@ namespace alimer
                 backend = GPUBackend::Direct3D12;
             else if (availableBackends.find(GPUBackend::Vulkan) != availableBackends.end())
                 backend = GPUBackend::Vulkan;
+            else if (availableBackends.find(GPUBackend::Direct3D11) != availableBackends.end())
+                backend = GPUBackend::Direct3D11;
             else if (availableBackends.find(GPUBackend::OpenGL) != availableBackends.end())
                 backend = GPUBackend::OpenGL;
             else
@@ -113,13 +122,20 @@ namespace alimer
             device = make_unique<VulkanGPUDevice>(flags);
             break;
 #endif
-            /*
 #if defined(ALIMER_D3D12)
         case GPUBackend::Direct3D12:
             ALIMER_LOGINFO("Using Direct3D12 render driver");
-            device = make_unique<D3D12GPUDevice>(validation);
+            gpuDevice = make_shared<D3D12GPUDevice>(window, desc);
             break;
-#endif*/
+#endif
+
+#if defined(ALIMER_D3D11)
+        case GPUBackend::Direct3D11:
+            ALIMER_LOGINFO("Using Direct3D11 render driver");
+            gpuDevice = make_shared<D3D11GPUDevice>(window, desc);
+            break;
+#endif
+
 #if defined(ALIMER_OPENGL)
         case GPUBackend::OpenGL:
             ALIMER_LOGINFO("Using OpenGL render driver");
@@ -130,6 +146,7 @@ namespace alimer
         case GPUBackend::Metal:
             break;
         default:
+            /* TODO: create null backend. */
             break;
         }
 
@@ -150,7 +167,7 @@ namespace alimer
 
     void GPUDevice::Shutdown()
     {
-
+        BackendShutdown();
     }
 
     void GPUDevice::NotifyValidationError(const char* message)

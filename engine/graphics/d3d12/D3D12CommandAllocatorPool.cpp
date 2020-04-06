@@ -26,10 +26,9 @@
 
 namespace alimer
 {
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device_, CommandQueueType queueType_)
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device_, D3D12_COMMAND_LIST_TYPE commandListType_)
         : device(device_)
-        , queueType(queueType_)
-        , commandListType(GetD3D12CommandListType(queueType_))
+        , commandListType(commandListType_)
     {
 
     }

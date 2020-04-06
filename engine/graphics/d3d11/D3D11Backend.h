@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/Types.h"
-#include "graphics/d3d_common/D3DCommon.h"
+#include "graphics/d3d/D3DCommon.h"
 #include <d3d11_1.h>
 
 namespace alimer

@@ -27,7 +27,7 @@
 #include "D3D12Texture.h"
 #include "D3D12GPUBuffer.h"
 #include "core/String.h"
-#include <D3D12MemAlloc.h>
+#include "D3D12MemAlloc.h"
 
 namespace alimer
 {
@@ -97,64 +97,16 @@ namespace alimer
         return available;
     }
 
-    D3D12GPUDevice::D3D12GPUDevice(bool validation)
-        : GPUDevice()
-        , validation{ validation }
+    D3D12GPUDevice::D3D12GPUDevice(Window* window_, const Desc& desc_)
+        : GPUDevice(window_, desc_)
+        , frameFence(this)
     {
-        CreateDeviceResources();
     }
 
     D3D12GPUDevice::~D3D12GPUDevice()
     {
         WaitIdle();
-        Destroy();
-    }
-
-    void D3D12GPUDevice::Destroy()
-    {
-        //mainContext.reset();
-
-        SafeDelete(graphicsQueue);
-        SafeDelete(computeQueue);
-        SafeDelete(copyQueue);
-
-        // Allocator
-        D3D12MA::Stats stats;
-        allocator->CalculateStats(&stats);
-
-        if (stats.Total.UsedBytes > 0) {
-            ALIMER_LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
-        }
-
-        SafeRelease(allocator);
-
-#if !defined(NDEBUG)
-        ULONG refCount = d3dDevice->Release();
-        if (refCount > 0)
-        {
-            ALIMER_LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
-
-            SharedPtr<ID3D12DebugDevice> debugDevice;
-            if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(debugDevice.GetAddressOf()))))
-            {
-                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
-            }
-        }
-#else
-        SafeRelease(d3dDevice);
-#endif
-
-        dxgiFactory.Reset();
-
-#ifdef _DEBUG
-        {
-            SharedPtr<IDXGIDebug1> dxgiDebug;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
-            {
-                dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-            }
-        }
-#endif
+        BackendShutdown();
     }
 
     bool D3D12GPUDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
@@ -243,13 +195,15 @@ namespace alimer
         return true;
     }
 
-    void D3D12GPUDevice::CreateDeviceResources()
+    bool D3D12GPUDevice::BackendInit()
     {
+
 #if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (validation)
+        if (any(desc.flags & GPUDeviceFlags::Validation) ||
+            any(desc.flags & GPUDeviceFlags::GPUBasedValidation))
         {
             ID3D12Debug* d3d12debug = nullptr;
             if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void**)&d3d12debug)))
@@ -259,11 +213,11 @@ namespace alimer
                 ID3D12Debug1* d3d12debug1;
                 if (SUCCEEDED(d3d12debug->QueryInterface(__uuidof(ID3D12Debug1), (void**)&d3d12debug1)))
                 {
-                    /*if (any(flags & GraphicsDeviceFlags::GPUBasedValidation))
+                    if (any(desc.flags & GPUDeviceFlags::GPUBasedValidation))
                     {
                         d3d12debug1->SetEnableGPUBasedValidation(true);
                     }
-                    else*/
+                    else
                     {
                         d3d12debug1->SetEnableGPUBasedValidation(false);
                     }
@@ -329,7 +283,7 @@ namespace alimer
                 adapter,
                 d3dMinFeatureLevel,
                 IID_PPV_ARGS(&d3dDevice)
-                ));
+            ));
 
             d3dDevice->SetName(L"AlimerDevice");
             InitCapabilities(adapter);
@@ -359,19 +313,77 @@ namespace alimer
 
         // Create command queue's and default context.
         {
-            graphicsQueue = new D3D12CommandQueue(this, CommandQueueType::Graphics);
-            computeQueue = new D3D12CommandQueue(this, CommandQueueType::Compute);
-            copyQueue = new D3D12CommandQueue(this, CommandQueueType::Copy);
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 0;
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, __uuidof(ID3D12CommandQueue), (void**)&graphicsQueue));
+            graphicsQueue->SetName(L"Graphics Command Queue");
+
+            //computeQueue = new D3D12CommandQueue(this, CommandQueueType::Compute);
+            //copyQueue = new D3D12CommandQueue(this, CommandQueueType::Copy);
             //mainContext.reset(new D3D12GraphicsContext(this, CommandQueueType::Graphics));
         }
 
         // Create frame fence.
-        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-        if (frameFenceEvent == nullptr)
-        {
-            ALIMER_LOGERROR("CreateEventEx failed");
+        frameFence.Init(0);
+
+        return true;
+    }
+
+    void D3D12GPUDevice::BackendShutdown()
+    {
+        //mainContext.reset();
+
+        frameFence.Shutdown();
+
+        SafeRelease(graphicsQueue);
+        //SafeDelete(computeQueue);
+        //SafeDelete(copyQueue);
+
+        // Allocator
+        D3D12MA::Stats stats;
+        allocator->CalculateStats(&stats);
+
+        if (stats.Total.UsedBytes > 0) {
+            ALIMER_LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
         }
+
+        SafeRelease(allocator);
+
+#if !defined(NDEBUG)
+        ULONG refCount = d3dDevice->Release();
+        if (refCount > 0)
+        {
+            ALIMER_LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
+
+            SharedPtr<ID3D12DebugDevice> debugDevice;
+            if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(debugDevice.GetAddressOf()))))
+            {
+                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
+            }
+        }
+#else
+        SafeRelease(d3dDevice);
+#endif
+
+        dxgiFactory.Reset();
+
+#ifdef _DEBUG
+        {
+            SharedPtr<IDXGIDebug1> dxgiDebug;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug.GetAddressOf()))))
+            {
+                dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            }
+        }
+#endif
+    }
+
+    void D3D12GPUDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
+    {
+
     }
 
     void D3D12GPUDevice::InitCapabilities(IDXGIAdapter1* adapter)
@@ -420,12 +432,19 @@ namespace alimer
 
     void D3D12GPUDevice::WaitIdle()
     {
-        graphicsQueue->WaitForIdle();
-        computeQueue->WaitForIdle();
-        copyQueue->WaitForIdle();
+        // Wait for the GPU to fully catch up with the CPU
+        ALIMER_ASSERT(currentCPUFrame >= currentGPUFrame);
+        if (currentCPUFrame > currentGPUFrame)
+        {
+            frameFence.Wait(currentCPUFrame);
+            currentGPUFrame = currentCPUFrame;
+        }
+
+        /*computeQueue->WaitForIdle();
+        copyQueue->WaitForIdle();*/
     }
 
-    SharedPtr<SwapChain> D3D12GPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
+    /*SharedPtr<SwapChain> D3D12GPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
     {
         ALIMER_ASSERT(descriptor);
         return new D3D12SwapChain(this, descriptor);
@@ -439,11 +458,11 @@ namespace alimer
     GPUBuffer* D3D12GPUDevice::CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData)
     {
         return new D3D12GPUBuffer(this, descriptor, initialData);
-    }
+    }*/
 
-    void D3D12GPUDevice::CommitFrame()
+    void D3D12GPUDevice::Commit()
     {
-        graphicsQueue->GetHandle()->Signal(frameFence, ++numFrames);
+        /*graphicsQueue->GetHandle()->Signal(frameFence, ++numFrames);
 
         uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
@@ -451,38 +470,12 @@ namespace alimer
         {
             frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
             WaitForSingleObject(frameFenceEvent, INFINITE);
-        }
+        }*/
 
         if (!dxgiFactory->IsCurrent())
         {
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
-        }
-    }
-
-    D3D12CommandQueue* D3D12GPUDevice::GetQueue(CommandQueueType queueType) const
-    {
-        switch (queueType)
-        {
-        case CommandQueueType::Compute:
-            return computeQueue;
-        case CommandQueueType::Copy:
-            return copyQueue;
-        default:
-            return graphicsQueue;
-        }
-    }
-
-    ID3D12CommandQueue* D3D12GPUDevice::GetD3DCommandQueue(CommandQueueType queueType) const
-    {
-        switch (queueType)
-        {
-        case CommandQueueType::Compute:
-            return computeQueue->GetHandle();
-        case CommandQueueType::Copy:
-            return copyQueue->GetHandle();
-        default:
-            return graphicsQueue->GetHandle();
         }
     }
 }

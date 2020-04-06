@@ -21,6 +21,7 @@
 //
 
 #include "core/Platform.h"
+#include "core/Assert.h"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -113,6 +114,74 @@ namespace alimer
         return PlatformFamily::Unknown;
 #endif
     }
+
+#if defined(_WIN64) || defined(_WIN32) || defined(WINAPI_FAMILY)
+    WindowsVersion Platform::GetWindowsVersion()
+    {
+        WindowsVersion version = WindowsVersion::Unknown;
+        auto RtlGetVersion = reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
+        ALIMER_ASSERT_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
+
+        RTL_OSVERSIONINFOEXW osinfo;
+        osinfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+        if (RtlGetVersion(&osinfo) == 0)
+        {
+            if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_NT)
+            {
+                if (osinfo.dwMajorVersion == 5)
+                {
+                    if (osinfo.dwMinorVersion == 0)
+                    {
+                        version = WindowsVersion::Win2000;
+                    }
+                    else if (osinfo.dwMinorVersion == 1)
+                    {
+                        version = WindowsVersion::WinXP;
+                    }
+                    else if (osinfo.dwMinorVersion == 2)
+                    {
+                        if (osinfo.wProductType == VER_NT_WORKSTATION)
+                        {
+                            // 64 bit windows actually but this will be detected later anyway
+                            version = WindowsVersion::WinXP; 
+                        }
+                        else if (
+                            osinfo.wProductType == VER_NT_SERVER ||
+                            osinfo.wProductType == VER_NT_DOMAIN_CONTROLLER)
+                        {
+                            version = WindowsVersion::WinSrv2003;
+                        }
+                    }
+                }
+                else if (osinfo.dwMajorVersion == 6)
+                {
+                    if (osinfo.dwMinorVersion == 0)
+                    {
+                        version = WindowsVersion::WinVista;
+                    }
+                    else if (osinfo.dwMinorVersion == 1)
+                    {
+                        version = WindowsVersion::Win7;
+                    }
+                    else if (osinfo.dwMinorVersion == 2)
+                    {
+                        version = WindowsVersion::Win8;
+                    }
+                    else if (osinfo.dwMinorVersion == 3)
+                    {
+                        version = WindowsVersion::Win81;
+                    }
+                }
+                else if (osinfo.dwMajorVersion == 10)
+                {
+                    version = WindowsVersion::Win10;
+                }
+            }
+        }
+
+        return version;
+    }
+#endif
 
     ProcessId Platform::GetCurrentProcessId()
     {

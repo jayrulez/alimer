@@ -55,16 +55,23 @@ namespace alimer
 
     class D3D12GPUDevice;
 
-    static inline D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
+    class D3D12GPUFence
     {
-        switch (queueType)
-        {
-        case CommandQueueType::Compute:
-            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        case CommandQueueType::Copy:
-            return D3D12_COMMAND_LIST_TYPE_COPY;
-        default:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        }
-    }
+    public:
+        D3D12GPUFence(D3D12GPUDevice* device_);
+        ~D3D12GPUFence();
+
+        void Init(uint64_t initialValue = 0);
+        void Shutdown();
+        void Signal(ID3D12CommandQueue* queue, uint64_t fenceValue);
+        void Wait(uint64_t fenceValue);
+        bool IsSignaled(uint64_t fenceValue);
+        void Clear(uint64_t fenceValue);
+
+    private:
+        D3D12GPUDevice* device;
+
+        ID3D12Fence* handle = nullptr;
+        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+    };
 }

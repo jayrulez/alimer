@@ -22,7 +22,7 @@
 
 #include "D3D12GPUBuffer.h"
 #include "D3D12GPUDevice.h"
-#include <D3D12MemAlloc.h>
+#include "D3D12MemAlloc.h"
 
 namespace alimer
 {

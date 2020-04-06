@@ -26,13 +26,12 @@
 
 namespace alimer
 {
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GPUDevice* device_, CommandQueueType queueType_)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GPUDevice* device_, D3D12_COMMAND_LIST_TYPE commandListType_)
         : device(device_)
-        , queueType(queueType_)
-        , commandListType(GetD3D12CommandListType(queueType_))
+        , commandListType(commandListType_)
         , nextFenceValue((uint64_t)commandListType << 56 | 1)
         , lastCompletedFenceValue((uint64_t)commandListType << 56)
-        , allocatorPool(device_->GetD3DDevice(), queueType_)
+        , allocatorPool(device_->GetD3DDevice(), commandListType)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Type = commandListType;
@@ -44,7 +43,7 @@ namespace alimer
         ThrowIfFailed(device->GetD3DDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3d12Fence)));
         d3d12Fence->Signal(lastCompletedFenceValue);
 
-        switch (queueType_)
+        /*switch (commandListType)
         {
         case CommandQueueType::Copy:
             d3d12CommandQueue->SetName(L"Copy Command Queue");
@@ -58,7 +57,7 @@ namespace alimer
             d3d12CommandQueue->SetName(L"Graphics Command Queue");
             d3d12Fence->SetName(L"Graphics Command Queue Fence");
             break;
-        }
+        }*/
 
         // Create an event handle to use for frame synchronization.
         fenceEventHandle = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);

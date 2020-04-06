@@ -66,6 +66,21 @@ namespace alimer
         Console
     };
 
+#if defined(_WIN32) || defined(_WIN64)
+    enum class WindowsVersion : uint32_t
+    {
+        Unknown,
+        Win2000,
+        WinXP,
+        WinSrv2003,
+        WinVista,
+        Win7,
+        Win8,
+        Win81,
+        Win10
+    };
+#endif
+
     using ProcessId = uint32_t;
 
     class ALIMER_API Platform
@@ -79,6 +94,11 @@ namespace alimer
 
         /// Return the current platform family.
         ALIMER_API PlatformFamily GetFamily();
+
+#if defined(_WIN32) || defined(_WIN64)
+        /// Return the current windows version.
+        ALIMER_API WindowsVersion GetWindowsVersion();
+#endif
 
         /// Returns the current process id (pid)
         ALIMER_API ProcessId GetCurrentProcessId();

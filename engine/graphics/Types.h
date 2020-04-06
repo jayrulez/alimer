@@ -48,6 +48,8 @@ namespace alimer
         Vulkan,
         /// Direct3D 12 backend.
         Direct3D12,
+        /// Direct3D 11.1+ backend.
+        Direct3D11,
         /// Metal backend.
         Metal,
         /// OpenGL backend.
@@ -61,15 +63,16 @@ namespace alimer
         None = 0,
         Headless = 0x1,
         Validation = 0x2,
-        GpuBasedValidation = 0x4
+        GPUBasedValidation = 0x4
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GPUDeviceFlags);
 
-    enum class CommandQueueType : uint32_t
+    enum class GPUAdapterType : uint32_t
     {
-        Graphics,
-        Compute,
-        Copy
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
     };
 
     /// Defines the type of Texture

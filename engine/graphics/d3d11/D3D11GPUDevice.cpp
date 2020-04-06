@@ -21,7 +21,10 @@
 //
 
 #include "D3D11GPUDevice.h"
-#include "D3D11Framebuffer.h"
+//#include "D3D11Framebuffer.h"
+
+#include <wrl/client.h>
+using Microsoft::WRL::ComPtr;
 
 namespace alimer
 {
@@ -93,7 +96,8 @@ namespace alimer
         return available;
     }
 
-    D3D11GPUDevice::D3D11GPUDevice()
+    D3D11GPUDevice::D3D11GPUDevice(Window* window_, const Desc& desc_)
+        : GPUDevice(window_, desc_)
     {
     }
 
@@ -103,7 +107,7 @@ namespace alimer
         BackendShutdown();
     }
 
-    bool D3D11GPUDevice::BackendInit(const DeviceDesc& desc)
+    bool D3D11GPUDevice::BackendInit()
     {
         CreateFactory();
 
@@ -111,14 +115,16 @@ namespace alimer
         ComPtr<IDXGIAdapter1> adapter = nullptr;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> dxgiFactory6;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
+        IDXGIFactory6* dxgiFactory6;
+        HRESULT hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory6), (void**)&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
             // By default prefer high performance
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == DevicePowerPreference::LowPower) {
+            if (desc.preferredAdapterType == GPUAdapterType::IntegratedGPU) {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
+            } else if (desc.preferredAdapterType == GPUAdapterType::Unknown) {
+                gpuPreference = DXGI_GPU_PREFERENCE_UNSPECIFIED;
             }
 
             for (UINT i = 0;
@@ -137,6 +143,8 @@ namespace alimer
                 break;
             }
         }
+
+        SafeRelease(dxgiFactory6);
 #endif
 
         if (!adapter)
@@ -184,8 +192,8 @@ namespace alimer
         };
 
         // Create the Direct3D 11 API device object and a corresponding context.
-        ComPtr<ID3D11Device> device;
-        ComPtr<ID3D11DeviceContext> context;
+        ID3D11Device* tempDevice;
+        ID3D11DeviceContext* tempContext;
 
         hr = D3D11CreateDevice(
             adapter.Get(),
@@ -195,9 +203,9 @@ namespace alimer
             s_featureLevels,
             _countof(s_featureLevels),
             D3D11_SDK_VERSION,
-            device.GetAddressOf(),  // Returns the Direct3D device created.
-            &d3dFeatureLevel,       // Returns feature level of device created.
-            context.GetAddressOf()  // Returns the device immediate context.
+            &tempDevice,
+            &d3dFeatureLevel,
+            &tempContext
         );
 
 #if !defined(NDEBUG)
@@ -214,9 +222,9 @@ namespace alimer
                 s_featureLevels,
                 _countof(s_featureLevels),
                 D3D11_SDK_VERSION,
-                device.GetAddressOf(),
+                &tempDevice,
                 &d3dFeatureLevel,
-                context.GetAddressOf()
+                &tempContext
             );
 
             if (SUCCEEDED(hr))
@@ -229,11 +237,11 @@ namespace alimer
 #ifndef NDEBUG
         if (any(desc.flags & GPUDeviceFlags::Validation))
         {
-            ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(device.As(&d3dDebug)))
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(tempDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug)))
             {
-                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
+                ID3D11InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -249,23 +257,29 @@ namespace alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
                 }
+
+                d3dDebug->Release();
             }
         }
 #endif
 
-        ThrowIfFailed(device.As(&d3dDevice));
-        ThrowIfFailed(context.As(&d3dContext));
+        ThrowIfFailed(tempDevice->QueryInterface(__uuidof(ID3D11Device1), (void**)&d3dDevice));
+        ThrowIfFailed(tempContext->QueryInterface(__uuidof(ID3D11DeviceContext1), (void**)&d3dContext));
+
+        SafeRelease(tempDevice);
+        SafeRelease(tempContext);
 
         // Init caps and features.
         InitCapabilities(adapter.Get());
 
-        if (desc.native_window_handle != nullptr)
+        /*if (desc.native_window_handle != nullptr)
         {
             SwapChainDescriptor swapChainDesc = {};
             swapChainDesc.nativeWindowHandle = desc.native_window_handle;
             createFramebuffer(&swapChainDesc);
-        }
+        }*/
 
         return true;
     }
@@ -276,29 +290,30 @@ namespace alimer
 
     void D3D11GPUDevice::BackendShutdown()
     {
-        d3dContext.Reset();
+        SafeRelease(d3dContext);
 
+        
 #if !defined(NDEBUG)
-        auto tempDevice = d3dDevice.Get();
-        ULONG refCount = d3dDevice.Reset();
+        ULONG refCount = d3dDevice->Release();
         if (refCount > 0)
         {
-            //ALIMER_LOGD("Direct3D11: There are {} unreleased references left on the device", refCount);
+            ALIMER_LOGD("Direct3D11: There are %u unreleased references left on the device", refCount);
 
             ID3D11Debug* debugDevice;
-            if (SUCCEEDED(tempDevice->QueryInterface(&debugDevice)))
+            if (SUCCEEDED(d3dDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugDevice)))
             {
                 debugDevice->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
                 debugDevice->Release();
             }
         }
 #else
-        d3dDevice.Reset();
+        d3dDevice->Release();
 #endif
     }
 
     void D3D11GPUDevice::CreateFactory()
     {
+        SafeRelease(dxgiFactory);
 
 #if defined(_DEBUG)
         bool debugDXGI = false;
@@ -307,7 +322,7 @@ namespace alimer
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
                 debugDXGI = true;
-                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
 
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -326,12 +341,12 @@ namespace alimer
         if (!debugDXGI)
 #endif
         {
-            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
         }
 
         // Determines whether tearing support is available for fullscreen borderless windows.
-        ComPtr<IDXGIFactory5> dxgiFactory5;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+        IDXGIFactory5* dxgiFactory5;
+        HRESULT hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory5), (void**)&dxgiFactory5);
         if (SUCCEEDED(hr))
         {
             BOOL allowTearing = FALSE;
@@ -344,6 +359,7 @@ namespace alimer
                 isTearingSupported = true;
             }
         }
+        SafeRelease(dxgiFactory5);
     }
 
     void D3D11GPUDevice::WaitIdle()
@@ -351,33 +367,28 @@ namespace alimer
         d3dContext->Flush();
     }
 
-    bool D3D11GPUDevice::begin_frame()
+    void D3D11GPUDevice::Commit()
     {
-        return true;
+        /* HRESULT hr = S_OK;
+         UINT syncInterval = vsync ? 1 : 0;
+         UINT presentFlags = (isTearingSupported && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
+
+         for (auto swap_chain : swap_chains)
+         {
+             hr = swap_chain->present(syncInterval, presentFlags);
+             if (hr == DXGI_ERROR_DEVICE_REMOVED
+                 || hr == DXGI_ERROR_DEVICE_HUNG
+                 || hr == DXGI_ERROR_DEVICE_RESET
+                 || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
+                 || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+             {
+             }
+         }*/
     }
 
-    void D3D11GPUDevice::end_frame()
-    {
-        HRESULT hr = S_OK;
-        UINT syncInterval = vsync ? 1 : 0;
-        UINT presentFlags = (isTearingSupported && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
-
-        for (auto swap_chain : swap_chains)
-        {
-            hr = swap_chain->present(syncInterval, presentFlags);
-            if (hr == DXGI_ERROR_DEVICE_REMOVED
-                || hr == DXGI_ERROR_DEVICE_HUNG
-                || hr == DXGI_ERROR_DEVICE_RESET
-                || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
-                || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
-            {
-            }
-        }
-    }
-
-    std::shared_ptr<Framebuffer> D3D11GPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
+    /*std::shared_ptr<Framebuffer> D3D11GPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
     {
         swap_chains.push_back(std::make_shared<D3D11Framebuffer>(this, descriptor));
         return swap_chains.back();
-    }
+    }*/
 }

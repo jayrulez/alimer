@@ -48,7 +48,7 @@ namespace alimer
     bool GLGPUDevice::BackendInit()
     {
         bool validation = any(desc.flags & GPUDeviceFlags::Validation) ||
-            any(desc.flags & GPUDeviceFlags::GpuBasedValidation);
+            any(desc.flags & GPUDeviceFlags::GPUBasedValidation);
 
         context = GLContext::Create(window->GetNativeHandle(), validation, true, false, desc.colorSrgb, desc.sampleCount);
 
@@ -56,6 +56,11 @@ namespace alimer
         LOAD(glClearColor);
 
         return true;
+    }
+
+    void GLGPUDevice::BackendShutdown()
+    {
+
     }
 
     void GLGPUDevice::Commit()

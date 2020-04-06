@@ -46,6 +46,7 @@ namespace alimer
         {
             GPUBackend preferredBackend = GPUBackend::Count;
             GPUDeviceFlags flags = GPUDeviceFlags::None;
+            GPUAdapterType preferredAdapterType = GPUAdapterType::DiscreteGPU;
             bool colorSrgb = true;
             uint32_t sampleCount = 1;
         };
@@ -81,6 +82,7 @@ namespace alimer
     private:
         bool Initialize();
         virtual bool BackendInit() = 0;
+        virtual void BackendShutdown() = 0;
 
     protected:
         /// Constructor.

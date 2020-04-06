@@ -32,7 +32,7 @@ namespace alimer
     class D3D12CommandQueue final 
     {
     public:
-        D3D12CommandQueue(D3D12GPUDevice* device_, CommandQueueType queueType_);
+        D3D12CommandQueue(D3D12GPUDevice* device_, D3D12_COMMAND_LIST_TYPE commandListType_);
         ~D3D12CommandQueue();
 
         void Destroy();
@@ -48,7 +48,6 @@ namespace alimer
 
     private:
         D3D12GPUDevice* device;
-        CommandQueueType queueType;
         const D3D12_COMMAND_LIST_TYPE commandListType;
         ID3D12CommandQueue* d3d12CommandQueue;
 

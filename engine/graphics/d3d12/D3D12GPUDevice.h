@@ -36,13 +36,19 @@ namespace alimer
         static bool IsAvailable();
 
         /// Constructor.
-        D3D12GPUDevice(bool validation);
+        D3D12GPUDevice(Window* window_, const Desc& desc_);
         /// Destructor.
         ~D3D12GPUDevice() override;
 
-        void Destroy();
-        void WaitIdle() override;
-        void CommitFrame() override;
+        void WaitIdle();
+        void Commit() override;
+
+        template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
+        {
+            IUnknown* base = resource;
+            DeferredRelease_(base, forceDeferred);
+            resource = nullptr;
+        }
 
         IDXGIFactory4*          GetDXGIFactory() const { return dxgiFactory; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
@@ -50,25 +56,23 @@ namespace alimer
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         D3D12MA::Allocator*     GetMemoryAllocator() const { return allocator; }
 
-        D3D12CommandQueue* GetGraphicsQueue(void) { return graphicsQueue; }
+        ID3D12CommandQueue* GetGraphicsQueue(void) { return graphicsQueue; }
         D3D12CommandQueue* GetComputeQueue(void) { return computeQueue; }
         D3D12CommandQueue* GetCopyQueue(void) { return copyQueue; }
-
-        D3D12CommandQueue* GetQueue(CommandQueueType queueType = CommandQueueType::Graphics) const;
-        ID3D12CommandQueue* GetD3DCommandQueue(CommandQueueType queueType = CommandQueueType::Graphics) const;
 
     private:
         static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
-        void CreateDeviceResources();
+        bool BackendInit() override;
+        void BackendShutdown() override;
         bool GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
+        void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
-        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
-        SharedPtr<Texture> CreateTexture() override;
-        GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
+        //SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
+        //SharedPtr<Texture> CreateTexture() override;
+        //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
 
-        bool validation;
         UINT dxgiFactoryFlags = 0;
         SharedPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
@@ -76,12 +80,13 @@ namespace alimer
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         D3D12MA::Allocator* allocator = nullptr;
 
-        D3D12CommandQueue* graphicsQueue;
+        ID3D12CommandQueue* graphicsQueue;
         D3D12CommandQueue* computeQueue;
         D3D12CommandQueue* copyQueue;
 
-        ID3D12Fence* frameFence = nullptr;
-        HANDLE frameFenceEvent = nullptr;
-        uint64_t numFrames=0;
+        D3D12GPUFence frameFence;
+        uint64_t currentCPUFrame = 0;
+        uint64_t currentGPUFrame = 0;
+        uint64_t currFrameIndex = 0;
     };
 }

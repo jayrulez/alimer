@@ -36,20 +36,19 @@ namespace alimer
         static bool IsAvailable();
 
         /// Constructor.
-        D3D11GPUDevice();
+        D3D11GPUDevice(Window* window_, const Desc& desc_);
         /// Destructor.
         ~D3D11GPUDevice() override;
 
-        bool BackendInit(const DeviceDesc& desc) override;
+        bool BackendInit() override;
         void BackendShutdown() override;
-        void WaitIdle() override;
-        bool begin_frame() override;
-        void end_frame() override;
+        void WaitIdle();
+        void Commit() override;
 
-        std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
+        //std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
-        IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory.Get(); }
-        ID3D11Device1*          GetD3DDevice() const { return d3dDevice.Get(); }
+        IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory; }
+        ID3D11Device1*          GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
 
@@ -58,13 +57,13 @@ namespace alimer
         void InitCapabilities(IDXGIAdapter1* adapter);
 
         UINT dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory2> dxgiFactory;
+        IDXGIFactory2* dxgiFactory = nullptr;
         bool isTearingSupported = false;
 
-        ComPtr<ID3D11Device1>               d3dDevice;
-        ComPtr<ID3D11DeviceContext1>        d3dContext;
-        D3D_FEATURE_LEVEL                   d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
+        ID3D11Device1*          d3dDevice = nullptr;
+        ID3D11DeviceContext1*   d3dContext = nullptr;
+        D3D_FEATURE_LEVEL       d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
 
-        std::vector<std::shared_ptr<D3D11Framebuffer>> swap_chains;
+        //std::vector<std::shared_ptr<D3D11Framebuffer>> swap_chains;
     };
 }

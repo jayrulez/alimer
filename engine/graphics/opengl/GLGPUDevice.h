@@ -44,6 +44,7 @@ namespace alimer
 
     private:
         bool BackendInit() override;
+        void BackendShutdown() override;
         void Commit() override;
 
         template<typename FT>

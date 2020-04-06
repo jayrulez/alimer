@@ -32,7 +32,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor);
+        D3DSwapChain(IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor);
 
         // Destructor
         ~D3DSwapChain() override;

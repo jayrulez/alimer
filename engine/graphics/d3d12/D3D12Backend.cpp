@@ -21,7 +21,62 @@
 //
 
 #include "D3D12Backend.h"
+#include "D3D12GPUDevice.h"
+#include "core/Assert.h"
 
 namespace alimer
 {
+    D3D12GPUFence::D3D12GPUFence(D3D12GPUDevice* device_)
+        : device(device_)
+    {
+    }
+
+    D3D12GPUFence::~D3D12GPUFence()
+    {
+        Shutdown();
+    }
+
+    void D3D12GPUFence::Init(uint64_t initialValue)
+    {
+        ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&handle));
+        fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fenceEvent != INVALID_HANDLE_VALUE);
+    }
+
+    void D3D12GPUFence::Shutdown()
+    {
+        if (handle == nullptr)
+            return;
+
+        CloseHandle(fenceEvent);
+        device->DeferredRelease(handle);
+    }
+
+    void D3D12GPUFence::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        ThrowIfFailed(queue->Signal(handle, fenceValue));
+    }
+
+    void D3D12GPUFence::Wait(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        if (handle->GetCompletedValue() < fenceValue)
+        {
+            ThrowIfFailed(handle->SetEventOnCompletion(fenceValue, fenceEvent));
+            WaitForSingleObject(fenceEvent, INFINITE);
+        }
+    }
+
+    bool D3D12GPUFence::IsSignaled(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        return handle->GetCompletedValue() >= fenceValue;
+    }
+
+    void D3D12GPUFence::Clear(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        handle->Signal(fenceValue);
+    }
 }

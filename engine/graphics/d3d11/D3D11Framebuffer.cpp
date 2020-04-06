@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D11Framebuffer.h"
 #include "D3D11GPUDevice.h"
 
@@ -134,3 +135,5 @@ namespace alimer
         return handle->Present(sync_interval, flags);
     }
 }
+
+#endif // TODO

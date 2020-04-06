@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12SwapChain.h"
 #include "D3D12GPUDevice.h"
 
@@ -63,3 +64,5 @@ namespace alimer
 
     }
 }
+#endif // TODO
+

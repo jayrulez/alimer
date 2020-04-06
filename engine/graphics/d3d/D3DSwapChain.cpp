@@ -26,8 +26,8 @@
 
 namespace alimer
 {
-    D3DSwapChain::D3DSwapChain(GPUDevice* device, IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor)
-        : SwapChain(device, descriptor)
+    D3DSwapChain::D3DSwapChain(IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor)
+        : SwapChain(descriptor)
         , factory(factory_)
         , deviceOrCommandQueue(deviceOrCommandQueue_)
         , backBufferCount(backBufferCount_)
