@@ -40,10 +40,10 @@ namespace alimer
         virtual ~GraphicsProvider() = default;
 
         /// Get set of available graphics providers.
-        static std::set<GPUBackend> GetAvailableProviders();
+        static std::set<BackendType> GetAvailableProviders();
 
         /// Create new GPUDevice with given preferred backend, fallback to supported one.
-        static std::unique_ptr<GraphicsProvider> Create(GraphicsProviderFlags flags = GraphicsProviderFlags::None,  GPUBackend preferredBackend = GPUBackend::Count);
+        static std::unique_ptr<GraphicsProvider> Create(const std::string& applicationName, GraphicsProviderFlags flags = GraphicsProviderFlags::None, BackendType preferredBackend = BackendType::Count);
 
         /// Enumerate all graphics adapter.
         virtual std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;

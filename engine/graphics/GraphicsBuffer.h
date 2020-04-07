@@ -22,20 +22,18 @@
 
 #pragma once
 
-#include "graphics/GPUBuffer.h"
-#include "D3D12Backend.h"
+#include "graphics/GraphicsResource.h"
 
 namespace alimer
 {
-    class D3D12GPUBuffer final : public GPUBuffer
+    class GraphicsBuffer : public GraphicsResource
     {
-    public:
-        D3D12GPUBuffer(D3D12GPUDevice* device, const BufferDescriptor* descriptor, const void* initialData);
-        ~D3D12GPUBuffer() override;
+        ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
 
-        void Destroy() override;
+    public:
+        /// Constructor.
+        GraphicsBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor);
 
     private:
-        D3D12MA::Allocation* allocation;
     };
-}
+} 

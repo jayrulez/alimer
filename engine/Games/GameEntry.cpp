@@ -37,7 +37,7 @@ using namespace std;
 namespace alimer
 {
     // Make sure this is linked in.
-    void application_dummy()
+    void ApplicationDummy()
     {
     }
 }
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     alimer::Platform::OpenConsole();
 #endif
 
-    auto app = unique_ptr<alimer::Game>(alimer::application_create(args));
+    auto app = unique_ptr<alimer::Game>(alimer::ApplicationCreate(args));
     app->Run();
     return EXIT_SUCCESS;
 }

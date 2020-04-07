@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    D3D12GPUBuffer::D3D12GPUBuffer(D3D12GPUDevice* device, const BufferDescriptor* descriptor, const void* initialData)
+    D3D12GraphicsBuffer::D3D12GraphicsBuffer(D3D12GraphicsDevice* device, const BufferDescriptor* descriptor, const void* initialData)
         : GPUBuffer(device, descriptor)
     {
         /*D3D12_RESOURCE_DESC resourceDesc;

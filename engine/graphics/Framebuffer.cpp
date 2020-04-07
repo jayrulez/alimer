@@ -26,7 +26,7 @@
 namespace alimer
 {
     Framebuffer::Framebuffer(GraphicsDevice* device)
-        : GraphicsResource(device, Type::Framebuffer)
+        : GraphicsResource(device, Type::Texture)
     {
 
     }

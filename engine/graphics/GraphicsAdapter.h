@@ -22,13 +22,23 @@
 
 #pragma once
 
+#include "core/Ptr.h"
 #include "core/Utils.h"
-#include "graphics/Types.h"
+#include "graphics/GraphicsSurface.h"
 #include <string>
+#include <memory>
 
 namespace alimer
 {
     class GraphicsProvider;
+    class GraphicsDevice;
+
+    static constexpr uint32_t kVendorId_AMD = 0x1002;
+    static constexpr uint32_t kVendorId_ARM = 0x13B5;
+    static constexpr uint32_t kVendorId_ImgTec = 0x1010;
+    static constexpr uint32_t kVendorId_Intel = 0x8086;
+    static constexpr uint32_t kVendorId_Nvidia = 0x10DE;
+    static constexpr uint32_t kVendorId_Qualcomm = 0x5143;
 
     /// Defines the physical graphics adapter class.
     class ALIMER_API GraphicsAdapter
@@ -37,29 +47,58 @@ namespace alimer
         /// Destructor.
         virtual ~GraphicsAdapter() = default;
 
-        inline GraphicsProvider* GetProvider() const { return provider; }
+        /// Get the creation provider.
+        inline GraphicsProvider* GetProvider() const noexcept { return provider; }
+
+        /// Get the backend type.
+        BackendType GetBackendType() const noexcept { return backend; }
 
         /// Gets the adapter PCI Vendor ID (VID).
-        virtual uint32_t GetVendorId() const = 0;
+        uint32_t GetVendorId() const noexcept { return vendorId; }
 
         /// Gets the adapter PCI Device ID (DID).
-        virtual uint32_t GetDeviceId() const = 0;
+        uint32_t GetDeviceId() const noexcept { return deviceId; }
 
         /// Get the type of the adapter.
-        virtual GraphicsAdapterType GetType() const = 0;
+        GraphicsAdapterType GetAdapterType() const noexcept { return adapterType; }
 
         /// Gets the name of the adapter.
-        virtual const std::string& GetName() const = 0;
+        const std::string& GetName() const noexcept { return name; }
+
+        /// Create new graphics device with given surface.
+        virtual SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) = 0;
+
+        bool IsAMD() const noexcept { return vendorId == kVendorId_AMD; }
+        bool IsARM() const noexcept { return vendorId == kVendorId_ARM; }
+        bool IsImgTec() const noexcept { return vendorId == kVendorId_ImgTec; }
+        bool IsIntel() const noexcept { return vendorId == kVendorId_Intel; }
+        bool IsNvidia() const noexcept { return vendorId == kVendorId_Nvidia; }
+        bool IsQualcomm() const noexcept { return vendorId == kVendorId_Qualcomm; }
+
+        /// Query device features.
+        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
+
+        /// Query device limits.
+        inline const GPUDeviceLimits& GetLimits() const { return limits; }
 
     protected:
         /// Constructor.
-        GraphicsAdapter::GraphicsAdapter(GraphicsProvider* provider_)
+        GraphicsAdapter::GraphicsAdapter(GraphicsProvider* provider_, BackendType backend_)
             : provider(provider_)
+            , backend(backend_)
         {
         }
-       
+
+        uint32_t vendorId = 0;
+        uint32_t deviceId = 0;
+        GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
+        std::string name;
+        GPUDeviceFeatures features{};
+        GPUDeviceLimits limits{};
+
     private:
         GraphicsProvider* provider;
+        BackendType backend;
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsAdapter);
     };

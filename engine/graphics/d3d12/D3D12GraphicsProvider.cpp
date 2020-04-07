@@ -24,8 +24,6 @@
 #include "D3D12GraphicsAdapter.h"
 #include "core/Assert.h"
 
-using namespace std;
-
 namespace alimer
 {
     bool D3D12GraphicsProvider::IsAvailable()
@@ -142,11 +140,11 @@ namespace alimer
             }
         }
 #endif
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
         BOOL allowTearing = FALSE;
-        IDXGIFactory5* dxgiFactory5 = nullptr;
-        HRESULT hr = factory->QueryInterface(__uuidof(IDXGIFactory5), (void**)&dxgiFactory5);
+        ComPtr<IDXGIFactory5> dxgiFactory5;
+        HRESULT hr = dxgiFactory.As(&dxgiFactory5);
         if (SUCCEEDED(hr))
         {
             hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -163,73 +161,71 @@ namespace alimer
         {
             isTearingSupported = true;
         }
-        SafeRelease(dxgiFactory5);
     }
 
     D3D12GraphicsProvider::~D3D12GraphicsProvider()
     {
-        SafeRelease(factory);
+        dxgiFactory.Reset();
 
 #ifdef _DEBUG
-        IDXGIDebug* dxgiDebug = nullptr;
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, __uuidof(IDXGIDebug), (void**)&dxgiDebug)))
+        ComPtr<IDXGIDebug> dxgiDebug;
+        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
         {
             dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
         }
-        SafeRelease(dxgiDebug);
 #endif
     }
 
-    vector<unique_ptr<GraphicsAdapter>> D3D12GraphicsProvider::EnumerateGraphicsAdapters()
+    std::vector<std::unique_ptr<GraphicsAdapter>> D3D12GraphicsProvider::EnumerateGraphicsAdapters()
     {
-        vector<unique_ptr<GraphicsAdapter>> adapters;
+        std::vector<std::unique_ptr<GraphicsAdapter>> adapters;
 
         UINT index = 0;
-        bool skipFallback = false;
 
-        IDXGIAdapter1* adapter = nullptr;
+        ComPtr<ID3D12Device> tempDevice = nullptr;
+        ComPtr<IDXGIAdapter1> dxgiAdapter = nullptr;
+
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        IDXGIFactory6* dxgiFactory6;
-        HRESULT hr = factory->QueryInterface(IID_PPV_ARGS(&dxgiFactory6));
+        ComPtr<IDXGIFactory6> dxgiFactory6;
+        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
-            while (dxgiFactory6->EnumAdapterByGpuPreference(index++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter)) != DXGI_ERROR_NOT_FOUND)
+            while (dxgiFactory6->EnumAdapterByGpuPreference(index++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(dxgiAdapter.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
             {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    adapter->Release();
-
-                    // Don't select the Basic Render Driver adapter.
+                std::unique_ptr<D3D12GraphicsAdapter> adapter = std::make_unique<D3D12GraphicsAdapter>(this, std::move(dxgiAdapter));
+                if (!adapter->Initialize()) {
                     continue;
                 }
 
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
-                {
-                    adapters.push_back(make_unique<D3D12GraphicsAdapter>(this, adapter));
-                }
+                adapters.push_back(std::move(adapter));
             }
-
-            skipFallback = true;
         }
-
-        SafeRelease(dxgiFactory6);
 #endif
 
-        if (!skipFallback)
+        if (adapters.empty())
         {
             index = 0;
-            while (factory->EnumAdapters1(index++, &adapter) != DXGI_ERROR_NOT_FOUND)
+            while (dxgiFactory->EnumAdapters1(index++, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND)
             {
-                DXGI_ADAPTER_DESC1 desc;
-                if (adapter->GetDesc1(&desc) != S_OK) {
+                std::unique_ptr<D3D12GraphicsAdapter> adapter = std::make_unique<D3D12GraphicsAdapter>(this, std::move(dxgiAdapter));
+                if (!adapter->Initialize()) {
                     continue;
                 }
+
+                adapters.push_back(std::move(adapter));
             }
         }
+
+#if !defined(NDEBUG)
+        if (adapters.empty())
+        {
+            // Try WARP12 instead
+            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(dxgiAdapter.ReleaseAndGetAddressOf()))))
+            {
+                ALIMER_LOGERROR("WARP12 not available. Enable the 'Graphics Tools' optional feature");
+            }
+        }
+#endif
 
         return adapters;
     }

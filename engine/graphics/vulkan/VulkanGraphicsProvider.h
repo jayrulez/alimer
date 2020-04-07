@@ -33,7 +33,7 @@ namespace alimer
         static bool IsAvailable();
 
         /// Constructor.
-        VulkanGraphicsProvider(GraphicsProviderFlags flags);
+        VulkanGraphicsProvider(const std::string& applicationName, GraphicsProviderFlags flags);
         /// Destructor.
         ~VulkanGraphicsProvider() override;
 

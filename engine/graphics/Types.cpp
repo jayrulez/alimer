@@ -26,10 +26,10 @@ using namespace std;
 
 namespace alimer
 {
-    string to_string(GPUBackend type)
+    string ToString(BackendType type)
     {
-        static const char* s_backend_names[] = {
-            "Null", "Vulkan", "Direct3D12", "Metal", "Count"
+        static const char* s_backend_names[(uint32_t)BackendType::Count] = {
+            "Null", "Vulkan", "Direct3D12", "Direct3D11", "Metal", "OpenGL"
         };
 
         return s_backend_names[(uint32_t)type];

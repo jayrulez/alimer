@@ -32,20 +32,18 @@ namespace alimer
     class D3D12GraphicsAdapter final : public GraphicsAdapter
     {
     public:
-        D3D12GraphicsAdapter(D3D12GraphicsProvider* provider_, IDXGIAdapter1* adapter_);
-        ~D3D12GraphicsAdapter() override;
+        D3D12GraphicsAdapter(D3D12GraphicsProvider* provider_, ComPtr<IDXGIAdapter1> adapter_);
+        ~D3D12GraphicsAdapter() = default;
 
-        uint32_t GetVendorId() const override;
-        uint32_t GetDeviceId() const override;
-        GraphicsAdapterType GetType() const override;
-        const std::string& GetName() const override;
+        bool Initialize();
+
+        SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) override;
+
+        IDXGIAdapter1* GetDXGIAdapter() const { return adapter.Get(); }
 
     private:
-        IDXGIAdapter1* adapter;
+        void InitCapabilities(D3D_FEATURE_LEVEL featureLevel);
 
-        uint32_t vendorId;
-        uint32_t deviceId;
-        GraphicsAdapterType type;
-        std::string name;
+        ComPtr<IDXGIAdapter1> adapter;
     };
 }

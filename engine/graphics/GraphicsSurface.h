@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "graphics/Types.h"
 #include "core/Utils.h"
 #include "math/size.h"
 
@@ -30,7 +31,9 @@ namespace alimer
     /// Defines a graphics surface type.
     enum class GraphicsSurfaceType : uint32_t
     {
-        Win32
+        Win32,
+        UwpCoreWindow,
+        UwpSwapChainPanel
     };
 
     /// Defines the graphics surface which can be rendered on by a graphics device.

@@ -32,30 +32,31 @@ namespace alimer
     class D3D12CommandQueue final 
     {
     public:
-        D3D12CommandQueue(D3D12GPUDevice* device_, D3D12_COMMAND_LIST_TYPE commandListType_);
+        D3D12CommandQueue(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandQueue();
 
+        void Create();
         void Destroy();
 
         uint64_t IncrementFence(void);
         bool IsFenceComplete(uint64_t fenceValue);
         void WaitForFence(uint64_t fenceValue);
         void WaitForIdle(void) { WaitForFence(IncrementFence()); }
-        ID3D12CommandQueue* GetHandle() { return d3d12CommandQueue; }
+        ID3D12CommandQueue* GetHandle() { return handle; }
         uint64_t GetNextFenceValue() { return nextFenceValue; }
 
         ID3D12CommandAllocator* RequestAllocator();
 
     private:
-        D3D12GPUDevice* device;
-        const D3D12_COMMAND_LIST_TYPE commandListType;
-        ID3D12CommandQueue* d3d12CommandQueue;
+        D3D12GraphicsDevice* device;
+        const D3D12_COMMAND_LIST_TYPE type;
+        ID3D12CommandQueue* handle = nullptr;
 
         // Lifetime of these objects is managed by the descriptor cache
-        ID3D12Fence* d3d12Fence;
+        ID3D12Fence* d3d12Fence = nullptr;
         uint64_t nextFenceValue;
         uint64_t lastCompletedFenceValue;
-        HANDLE fenceEventHandle;
+        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
 
         D3D12CommandAllocatorPool allocatorPool;
         std::mutex fenceMutex;

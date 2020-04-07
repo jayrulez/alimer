@@ -277,22 +277,6 @@ namespace alimer
         return "";
     }
 
-    static inline const char* GetVendorByID(unsigned id)
-    {
-        switch (id)
-        {
-        case 0x1002: return "Advanced Micro Devices, Inc.";
-        case 0x10de: return "NVIDIA Corporation";
-        case 0x102b: return "Matrox Electronic Systems Ltd.";
-        case 0x1414: return "Microsoft Corporation";
-        case 0x5333: return "S3 Graphics Co., Ltd.";
-        case 0x8086: return "Intel Corporation";
-        case 0x80ee: return "Oracle Corporation";
-        case 0x15ad: return "VMware Inc.";
-        }
-        return "";
-    }
-
     /// Calculate size taking into account alignment. Alignment must be a power of 2
     static inline uint32_t alignTo(uint32_t size, uint32_t alignment) { return (size + alignment - 1) & ~(alignment - 1); }
     static inline uint64_t alignTo(uint64_t size, uint64_t alignment) { return (size + alignment - 1) & ~(alignment - 1); }

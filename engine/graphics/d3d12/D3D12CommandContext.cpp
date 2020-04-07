@@ -20,20 +20,25 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12CommandContext.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
-namespace Alimer
+namespace alimer
 {
-    D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_)
+    D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_, uint32_t commandAllocatorsCount_)
         : GraphicsContext(device_)
+        , type(type_)
+        , commandAllocatorsCount(commandAllocatorsCount_)
     {
-        currentAllocator = device_->GetQueue(queueType_)->RequestAllocator();
-        //ThrowIfFailed(device_->GetD3DDevice()->CreateCommandList(1, Type, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
-        //commandList->SetName(L"CommandList");
+        for (uint32_t i = 0; i < commandAllocatorsCount_; ++i)
+        {
+            ThrowIfFailed(device_->GetD3DDevice()->CreateCommandAllocator(type_, IID_PPV_ARGS(&commandAllocators[i])));
+        }
+
+        ThrowIfFailed(device_->GetD3DDevice()->CreateCommandList(0, type_, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
+        ThrowIfFailed(commandList->Close());
     }
 
     D3D12GraphicsContext::~D3D12GraphicsContext()
@@ -43,11 +48,11 @@ namespace Alimer
 
     void D3D12GraphicsContext::Destroy()
     {
-        if (commandList != nullptr)
+        for (uint32_t i = 0; i < commandAllocatorsCount; ++i)
         {
-            commandList->Release();
+            SafeRelease(commandAllocators[i]);
         }
+
+        SafeRelease(commandList);
     }
 }
-
-#endif // TODO

@@ -33,6 +33,7 @@
 
 namespace alimer
 {
+    static constexpr uint32_t kMaxFrameLatency = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -40,7 +41,7 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
     /// Enum describing the Device backend.
-    enum class GPUBackend : uint32_t
+    enum class BackendType : uint32_t
     {
         /// Null backend.
         Null,
@@ -75,27 +76,17 @@ namespace alimer
         Unknown
     };
 
-    /// Defines the type of Texture
-    enum class TextureType : uint32_t
+    /// Defines the dimension of Texture
+    enum class TextureDimension : uint32_t
     {
         /// One dimensional texture
-        Type1D,
+        Dimension1D,
         /// Two dimensional texture
-        Type2D,
+        Dimension2D,
         /// Three dimensional texture
-        Type3D,
+        Dimension3D,
         /// Cube texture
-        TypeCube
-    };
-
-    enum class TextureSampleCount : uint32_t
-    {
-        Count1 = 1,
-        Count2 = 2,
-        Count4 = 4,
-        Count8 = 8,
-        Count16 = 16,
-        Count32 = 32,
+        DimensionCube
     };
 
     enum class BufferUsage : uint32_t
@@ -117,9 +108,9 @@ namespace alimer
     enum class TextureUsage : uint32_t
     {
         None = 0,
-        ShaderRead = 0x01,
-        ShaderWrite = 0x02,
-        RenderTarget = 0x04,
+        Sampled = 0x01,
+        Storage = 0x02,
+        OutputAttachment = 0x04,
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
@@ -138,24 +129,6 @@ namespace alimer
         uint64_t size;
     };
 
-    /// Describes a GPU Texture.
-    struct TextureDescriptor
-    {
-        TextureType type = TextureType::Type2D;
-        /// Texture format .
-        PixelFormat format = PixelFormat::RGBA8UNorm;
-
-        uint32_t width = 1u;
-        uint32_t height = 1u;
-        uint32_t depth = 1u;
-        uint32_t arraySize = 1u;
-        uint32_t mipLevels = 1u;
-        TextureSampleCount  samples = TextureSampleCount::Count1;
-        TextureUsage usage = TextureUsage::ShaderRead;
-        //TextureLayout initialLayout = TextureLayout::General;
-        std::string name;
-    };
-
     /// Describes a SwapChain.
     struct SwapChainDescriptor
     {
@@ -168,24 +141,6 @@ namespace alimer
         PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
         PresentMode presentMode = PresentMode::Fifo;
-    };
-
-    /// GraphicsDevice information.
-    struct GPUDeviceInfo
-    {
-        GPUBackend backend;
-
-        /// Rendering API name.
-        std::string backendName;
-
-        /// The hardware gpu device vendor name.
-        std::string vendorName;
-
-        /// The hardware gpu device vendor id.
-        uint32_t vendorId;
-
-        /// The hardware gpu device name.
-        std::string deviceName;
     };
 
     /// Describes GPUDevice features.
@@ -247,5 +202,5 @@ namespace alimer
         uint32_t        maxComputeWorkGroupSize[3];
     };
 
-    ALIMER_API std::string to_string(GPUBackend type);
+    ALIMER_API std::string ToString(BackendType type);
 } 

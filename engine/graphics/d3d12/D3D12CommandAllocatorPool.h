@@ -33,9 +33,10 @@ namespace alimer
     class D3D12CommandAllocatorPool final
     {
     public:
-        D3D12CommandAllocatorPool(ID3D12Device* device_, D3D12_COMMAND_LIST_TYPE commandListType_);
+        D3D12CommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandAllocatorPool();
 
+        void Create(ID3D12Device* device_);
         void Destroy();
 
         ID3D12CommandAllocator* RequestAllocator(uint64_t fenceValue);
@@ -43,10 +44,10 @@ namespace alimer
 
     private:
         ID3D12Device* device;
-        const D3D12_COMMAND_LIST_TYPE commandListType;
+        const D3D12_COMMAND_LIST_TYPE type;
 
         std::vector<ID3D12CommandAllocator*> allocators;
-        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> freeAllocators;
+        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
         std::mutex allocatorMutex;
     };
 }

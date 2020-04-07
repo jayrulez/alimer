@@ -35,9 +35,9 @@ namespace alimer
 
     }
 
-    Game* application_create(const std::vector<std::string>& args)
+    Game* ApplicationCreate(const std::vector<std::string>& args)
     {
-        application_dummy();
+        ApplicationDummy();
 
         Configuration config;
         config.windowTitle = "Alimer Studio";

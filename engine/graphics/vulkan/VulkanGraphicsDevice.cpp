@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#if TODO_VK
 #include "VulkanGraphicsDevice.h"
-#include "VulkanFramebuffer.h"
+#include "VulkanGraphicsAdapter.h"
 #include "graphics/SwapChain.h"
 #include "core/Utils.h"
 #include "core/Assert.h"
@@ -40,19 +39,12 @@ using namespace std;
 
 namespace alimer
 {
-    VulkanGPUDevice::VulkanGPUDevice(GPUDeviceFlags flags)
-        : GPUDevice()
+    VulkanGraphicsDevice::VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_)
+        : GraphicsDevice(adapter_, surface_)
     {
-        ALIMER_ASSERT(IsAvailable());
-
-        // Setup application info and create VkInstance.
-        vk_features.apiVersion = volkGetInstanceVersion();
-        
-
+#if TODO_VK
         // Enumerate physical device and create logical one.
         {
-            
-
             // Pick a suitable physical device based on user's preference.
             uint32_t best_device_score = 0;
             uint32_t best_device_index = -1;
@@ -347,15 +339,17 @@ namespace alimer
                 return;
             }
         }
+#endif // TODO_VK
+
     }
 
-    VulkanGPUDevice::~VulkanGPUDevice()
+    VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {
-        WaitIdle();
+        WaitForIdle();
         Destroy();
     }
 
-    void VulkanGPUDevice::Destroy()
+    void VulkanGraphicsDevice::Destroy()
     {
         if (instance == VK_NULL_HANDLE) {
             return;
@@ -376,12 +370,22 @@ namespace alimer
         }
     }
 
-    void VulkanGPUDevice::WaitIdle()
+    void VulkanGraphicsDevice::WaitForIdle()
     {
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-    VkSurfaceKHR VulkanGPUDevice::createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height)
+    bool VulkanGraphicsDevice::BeginFrame()
+    {
+        return true;
+    }
+
+    void VulkanGraphicsDevice::PresentFrame()
+    {
+    }
+
+
+    VkSurfaceKHR VulkanGraphicsDevice::CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height)
     {
         VkResult result = VK_SUCCESS;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -408,85 +412,4 @@ namespace alimer
 
         return surface;
     }
-
-    SharedPtr<SwapChain> VulkanGPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
-    {
-        ALIMER_ASSERT(descriptor);
-        return nullptr;
-    }
-
-    SharedPtr<Texture> VulkanGPUDevice::CreateTexture()
-    {
-        return nullptr;
-    }
-
-
-    GPUBuffer* VulkanGPUDevice::CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData)
-    {
-        return nullptr;
-    }
-
-    /*shared_ptr<Framebuffer> VulkanGPUDevice::createFramebufferCore(const SwapChainDescriptor* descriptor)
-    {
-        uint32_t width, height;
-        VkSurfaceKHR surface = createSurface(descriptor->nativeWindowHandle, &width, &height);
-        return make_shared<VulkanFramebuffer>(this, surface, width, height, descriptor);
-    }
-    */
-
-    static VKAPI_ATTR VkBool32 VKAPI_CALL vulkanDebugCallback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-        VkDebugUtilsMessageTypeFlagsEXT                  messageType,
-        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-        void* pUserData)
-    {
-        auto* context = static_cast<GraphicsDevice*>(pUserData);
-
-        switch (messageSeverity)
-        {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            if (messageType == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-            {
-                ALIMER_LOGE("[Vulkan]: Validation Error: %s", pCallbackData->pMessage);
-                // context->notify_validation_error(pCallbackData->pMessage);
-            }
-            else
-                ALIMER_LOGE("[Vulkan]: Other Error: %s", pCallbackData->pMessage);
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            if (messageType == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-                ALIMER_LOGW("[Vulkan]: Validation Warning: %s", pCallbackData->pMessage);
-            else
-                ALIMER_LOGW("[Vulkan]: Other Warning: %s", pCallbackData->pMessage);
-            break;
-
-        default:
-            return VK_FALSE;
-        }
-
-        bool log_object_names = false;
-        for (uint32_t i = 0; i < pCallbackData->objectCount; i++)
-        {
-            auto* name = pCallbackData->pObjects[i].pObjectName;
-            if (name)
-            {
-                log_object_names = true;
-                break;
-            }
-        }
-
-        if (log_object_names)
-        {
-            for (uint32_t i = 0; i < pCallbackData->objectCount; i++)
-            {
-                auto* name = pCallbackData->pObjects[i].pObjectName;
-                ALIMER_LOGI("  Object #%u: %s", i, name ? name : "N/A");
-            }
-        }
-
-        return VK_FALSE;
-    }
 }
-
-#endif // TODO_VK

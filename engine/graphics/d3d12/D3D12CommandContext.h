@@ -30,13 +30,15 @@ namespace alimer
     class D3D12GraphicsContext final : public GraphicsContext
     {
     public:
-        D3D12GraphicsContext(D3D12GraphicsDevice* device_, CommandQueueType queueType_);
+        D3D12GraphicsContext(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_, uint32_t commandAllocatorsCount_);
         ~D3D12GraphicsContext() override;
 
         void Destroy();
 
     private:
-        ID3D12GraphicsCommandList* commandList = nullptr;
-        ID3D12CommandAllocator* currentAllocator = nullptr;
+        const D3D12_COMMAND_LIST_TYPE type;
+        uint32_t commandAllocatorsCount;
+        ID3D12CommandAllocator* commandAllocators[kMaxFrameLatency] = {};
+        ID3D12GraphicsCommandList* commandList;
     };
 }

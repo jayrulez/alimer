@@ -20,16 +20,40 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
-    D3D12Texture::D3D12Texture(D3D12GPUDevice* device)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, PixelFormat format_, ID3D12Resource* resource, D3D12_RESOURCE_STATES currentState)
         : Texture(device)
+        , D3D12GpuResource(resource, currentState)
     {
+        auto desc = resource->GetDesc();
+        width = static_cast<uint32_t>(desc.Width);
+        height = static_cast<uint32_t>(desc.Height);
+        depth = desc.DepthOrArraySize;
+        mipLevels = desc.MipLevels;
+        sampleCount = desc.SampleDesc.Count;
+        dimension = TextureDimension::Dimension2D;
+        format = format_;
+        usage = TextureUsage::None;
 
+        if (!(desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+        {
+            usage |= TextureUsage::Sampled;
+        }
+
+        if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS))
+        {
+            usage |= TextureUsage::Storage;
+        }
+
+        if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) ||
+            desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+        {
+            usage |= TextureUsage::OutputAttachment;
+        }
     }
 
     D3D12Texture::~D3D12Texture()
@@ -42,6 +66,5 @@ namespace alimer
 
     }
 }
-#endif // TODO
 
 

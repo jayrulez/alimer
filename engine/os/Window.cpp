@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "os/window.h"
+#include "os/Window.h"
 
 #if defined(GLFW_BACKEND)
 #   include "glfw/glfw_window.h"
@@ -39,7 +39,7 @@ namespace alimer
 
     bool Window::create(const std::string& title, const point& pos, const usize& size, WindowStyle style)
     {
-        close();
+        Close();
 
         impl = new WindowImpl(title, pos, size, style);
         return impl != nullptr;
@@ -47,26 +47,16 @@ namespace alimer
 
     Window::~Window()
     {
-        close();
+        Close();
     }
 
-    void Window::close()
+    void Window::Close()
     {
         if (impl != nullptr)
         {
             delete impl;
             impl = nullptr;
         }
-    }
-
-    NativeHandle Window::GetNativeHandle() const
-    {
-        return impl->GetNativeHandle();
-    }
-
-    NativeDisplay Window::GetNativeDisplay() const
-    {
-        return impl->GetNativeDisplay();
     }
 
     auto Window::get_id() const noexcept -> uint32_t
@@ -89,9 +79,24 @@ namespace alimer
         return impl->is_maximized();
     }
 
-    auto Window::get_size() const noexcept -> usize
+    usize Window::GetSize() const noexcept
     {
         return impl->get_size();
+    }
+
+    GraphicsSurfaceType Window::GetType() const noexcept
+    {
+        return GraphicsSurfaceType::Win32;
+    }
+
+    void* Window::GetHandle() const
+    {
+        return impl->GetNativeHandle();
+    }
+
+    void* Window::GetDisplay() const
+    {
+        return impl->GetNativeDisplay();
     }
 
     auto Window::get_title() const noexcept -> std::string

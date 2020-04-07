@@ -25,9 +25,8 @@
 
 namespace alimer
 {
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device_, D3D12_COMMAND_LIST_TYPE commandListType_)
-        : device(device_)
-        , commandListType(commandListType_)
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type_)
+        : type(type_)
     {
 
     }
@@ -37,11 +36,17 @@ namespace alimer
         Destroy();
     }
 
+    void D3D12CommandAllocatorPool::Create(ID3D12Device* device_)
+    {
+        ALIMER_ASSERT(device_);
+        device = device_;
+    }
+
     void D3D12CommandAllocatorPool::Destroy()
     {
-        for (size_t i = 0; i < allocators.size(); ++i)
+        for (auto allocator : allocators)
         {
-            allocators[i]->Release();
+            allocator->Release();
         }
 
         allocators.clear();
@@ -53,29 +58,25 @@ namespace alimer
 
         ID3D12CommandAllocator* commandAllocator = nullptr;
 
-        if (!freeAllocators.empty())
+        if (!readyAllocators.empty())
         {
-            auto& allocatorPair = freeAllocators.front();
+            std::pair<uint64_t, ID3D12CommandAllocator*>& pair = readyAllocators.front();
 
-            if (allocatorPair.first <= fenceValue)
+            if (pair.first <= fenceValue)
             {
-                commandAllocator = allocatorPair.second;
+                commandAllocator = pair.second;
                 ThrowIfFailed(commandAllocator->Reset());
-                freeAllocators.pop();
+                readyAllocators.pop();
             }
         }
 
         // If no allocator's were ready to be reused, create a new one
         if (commandAllocator == nullptr)
         {
-            ThrowIfFailed(device->CreateCommandAllocator(commandListType, IID_PPV_ARGS(&commandAllocator)));
+            ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 #if defined(_DEBUG)
             wchar_t AllocatorName[32];
-#if (EASTL_SIZE_T_32BIT == 0) || (EA_PLATFORM_WORD_SIZE == 4)
             swprintf(AllocatorName, 32, L"CommandAllocator %zu", allocators.size());
-#else
-            swprintf(AllocatorName, 32, L"CommandAllocator %u", allocators.size());
-#endif
             commandAllocator->SetName(AllocatorName);
 #endif
 
@@ -90,6 +91,6 @@ namespace alimer
         std::lock_guard<std::mutex> LockGuard(allocatorMutex);
 
         // That fence value indicates we are free to reset the allocator
-        freeAllocators.push(std::make_pair(fenceValue, commandAllocator));
+        readyAllocators.push(std::make_pair(fenceValue, commandAllocator));
     }
 }

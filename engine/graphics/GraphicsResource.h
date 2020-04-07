@@ -43,8 +43,7 @@ namespace alimer
             /// Buffer. Can be bound to all shader-stages
             Buffer,
             ///Texture. Can be bound as render-target, shader-resource and UAV
-            Texture,
-            Framebuffer
+            Texture
         };
 
     protected:

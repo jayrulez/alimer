@@ -70,10 +70,6 @@ namespace alimer
     enum class WindowsVersion : uint32_t
     {
         Unknown,
-        Win2000,
-        WinXP,
-        WinSrv2003,
-        WinVista,
         Win7,
         Win8,
         Win81,

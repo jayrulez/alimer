@@ -22,26 +22,23 @@
 
 #pragma once
 
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    /// Vulkan GPU backend.
-    class ALIMER_API VulkanGPUDevice final : public GPUDevice
+    class VulkanGraphicsAdapter;
+
+    /// Vulkan GraphicsDevice.
+    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
         /// Constructor.
-        VulkanGPUDevice(GPUDeviceFlags flags);
+        VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_);
         /// Destructor.
-        ~VulkanGPUDevice() override;
+        ~VulkanGraphicsDevice() override;
 
         void Destroy();
-        void WaitIdle() override;
-        //bool BeginFrame() override;
-        //void EndFrame() override;
 
         const VulkanDeviceFeatures& GetVulkanFeatures() const { return vk_features; }
         VkInstance GetInstance() const { return instance; }
@@ -50,14 +47,11 @@ namespace alimer
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
 
     private:
-        VkSurfaceKHR createSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
+        VkSurfaceKHR CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
+        void WaitForIdle() override;
+        bool BeginFrame() override;
+        void PresentFrame() override;
 
-        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
-        SharedPtr<Texture> CreateTexture() override;
-        GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
-        //std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
-
-    private:
         VulkanDeviceFeatures vk_features{};
         VkInstance instance{ VK_NULL_HANDLE };
         VkDebugUtilsMessengerEXT debug_messenger{ VK_NULL_HANDLE };

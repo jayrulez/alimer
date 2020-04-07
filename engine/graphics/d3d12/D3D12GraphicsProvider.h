@@ -37,13 +37,12 @@ namespace alimer
 
          std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
 
-         IDXGIFactory4* GetDXGIFactory() const { return factory; }
+         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
          bool IsTearingSupported() const { return isTearingSupported; }
-
 
     private:
         UINT dxgiFactoryFlags = 0;
-        IDXGIFactory4* factory = nullptr;
+        ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
     };
 }

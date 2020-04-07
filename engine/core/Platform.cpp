@@ -128,38 +128,9 @@ namespace alimer
         {
             if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_NT)
             {
-                if (osinfo.dwMajorVersion == 5)
+                if (osinfo.dwMajorVersion == 6)
                 {
-                    if (osinfo.dwMinorVersion == 0)
-                    {
-                        version = WindowsVersion::Win2000;
-                    }
-                    else if (osinfo.dwMinorVersion == 1)
-                    {
-                        version = WindowsVersion::WinXP;
-                    }
-                    else if (osinfo.dwMinorVersion == 2)
-                    {
-                        if (osinfo.wProductType == VER_NT_WORKSTATION)
-                        {
-                            // 64 bit windows actually but this will be detected later anyway
-                            version = WindowsVersion::WinXP; 
-                        }
-                        else if (
-                            osinfo.wProductType == VER_NT_SERVER ||
-                            osinfo.wProductType == VER_NT_DOMAIN_CONTROLLER)
-                        {
-                            version = WindowsVersion::WinSrv2003;
-                        }
-                    }
-                }
-                else if (osinfo.dwMajorVersion == 6)
-                {
-                    if (osinfo.dwMinorVersion == 0)
-                    {
-                        version = WindowsVersion::WinVista;
-                    }
-                    else if (osinfo.dwMinorVersion == 1)
+                    if (osinfo.dwMinorVersion == 1)
                     {
                         version = WindowsVersion::Win7;
                     }

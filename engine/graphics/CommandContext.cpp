@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 //
 
-#if 0
 #include "graphics/CommandContext.h"
 #include "graphics/GraphicsDevice.h"
 
@@ -53,5 +52,3 @@ namespace alimer
 
     GraphicsContext::~GraphicsContext() = default;
 }
-
-#endif // 0

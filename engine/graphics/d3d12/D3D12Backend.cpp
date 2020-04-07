@@ -21,7 +21,7 @@
 //
 
 #include "D3D12Backend.h"
-//#include "D3D12GraphicsDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
@@ -36,7 +36,7 @@ namespace alimer
     PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
 #endif
 
-    D3D12GPUFence::D3D12GPUFence(D3D12GPUDevice* device_)
+    D3D12GPUFence::D3D12GPUFence(D3D12GraphicsDevice* device_)
         : device(device_)
     {
     }
@@ -48,7 +48,7 @@ namespace alimer
 
     void D3D12GPUFence::Init(uint64_t initialValue)
     {
-        //ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&handle));
+        ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void**)&handle));
         fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
         ALIMER_ASSERT(fenceEvent != INVALID_HANDLE_VALUE);
     }
@@ -59,7 +59,7 @@ namespace alimer
             return;
 
         CloseHandle(fenceEvent);
-        //device->DeferredRelease(handle);
+        device->DeferredRelease(handle);
     }
 
     void D3D12GPUFence::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)
@@ -88,5 +88,64 @@ namespace alimer
     {
         ALIMER_ASSERT(handle != nullptr);
         handle->Signal(fenceValue);
+    }
+
+    /* D3D12DescriptorHeap */
+    D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GraphicsDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_)
+        : device(device_)
+        , type(type_)
+        , shaderVisible(shaderVisible_)
+        , numHeaps(shaderVisible ? 2 : 1)
+    {
+
+    }
+
+    D3D12DescriptorHeap::~D3D12DescriptorHeap()
+    {
+
+    }
+
+    void D3D12DescriptorHeap::Init(uint32_t numPersistent_, uint32_t numTemporary_)
+    {
+        Shutdown();
+
+        descriptorSize = device->GetD3DDevice()->GetDescriptorHandleIncrementSize(type);
+
+        numPersistent = numPersistent_;
+        numTemporary = numTemporary_;
+        uint32_t totalNumDescriptors = numPersistent_ + numTemporary_;
+        ALIMER_ASSERT(totalNumDescriptors > 0);
+
+        D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+        heapDesc.Type = type;
+        heapDesc.NumDescriptors = totalNumDescriptors;
+        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if (shaderVisible)
+        {
+            heapDesc.Flags |= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        }
+        heapDesc.NodeMask = 0;
+
+        for (uint32_t i = 0; i < numHeaps; ++i)
+        {
+            ThrowIfFailed(device->GetD3DDevice()->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heaps[i])));
+            CPUStart[i] = heaps[i]->GetCPUDescriptorHandleForHeapStart();
+            if (shaderVisible)
+            {
+                GPUStart[i] = heaps[i]->GetGPUDescriptorHandleForHeapStart();
+            }
+        }
+
+    }
+
+    void D3D12DescriptorHeap::Shutdown()
+    {
+        const uint32_t NumHeaps = shaderVisible ? 2 : 1;
+
+        ALIMER_ASSERT(persistentAllocated == 0);
+        for (uint32_t i = 0; i < NumHeaps; ++i)
+        {
+            SafeRelease(heaps[i]);
+        }
     }
 }

@@ -23,6 +23,7 @@
 #include "os/os.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsProvider.h"
+#include "graphics/GraphicsDevice.h"
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
@@ -40,7 +41,7 @@ namespace alimer
 #ifdef _DEBUG
         flags |= GraphicsProviderFlags::Validation;
 #endif
-        graphicsProvider = GraphicsProvider::Create(flags, config.preferredGraphicsBackend);
+        graphicsProvider = GraphicsProvider::Create(config.applicationName, flags, config.preferredGraphicsBackend);
     }
 
     Game::~Game()
@@ -62,14 +63,11 @@ namespace alimer
 
         // Init graphics with main window.
         auto gpuAdapters = graphicsProvider->EnumerateGraphicsAdapters();
-        //gpuAdapters[0]->CreateDevice();
-        /*GPUDevice::Desc gpuDeviceDesc = {};
-
-        gpuDevice = GPUDevice::Create(mainWindow.get(), gpuDeviceDesc);
-        if (!gpuDevice)
+        graphicsDevice = gpuAdapters[0]->CreateDevice(mainWindow.get());
+        if (!graphicsDevice)
         {
             headless = true;
-        }*/
+        }
 
         Initialize();
         if (exitCode)
@@ -102,7 +100,9 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        //vgpu_begin_frame(gpu_device);
+        if (!graphicsDevice->BeginFrame()) {
+            return false;
+        }
 
         for (auto gameSystem : gameSystems)
         {
@@ -127,7 +127,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //gpuDevice->Commit();
+        graphicsDevice->PresentFrame();
     }
 
     int Game::Run()

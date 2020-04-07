@@ -27,10 +27,10 @@
 
 namespace alimer
 {
-    class D3D12Texture final : public Texture
+    class D3D12Texture final : public Texture, public D3D12GpuResource
     {
     public:
-        D3D12Texture(D3D12GPUDevice* device);
+        D3D12Texture(D3D12GraphicsDevice* device, PixelFormat format_, ID3D12Resource* resource,  D3D12_RESOURCE_STATES currentState);
         ~D3D12Texture() override;
 
         void Destroy() override;

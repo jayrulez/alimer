@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "core/Utils.h"
+#include "graphics/GraphicsSurface.h"
 #include "math/vec2.h"
 #include "math/size.h"
 #include <string>
@@ -43,13 +43,11 @@ namespace alimer
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowStyle);
 
     constexpr static const int32_t centered = std::numeric_limits<int32_t>::max();
-    using NativeHandle = void*;
-    using NativeDisplay = void*;
 
     class WindowImpl;
 
     /// Defines an OS Window.
-    class ALIMER_API Window final
+    class ALIMER_API Window final : public GraphicsSurface
     {
     public:
         /// Constructor.
@@ -65,10 +63,7 @@ namespace alimer
         bool create(const std::string& title, const point& pos, const usize& size, WindowStyle style);
 
         /// Close the window.
-        void close();
-
-        NativeHandle GetNativeHandle() const;
-        NativeDisplay GetNativeDisplay() const;
+        void Close();
 
         /// Return the window id.
         auto get_id() const noexcept->uint32_t;
@@ -83,7 +78,12 @@ namespace alimer
         auto is_maximized() const noexcept -> bool;
 
         /// Get the window size.
-        auto get_size() const noexcept->usize;
+        usize GetSize() const noexcept;
+
+        GraphicsSurfaceType GetType() const noexcept;
+
+        void* GetHandle() const;
+        void* GetDisplay() const;
 
         /// Return the window title.
         auto get_title() const noexcept->std::string;

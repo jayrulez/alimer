@@ -22,19 +22,29 @@
 
 #pragma once
 
-#include "graphics/d3d/D3DSwapChain.h"
+#include "core/Ptr.h"
+#include "graphics/GraphicsSurface.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12SwapChain final : public D3DSwapChain
+    class Texture;
+
+    class D3D12SwapChain final
     {
     public:
-        D3D12SwapChain(D3D12GPUDevice* device, const SwapChainDescriptor* descriptor);
-        ~D3D12SwapChain() override;
+        D3D12SwapChain(D3D12GraphicsDevice* device_, IDXGIFactory4* factory, GraphicsSurface* surface, uint32_t backBufferCount_);
+        ~D3D12SwapChain();
 
         void Destroy();
         void AfterReset();
+        void Present();
+
     private:
+        D3D12GraphicsDevice* device;
+        uint32_t backBufferCount;
+        IDXGISwapChain3* handle = nullptr;
+        uint32_t backBufferIndex = 0;
+        SharedPtr<Texture> renderTargets[kMaxFrameLatency];
     };
 }

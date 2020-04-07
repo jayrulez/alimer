@@ -35,6 +35,16 @@ namespace alimer
         /// Constructor.
         Texture(GraphicsDevice* device);
 
-    private:
+        uint32_t width = 1u;
+        uint32_t height = 1u;
+        /// Depth or array layers.
+        uint32_t depth = 1u;
+        uint32_t mipLevels = 1u;
+        uint32_t sampleCount = 1u;
+
+        TextureDimension dimension = TextureDimension::Dimension2D;
+        /// Texture format.
+        PixelFormat format = PixelFormat::RGBA8UNorm;
+        TextureUsage usage = TextureUsage::Sampled;
     };
 } 

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/Framebuffer.h"
+#include "graphics/GraphicsAdapter.h"
 #include "graphics/CommandContext.h"
 #include <vector>
 #include <set>
@@ -30,69 +30,38 @@
 
 namespace alimer
 {
-    class Window;
     class GPUBuffer;
     class Texture;
-    class SwapChain;
-    class GraphicsDevice;
-    using GraphicsDevicePtr = std::shared_ptr<GraphicsDevice>;
 
     /* TODO: Expose GraphicsContext */
     /* TODO: Expose resource creation context */
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
-        /// Device descriptor.
-        struct Desc
-        {
-            bool colorSrgb = true;
-            uint32_t sampleCount = 1;
-        };
-
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
-        /// Get set of available GPU backend supported implementation.
-        static std::set<GPUBackend> GetAvailableBackends();
+        /// Waits for the device to become idle.
+        virtual void WaitForIdle() = 0;
 
-        /// Create new GPUDevice with given preferred backend, fallback to supported one.
-        static GraphicsDevicePtr Create(Window* window, const Desc& desc);
+        /// Begin frame rendering logic.
+        virtual bool BeginFrame() = 0;
 
-        void Shutdown();
+        /// End current frame and present it on scree.
+        virtual void PresentFrame() = 0;
 
-        /// Called by validation layer.
-        void NotifyValidationError(const char* message);
-
-        virtual void Commit() {}
-
-        /// Get the backend type.
-        GPUBackend GetBackendType() const { return info.backend; }
-
-        /// Get device features.
-        inline const GPUDeviceInfo& GetInfo() const { return info; }
-
-        /// Query device features.
-        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
-
-        /// Query device limits.
-        inline const GPUDeviceLimits& GetLimits() const { return limits; }
-
-    private:
-        bool Initialize();
-        virtual bool BackendInit() = 0;
-        virtual void BackendShutdown() = 0;
-
+        /// Get the main context created with the device.
+        GraphicsContext* GetMainContext() const;
+        
     protected:
         /// Constructor.
-        GraphicsDevice(Window* window_, const Desc& desc_);
+        GraphicsDevice(GraphicsAdapter* adapter_, GraphicsSurface* surface_);
 
-        Window* window;
-        Desc desc;
-        GPUDeviceInfo info;
-        GPUDeviceFeatures features{};
-        GPUDeviceLimits limits{};
+        GraphicsAdapter* adapter;
+        GraphicsSurface* surface;
+        std::unique_ptr<GraphicsContext> mainContext;
        
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

@@ -23,25 +23,21 @@
 #pragma once
 
 #include "graphics/GraphicsDevice.h"
-#include "D3D12Backend.h"
+#include "D3D12CommandQueue.h"
 
 namespace alimer
 {
-    class D3D12CommandQueue;
+    class D3D12GraphicsAdapter;
+    class D3D12SwapChain;
 
     /// Direct3D12 GPU backend.
-    class ALIMER_API D3D12GPUDevice final : public GPUDevice
+    class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
         /// Constructor.
-        D3D12GPUDevice(Window* window_, const Desc& desc_);
+        D3D12GraphicsDevice(D3D12GraphicsAdapter * adapter_, GraphicsSurface * surface_);
         /// Destructor.
-        ~D3D12GPUDevice() override;
-
-        void WaitIdle();
-        void Commit() override;
+        ~D3D12GraphicsDevice() override;
 
         template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
         {
@@ -50,39 +46,53 @@ namespace alimer
             resource = nullptr;
         }
 
-           ID3D12Device*           GetD3DDevice() const { return d3dDevice; }
-        D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
-        D3D12MA::Allocator*     GetMemoryAllocator() const { return allocator; }
+        ID3D12Device* GetD3DDevice() const { return d3dDevice; }
+        D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
-        ID3D12CommandQueue* GetGraphicsQueue(void) { return graphicsQueue; }
-        D3D12CommandQueue* GetComputeQueue(void) { return computeQueue; }
-        D3D12CommandQueue* GetCopyQueue(void) { return copyQueue; }
+        D3D12CommandQueue& GetQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT)
+        {
+            switch (type)
+            {
+            case D3D12_COMMAND_LIST_TYPE_COMPUTE: return computeQueue;
+            case D3D12_COMMAND_LIST_TYPE_COPY: return copyQueue;
+            default: return graphicsQueue;
+            }
+        }
+
+        ID3D12CommandQueue* GetD3D12GraphicsQueue(void) { return graphicsQueue.GetHandle(); }
 
     private:
-        static constexpr D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-
-        bool GetAdapter(IDXGIAdapter1** ppAdapter);
-        void InitCapabilities(IDXGIAdapter1* adapter);
+        void Shutdown();
+        void ProcessDeferredReleases(uint64_t frameIndex);
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
-        //SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor) override;
-        //SharedPtr<Texture> CreateTexture() override;
+        void CreateDeviceResources();
+
+        void WaitForIdle() override;
+        bool BeginFrame() override;
+        void PresentFrame() override;
+
         //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
 
-        UINT dxgiFactoryFlags = 0;
-        SharedPtr<IDXGIFactory4> dxgiFactory;
-        bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
-        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         D3D12MA::Allocator* allocator = nullptr;
 
-        ID3D12CommandQueue* graphicsQueue;
-        D3D12CommandQueue* computeQueue;
-        D3D12CommandQueue* copyQueue;
+        D3D12CommandQueue graphicsQueue;
+        D3D12CommandQueue computeQueue;
+        D3D12CommandQueue copyQueue;
 
+        std::unique_ptr<D3D12SwapChain> swapChain;
+        uint32_t renderLatency = 2u;
         D3D12GPUFence frameFence;
         uint64_t currentCPUFrame = 0;
         uint64_t currentGPUFrame = 0;
-        uint64_t currFrameIndex = 0;
+        uint64_t currentFrameIndex = 0;
+        bool shuttingDown = false;
+
+        /* Descriptor heaps */
+        D3D12DescriptorHeap RTVDescriptorHeap;
+        D3D12DescriptorHeap DSVDescriptorHeap;
+
+        std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
     };
 }

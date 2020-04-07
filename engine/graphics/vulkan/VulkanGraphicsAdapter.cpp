@@ -22,6 +22,7 @@
 
 #include "VulkanGraphicsAdapter.h"
 #include "VulkanGraphicsProvider.h"
+#include "VulkanGraphicsDevice.h"
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "math/math.h"
@@ -31,53 +32,37 @@ using namespace std;
 namespace alimer
 {
     VulkanGraphicsAdapter::VulkanGraphicsAdapter(VulkanGraphicsProvider* provider_, VkPhysicalDevice handle_)
-        : GraphicsAdapter(provider_)
+        : GraphicsAdapter(provider_, BackendType::Vulkan)
         , handle(handle_)
     {
         vkGetPhysicalDeviceProperties(handle, &properties);
-        name = properties.deviceName;
+
+        vendorId = properties.vendorID;
+        deviceId = properties.deviceID;
         switch (properties.deviceType)
         {
         case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-            type = GraphicsAdapterType::Unknown;
+            adapterType = GraphicsAdapterType::Unknown;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            type = GraphicsAdapterType::IntegratedGPU;
+            adapterType = GraphicsAdapterType::IntegratedGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            type = GraphicsAdapterType::DiscreteGPU;
+            adapterType = GraphicsAdapterType::DiscreteGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            type = GraphicsAdapterType::CPU;
+            adapterType = GraphicsAdapterType::CPU;
             break;
 
         default:
-            type = GraphicsAdapterType::Unknown;
+            adapterType = GraphicsAdapterType::Unknown;
             break;
         }
+        name = properties.deviceName;
     }
 
-    VulkanGraphicsAdapter::~VulkanGraphicsAdapter()
+    SharedPtr<GraphicsDevice> VulkanGraphicsAdapter::CreateDevice(GraphicsSurface* surface)
     {
-    }
-
-    uint32_t VulkanGraphicsAdapter::GetVendorId() const
-    {
-        return properties.vendorID;
-    }
-
-    uint32_t VulkanGraphicsAdapter::GetDeviceId() const
-    {
-        return properties.deviceID;
-    }
-
-    GraphicsAdapterType VulkanGraphicsAdapter::GetType() const
-    {
-        return type;
-    }
-
-    const std::string& VulkanGraphicsAdapter::GetName() const
-    {
-        return name;
+        return SharedPtr<GraphicsDevice>(new VulkanGraphicsDevice(this, surface));
     }
 }

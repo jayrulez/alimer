@@ -33,18 +33,12 @@ namespace alimer
         /// Constructor.
         VulkanGraphicsAdapter(VulkanGraphicsProvider * provider_, VkPhysicalDevice handle_);
         /// Destructor.
-        ~VulkanGraphicsAdapter() override;
+        ~VulkanGraphicsAdapter() = default;
 
-        uint32_t GetVendorId() const override;
-        uint32_t GetDeviceId() const override;
-        GraphicsAdapterType GetType() const override;
-        const std::string& GetName() const override;
+        SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) override;
 
     private:
         VkPhysicalDevice handle;
         VkPhysicalDeviceProperties properties;
-
-        GraphicsAdapterType type;
-        std::string name;
     };
 }

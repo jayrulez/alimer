@@ -36,7 +36,10 @@ namespace alimer
     struct Configuration
     {
         /// The preferred GPU backend.
-        GPUBackend preferredGraphicsBackend = GPUBackend::Count;
+        BackendType preferredGraphicsBackend = BackendType::Count;
+
+        /// Name of the application.
+        std::string applicationName = "Alimer";
 
         /// Run engine in headless mode.
         bool headless = false;
@@ -105,12 +108,13 @@ namespace alimer
         std::vector<GameSystem*> gameSystems;
         InputManager* input;
         std::unique_ptr<GraphicsProvider> graphicsProvider;
+        SharedPtr<GraphicsDevice> graphicsDevice;
         bool headless{ false };
     };
 
-    extern Game* application_create(const std::vector<std::string>& args);
+    extern Game* ApplicationCreate(const std::vector<std::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.
-    ALIMER_API void application_dummy();
+    ALIMER_API void ApplicationDummy();
 }

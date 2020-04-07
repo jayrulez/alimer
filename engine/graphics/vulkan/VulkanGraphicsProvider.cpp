@@ -150,14 +150,14 @@ namespace alimer
         return available;
     }
 
-    VulkanGraphicsProvider::VulkanGraphicsProvider(GraphicsProviderFlags flags)
+    VulkanGraphicsProvider::VulkanGraphicsProvider(const std::string& applicationName, GraphicsProviderFlags flags)
     {
         ALIMER_ASSERT(IsAvailable());
 
         features.apiVersion = volkGetInstanceVersion();
 
         VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-        appInfo.pApplicationName = "Alimer";
+        appInfo.pApplicationName = applicationName.c_str();
         appInfo.applicationVersion = 0;
         appInfo.pEngineName = "Alimer";
         appInfo.engineVersion = 0;
