@@ -54,47 +54,10 @@ else()
 	message(FATAL_ERROR "Unknown platform ${CMAKE_SYSTEM_NAME}")
 endif ()
 
-# Setup third party libs used
-if (VGPU_BACKEND_VULKAN)
-    # vulkan headers
-    add_library(vulkan INTERFACE)
-    set (VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/khronos)
-    target_sources (vulkan INTERFACE 
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_sdk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_core.h
-    )
-    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
-    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
-
-    if(ANDROID)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
-    elseif(WIN32)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
-    elseif(APPLE)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
-    elseif(UNIX)
-        # See whether X11 is available. If not, fall back to direct-to-display mode.
-        find_package(X11 QUIET)
-        if (X11_FOUND)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
-        else()
-            set(DIRECT_TO_DISPLAY TRUE)
-            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
-        endif()
-    endif()
-endif ()
-
-# agpu
 set(SOURCE_FILES 
     include/vgpu/vgpu.h
     src/vgpu_backend.h
-    src/vgpu.c
-    #src/agpu_backend_gl.c
-    #src/agpu_vk.cpp
-    #src/agpu_d3d12.cpp
+    src/vgpu.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
@@ -110,26 +73,34 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>
 )
 
+# Private include paths
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/libs>
+)
+
+
 if (VGPU_BACKEND_VULKAN)
     target_sources(${PROJECT_NAME} PRIVATE
         src/vk/vk.h
         src/vk/vk.c
-        src/vk/vk_mem_alloc.h
-        src/vk/vk_mem_alloc.cpp
-        src/vgpu_vk.c
+        #src/vk/vk_mem_alloc.h
+        #src/vk/vk_mem_alloc.cpp
+        #src/vgpu_vk.c
     )
 
-    target_compile_definitions(${PROJECT_NAME} PRIVATE VGPU_VK_BACKEND)
+    #target_compile_definitions(${PROJECT_NAME} PRIVATE VGPU_VK_BACKEND)
     target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
 endif ()
 
-if (AGPU_BACKEND_D3D11 OR AGPU_BACKEND_D3D12)
-    #target_link_libraries(agpu PRIVATE dxguid)
-endif ()
+if (VGPU_BACKEND_D3D12)
+    target_sources(${PROJECT_NAME} PRIVATE
+        src/vgpu_d3d12.cpp
+        src/libs/D3D12MemAlloc.cpp
+        src/libs/D3D12MemAlloc.natvis
+    )
 
-if (AGPU_BACKEND_D3D12)
-    #target_compile_definitions(agpu PRIVATE GPU_D3D12_BACKEND)
-    #target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE VGPU_D3D12_BACKEND)
+    #target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator)
 endif ()
 
 if (MSVC)

@@ -35,6 +35,9 @@ namespace alimer
         /// Destructor.
         virtual ~CopyContext();
 
+        virtual void BeginMarker(const char* name) = 0;
+        virtual void EndMarker() = 0;
+
     protected:
         /// Constructor.
         CopyContext(GraphicsDevice* device);

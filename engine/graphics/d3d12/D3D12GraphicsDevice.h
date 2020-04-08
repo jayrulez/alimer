@@ -29,13 +29,16 @@ namespace alimer
 {
     class D3D12GraphicsAdapter;
     class D3D12SwapChain;
+    class D3D12GraphicsContext;
 
     /// Direct3D12 GPU backend.
     class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
+
         /// Constructor.
-        D3D12GraphicsDevice(D3D12GraphicsAdapter * adapter_, GraphicsSurface * surface_);
+        D3D12GraphicsDevice(GraphicsSurface* surface, const Desc& desc);
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
@@ -46,6 +49,8 @@ namespace alimer
             resource = nullptr;
         }
 
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
+        bool IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
@@ -67,15 +72,22 @@ namespace alimer
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void CreateDeviceResources();
+        void InitCapabilities(IDXGIAdapter1* adapter);
 
         void WaitForIdle() override;
         bool BeginFrame() override;
         void PresentFrame() override;
+        GraphicsContext* GetMainContext() const override;
 
         //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
 
+        UINT dxgiFactoryFlags = 0;
+        IDXGIFactory4* dxgiFactory = nullptr;
+        bool isTearingSupported = false;
+
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
+        D3D_FEATURE_LEVEL featureLevel;
 
         D3D12CommandQueue graphicsQueue;
         D3D12CommandQueue computeQueue;
@@ -92,6 +104,8 @@ namespace alimer
         /* Descriptor heaps */
         D3D12DescriptorHeap RTVDescriptorHeap;
         D3D12DescriptorHeap DSVDescriptorHeap;
+
+        std::unique_ptr<D3D12GraphicsContext> mainContext;
 
         std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
     };

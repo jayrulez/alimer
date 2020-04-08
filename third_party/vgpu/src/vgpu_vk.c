@@ -28,7 +28,7 @@
 #define VK_CHECK(res) do { VkResult r = (res); GPU_CHECK(r >= 0, vk_get_error_string(r)); } while (0)
 
 #if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-#   define VULKAN_DEBUG 
+#   define VULKAN_DEBUG
 #endif
 
 #define _GPU_MAX_PHYSICAL_DEVICES (32u)
@@ -1134,7 +1134,7 @@ static void _vgpu_commit_command_buffer(agpu_vk_renderer* renderer, VkCommandBuf
 }
 
 static bool _agpu_query_presentation_support(VkPhysicalDevice physical_device, uint32_t queue_family_index) {
-#if defined(_WIN32) 
+#if defined(_WIN32)
     return vkGetPhysicalDeviceWin32PresentationSupportKHR(physical_device, queue_family_index);
 #elif defined(__ANDROID__)
     return true;
@@ -1368,7 +1368,7 @@ static agpu_device* vk_create_device(const char* application_name, const agpu_de
     renderer = VGPU_ALLOC_HANDLE(agpu_vk_renderer);
     memset(renderer, 0, sizeof(agpu_vk_renderer));
 
-    /* The FNA3D_Device and OpenGLRenderer need to reference each other */
+    /* Reference gpu_device and renderer each other */
     renderer->gpu_device = device;
     device->renderer = (agpu_renderer*)renderer;
 

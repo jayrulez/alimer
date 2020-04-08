@@ -45,7 +45,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct agpu_device agpu_device;
 typedef struct vgpu_context vgpu_context;
 typedef struct vgpu_buffer vgpu_buffer;
 typedef struct vgpu_texture vgpu_texture;
@@ -60,6 +59,7 @@ enum {
 
     /// Maximum commands buffers per frame.
     VGPU_MAX_SUBMITTED_COMMAND_BUFFERS = 16u,
+    VGPU_MAX_TEXTURES = 2048u,
 };
 
 typedef enum vgpu_log_level {
@@ -268,7 +268,9 @@ typedef uint32_t vgpu_texture_usage_flags;
 
 typedef enum vgpu_config_flags_bits {
     VGPU_CONFIG_FLAGS_NONE = 0,
-    VGPU_CONFIG_FLAGS_VALIDATION = 0x1
+    VGPU_CONFIG_FLAGS_HEADLESS = 0x1,
+    VGPU_CONFIG_FLAGS_VALIDATION = 0x2,
+    VGPU_CONFIG_FLAGS_GPU_BASED_VALIDATION = 0x4
 } vgpu_config_flags_bits;
 typedef uint32_t vgpu_config_flags;
 
@@ -314,7 +316,7 @@ typedef struct vgpu_texture_desc {
     const char* name;
 } vgpu_texture_desc;
 
-typedef struct agpu_features {
+typedef struct vgpu_features {
     bool  independent_blend;
     bool  compute_shader;
     bool  geometry_shader;
@@ -333,9 +335,9 @@ typedef struct agpu_features {
     bool  texture_2D_array;
     bool  texture_cube_array;
     bool  raytracing;
-} agpu_features;
+} vgpu_features;
 
-typedef struct agpu_limits {
+typedef struct vgpu_limits {
     uint32_t        max_vertex_attributes;
     uint32_t        max_vertex_bindings;
     uint32_t        max_vertex_attribute_offset;
@@ -367,15 +369,15 @@ typedef struct agpu_limits {
     uint32_t        max_compute_work_group_size_x;
     uint32_t        max_compute_work_group_size_y;
     uint32_t        max_compute_work_group_size_z;
-} agpu_limits;
+} vgpu_limits;
 
 typedef void(*vgpu_log_callback)(void* user_data, const char* message, vgpu_log_level level);
 
-typedef struct agpu_desc {
+typedef struct vgpu_desc {
+    vgpu_backend preferred_backend;
     vgpu_config_flags flags;
     vgpu_adapter_type preferred_adapter;
-    const vgpu_context_desc* main_context_desc;
-} agpu_desc;
+} vgpu_desc;
 
 #ifdef __cplusplus
 extern "C" {
@@ -388,26 +390,30 @@ extern "C" {
 
     VGPU_EXPORT void vgpu_log(vgpu_log_level level, const char* message);
     VGPU_EXPORT void vgpu_log_format(vgpu_log_level level, const char* format, ...);
+    VGPU_EXPORT void vgpu_log_error(const char* context, const char* message);
 
-    VGPU_EXPORT agpu_device* vgpu_create_device(const char* application_name, const agpu_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_device(agpu_device* device);
-    VGPU_EXPORT void vgpu_wait_idle(agpu_device* device);
-    VGPU_EXPORT void vgpu_begin_frame(agpu_device* device);
-    VGPU_EXPORT void vgpu_end_frame(agpu_device* device);
+    VGPU_EXPORT vgpu_backend vgpu_get_default_platform_backend(void);
+    VGPU_EXPORT bool vgpu_is_backend_supported(vgpu_backend backend);
+    VGPU_EXPORT bool vgpu_init(const char* app_name, const vgpu_desc* desc);
+    VGPU_EXPORT void vgpu_shutdown(void);
+    VGPU_EXPORT void vgpu_wait_idle(void);
+    VGPU_EXPORT void vgpu_begin_frame(void);
+    VGPU_EXPORT void vgpu_end_frame(void);
 
-    VGPU_EXPORT vgpu_context* vgpu_create_context(agpu_device* device, const vgpu_context_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_context(agpu_device* device, vgpu_context* context);
-    VGPU_EXPORT void vgpu_set_context(agpu_device* device, vgpu_context* context);
+    VGPU_EXPORT vgpu_backend vgpu_get_backend(void);
+    VGPU_EXPORT vgpu_features vgpu_query_features(void);
+    VGPU_EXPORT vgpu_limits vgpu_query_limits(void);
 
-    VGPU_EXPORT vgpu_backend vgpu_query_backend(agpu_device* device);
-    VGPU_EXPORT agpu_features vgpu_query_features(agpu_device* device);
-    VGPU_EXPORT agpu_limits vgpu_query_limits(agpu_device* device);
+    //VGPU_EXPORT vgpu_context* vgpu_create_context(vgpu_device* device, const vgpu_context_desc* desc);
+    //VGPU_EXPORT void vgpu_destroy_context(vgpu_device* device, vgpu_context* context);
+    //VGPU_EXPORT void vgpu_set_context(vgpu_device* device, vgpu_context* context);
 
-    VGPU_EXPORT vgpu_buffer* vgpu_create_buffer(agpu_device* device, const vgpu_buffer_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_buffer(agpu_device* device, vgpu_buffer* buffer);
 
-    VGPU_EXPORT vgpu_texture* vgpu_create_texture(agpu_device* device, const vgpu_texture_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_texture(agpu_device* device, vgpu_texture* texture);
+    //VGPU_EXPORT vgpu_buffer* vgpu_create_buffer(vgpu_device* device, const vgpu_buffer_desc* desc);
+    //VGPU_EXPORT void vgpu_destroy_buffer(vgpu_device* device, vgpu_buffer* buffer);
+
+    //VGPU_EXPORT vgpu_texture* vgpu_create_texture(vgpu_device* device, const vgpu_texture_desc* desc);
+    //VGPU_EXPORT void vgpu_destroy_texture(vgpu_device* device, vgpu_texture* texture);
 
     /// Check if the format has a depth component.
     VGPU_EXPORT bool vgpu_is_depth_format(vgpu_pixel_format format);

@@ -40,6 +40,14 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
+    /* Known vendor ids */
+    static constexpr uint32_t kVendorId_AMD = 0x1002;
+    static constexpr uint32_t kVendorId_ARM = 0x13B5;
+    static constexpr uint32_t kVendorId_ImgTec = 0x1010;
+    static constexpr uint32_t kVendorId_Intel = 0x8086;
+    static constexpr uint32_t kVendorId_Nvidia = 0x10DE;
+    static constexpr uint32_t kVendorId_Qualcomm = 0x5143;
+
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
     {
@@ -142,6 +150,25 @@ namespace alimer
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
         PresentMode presentMode = PresentMode::Fifo;
     };
+
+    /// GraphicsDevice information.
+    struct GraphicsDeviceInfo
+    {
+        BackendType backendType;
+
+        /// The hardware adapter PCI Vendor ID (VID).
+        uint32_t vendorId;
+
+        /// The hardware adapter PCI Device ID (DID).
+        uint32_t deviceId;
+
+        /// The hardware adapter type.
+        GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
+
+        /// The hardware adapter name.
+        std::string adapterName;
+    };
+
 
     /// Describes GPUDevice features.
     struct GPUDeviceFeatures

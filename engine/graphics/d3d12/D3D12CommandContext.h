@@ -34,11 +34,22 @@ namespace alimer
         ~D3D12GraphicsContext() override;
 
         void Destroy();
+        void Begin(const char* name, bool profile);
+        void End();
+        void BeginMarker(const char* name) override;
+        void EndMarker() override;
+
+        ID3D12GraphicsCommandList* GetCommandList() const
+        {
+            return commandList;
+        }
 
     private:
         const D3D12_COMMAND_LIST_TYPE type;
+        uint32_t frameIndex = 0;
         uint32_t commandAllocatorsCount;
         ID3D12CommandAllocator* commandAllocators[kMaxFrameLatency] = {};
         ID3D12GraphicsCommandList* commandList;
+        bool isProfiling = false;
     };
 }

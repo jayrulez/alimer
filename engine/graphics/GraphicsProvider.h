@@ -24,7 +24,6 @@
 
 #include "graphics/GraphicsAdapter.h"
 #include <vector>
-#include <set>
 #include <memory>
 
 namespace alimer
@@ -39,12 +38,8 @@ namespace alimer
         /// Destructor.
         virtual ~GraphicsProvider() = default;
 
-        /// Get set of available graphics providers.
-        static std::set<BackendType> GetAvailableProviders();
-
-        /// Create new GPUDevice with given preferred backend, fallback to supported one.
-        static std::unique_ptr<GraphicsProvider> Create(const std::string& applicationName, GraphicsProviderFlags flags = GraphicsProviderFlags::None, BackendType preferredBackend = BackendType::Count);
-
+        
+       
         /// Enumerate all graphics adapter.
         virtual std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
 

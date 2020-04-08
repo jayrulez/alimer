@@ -131,73 +131,200 @@ void vgpu_log_format(vgpu_log_level level, const char* format, ...) {
     }
 }
 
-static const agpu_driver* drivers[] = {
-#if defined(VGPU_VK_BACKEND)
-    &vulkan_driver,
+void vgpu_log_error(const char* context, const char* message) {
+    if (s_log_function) {
+        vgpu_log_format(VGPU_LOG_LEVEL_ERROR, "[%s]: %s", context, message);
+    }
+}
+
+vgpu_backend vgpu_get_default_platform_backend(void) {
+#if defined(_WIN32)
+    if (vgpu_is_backend_supported(VGPU_BACKEND_DIRECT3D12)) {
+        return VGPU_BACKEND_DIRECT3D12;
+    }
+
+    if (vgpu_is_backend_supported(VGPU_BACKEND_VULKAN)) {
+        return VGPU_BACKEND_VULKAN;
+    }
+
+    if (vgpu_is_backend_supported(VGPU_BACKEND_DIRECT3D11)) {
+        return VGPU_BACKEND_DIRECT3D11;
+    }
+
+    if (vgpu_is_backend_supported(VGPU_BACKEND_OPENGL)) {
+        return VGPU_BACKEND_OPENGL;
+    }
+
+    return VGPU_BACKEND_NULL;
+#elif defined(__linux__) || defined(__ANDROID__)
+    return VGPU_BACKEND_OPENGL;
+#elif defined(__APPLE__)
+    return VGPU_BACKEND_VULKAN;
+#else
+    return VGPU_BACKEND_OPENGL;
 #endif
-};
-
-agpu_device* vgpu_create_device(const char* application_name, const agpu_desc* desc) {
-    return drivers[0]->create_device(application_name, desc);
 }
 
-void vgpu_destroy_device(agpu_device* device) {
-    device->destroy_device(device);
+bool vgpu_is_backend_supported(vgpu_backend backend) {
+    if (backend == VGPU_BACKEND_DEFAULT) {
+        backend = vgpu_get_default_platform_backend();
+    }
+
+    switch (backend)
+    {
+    case VGPU_BACKEND_NULL:
+        return true;
+#if defined(VGPU_VK_BACKEND)
+    case VGPU_BACKEND_VULKAN:
+        return vgpu_vk_supported();
+#endif
+#if defined(VGPU_D3D12_BACKEND)
+    case VGPU_BACKEND_DIRECT3D12:
+        return vgpu_d3d12_supported();
+#endif /* defined(VGPU_D3D12_BACKEND) */
+
+#if defined(VGPU_BACKEND_GL)
+    case VGPU_BACKEND_OPENGL:
+        return agpu_gl_supported();
+#endif // defined(AGPU_BACKEND_GL)
+
+    default:
+        return false;
+    }
 }
 
-void vgpu_wait_idle(agpu_device* device) {
-    device->wait_idle(device->renderer);
+static vgpu_renderer* s_renderer = NULL;
+
+bool vgpu_init(const char* app_name, const vgpu_desc* desc) {
+    if (s_renderer) {
+        return true;
+    }
+
+    assert(desc);
+
+    vgpu_backend backend = desc->preferred_backend;
+    if (backend == VGPU_BACKEND_DEFAULT) {
+        backend = vgpu_get_default_platform_backend();
+    }
+
+    vgpu_renderer* renderer = NULL;
+    switch (backend)
+    {
+    case VGPU_BACKEND_NULL:
+        break;
+#if defined(VGPU_VK_BACKEND)
+    case VGPU_BACKEND_VULKAN:
+        renderer = vgpuCreateVkBackend();
+        if (!renderer) {
+            vgpuLogError("Vulkan backend is not supported");
+        }
+        break;
+#endif
+
+#if defined(VGPU_D3D12_BACKEND)
+    case VGPU_BACKEND_DIRECT3D12:
+        renderer = vgpu_create_d3d12_backend();
+        if (!renderer) {
+            vgpu_log(VGPU_LOG_LEVEL_ERROR, "Direct3D12 backend is not supported");
+        }
+        break;
+#endif
+
+#if defined(VGPU_D3D11_BACKEND)
+    case VGPU_BACKEND_DIRECT3D11:
+        renderer = vgpu_create_d3d11_backend();
+        if (!renderer) {
+            vgpuLogError("Direct3D11 backend is not supported");
+        }
+        break;
+#endif
+
+#if defined(VGPU_BACKEND_GL)
+    case VGPU_BACKEND_OPENGL:
+        renderer = vgpuCreateOpenGLBackend();
+        if (!renderer) {
+            vgpuLogError("OpenGL backend is not supported");
+        }
+        break;
+#endif
+
+    default:
+        break;
+    }
+
+    if (renderer != nullptr) {
+        s_renderer = renderer;
+        return renderer->init(app_name, desc);
+    }
+
+    return true;
 }
 
-void vgpu_begin_frame(agpu_device* device) {
-    device->begin_frame(device->renderer);
+void vgpu_shutdown(void) {
+    if (s_renderer != nullptr) {
+        s_renderer->shutdown();
+    }
 }
 
-void vgpu_end_frame(agpu_device* device) {
-    device->end_frame(device->renderer);
+void vgpu_wait_idle(void) {
+    s_renderer->wait_idle();
 }
 
-vgpu_context* vgpu_create_context(agpu_device* device, const vgpu_context_desc* desc) {
+void vgpu_begin_frame(void) {
+    s_renderer->begin_frame();
+}
+
+void vgpu_end_frame(void) {
+    s_renderer->end_frame();
+}
+
+vgpu_backend vgpu_get_backend(void) {
+    return s_renderer->get_backend();
+}
+
+vgpu_features vgpu_query_features(void) {
+    return s_renderer->query_features();
+}
+
+vgpu_limits vgpu_query_limits(void) {
+    return s_renderer->query_limits();
+}
+
+/*vgpu_context* vgpu_create_context(vgpu_device* device, const vgpu_context_desc* desc) {
     return device->create_context(device->renderer, desc);
 }
 
-void vgpu_destroy_context(agpu_device* device, vgpu_context* context) {
+void vgpu_destroy_context(vgpu_device* device, vgpu_context* context) {
     device->destroy_context(device->renderer, context);
 }
 
-void vgpu_set_context(agpu_device* device, vgpu_context* context) {
+void vgpu_set_context(vgpu_device* device, vgpu_context* context) {
     device->set_context(device->renderer, context);
-}
+}*/
 
-vgpu_backend vgpu_query_backend(agpu_device* device) {
-    return device->query_backend();
-}
-
-agpu_features vgpu_query_features(agpu_device* device) {
-    return device->query_features(device->renderer);
-}
-
-agpu_limits vgpu_query_limits(agpu_device* device) {
-    return device->query_limits(device->renderer);
-}
-
-vgpu_buffer* vgpu_create_buffer(agpu_device* device, const vgpu_buffer_desc* desc) {
+/*vgpu_buffer* vgpu_create_buffer(vgpu_device* device, const vgpu_buffer_desc* desc) {
     return device->create_buffer(device->renderer, desc);
 }
 
-void vgpu_destroy_buffer(agpu_device* device, vgpu_buffer* buffer) {
+void vgpu_destroy_buffer(vgpu_device* device, vgpu_buffer* buffer) {
     device->destroy_buffer(device->renderer, buffer);
 }
 
-vgpu_texture* vgpu_create_texture(agpu_device* device, const vgpu_texture_desc* desc) {
+vgpu_texture* vgpu_create_texture(vgpu_device* device, const vgpu_texture_desc* desc) {
     return device->create_texture(device->renderer, desc);
 }
+
+
+void vgpu_destroy_texture(vgpu_device* device, vgpu_texture* texture) {
+    device->destroy_texture(device->renderer, texture);
+}
+*/
 
 /* Format helpers */
 typedef struct vgpu_pixel_format_desc
 {
     vgpu_pixel_format       format;
-    const char*             name;
+    const char* name;
     vgpu_pixel_format_type  type;
     uint8_t                 bits_per_pixel;
     struct
@@ -311,10 +438,6 @@ const vgpu_pixel_format_desc FormatDesc[] =
     { VGPU_PIXEL_FORMAT_ASTC12x12,              "ASTC12x12",            VGPU_PIXEL_FORMAT_TYPE_UNORM,       3,          {12, 12, 16, 1, 1},     {0, 0, 0, 0, 0, 0} },
 };
 
-void vgpu_destroy_texture(agpu_device* device, vgpu_texture* texture) {
-    device->destroy_texture(device->renderer, texture);
-}
-
 bool vgpu_is_depth_format(vgpu_pixel_format format) {
     assert(FormatDesc[format].format == format);
     return FormatDesc[format].bits.depth > 0;
@@ -328,128 +451,3 @@ bool vgpu_is_stencil_format(vgpu_pixel_format format) {
 bool vgpu_is_depth_stencil_format(vgpu_pixel_format format) {
     return vgpu_is_depth_format(format) || vgpu_is_stencil_format(format);
 }
-
-/*static agpu_renderer* s_renderer = nullptr;
-
-bool agpu_is_backend_supported(agpu_backend backend) {
-    if (backend == AGPU_BACKEND_DEFAULT) {
-        backend = agpu_get_default_platform_backend();
-    }
-
-    switch (backend)
-    {
-    case AGPU_BACKEND_NULL:
-        return true;
-    case AGPU_BACKEND_VULKAN:
-        return agpu_vk_supported();
-        //case AGPU_BACKEND_DIRECT3D11:
-        //    return vgpu_d3d11_supported();
-    case AGPU_BACKEND_DIRECT3D12:
-        return agpu_d3d12_supported();
-#if defined(AGPU_BACKEND_GL)
-    case AGPU_BACKEND_OPENGL:
-        return agpu_gl_supported();
-#endif // defined(AGPU_BACKEND_GL)
-
-    default:
-        return false;
-    }
-}
-
-agpu_backend agpu_get_default_platform_backend() {
-#if defined(_WIN32)
-    if (agpu_is_backend_supported(AGPU_BACKEND_DIRECT3D12)) {
-        return AGPU_BACKEND_DIRECT3D12;
-    }
-
-    if (agpu_is_backend_supported(AGPU_BACKEND_VULKAN)) {
-        return AGPU_BACKEND_VULKAN;
-    }
-
-    if (agpu_is_backend_supported(AGPU_BACKEND_DIRECT3D11)) {
-        return AGPU_BACKEND_DIRECT3D11;
-    }
-
-    if (agpu_is_backend_supported(AGPU_BACKEND_OPENGL)) {
-        return AGPU_BACKEND_OPENGL;
-    }
-
-    return AGPU_BACKEND_NULL;
-#elif defined(__linux__) || defined(__ANDROID__)
-    return AGPU_BACKEND_OPENGL;
-#elif defined(__APPLE__)
-    return AGPU_BACKEND_VULKAN;
-#else
-    return AGPU_BACKEND_OPENGL;
-#endif
-}
-
-bool agpu_init(const agpu_config* config) {
-    if (s_renderer != nullptr) {
-        return true;
-    }
-
-    assert(config);
-    agpu_backend backend = config->preferred_backend;
-    if (backend == AGPU_BACKEND_DEFAULT) {
-        backend = agpu_get_default_platform_backend();
-    }
-
-    agpu_renderer* renderer = nullptr;
-    switch (backend)
-    {
-    case AGPU_BACKEND_NULL:
-        break;
-    case AGPU_BACKEND_VULKAN:
-        renderer = agpu_create_vk_backend();
-        if (!renderer) {
-            //vgpuLogError("OpenGL backend is not supported");
-        }
-        break;
-
-    case AGPU_BACKEND_DIRECT3D12:
-        renderer = agpu_create_d3d12_backend();
-        if (!renderer) {
-            //vgpuLogError("OpenGL backend is not supported");
-        }
-        break;
-#if defined(AGPU_BACKEND_GL)
-    case AGPU_BACKEND_OPENGL:
-        renderer = agpu_create_gl_backend();
-        if (!renderer) {
-            //vgpuLogError("OpenGL backend is not supported");
-        }
-        break;
-#endif // defined(AGPU_BACKEND_GL)
-
-    default:
-        break;
-    }
-
-    if (renderer != nullptr) {
-        s_renderer = renderer;
-        return renderer->initialize(config);
-    }
-
-    //s_logCallback = descriptor->logCallback;
-    return false;
-}
-
-void agpu_shutdown(void) {
-    if (s_renderer != nullptr) {
-        s_renderer->shutdown();
-        s_renderer = nullptr;
-    }
-}
-
-void agpu_wait_idle(void) {
-    s_renderer->wait_idle();
-}
-
-void agpu_begin_frame(void) {
-    s_renderer->begin_frame();
-}
-
-void agpu_end_frame(void) {
-    s_renderer->end_frame();
-}*/

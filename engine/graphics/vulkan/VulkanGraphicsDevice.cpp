@@ -40,7 +40,7 @@ using namespace std;
 namespace alimer
 {
     VulkanGraphicsDevice::VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_)
-        : GraphicsDevice(adapter_, surface_)
+        : GraphicsDevice(surface_, {})
     {
 #if TODO_VK
         // Enumerate physical device and create logical one.
@@ -384,6 +384,11 @@ namespace alimer
     {
     }
 
+    GraphicsContext* VulkanGraphicsDevice::GetMainContext() const
+    {
+        return nullptr;
+        /*return mainContext.get();*/
+    }
 
     VkSurfaceKHR VulkanGraphicsDevice::CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height)
     {

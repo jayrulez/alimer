@@ -154,6 +154,12 @@ namespace alimer
             hr == DXGI_ERROR_DEVICE_RESET)
         {
         }
+        else
+        {
+            ThrowIfFailed(hr);
+
+            backBufferIndex = handle->GetCurrentBackBufferIndex();
+        }
     }
 }
 

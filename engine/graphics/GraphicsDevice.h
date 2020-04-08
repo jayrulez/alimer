@@ -40,6 +40,19 @@ namespace alimer
     class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
+        struct Desc
+        {
+            BackendType preferredBackend = BackendType::Count;
+            std::string applicationName;
+            GraphicsProviderFlags flags = GraphicsProviderFlags::None;
+        };
+
+        /// Get set of available graphics providers.
+        static std::set<BackendType> GetAvailableBackends();
+
+        /// Create new GraphicsDevice with given preferred backend, fallback to supported one.
+        static SharedPtr<GraphicsDevice> Create(GraphicsSurface* surface, const Desc& desc);
+
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
@@ -53,16 +66,27 @@ namespace alimer
         virtual void PresentFrame() = 0;
 
         /// Get the main context created with the device.
-        GraphicsContext* GetMainContext() const;
-        
+        virtual GraphicsContext* GetMainContext() const = 0;
+
+        /// Query device features.
+        inline const GraphicsDeviceInfo& GetInfo() const { return info; }
+
+        /// Query device features.
+        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
+
+        /// Query device limits.
+        inline const GPUDeviceLimits& GetLimits() const { return limits; }
+
     protected:
         /// Constructor.
-        GraphicsDevice(GraphicsAdapter* adapter_, GraphicsSurface* surface_);
+        GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_);
 
-        GraphicsAdapter* adapter;
         GraphicsSurface* surface;
-        std::unique_ptr<GraphicsContext> mainContext;
-       
+        Desc desc;
+        GraphicsDeviceInfo info{};
+        GPUDeviceFeatures features{};
+        GPUDeviceLimits limits{};
+
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };

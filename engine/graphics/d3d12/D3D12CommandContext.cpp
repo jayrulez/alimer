@@ -55,4 +55,44 @@ namespace alimer
 
         SafeRelease(commandList);
     }
+
+    void D3D12GraphicsContext::Begin(const char* name, bool profile)
+    {
+        isProfiling = profile;
+
+        ThrowIfFailed(commandAllocators[frameIndex]->Reset());
+        ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
+
+        /*ID3D12DescriptorHeap* heaps[] = { context->m_Device->m_SRVHeap.m_DescHeap, context->m_Device->m_SamplerHeap.m_DescHeap };
+        commandList->SetDescriptorHeaps(2, heaps);*/
+
+        BeginMarker(name);
+    }
+
+    void D3D12GraphicsContext::End()
+    {
+        EndMarker();
+
+        commandList->Close();
+
+        frameIndex = (frameIndex+1) % commandAllocatorsCount;
+    }
+
+    void D3D12GraphicsContext::BeginMarker(const char* name)
+    {
+        PIXBeginEvent(commandList, 0, name);
+
+        if (isProfiling)
+        {
+        }
+    }
+
+    void D3D12GraphicsContext::EndMarker()
+    {
+        if (isProfiling)
+        {
+        }
+
+        PIXEndEvent(commandList);
+    }
 }

@@ -33,13 +33,6 @@ namespace alimer
     class GraphicsProvider;
     class GraphicsDevice;
 
-    static constexpr uint32_t kVendorId_AMD = 0x1002;
-    static constexpr uint32_t kVendorId_ARM = 0x13B5;
-    static constexpr uint32_t kVendorId_ImgTec = 0x1010;
-    static constexpr uint32_t kVendorId_Intel = 0x8086;
-    static constexpr uint32_t kVendorId_Nvidia = 0x10DE;
-    static constexpr uint32_t kVendorId_Qualcomm = 0x5143;
-
     /// Defines the physical graphics adapter class.
     class ALIMER_API GraphicsAdapter
     {
@@ -75,12 +68,6 @@ namespace alimer
         bool IsNvidia() const noexcept { return vendorId == kVendorId_Nvidia; }
         bool IsQualcomm() const noexcept { return vendorId == kVendorId_Qualcomm; }
 
-        /// Query device features.
-        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
-
-        /// Query device limits.
-        inline const GPUDeviceLimits& GetLimits() const { return limits; }
-
     protected:
         /// Constructor.
         GraphicsAdapter::GraphicsAdapter(GraphicsProvider* provider_, BackendType backend_)
@@ -93,8 +80,7 @@ namespace alimer
         uint32_t deviceId = 0;
         GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
         std::string name;
-        GPUDeviceFeatures features{};
-        GPUDeviceLimits limits{};
+        
 
     private:
         GraphicsProvider* provider;

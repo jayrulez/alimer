@@ -51,6 +51,7 @@ namespace alimer
         void WaitForIdle() override;
         bool BeginFrame() override;
         void PresentFrame() override;
+        GraphicsContext* GetMainContext() const override;
 
         VulkanDeviceFeatures vk_features{};
         VkInstance instance{ VK_NULL_HANDLE };

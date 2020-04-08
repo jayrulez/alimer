@@ -1,3 +1,6 @@
+# add_subdirectory(vgpu)
+# set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
+
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
