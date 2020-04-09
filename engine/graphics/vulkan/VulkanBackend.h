@@ -23,8 +23,9 @@
 #pragma once
 
 #include "volk.h"
-#include "vk_mem_alloc.h"
 #include <string>
+
+VK_DEFINE_HANDLE(VmaAllocator);
 
 namespace alimer
 {

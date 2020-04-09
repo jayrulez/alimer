@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,44 +23,27 @@
 #pragma once
 
 #include "graphics/GraphicsAdapter.h"
-#include "graphics/CommandContext.h"
-#include <memory>
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    class GPUBuffer;
-    class Texture;
+    class D3D12GraphicsProvider;
 
-    /* TODO: Expose GraphicsContext */
-    /* TODO: Expose resource creation context */
-
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class D3D12GraphicsAdapter final : public GraphicsAdapter
     {
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        D3D12GraphicsAdapter(D3D12GraphicsProvider* provider_, ComPtr<IDXGIAdapter1> adapter_);
+        ~D3D12GraphicsAdapter() = default;
 
-        /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+        bool Initialize();
 
-        /// Begin frame rendering logic.
-        virtual bool BeginFrame() = 0;
+        SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) override;
 
-        /// End current frame and present it on scree.
-        virtual void PresentFrame() = 0;
-
-        /// Get the main context created with the device.
-        virtual GraphicsContext* GetMainContext() const = 0;
-
-    protected:
-        /// Constructor.
-        GraphicsDevice(GraphicsAdapter* adapter_, GraphicsSurface* surface_);
-
-        GraphicsAdapter* adapter;
-        GraphicsSurface* surface;
+        IDXGIAdapter1* GetDXGIAdapter() const { return adapter.Get(); }
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        void InitCapabilities(D3D_FEATURE_LEVEL featureLevel);
+
+        ComPtr<IDXGIAdapter1> adapter;
     };
 }

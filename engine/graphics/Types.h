@@ -151,25 +151,6 @@ namespace alimer
         PresentMode presentMode = PresentMode::Fifo;
     };
 
-    /// GraphicsDevice information.
-    struct GraphicsDeviceInfo
-    {
-        BackendType backendType;
-
-        /// The hardware adapter PCI Vendor ID (VID).
-        uint32_t vendorId;
-
-        /// The hardware adapter PCI Device ID (DID).
-        uint32_t deviceId;
-
-        /// The hardware adapter type.
-        GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
-
-        /// The hardware adapter name.
-        std::string adapterName;
-    };
-
-
     /// Describes GPUDevice features.
     struct GPUDeviceFeatures
     {

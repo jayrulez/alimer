@@ -58,6 +58,12 @@ namespace alimer
         /// Gets the name of the adapter.
         const std::string& GetName() const noexcept { return name; }
 
+        /// Get the features.
+        inline const GPUDeviceFeatures& GetFeatures() const { return features; }
+
+        /// Get device limits.
+        inline const GPUDeviceLimits& GetLimits() const { return limits; }
+
         /// Create new graphics device with given surface.
         virtual SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) = 0;
 
@@ -80,7 +86,8 @@ namespace alimer
         uint32_t deviceId = 0;
         GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
         std::string name;
-        
+        GPUDeviceFeatures features{};
+        GPUDeviceLimits limits{};
 
     private:
         GraphicsProvider* provider;

@@ -22,6 +22,7 @@
 
 #include "os/os.h"
 #include "Games/Game.h"
+#include "graphics/GraphicsProvider.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
@@ -35,6 +36,12 @@ namespace alimer
     {
         os::init();
         gameSystems.push_back(input);
+
+        GraphicsProviderFlags flags = GraphicsProviderFlags::None;
+#ifdef _DEBUG
+        flags |= GraphicsProviderFlags::Validation;
+#endif
+        graphicsProvider = GraphicsProvider::Create(config.applicationName, flags, config.preferredGraphicsBackend);
     }
 
     Game::~Game()
@@ -46,6 +53,7 @@ namespace alimer
 
         gameSystems.clear();
         graphicsDevice.Reset();
+        graphicsProvider.reset();
         os::shutdown();
     }
 
@@ -55,12 +63,9 @@ namespace alimer
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics with main window.
-        GraphicsDevice::Desc graphicsDesc = {};
-#ifdef _DEBUG
-        graphicsDesc.flags |= GraphicsProviderFlags::Validation;
-#endif
-        graphicsDevice = GraphicsDevice::Create(mainWindow.get(), graphicsDesc);
-        if (graphicsDevice.IsNull())
+        auto gpuAdapters = graphicsProvider->EnumerateGraphicsAdapters();
+        graphicsDevice = gpuAdapters[0]->CreateDevice(mainWindow.get());
+        if (!graphicsDevice)
         {
             headless = true;
         }

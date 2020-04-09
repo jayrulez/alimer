@@ -35,12 +35,15 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 using namespace std;
 
 namespace alimer
 {
     VulkanGraphicsDevice::VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_)
-        : GraphicsDevice(surface_, {})
+        : GraphicsDevice(adapter_, surface_)
     {
 #if TODO_VK
         // Enumerate physical device and create logical one.

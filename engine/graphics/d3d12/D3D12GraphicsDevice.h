@@ -35,10 +35,8 @@ namespace alimer
     class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
         /// Constructor.
-        D3D12GraphicsDevice(GraphicsSurface* surface, const Desc& desc);
+        D3D12GraphicsDevice(D3D12GraphicsAdapter* adapter_, GraphicsSurface* surface_);
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
@@ -49,8 +47,6 @@ namespace alimer
             resource = nullptr;
         }
 
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
@@ -72,7 +68,6 @@ namespace alimer
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void CreateDeviceResources();
-        void InitCapabilities(IDXGIAdapter1* adapter);
 
         void WaitForIdle() override;
         bool BeginFrame() override;
@@ -80,10 +75,6 @@ namespace alimer
         GraphicsContext* GetMainContext() const override;
 
         //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
-
-        UINT dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
 
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;

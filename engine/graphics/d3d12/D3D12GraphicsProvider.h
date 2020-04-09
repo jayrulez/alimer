@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,45 +22,27 @@
 
 #pragma once
 
-#include "graphics/GraphicsAdapter.h"
-#include "graphics/CommandContext.h"
-#include <memory>
+#include "graphics/GraphicsProvider.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    class GPUBuffer;
-    class Texture;
-
-    /* TODO: Expose GraphicsContext */
-    /* TODO: Expose resource creation context */
-
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class ALIMER_API D3D12GraphicsProvider final : public GraphicsProvider
     {
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+         static bool IsAvailable();
 
-        /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+         D3D12GraphicsProvider(GraphicsProviderFlags flags);
+         ~D3D12GraphicsProvider();
 
-        /// Begin frame rendering logic.
-        virtual bool BeginFrame() = 0;
+         std::vector<std::unique_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
 
-        /// End current frame and present it on scree.
-        virtual void PresentFrame() = 0;
-
-        /// Get the main context created with the device.
-        virtual GraphicsContext* GetMainContext() const = 0;
-
-    protected:
-        /// Constructor.
-        GraphicsDevice(GraphicsAdapter* adapter_, GraphicsSurface* surface_);
-
-        GraphicsAdapter* adapter;
-        GraphicsSurface* surface;
+         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
+         bool IsTearingSupported() const { return isTearingSupported; }
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        UINT dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory4> dxgiFactory;
+        bool isTearingSupported = false;
     };
 }

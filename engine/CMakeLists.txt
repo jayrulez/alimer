@@ -90,8 +90,14 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
 
+if (ALIMER_D3D12)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_D3D12)
+    target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator)
+endif ()
+
 if (ALIMER_VULKAN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_VULKAN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
 endif ()
 
 

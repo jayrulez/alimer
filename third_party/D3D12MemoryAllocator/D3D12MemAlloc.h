@@ -24,7 +24,7 @@
 
 /** \mainpage D3D12 Memory Allocator
 
-<b>Version 2.0.0-development</b> (2020-03-24)
+<b>Version 2.0.0-development</b> (2020-04-07)
 
 Copyright (c) 2019-2020 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
@@ -38,6 +38,7 @@ Documentation of all members: D3D12MemAlloc.h
         - [Project setup](@ref quick_start_project_setup)
         - [Creating resources](@ref quick_start_creating_resources)
         - [Mapping memory](@ref quick_start_mapping_memory)
+    - \subpage reserving_memory
 - \subpage configuration
   - [Custom CPU memory allocator](@ref custom_memory_allocator)
 - \subpage general_considerations
@@ -235,6 +236,43 @@ resource->Unmap(0, NULL);
 \endcode
 
 
+\page reserving_memory Reserving minimum amount of memory
+
+The library automatically allocates and frees memory heaps.
+It also applies some hysteresis so that it doesn't allocate and free entire heap
+when you repeatedly create and release a single resource.
+However, if you want to make sure certain number of bytes is always allocated as heaps in a specific pool,
+you can use functions designed for this purpose:
+
+- For default heaps use D3D12MA::Allocator::SetDefaultHeapMinBytes.
+- For custom heaps use D3D12MA::Pool::SetMinBytes.
+
+Default is 0. You can change this parameter any time.
+Setting it to higher value may cause new heaps to be allocated.
+If this allocation fails, the function returns appropriate error code, but the parameter remains set to the new value.
+Setting it to lower value may cause some empty heaps to be released.
+
+You can always call D3D12MA::Allocator::SetDefaultHeapMinBytes for 3 sets of heap flags separately:
+`D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`, `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`.
+When ResourceHeapTier = 2, so that all types of resourced are kept together,
+these 3 values as simply summed up to calculate minimum amount of bytes for default pool with certain heap type.
+Alternatively, when ResourceHeapTier = 2, you can call this function with
+`D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0. This will set a single value for the default pool and
+will override the sum of those three.
+
+Reservation of minimum number of bytes interacts correctly with
+D3D12MA::POOL_DESC::MinBlockCount and D3D12MA::POOL_DESC::MaxBlockCount.
+For example, free blocks (heaps) of a custom pool will be released only when
+their number doesn't fall below `MinBlockCount` and their sum size doesn't fall below `MinBytes`.
+
+Some restrictions apply:
+
+- Setting `MinBytes` doesn't interact with memory budget. The allocator tries
+  to create additional heaps when necessary without checking if they will exceed the budget.
+- Resources created as committed don't count into the number of bytes compared with `MinBytes` set.
+  Only placed resources are considered.
+
+
 \page configuration Configuration
 
 Please check file `D3D12MemAlloc.cpp` lines between "Configuration Begin" and
@@ -300,7 +338,6 @@ Features planned for future releases:
 
 Near future: feature parity with [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/), including:
 
-- Custom memory pools
 - Alternative allocation algorithms: linear allocator, buddy allocator
 - JSON dump that can be visualized on a picture
 - Support for priorities using `ID3D12Device1::SetResidencyPriority`
@@ -375,10 +412,15 @@ namespace D3D12MA
 
 /// \cond INTERNAL
 class AllocatorPimpl;
+class PoolPimpl;
 class NormalBlock;
 class BlockVector;
 class JsonWriter;
 /// \endcond
+
+class Pool;
+class Allocator;
+struct StatInfo;
 
 /// Pointer to custom callback function that allocates CPU memory.
 typedef void* (*ALLOCATE_FUNC_PTR)(size_t Size, size_t Alignment, void* pUserData);
@@ -419,8 +461,8 @@ typedef enum ALLOCATION_FLAGS
     If new allocation cannot be placed in any of the existing heaps, allocation
     fails with `E_OUTOFMEMORY` error.
 
-    You should not use #ALLOCATION_FLAG_COMMITTED and
-    #ALLOCATION_FLAG_NEVER_ALLOCATE at the same time. It makes no sense.
+    You should not use D3D12MA::ALLOCATION_FLAG_COMMITTED and
+    D3D12MA::ALLOCATION_FLAG_NEVER_ALLOCATE at the same time. It makes no sense.
     */
     ALLOCATION_FLAG_NEVER_ALLOCATE = 0x2,
 
@@ -430,7 +472,7 @@ typedef enum ALLOCATION_FLAGS
     ALLOCATION_FLAG_WITHIN_BUDGET = 0x4,
 } ALLOCATION_FLAGS;
 
-/// \brief Parameters of created Allocation object. To be used with Allocator::CreateResource.
+/// \brief Parameters of created D3D12MA::Allocation object. To be used with Allocator::CreateResource.
 struct ALLOCATION_DESC
 {
     /// Flags.
@@ -438,6 +480,8 @@ struct ALLOCATION_DESC
     /** \brief The type of memory heap where the new allocation should be placed.
 
     It must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
+
+    When D3D12MA::ALLOCATION_DESC::CustomPool != NULL this member is ignored.
     */
     D3D12_HEAP_TYPE HeapType;
     /** \brief Additional heap flags to be used when allocating memory.
@@ -445,18 +489,25 @@ struct ALLOCATION_DESC
     In most cases it can be 0.
     
     - If you use D3D12MA::Allocator::CreateResource(), you don't need to care.
-      In case of D3D12MA::Allocator::GetD3D12Options()`.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1`,
-      necessary flag `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
+      Necessary flag `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
       or `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES` is added automatically.
-    - If you use D3D12MA::Allocator::AllocateMemory() and
-      D3D12MA::Allocator::GetD3D12Options()`.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1`,
-      you must specify one of those `ALLOW_ONLY` flags. When it's `TIER_2`, you can leave it 0.
+    - If you use D3D12MA::Allocator::AllocateMemory(), you should specify one of those `ALLOW_ONLY` flags.
+      Except when you validate that D3D12MA::Allocator::GetD3D12Options()`.ResourceHeapTier == D3D12_RESOURCE_HEAP_TIER_1` -
+      then you can leave it 0.
     - If configuration macro `D3D12MA_ALLOW_SHADER_ATOMICS` is set to 1 (which is the default),
       `D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS` is added automatically wherever it might be needed.
     - You can specify additional flags if needed. Then the memory will always be allocated as
       separate block using `D3D12Device::CreateCommittedResource` or `CreateHeap`, not as part of an existing larget block.
+
+    When D3D12MA::ALLOCATION_DESC::CustomPool != NULL this member is ignored.
     */
     D3D12_HEAP_FLAGS ExtraHeapFlags;
+    /** \brief Custom pool to place the new resource in. Optional.
+
+    When not NULL, the resource will be created inside specified custom pool.
+    It will then never be created as committed.
+    */
+    Pool* CustomPool;
 };
 
 /** \brief Represents single memory allocation.
@@ -619,6 +670,114 @@ private:
     void FreeName();
 
     D3D12MA_CLASS_NO_COPY(Allocation)
+};
+
+/// \brief Parameters of created D3D12MA::Pool object. To be used with D3D12MA::Allocator::CreatePool.
+struct POOL_DESC
+{
+    /** \brief The type of memory heap where allocations of this pool should be placed.
+
+    It must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
+    */
+    D3D12_HEAP_TYPE HeapType;
+    /** \brief Heap flags to be used when allocating heaps of this pool.
+
+    It should contain one of these values, depending on type of resources you are going to create in this heap:
+    `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`,
+    `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
+    `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`.
+    Except if ResourceHeapTier = 2, then it may be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0.
+    
+    If configuration macro `D3D12MA_ALLOW_SHADER_ATOMICS` is set to 1 (which is the default),
+    `D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS` is added automatically wherever it might be needed.
+    
+    You can specify additional flags if needed.
+    */
+    D3D12_HEAP_FLAGS HeapFlags;
+    /** \brief Size of a single heap (memory block) to be allocated as part of this pool, in bytes. Optional.
+
+    Specify nonzero to set explicit, constant size of memory blocks used by this pool.
+    Leave 0 to use default and let the library manage block sizes automatically.
+    Then sizes of particular blocks may vary.
+    */
+    UINT64 BlockSize;
+    /** \brief Minimum number of heaps (memory blocks) to be always allocated in this pool, even if they stay empty. Optional.
+
+    Set to 0 to have no preallocated blocks and allow the pool be completely empty.
+    */
+    UINT MinBlockCount;
+    /** \brief Maximum number of heaps (memory blocks) that can be allocated in this pool. Optional.
+
+    Set to 0 to use default, which is `UINT64_MAX`, which means no limit.
+
+    Set to same value as D3D12MA::POOL_DESC::MinBlockCount to have fixed amount of memory allocated
+    throughout whole lifetime of this pool.
+    */
+    UINT MaxBlockCount;
+};
+
+/** \brief Custom memory pool
+
+Represents a separate set of heaps (memory blocks) that can be used to create
+D3D12MA::Allocation-s and resources in it. Usually there is no need to create custom
+pools - creating resources in default pool is sufficient.
+
+To create custom pool, fill D3D12MA::POOL_DESC and call D3D12MA::Allocator::CreatePool.
+*/
+class Pool
+{
+public:
+    /** \brief Deletes pool object, frees D3D12 heaps (memory blocks) managed by it. Allocations and resources must already be released!
+
+    It doesn't delete allocations and resources created in this pool. They must be all
+    released before calling this function!
+    */
+    void Release();
+    
+    /** \brief Returns copy of parameters of the pool.
+
+    These are the same parameters as passed to D3D12MA::Allocator::CreatePool.
+    */
+    POOL_DESC GetDesc() const;
+
+    /** \brief Sets the minimum number of bytes that should always be allocated (reserved) in this pool.
+
+    See also: \subpage reserving_memory.
+    */
+    HRESULT SetMinBytes(UINT64 minBytes);
+
+    /** \brief Retrieves statistics from the current state of this pool.
+    */
+    void CalculateStats(StatInfo* pStats);
+
+    /** \brief Associates a name with the pool. This name is for use in debug diagnostics and tools.
+
+    Internal copy of the string is made, so the memory pointed by the argument can be
+    changed of freed immediately after this call.
+
+    `Name` can be NULL.
+    */
+    void SetName(LPCWSTR Name);
+
+    /** \brief Returns the name associated with the pool object.
+
+    Returned string points to an internal copy.
+
+    If no name was associated with the allocation, returns NULL.
+    */
+    LPCWSTR GetName() const;
+
+private:
+    friend class Allocator;
+    friend class AllocatorPimpl;
+    template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
+
+    PoolPimpl* m_Pimpl;
+
+    Pool(Allocator* allocator, const POOL_DESC &desc);
+    ~Pool();
+
+    D3D12MA_CLASS_NO_COPY(Pool)
 };
 
 /// \brief Bit flags to be used with ALLOCATOR_DESC::Flags.
@@ -814,18 +973,18 @@ public:
     This function is similar to `ID3D12Device::CreateHeap`, but it may really assign
     part of a larger, existing heap to the allocation.
 
-    If ResourceHeapTier = 1, `heapFlags` must contain one of these values, depending on type
-    of resources you are going to create in this memory:
+    `pAllocDesc->heapFlags` should contain one of these values, depending on type of resources you are going to create in this memory:
     `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`,
     `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
     `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`.
-    If ResourceHeapTier = 2, `heapFlags` may be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0.
+    Except if you validate that ResourceHeapTier = 2 - then `heapFlags`
+    may be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES` = 0.
     Additional flags in `heapFlags` are allowed as well.
 
     `pAllocInfo->SizeInBytes` must be multiply of 64KB.
     `pAllocInfo->Alignment` must be one of the legal values as described in documentation of `D3D12_HEAP_DESC`.
 
-    If you use #ALLOCATION_FLAG_COMMITTED you will get a separate memory block -
+    If you use D3D12MA::ALLOCATION_FLAG_COMMITTED you will get a separate memory block -
     a heap that always has offset 0.
     */
     HRESULT AllocateMemory(
@@ -864,6 +1023,26 @@ public:
         REFIID riidResource,
         void** ppvResource);
 
+    /** \brief Creates custom pool.
+    */
+    HRESULT CreatePool(
+        const POOL_DESC* pPoolDesc,
+        Pool** ppPool);
+
+    /** \brief Sets the minimum number of bytes that should always be allocated (reserved) in a specific default pool.
+
+    \param heapType Must be one of: `D3D12_HEAP_TYPE_DEFAULT`, `D3D12_HEAP_TYPE_UPLOAD`, `D3D12_HEAP_TYPE_READBACK`.
+    \param heapFlags Must be one of: `D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS`, `D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES`,
+        `D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES`. If ResourceHeapTier = 2, it can also be `D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES`.
+    \param minBytes Minimum number of bytes to keep allocated.
+
+    See also: \subpage reserving_memory.
+    */
+    HRESULT SetDefaultHeapMinBytes(
+        D3D12_HEAP_TYPE heapType,
+        D3D12_HEAP_FLAGS heapFlags,
+        UINT64 minBytes);
+
     /** \brief Sets the index of the current frame.
 
     This function is used to set the frame index in the allocator when a new game frame begins.
@@ -899,6 +1078,7 @@ public:
 private:
     friend HRESULT CreateAllocator(const ALLOCATOR_DESC*, Allocator**);
     template<typename T> friend void D3D12MA_DELETE(const ALLOCATION_CALLBACKS&, T*);
+    friend class Pool;
 
     Allocator(const ALLOCATION_CALLBACKS& allocationCallbacks, const ALLOCATOR_DESC& desc);
     ~Allocator();
