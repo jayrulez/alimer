@@ -22,11 +22,14 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandContext.h"
-#include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
 #include "D3D12GraphicsBuffer.h"
 #include "core/String.h"
 #include "D3D12MemAlloc.h"
+#include "math/math.h"
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+#include <windows.ui.xaml.media.dxinterop.h>
+#endif
 
 namespace alimer
 {
@@ -86,12 +89,12 @@ namespace alimer
         return available;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_)
-        : GraphicsDevice(surface_, desc_)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsProviderFlags flags, GPUPowerPreference powerPreference)
+        : flags{ flags }
+        , powerPreference{ powerPreference }
         , graphicsQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT)
         , computeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
         , copyQueue(this, D3D12_COMMAND_LIST_TYPE_COPY)
-        , frameFence(this)
         , RTVDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false)
         , DSVDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false)
     {
@@ -105,7 +108,8 @@ namespace alimer
 
     void D3D12GraphicsDevice::Shutdown()
     {
-        ALIMER_ASSERT(currentCPUFrame == currentGPUFrame);
+        GPUFrameCount = GetGpuValue(frameFence);
+        ALIMER_ASSERT(frameCount == GPUFrameCount);
         shuttingDown = true;
 
         for (uint32_t i = 0; i < renderLatency; ++i)
@@ -113,8 +117,8 @@ namespace alimer
             ProcessDeferredReleases(i);
         }
 
-        swapChain.reset();
-        mainContext.reset();
+        //swapChain.reset();
+        //mainContext.reset();
 
         // Destroy descripto heaps.
         {
@@ -124,7 +128,7 @@ namespace alimer
             //UAVDescriptorHeap.Shutdown();
         }
 
-        frameFence.Shutdown();
+        DestroyFence(frameFence);
 
         copyQueue.Destroy();
         computeQueue.Destroy();
@@ -184,14 +188,14 @@ namespace alimer
         if (resource == nullptr)
             return;
 
-        if ((currentCPUFrame == currentGPUFrame && forceDeferred == false) ||
+        if ((frameCount == GPUFrameCount && forceDeferred == false) ||
             shuttingDown || d3dDevice == nullptr)
         {
             resource->Release();
             return;
         }
 
-        deferredReleases[currentFrameIndex].push_back(resource);
+        deferredReleases[frameIndex].push_back(resource);
     }
 
     bool D3D12GraphicsDevice::Init()
@@ -200,8 +204,8 @@ namespace alimer
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (any(desc.flags & GraphicsProviderFlags::Validation) ||
-            any(desc.flags & GraphicsProviderFlags::GPUBasedValidation))
+        if (any(flags & GraphicsProviderFlags::Validation) ||
+            any(flags & GraphicsProviderFlags::GPUBasedValidation))
         {
             ComPtr<ID3D12Debug> d3d12debug;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(d3d12debug.GetAddressOf()))))
@@ -211,7 +215,7 @@ namespace alimer
                 ComPtr<ID3D12Debug1> d3d12debug1 = nullptr;
                 if (SUCCEEDED(d3d12debug.As(&d3d12debug1)))
                 {
-                    if (any(desc.flags & GraphicsProviderFlags::GPUBasedValidation))
+                    if (any(flags & GraphicsProviderFlags::GPUBasedValidation))
                     {
                         d3d12debug1->SetEnableGPUBasedValidation(TRUE);
                         d3d12debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
@@ -336,17 +340,24 @@ namespace alimer
         }
 
         // Create the main swap chain
-        swapChain.reset(new D3D12SwapChain(this, dxgiFactory.Get(), surface, renderLatency));
+        //swapChain.reset(new D3D12SwapChain(this, dxgiFactory.Get(), surface, renderLatency));
 
         // Create the main context.
-        mainContext.reset(new D3D12GraphicsContext(this, D3D12_COMMAND_LIST_TYPE_DIRECT, renderLatency));
-
-        // Create frame fence.
-        frameFence.Init(0);
+        //mainContext.reset(new D3D12GraphicsContext(this, D3D12_COMMAND_LIST_TYPE_DIRECT, renderLatency));
 
         // Init descriptor heaps
         RTVDescriptorHeap.Init(256, 0);
         DSVDescriptorHeap.Init(256, 0);
+
+        // Init pools
+        {
+            fences.init();
+            swapchains.init();
+            textures.init();
+        }
+
+        // Create frame fence.
+        frameFence = CreateFence();
 
         return true;
     }
@@ -363,7 +374,7 @@ namespace alimer
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == GPUPowerPreference::LowPower)
+            if (powerPreference == GPUPowerPreference::LowPower)
             {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
@@ -496,61 +507,309 @@ namespace alimer
         {
             featureLevel = D3D_FEATURE_LEVEL_11_0;
         }
+
+        D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+        // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+        featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+        if (FAILED(d3dDevice->CheckFeatureSupport(
+            D3D12_FEATURE_ROOT_SIGNATURE,
+            &featureData, sizeof(featureData))))
+        {
+            rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+        }
+
+        // Features
+        caps.features.independentBlend = true;
+        caps.features.computeShader = true;
+        caps.features.geometryShader = true;
+        caps.features.tessellationShader = true;
+        caps.features.logicOp = true;
+        caps.features.multiViewport = true;
+        caps.features.fullDrawIndexUint32 = true;
+        caps.features.multiDrawIndirect = true;
+        caps.features.fillModeNonSolid = true;
+        caps.features.samplerAnisotropy = true;
+        caps.features.textureCompressionBC = true;
+        caps.features.textureCompressionPVRTC = false;
+        caps.features.textureCompressionETC2 = false;
+        caps.features.textureCompressionASTC = false;
+        caps.features.texture1D = true;
+        caps.features.texture3D = true;
+        caps.features.texture2DArray = true;
+        caps.features.textureCubeArray = true;
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
+        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(
+            D3D12_FEATURE_D3D12_OPTIONS5,
+            &d3d12options5, sizeof(d3d12options5)))
+            && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+        {
+            caps.features.raytracing = true;
+        }
+        else
+        {
+            caps.features.raytracing = false;
+        }
     }
 
     void D3D12GraphicsDevice::WaitForIdle()
     {
         // Wait for the GPU to fully catch up with the CPU
-        ALIMER_ASSERT(currentCPUFrame >= currentGPUFrame);
-        if (currentCPUFrame > currentGPUFrame)
-        {
-            frameFence.Wait(currentCPUFrame);
-            currentGPUFrame = currentCPUFrame;
-        }
+        frameCount = GpuSignal(frameFence, graphicsQueue.GetHandle());
+        /*graphicsQueue.GetHandle()->Signal(frameFence, ++frameCount);
+        frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
+        WaitForSingleObject(frameFenceEvent, INFINITE);*/
+
+        //GPUDescriptorHeaps[frameIndex].Size = 0;
+        //GPUUploadMemoryHeaps[frameIndex].Size = 0;
 
         /*computeQueue->WaitForIdle();
         copyQueue->WaitForIdle();*/
     }
 
-
-    bool D3D12GraphicsDevice::BeginFrame()
+    void D3D12GraphicsDevice::Frame()
     {
-        /*mainContext->Begin();*/
+        frameCount =  GpuSignal(frameFence, graphicsQueue.GetHandle());
 
+        const uint64_t cpuFrameCount = GetCpuValue(frameFence);
+        if (cpuFrameCount >= renderLatency)
+        {
+            SyncCpuValue(frameFence, cpuFrameCount - renderLatency);
+        }
+
+       /* GPUFrameCount = frameFence->GetCompletedValue();
+
+        if ((frameCount - GPUFrameCount) >= renderLatency)
+        {
+           frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
+            WaitForSingleObject(frameFenceEvent, INFINITE);
+        }*/
+
+        frameIndex = frameCount % renderLatency;
+
+        // Release any pending deferred releases
+        ProcessDeferredReleases(frameIndex);
+    }
+
+    GPUFenceHandle D3D12GraphicsDevice::CreateFence()
+    {
+        if (fences.isFull()) {
+            ALIMER_LOGERROR("Direct3D12: reached maximum number of fences allocated");
+            return { kInvalidHandle };
+        }
+
+        const int id = fences.alloc();
+        FenceD3D12& fence = fences[id];
+
+        fence.cpuValue = 0;
+        ThrowIfFailed(d3dDevice->CreateFence(fence.cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence.handle)));
+        fence.fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fence.fenceEvent != INVALID_HANDLE_VALUE);
+        fence.cpuValue++;
+        return { (uint32_t)id };
+    }
+
+    void D3D12GraphicsDevice::DestroyFence(GPUFenceHandle handle)
+    {
+        FenceD3D12& fence = fences[handle.id];
+        CloseHandle(fence.fenceEvent);
+        DeferredRelease(fence.handle);
+        fences.dealloc(handle.id);
+    }
+
+    uint64_t D3D12GraphicsDevice::GetCpuValue(GPUFenceHandle handle)
+    {
+        return fences[handle.id].cpuValue;
+    }
+
+    uint64_t D3D12GraphicsDevice::GetGpuValue(GPUFenceHandle handle)
+    {
+        return fences[handle.id].handle->GetCompletedValue();
+    }
+
+    uint64_t D3D12GraphicsDevice::GpuSignal(GPUFenceHandle handle, ID3D12CommandQueue* queue)
+    {
+        FenceD3D12& fence = fences[handle.id];
+        ThrowIfFailed(queue->Signal(fence.handle, fence.cpuValue));
+        fence.cpuValue++;
+        return fence.cpuValue - 1;
+    }
+
+    void D3D12GraphicsDevice::SyncCpuValue(GPUFenceHandle handle, uint64_t value)
+    {
+        FenceD3D12& fence = fences[handle.id];
+        assert(value <= fence.cpuValue - 1);
+
+        uint64_t gpuValue = fence.handle->GetCompletedValue();
+        if (gpuValue < value)
+        {
+            ThrowIfFailed(fence.handle->SetEventOnCompletion(value, fence.fenceEvent));
+            WaitForSingleObject(fence.fenceEvent, INFINITE);
+        }
+    }
+
+    GPUSwapchainHandle D3D12GraphicsDevice::CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode)
+    {
+        if (swapchains.isFull()) {
+            ALIMER_LOGERROR("Direct3D12: reached maximum number of Swapchains allocated");
+            return { kInvalidHandle };
+        }
+
+        // Determine the render target size in pixels.
+        const uint32_t backBufferWidth = max<uint32_t>(width, 1u);
+        const uint32_t backBufferHeight = max<uint32_t>(height, 1u);
+        const DXGI_FORMAT backBufferFormat = ToDXGISwapChainFormat(PixelFormat::BGRA8UNorm);
+
+        // Create a descriptor for the swap chain.
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.Width = backBufferWidth;
+        swapChainDesc.Height = backBufferHeight;
+        swapChainDesc.Format = backBufferFormat;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.BufferCount = renderLatency;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        if (presentMode == PresentMode::Immediate
+            && isTearingSupported)
+        {
+            swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
+
+        // Create a swap chain for the window.
+        IDXGISwapChain1* tempSwapChain;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+        fsSwapChainDesc.Windowed = TRUE;
+
+        HWND hwnd = reinterpret_cast<HWND>(nativeHandle);
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+            GetD3D12GraphicsQueue(),
+            hwnd,
+            &swapChainDesc,
+            &fsSwapChainDesc,
+            nullptr,
+            &tempSwapChain
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+#else
+        IUnknown* window = reinterpret_cast<IUnknown*>(nativeHandle);
+
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
+            GetD3D12GraphicsQueue(),
+            window,
+            &swapChainDesc,
+            nullptr,
+            &tempSwapChain
+        ));
+
+        /*IInspectable* swapChainPanel = reinterpret_cast<IInspectable*>(surface->GetHandle());
+        ThrowIfFailed(factory->CreateSwapChainForComposition(
+            device->GetD3D12GraphicsQueue(),
+            &swapChainDesc,
+            nullptr,
+            &tempSwapChain
+        ));
+
+        ISwapChainPanelNative* panelNative;
+        ThrowIfFailed(swapChainPanel->QueryInterface(__uuidof(ISwapChainPanelNative), (void**)panelNative));
+        ThrowIfFailed(panelNative->SetSwapChain(tempSwapChain));*/
+#endif
+
+        const int id = swapchains.alloc();
+        SwapchainD3D12& handle = swapchains[id];
+        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle.handle)));
+        SafeRelease(tempSwapChain);
+
+        handle.imageCount = swapChainDesc.BufferCount;
+        handle.syncInterval = 1;
+        handle.flags = 0;
+        if (presentMode == PresentMode::Immediate
+            && isTearingSupported)
+        {
+            handle.syncInterval = 0;
+            handle.flags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+
+        for (uint32_t i = 0; i < handle.imageCount; ++i)
+        {
+            ID3D12Resource* resource;
+            ThrowIfFailed(handle.handle->GetBuffer(i, IID_PPV_ARGS(&resource)));
+
+            handle.textures[i] = CreateExternalTexture(resource);
+        }
+
+        return { (uint32_t)id };
+    }
+
+    void D3D12GraphicsDevice::DestroySwapChain(GPUSwapchainHandle handle)
+    {
+        SwapchainD3D12& swapchain = swapchains[handle.id];
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        swapchain.handle->SetFullscreenState(FALSE, nullptr);
+#endif
+        DeferredRelease(swapchain.handle);
+
+        swapchains.dealloc(handle.id);
+    }
+
+    uint32_t D3D12GraphicsDevice::GetImageCount(GPUSwapchainHandle handle)
+    {
+        SwapchainD3D12& swapchain = swapchains[handle.id];
+        return swapchain.imageCount;
+    }
+
+    GPUTextureHandle D3D12GraphicsDevice::GetTexture(GPUSwapchainHandle handle, uint32_t index)
+    {
+        SwapchainD3D12& swapchain = swapchains[handle.id];
+        return swapchain.textures[index];
+    }
+
+    uint32_t D3D12GraphicsDevice::GetNextTexture(GPUSwapchainHandle handle)
+    {
+        SwapchainD3D12& swapchain = swapchains[handle.id];
+        return swapchain.handle->GetCurrentBackBufferIndex();
+    }
+
+    bool D3D12GraphicsDevice::Present(GPUSwapchainHandle handle)
+    {
+        SwapchainD3D12& swapchain = swapchains[handle.id];
+
+        HRESULT hr = swapchain.handle->Present(swapchain.syncInterval, swapchain.flags);
+
+        if (hr == DXGI_ERROR_DEVICE_REMOVED ||
+            hr == DXGI_ERROR_DEVICE_RESET)
+        {
+            return false;
+        }
+
+        ThrowIfFailed(hr);
         return true;
     }
 
-    void D3D12GraphicsDevice::PresentFrame()
+    GPUTextureHandle D3D12GraphicsDevice::CreateExternalTexture(ID3D12Resource* resource)
     {
-        //ID3D12CommandList* commandLists[] = { mainContext->GetCommandList() };
-        //graphicsQueue.GetHandle()->ExecuteCommandLists(_countof(commandLists), commandLists);
-
-        // Present the frame.
-        swapChain->Present();
-
-        ++currentCPUFrame;
-
-        // Signal the fence with the current frame number, so that we can check back on it
-        frameFence.Signal(graphicsQueue.GetHandle(), currentCPUFrame);
-
-        // Wait for the GPU to catch up before we stomp an executing command buffer
-        const uint64_t gpuLag = currentCPUFrame - currentGPUFrame;
-        ALIMER_ASSERT(gpuLag <= renderLatency);
-        if (gpuLag >= renderLatency)
-        {
-            // Make sure that the previous frame is finished
-            frameFence.Wait(currentGPUFrame + 1);
-            ++currentGPUFrame;
+        if (textures.isFull()) {
+            ALIMER_LOGERROR("Direct3D12: reached maximum number of Textures allocated");
+            return { kInvalidHandle };
         }
 
-        currentFrameIndex = currentCPUFrame % renderLatency;
-
-        // Release any pending deferred releases
-        ProcessDeferredReleases(currentFrameIndex);
+        const int id = textures.alloc();
+        TextureD3D12& texture = textures[id];
+        texture.handle = resource;
+        return { (uint32_t)id };
     }
 
-    GraphicsContext* D3D12GraphicsDevice::RequestContext(bool compute)
+    void D3D12GraphicsDevice::DestroyTexture(GPUTextureHandle handle)
     {
-        return mainContext.get();
+        TextureD3D12& texture = textures[handle.id];
+        DeferredRelease(texture.handle);
+        textures.dealloc(handle.id);
     }
 }

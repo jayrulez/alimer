@@ -26,10 +26,9 @@
 namespace alimer
 {
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, PixelFormat format_, ID3D12Resource* resource, D3D12_RESOURCE_STATES currentState)
-        : Texture(device)
-        , D3D12GpuResource(resource, currentState)
+        : D3D12GpuResource(resource, currentState)
     {
-        auto desc = resource->GetDesc();
+        /*auto desc = resource->GetDesc();
         width = static_cast<uint32_t>(desc.Width);
         height = static_cast<uint32_t>(desc.Height);
         depth = desc.DepthOrArraySize;
@@ -53,7 +52,7 @@ namespace alimer
             desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
         {
             usage |= TextureUsage::OutputAttachment;
-        }
+        }*/
     }
 
     D3D12Texture::~D3D12Texture()

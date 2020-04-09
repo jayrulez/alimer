@@ -40,7 +40,7 @@ namespace alimer
 
     protected:
         /// Constructor.
-        Framebuffer(GraphicsDevice* device);
+        Framebuffer(GraphicsDevice &device);
 
     public:
         const usize& getExtent() const;

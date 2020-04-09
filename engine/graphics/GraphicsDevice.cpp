@@ -26,6 +26,7 @@
 #include "os/window.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsBuffer.h"
+#include "graphics/GraphicsImpl.h"
 
 #if defined(ALIMER_VULKAN)
 #include "graphics/vulkan/VulkanGraphicsProvider.h"
@@ -45,8 +46,6 @@
 
 namespace alimer
 {
-    SharedPtr<GraphicsDevice> graphicsDevice;
-
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()
     {
         static std::set<BackendType> availableProviders;
@@ -78,14 +77,8 @@ namespace alimer
         return availableProviders;
     }
 
-    SharedPtr<GraphicsDevice> GraphicsDevice::Create(GraphicsSurface* surface, const Desc& desc)
+    GraphicsDevice::GraphicsDevice(const Desc& desc)
     {
-        if (graphicsDevice)
-        {
-            ALIMER_LOGERROR("Only one instance of GraphicsDevice is allowed");
-            return nullptr;
-        }
-
         BackendType backend = desc.preferredBackend;
         if (desc.preferredBackend == BackendType::Count)
         {
@@ -116,7 +109,7 @@ namespace alimer
 #if defined(ALIMER_D3D12)
         case BackendType::Direct3D12:
             ALIMER_LOGINFO("Using Direct3D12 render driver");
-            graphicsDevice = SharedPtr<GraphicsDevice>(new D3D12GraphicsDevice(surface, desc));
+            impl = new D3D12GraphicsDevice(desc.flags, desc.powerPreference);
             break;
 #endif
 
@@ -141,24 +134,39 @@ namespace alimer
             break;
         }
 
-        if (graphicsDevice->Init() == false)
+        if (Init() == false)
         {
-            graphicsDevice = nullptr;
+            impl = nullptr;
         }
-
-        return graphicsDevice;
     }
 
-    GraphicsDevice::GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_)
-        : surface(surface_)
-        , desc(desc_)
+    GraphicsDevice::~GraphicsDevice()
     {
+        SafeDelete(impl);
+    }
 
+    void GraphicsDevice::WaitForIdle()
+    {
+        impl->WaitForIdle();
+    }
+
+    void GraphicsDevice::Frame()
+    {
+        impl->Frame();
+    }
+
+    bool GraphicsDevice::Init()
+    {
+        if (!impl->Init()) {
+            return false;
+        }
+
+        return true;
     }
 
     GraphicsContext* GraphicsDevice::GetContext(const std::string& name)
     {
-        GraphicsContext* newContext = RequestContext(false);
+        GraphicsContext* newContext = nullptr; // RequestContext(false);
         newContext->SetName(name);
         if (name.length() > 0)
         {
@@ -166,5 +174,15 @@ namespace alimer
         }
 
         return newContext;
+    }
+
+    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
+    {
+        return impl->GetCaps();
+    }
+
+    GraphicsImpl* GraphicsDevice::GetImpl() const
+    {
+        return impl;
     }
 }

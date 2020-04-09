@@ -31,10 +31,12 @@ namespace alimer
     {
         ALIMER_OBJECT(Texture, GraphicsResource);
 
-    protected:
+    public:
         /// Constructor.
-        Texture(GraphicsDevice* device);
+        Texture(GraphicsDevice &device, GPUTextureHandle handle);
+        ~Texture();
 
+    private:
         uint32_t width = 1u;
         uint32_t height = 1u;
         /// Depth or array layers.
@@ -46,5 +48,8 @@ namespace alimer
         /// Texture format.
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
+
+    private:
+        GPUTextureHandle handle{ kInvalidHandle };
     };
 } 

@@ -26,9 +26,9 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice* device_, Type type_)
-        : device(device_)
-        , type(type_)
+    GraphicsResource::GraphicsResource(GraphicsDevice &device, Type type)
+        : device{ device }
+        , type{ type }
     {
         //device->AddGPUResource(this);
     }
@@ -36,6 +36,11 @@ namespace alimer
     GraphicsResource::~GraphicsResource()
     {
         //device->RemoveGPUResource(this);
+    }
+
+    const GraphicsDevice& GraphicsResource::GetDevice() const
+    {
+        return device;
     }
 }
 

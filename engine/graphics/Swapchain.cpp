@@ -20,26 +20,56 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Texture.h"
+#include "graphics/Swapchain.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsImpl.h"
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, GPUTextureHandle handle)
-        : GraphicsResource(device, Type::Texture)
-        , handle{ handle }
+    Swapchain::Swapchain(GraphicsDevice& device, GraphicsSurface* surface)
+        : device{ device }
+        , extent(surface->GetSize())
     {
-        isAllocated = true;
+        handle = device.GetImpl()->CreateSwapChain(surface->GetHandle(), extent.width, extent.height, presentMode);
+        textures.resize(device.GetImpl()->GetImageCount(handle));
+        for (uint32_t i = 0; i < uint32_t(textures.size()); i++)
+        {
+            GPUTextureHandle textureHandle = device.GetImpl()->GetTexture(handle, i);
+            textures[i] = new Texture(device, textureHandle);
+        }
     }
 
-    Texture::~Texture()
+    Swapchain::~Swapchain()
     {
+        textures.clear();
+        textureIndex = 0;
+
         if (handle.isValid())
         {
-            device.GetImpl()->DestroyTexture(handle);
+            device.GetImpl()->DestroySwapChain(handle);
             handle.id = kInvalidHandle;
         }
+    }
+
+    Swapchain::ResizeResult Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        return ResizeResult::Success;
+    }
+
+    void Swapchain::Present()
+    {
+        device.GetImpl()->Present(handle);
+    }
+
+    Texture* Swapchain::GetCurrentTexture() const
+    {
+        textureIndex = device.GetImpl()->GetNextTexture(handle);
+        return textures[textureIndex].Get();
+    }
+
+    const usize& Swapchain::GetExtent() const
+    {
+        return extent;
     }
 }
 

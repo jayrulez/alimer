@@ -47,18 +47,23 @@ namespace alimer
         };
 
     protected:
-        GraphicsResource(GraphicsDevice* device_, Type type_);
+        /// Constructor.
+        GraphicsResource() = default;
+
+        GraphicsResource(GraphicsDevice &device, Type type);
         virtual ~GraphicsResource();
 
     public:
         /// Release the GPU resource.
         virtual void Destroy() {}
 
+        const GraphicsDevice& GetDevice() const;
+
         /// Return value indicating if the resource has been allocated.
         bool IsAllocated() const { return isAllocated; }
 
     protected:
-        GraphicsDevice* device;
+        GraphicsDevice &device;
         Type type;
         /// Size in bytes of the resource.
         uint64_t size{ 0 };

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_OLD
 #include "D3DSwapChain.h"
 #include "core/Log.h"
 #include "core/Assert.h"
@@ -27,7 +28,7 @@
 namespace alimer
 {
     D3DSwapChain::D3DSwapChain(IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor)
-        : SwapChain(descriptor)
+        : SwapChain(nullptr, descriptor)
         , factory(factory_)
         , deviceOrCommandQueue(deviceOrCommandQueue_)
         , backBufferCount(backBufferCount_)
@@ -56,7 +57,7 @@ namespace alimer
                 BOOL allowTearing = FALSE;
                 HRESULT tearingSupportHR = factory5->CheckFeatureSupport(
                     DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)
-                    );
+                );
 
                 if (SUCCEEDED(tearingSupportHR) && allowTearing)
                 {
@@ -163,3 +164,5 @@ namespace alimer
         }
     }
 }
+
+#endif // TODO_OLD

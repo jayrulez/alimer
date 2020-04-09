@@ -23,7 +23,7 @@
 #include "os/os.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/SwapChain.h"
+#include "graphics/Swapchain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -45,7 +45,9 @@ namespace alimer
         }
 
         gameSystems.clear();
-        graphicsDevice.Reset();
+        graphicsDevice->WaitForIdle();
+        mainSwapChain.reset();
+        graphicsDevice.reset();
         os::shutdown();
     }
 
@@ -59,11 +61,13 @@ namespace alimer
 #ifdef _DEBUG
         graphicsDesc.flags |= GraphicsProviderFlags::Validation;
 #endif
-        graphicsDevice = GraphicsDevice::Create(mainWindow.get(), graphicsDesc);
+        graphicsDevice = std::make_unique<GraphicsDevice>(graphicsDesc);
         if (!graphicsDevice)
         {
             headless = true;
         }
+
+        mainSwapChain.reset(new Swapchain(*graphicsDevice, mainWindow.get()));
 
         Initialize();
         if (exitCode)
@@ -96,9 +100,9 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        if (!graphicsDevice->BeginFrame()) {
+        /*if (!graphicsDevice->BeginFrame()) {
             return false;
-        }
+        }*/
 
         for (auto gameSystem : gameSystems)
         {
@@ -122,12 +126,15 @@ namespace alimer
 
     void Game::EndDraw()
     {
+        auto currentTexture = mainSwapChain->GetCurrentTexture();
+
         for (auto gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->PresentFrame();
+        mainSwapChain->Present();
+        graphicsDevice->Frame();
     }
 
     int Game::Run()
@@ -182,7 +189,7 @@ namespace alimer
         time.Tick([&]()
             {
                 Update(time);
-});
+            });
 
         Render();
     }
@@ -207,4 +214,4 @@ namespace alimer
             EndDraw();
         }
     }
-        }
+}

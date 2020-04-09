@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GraphicsDevice.h"
+#include "graphics/GraphicsImpl.h"
 #include "D3D12CommandQueue.h"
 
 namespace alimer
@@ -32,13 +32,13 @@ namespace alimer
     class D3D12GraphicsContext;
 
     /// Direct3D12 GPU backend.
-    class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
+    class ALIMER_API D3D12GraphicsDevice final : public GraphicsImpl
     {
     public:
         static bool IsAvailable();
 
         /// Constructor.
-        D3D12GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_);
+        D3D12GraphicsDevice(GraphicsProviderFlags flags, GPUPowerPreference powerPreference);
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
@@ -76,11 +76,36 @@ namespace alimer
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void WaitForIdle() override;
-        bool BeginFrame() override;
-        void PresentFrame() override;
-        GraphicsContext* RequestContext(bool compute) override;
+        void Frame() override;
+
+        /* Fence */
+        GPUFenceHandle CreateFence();
+        void DestroyFence(GPUFenceHandle handle);
+        uint64_t GetCpuValue(GPUFenceHandle handle);
+        uint64_t GetGpuValue(GPUFenceHandle handle);
+        uint64_t GpuSignal(GPUFenceHandle handle, ID3D12CommandQueue* queue);
+        void SyncCpuValue(GPUFenceHandle handle, uint64_t value);
+
+        /* Swapchain */
+        GPUSwapchainHandle CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) override;
+        void DestroySwapChain(GPUSwapchainHandle handle) override;
+        uint32_t GetImageCount(GPUSwapchainHandle handle) override;
+        GPUTextureHandle GetTexture(GPUSwapchainHandle handle, uint32_t index) override;
+        uint32_t GetNextTexture(GPUSwapchainHandle handle) override;
+        bool Present(GPUSwapchainHandle handle) override;
+
+        /* Texture */
+        GPUTextureHandle CreateExternalTexture(ID3D12Resource* resource);
+        void DestroyTexture(GPUTextureHandle handle) override;
+
+        //bool BeginFrame() override;
+        //void PresentFrame() override;
+        //GraphicsContext* RequestContext(bool compute) override;
 
         //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
+
+        GraphicsProviderFlags flags;
+        GPUPowerPreference powerPreference;
 
         UINT dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory;
@@ -91,23 +116,51 @@ namespace alimer
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         D3D_FEATURE_LEVEL featureLevel{};
+        /// Root signature version
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion{ D3D_ROOT_SIGNATURE_VERSION_1_1 };
 
         D3D12CommandQueue graphicsQueue;
         D3D12CommandQueue computeQueue;
         D3D12CommandQueue copyQueue;
 
-        std::unique_ptr<D3D12SwapChain> swapChain;
         uint32_t renderLatency = 2u;
-        D3D12GPUFence frameFence;
-        uint64_t currentCPUFrame = 0;
-        uint64_t currentGPUFrame = 0;
-        uint64_t currentFrameIndex = 0;
+        uint64_t frameIndex = 0;
+        uint64_t frameCount = 0;
+        uint64_t GPUFrameCount = 0;
         bool shuttingDown = false;
 
         /* Descriptor heaps */
         D3D12DescriptorHeap RTVDescriptorHeap;
         D3D12DescriptorHeap DSVDescriptorHeap;
 
+        /* Pool */
+        struct FenceD3D12
+        {
+            uint64_t cpuValue;
+            ID3D12Fence* handle = nullptr;
+            HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+        };
+
+        struct SwapchainD3D12
+        {
+            IDXGISwapChain3*    handle;
+            uint32_t            imageCount;
+            uint32_t            syncInterval;
+            uint32_t            flags;
+
+            GPUTextureHandle    textures[kMaxFrameLatency];
+        };
+
+        struct TextureD3D12
+        {
+            ID3D12Resource* handle;
+        };
+
+        Pool<FenceD3D12, kMaxFences> fences;
+        Pool<SwapchainD3D12, kMaxSwapchains> swapchains;
+        Pool<TextureD3D12, kMaxTextures> textures;
+
+        GPUFenceHandle frameFence;
         std::unique_ptr<D3D12GraphicsContext> mainContext;
 
         std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];

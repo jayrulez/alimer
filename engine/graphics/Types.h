@@ -25,12 +25,6 @@
 #include "core/Utils.h"
 #include "graphics/PixelFormat.h"
 
-#ifndef GPU_DEBUG
-#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-#       define GPU_DEBUG
-#   endif
-#endif 
-
 namespace alimer
 {
     static constexpr uint32_t kMaxFrameLatency = 3;
@@ -40,6 +34,10 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
+    static constexpr uint32_t kMaxSwapchains = 16u;
+    static constexpr uint32_t kMaxTextures = 2048u;
+    static constexpr uint32_t kMaxFences = 256u;
+
     /* Known vendor ids */
     static constexpr uint32_t kVendorId_AMD = 0x1002;
     static constexpr uint32_t kVendorId_ARM = 0x13B5;
@@ -47,6 +45,15 @@ namespace alimer
     static constexpr uint32_t kVendorId_Intel = 0x8086;
     static constexpr uint32_t kVendorId_Nvidia = 0x10DE;
     static constexpr uint32_t kVendorId_Qualcomm = 0x5143;
+
+    /* Describes GPUResource handle. */
+    using GpuHandle = uint64_t;
+    static constexpr GpuHandle kGpuNullHandle = 0;
+
+    static constexpr uint32_t kInvalidHandle = 0xffFFffFF;
+    struct GPUSwapchainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct GPUTextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct GPUFenceHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -142,20 +149,6 @@ namespace alimer
         const char* label = nullptr;
         BufferUsage usage;
         uint64_t size;
-    };
-
-    /// Describes a SwapChain.
-    struct SwapChainDescriptor
-    {
-        /// Native window handle.
-        void* nativeWindowHandle;
-
-        uint32_t width;
-        uint32_t height;
-
-        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
-        PixelFormat depthStencilFormat = PixelFormat::Undefined;
-        PresentMode presentMode = PresentMode::Fifo;
     };
 
     struct GraphicsDeviceCaps

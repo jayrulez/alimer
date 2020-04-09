@@ -32,7 +32,7 @@ namespace alimer
 
     public:
         /// Constructor.
-        GraphicsBuffer(GraphicsDevice* device, const BufferDescriptor* descriptor);
+        GraphicsBuffer(GraphicsDevice& device);
 
     private:
     };

@@ -30,6 +30,7 @@
 
 namespace alimer
 {
+    class GraphicsImpl;
     class GPUBuffer;
     class Texture;
 
@@ -37,7 +38,7 @@ namespace alimer
     /* TODO: Expose resource creation context */
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class ALIMER_API GraphicsDevice final 
     {
     public:
         struct Desc
@@ -45,48 +46,41 @@ namespace alimer
             BackendType preferredBackend = BackendType::Count;
             std::string applicationName;
             GraphicsProviderFlags flags = GraphicsProviderFlags::None;
-            GPUPowerPreference powerPreference;
+            GPUPowerPreference powerPreference = GPUPowerPreference::DontCare;
         };
 
         /// Get set of available graphics backends.
         static std::set<BackendType> GetAvailableBackends();
 
         /// Create new GraphicsDevice with given preferred backend, fallback to supported one.
-        static SharedPtr<GraphicsDevice> Create(GraphicsSurface* surface, const Desc& desc);
+        GraphicsDevice(const Desc& desc);
 
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        ~GraphicsDevice();
 
         /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+        void WaitForIdle();
 
-        /// Begin frame rendering logic.
-        virtual bool BeginFrame() = 0;
-
-        /// End current frame and present it on scree.
-        virtual void PresentFrame() = 0;
+        /// Commits current frame and advance to next one.
+        void Frame();
 
         /// Begin recording to given context.
         GraphicsContext* GetContext(const std::string& name = "");
 
         /// Get the features.
-        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        const GraphicsDeviceCaps& GetCaps() const;
+
+        /// Get the backend implementation.
+        GraphicsImpl* GetImpl() const;
 
     private:
-        virtual bool Init() = 0;
-        virtual GraphicsContext* RequestContext(bool compute) = 0;
+        bool Init();
+        //virtual GraphicsContext* RequestContext(bool compute) = 0;
 
-    protected:
-        /// Constructor.
-        GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_);
-
-        GraphicsSurface* surface;
-        Desc desc;
-        GraphicsDeviceCaps caps;
-
+    private:
+        GraphicsImpl* impl;
+        
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
-
-    ALIMER_API extern SharedPtr<GraphicsDevice> graphicsDevice;
 }

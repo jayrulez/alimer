@@ -28,7 +28,7 @@
 namespace alimer
 {
     D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_, uint32_t commandAllocatorsCount_)
-        : GraphicsContext(device_)
+        : GraphicsContext(nullptr)
         , type(type_)
         , commandAllocatorsCount(commandAllocatorsCount_)
     {

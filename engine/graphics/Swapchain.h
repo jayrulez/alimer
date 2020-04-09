@@ -20,21 +20,46 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
+#pragma once
+
+#include "graphics/GraphicsSurface.h"
+#include "graphics/Texture.h"
+#include <vector>
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : extent(descriptor->width, descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
-        , presentMode(descriptor->presentMode)
-    {
-    }
+    class Texture;
 
-    const usize& SwapChain::GetExtent() const
+    class Swapchain final 
     {
-        return extent;
-    }
-}
+    public:
+        /// Constructor.
+        Swapchain(GraphicsDevice& device, GraphicsSurface* surface);
+        ~Swapchain();
 
+        enum class ResizeResult
+        {
+            Success,
+            NoSurface,
+            Error
+        };
+
+        ResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
+        void Present();
+
+        Texture* GetCurrentTexture() const;
+
+        const usize& GetExtent() const;
+
+    private:
+        GraphicsDevice& device;
+        usize extent{};
+        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
+        PixelFormat depthStencilFormat = PixelFormat::Undefined;
+        PresentMode presentMode = PresentMode::Fifo;
+
+        GPUSwapchainHandle handle{ kInvalidHandle };
+        std::vector<SharedPtr<Texture>> textures;
+        mutable uint32_t textureIndex{ 0 };
+    };
+} 
