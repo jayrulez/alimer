@@ -22,8 +22,9 @@
 
 #pragma once
 
+#include "graphics/GraphicsSurface.h"
 #include "graphics/Texture.h"
-#include "core/Object.h"
+#include "core/Ptr.h"
 #include <vector>
 
 namespace alimer
@@ -37,10 +38,8 @@ namespace alimer
 
     class Texture;
 
-    class SwapChain : public Object
+    class SwapChain : public RefCounted
     {
-        ALIMER_OBJECT(SwapChain, Object);
-
     protected:
         /// Constructor.
         SwapChain(const SwapChainDescriptor* descriptor);

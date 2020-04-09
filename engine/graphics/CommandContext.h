@@ -31,18 +31,23 @@ namespace alimer
     /// Command context class for recording copy GPU commands.
     class CopyContext
     {
+        friend class GraphicsDevice;
+
     public:
         /// Destructor.
-        virtual ~CopyContext();
+        virtual ~CopyContext() = default;
 
         virtual void BeginMarker(const char* name) = 0;
         virtual void EndMarker() = 0;
 
     protected:
         /// Constructor.
-        CopyContext(GraphicsDevice* device);
+        CopyContext(GraphicsDevice* device_);
+
+        void SetName(const std::string& name_) { name = name_; }
 
         GraphicsDevice* device;
+        std::string name;
     };
 
     /// Command context class for recording compute GPU commands.
@@ -50,11 +55,11 @@ namespace alimer
     {
     public:
         /// Destructor.
-        virtual ~ComputeContext();
+        virtual ~ComputeContext() = default;
 
     protected:
         /// Constructor.
-        ComputeContext(GraphicsDevice* device);
+        ComputeContext(GraphicsDevice* device_);
     };
 
     /// Command context class for recording graphics GPU commands.
@@ -62,10 +67,10 @@ namespace alimer
     {
     public:
         /// Destructor.
-        virtual ~GraphicsContext();
+        virtual ~GraphicsContext() = default;
 
     protected:
         /// Constructor.
-        GraphicsContext(GraphicsDevice* device);
+        GraphicsContext(GraphicsDevice* device_);
     };
 }

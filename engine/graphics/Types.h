@@ -84,6 +84,13 @@ namespace alimer
         Unknown
     };
 
+    enum class GPUPowerPreference : uint32_t
+    {
+        DontCare,
+        LowPower,
+        HighPerformance,
+    };
+
     /// Defines the dimension of Texture
     enum class TextureDimension : uint32_t
     {
@@ -151,35 +158,49 @@ namespace alimer
         PresentMode presentMode = PresentMode::Fifo;
     };
 
-    /// Describes GPUDevice features.
-    struct GPUDeviceFeatures
+    struct GraphicsDeviceCaps
     {
-        bool    independentBlend = false;
-        bool    computeShader = false;
-        bool    geometryShader = false;
-        bool    tessellationShader = false;
-        bool    logicOp = false;
-        bool    multiViewport = false;
-        bool    fullDrawIndexUint32 = false;
-        bool    multiDrawIndirect = false;
-        bool    fillModeNonSolid = false;
-        bool    samplerAnisotropy = false;
-        bool    textureCompressionBC = false;
-        bool    textureCompressionPVRTC = false;
-        bool    textureCompressionETC2 = false;
-        bool    textureCompressionASTC = false;
-        bool    pipelineStatisticsQuery = false;
-        /// Specifies whether 1D textures are supported.
-        bool    texture1D = false;
-        /// Specifies whether 3D textures are supported.
-        bool    texture3D = false;
-        /// Specifies whether 2D array textures are supported.
-        bool    texture2DArray = false;
-        /// Specifies whether cube array textures are supported.
-        bool    textureCubeArray = false;
-        /// Specifies whether raytracing is supported.
-        bool    raytracing = false;
+        /// The backend type.
+        BackendType backendType;
+
+        /// Selected GPU vendor PCI id.
+        uint32_t vendorId = 0;
+        uint32_t deviceId = 0;
+        GraphicsAdapterType adapterType = GraphicsAdapterType::Unknown;
+        std::string adapterName;
+
+        struct Features
+        {
+            bool    independentBlend = false;
+            bool    computeShader = false;
+            bool    geometryShader = false;
+            bool    tessellationShader = false;
+            bool    logicOp = false;
+            bool    multiViewport = false;
+            bool    fullDrawIndexUint32 = false;
+            bool    multiDrawIndirect = false;
+            bool    fillModeNonSolid = false;
+            bool    samplerAnisotropy = false;
+            bool    textureCompressionBC = false;
+            bool    textureCompressionPVRTC = false;
+            bool    textureCompressionETC2 = false;
+            bool    textureCompressionASTC = false;
+            bool    pipelineStatisticsQuery = false;
+            /// Specifies whether 1D textures are supported.
+            bool    texture1D = false;
+            /// Specifies whether 3D textures are supported.
+            bool    texture3D = false;
+            /// Specifies whether 2D array textures are supported.
+            bool    texture2DArray = false;
+            /// Specifies whether cube array textures are supported.
+            bool    textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool    raytracing = false;
+        };
+
+        Features features;
     };
+
 
     /// Describes GPUDevice limits.
     struct GPUDeviceLimits
@@ -209,6 +230,13 @@ namespace alimer
         uint32_t        maxComputeWorkGroupInvocations;
         uint32_t        maxComputeWorkGroupSize[3];
     };
+
+    inline bool IsAMD(uint32_t vendorId) { return vendorId == kVendorId_AMD; }
+    inline bool IsARM(uint32_t vendorId) { return vendorId == kVendorId_ARM; }
+    inline bool IsImgTec(uint32_t vendorId) { return vendorId == kVendorId_ImgTec; }
+    inline bool IsIntel(uint32_t vendorId) { return vendorId == kVendorId_Intel; }
+    inline bool IsNvidia(uint32_t vendorId) { return vendorId == kVendorId_Nvidia; }
+    inline bool IsQualcomm(uint32_t vendorId) { return vendorId == kVendorId_Qualcomm; }
 
     ALIMER_API std::string ToString(BackendType type);
 } 

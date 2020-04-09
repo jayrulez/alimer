@@ -22,9 +22,11 @@
 
 #pragma once
 
-#include "graphics/GraphicsAdapter.h"
+#include "graphics/GraphicsSurface.h"
+#include "graphics/SwapChain.h"
 #include "graphics/CommandContext.h"
 #include <memory>
+#include <set>
 
 namespace alimer
 {
@@ -38,6 +40,20 @@ namespace alimer
     class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
+        struct Desc
+        {
+            BackendType preferredBackend = BackendType::Count;
+            std::string applicationName;
+            GraphicsProviderFlags flags = GraphicsProviderFlags::None;
+            GPUPowerPreference powerPreference;
+        };
+
+        /// Get set of available graphics backends.
+        static std::set<BackendType> GetAvailableBackends();
+
+        /// Create new GraphicsDevice with given preferred backend, fallback to supported one.
+        static SharedPtr<GraphicsDevice> Create(GraphicsSurface* surface, const Desc& desc);
+
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
@@ -50,17 +66,27 @@ namespace alimer
         /// End current frame and present it on scree.
         virtual void PresentFrame() = 0;
 
-        /// Get the main context created with the device.
-        virtual GraphicsContext* GetMainContext() const = 0;
+        /// Begin recording to given context.
+        GraphicsContext* GetContext(const std::string& name = "");
+
+        /// Get the features.
+        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
+
+    private:
+        virtual bool Init() = 0;
+        virtual GraphicsContext* RequestContext(bool compute) = 0;
 
     protected:
         /// Constructor.
-        GraphicsDevice(GraphicsAdapter* adapter_, GraphicsSurface* surface_);
+        GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_);
 
-        GraphicsAdapter* adapter;
         GraphicsSurface* surface;
+        Desc desc;
+        GraphicsDeviceCaps caps;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
+
+    ALIMER_API extern SharedPtr<GraphicsDevice> graphicsDevice;
 }

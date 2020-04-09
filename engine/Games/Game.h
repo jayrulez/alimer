@@ -52,7 +52,6 @@ namespace alimer
     };
 
     class InputManager;
-    class GraphicsProvider;
     class GraphicsDevice;
 
     class ALIMER_API Game : public Object
@@ -107,8 +106,6 @@ namespace alimer
         std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
         InputManager* input;
-        std::unique_ptr<GraphicsProvider> graphicsProvider;
-        SharedPtr<GraphicsDevice> graphicsDevice;
         bool headless{ false };
     };
 

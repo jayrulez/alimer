@@ -23,7 +23,7 @@
 #pragma once
 
 #include "core/Ptr.h"
-#include "graphics/GraphicsSurface.h"
+#include "graphics/SwapChain.h"
 #include "D3D12Backend.h"
 
 namespace alimer

@@ -26,29 +26,23 @@
 namespace alimer
 {
     /* CopyContext */
-    CopyContext::CopyContext(GraphicsDevice* device)
-        : device{ device }
+    CopyContext::CopyContext(GraphicsDevice* device_)
+        : device(device_)
     {
         ALIMER_ASSERT(device);
     }
 
-    CopyContext::~CopyContext() = default;
-
     /* ComputeContext */
-    ComputeContext::ComputeContext(GraphicsDevice* device)
-        : CopyContext(device)
+    ComputeContext::ComputeContext(GraphicsDevice* device_)
+        : CopyContext(device_)
     {
 
     }
-
-    ComputeContext::~ComputeContext() = default;
 
     /* GraphicsContext */
-    GraphicsContext::GraphicsContext(GraphicsDevice* device)
-        : ComputeContext(device)
+    GraphicsContext::GraphicsContext(GraphicsDevice* device_)
+        : ComputeContext(device_)
     {
 
     }
-
-    GraphicsContext::~GraphicsContext() = default;
 }

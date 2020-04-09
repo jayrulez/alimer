@@ -35,8 +35,10 @@ namespace alimer
     class ALIMER_API D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
+
         /// Constructor.
-        D3D12GraphicsDevice(D3D12GraphicsAdapter* adapter_, GraphicsSurface* surface_);
+        D3D12GraphicsDevice(GraphicsSurface* surface_, const Desc& desc_);
         /// Destructor.
         ~D3D12GraphicsDevice() override;
 
@@ -47,6 +49,8 @@ namespace alimer
             resource = nullptr;
         }
 
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        bool IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
@@ -63,22 +67,30 @@ namespace alimer
         ID3D12CommandQueue* GetD3D12GraphicsQueue(void) { return graphicsQueue.GetHandle(); }
 
     private:
+        bool Init() override;
         void Shutdown();
+        bool GetAdapter(IDXGIAdapter1** ppAdapter);
+        void InitCapabilities(IDXGIAdapter1* adapter);
+
         void ProcessDeferredReleases(uint64_t frameIndex);
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
-
-        void CreateDeviceResources();
 
         void WaitForIdle() override;
         bool BeginFrame() override;
         void PresentFrame() override;
-        GraphicsContext* GetMainContext() const override;
+        GraphicsContext* RequestContext(bool compute) override;
 
         //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
 
+        UINT dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory4> dxgiFactory;
+        bool isTearingSupported = false;
+
+        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
-        D3D_FEATURE_LEVEL featureLevel;
+        D3D_FEATURE_LEVEL featureLevel{};
 
         D3D12CommandQueue graphicsQueue;
         D3D12CommandQueue computeQueue;
