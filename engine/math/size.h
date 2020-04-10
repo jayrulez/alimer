@@ -69,6 +69,53 @@ namespace alimer
         }
     };
 
+    template <typename T>
+    struct tsize3
+    {
+    public:
+        static constexpr size_t SIZE = 3;
+
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                T width, height, depth;
+            };
+        };
+
+        constexpr tsize3() = default;
+        constexpr tsize3(const tsize3&) = default;
+
+        template <typename U>
+        explicit constexpr tsize3(const tsize3<U>& u)
+        {
+            width = T(u.width);
+            height = T(u.height);
+            depth = T(u.depth);
+        }
+
+        constexpr tsize3(T width_, T height_, T depth_)
+        {
+            width = width_;
+            height = height_;
+            depth = depth_;
+        }
+
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
+    };
+
     using size = tsize2<int32_t>;
     using usize = tsize2<uint32_t>;
+
+    using size3 = tsize3<int32_t>;
+    using usize3 = tsize3<uint32_t>;
 } 

@@ -45,11 +45,13 @@ namespace alimer
         };
 
         ResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
-        void Present();
 
         Texture* GetCurrentTexture() const;
 
         const usize& GetExtent() const;
+
+        /// Get the Gpu handle.
+        GpuSwapchain GetHandle() const { return handle; }
 
     private:
         GraphicsDevice& device;
@@ -58,7 +60,7 @@ namespace alimer
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
         PresentMode presentMode = PresentMode::Fifo;
 
-        GPUSwapchainHandle handle{ kInvalidHandle };
+        GpuSwapchain handle{ kInvalidHandle };
         std::vector<SharedPtr<Texture>> textures;
         mutable uint32_t textureIndex{ 0 };
     };

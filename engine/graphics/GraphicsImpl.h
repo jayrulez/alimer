@@ -23,6 +23,7 @@
 #pragma once
 
 #include "graphics/Types.h"
+#include "math/Color.h"
 
 namespace alimer
 {
@@ -67,6 +68,20 @@ namespace alimer
         static constexpr uint32_t CAPACITY = MAX_COUNT;
     };
 
+    class GpuCommandBuffer
+    {
+    public:
+        /// Destructor.
+        virtual ~GpuCommandBuffer() = default;
+
+        virtual void BeginMarker(const char* name) = 0;
+        virtual void EndMarker() = 0;
+        virtual void Flush(bool wait) = 0;
+
+        virtual void BeginRenderPass(GPUTexture texture, const Color& clearColor) = 0;
+        virtual void EndRenderPass() = 0;
+    };
+
     class GraphicsImpl
     {
     public:
@@ -82,18 +97,22 @@ namespace alimer
 
         virtual bool Init() = 0;
         virtual void WaitForIdle() = 0;
-        virtual void Frame() = 0;
+
+        virtual uint64_t PresentFrame(uint32_t count, const GpuSwapchain* pSwapchains) = 0;
 
         /* Swapchain */
-        virtual GPUSwapchainHandle CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) = 0;
-        virtual void DestroySwapChain(GPUSwapchainHandle handle) = 0;
-        virtual uint32_t GetImageCount(GPUSwapchainHandle handle) = 0;
-        virtual GPUTextureHandle GetTexture(GPUSwapchainHandle handle, uint32_t index) = 0;
-        virtual uint32_t GetNextTexture(GPUSwapchainHandle handle) = 0;
-        virtual bool Present(GPUSwapchainHandle handle) = 0;
+        virtual GpuSwapchain CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) = 0;
+        virtual void DestroySwapChain(GpuSwapchain handle) = 0;
+        virtual uint32_t GetImageCount(GpuSwapchain handle) = 0;
+        virtual GPUTexture GetTexture(GpuSwapchain handle, uint32_t index) = 0;
+        virtual uint32_t GetNextTexture(GpuSwapchain handle) = 0;
 
         /* Texture */
-        virtual void DestroyTexture(GPUTextureHandle handle) = 0;
+        virtual void DestroyTexture(GPUTexture handle) = 0;
+
+        /* CommandBuffer */
+        virtual GpuCommandBuffer* CreateCommandBuffer(QueueType family) = 0;
+        virtual void DestroyCommandBuffer(GpuCommandBuffer* handle) = 0;
 
         /// Get the features.
         inline const GraphicsDeviceCaps& GetCaps() const { return caps; }

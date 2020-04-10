@@ -26,12 +26,12 @@
 
 namespace alimer
 {
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_)
-        : device(device_)
-        , type(type_)
-        , nextFenceValue((uint64_t)type_ << 56 | 1)
-        , lastCompletedFenceValue((uint64_t)type_ << 56)
-        , allocatorPool(type_)
+    D3D12CommandQueue::D3D12CommandQueue(QueueType type_)
+        : type(type_)
+        , commandListType(D3D12GetCommandListType(type))
+        , nextFenceValue((uint64_t)commandListType << 56 | 1)
+        , lastCompletedFenceValue((uint64_t)commandListType << 56)
+        , allocatorPool(commandListType)
     {
     }
 
@@ -40,29 +40,29 @@ namespace alimer
         Destroy();
     }
 
-    void D3D12CommandQueue::Create()
+    void D3D12CommandQueue::Create(ID3D12Device* device)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-        queueDesc.Type = type;
+        queueDesc.Type = commandListType;
         queueDesc.NodeMask = 0;
 
-        ThrowIfFailed(device->GetD3DDevice()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
-        ThrowIfFailed(device->GetD3DDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3d12Fence)));
-        d3d12Fence->Signal((uint64_t)type << 56);
+        ThrowIfFailed(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
+        ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3d12Fence)));
+        d3d12Fence->Signal((uint64_t)commandListType << 56);
 
         switch (type)
         {
-        case D3D12_COMMAND_LIST_TYPE_COPY:
-            handle->SetName(L"Copy Command Queue");
-            d3d12Fence->SetName(L"Copy Command Queue Fence");
+        case QueueType::Copy:
+            handle->SetName(L"COPY QUEUE");
+            d3d12Fence->SetName(L"COPY QUEUE FENCE");
             break;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-            handle->SetName(L"Compute Command Queue");
-            d3d12Fence->SetName(L"Compute Command Queue Fence");
+        case QueueType::Compute:
+            handle->SetName(L"COMPUTE QUEUE");
+            d3d12Fence->SetName(L"COMPUTE QUEUE FENCE");
             break;
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:
-            handle->SetName(L"Graphics Command Queue");
-            d3d12Fence->SetName(L"Graphics Command Queue Fence");
+        case QueueType::Graphics:
+            handle->SetName(L"GRAPHICS QUEUE");
+            d3d12Fence->SetName(L"GRAPHICS QUEUE FENCE");
             break;
         }
 
@@ -72,6 +72,8 @@ namespace alimer
         {
             ALIMER_LOGERROR("CreateEventEx failed");
         }
+
+        allocatorPool.Create(device);
     }
 
     void D3D12CommandQueue::Destroy()
@@ -133,6 +135,21 @@ namespace alimer
     {
         uint64_t completedFenceValue = d3d12Fence->GetCompletedValue();
         return allocatorPool.RequestAllocator(completedFenceValue);
+    }
+
+    uint64_t D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
+    {
+        std::lock_guard<std::mutex> LockGuard(fenceMutex);
+
+        // Kickoff the command list
+        ID3D12CommandList* commandLists[] = { commandList };
+        handle->ExecuteCommandLists(1, commandLists);
+
+        // Signal the next fence value (with the GPU)
+        handle->Signal(d3d12Fence, nextFenceValue);
+
+        // And increment the fence value.  
+        return nextFenceValue++;
     }
 }
 

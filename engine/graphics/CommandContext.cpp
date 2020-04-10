@@ -22,27 +22,59 @@
 
 #include "graphics/CommandContext.h"
 #include "graphics/GraphicsDevice.h"
+#include "graphics/Texture.h"
+#include "graphics/Swapchain.h"
+#include "graphics/GraphicsImpl.h"
 
 namespace alimer
 {
     /* CopyContext */
-    CopyContext::CopyContext(GraphicsDevice* device_)
+    CopyContext::CopyContext(GraphicsDevice& device_)
         : device(device_)
     {
-        ALIMER_ASSERT(device);
+    }
+
+    CopyContext::~CopyContext()
+    {
+        device.GetImpl()->DestroyCommandBuffer(handle);
+    }
+
+    void CopyContext::BeginMarker(const std::string& name)
+    {
+
+    }
+
+    void CopyContext::EndMarker()
+    {
+
+    }
+
+    void CopyContext::Flush(bool wait)
+    {
+        handle->Flush(wait);
     }
 
     /* ComputeContext */
-    ComputeContext::ComputeContext(GraphicsDevice* device_)
+    ComputeContext::ComputeContext(GraphicsDevice& device_)
         : CopyContext(device_)
     {
 
     }
 
     /* GraphicsContext */
-    GraphicsContext::GraphicsContext(GraphicsDevice* device_)
+    GraphicsContext::GraphicsContext(GraphicsDevice& device_)
         : ComputeContext(device_)
     {
+        handle = device_.GetImpl()->CreateCommandBuffer(QueueType::Graphics);
+    }
 
+    void GraphicsContext::BeginRenderPass(Swapchain* swapchain, const Color& clearColor)
+    {
+        handle->BeginRenderPass(swapchain->GetCurrentTexture()->GetHandle(), clearColor);
+    }
+
+    void GraphicsContext::EndRenderPass()
+    {
+        handle->EndRenderPass();
     }
 }

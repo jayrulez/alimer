@@ -23,33 +23,44 @@
 #pragma once
 
 #include "graphics/GraphicsResource.h"
-#include "math/Size.h"
+#include "math/size.h"
 
 namespace alimer
 {
-    class Texture : public GraphicsResource
+    /// Defines the type of Texture.
+    enum class TextureType : uint32_t
+    {
+        /// Two dimensional texture
+        Type2D,
+        /// Three dimensional texture
+        Type3D,
+        /// Cube texture
+        TypeCube
+    };
+
+    class Texture final : public GraphicsResource
     {
         ALIMER_OBJECT(Texture, GraphicsResource);
 
     public:
         /// Constructor.
-        Texture(GraphicsDevice &device, GPUTextureHandle handle);
+        Texture(GraphicsDevice &device, GPUTexture handle, const usize3& extent);
         ~Texture();
 
+        /// Get the Gpu handle.
+        GPUTexture GetHandle() const { return handle; }
+
     private:
-        uint32_t width = 1u;
-        uint32_t height = 1u;
-        /// Depth or array layers.
-        uint32_t depth = 1u;
+        TextureType type = TextureType::Type2D;
+        usize3 extent = { 1u, 1u, 1u };
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
 
-        TextureDimension dimension = TextureDimension::Dimension2D;
         /// Texture format.
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
 
     private:
-        GPUTextureHandle handle{ kInvalidHandle };
+        GPUTexture handle{ kInvalidHandle };
     };
 } 

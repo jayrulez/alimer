@@ -34,8 +34,8 @@ namespace alimer
         textures.resize(device.GetImpl()->GetImageCount(handle));
         for (uint32_t i = 0; i < uint32_t(textures.size()); i++)
         {
-            GPUTextureHandle textureHandle = device.GetImpl()->GetTexture(handle, i);
-            textures[i] = new Texture(device, textureHandle);
+            GPUTexture textureHandle = device.GetImpl()->GetTexture(handle, i);
+            textures[i] = new Texture(device, textureHandle, { extent.width, extent.height, 1u });
         }
     }
 
@@ -54,11 +54,6 @@ namespace alimer
     Swapchain::ResizeResult Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         return ResizeResult::Success;
-    }
-
-    void Swapchain::Present()
-    {
-        device.GetImpl()->Present(handle);
     }
 
     Texture* Swapchain::GetCurrentTexture() const

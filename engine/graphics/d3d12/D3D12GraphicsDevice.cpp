@@ -22,7 +22,6 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandContext.h"
-#include "D3D12Texture.h"
 #include "D3D12GraphicsBuffer.h"
 #include "core/String.h"
 #include "D3D12MemAlloc.h"
@@ -92,9 +91,9 @@ namespace alimer
     D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsProviderFlags flags, GPUPowerPreference powerPreference)
         : flags{ flags }
         , powerPreference{ powerPreference }
-        , graphicsQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT)
-        , computeQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE)
-        , copyQueue(this, D3D12_COMMAND_LIST_TYPE_COPY)
+        , graphicsQueue(QueueType::Graphics)
+        , computeQueue(QueueType::Compute)
+        , copyQueue(QueueType::Copy)
         , RTVDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false)
         , DSVDescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false)
     {
@@ -102,25 +101,22 @@ namespace alimer
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
-        WaitForIdle();
         Shutdown();
     }
 
     void D3D12GraphicsDevice::Shutdown()
     {
-        GPUFrameCount = GetGpuValue(frameFence);
-        ALIMER_ASSERT(frameCount == GPUFrameCount);
-        shuttingDown = true;
-
-        for (uint32_t i = 0; i < renderLatency; ++i)
+        if (frameFence.cpuValue != frameFence.handle->GetCompletedValue())
         {
-            ProcessDeferredReleases(i);
+            WaitForIdle();
         }
 
-        //swapChain.reset();
-        //mainContext.reset();
+        ALIMER_ASSERT(frameFence.cpuValue == frameFence.handle->GetCompletedValue());
+        shuttingDown = true;
 
-        // Destroy descripto heaps.
+        ExecuteDeferredReleases();
+
+        // Destroy descripton heaps.
         {
             RTVDescriptorHeap.Shutdown();
             DSVDescriptorHeap.Shutdown();
@@ -128,7 +124,7 @@ namespace alimer
             //UAVDescriptorHeap.Shutdown();
         }
 
-        DestroyFence(frameFence);
+        DestroyFence(&frameFence);
 
         copyQueue.Destroy();
         computeQueue.Destroy();
@@ -173,14 +169,15 @@ namespace alimer
 #endif
     }
 
-    void D3D12GraphicsDevice::ProcessDeferredReleases(uint64_t frameIndex)
+    void D3D12GraphicsDevice::ExecuteDeferredReleases()
     {
-        for (size_t i = 0, count = deferredReleases[frameIndex].size(); i < count; ++i)
+        uint64_t gpuValue = frameFence.handle->GetCompletedValue();
+        while (deferredReleases.size() &&
+            deferredReleases.front().frameIndex <= gpuValue)
         {
-            deferredReleases[frameIndex][i]->Release();
+            deferredReleases.front().handle->Release();
+            deferredReleases.pop();
         }
-
-        deferredReleases[frameIndex].clear();
     }
 
     void D3D12GraphicsDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
@@ -188,14 +185,13 @@ namespace alimer
         if (resource == nullptr)
             return;
 
-        if ((frameCount == GPUFrameCount && forceDeferred == false) ||
-            shuttingDown || d3dDevice == nullptr)
+        if (forceDeferred || shuttingDown || d3dDevice == nullptr)
         {
             resource->Release();
             return;
         }
 
-        deferredReleases[frameIndex].push_back(resource);
+        deferredReleases.push({ frameFence.cpuValue, resource });
     }
 
     bool D3D12GraphicsDevice::Init()
@@ -298,9 +294,13 @@ namespace alimer
 #endif
             D3D12_MESSAGE_ID hide[] =
             {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
                 D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
                 D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-                D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+                D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES
             };
             D3D12_INFO_QUEUE_FILTER filter = {};
             filter.DenyList.NumIDs = _countof(hide);
@@ -334,9 +334,9 @@ namespace alimer
 
         // Create command queue's and default context.
         {
-            graphicsQueue.Create();
-            computeQueue.Create();
-            copyQueue.Create();
+            graphicsQueue.Create(d3dDevice);
+            computeQueue.Create(d3dDevice);
+            copyQueue.Create(d3dDevice);
         }
 
         // Create the main swap chain
@@ -351,13 +351,13 @@ namespace alimer
 
         // Init pools
         {
-            fences.init();
             swapchains.init();
             textures.init();
+            buffers.init();
         }
 
         // Create frame fence.
-        frameFence = CreateFence();
+        CreateFence(&frameFence);
 
         return true;
     }
@@ -556,8 +556,11 @@ namespace alimer
 
     void D3D12GraphicsDevice::WaitForIdle()
     {
+        SignalAndWait(&frameFence, graphicsQueue.GetHandle());
+
         // Wait for the GPU to fully catch up with the CPU
-        frameCount = GpuSignal(frameFence, graphicsQueue.GetHandle());
+        //WaitForIdle(&graphicsQueue);
+        //frameCount = GpuSignal(frameFence, graphicsQueue.handle);
         /*graphicsQueue.GetHandle()->Signal(frameFence, ++frameCount);
         frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
         WaitForSingleObject(frameFenceEvent, INFINITE);*/
@@ -567,90 +570,83 @@ namespace alimer
 
         /*computeQueue->WaitForIdle();
         copyQueue->WaitForIdle();*/
+
+        ExecuteDeferredReleases();
     }
 
-    void D3D12GraphicsDevice::Frame()
+    uint64_t D3D12GraphicsDevice::PresentFrame(uint32_t count, const GpuSwapchain* pSwapchains)
     {
-        frameCount =  GpuSignal(frameFence, graphicsQueue.GetHandle());
-
-        const uint64_t cpuFrameCount = GetCpuValue(frameFence);
-        if (cpuFrameCount >= renderLatency)
+        // Present swap chains.
+        for (uint32_t i = 0; i < count; i++)
         {
-            SyncCpuValue(frameFence, cpuFrameCount - renderLatency);
+            d3d12::Swapchain& swapchain = swapchains[pSwapchains[i].id];
+
+            HRESULT hr = swapchain.handle->Present(swapchain.syncInterval, swapchain.flags);
+
+            if (hr == DXGI_ERROR_DEVICE_REMOVED ||
+                hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                isLost = true;
+                return static_cast<uint64_t>(-1);
+            }
+
+            ThrowIfFailed(hr);
         }
 
-       /* GPUFrameCount = frameFence->GetCompletedValue();
+        // Signal the fence with the current frame number
+        Signal(&frameFence, graphicsQueue.GetHandle());
 
-        if ((frameCount - GPUFrameCount) >= renderLatency)
+        // Wait for the GPU to catch up before we stomp an executing command buffer
+        if (frameFence.cpuValue >= kRenderLatency)
         {
-           frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
-            WaitForSingleObject(frameFenceEvent, INFINITE);
-        }*/
-
-        frameIndex = frameCount % renderLatency;
+            Wait(&frameFence, frameFence.cpuValue - kRenderLatency);
+        }
 
         // Release any pending deferred releases
-        ProcessDeferredReleases(frameIndex);
+        ExecuteDeferredReleases();
+
+        return ++frameCount;
     }
 
-    GPUFenceHandle D3D12GraphicsDevice::CreateFence()
+    void D3D12GraphicsDevice::CreateFence(d3d12::Fence* fence)
     {
-        if (fences.isFull()) {
-            ALIMER_LOGERROR("Direct3D12: reached maximum number of fences allocated");
-            return { kInvalidHandle };
-        }
-
-        const int id = fences.alloc();
-        FenceD3D12& fence = fences[id];
-
-        fence.cpuValue = 0;
-        ThrowIfFailed(d3dDevice->CreateFence(fence.cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence.handle)));
-        fence.fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-        ALIMER_ASSERT(fence.fenceEvent != INVALID_HANDLE_VALUE);
-        fence.cpuValue++;
-        return { (uint32_t)id };
+        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence->handle)));
+        fence->cpuValue = 1;
+        fence->fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fence->fenceEvent != INVALID_HANDLE_VALUE);
     }
 
-    void D3D12GraphicsDevice::DestroyFence(GPUFenceHandle handle)
+    void D3D12GraphicsDevice::DestroyFence(d3d12::Fence* fence)
     {
-        FenceD3D12& fence = fences[handle.id];
-        CloseHandle(fence.fenceEvent);
-        DeferredRelease(fence.handle);
-        fences.dealloc(handle.id);
+        CloseHandle(fence->fenceEvent);
+        SafeRelease(fence->handle);
     }
 
-    uint64_t D3D12GraphicsDevice::GetCpuValue(GPUFenceHandle handle)
+    uint64_t D3D12GraphicsDevice::Signal(d3d12::Fence* fence, ID3D12CommandQueue* queue)
     {
-        return fences[handle.id].cpuValue;
+        ThrowIfFailed(queue->Signal(fence->handle, fence->cpuValue));
+        fence->cpuValue++;
+        return fence->cpuValue - 1;
     }
 
-    uint64_t D3D12GraphicsDevice::GetGpuValue(GPUFenceHandle handle)
+    void D3D12GraphicsDevice::SignalAndWait(d3d12::Fence* fence, ID3D12CommandQueue* queue)
     {
-        return fences[handle.id].handle->GetCompletedValue();
+        ThrowIfFailed(queue->Signal(fence->handle, ++fence->cpuValue));
+        fence->handle->SetEventOnCompletion(fence->cpuValue, fence->fenceEvent);
+        WaitForSingleObject(fence->fenceEvent, INFINITE);
     }
 
-    uint64_t D3D12GraphicsDevice::GpuSignal(GPUFenceHandle handle, ID3D12CommandQueue* queue)
+    void D3D12GraphicsDevice::Wait(d3d12::Fence* fence, uint64_t value)
     {
-        FenceD3D12& fence = fences[handle.id];
-        ThrowIfFailed(queue->Signal(fence.handle, fence.cpuValue));
-        fence.cpuValue++;
-        return fence.cpuValue - 1;
-    }
-
-    void D3D12GraphicsDevice::SyncCpuValue(GPUFenceHandle handle, uint64_t value)
-    {
-        FenceD3D12& fence = fences[handle.id];
-        assert(value <= fence.cpuValue - 1);
-
-        uint64_t gpuValue = fence.handle->GetCompletedValue();
+        const uint64_t gpuValue = fence->handle->GetCompletedValue();
         if (gpuValue < value)
         {
-            ThrowIfFailed(fence.handle->SetEventOnCompletion(value, fence.fenceEvent));
-            WaitForSingleObject(fence.fenceEvent, INFINITE);
+            ThrowIfFailed(fence->handle->SetEventOnCompletion(value, fence->fenceEvent));
+            WaitForSingleObject(fence->fenceEvent, INFINITE);
         }
     }
 
-    GPUSwapchainHandle D3D12GraphicsDevice::CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode)
+    GpuSwapchain D3D12GraphicsDevice::CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode)
     {
         if (swapchains.isFull()) {
             ALIMER_LOGERROR("Direct3D12: reached maximum number of Swapchains allocated");
@@ -668,7 +664,7 @@ namespace alimer
         swapChainDesc.Height = backBufferHeight;
         swapChainDesc.Format = backBufferFormat;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = renderLatency;
+        swapChainDesc.BufferCount = kRenderLatency;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -688,7 +684,7 @@ namespace alimer
 
         HWND hwnd = reinterpret_cast<HWND>(nativeHandle);
         ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-            GetD3D12GraphicsQueue(),
+            graphicsQueue.GetHandle(),
             hwnd,
             &swapChainDesc,
             &fsSwapChainDesc,
@@ -723,7 +719,7 @@ namespace alimer
 #endif
 
         const int id = swapchains.alloc();
-        SwapchainD3D12& handle = swapchains[id];
+        d3d12::Swapchain& handle = swapchains[id];
         ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle.handle)));
         SafeRelease(tempSwapChain);
 
@@ -748,9 +744,9 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    void D3D12GraphicsDevice::DestroySwapChain(GPUSwapchainHandle handle)
+    void D3D12GraphicsDevice::DestroySwapChain(GpuSwapchain handle)
     {
-        SwapchainD3D12& swapchain = swapchains[handle.id];
+        d3d12::Swapchain& swapchain = swapchains[handle.id];
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapchain.handle->SetFullscreenState(FALSE, nullptr);
 #endif
@@ -759,41 +755,25 @@ namespace alimer
         swapchains.dealloc(handle.id);
     }
 
-    uint32_t D3D12GraphicsDevice::GetImageCount(GPUSwapchainHandle handle)
+    uint32_t D3D12GraphicsDevice::GetImageCount(GpuSwapchain handle)
     {
-        SwapchainD3D12& swapchain = swapchains[handle.id];
+        d3d12::Swapchain& swapchain = swapchains[handle.id];
         return swapchain.imageCount;
     }
 
-    GPUTextureHandle D3D12GraphicsDevice::GetTexture(GPUSwapchainHandle handle, uint32_t index)
+    GPUTexture D3D12GraphicsDevice::GetTexture(GpuSwapchain handle, uint32_t index)
     {
-        SwapchainD3D12& swapchain = swapchains[handle.id];
+        d3d12::Swapchain& swapchain = swapchains[handle.id];
         return swapchain.textures[index];
     }
 
-    uint32_t D3D12GraphicsDevice::GetNextTexture(GPUSwapchainHandle handle)
+    uint32_t D3D12GraphicsDevice::GetNextTexture(GpuSwapchain handle)
     {
-        SwapchainD3D12& swapchain = swapchains[handle.id];
+        d3d12::Swapchain& swapchain = swapchains[handle.id];
         return swapchain.handle->GetCurrentBackBufferIndex();
     }
 
-    bool D3D12GraphicsDevice::Present(GPUSwapchainHandle handle)
-    {
-        SwapchainD3D12& swapchain = swapchains[handle.id];
-
-        HRESULT hr = swapchain.handle->Present(swapchain.syncInterval, swapchain.flags);
-
-        if (hr == DXGI_ERROR_DEVICE_REMOVED ||
-            hr == DXGI_ERROR_DEVICE_RESET)
-        {
-            return false;
-        }
-
-        ThrowIfFailed(hr);
-        return true;
-    }
-
-    GPUTextureHandle D3D12GraphicsDevice::CreateExternalTexture(ID3D12Resource* resource)
+    GPUTexture D3D12GraphicsDevice::CreateExternalTexture(ID3D12Resource* resource)
     {
         if (textures.isFull()) {
             ALIMER_LOGERROR("Direct3D12: reached maximum number of Textures allocated");
@@ -801,15 +781,49 @@ namespace alimer
         }
 
         const int id = textures.alloc();
-        TextureD3D12& texture = textures[id];
+        d3d12::Resource& texture = textures[id];
         texture.handle = resource;
+        texture.state = D3D12_RESOURCE_STATE_COMMON;
+        texture.transitioning_state = (D3D12_RESOURCE_STATES)-1;
+        texture.gpu_virtual_address = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
+        texture.rtv.ptr = 0;
+        texture.rtv = RTVDescriptorHeap.AllocatePersistent().handles[0];
+        d3dDevice->CreateRenderTargetView(resource, nullptr, texture.rtv);
         return { (uint32_t)id };
     }
 
-    void D3D12GraphicsDevice::DestroyTexture(GPUTextureHandle handle)
+    void D3D12GraphicsDevice::DestroyTexture(GPUTexture handle)
     {
-        TextureD3D12& texture = textures[handle.id];
+        d3d12::Resource& texture = textures[handle.id];
         DeferredRelease(texture.handle);
+        if (texture.rtv.ptr != 0)
+        {
+            RTVDescriptorHeap.FreePersistent(texture.rtv);
+        }
+
         textures.dealloc(handle.id);
+    }
+
+    d3d12::Resource* D3D12GraphicsDevice::GetTexture(GPUTexture handle)
+    {
+        return &textures[handle.id];
+    }
+
+    GpuCommandBuffer* D3D12GraphicsDevice::CreateCommandBuffer(QueueType type)
+    {
+        return new D3D12GraphicsContext(*this, type);
+    }
+
+    void D3D12GraphicsDevice::DestroyCommandBuffer(GpuCommandBuffer* handle)
+    {
+        D3D12GraphicsContext* d3dContext = static_cast<D3D12GraphicsContext*>(handle);
+        d3dContext->Destroy();
+        delete d3dContext;
+    }
+
+    void D3D12GraphicsDevice::WaitForFence(uint64_t fenceValue)
+    {
+        D3D12CommandQueue& producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
+        producer.WaitForFence(fenceValue);
     }
 }

@@ -23,10 +23,13 @@
 #pragma once
 
 #include "graphics/Types.h"
+#include "math/Color.h"
 
 namespace alimer
 {
     class GraphicsDevice;
+    class GpuCommandBuffer;
+    class Swapchain;
 
     /// Command context class for recording copy GPU commands.
     class CopyContext
@@ -35,42 +38,44 @@ namespace alimer
 
     public:
         /// Destructor.
-        virtual ~CopyContext() = default;
+        virtual ~CopyContext();
 
-        virtual void BeginMarker(const char* name) = 0;
-        virtual void EndMarker() = 0;
+        void BeginMarker(const std::string& name);
+        void EndMarker();
+
+        void Flush(bool wait = false);
 
     protected:
         /// Constructor.
-        CopyContext(GraphicsDevice* device_);
+        CopyContext(GraphicsDevice& device_);
 
         void SetName(const std::string& name_) { name = name_; }
 
-        GraphicsDevice* device;
+        GraphicsDevice& device;
         std::string name;
+        GpuCommandBuffer* handle = nullptr;
     };
 
     /// Command context class for recording compute GPU commands.
     class ALIMER_API ComputeContext : public CopyContext
     {
     public:
-        /// Destructor.
-        virtual ~ComputeContext() = default;
 
     protected:
         /// Constructor.
-        ComputeContext(GraphicsDevice* device_);
+        ComputeContext(GraphicsDevice& device_);
     };
 
     /// Command context class for recording graphics GPU commands.
-    class ALIMER_API GraphicsContext : public ComputeContext
+    class ALIMER_API GraphicsContext final : public ComputeContext
     {
     public:
-        /// Destructor.
-        virtual ~GraphicsContext() = default;
+        /// Constructor.
+        GraphicsContext(GraphicsDevice& device_);
+
+        void BeginRenderPass(Swapchain* swapchain, const Color& clearColor);
+        void EndRenderPass();
 
     protected:
-        /// Constructor.
-        GraphicsContext(GraphicsDevice* device_);
     };
 }

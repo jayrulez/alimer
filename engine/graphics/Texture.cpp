@@ -26,11 +26,26 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, GPUTextureHandle handle)
+    namespace
+    {
+        inline TextureType FindTextureType(const usize3& extent)
+        {
+            TextureType result = TextureType::Type2D;
+            if (extent.depth > 1)
+            {
+                result = TextureType::Type3D;
+            }
+
+            return result;
+        }
+    } 
+
+    Texture::Texture(GraphicsDevice& device, GPUTexture handle, const usize3& extent)
         : GraphicsResource(device, Type::Texture)
         , handle{ handle }
+        , type(FindTextureType(extent))
+        , extent{ extent }
     {
-        isAllocated = true;
     }
 
     Texture::~Texture()

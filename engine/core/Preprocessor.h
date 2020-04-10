@@ -162,6 +162,7 @@ Inline macro
     #define ALIMER_ALIGN(alignment, decl) __declspec(align(alignment)) decl
     #define ALIMER_ALIGN_PREFIX(alignment) __declspec(align(alignment))
     #define ALIMER_ALIGN_SUFFIX(alignment)
+    #define ALIMER_SELECT_ANY __declspec(selectany)
 #elif ALIMER_GCC_FAMILY
     #define ALIMER_NOINLINE __attribute__((noinline))
     #define ALIMER_FORCE_INLINE inline __attribute__((always_inline))
@@ -172,6 +173,7 @@ Inline macro
     #define ALIMER_ALIGN(alignment, decl) decl __attribute__((aligned(alignment)))
     #define ALIMER_ALIGN_PREFIX(alignment)
     #define ALIMER_ALIGN_SUFFIX(alignment) __attribute__((aligned(alignment)))
+    #define ALIMER_SELECT_ANY __attribute__((weak))
 #else
     #define ALIMER_NOINLINE
     #define ALIMER_FORCE_INLINE inline

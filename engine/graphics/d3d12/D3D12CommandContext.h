@@ -22,22 +22,37 @@
 
 #pragma once
 
-#include "graphics/CommandContext.h"
+#include "graphics/GraphicsImpl.h"
 #include "D3D12Backend.h"
+
+#define VALID_COMPUTE_QUEUE_RESOURCE_STATES \
+    ( D3D12_RESOURCE_STATE_UNORDERED_ACCESS \
+    | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE \
+    | D3D12_RESOURCE_STATE_COPY_DEST \
+    | D3D12_RESOURCE_STATE_COPY_SOURCE )
 
 namespace alimer
 {
-    class D3D12GraphicsContext final : public GraphicsContext
+    namespace d3d12
+    {
+        struct Resource;
+    }
+
+    class D3D12GraphicsContext final : public GpuCommandBuffer
     {
     public:
-        D3D12GraphicsContext(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_, uint32_t commandAllocatorsCount_);
-        ~D3D12GraphicsContext() override;
-
+        D3D12GraphicsContext(D3D12GraphicsDevice& device_, QueueType type_);
         void Destroy();
-        void Begin(const char* name, bool profile);
-        void End();
+
+        void Reset();
         void BeginMarker(const char* name) override;
         void EndMarker() override;
+        void Flush(bool wait) override;
+        void TransitionResource(d3d12::Resource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
+        void FlushResourceBarriers(void);
+
+        void BeginRenderPass(GPUTexture texture, const Color& clearColor) override;
+        void EndRenderPass() override;
 
         ID3D12GraphicsCommandList* GetCommandList() const
         {
@@ -45,11 +60,16 @@ namespace alimer
         }
 
     private:
-        const D3D12_COMMAND_LIST_TYPE type;
-        uint32_t frameIndex = 0;
-        uint32_t commandAllocatorsCount;
-        ID3D12CommandAllocator* commandAllocators[kMaxFrameLatency] = {};
+        D3D12GraphicsDevice& device;
+        const QueueType type;
+
+        ID3D12CommandAllocator* currentAllocator;
         ID3D12GraphicsCommandList* commandList;
         bool isProfiling = false;
+
+        static constexpr uint32_t kMaxResourceBarriers = 16;
+
+        D3D12_RESOURCE_BARRIER resourceBarriers[kMaxResourceBarriers];
+        UINT numBarriersToFlush = 0;
     };
 }

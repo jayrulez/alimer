@@ -114,9 +114,9 @@ namespace alimer
 
     void Game::Draw(const GameTime& gameTime)
     {
-        /*auto context = graphicsDevice->GetMainContext();
-        context->Begin("Frame", false);
-        context->End();*/
+        auto context = graphicsDevice->GetGraphicsContext();
+        context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
+        context->EndMarker();
 
         for (auto gameSystem : gameSystems)
         {
@@ -133,8 +133,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        mainSwapChain->Present();
-        graphicsDevice->Frame();
+        graphicsDevice->PresentFrame(mainSwapChain.get());
     }
 
     int Game::Run()

@@ -31,10 +31,7 @@
 namespace alimer
 {
     class GraphicsImpl;
-    class GPUBuffer;
-    class Texture;
 
-    /* TODO: Expose GraphicsContext */
     /* TODO: Expose resource creation context */
 
     /// Defines the logical graphics device class.
@@ -62,10 +59,11 @@ namespace alimer
         void WaitForIdle();
 
         /// Commits current frame and advance to next one.
-        void Frame();
+        uint64_t PresentFrame(Swapchain* swapchain);
+        uint64_t PresentFrame(const std::vector<Swapchain*>& swapchains);
 
-        /// Begin recording to given context.
-        GraphicsContext* GetContext(const std::string& name = "");
+        /// Get the default main graphics context.
+        GraphicsContext* GetGraphicsContext() const { return graphicsContext.get(); }
 
         /// Get the features.
         const GraphicsDeviceCaps& GetCaps() const;
@@ -79,7 +77,8 @@ namespace alimer
 
     private:
         GraphicsImpl* impl;
-        
+        std::shared_ptr<GraphicsContext> graphicsContext;
+
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };

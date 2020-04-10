@@ -40,6 +40,8 @@
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
+#include <vector>
+
 // Forward declare memory allocator classes
 namespace D3D12MA
 {
@@ -64,72 +66,14 @@ namespace alimer
     extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
 #endif
 
+    static constexpr uint32_t kMaxFrameLatency = 3;
+
     class D3D12GraphicsDevice;
 
-    class D3D12GpuResource
+    struct PersistentDescriptorAlloc
     {
-    public:
-        D3D12GpuResource()
-            : handle(nullptr)
-            , usageState(D3D12_RESOURCE_STATE_COMMON)
-            , transitioningState((D3D12_RESOURCE_STATES)-1)
-            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
-        {
-        }
-
-        D3D12GpuResource(ID3D12Resource* handle_, D3D12_RESOURCE_STATES currentState)
-            : handle(handle_)
-            , usageState(currentState)
-            , transitioningState((D3D12_RESOURCE_STATES)-1)
-            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
-        {
-        }
-
-        ~D3D12GpuResource()
-        {
-            Destroy();
-        }
-
-        virtual void Destroy()
-        {
-            SafeRelease(handle);
-            gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
-        }
-
-        ID3D12Resource* operator->() { return handle; }
-        const ID3D12Resource* operator->() const { return handle; }
-
-        ID3D12Resource* GetResource() { return handle; }
-        const ID3D12Resource* GetResource() const { return handle; }
-
-        D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
-
-    protected:
-        ID3D12Resource* handle;
-        D3D12_RESOURCE_STATES usageState;
-        D3D12_RESOURCE_STATES transitioningState;
-        D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
-
-    };
-
-    class D3D12GPUFence
-    {
-    public:
-        D3D12GPUFence(D3D12GraphicsDevice* device_);
-        ~D3D12GPUFence();
-
-        void Init(uint64_t initialValue = 0);
-        void Shutdown();
-        void Signal(ID3D12CommandQueue* queue, uint64_t fenceValue);
-        void Wait(uint64_t fenceValue);
-        bool IsSignaled(uint64_t fenceValue);
-        void Clear(uint64_t fenceValue);
-
-    private:
-        D3D12GraphicsDevice* device;
-
-        ID3D12Fence* handle = nullptr;
-        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+        D3D12_CPU_DESCRIPTOR_HANDLE handles[kMaxFrameLatency] = {};
+        uint32_t index = uint32_t(-1);
     };
 
     class D3D12DescriptorHeap
@@ -140,6 +84,14 @@ namespace alimer
 
         void Init(uint32_t numPersistent_, uint32_t numTemporary_);
         void Shutdown();
+        PersistentDescriptorAlloc AllocatePersistent();
+        void FreePersistent(uint32_t& index);
+        void FreePersistent(D3D12_CPU_DESCRIPTOR_HANDLE& handle);
+        void FreePersistent(D3D12_GPU_DESCRIPTOR_HANDLE& handle);
+
+        uint32_t IndexFromHandle(D3D12_CPU_DESCRIPTOR_HANDLE handle);
+        uint32_t IndexFromHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
+        uint32_t TotalNumDescriptors() const { return numPersistent + numTemporary; }
 
     private:
         D3D12GraphicsDevice* device;
@@ -151,9 +103,28 @@ namespace alimer
         uint32_t numPersistent = 0;
         uint32_t persistentAllocated = 0;
         uint32_t numTemporary = 0;
+        std::vector<uint32_t> deadList;
 
         ID3D12DescriptorHeap* heaps[kMaxFrameLatency] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE CPUStart[kMaxFrameLatency] = {};
         D3D12_GPU_DESCRIPTOR_HANDLE GPUStart[kMaxFrameLatency] = {};
+
+        SRWLOCK lock = SRWLOCK_INIT;
+        uint32_t heapIndex = 0;
     };
+
+    static inline D3D12_COMMAND_LIST_TYPE D3D12GetCommandListType(QueueType type)
+    {
+        switch (type)
+        {
+        case QueueType::Graphics:
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        case QueueType::Compute:
+            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        case QueueType::Copy:
+            return D3D12_COMMAND_LIST_TYPE_COPY;
+        default:
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+        }
+    }
 }

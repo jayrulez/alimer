@@ -59,15 +59,11 @@ namespace alimer
 
         const GraphicsDevice& GetDevice() const;
 
-        /// Return value indicating if the resource has been allocated.
-        bool IsAllocated() const { return isAllocated; }
-
     protected:
         GraphicsDevice &device;
         Type type;
         /// Size in bytes of the resource.
         uint64_t size{ 0 };
-        bool isAllocated = false;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsResource);

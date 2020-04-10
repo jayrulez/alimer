@@ -31,6 +31,37 @@ namespace alimer
     class D3D12SwapChain;
     class D3D12GraphicsContext;
 
+    namespace d3d12
+    {
+        /* Types */
+        struct Fence
+        {
+            uint64_t cpuValue;
+            uint64_t gpuValue;
+            ID3D12Fence* handle = nullptr;
+            HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+        };
+
+        struct Swapchain
+        {
+            IDXGISwapChain3* handle;
+            uint32_t imageCount;
+            uint32_t syncInterval;
+            uint32_t flags;
+
+            GPUTexture textures[kMaxFrameLatency];
+        };
+
+        struct Resource
+        {
+            ID3D12Resource* handle;
+            D3D12_RESOURCE_STATES state;
+            D3D12_RESOURCE_STATES transitioning_state;
+            D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
+            D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+        };
+    }
+
     /// Direct3D12 GPU backend.
     class ALIMER_API D3D12GraphicsDevice final : public GraphicsImpl
     {
@@ -54,17 +85,37 @@ namespace alimer
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
-        D3D12CommandQueue& GetQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT)
+        D3D12CommandQueue& GetQueue(QueueType type)
         {
             switch (type)
             {
-            case D3D12_COMMAND_LIST_TYPE_COMPUTE: return computeQueue;
-            case D3D12_COMMAND_LIST_TYPE_COPY: return copyQueue;
-            default: return graphicsQueue;
+            case QueueType::Compute:
+                return computeQueue;
+            case QueueType::Copy:
+                return copyQueue;
+            default:
+                return graphicsQueue;
             }
         }
 
-        ID3D12CommandQueue* GetD3D12GraphicsQueue(void) { return graphicsQueue.GetHandle(); }
+        D3D12CommandQueue& GetQueue(D3D12_COMMAND_LIST_TYPE type)
+        {
+            switch (type)
+            {
+            case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+                return computeQueue;
+            case D3D12_COMMAND_LIST_TYPE_COPY:
+                return copyQueue;
+            default:
+                return graphicsQueue;
+            }
+        }
+
+        // The CPU will wait for a fence to reach a specified value
+        void WaitForFence(uint64_t fenceValue);
+
+        /* Access to resources. */
+        d3d12::Resource* GetTexture(GPUTexture handle);
 
     private:
         bool Init() override;
@@ -72,37 +123,34 @@ namespace alimer
         bool GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
 
-        void ProcessDeferredReleases(uint64_t frameIndex);
+        void ExecuteDeferredReleases();
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void WaitForIdle() override;
-        void Frame() override;
+        uint64_t PresentFrame(uint32_t count, const GpuSwapchain* pSwapchains) override;
 
         /* Fence */
-        GPUFenceHandle CreateFence();
-        void DestroyFence(GPUFenceHandle handle);
-        uint64_t GetCpuValue(GPUFenceHandle handle);
-        uint64_t GetGpuValue(GPUFenceHandle handle);
-        uint64_t GpuSignal(GPUFenceHandle handle, ID3D12CommandQueue* queue);
-        void SyncCpuValue(GPUFenceHandle handle, uint64_t value);
+        void CreateFence(d3d12::Fence* fence);
+        void DestroyFence(d3d12::Fence* fence);
+        uint64_t Signal(d3d12::Fence* fence, ID3D12CommandQueue* queue);
+        void SignalAndWait(d3d12::Fence* fence, ID3D12CommandQueue* queue);
+        void Wait(d3d12::Fence* fence, uint64_t value);
 
         /* Swapchain */
-        GPUSwapchainHandle CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) override;
-        void DestroySwapChain(GPUSwapchainHandle handle) override;
-        uint32_t GetImageCount(GPUSwapchainHandle handle) override;
-        GPUTextureHandle GetTexture(GPUSwapchainHandle handle, uint32_t index) override;
-        uint32_t GetNextTexture(GPUSwapchainHandle handle) override;
-        bool Present(GPUSwapchainHandle handle) override;
+        GpuSwapchain CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) override;
+        void DestroySwapChain(GpuSwapchain handle) override;
+        uint32_t GetImageCount(GpuSwapchain handle) override;
+        GPUTexture GetTexture(GpuSwapchain handle, uint32_t index) override;
+        uint32_t GetNextTexture(GpuSwapchain handle) override;
 
         /* Texture */
-        GPUTextureHandle CreateExternalTexture(ID3D12Resource* resource);
-        void DestroyTexture(GPUTextureHandle handle) override;
+        GPUTexture CreateExternalTexture(ID3D12Resource* resource);
+        void DestroyTexture(GPUTexture handle) override;
+        
 
-        //bool BeginFrame() override;
-        //void PresentFrame() override;
-        //GraphicsContext* RequestContext(bool compute) override;
-
-        //GPUBuffer* CreateBufferCore(const BufferDescriptor* descriptor, const void* initialData) override;
+        /* CommandBuffer */
+        GpuCommandBuffer* CreateCommandBuffer(QueueType type) override;
+        void DestroyCommandBuffer(GpuCommandBuffer* handle) override;
 
         GraphicsProviderFlags flags;
         GPUPowerPreference powerPreference;
@@ -119,50 +167,33 @@ namespace alimer
         /// Root signature version
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion{ D3D_ROOT_SIGNATURE_VERSION_1_1 };
 
-        D3D12CommandQueue graphicsQueue;
-        D3D12CommandQueue computeQueue;
-        D3D12CommandQueue copyQueue;
-
-        uint32_t renderLatency = 2u;
-        uint64_t frameIndex = 0;
+        static constexpr uint32_t kRenderLatency = 2;
         uint64_t frameCount = 0;
-        uint64_t GPUFrameCount = 0;
         bool shuttingDown = false;
+        bool isLost = false;
 
         /* Descriptor heaps */
         D3D12DescriptorHeap RTVDescriptorHeap;
         D3D12DescriptorHeap DSVDescriptorHeap;
+        
+        Pool<d3d12::Swapchain, kMaxSwapchains> swapchains;
+        Pool<d3d12::Resource, kMaxTextures> textures;
+        Pool<d3d12::Resource, kMaxBuffers> buffers;
 
-        /* Pool */
-        struct FenceD3D12
-        {
-            uint64_t cpuValue;
-            ID3D12Fence* handle = nullptr;
-            HANDLE fenceEvent = INVALID_HANDLE_VALUE;
-        };
+        D3D12CommandQueue graphicsQueue;
+        D3D12CommandQueue computeQueue;
+        D3D12CommandQueue copyQueue;
 
-        struct SwapchainD3D12
-        {
-            IDXGISwapChain3*    handle;
-            uint32_t            imageCount;
-            uint32_t            syncInterval;
-            uint32_t            flags;
+        d3d12::Fence frameFence;
 
-            GPUTextureHandle    textures[kMaxFrameLatency];
-        };
-
-        struct TextureD3D12
-        {
-            ID3D12Resource* handle;
-        };
-
-        Pool<FenceD3D12, kMaxFences> fences;
-        Pool<SwapchainD3D12, kMaxSwapchains> swapchains;
-        Pool<TextureD3D12, kMaxTextures> textures;
-
-        GPUFenceHandle frameFence;
         std::unique_ptr<D3D12GraphicsContext> mainContext;
 
-        std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
+        struct ResourceRelease
+        {
+            uint64_t frameIndex;
+            IUnknown* handle;
+        };
+
+        std::queue<ResourceRelease> deferredReleases;
     };
 }

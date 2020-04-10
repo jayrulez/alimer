@@ -27,6 +27,7 @@
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsBuffer.h"
 #include "graphics/GraphicsImpl.h"
+#include "graphics/Swapchain.h"
 
 #if defined(ALIMER_VULKAN)
 #include "graphics/vulkan/VulkanGraphicsProvider.h"
@@ -43,6 +44,11 @@
 #if defined(ALIMER_OPENGL)
 #include "graphics/opengl/GLGPUDevice.h"
 #endif
+
+
+#include <malloc.h>
+// These must be force_inline so that the allocation happens in the caller's stack frame
+template <typename T> ALIMER_FORCE_INLINE T* StackAlloc(size_t N) { return (T*)alloca(N * sizeof(T)); }
 
 namespace alimer
 {
@@ -142,17 +148,37 @@ namespace alimer
 
     GraphicsDevice::~GraphicsDevice()
     {
+        graphicsContext->Flush(true);
+        graphicsContext.reset();
         SafeDelete(impl);
     }
 
     void GraphicsDevice::WaitForIdle()
     {
+        //graphicsContext->Flush(true);
         impl->WaitForIdle();
     }
 
-    void GraphicsDevice::Frame()
+    uint64_t GraphicsDevice::PresentFrame(Swapchain* swapchain)
     {
-        impl->Frame();
+        ALIMER_ASSERT(swapchain);
+        graphicsContext->Flush();
+        return impl->PresentFrame(1, &swapchain->GetHandle());
+    }
+
+    uint64_t GraphicsDevice::PresentFrame(const std::vector<Swapchain*>& swapchains)
+    {
+        ALIMER_ASSERT(swapchains.size() > 0);
+        const uint32_t count = static_cast<uint32_t>(swapchains.size());
+        GpuSwapchain* gpuSwapchains = StackAlloc<GpuSwapchain>(swapchains.size());
+
+        for (uint32_t i = 0; i < count; i++)
+        {
+            gpuSwapchains[i] = swapchains[i]->GetHandle();
+        }
+
+        graphicsContext->Flush();
+        return impl->PresentFrame(count, gpuSwapchains);
     }
 
     bool GraphicsDevice::Init()
@@ -161,19 +187,9 @@ namespace alimer
             return false;
         }
 
+        graphicsContext = std::make_shared<GraphicsContext>(*this);
+
         return true;
-    }
-
-    GraphicsContext* GraphicsDevice::GetContext(const std::string& name)
-    {
-        GraphicsContext* newContext = nullptr; // RequestContext(false);
-        newContext->SetName(name);
-        if (name.length() > 0)
-        {
-            //EngineProfiling::BeginBlock(ID, &newContext);
-        }
-
-        return newContext;
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const

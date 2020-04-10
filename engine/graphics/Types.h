@@ -27,7 +27,6 @@
 
 namespace alimer
 {
-    static constexpr uint32_t kMaxFrameLatency = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -35,8 +34,8 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
     static constexpr uint32_t kMaxSwapchains = 16u;
-    static constexpr uint32_t kMaxTextures = 2048u;
-    static constexpr uint32_t kMaxFences = 256u;
+    static constexpr uint32_t kMaxTextures = 4096u;
+    static constexpr uint32_t kMaxBuffers = 4096u;
 
     /* Known vendor ids */
     static constexpr uint32_t kVendorId_AMD = 0x1002;
@@ -46,14 +45,10 @@ namespace alimer
     static constexpr uint32_t kVendorId_Nvidia = 0x10DE;
     static constexpr uint32_t kVendorId_Qualcomm = 0x5143;
 
-    /* Describes GPUResource handle. */
-    using GpuHandle = uint64_t;
-    static constexpr GpuHandle kGpuNullHandle = 0;
-
     static constexpr uint32_t kInvalidHandle = 0xffFFffFF;
-    struct GPUSwapchainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    struct GPUTextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    struct GPUFenceHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct GpuSwapchain { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct GPUTexture { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct GPUBuffer { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -91,24 +86,18 @@ namespace alimer
         Unknown
     };
 
+    enum class QueueType : uint32_t
+    {
+        Graphics,
+        Compute,
+        Copy
+    };
+
     enum class GPUPowerPreference : uint32_t
     {
         DontCare,
         LowPower,
         HighPerformance,
-    };
-
-    /// Defines the dimension of Texture
-    enum class TextureDimension : uint32_t
-    {
-        /// One dimensional texture
-        Dimension1D,
-        /// Two dimensional texture
-        Dimension2D,
-        /// Three dimensional texture
-        Dimension3D,
-        /// Cube texture
-        DimensionCube
     };
 
     enum class BufferUsage : uint32_t

@@ -83,12 +83,21 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_DL_LIBS})
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    imgui
+)
 
-if(NOT (EMSCRIPTEN OR ANDROID))
-    target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
-    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
-endif ()
+# Link platform specific libraries
+if(ANDROID)
+    target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
+else()
+    if (DIRECT_TO_DISPLAY)
+        target_link_libraries(${PROJECT_NAME} PRIVATE dl)
+    elseif (NOT EMSCRIPTEN)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    endif()
+endif()
 
 if (ALIMER_D3D12)
     target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_D3D12)

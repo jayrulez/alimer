@@ -32,10 +32,10 @@ namespace alimer
     class D3D12CommandQueue final 
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_);
+        D3D12CommandQueue(QueueType type_);
         ~D3D12CommandQueue();
 
-        void Create();
+        void Create(ID3D12Device* device);
         void Destroy();
 
         uint64_t IncrementFence(void);
@@ -44,12 +44,13 @@ namespace alimer
         void WaitForIdle(void) { WaitForFence(IncrementFence()); }
         ID3D12CommandQueue* GetHandle() { return handle; }
         uint64_t GetNextFenceValue() { return nextFenceValue; }
+        uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
 
         ID3D12CommandAllocator* RequestAllocator();
 
     private:
-        D3D12GraphicsDevice* device;
-        const D3D12_COMMAND_LIST_TYPE type;
+        const QueueType type;
+        const D3D12_COMMAND_LIST_TYPE commandListType;
         ID3D12CommandQueue* handle = nullptr;
 
         // Lifetime of these objects is managed by the descriptor cache
