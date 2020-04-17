@@ -1,5 +1,6 @@
-# add_subdirectory(vgpu)
-# set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
+# stb
+add_library(stb INTERFACE)
+target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
