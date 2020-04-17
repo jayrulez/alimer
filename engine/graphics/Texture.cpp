@@ -26,35 +26,16 @@
 
 namespace alimer
 {
-    namespace
-    {
-        inline TextureType FindTextureType(const usize3& extent)
-        {
-            TextureType result = TextureType::Type2D;
-            if (extent.depth > 1)
-            {
-                result = TextureType::Type3D;
-            }
-
-            return result;
-        }
-    } 
-
-    Texture::Texture(GraphicsDevice& device, GPUTexture handle, const usize3& extent)
+    Texture::Texture(GraphicsDevice& device, const TextureDescriptor* descriptor)
         : GraphicsResource(device, Type::Texture)
-        , handle{ handle }
-        , type(FindTextureType(extent))
-        , extent{ extent }
+        , type(descriptor->type)
+        , usage(descriptor->usage)
+        , format(descriptor->format)
+        , extent(descriptor->extent)
+        , mipLevels(descriptor->mipLevels)
+        , sampleCount(descriptor->sampleCount)
+        , external(descriptor->externalHandle != nullptr)
     {
-    }
-
-    Texture::~Texture()
-    {
-        if (handle.isValid())
-        {
-            device.GetImpl()->DestroyTexture(handle);
-            handle.id = kInvalidHandle;
-        }
     }
 }
 

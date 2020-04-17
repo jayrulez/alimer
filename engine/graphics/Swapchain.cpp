@@ -26,39 +26,28 @@
 
 namespace alimer
 {
-    Swapchain::Swapchain(GraphicsDevice& device, GraphicsSurface* surface)
+    Swapchain::Swapchain(GraphicsDevice& device, const PresentationParameters& parameters)
         : device{ device }
-        , extent(surface->GetSize())
+        , colorFormat(parameters.colorFormat)
+        , extent(parameters.extent)
+        , depthStencilFormat(parameters.depthStencilFormat)
     {
-        handle = device.GetImpl()->CreateSwapChain(surface->GetHandle(), extent.width, extent.height, presentMode);
-        textures.resize(device.GetImpl()->GetImageCount(handle));
-        for (uint32_t i = 0; i < uint32_t(textures.size()); i++)
-        {
-            GPUTexture textureHandle = device.GetImpl()->GetTexture(handle, i);
-            textures[i] = new Texture(device, textureHandle, { extent.width, extent.height, 1u });
-        }
-    }
-
-    Swapchain::~Swapchain()
-    {
-        textures.clear();
-        textureIndex = 0;
-
-        if (handle.isValid())
-        {
-            device.GetImpl()->DestroySwapChain(handle);
-            handle.id = kInvalidHandle;
-        }
     }
 
     Swapchain::ResizeResult Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
-        return ResizeResult::Success;
+        if (extent.width == newWidth && extent.height == newHeight)
+        {
+            return ResizeResult::Success;
+        }
+
+        extent = { newWidth, newHeight };
+        return ResizeImpl(newWidth, newHeight);
     }
 
     Texture* Swapchain::GetCurrentTexture() const
     {
-        textureIndex = device.GetImpl()->GetNextTexture(handle);
+        //textureIndex = device.GetImpl()->GetNextTexture(handle);
         return textures[textureIndex].Get();
     }
 

@@ -20,7 +20,7 @@ option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
 if (WIN32 OR WINDOWS_STORE)
-	option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
+	option(ALIMER_DISABLE_D3D11 "Disable Direct3D11 backend" OFF)
     option(ALIMER_D3D12 "Include Direct3D12 backend (experimental)" ON)
     if (WIN32)
         option(ALIMER_OPENGL "Include OpenGL backend" ON)

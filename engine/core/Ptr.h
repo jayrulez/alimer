@@ -297,7 +297,7 @@ namespace alimer
         bool IsNull() const { return ptr_ == nullptr; }
 
         /// Check if the pointer is not null.
-        bool NotNull() const { return ptr_ != nullptr; }
+        bool IsNotNull() const { return ptr_ != nullptr; }
 
         operator bool() const noexcept { return ptr_ != nullptr; }
 

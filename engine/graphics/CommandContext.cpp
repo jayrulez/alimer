@@ -36,7 +36,7 @@ namespace alimer
 
     CopyContext::~CopyContext()
     {
-        device.GetImpl()->DestroyCommandBuffer(handle);
+        //device.GetImpl()->DestroyCommandBuffer(handle);
     }
 
     void CopyContext::BeginMarker(const std::string& name)
@@ -65,12 +65,12 @@ namespace alimer
     GraphicsContext::GraphicsContext(GraphicsDevice& device_)
         : ComputeContext(device_)
     {
-        handle = device_.GetImpl()->CreateCommandBuffer(QueueType::Graphics);
+        //handle = device_.GetImpl()->CreateCommandBuffer(QueueType::Graphics);
     }
 
     void GraphicsContext::BeginRenderPass(Swapchain* swapchain, const Color& clearColor)
     {
-        handle->BeginRenderPass(swapchain->GetCurrentTexture()->GetHandle(), clearColor);
+        //handle->BeginRenderPass(swapchain->GetCurrentTexture()->GetHandle(), clearColor);
     }
 
     void GraphicsContext::EndRenderPass()

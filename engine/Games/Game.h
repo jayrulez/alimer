@@ -53,7 +53,6 @@ namespace alimer
 
     class InputManager;
     class GraphicsDevice;
-    class Swapchain;
 
     class ALIMER_API Game : public Object
     {
@@ -107,7 +106,6 @@ namespace alimer
         std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
         std::unique_ptr<GraphicsDevice> graphicsDevice;
-        std::unique_ptr<Swapchain> mainSwapChain;
         InputManager* input;
         bool headless{ false };
     };

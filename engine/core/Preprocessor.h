@@ -32,17 +32,14 @@
 // Platforms
 #define ALIMER_XBOXONE 0
 #define ALIMER_UWP 0
-#define ALIMER_WIN64 0
-#define ALIMER_WIN32 0
+#define ALIMER_WINDOWS 0
 #define ALIMER_ANDROID 0
 #define ALIMER_LINUX 0
 #define ALIMER_IOS 0
 #define ALIMER_OSX 0
 #define ALIMER_EMSCRIPTEN 0
 
-/**
-Compiler defines, see http://sourceforge.net/p/predef/wiki/Compilers/
-*/
+/** Compiler defines, see http://sourceforge.net/p/predef/wiki/Compilers/ */
 #if defined(_MSC_VER)
     #undef ALIMER_VC
     #if _MSC_VER >= 1910
@@ -87,29 +84,36 @@ Compiler defines, see http://sourceforge.net/p/predef/wiki/Compilers/
 Operating system defines, see http://sourceforge.net/p/predef/wiki/OperatingSystems/
 */
 #if defined(_XBOX_ONE)
-    #undef ALIMER_XBOXONE
-    #define ALIMER_XBOXONE 1
+#   undef ALIMER_XBOXONE
+#   define ALIMER_XBOXONE 1
+#   define ALIMER_SUPPORTS_DIRECT3D11 1
 #elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-    #undef ALIMER_UWP
-    #define ALIMER_UWP 1 
-#elif defined(_WIN64) // note: _XBOX_ONE implies _WIN64
-    #undef ALIMER_WIN64
-    #define ALIMER_WIN64 1
-#elif defined(_WIN32) // note: _M_PPC implies _WIN32
-    #undef ALIMER_WIN32
-    #define ALIMER_WIN32 1
+#   undef ALIMER_UWP
+#   define ALIMER_UWP 1
+#   define ALIMER_SUPPORTS_DIRECT3D11 1
+#   define ALIMER_SUPPORTS_DIRECT3D12 2
+#elif defined(_WIN32) || defined(_WIN64)
+#   undef ALIMER_WINDOWS
+#   define ALIMER_WINDOWS 1
+#   define ALIMER_SUPPORTS_DIRECT3D11 1
+#   define ALIMER_SUPPORTS_DIRECT3D12 2
+#   define ALIMER_SUPPORTS_OPENGL 1
 #elif defined(__ANDROID__)
-    #undef ALIMER_ANDROID
-    #define ALIMER_ANDROID 1
+#   undef ALIMER_ANDROID
+#   define ALIMER_ANDROID 1
+#   define ALIMER_SUPPORTS_OPENGL 1
 #elif defined(__linux__) || defined (__EMSCRIPTEN__) || defined(__CYGWIN__) /* note: __ANDROID__ implies __linux__ */
-    #undef ALIMER_LINUX
-    #define ALIMER_LINUX 1
+#   undef ALIMER_LINUX
+#   define ALIMER_LINUX 1
+#   define ALIMER_SUPPORTS_OPENGL 1
 #elif defined(__APPLE__) && (defined(__arm__) || defined(__arm64__))
-    #undef ALIMER_IOS
-    #define ALIMER_IOS 1
+#   undef ALIMER_IOS
+#   define ALIMER_IOS 1
+#   define ALIMER_SUPPORTS_METAL 1
 #elif defined(__APPLE__)
-    #undef ALIMER_OSX
-    #define ALIMER_OSX 1
+#   undef ALIMER_OSX
+#   define ALIMER_OSX 1
+#   define ALIMER_SUPPORTS_METAL 1
 #else
     #error "Unknown operating system"
 #endif
@@ -118,8 +122,7 @@ Operating system defines, see http://sourceforge.net/p/predef/wiki/OperatingSyst
 // compiler
 #define ALIMER_GCC_FAMILY (ALIMER_CLANG || ALIMER_SNC || ALIMER_GHS || ALIMER_GCC)
 // os
-#define ALIMER_WINDOWS (ALIMER_WIN32 || ALIMER_WIN64)
-#define ALIMER_WINDOWS_FAMILY (ALIMER_WIN32 || ALIMER_WIN64 || ALIMER_UWP)
+#define ALIMER_WINDOWS_FAMILY (ALIMER_WINDOWS || ALIMER_UWP)
 #define ALIMER_MICROSOFT_FAMILY (ALIMER_XBOXONE || ALIMER_WINDOWS_FAMILY)
 #define ALIMER_LINUX_FAMILY (ALIMER_LINUX || ALIMER_ANDROID)
 #define ALIMER_APPLE_FAMILY (ALIMER_IOS || ALIMER_OSX)                  // equivalent to #if __APPLE__

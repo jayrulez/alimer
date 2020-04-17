@@ -98,26 +98,8 @@ namespace alimer
         virtual bool Init() = 0;
         virtual void WaitForIdle() = 0;
 
-        virtual uint64_t PresentFrame(uint32_t count, const GpuSwapchain* pSwapchains) = 0;
-
-        /* Swapchain */
-        virtual GpuSwapchain CreateSwapChain(void* nativeHandle, uint32_t width, uint32_t height, PresentMode presentMode) = 0;
-        virtual void DestroySwapChain(GpuSwapchain handle) = 0;
-        virtual uint32_t GetImageCount(GpuSwapchain handle) = 0;
-        virtual GPUTexture GetTexture(GpuSwapchain handle, uint32_t index) = 0;
-        virtual uint32_t GetNextTexture(GpuSwapchain handle) = 0;
-
-        /* Texture */
-        virtual void DestroyTexture(GPUTexture handle) = 0;
-
         /* CommandBuffer */
         virtual GpuCommandBuffer* CreateCommandBuffer(QueueType family) = 0;
         virtual void DestroyCommandBuffer(GpuCommandBuffer* handle) = 0;
-
-        /// Get the features.
-        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
-
-    protected:
-        GraphicsDeviceCaps caps;
     };
 }

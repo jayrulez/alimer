@@ -30,12 +30,12 @@ namespace alimer
 {
     class Texture;
 
-    class Swapchain final 
+    class Swapchain : public RefCounted 
     {
     public:
         /// Constructor.
-        Swapchain(GraphicsDevice& device, GraphicsSurface* surface);
-        ~Swapchain();
+        Swapchain(GraphicsDevice& device, const PresentationParameters& parameters);
+        virtual ~Swapchain() = default;
 
         enum class ResizeResult
         {
@@ -50,17 +50,15 @@ namespace alimer
 
         const usize& GetExtent() const;
 
-        /// Get the Gpu handle.
-        GpuSwapchain GetHandle() const { return handle; }
-
     private:
+        virtual ResizeResult ResizeImpl(uint32_t width, uint32_t height) = 0;
+
+    protected:
         GraphicsDevice& device;
         usize extent{};
         PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
-        PresentMode presentMode = PresentMode::Fifo;
 
-        GpuSwapchain handle{ kInvalidHandle };
         std::vector<SharedPtr<Texture>> textures;
         mutable uint32_t textureIndex{ 0 };
     };

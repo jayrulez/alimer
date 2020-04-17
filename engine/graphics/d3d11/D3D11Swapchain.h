@@ -22,27 +22,26 @@
 
 #pragma once
 
-#include "graphics/SwapChain.h"
-#include "D3DCommon.h"
-#include <vector>
+#include "graphics/Swapchain.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    class D3DSwapChain : public SwapChain
+    class D3D11Swapchain : public Swapchain
     {
     public:
         /// Constructor.
-        D3DSwapChain(IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor);
+        D3D11Swapchain(D3D11GraphicsDevice* device, const PresentationParameters& parameters, uint32_t backBufferCount_);
 
         // Destructor
-        ~D3DSwapChain() override;
+        ~D3D11Swapchain() override;
 
         void Destroy();
+        HRESULT Present();
 
     private:
-        SwapChainResizeResult Resize(uint32_t newWidth, uint32_t newHeight) override;
-        void Present() override;
-        virtual void AfterReset() = 0;
+        ResizeResult ResizeImpl(uint32_t width, uint32_t height) override;
+        void AfterReset();
 
         IDXGIFactory2* factory;
         IUnknown* deviceOrCommandQueue;
@@ -53,11 +52,11 @@ namespace alimer
 #endif
         uint32_t syncInterval;
         uint32_t presentFlags = 0;
-        uint32_t swapChainFlags = 0;
+        uint32_t swapChainFlags;
 
     protected:
         uint32_t backBufferCount;
-        DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
+        DXGI_FORMAT dxgiColorFormat;
         IDXGISwapChain1* handle = nullptr;
     };
 }

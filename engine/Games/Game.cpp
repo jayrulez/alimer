@@ -46,7 +46,6 @@ namespace alimer
 
         gameSystems.clear();
         graphicsDevice->WaitForIdle();
-        mainSwapChain.reset();
         graphicsDevice.reset();
         os::shutdown();
     }
@@ -56,18 +55,21 @@ namespace alimer
         // Create main window.
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
-        // Init graphics with main window.
-        GraphicsDevice::Desc graphicsDesc = {};
+        // Init graphics device.
+        GraphicsDeviceDescriptor graphicsDesc = {};
 #ifdef _DEBUG
-        graphicsDesc.flags |= GraphicsProviderFlags::Validation;
+        graphicsDesc.debug = true;
 #endif
-        graphicsDevice = std::make_unique<GraphicsDevice>(graphicsDesc);
+        graphicsDesc.presentationParameters.extent = mainWindow->GetSize();
+        graphicsDesc.presentationParameters.platformData.windowHandle = mainWindow->GetHandle();
+        graphicsDesc.presentationParameters.platformData.display = mainWindow->GetDisplay();
+        //graphicsDesc.presentationParameters.isFullScreen = mainWindow->IsFullScreen();
+
+        graphicsDevice = GraphicsDevice::Create(graphicsDesc);
         if (!graphicsDevice)
         {
             headless = true;
         }
-
-        mainSwapChain.reset(new Swapchain(*graphicsDevice, mainWindow.get()));
 
         Initialize();
         if (exitCode)
@@ -114,9 +116,9 @@ namespace alimer
 
     void Game::Draw(const GameTime& gameTime)
     {
-        auto context = graphicsDevice->GetGraphicsContext();
-        context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
-        context->EndMarker();
+        //auto context = graphicsDevice->GetGraphicsContext();
+        //context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
+        //context->EndMarker();
 
         for (auto gameSystem : gameSystems)
         {
@@ -126,14 +128,14 @@ namespace alimer
 
     void Game::EndDraw()
     {
-        auto currentTexture = mainSwapChain->GetCurrentTexture();
+        //auto currentTexture = mainSwapChain->GetCurrentTexture();
 
         for (auto gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->PresentFrame(mainSwapChain.get());
+        graphicsDevice->Present();
     }
 
     int Game::Run()

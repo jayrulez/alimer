@@ -31,11 +31,19 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3D11Texture(D3D11GPUDevice * device, const TextureDescriptor* descriptor);
+        D3D11Texture(GraphicsDevice* device, const TextureDescriptor* descriptor);
         /// Destructor.
         ~D3D11Texture() override;
 
     private:
         void Destroy() override;
+        DXGI_FORMAT dxgiFormat;
+        union
+        {
+            ID3D11Resource* resource;
+            ID3D11Texture1D* tex1d;
+            ID3D11Texture2D* tex2d;
+            ID3D11Texture3D* tex3d;
+        } handle;
     };
 }

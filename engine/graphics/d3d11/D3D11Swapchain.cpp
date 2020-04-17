@@ -20,63 +20,46 @@
 // THE SOFTWARE.
 //
 
-#if TODO_OLD
-#include "D3DSwapChain.h"
+#include "D3D11Swapchain.h"
+#include "D3D11GraphicsDevice.h"
+#include "D3D11Texture.h"
 #include "core/Log.h"
 #include "core/Assert.h"
 
 namespace alimer
 {
-    D3DSwapChain::D3DSwapChain(IDXGIFactory2* factory_, IUnknown* deviceOrCommandQueue_, uint32_t backBufferCount_, const SwapChainDescriptor* descriptor)
-        : SwapChain(nullptr, descriptor)
-        , factory(factory_)
-        , deviceOrCommandQueue(deviceOrCommandQueue_)
+    D3D11Swapchain::D3D11Swapchain(D3D11GraphicsDevice* device, const PresentationParameters& parameters, uint32_t backBufferCount_)
+        : Swapchain(*device, parameters)
+        , factory(device->GetDXGIFactory())
+        , deviceOrCommandQueue(device->GetD3DDevice())
+        , dxgiColorFormat(ToDXGISwapChainFormat(parameters.colorFormat))
         , backBufferCount(backBufferCount_)
-        , syncInterval(descriptor->presentMode == PresentMode::Immediate ? 0 : 1)
+        , syncInterval(GetSyncInterval(parameters.presentationInterval))
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        window = reinterpret_cast<HWND>(descriptor->nativeWindowHandle);
+        window = reinterpret_cast<HWND>(parameters.platformData.windowHandle);
         ALIMER_ASSERT(IsWindow(window));
-
-        RECT rect;
-        BOOL success = GetClientRect(window, &rect);
-        ALIMER_ASSERT(success);
-        extent.width = rect.right - rect.left;
-        extent.height = rect.bottom - rect.top;
 #else
-        window = (IUnknown*)nativeWindow;
+        window = reinterpret_cast<IUnknown*>(parameters.platformData.windowHandle);
 #endif
 
-        if (!syncInterval)
+        swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        if (!syncInterval
+            && device->IsTearingSupported())
         {
-            // Determines whether tearing support is available for fullscreen borderless windows.
-            IDXGIFactory5* factory5;
-            HRESULT hr = factory->QueryInterface(&factory5);
-            if (SUCCEEDED(hr))
-            {
-                BOOL allowTearing = FALSE;
-                HRESULT tearingSupportHR = factory5->CheckFeatureSupport(
-                    DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing)
-                );
-
-                if (SUCCEEDED(tearingSupportHR) && allowTearing)
-                {
-                    presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-                    swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-                }
-                factory5->Release();
-            }
+            presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
 
-        Resize(extent.width, extent.height);
+        ResizeImpl(parameters.extent.width, parameters.extent.height);
     }
 
-    D3DSwapChain::~D3DSwapChain()
+    D3D11Swapchain::~D3D11Swapchain()
     {
         Destroy();
     }
 
-    void D3DSwapChain::Destroy()
+    void D3D11Swapchain::Destroy()
     {
         if (handle)
         {
@@ -88,26 +71,23 @@ namespace alimer
         }
     }
 
-    SwapChainResizeResult D3DSwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    Swapchain::ResizeResult D3D11Swapchain::ResizeImpl(uint32_t width, uint32_t height)
     {
         HRESULT hr = S_OK;
-        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 
         if (handle != nullptr)
         {
-            ThrowIfFailed(handle->GetDesc1(&swapChainDesc));
-
             HRESULT hr = handle->ResizeBuffers(
-                swapChainDesc.BufferCount,
-                newWidth, newHeight,
-                swapChainDesc.Format, swapChainDesc.Flags);
+                backBufferCount,
+                width, height,
+                dxgiColorFormat, swapChainFlags);
         }
         else
         {
             DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = newWidth;
-            swapChainDesc.Height = newHeight;
-            swapChainDesc.Format = backBufferFormat;
+            swapChainDesc.Width = width;
+            swapChainDesc.Height = height;
+            swapChainDesc.Format = dxgiColorFormat;
             swapChainDesc.SampleDesc.Count = 1;
             swapChainDesc.SampleDesc.Quality = 0;
             swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -143,26 +123,26 @@ namespace alimer
 #endif
         }
 
-        ThrowIfFailed(handle->GetDesc1(&swapChainDesc));
-        extent.width = swapChainDesc.Width;
-        extent.height = swapChainDesc.Height;
         AfterReset();
 
-        return SwapChainResizeResult::Success;
+        return ResizeResult::Success;
     }
 
-    void D3DSwapChain::Present()
+    void D3D11Swapchain::AfterReset()
     {
-        HRESULT hr = handle->Present(syncInterval, presentFlags);
-        if (hr == DXGI_ERROR_DEVICE_REMOVED
-            || hr == DXGI_ERROR_DEVICE_HUNG
-            || hr == DXGI_ERROR_DEVICE_RESET
-            || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
-            || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
-        {
-            //return false;
-        }
+        ComPtr<ID3D11Texture2D> renderTarget;
+        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(renderTarget.GetAddressOf())));
+        TextureDescriptor textureDesc = {};
+        textureDesc.usage = TextureUsage::RenderTarget | TextureUsage::Sampled;
+        textureDesc.extent.width =  extent.width;
+        textureDesc.extent.height = extent.height;
+        textureDesc.format = colorFormat;
+        textureDesc.externalHandle = (void*)renderTarget.Get();
+        textures.push_back(new D3D11Texture(&device, &textureDesc));
+    }
+
+    HRESULT D3D11Swapchain::Present()
+    {
+        return handle->Present(syncInterval, presentFlags);
     }
 }
-
-#endif // TODO_OLD

@@ -29,6 +29,15 @@
 #include "graphics/GraphicsImpl.h"
 #include "graphics/Swapchain.h"
 
+// Direct3D 11
+#ifndef ALIMER_ENABLE_DIRECT3D11
+#   define ALIMER_ENABLE_DIRECT3D11 1
+#endif
+
+#if ALIMER_SUPPORTS_DIRECT3D11 && ALIMER_ENABLE_DIRECT3D11
+#   define ALIMER_DIRECT3D11 1
+#endif
+
 #if defined(ALIMER_VULKAN)
 #include "graphics/vulkan/VulkanGraphicsProvider.h"
 #endif
@@ -37,18 +46,16 @@
 #include "graphics/d3d12/D3D12GraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_D3D11)
-#include "graphics/d3d11/D3D11GPUDevice.h"
+#if defined(ALIMER_DIRECT3D11)
+#   include "graphics/d3d11/D3D11GraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_OPENGL)
 #include "graphics/opengl/GLGPUDevice.h"
 #endif
 
-
-#include <malloc.h>
-// These must be force_inline so that the allocation happens in the caller's stack frame
-template <typename T> ALIMER_FORCE_INLINE T* StackAlloc(size_t N) { return (T*)alloca(N * sizeof(T)); }
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 
 namespace alimer
 {
@@ -70,9 +77,10 @@ namespace alimer
                 availableProviders.insert(BackendType::Direct3D12);
 #endif
 
-#if defined(ALIMER_D3D11)
-            if (D3D11GPUDevice::IsAvailable())
+#if defined(ALIMER_DIRECT3D11)
+            if (D3D11GraphicsDevice::IsAvailable()) {
                 availableProviders.insert(BackendType::Direct3D11);
+            }
 #endif
 
 #if defined(ALIMER_OPENGL)
@@ -83,7 +91,12 @@ namespace alimer
         return availableProviders;
     }
 
-    GraphicsDevice::GraphicsDevice(const Desc& desc)
+    GraphicsDevice::GraphicsDevice(const GraphicsDeviceDescriptor& desc_)
+        : desc(desc_)
+    {
+    }
+
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const GraphicsDeviceDescriptor& desc)
     {
         BackendType backend = desc.preferredBackend;
         if (desc.preferredBackend == BackendType::Count)
@@ -104,6 +117,7 @@ namespace alimer
                 backend = BackendType::Null;
         }
 
+        std::unique_ptr<GraphicsDevice> device = nullptr;
         switch (backend)
         {
 #if defined(ALIMER_VULKAN)
@@ -119,10 +133,10 @@ namespace alimer
             break;
 #endif
 
-#if defined(ALIMER_D3D11)
+#if defined(ALIMER_DIRECT3D11)
         case BackendType::Direct3D11:
             ALIMER_LOGINFO("Using Direct3D11 render driver");
-            gpuDevice = make_shared<D3D11GPUDevice>(window, desc);
+            device = std::make_unique<D3D11GraphicsDevice>(desc);
             break;
 #endif
 
@@ -140,65 +154,12 @@ namespace alimer
             break;
         }
 
-        if (Init() == false)
-        {
-            impl = nullptr;
-        }
+        return device;
     }
 
-    GraphicsDevice::~GraphicsDevice()
+    void GraphicsDevice::Present()
     {
-        graphicsContext->Flush(true);
-        graphicsContext.reset();
-        SafeDelete(impl);
-    }
-
-    void GraphicsDevice::WaitForIdle()
-    {
-        //graphicsContext->Flush(true);
-        impl->WaitForIdle();
-    }
-
-    uint64_t GraphicsDevice::PresentFrame(Swapchain* swapchain)
-    {
-        ALIMER_ASSERT(swapchain);
-        graphicsContext->Flush();
-        return impl->PresentFrame(1, &swapchain->GetHandle());
-    }
-
-    uint64_t GraphicsDevice::PresentFrame(const std::vector<Swapchain*>& swapchains)
-    {
-        ALIMER_ASSERT(swapchains.size() > 0);
-        const uint32_t count = static_cast<uint32_t>(swapchains.size());
-        GpuSwapchain* gpuSwapchains = StackAlloc<GpuSwapchain>(swapchains.size());
-
-        for (uint32_t i = 0; i < count; i++)
-        {
-            gpuSwapchains[i] = swapchains[i]->GetHandle();
-        }
-
-        graphicsContext->Flush();
-        return impl->PresentFrame(count, gpuSwapchains);
-    }
-
-    bool GraphicsDevice::Init()
-    {
-        if (!impl->Init()) {
-            return false;
-        }
-
-        graphicsContext = std::make_shared<GraphicsContext>(*this);
-
-        return true;
-    }
-
-    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
-    {
-        return impl->GetCaps();
-    }
-
-    GraphicsImpl* GraphicsDevice::GetImpl() const
-    {
-        return impl;
+        ALIMER_ASSERT(mainSwapchain.IsNotNull());
+        Present({ mainSwapchain.Get() });
     }
 }

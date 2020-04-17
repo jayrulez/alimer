@@ -27,40 +27,26 @@
 
 namespace alimer
 {
-    /// Defines the type of Texture.
-    enum class TextureType : uint32_t
-    {
-        /// Two dimensional texture
-        Type2D,
-        /// Three dimensional texture
-        Type3D,
-        /// Cube texture
-        TypeCube
-    };
-
-    class Texture final : public GraphicsResource
+    class Texture : public GraphicsResource
     {
         ALIMER_OBJECT(Texture, GraphicsResource);
-
+        
     public:
+        /// Destructor.
+        virtual ~Texture() = default;
+
+    protected:
         /// Constructor.
-        Texture(GraphicsDevice &device, GPUTexture handle, const usize3& extent);
-        ~Texture();
+        Texture(GraphicsDevice& device, const TextureDescriptor* descriptor);
 
-        /// Get the Gpu handle.
-        GPUTexture GetHandle() const { return handle; }
-
-    private:
         TextureType type = TextureType::Type2D;
-        usize3 extent = { 1u, 1u, 1u };
-        uint32_t mipLevels = 1u;
-        uint32_t sampleCount = 1u;
-
+        TextureUsage usage = TextureUsage::Sampled;
         /// Texture format.
         PixelFormat format = PixelFormat::RGBA8UNorm;
-        TextureUsage usage = TextureUsage::Sampled;
 
-    private:
-        GPUTexture handle{ kInvalidHandle };
+        usize3 extent = { 1u, 1u, 1u };
+        uint32_t mipLevels = 1u;
+        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+        bool external = false;
     };
 } 

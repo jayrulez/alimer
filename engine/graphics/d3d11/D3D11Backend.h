@@ -28,5 +28,33 @@
 
 namespace alimer
 {
-    class D3D11GPUDevice;
+    class D3D11GraphicsDevice;
+
+    static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
+    {
+        UINT bindFlags = 0;
+        if (any(usage & TextureUsage::Sampled))
+        {
+            bindFlags |= D3D11_BIND_SHADER_RESOURCE;
+        }
+
+        if (any(usage & TextureUsage::Storage))
+        {
+            bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+        }
+
+        if (any(usage & TextureUsage::RenderTarget))
+        {
+            if (depthStencilFormat)
+            {
+                bindFlags |= D3D11_BIND_DEPTH_STENCIL;
+            }
+            else
+            {
+                bindFlags |= D3D11_BIND_RENDER_TARGET;
+            }
+        }
+
+        return bindFlags;
+    }
 }

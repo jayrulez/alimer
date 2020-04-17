@@ -32,12 +32,6 @@
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1 = nullptr;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
-#endif
-
 #if ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count)
     {

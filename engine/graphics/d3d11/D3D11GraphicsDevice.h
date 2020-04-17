@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
 
 namespace alimer
@@ -30,40 +30,41 @@ namespace alimer
     class D3D11Framebuffer;
 
     /// Direct3D11 graphics backend.
-    class ALIMER_API D3D11GPUDevice final : public GPUDevice
+    class ALIMER_API D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
 
         /// Constructor.
-        D3D11GPUDevice(Window* window_, const Desc& desc_);
+        D3D11GraphicsDevice(const GraphicsDeviceDescriptor& desc_);
         /// Destructor.
-        ~D3D11GPUDevice() override;
+        ~D3D11GraphicsDevice() override;
 
-        bool BackendInit() override;
-        void BackendShutdown() override;
-        void WaitIdle();
-        void Commit() override;
+        void BackendShutdown();
+        void WaitForIdle() override;
+        //void Commit() override;
 
         //std::shared_ptr<Framebuffer> createFramebufferCore(const SwapChainDescriptor* descriptor) override;
 
-        IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory; }
-        ID3D11Device1*          GetD3DDevice() const { return d3dDevice; }
+        IDXGIFactory2*          GetDXGIFactory() const { return dxgiFactory.Get(); }
+        ID3D11Device1*          GetD3DDevice() const { return d3dDevice.Get(); }
         D3D_FEATURE_LEVEL       GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
         bool                    IsTearingSupported() const { return isTearingSupported; }
 
     private:
+        void CreateDeviceResources();
         void CreateFactory();
+        void GetHardwareAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
+        void Present(const std::vector<Swapchain*>& swapchains) override;
 
         UINT dxgiFactoryFlags = 0;
-        IDXGIFactory2* dxgiFactory = nullptr;
+        ComPtr<IDXGIFactory2> dxgiFactory;
         bool isTearingSupported = false;
 
-        ID3D11Device1*          d3dDevice = nullptr;
-        ID3D11DeviceContext1*   d3dContext = nullptr;
-        D3D_FEATURE_LEVEL       d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
-
-        //std::vector<std::shared_ptr<D3D11Framebuffer>> swap_chains;
+        ComPtr<ID3D11Device1>   d3dDevice;
+        ComPtr<ID3D11DeviceContext1> d3dContext;
+        D3D_FEATURE_LEVEL d3dFeatureLevel{ D3D_FEATURE_LEVEL_9_1 };
+        bool isLost = false;
     };
 }

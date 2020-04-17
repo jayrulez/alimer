@@ -24,6 +24,7 @@
 
 #include "core/Assert.h"
 #include "core/Log.h"
+#include "graphics/Types.h"
 #include "graphics/PixelFormat.h"
 
 #ifndef NOMINMAX
@@ -31,51 +32,36 @@
 #endif 
 
 #if defined(_WIN32)
-    #define NODRAWTEXT
-    #define NOGDI
-    #define NOBITMAP
-    #define NOMCX
-    #define NOSERVICE
-    #define NOHELP
-    #define WIN32_LEAN_AND_MEAN
-    #include <Windows.h>
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
 #endif
 
 #include <d3dcommon.h>
 #include <dxgiformat.h>
 
 #if defined(NTDDI_WIN10_RS2)
-    #include <dxgi1_6.h>
+#include <dxgi1_6.h>
 #else
-    #include <dxgi1_5.h>
+#include <dxgi1_5.h>
 #endif
 
 #if defined(_DEBUG)
-    #include <dxgidebug.h>
+#include <dxgidebug.h>
 #endif
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY)(REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE)(UINT flags, REFIID _riid, void** _debug);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
-#endif
-
-#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
+#include <wrl/client.h>
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1;
-    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-
-#if defined(_DEBUG)
-    // Declare debug guids to avoid linking with "dxguid.lib"
-    static constexpr GUID g_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
-    static constexpr GUID g_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
-#endif
+    // Type alias for Win32 ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
@@ -259,6 +245,17 @@ namespace alimer
         }
     }
 
+    static inline DXGI_FORMAT ToDXGIFormatWithUsage(PixelFormat format, TextureUsage usage)
+    {
+        if (IsDepthFormat(format) &&
+            (any(usage & TextureUsage::Sampled | TextureUsage::Storage)))
+        {
+            return ToDXGITypelessDepthFormat(format);
+        }
+
+        return ToDXGIFormat(format);
+    }
+
     static inline std::string D3DFeatureLevelToVersion(D3D_FEATURE_LEVEL featureLevel)
     {
         switch (featureLevel)
@@ -277,9 +274,23 @@ namespace alimer
         return "";
     }
 
-    /// Calculate size taking into account alignment. Alignment must be a power of 2
-    static inline uint32_t alignTo(uint32_t size, uint32_t alignment) { return (size + alignment - 1) & ~(alignment - 1); }
-    static inline uint64_t alignTo(uint64_t size, uint64_t alignment) { return (size + alignment - 1) & ~(alignment - 1); }
+    static inline UINT GetSyncInterval(PresentInterval interval)
+    {
+        switch (interval)
+        {
+        case PresentInterval::Default:
+        case PresentInterval::One:
+            return 1;
+        case PresentInterval::Two:
+            return 2;
+        case PresentInterval::Immediate:
+            return 0;
+        default:
+            ALIMER_UNREACHABLE();
+            return (UINT)-1;
+            break;
+        }
+    }
 }
 
 #if ALIMER_ENABLE_ASSERT
