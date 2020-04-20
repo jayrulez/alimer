@@ -54,21 +54,9 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
 
-if (WIN32 OR WINDOWS_STORE)
-    define_engine_source_files(graphics/d3d)
-
-    if (NOT ALIMER_DISABLE_D3D11)
-        define_engine_source_files(graphics/d3d11)
-    endif ()
-endif ()
-
 if (ALIMER_D3D12)
     define_engine_source_files(graphics/d3d)
     #define_engine_source_files(graphics/d3d12)
-endif ()
-
-if (ALIMER_VULKAN)
-    #define_engine_source_files(graphics/vulkan)
 endif ()
 
 group_sources()
@@ -92,6 +80,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    vgpu
     stb
     imgui
 )
@@ -107,23 +96,6 @@ else()
         target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
     endif()
 endif()
-
-if (ALIMER_DISABLE_D3D11)
-    target_compile_definitions(alimer PRIVATE ALIMER_ENABLE_DIRECT3D11=0)
-else()
-    target_link_libraries(alimer PRIVATE d3d11 dxgi dxguid)
-endif ()
-
-if (ALIMER_D3D12)
-    #target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_D3D12)
-    #target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator)
-endif ()
-
-if (ALIMER_VULKAN)
-    #target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_VULKAN)
-    #target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
-endif ()
-
 
 if (MSVC)
     set(OPTIMIZATION_FLAGS

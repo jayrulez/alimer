@@ -32,7 +32,6 @@ namespace alimer
 {
     class Swapchain;
 
-    /* TODO: Expose resource creation context */
     struct GraphicsDeviceDescriptor
     {
         BackendType preferredBackend = BackendType::Count;
@@ -48,7 +47,7 @@ namespace alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice 
+    class ALIMER_API GraphicsDevice
     {
     public:
         /// Get set of available graphics backends.
@@ -58,7 +57,14 @@ namespace alimer
         GraphicsDevice(const GraphicsDeviceDescriptor& desc_);
 
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        virtual ~GraphicsDevice();
+
+        /**
+        * Gets the single instance of the graphics device.
+        *
+        * @return The single instance of the device.
+        */
+        static GraphicsDevice* GetInstance();
 
         static std::unique_ptr<GraphicsDevice> Create(const GraphicsDeviceDescriptor& desc);
 
@@ -85,6 +91,8 @@ namespace alimer
         SharedPtr<Swapchain> mainSwapchain;
 
     private:
+        static SharedPtr<GraphicsDevice> instance;
+
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

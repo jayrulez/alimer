@@ -45,8 +45,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        graphicsDevice->WaitForIdle();
-        graphicsDevice.reset();
+        vgpu_wait_idle();
+        vgpu_shutdown();
         os::shutdown();
     }
 
@@ -56,17 +56,23 @@ namespace alimer
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics device.
-        GraphicsDeviceDescriptor graphicsDesc = {};
+        vgpu_config gpu_config = {};
+        gpu_config.preferred_backend = VGPU_BACKEND_D3D11;
+        //gpu_config.preferred_backend = VGPU_BACKEND_VULKAN;
 #ifdef _DEBUG
-        graphicsDesc.debug = true;
+        gpu_config.debug = true;
 #endif
-        graphicsDesc.presentationParameters.extent = mainWindow->GetSize();
-        graphicsDesc.presentationParameters.platformData.windowHandle = mainWindow->GetHandle();
-        graphicsDesc.presentationParameters.platformData.display = mainWindow->GetDisplay();
-        //graphicsDesc.presentationParameters.isFullScreen = mainWindow->IsFullScreen();
 
-        graphicsDevice = GraphicsDevice::Create(graphicsDesc);
-        if (!graphicsDevice)
+        vgpu_swapchain_desc swapchain_desc = {};
+        swapchain_desc.handle.display = mainWindow->GetDisplay();
+        swapchain_desc.handle.window_handle = mainWindow->GetHandle();
+        swapchain_desc.width = mainWindow->GetSize().width;
+        swapchain_desc.height = mainWindow->GetSize().height;
+        gpu_config.swapchain = &swapchain_desc;
+
+        //graphicsDesc.fullscreen.isFullScreen = mainWindow->IsFullScreen();
+
+        if (!vgpu_init(&gpu_config))
         {
             headless = true;
         }
@@ -82,12 +88,69 @@ namespace alimer
         BeginRun();
     }
 
+    static vgpu_buffer vertex_buffer;
+    static vgpu_shader shader;
+    static vgpu_pipeline render_pipeline;
+
     void Game::Initialize()
     {
         for (auto gameSystem : gameSystems)
         {
             gameSystem->Initialize();
         }
+
+        struct Vertex
+        {
+            float3 position;
+            float4 color;
+        };
+
+        // Define the geometry for a triangle.
+        Vertex triangle_vertices[] =
+        {
+            { { 0.0f, 0.5, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+        };
+
+        vgpu_buffer_desc buffer_desc = {};
+        buffer_desc.usage = VGPU_BUFFER_USAGE_VERTEX;
+        buffer_desc.size = sizeof(triangle_vertices);
+        buffer_desc.content = triangle_vertices;
+        vertex_buffer = vgpu_create_buffer(&buffer_desc);
+
+        std::string shader_source = R"(
+            struct PSInput
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+};
+
+PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
+{
+    PSInput result;
+
+    result.position = position;
+    result.color = color;
+
+    return result;
+}
+
+float4 PSMain(PSInput input) : SV_TARGET
+{
+    return input.color;
+})";
+
+        vgpu_shader_desc shader_desc = {};
+        shader_desc.vertex.source = shader_source.c_str();
+        shader_desc.vertex.entry_point = "VSMain";
+        shader_desc.fragment.source = shader_source.c_str();
+        shader_desc.fragment.entry_point = "PSMain";
+        shader = vgpu_create_shader(&shader_desc);
+
+        vgpu_render_pipeline_desc pipeline_desc = {};
+        pipeline_desc.shader = shader;
+        render_pipeline = vgpu_create_render_pipeline(&pipeline_desc);
     }
 
     void Game::BeginRun()
@@ -102,9 +165,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        /*if (!graphicsDevice->BeginFrame()) {
-            return false;
-        }*/
+        vgpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -135,7 +196,13 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->Present();
+        auto clear_color = Colors::CornflowerBlue;
+        auto defaultRenderPass = vgpu_get_default_render_pass();
+        vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
+        vgpu_cmd_begin_render_pass(defaultRenderPass);
+        vgpu_cmd_end_render_pass();
+
+        vgpu_end_frame();
     }
 
     int Game::Run()

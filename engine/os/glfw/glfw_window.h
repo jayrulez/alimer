@@ -131,7 +131,7 @@ namespace alimer
     class WindowImpl final
     {
     public:
-        WindowImpl(const std::string& title, const point& pos, const usize& size, WindowStyle style);
+        WindowImpl(const std::string& title, const int2& pos, const usize& size, WindowStyle style);
         ~WindowImpl();
 
         auto get_id() const noexcept -> uint32_t
@@ -157,7 +157,7 @@ namespace alimer
         void* GetNativeDisplay() const
         {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-            return GetModuleHandle(NULL);
+            return (HINSTANCE)GetWindowLongPtrW(glfwGetWin32Window(window_), GWLP_HINSTANCE);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
             return (void*)(uintptr_t)glfwGetX11Display();
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)

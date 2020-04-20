@@ -258,18 +258,12 @@ void vgpu_shutdown(void) {
 
 vgpu_backend vgpu_query_backend(void) {
     VGPU_ASSERT(s_gpuDevice);
-    return s_gpuDevice->getBackend();
+    return s_gpuDevice->query_caps(s_gpuDevice->renderer).backend;
 }
 
-VGPUFeatures vgpu_query_features(void) {
+vgpu_caps vgpu_query_caps(void) {
     VGPU_ASSERT(s_gpuDevice);
-    return s_gpuDevice->getFeatures(s_gpuDevice->renderer);
-}
-
-VGPULimits vgpu_query_limits(void)
-{
-    VGPU_ASSERT(s_gpuDevice);
-    return s_gpuDevice->getLimits(s_gpuDevice->renderer);
+    return s_gpuDevice->query_caps(s_gpuDevice->renderer);
 }
 
 VGPURenderPass vgpu_get_default_render_pass(void)
@@ -301,14 +295,14 @@ void vgpu_end_frame(void) {
 }
 
 /* Buffer */
-VGPUBuffer vgpu_create_buffer(const VGPUBufferDescriptor* descriptor)
+vgpu_buffer vgpu_create_buffer(const vgpu_buffer_desc* descriptor)
 {
-    return s_gpuDevice->bufferCreate(s_gpuDevice->renderer, descriptor);
+    return s_gpuDevice->create_buffer(s_gpuDevice->renderer, descriptor);
 }
 
-void vgpu_destroy_buffer(VGPUBuffer buffer)
+void vgpu_destroy_buffer(vgpu_buffer buffer)
 {
-    s_gpuDevice->bufferDestroy(s_gpuDevice->renderer, buffer);
+    s_gpuDevice->destroy_buffer(s_gpuDevice->renderer, buffer);
 }
 
 /* Texture */
@@ -324,28 +318,44 @@ static vgpu_texture_desc _vgpu_texture_desc_defaults(const vgpu_texture_desc* de
     return def;
 }
 
-VGPUTexture vgpu_create_texture(const vgpu_texture_desc* desc)
+vgpu_texture vgpu_create_texture(const vgpu_texture_desc* desc)
 {
     vgpu_texture_desc desc_def = _vgpu_texture_desc_defaults(desc);
     return s_gpuDevice->create_texture(s_gpuDevice->renderer, &desc_def);
 }
 
-void vgpu_destroy_texture(VGPUTexture texture)
+vgpu_texture vgpu_create_texture_cube(uint32_t size, vgpu_pixel_format format, uint32_t layers, uint32_t mip_levels, vgpu_texture_usage_flags usage, const void* initial_data)
+{
+    const vgpu_texture_desc texture_desc = {
+        .type = VGPU_TEXTURE_TYPE_CUBE,
+        .usage = usage,
+        .width = size,
+        .height = size,
+        .layers = layers,
+        .format = format,
+        .mip_levels = mip_levels,
+        .sample_count = VGPU_SAMPLE_COUNT_1,
+    };
+
+    return s_gpuDevice->create_texture(s_gpuDevice->renderer, &texture_desc);
+}
+
+void vgpu_destroy_texture(vgpu_texture texture)
 {
     s_gpuDevice->destroy_texture(s_gpuDevice->renderer, texture);
 }
 
-vgpu_texture_desc vgpu_query_texture_desc(VGPUTexture texture)
+vgpu_texture_desc vgpu_query_texture_desc(vgpu_texture texture)
 {
     return s_gpuDevice->query_texture_desc(texture);
 }
 
-uint32_t vgpu_get_texture_width(VGPUTexture texture, uint32_t mip_level)
+uint32_t vgpu_get_texture_width(vgpu_texture texture, uint32_t mip_level)
 {
     return _vgpu_max(1u, vgpu_query_texture_desc(texture).width >> mip_level);
 }
 
-uint32_t vgpu_get_texture_height(VGPUTexture texture, uint32_t mip_level)
+uint32_t vgpu_get_texture_height(vgpu_texture texture, uint32_t mip_level)
 {
     return _vgpu_max(1u, vgpu_query_texture_desc(texture).height >> mip_level);
 }
@@ -402,6 +412,35 @@ void vgpu_render_pass_set_depth_stencil_clear_value(VGPURenderPass render_pass, 
     s_gpuDevice->render_pass_set_depth_stencil_clear_value(render_pass, depth, stencil);
 }
 
+/* Shader */
+vgpu_shader vgpu_create_shader(const vgpu_shader_desc* desc)
+{
+    VGPU_ASSERT(desc);
+    return s_gpuDevice->create_shader(s_gpuDevice->renderer, desc);
+}
+
+void vgpu_destroy_shader(vgpu_shader shader)
+{
+    s_gpuDevice->destroy_shader(s_gpuDevice->renderer, shader);
+}
+
+/* Pipeline */
+vgpu_pipeline vgpu_create_render_pipeline(const vgpu_render_pipeline_desc* desc)
+{
+    VGPU_ASSERT(desc);
+    return s_gpuDevice->create_render_pipeline(s_gpuDevice->renderer, desc);
+}
+
+vgpu_pipeline vgpu_create_compute_pipeline(const VgpuComputePipelineDescriptor* desc)
+{
+    VGPU_ASSERT(desc);
+    return s_gpuDevice->create_compute_pipeline(s_gpuDevice->renderer, desc);
+}
+
+void vgpu_destroy_pipeline(vgpu_pipeline pipeline)
+{
+    s_gpuDevice->destroy_pipeline(s_gpuDevice->renderer, pipeline);
+}
 
 /* Commands */
 VGPU_EXPORT void vgpu_cmd_begin_render_pass(VGPURenderPass renderPass)

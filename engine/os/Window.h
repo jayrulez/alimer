@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/GraphicsSurface.h"
-#include "math/vec2.h"
+#include "math/math.h"
 #include "math/size.h"
 #include <string>
 
@@ -60,7 +60,7 @@ namespace alimer
         ~Window();
 
         /// Create the window.
-        bool create(const std::string& title, const point& pos, const usize& size, WindowStyle style);
+        bool create(const std::string& title, const int2& pos, const usize& size, WindowStyle style);
 
         /// Close the window.
         void Close();

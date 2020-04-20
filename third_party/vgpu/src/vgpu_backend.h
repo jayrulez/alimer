@@ -105,9 +105,7 @@ typedef struct VGPUDeviceImpl {
 
     bool (*init)(VGPUDevice device, const vgpu_config* config);
     void (*destroy)(VGPUDevice device);
-    vgpu_backend(*getBackend)(void);
-    VGPUFeatures(*getFeatures)(VGPURenderer* driver_data);
-    VGPULimits(*getLimits)(VGPURenderer* driver_data);
+    vgpu_caps(*query_caps)(VGPURenderer* driver_data);
     VGPURenderPass (*get_default_render_pass)(VGPURenderer* driver_data);
 
     vgpu_pixel_format(*get_default_depth_format)(VGPURenderer* driver_data);
@@ -118,28 +116,37 @@ typedef struct VGPUDeviceImpl {
     void (*end_frame)(VGPURenderer* driver_data);
 
     /* Buffer */
-    VGPUBuffer(*bufferCreate)(VGPURenderer* driverData, const VGPUBufferDescriptor* desc);
-    void (*bufferDestroy)(VGPURenderer* driverData, VGPUBuffer handle);
+    vgpu_buffer(*create_buffer)(VGPURenderer* driverData, const vgpu_buffer_desc* desc);
+    void (*destroy_buffer)(VGPURenderer* driverData, vgpu_buffer handle);
 
     /* Texture */
-    VGPUTexture (*create_texture)(VGPURenderer* driverData, const vgpu_texture_desc* desc);
-    void (*destroy_texture)(VGPURenderer* driverData, VGPUTexture handle);
-    vgpu_texture_desc(*query_texture_desc)(VGPUTexture handle);
+    vgpu_texture(*create_texture)(VGPURenderer* driverData, const vgpu_texture_desc* desc);
+    void (*destroy_texture)(VGPURenderer* driverData, vgpu_texture handle);
+    vgpu_texture_desc(*query_texture_desc)(vgpu_texture handle);
 
     /* Sampler */
     vgpu_sampler(*samplerCreate)(VGPURenderer* driver_data, const vgpu_sampler_desc* desc);
     void (*samplerDestroy)(VGPURenderer* driver_data, vgpu_sampler handle);
 
     /* RenderPass */
-    VGPURenderPass (*renderPassCreate)(VGPURenderer* driverData, const VGPURenderPassDescriptor* descriptor);
-    void (*renderPassDestroy)(VGPURenderer* driverData, VGPURenderPass handle);
-    void (*renderPassGetExtent)(VGPURenderer* driverData, VGPURenderPass handle, uint32_t* width, uint32_t* height);
+    VGPURenderPass (*renderPassCreate)(VGPURenderer* driver_data, const VGPURenderPassDescriptor* descriptor);
+    void (*renderPassDestroy)(VGPURenderer* driver_data, VGPURenderPass handle);
+    void (*renderPassGetExtent)(VGPURenderer* driver_data, VGPURenderPass handle, uint32_t* width, uint32_t* height);
     void (*render_pass_set_color_clear_value)(VGPURenderPass handle, uint32_t attachment_index, const float colorRGBA[4]);
     void (*render_pass_set_depth_stencil_clear_value)(VGPURenderPass handle, float depth, uint8_t stencil);
 
+    /* Shader */
+    vgpu_shader(*create_shader)(VGPURenderer* driver_data, const vgpu_shader_desc* desc);
+    void (*destroy_shader)(VGPURenderer* driver_data, vgpu_shader handle);
+
+    /* Pipeline */
+    vgpu_pipeline(*create_render_pipeline)(VGPURenderer* driver_data, const vgpu_render_pipeline_desc* desc);
+    vgpu_pipeline(*create_compute_pipeline)(VGPURenderer* driver_data, const VgpuComputePipelineDescriptor* desc);
+    void (*destroy_pipeline)(VGPURenderer* driver_data, vgpu_pipeline handle);
+
     /* Commands */
-    void (*cmdBeginRenderPass)(VGPURenderer* driverData, VGPURenderPass handle);
-    void (*cmdEndRenderPass)(VGPURenderer* driverData);
+    void (*cmdBeginRenderPass)(VGPURenderer* driver_data, VGPURenderPass handle);
+    void (*cmdEndRenderPass)(VGPURenderer* driver_data);
 } VGPUDeviceImpl;
 
 /* d3d11 */
@@ -154,17 +161,15 @@ extern VGPUDevice vk_create_device(void);
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
 ASSIGN_DRIVER_FUNC(destroy, name)\
-ASSIGN_DRIVER_FUNC(getBackend, name)\
-ASSIGN_DRIVER_FUNC(getFeatures, name)\
-ASSIGN_DRIVER_FUNC(getLimits, name)\
+ASSIGN_DRIVER_FUNC(query_caps, name)\
 ASSIGN_DRIVER_FUNC(get_default_render_pass, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
 ASSIGN_DRIVER_FUNC(wait_idle, name)\
 ASSIGN_DRIVER_FUNC(begin_frame, name)\
 ASSIGN_DRIVER_FUNC(end_frame, name)\
-ASSIGN_DRIVER_FUNC(bufferCreate, name)\
-ASSIGN_DRIVER_FUNC(bufferDestroy, name)\
+ASSIGN_DRIVER_FUNC(create_buffer, name)\
+ASSIGN_DRIVER_FUNC(destroy_buffer, name)\
 ASSIGN_DRIVER_FUNC(create_texture, name)\
 ASSIGN_DRIVER_FUNC(destroy_texture, name)\
 ASSIGN_DRIVER_FUNC(query_texture_desc, name)\
@@ -175,5 +180,10 @@ ASSIGN_DRIVER_FUNC(renderPassDestroy, name)\
 ASSIGN_DRIVER_FUNC(renderPassGetExtent, name)\
 ASSIGN_DRIVER_FUNC(render_pass_set_color_clear_value, name)\
 ASSIGN_DRIVER_FUNC(render_pass_set_depth_stencil_clear_value, name)\
+ASSIGN_DRIVER_FUNC(create_shader, name)\
+ASSIGN_DRIVER_FUNC(destroy_shader, name)\
+ASSIGN_DRIVER_FUNC(create_render_pipeline, name)\
+ASSIGN_DRIVER_FUNC(create_compute_pipeline, name)\
+ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
 ASSIGN_DRIVER_FUNC(cmdBeginRenderPass, name)\
 ASSIGN_DRIVER_FUNC(cmdEndRenderPass, name)

@@ -23,6 +23,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <assert.h>
 #include <cmath>
 
 #ifdef _MSC_VER
@@ -80,6 +81,264 @@ namespace alimer
 
     /// Check whether a floating point value is positive or negative infinity
     template <typename T> inline bool is_inf(T value) { return isinf(value); }
+
+    template <typename T> struct tvec2;
+    template <typename T> struct tvec3;
+    template <typename T> struct tvec4;
+    template <typename T> struct tmat2;
+    template <typename T> struct tmat3;
+    template <typename T> struct tmat4;
+
+    template <typename T>
+    struct tvec2
+    {
+        static constexpr size_t SIZE = 2;
+
+        union
+        {
+            T data[2];
+            struct
+            {
+                T x, y;
+            };
+        };
+
+        constexpr tvec2() = default;
+        constexpr tvec2(const tvec2&) = default;
+
+        template <typename U>
+        explicit constexpr tvec2(const tvec2 <U>& u)
+        {
+            x = T(u.x);
+            y = T(u.y);
+        }
+
+        constexpr tvec2(T x_, T y_)
+        {
+            x = x_;
+            y = y_;
+        }
+
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            assert(i < SIZE);
+            return v[i];
+        }
+
+        inline constexpr tvec2 xx() const { return tvec2(x, x); }
+        inline constexpr tvec2 xy() const { return tvec2(x, y); }
+        inline constexpr tvec2 yx() const { return tvec2(y, x); }
+        inline constexpr tvec2 yy() const { return tvec2(y, y); }
+    };
+
+    template <typename T>
+    struct tvec3 final
+    {
+        static constexpr size_t SIZE = 3;
+
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                T x, y, z;
+            };
+        };
+
+        tvec3() = default;
+        tvec3(const tvec3&) = default;
+        tvec3& operator=(const tvec3&) = default;
+        tvec3(tvec3&&) = default;
+        tvec3& operator=(tvec3&&) = default;
+
+        constexpr explicit tvec3(T v) noexcept
+        {
+            x = v;
+            y = v;
+            z = v;
+        }
+
+        constexpr tvec3(T x_, T y_, T z_) noexcept
+        {
+            x = x_;
+            y = y_;
+            z = z_;
+        }
+
+        template <typename U>
+        constexpr tvec3(const tvec3<U>& u) noexcept
+        {
+            x = T(u.x);
+            y = T(u.y);
+            z = T(u.z);
+        }
+
+        /*inline tvec3(const tvec2<T>& v, T z_) noexcept
+        {
+            x = v.x;
+            y = v.y;
+            z = z_;
+        }*/
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+    };
+
+    template <typename T>
+    struct tvec4
+    {
+    public:
+        static constexpr size_t SIZE = 4;
+
+        union
+        {
+            T data[SIZE];
+            struct
+            {
+                T x, y, z, w;
+            };
+        };
+
+        tvec4() = default;
+        tvec4(const tvec4&) = default;
+
+        template <typename U>
+        explicit inline tvec4(const tvec4<U>& u)
+        {
+            x = T(u.x);
+            y = T(u.y);
+            z = T(u.z);
+            w = T(u.w);
+        }
+
+        inline tvec4(const tvec2<T>& a, const tvec2<T>& b)
+        {
+            x = a.x;
+            y = a.y;
+            z = b.x;
+            w = b.y;
+        }
+
+        inline tvec4(const tvec3<T>& a, T b)
+        {
+            x = a.x;
+            y = a.y;
+            z = a.z;
+            w = b;
+        }
+
+        inline tvec4(T a, const tvec3<T>& b)
+        {
+            x = a;
+            y = b.x;
+            z = b.y;
+            w = b.z;
+        }
+
+        inline tvec4(const tvec2<T>& a, T b, T c)
+        {
+            x = a.x;
+            y = a.y;
+            z = b;
+            w = c;
+        }
+
+        inline tvec4(T a, const tvec2<T>& b, T c)
+        {
+            x = a;
+            y = b.x;
+            z = b.y;
+            w = c;
+        }
+
+        inline tvec4(T a, T b, const tvec2<T>& c)
+        {
+            x = a;
+            y = b;
+            z = c.x;
+            w = c.y;
+        }
+
+        explicit inline tvec4(T v)
+        {
+            x = v;
+            y = v;
+            z = v;
+            w = v;
+        }
+
+        inline tvec4(T x_, T y_, T z_, T w_)
+        {
+            x = x_;
+            y = y_;
+            z = z_;
+            w = w_;
+        }
+
+        // array access
+        inline constexpr T const& operator[](size_t i) const noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+
+        inline constexpr T& operator[](size_t i) noexcept {
+            ALIMER_ASSERT(i < SIZE);
+            return data[i];
+        }
+    };
+
+    using uint = uint32_t;
+    using float2 = tvec2<float>;
+    using float3 = tvec3<float>;
+    using float4 = tvec4<float>;
+    using float2x2 = tmat2<float>;
+    using float3x3 = tmat3<float>;
+    using float4x4 = tmat4<float>;
+
+    using double2 = tvec2<double>;
+    using double3 = tvec3<double>;
+    using double4 = tvec4<double>;
+    using double2x2 = tmat2<double>;
+    using double3x3 = tmat3<double>;
+    using double4x4 = tmat4<double>;
+
+    using int2 = tvec2<int32_t>;
+    using int3 = tvec3<int32_t>;
+    using int4 = tvec4<int32_t>;
+    using uint2 = tvec2<uint32_t>;
+    using uint3 = tvec3<uint32_t>;
+    using uint4 = tvec4<uint32_t>;
+
+    using ushort2 = tvec2<uint16_t>;
+    using ushort3 = tvec3<uint16_t>;
+    using ushort4 = tvec4<uint16_t>;
+    using short2 = tvec2<int16_t>;
+    using short3 = tvec3<int16_t>;
+    using short4 = tvec4<int16_t>;
+
+    //using half2 = tvec2<half>;
+    using ubyte2 = tvec2<uint8_t>;
+    using ubyte3 = tvec3<uint8_t>;
+    using ubyte4 = tvec4<uint8_t>;
+    using byte2 = tvec2<int8_t>;
+    using byte3 = tvec3<int8_t>;
+    using byte4 = tvec4<int8_t>;
+
+    using bool2 = tvec2<bool>;
+    using bool3 = tvec3<bool>;
+    using bool4 = tvec4<bool>;
 } 
 
 #ifdef _MSC_VER

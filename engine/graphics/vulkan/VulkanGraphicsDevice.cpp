@@ -21,7 +21,6 @@
 //
 
 #include "VulkanGraphicsDevice.h"
-#include "VulkanGraphicsAdapter.h"
 #include "graphics/SwapChain.h"
 #include "core/Utils.h"
 #include "core/Assert.h"
@@ -30,11 +29,6 @@
 #include <algorithm>
 #include <vector>
 
-#if ALIMER_WINDOWS || ALIMER_LINUX || ALIMER_OSX
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#endif
-
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
@@ -42,8 +36,28 @@ using namespace std;
 
 namespace alimer
 {
-    VulkanGraphicsDevice::VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_)
-        : GraphicsDevice(adapter_, surface_)
+    bool VulkanGraphicsDevice::IsAvailable()
+    {
+        static bool availableInitialized = false;
+        static bool available = false;
+        if (availableInitialized) {
+            return available;
+        }
+
+        availableInitialized = true;
+        VkResult result = volkInitialize();
+        if (result != VK_SUCCESS)
+        {
+            ALIMER_LOGW("Failed to initialize volk, vulkan backend is not available.");
+            return false;
+        }
+
+        available = true;
+        return available;
+    }
+
+    VulkanGraphicsDevice::VulkanGraphicsDevice(const GraphicsDeviceDescriptor& desc_)
+        : GraphicsDevice(desc_)
     {
 #if TODO_VK
         // Enumerate physical device and create logical one.
@@ -378,19 +392,8 @@ namespace alimer
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-    bool VulkanGraphicsDevice::BeginFrame()
+    void VulkanGraphicsDevice::Present(const std::vector<Swapchain*>& swapchains)
     {
-        return true;
-    }
-
-    void VulkanGraphicsDevice::PresentFrame()
-    {
-    }
-
-    GraphicsContext* VulkanGraphicsDevice::GetMainContext() const
-    {
-        return nullptr;
-        /*return mainContext.get();*/
     }
 
     VkSurfaceKHR VulkanGraphicsDevice::CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height)

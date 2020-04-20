@@ -37,7 +37,7 @@ namespace alimer
         create(title, { centered, centered }, newSize, style);
     }
 
-    bool Window::create(const std::string& title, const point& pos, const usize& size, WindowStyle style)
+    bool Window::create(const std::string& title, const int2& pos, const usize& size, WindowStyle style)
     {
         Close();
 

@@ -24,7 +24,6 @@
 #include "graphics/GraphicsDevice.h"
 #include "graphics/Texture.h"
 #include "graphics/Swapchain.h"
-#include "graphics/GraphicsImpl.h"
 
 namespace alimer
 {
@@ -51,7 +50,7 @@ namespace alimer
 
     void CopyContext::Flush(bool wait)
     {
-        handle->Flush(wait);
+        //handle->Flush(wait);
     }
 
     /* ComputeContext */
@@ -75,6 +74,6 @@ namespace alimer
 
     void GraphicsContext::EndRenderPass()
     {
-        handle->EndRenderPass();
+        //handle->EndRenderPass();
     }
 }

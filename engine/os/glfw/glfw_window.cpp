@@ -27,7 +27,7 @@
 namespace alimer
 {
 
-    WindowImpl::WindowImpl(const std::string& title, const point& pos, const usize& size, WindowStyle style)
+    WindowImpl::WindowImpl(const std::string& title, const int2& pos, const usize& size, WindowStyle style)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         /*if (opengl_) {

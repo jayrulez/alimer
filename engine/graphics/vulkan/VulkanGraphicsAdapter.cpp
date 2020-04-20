@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "VulkanGraphicsAdapter.h"
 #include "VulkanGraphicsProvider.h"
 #include "VulkanGraphicsDevice.h"
@@ -66,3 +67,5 @@ namespace alimer
         return SharedPtr<GraphicsDevice>(new VulkanGraphicsDevice(this, surface));
     }
 }
+
+#endif // TODO

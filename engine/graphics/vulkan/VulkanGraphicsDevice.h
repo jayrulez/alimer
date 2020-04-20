@@ -33,8 +33,10 @@ namespace alimer
     class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
+
         /// Constructor.
-        VulkanGraphicsDevice(VulkanGraphicsAdapter* adapter_, GraphicsSurface* surface_);
+        VulkanGraphicsDevice(const GraphicsDeviceDescriptor& desc_);
         /// Destructor.
         ~VulkanGraphicsDevice() override;
 
@@ -49,9 +51,7 @@ namespace alimer
     private:
         VkSurfaceKHR CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
         void WaitForIdle() override;
-        bool BeginFrame() override;
-        void PresentFrame() override;
-        GraphicsContext* GetMainContext() const override;
+        void Present(const std::vector<Swapchain*>& swapchains) override;
 
         VulkanDeviceFeatures vk_features{};
         VkInstance instance{ VK_NULL_HANDLE };

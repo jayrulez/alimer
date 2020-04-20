@@ -98,8 +98,8 @@ typedef struct VGPUSwapchainVk {
     vgpu_pixel_format   depthStencilFormat;
     uint32_t imageIndex;
     uint32_t imageCount;
-    VGPUTexture backbufferTextures[4];
-    VGPUTexture depthStencilTexture;
+    vgpu_texture backbufferTextures[4];
+    vgpu_texture depthStencilTexture;
     VGPURenderPass renderPasses[4];
 } VGPUSwapchainVk;
 
@@ -127,7 +127,7 @@ typedef struct {
     VkFramebuffer framebuffer;
     VkRect2D renderArea;
     uint32_t color_attachment_count;
-    VGPUTexture textures[VGPU_MAX_COLOR_ATTACHMENTS + 1];
+    vgpu_texture textures[VGPU_MAX_COLOR_ATTACHMENTS + 1];
     VkClearValue clears[VGPU_MAX_COLOR_ATTACHMENTS + 1];
 } VGPURenderPassVk;
 
@@ -156,7 +156,7 @@ typedef struct
 {
     uint32_t colorFormatsCount;
     VkFormat colorFormats[VGPU_MAX_COLOR_ATTACHMENTS];
-    VGPULoadOp loadOperations[VGPU_MAX_COLOR_ATTACHMENTS];
+    vgpu_load_action loadOperations[VGPU_MAX_COLOR_ATTACHMENTS];
     VkFormat depthStencilFormat;
 } RenderPassHash;
 
@@ -177,8 +177,7 @@ typedef struct VGPURendererVk {
     bool api_version_12;
     vk_physical_device_features device_features;
 
-    VGPUFeatures features;
-    VGPULimits limits;
+    vgpu_caps caps;
 
     VkbAPI api;
 
@@ -792,7 +791,7 @@ static VkPipelineStageFlags vgpuVkGetShaderStageMask(VGPUTextureLayout layout, V
 static void vgpuVkTextureBarrier(
     VGPURenderer* driverData,
     VkCommandBuffer commandBuffer,
-    VGPUTexture handle,
+    vgpu_texture handle,
     VGPUTextureLayout newState)
 {
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
@@ -837,16 +836,16 @@ static void vgpuVkTextureBarrier(
 #define _VGPU_VK_MAX_SURFACE_FORMATS (32u)
 #define _VGPU_VK_MAX_PRESENT_MODES (16u)
 
-static VkPresentModeKHR vgpuVkGetPresentMode(VGPUPresentMode value) {
+static VkPresentModeKHR vgpuVkGetPresentMode(vgpu_present_mode value) {
     switch (value)
     {
-    case VGPUPresentMode_Mailbox:
+    case VGPU_PRESENT_MODE_MAILBOX:
         return VK_PRESENT_MODE_MAILBOX_KHR;
 
-    case VGPUPresentMode_Immediate:
+    case VGPU_PRESENT_MODE_IMMEDIATE:
         return VK_PRESENT_MODE_IMMEDIATE_KHR;
 
-    case VGPUPresentMode_Fifo:
+    case VGPU_PRESENT_MODE_FIFO:
     default:
         return VK_PRESENT_MODE_FIFO_KHR;
     }
@@ -1166,7 +1165,7 @@ static bool vgpuVkSwapchainInit(VGPURenderer* driverData, VGPUSwapchainVk* swapc
         texture_desc.external_handle = (void*)swapChainImages[i];
         swapchain->backbufferTextures[i] = vgpu_create_texture(&texture_desc);
         passDesc.color_attachments[0].texture = swapchain->backbufferTextures[i];
-        passDesc.color_attachments[0].loadOp = VGPULoadOp_Clear;
+        passDesc.color_attachments[0].load_action = VGPU_LOAD_ACTION_CLEAR;
         passDesc.color_attachments[0].clear_color = swapchain->clear_color;
         swapchain->renderPasses[i] = vgpuCreateRenderPass(&passDesc);
     }
@@ -1421,7 +1420,6 @@ static bool vk_init(VGPUDevice device, const vgpu_config* desc)
     }
 
     /* Find best supported physical device. */
-    const VGPUAdapterType preferredAdapter = VGPUAdapterType_DiscreteGPU;
     uint32_t best_device_score = 0U;
     uint32_t best_device_index = VK_QUEUE_FAMILY_IGNORED;
     for (uint32_t i = 0; i < vk.physical_device_count; ++i)
@@ -1441,25 +1439,16 @@ static bool vk_init(VGPUDevice device, const vgpu_config* desc)
 
         switch (physical_device_props.deviceType) {
         case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            score += 100U;
-            if (preferredAdapter == VGPUAdapterType_DiscreteGPU) {
-                score += 1000u;
-            }
+            score += 1000u;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
             score += 90U;
-            if (preferredAdapter == VGPUAdapterType_IntegratedGPU) {
-                score += 1000u;
-            }
             break;
         case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
             score += 80U;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_CPU:
             score += 70U;
-            if (preferredAdapter == VGPUAdapterType_CPU) {
-                score += 1000u;
-            }
             break;
         default: score += 10U;
         }
@@ -1580,8 +1569,8 @@ static bool vk_init(VGPUDevice device, const vgpu_config* desc)
     }
 #endif
 
-    VkPhysicalDeviceFeatures2KHR features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR
+    VkPhysicalDeviceFeatures2 features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
     };
     vk.api.vkGetPhysicalDeviceFeatures2(renderer->physical_device, &features);
 
@@ -1662,56 +1651,77 @@ static bool vk_init(VGPUDevice device, const vgpu_config* desc)
     }
 
     /* Init features and limits. */
-    renderer->features.independentBlend = features.features.independentBlend;
-    renderer->features.computeShader = true;
-    renderer->features.geometryShader = features.features.geometryShader;
-    renderer->features.tessellationShader = features.features.tessellationShader;
-    renderer->features.multiViewport = features.features.multiViewport;
-    renderer->features.indexUint32 = features.features.fullDrawIndexUint32;
-    renderer->features.multiDrawIndirect = features.features.multiDrawIndirect;
-    renderer->features.fillModeNonSolid = features.features.fillModeNonSolid;
-    renderer->features.samplerAnisotropy = features.features.samplerAnisotropy;
-    renderer->features.textureCompressionETC2 = features.features.textureCompressionETC2;
-    renderer->features.textureCompressionASTC_LDR = features.features.textureCompressionASTC_LDR;
-    renderer->features.textureCompressionBC = features.features.textureCompressionBC;
-    renderer->features.textureCubeArray = features.features.imageCubeArray;
+    renderer->caps.backend = VGPU_BACKEND_VULKAN;
+    renderer->caps.vendor_id = gpu_props.vendorID;
+    renderer->caps.device_id = gpu_props.deviceID;
+    /*switch (gpu_props.deviceType)
+    {
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+        renderer->caps.adapter_type = VGPU_ADAPTER_TYPE_INTEGRATED_GPU;
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+        renderer->caps.adapter_type = VGPU_ADAPTER_TYPE_DISCRETE_GPU;
+        break;
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+        renderer->caps.adapter_type = VGPU_ADAPTER_TYPE_CPU;
+        break;
+
+    default:
+        renderer->caps.adapter_type = VGPU_ADAPTER_TYPE_UNKNOWN;
+        break;
+    }*/
+    memcpy(renderer->caps.adapter_name, gpu_props.deviceName, VGPU_MAX_DEVICE_NAME_SIZE);
+
+    renderer->caps.features.independentBlend = features.features.independentBlend;
+    renderer->caps.features.computeShader = true;
+    renderer->caps.features.geometryShader = features.features.geometryShader;
+    renderer->caps.features.tessellationShader = features.features.tessellationShader;
+    renderer->caps.features.multiViewport = features.features.multiViewport;
+    renderer->caps.features.indexUint32 = features.features.fullDrawIndexUint32;
+    renderer->caps.features.multiDrawIndirect = features.features.multiDrawIndirect;
+    renderer->caps.features.fillModeNonSolid = features.features.fillModeNonSolid;
+    renderer->caps.features.samplerAnisotropy = features.features.samplerAnisotropy;
+    renderer->caps.features.textureCompressionETC2 = features.features.textureCompressionETC2;
+    renderer->caps.features.textureCompressionASTC_LDR = features.features.textureCompressionASTC_LDR;
+    renderer->caps.features.textureCompressionBC = features.features.textureCompressionBC;
+    renderer->caps.features.textureCubeArray = features.features.imageCubeArray;
     //renderer->features.raytracing = vk.KHR_get_physical_device_properties2
     //    && renderer->device_features.get_memory_requirements2
     //    || HasExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
 
     // Limits
-    renderer->limits.max_vertex_attributes = gpu_props.limits.maxVertexInputAttributes;
-    renderer->limits.max_vertex_bindings = gpu_props.limits.maxVertexInputBindings;
-    renderer->limits.max_vertex_attribute_offset = gpu_props.limits.maxVertexInputAttributeOffset;
-    renderer->limits.max_vertex_binding_stride = gpu_props.limits.maxVertexInputBindingStride;
+    renderer->caps.limits.max_vertex_attributes = gpu_props.limits.maxVertexInputAttributes;
+    renderer->caps.limits.max_vertex_bindings = gpu_props.limits.maxVertexInputBindings;
+    renderer->caps.limits.max_vertex_attribute_offset = gpu_props.limits.maxVertexInputAttributeOffset;
+    renderer->caps.limits.max_vertex_binding_stride = gpu_props.limits.maxVertexInputBindingStride;
 
-    renderer->limits.max_texture_size_1d = gpu_props.limits.maxImageDimension1D;
-    renderer->limits.max_texture_size_2d = gpu_props.limits.maxImageDimension2D;
-    renderer->limits.max_texture_size_3d = gpu_props.limits.maxImageDimension3D;
-    renderer->limits.max_texture_size_cube = gpu_props.limits.maxImageDimensionCube;
-    renderer->limits.max_texture_array_layers = gpu_props.limits.maxImageArrayLayers;
-    renderer->limits.max_color_attachments = gpu_props.limits.maxColorAttachments;
-    renderer->limits.max_uniform_buffer_size = gpu_props.limits.maxUniformBufferRange;
-    renderer->limits.min_uniform_buffer_offset_alignment = gpu_props.limits.minUniformBufferOffsetAlignment;
-    renderer->limits.max_storage_buffer_size = gpu_props.limits.maxStorageBufferRange;
-    renderer->limits.min_storage_buffer_offset_alignment = gpu_props.limits.minStorageBufferOffsetAlignment;
-    renderer->limits.max_sampler_anisotropy = (uint32_t)gpu_props.limits.maxSamplerAnisotropy;
-    renderer->limits.max_viewports = gpu_props.limits.maxViewports;
-    renderer->limits.max_viewport_width = gpu_props.limits.maxViewportDimensions[0];
-    renderer->limits.max_viewport_height = gpu_props.limits.maxViewportDimensions[1];
-    renderer->limits.max_tessellation_patch_size = gpu_props.limits.maxTessellationPatchSize;
-    renderer->limits.point_size_range_min = gpu_props.limits.pointSizeRange[0];
-    renderer->limits.point_size_range_max = gpu_props.limits.pointSizeRange[1];
-    renderer->limits.line_width_range_min = gpu_props.limits.lineWidthRange[0];
-    renderer->limits.line_width_range_max = gpu_props.limits.lineWidthRange[1];
-    renderer->limits.max_compute_shared_memory_size = gpu_props.limits.maxComputeSharedMemorySize;
-    renderer->limits.max_compute_work_group_count_x = gpu_props.limits.maxComputeWorkGroupCount[0];
-    renderer->limits.max_compute_work_group_count_y = gpu_props.limits.maxComputeWorkGroupCount[1];
-    renderer->limits.max_compute_work_group_count_z = gpu_props.limits.maxComputeWorkGroupCount[2];
-    renderer->limits.max_compute_work_group_invocations = gpu_props.limits.maxComputeWorkGroupInvocations;
-    renderer->limits.max_compute_work_group_size_x = gpu_props.limits.maxComputeWorkGroupSize[0];
-    renderer->limits.max_compute_work_group_size_y = gpu_props.limits.maxComputeWorkGroupSize[1];
-    renderer->limits.max_compute_work_group_size_z = gpu_props.limits.maxComputeWorkGroupSize[2];
+    renderer->caps.limits.max_texture_size_1d = gpu_props.limits.maxImageDimension1D;
+    renderer->caps.limits.max_texture_size_2d = gpu_props.limits.maxImageDimension2D;
+    renderer->caps.limits.max_texture_size_3d = gpu_props.limits.maxImageDimension3D;
+    renderer->caps.limits.max_texture_size_cube = gpu_props.limits.maxImageDimensionCube;
+    renderer->caps.limits.max_texture_array_layers = gpu_props.limits.maxImageArrayLayers;
+    renderer->caps.limits.max_color_attachments = gpu_props.limits.maxColorAttachments;
+    renderer->caps.limits.max_uniform_buffer_size = gpu_props.limits.maxUniformBufferRange;
+    renderer->caps.limits.min_uniform_buffer_offset_alignment = gpu_props.limits.minUniformBufferOffsetAlignment;
+    renderer->caps.limits.max_storage_buffer_size = gpu_props.limits.maxStorageBufferRange;
+    renderer->caps.limits.min_storage_buffer_offset_alignment = gpu_props.limits.minStorageBufferOffsetAlignment;
+    renderer->caps.limits.max_sampler_anisotropy = (uint32_t)gpu_props.limits.maxSamplerAnisotropy;
+    renderer->caps.limits.max_viewports = gpu_props.limits.maxViewports;
+    renderer->caps.limits.max_viewport_width = gpu_props.limits.maxViewportDimensions[0];
+    renderer->caps.limits.max_viewport_height = gpu_props.limits.maxViewportDimensions[1];
+    renderer->caps.limits.max_tessellation_patch_size = gpu_props.limits.maxTessellationPatchSize;
+    renderer->caps.limits.point_size_range_min = gpu_props.limits.pointSizeRange[0];
+    renderer->caps.limits.point_size_range_max = gpu_props.limits.pointSizeRange[1];
+    renderer->caps.limits.line_width_range_min = gpu_props.limits.lineWidthRange[0];
+    renderer->caps.limits.line_width_range_max = gpu_props.limits.lineWidthRange[1];
+    renderer->caps.limits.max_compute_shared_memory_size = gpu_props.limits.maxComputeSharedMemorySize;
+    renderer->caps.limits.max_compute_work_group_count_x = gpu_props.limits.maxComputeWorkGroupCount[0];
+    renderer->caps.limits.max_compute_work_group_count_y = gpu_props.limits.maxComputeWorkGroupCount[1];
+    renderer->caps.limits.max_compute_work_group_count_z = gpu_props.limits.maxComputeWorkGroupCount[2];
+    renderer->caps.limits.max_compute_work_group_invocations = gpu_props.limits.maxComputeWorkGroupInvocations;
+    renderer->caps.limits.max_compute_work_group_size_x = gpu_props.limits.maxComputeWorkGroupSize[0];
+    renderer->caps.limits.max_compute_work_group_size_y = gpu_props.limits.maxComputeWorkGroupSize[1];
+    renderer->caps.limits.max_compute_work_group_size_z = gpu_props.limits.maxComputeWorkGroupSize[2];
 
     /* Create main context and set it as active. */
     if (surface != VK_NULL_HANDLE)
@@ -1719,10 +1729,10 @@ static bool vk_init(VGPUDevice device, const vgpu_config* desc)
         renderer->swapchains[0].surface = surface;
         renderer->swapchains[0].width = desc->swapchain->width;
         renderer->swapchains[0].height = desc->swapchain->height;
-        renderer->swapchains[0].colorFormat = desc->swapchain->colorFormat;
+        renderer->swapchains[0].colorFormat = desc->swapchain->color_format;
         renderer->swapchains[0].clear_color = desc->swapchain->clear_color;
-        renderer->swapchains[0].depthStencilFormat = desc->swapchain->depthStencilFormat;
-        renderer->swapchains[0].presentMode = vgpuVkGetPresentMode(desc->swapchain->presentMode);
+        renderer->swapchains[0].depthStencilFormat = desc->swapchain->depth_stencil_format;
+        renderer->swapchains[0].presentMode = vgpuVkGetPresentMode(desc->swapchain->present_mode);
 
         if (!vgpuVkSwapchainInit(device->renderer, &renderer->swapchains[0]))
         {
@@ -1911,20 +1921,10 @@ static void vk_waitIdle(VGPUDevice device) {
     VK_CHECK(renderer->api.vkDeviceWaitIdle(renderer->device));
 }
 
-static vgpu_backend vk_getBackend(void) {
-    return VGPU_BACKEND_VULKAN;
-}
-
-static VGPUFeatures vk_getFeatures(VGPURenderer* driverData)
+static vgpu_caps vk_query_caps(VGPURenderer* driverData)
 {
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
-    return renderer->features;
-}
-
-static VGPULimits vk_getLimits(VGPURenderer* driverData)
-{
-    VGPURendererVk* renderer = (VGPURendererVk*)driverData;
-    return renderer->limits;
+    return renderer->caps;
 }
 
 static VGPURenderPass vk_get_default_render_pass(VGPURenderer* driver_data)
@@ -2073,23 +2073,23 @@ static void vk_end_frame(VGPURenderer* driver_data)
 
 
 /* Buffer */
-static VGPUBuffer vk_bufferCreate(VGPURenderer* driverData, const VGPUBufferDescriptor* descriptor)
+static vgpu_buffer vk_create_buffer(VGPURenderer* driverData, const vgpu_buffer_desc* descriptor)
 {
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
     VGPUBufferVk* result = _VGPU_ALLOC_HANDLE(VGPUBufferVk);
-    return (VGPUBuffer)result;
+    return (vgpu_buffer)result;
 }
 
-static void vk_bufferDestroy(VGPURenderer* driverData, VGPUBuffer handle)
+static void vk_destroy_buffer(VGPURenderer* driver_dta, vgpu_buffer handle)
 {
-    VGPURendererVk* renderer = (VGPURendererVk*)driverData;
+    VGPURendererVk* renderer = (VGPURendererVk*)driver_dta;
     VGPUBufferVk* buffer = (VGPUBufferVk*)handle;
     vgpuVkDeferredDestroy(renderer, buffer->handle, buffer->memory, VK_OBJECT_TYPE_BUFFER);
     VGPU_FREE(buffer);
 }
 
 /* Texture */
-static VGPUTexture vk_create_texture(VGPURenderer* driverData, const vgpu_texture_desc* desc)
+static vgpu_texture vk_create_texture(VGPURenderer* driverData, const vgpu_texture_desc* desc)
 {
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
     VGPUTextureVk* result = _VGPU_ALLOC_HANDLE(VGPUTextureVk);
@@ -2106,10 +2106,10 @@ static VGPUTexture vk_create_texture(VGPURenderer* driverData, const vgpu_textur
 
     result->layout = VGPUTextureLayout_Undefined;
     memcpy(&(result->desc), desc, sizeof(*desc));
-    return (VGPUTexture)result;
+    return (vgpu_texture)result;
 }
 
-static void vk_destroy_texture(VGPURenderer* driverData, VGPUTexture handle)
+static void vk_destroy_texture(VGPURenderer* driverData, vgpu_texture handle)
 {
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
     VGPUTextureVk* texture = (VGPUTextureVk*)handle;
@@ -2125,7 +2125,7 @@ static void vk_destroy_texture(VGPURenderer* driverData, VGPUTexture handle)
     VGPU_FREE(handle);
 }
 
-static vgpu_texture_desc vk_query_texture_desc(VGPUTexture handle)
+static vgpu_texture_desc vk_query_texture_desc(vgpu_texture handle)
 {
     VGPUTextureVk* texture = (VGPUTextureVk*)handle;
     return texture->desc;
@@ -2266,7 +2266,7 @@ static RenderPassHash vk_GetRenderPassHash(const VGPURenderPassDescriptor* descr
         VGPUTextureVk* texture = (VGPUTextureVk*)descriptor->color_attachments[i].texture;
 
         hash.colorFormats[hash.colorFormatsCount] = texture->format;
-        hash.loadOperations[hash.colorFormatsCount] = descriptor->color_attachments[i].loadOp;
+        hash.loadOperations[hash.colorFormatsCount] = descriptor->color_attachments[i].load_action;
         hash.colorFormatsCount++;
     }
 
@@ -2283,9 +2283,9 @@ static RenderPassHash vk_GetRenderPassHash(const VGPURenderPassDescriptor* descr
 static VkRenderPass vk_GetRenderPass(VGPURenderer* driverData, const VGPURenderPassDescriptor* descriptor)
 {
     static const VkAttachmentLoadOp loadOps[] = {
-        [VGPULoadOp_DontCare] = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        [VGPULoadOp_Load] = VK_ATTACHMENT_LOAD_OP_LOAD,
-        [VGPULoadOp_Clear] = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        [VGPU_LOAD_ACTION_LOAD] = VK_ATTACHMENT_LOAD_OP_LOAD,
+        [VGPU_LOAD_ACTION_CLEAR] = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        [VGPU_LOAD_ACTION_DONT_CARE] = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     };
 
     VGPURendererVk* renderer = (VGPURendererVk*)driverData;
@@ -2391,7 +2391,7 @@ static VGPURenderPass vk_renderPassCreate(VGPURenderer* driverData, const VGPURe
 
         VGPUTextureVk* texture = (VGPUTextureVk*)descriptor->color_attachments[i].texture;
 
-        uint32_t mipLevel = descriptor->color_attachments[i].mipLevel;
+        uint32_t mipLevel = descriptor->color_attachments[i].mip_level;
         renderPass->renderArea.extent.width = _vgpu_min(renderPass->renderArea.extent.width, _vgpu_max(1u, texture->desc.width >> mipLevel));
         renderPass->renderArea.extent.height = _vgpu_min(renderPass->renderArea.extent.height, _vgpu_max(1u, texture->desc.height >> mipLevel));
 
@@ -2477,6 +2477,34 @@ void vk_render_pass_set_depth_stencil_clear_value(VGPURenderPass handle, float d
     VGPURenderPassVk* render_pass = (VGPURenderPassVk*)handle;
     render_pass->clears[render_pass->color_attachment_count + 1].depthStencil.depth = depth;
     render_pass->clears[render_pass->color_attachment_count + 1].depthStencil.stencil = stencil;
+}
+
+/* Shader */
+static vgpu_shader vk_create_shader(VGPURenderer* driver_data, const vgpu_shader_desc* desc)
+{
+    return nullptr;
+}
+
+static void vk_destroy_shader(VGPURenderer* driver_data, vgpu_shader handle)
+{
+
+}
+
+
+/* Pipeline */
+static vgpu_pipeline vk_create_render_pipeline(VGPURenderer* driver_data, const vgpu_render_pipeline_desc* desc)
+{
+    return nullptr;
+}
+
+static vgpu_pipeline vk_create_compute_pipeline(VGPURenderer* driver_data, const VgpuComputePipelineDescriptor* desc)
+{
+    return nullptr;
+}
+
+static void vk_destroy_pipeline(VGPURenderer* driver_data, vgpu_pipeline handle)
+{
+
 }
 
 /* Commands */

@@ -162,17 +162,17 @@ static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(vgpu_pixel_format format) {
     }
 }
 
-static UINT vgpuD3DGetSyncInterval(VGPUPresentMode mode)
+static UINT vgpuD3DGetSyncInterval(vgpu_present_mode mode)
 {
     switch (mode)
     {
-    case VGPUPresentMode_Immediate:
+    case VGPU_PRESENT_MODE_IMMEDIATE:
         return 0;
 
-    case VGPUPresentMode_Mailbox:
+    case VGPU_PRESENT_MODE_MAILBOX:
         return 2;
 
-    case VGPUPresentMode_Fifo:
+    case VGPU_PRESENT_MODE_FIFO:
     default:
         return 1;
     }

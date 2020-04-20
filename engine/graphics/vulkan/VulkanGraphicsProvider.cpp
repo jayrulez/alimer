@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "VulkanGraphicsProvider.h"
 #include "VulkanGraphicsAdapter.h"
 #include "core/Assert.h"
@@ -395,3 +396,5 @@ namespace alimer
         return adapters;
     }
 }
+
+#endif // TODO

@@ -45,14 +45,17 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct VGPUBufferImpl* VGPUBuffer;
-typedef struct VGPUTextureImpl* VGPUTexture;
+typedef struct vgpu_buffer_t* vgpu_buffer;
+typedef struct vgpu_texture_t* vgpu_texture;
 //typedef struct VGPUTextureViewImpl* VGPUTextureView;
 typedef struct vgpu_sampler_t* vgpu_sampler;
 typedef struct VGPURenderPassImpl* VGPURenderPass;
+typedef struct vgpu_shader_t* vgpu_shader;
+typedef struct vgpu_pipeline_t* vgpu_pipeline;
 
 enum {
     VGPU_MAX_COLOR_ATTACHMENTS = 8u,
+    VGPU_MAX_DEVICE_NAME_SIZE = 256,
     VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
     VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
     VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
@@ -82,20 +85,12 @@ typedef enum vgpu_backend {
     VGPU_BACKEND_FORCE_U32 = 0x7FFFFFFF
 } vgpu_backend;
 
-typedef enum VGPUAdapterType {
-    VGPUAdapterType_DiscreteGPU = 0x00000000,
-    VGPUAdapterType_IntegratedGPU = 0x00000001,
-    VGPUAdapterType_CPU = 0x00000002,
-    VGPUAdapterType_Unknown = 0x00000003,
-    VGPUAdapterType_Force32 = 0x7FFFFFFF
-} VGPUAdapterType;
-
-typedef enum VGPUPresentMode {
-    VGPUPresentMode_Fifo = 0,
-    VGPUPresentMode_Mailbox = 1,
-    VGPUPresentMode_Immediate = 2,
-    VGPUPresentMode_Force32 = 0x7FFFFFFF
-} VGPUPresentMode;
+typedef enum vgpu_present_mode {
+    VGPU_PRESENT_MODE_FIFO = 0,
+    VGPU_PRESENT_MODE_MAILBOX = 1,
+    VGPU_PRESENT_MODE_IMMEDIATE = 2,
+    VGPU_PRESENT_MODE_FORCE_U32 = 0x7FFFFFFF
+} vgpu_present_mode;
 
 /// Defines pixel format.
 typedef enum vgpu_pixel_format {
@@ -223,29 +218,29 @@ typedef enum vgpu_texture_usage {
 } vgpu_texture_usage;
 typedef uint32_t vgpu_texture_usage_flags;
 
-typedef enum VGPUBufferUsage {
+typedef enum vgpu_buffer_usage {
     VGPU_BUFFER_USAGE_NONE = 0,
-    VGPU_BUFFER_USAGE_VERTEX = 1,
-    VGPU_BUFFER_USAGE_INDEX = 2,
-    VGPU_BUFFER_USAGE_UNIFORM = 4,
-    VGPU_BUFFER_USAGE_STORAGE = 8,
-    VGPU_BUFFER_USAGE_INDIRECT = 16,
-    VGPU_BUFFER_USAGE_DYNAMIC = 32,
-    VGPU_BUFFER_USAGE_CPU_ACCESSIBLE = 64,
-} VGPUBufferUsage;
-typedef uint32_t VGPUBufferUsageFlags;
+    VGPU_BUFFER_USAGE_VERTEX = (1 << 0),
+    VGPU_BUFFER_USAGE_INDEX = (1 << 1),
+    VGPU_BUFFER_USAGE_UNIFORM = (1 << 2),
+    VGPU_BUFFER_USAGE_STORAGE = (1 << 3),
+    VGPU_BUFFER_USAGE_INDIRECT = (1 << 4),
+    VGPU_BUFFER_USAGE_DYNAMIC = (1 << 5),
+    VGPU_BUFFER_USAGE_STAGING = (1 << 6)
+} vgpu_buffer_usage;
+typedef uint32_t vgpu_buffer_usage_flags;
 
-typedef enum VGPUShaderStage {
-    VGPUShaderStage_None = 0x00000000,
-    VGPUShaderStage_Vertex = 0x00000001,
-    VGPUShaderStage_Hull = 0x00000002,
-    VGPUShaderStage_Domain = 0x00000004,
-    VGPUShaderStage_Geometry = 0x00000008,
-    VGPUShaderStage_Fragment = 0x00000010,
-    VGPUShaderStage_Compute = 0x00000020,
-    VGPUShaderStage_Force32 = 0x7FFFFFFF
-} VGPUShaderStage;
-typedef uint32_t VGPUShaderStageFlags;
+typedef enum vgpu_shader_stage {
+    VGPU_SHADER_STAGE_NONE = 0,
+    VGPU_SHADER_STAGE_VERTEX = 0x01,
+    VGPU_SHADER_STAGE_HULL = 0x02,
+    VGPU_SHADER_STAGE_DOMAIN = 0x04,
+    VGPU_SHADER_STAGE_GEOMETRY = 0x08,
+    VGPU_SHADER_STAGE_FRAGMENT = 0x10,
+    VGPU_SHADER_STAGE_COMPUTE = 0x20,
+    _VGPU_SHADER_STAGE_FORCE_U32 = 0x7FFFFFFF
+} vgpu_shader_stage;
+typedef uint32_t vgpu_shader_stage_flags;
 
 typedef enum VGPUVertexFormat {
     VGPUVertexFormat_Invalid = 0,
@@ -337,12 +332,18 @@ typedef enum vgpu_border_color {
     VGPU_BORDER_COLOR_FORCE_U32 = 0x7FFFFFFF
 } vgpu_border_color;
 
-typedef enum VGPULoadOp {
-    VGPULoadOp_DontCare = 0,
-    VGPULoadOp_Load = 1,
-    VGPULoadOp_Clear = 2,
-    VGPULoadOp_Force32 = 0x7FFFFFFF
-} VGPULoadOp;
+typedef enum vgpu_load_action {
+    VGPU_LOAD_ACTION_LOAD,
+    VGPU_LOAD_ACTION_CLEAR,
+    VGPU_LOAD_ACTION_DONT_CARE,
+    VGPU_LOAD_ACTION_FORCE_U32 = 0x7FFFFFFF
+} vgpu_load_action;
+
+typedef enum vgpu_store_action {
+    VGPU_STORE_ACTION_STORE,
+    VGPU_STORE_ACTION_DONT_CARE,
+    VGPU_STORE_ACTION_FORCE_U32 = 0x7FFFFFFF
+} vgpu_store_action;
 
 typedef enum VGPUTextureLayout {
     VGPUTextureLayout_Undefined = 0,
@@ -387,7 +388,7 @@ typedef struct VgpuViewport {
     float       maxDepth;
 } VgpuViewport;
 
-typedef struct VGPUFeatures {
+typedef struct vgpu_features {
     bool independentBlend;
     bool computeShader;
     bool geometryShader;
@@ -402,9 +403,9 @@ typedef struct VGPUFeatures {
     bool textureCompressionBC;
     bool textureCubeArray;
     bool raytracing;
-} VGPUFeatures;
+} vgpu_features;
 
-typedef struct VGPULimits {
+typedef struct vgpu_limits {
     uint32_t        max_vertex_attributes;
     uint32_t        max_vertex_bindings;
     uint32_t        max_vertex_attribute_offset;
@@ -436,14 +437,27 @@ typedef struct VGPULimits {
     uint32_t        max_compute_work_group_size_x;
     uint32_t        max_compute_work_group_size_y;
     uint32_t        max_compute_work_group_size_z;
-} VGPULimits;
+} vgpu_limits;
 
-typedef struct VGPUBufferDescriptor {
-    VGPUBufferUsageFlags usage;
-    uint64_t size;
+typedef struct vgpu_caps {
+    /// The backend type.
+    vgpu_backend backend;
+
+    /// Selected GPU vendor PCI id.
+    uint32_t vendor_id;
+    uint32_t device_id;
+    char adapter_name[VGPU_MAX_DEVICE_NAME_SIZE];
+
+    vgpu_features features;
+    vgpu_limits limits;
+} vgpu_caps;
+
+typedef struct vgpu_buffer_desc {
+    vgpu_buffer_usage_flags usage;
+    uint32_t size;
     const void* content;
     const char* label;
-} VGPUBufferDescriptor;
+} vgpu_buffer_desc;
 
 typedef struct vgpu_texture_desc {
     vgpu_texture_type type;
@@ -465,22 +479,27 @@ typedef struct vgpu_texture_desc {
 } vgpu_texture_desc;
 
 typedef struct vgpu_color_attachment {
-    VGPUTexture     texture;
-    uint32_t        mipLevel;
-    uint32_t        slice;
-    VGPULoadOp      loadOp;
-    vgpu_color      clear_color;
+    vgpu_texture texture;
+    uint32_t mip_level;
+    uint32_t slice;
+    vgpu_load_action load_action;
+    vgpu_store_action store_action;
+    vgpu_color clear_color;
 } vgpu_color_attachment;
 
-typedef struct VGPUDepthStencilAttachment {
-    VGPUTexture               texture;
-    float clearDepth;
-    uint32_t clearStencil;
-} VGPUDepthStencilAttachment;
+typedef struct vgpu_depth_stencil_attachment {
+    vgpu_texture        texture;
+    vgpu_load_action    depth_load_action;
+    vgpu_store_action   depth_store_action;
+    float               clear_depth;
+    vgpu_load_action    stencil_load_action;
+    vgpu_store_action   stencil_store_action;
+    uint8_t             clear_stencil;
+} vgpu_depth_stencil_attachment;
 
 typedef struct VGPURenderPassDescriptor {
-    vgpu_color_attachment       color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
-    VGPUDepthStencilAttachment  depth_stencil_attachment;
+    vgpu_color_attachment           color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
+    vgpu_depth_stencil_attachment   depth_stencil_attachment;
 } VGPURenderPassDescriptor;
 
 typedef struct VgpuVertexBufferLayoutDescriptor {
@@ -499,30 +518,23 @@ typedef struct VgpuVertexDescriptor {
     VgpuVertexAttributeDescriptor       attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
 } VgpuVertexDescriptor;
 
-typedef struct VGPUShaderModuleDescriptor {
-    VGPUShaderStage stage;
-    uint64_t        codeSize;
-    const uint8_t*  pCode;
+typedef struct vgpu_shader_stage_desc {
+    uint64_t        byte_code_size;
+    const uint8_t*  byte_code;
     const char*     source;
-    const char*     entryPoint;
-} VGPUShaderModuleDescriptor;
+    const char*     entry_point;
+} vgpu_shader_stage_desc;
 
-typedef struct VgpuShaderStageDescriptor {
-    //VgpuShaderModule            shaderModule;
-    const char* entryPoint;
-    /*const VgpuSpecializationInfo* specializationInfo;*/
-} VgpuShaderStageDescriptor;
+typedef struct vgpu_shader_desc {
+    vgpu_shader_stage_desc vertex;
+    vgpu_shader_stage_desc fragment;
+} vgpu_shader_desc;
 
-typedef struct VgpuShaderDescriptor {
-    uint32_t                            stageCount;
-    const VgpuShaderStageDescriptor* stages;
-} VgpuShaderDescriptor;
-
-typedef struct VgpuRenderPipelineDescriptor {
-    //VgpuShader                  shader;
+typedef struct vgpu_render_pipeline_desc {
+    vgpu_shader                 shader;
     VgpuVertexDescriptor        vertexDescriptor;
-    VGPUPrimitiveTopology       primitiveTopology;
-} VgpuRenderPipelineDescriptor;
+    VGPUPrimitiveTopology       primitive_topology;
+} vgpu_render_pipeline_desc;
 
 typedef struct VgpuComputePipelineDescriptor {
     uint32_t dummy;
@@ -560,10 +572,10 @@ typedef struct vgpu_swapchain_desc {
     uint32_t            width;
     uint32_t            height;
     bool                fullscreen;
-    vgpu_pixel_format   colorFormat;
+    vgpu_pixel_format   color_format;
     vgpu_color          clear_color;
-    vgpu_pixel_format   depthStencilFormat;
-    VGPUPresentMode     presentMode;
+    vgpu_pixel_format   depth_stencil_format;
+    vgpu_present_mode   present_mode;
     vgpu_sample_count   sample_count;
 } vgpu_swapchain_desc;
 
@@ -600,8 +612,7 @@ extern "C"
     VGPU_EXPORT bool vgpu_init(const vgpu_config* config);
     VGPU_EXPORT void vgpu_shutdown(void);
     VGPU_EXPORT vgpu_backend vgpu_query_backend(void);
-    VGPU_EXPORT VGPUFeatures vgpu_query_features(void);
-    VGPU_EXPORT VGPULimits vgpu_query_limits(void);
+    VGPU_EXPORT vgpu_caps vgpu_query_caps(void);
     VGPU_EXPORT VGPURenderPass vgpu_get_default_render_pass(void);
     VGPU_EXPORT vgpu_pixel_format vgpu_get_default_depth_format(void);
     VGPU_EXPORT vgpu_pixel_format vgpu_get_default_depth_stencil_format(void);
@@ -611,15 +622,16 @@ extern "C"
     VGPU_EXPORT void vgpu_end_frame(void);
    
     /* Buffer */
-    VGPU_EXPORT VGPUBuffer vgpu_create_buffer(const VGPUBufferDescriptor* desc);
-    VGPU_EXPORT void vgpu_destroy_buffer(VGPUBuffer buffer);
+    VGPU_EXPORT vgpu_buffer vgpu_create_buffer(const vgpu_buffer_desc* desc);
+    VGPU_EXPORT void vgpu_destroy_buffer(vgpu_buffer buffer);
 
     /* Texture */
-    VGPU_EXPORT VGPUTexture vgpu_create_texture(const vgpu_texture_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_texture(VGPUTexture texture);
-    VGPU_EXPORT vgpu_texture_desc vgpu_query_texture_desc(VGPUTexture texture);
-    VGPU_EXPORT uint32_t vgpu_get_texture_width(VGPUTexture texture, uint32_t mip_level);
-    VGPU_EXPORT uint32_t vgpu_get_texture_height(VGPUTexture texture, uint32_t mip_level);
+    VGPU_EXPORT vgpu_texture vgpu_create_texture(const vgpu_texture_desc* desc);
+    VGPU_EXPORT vgpu_texture vgpu_create_texture_cube(uint32_t size, vgpu_pixel_format format, uint32_t mip_levels, uint32_t layers, vgpu_texture_usage_flags usage, const void* initial_data);
+    VGPU_EXPORT void vgpu_destroy_texture(vgpu_texture texture);
+    VGPU_EXPORT vgpu_texture_desc vgpu_query_texture_desc(vgpu_texture texture);
+    VGPU_EXPORT uint32_t vgpu_get_texture_width(vgpu_texture texture, uint32_t mip_level);
+    VGPU_EXPORT uint32_t vgpu_get_texture_height(vgpu_texture texture, uint32_t mip_level);
 
     /* Sampler */
     VGPU_EXPORT vgpu_sampler vgpu_create_sampler(const vgpu_sampler_desc* desc);
@@ -633,18 +645,14 @@ extern "C"
     VGPU_EXPORT void vgpu_render_pass_set_color_clear_value(VGPURenderPass render_pass, uint32_t attachment_index, const float colorRGBA[4]);
     VGPU_EXPORT void vgpu_render_pass_set_depth_stencil_clear_value(VGPURenderPass render_pass, float depth, uint8_t stencil);
 
-    /* ShaderModule */
-    //VGPU_EXPORT VgpuShaderModule vgpuCreateShaderModule(const VgpuShaderModuleDescriptor* descriptor);
-    //VGPU_EXPORT void vgpuDestroyShaderModule(VgpuShaderModule shaderModule);
-
     /* Shader */
-    //VGPU_EXPORT VgpuShader vgpuCreateShader(const VgpuShaderDescriptor* descriptor);
-    //VGPU_EXPORT void vgpuDestroyShader(VgpuShader shader);
+    VGPU_EXPORT vgpu_shader vgpu_create_shader(const vgpu_shader_desc* desc);
+    VGPU_EXPORT void vgpu_destroy_shader(vgpu_shader shader);
 
     /* Pipeline */
-    //VGPU_EXPORT VgpuPipeline vgpuCreateRenderPipeline(const VgpuRenderPipelineDescriptor* descriptor);
-    //VGPU_EXPORT VgpuPipeline vgpuCreateComputePipeline(const VgpuComputePipelineDescriptor* descriptor);
-    //VGPU_EXPORT void vgpuDestroyPipeline(VgpuPipeline pipeline);
+    VGPU_EXPORT vgpu_pipeline vgpu_create_render_pipeline(const vgpu_render_pipeline_desc* desc);
+    VGPU_EXPORT vgpu_pipeline vgpu_create_compute_pipeline(const VgpuComputePipelineDescriptor* desc);
+    VGPU_EXPORT void vgpu_destroy_pipeline(vgpu_pipeline pipeline);
 
     /* Commands */
     VGPU_EXPORT void vgpu_cmd_begin_render_pass(VGPURenderPass renderPass);

@@ -22,7 +22,6 @@
 
 #include "graphics/Swapchain.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsImpl.h"
 
 namespace alimer
 {

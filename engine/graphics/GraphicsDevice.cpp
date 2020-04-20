@@ -26,36 +26,19 @@
 #include "os/window.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsImpl.h"
 #include "graphics/Swapchain.h"
 
-// Direct3D 11
-#ifndef ALIMER_ENABLE_DIRECT3D11
-#   define ALIMER_ENABLE_DIRECT3D11 1
-#endif
-
-#if ALIMER_SUPPORTS_DIRECT3D11 && ALIMER_ENABLE_DIRECT3D11
-#   define ALIMER_DIRECT3D11 1
-#endif
-
 #if defined(ALIMER_VULKAN)
-#include "graphics/vulkan/VulkanGraphicsProvider.h"
+#include "graphics/vulkan/VulkanGraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_D3D12)
 #include "graphics/d3d12/D3D12GraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_DIRECT3D11)
-#   include "graphics/d3d11/D3D11GraphicsDevice.h"
-#endif
-
 #if defined(ALIMER_OPENGL)
 #include "graphics/opengl/GLGPUDevice.h"
 #endif
-
-#define STB_DS_IMPLEMENTATION
-#include "stb_ds.h"
 
 namespace alimer
 {
@@ -68,8 +51,10 @@ namespace alimer
             availableProviders.insert(BackendType::Null);
 
 #if defined(ALIMER_VULKAN)
-            if (VulkanGraphicsProvider::IsAvailable())
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
                 availableProviders.insert(BackendType::Vulkan);
+            }
 #endif
 
 #if defined(ALIMER_D3D12)
@@ -91,9 +76,24 @@ namespace alimer
         return availableProviders;
     }
 
+    static GraphicsDevice* __graphicsDeviceInstance = nullptr;
+
     GraphicsDevice::GraphicsDevice(const GraphicsDeviceDescriptor& desc_)
         : desc(desc_)
     {
+        ALIMER_ASSERT(__graphicsDeviceInstance == nullptr);
+        __graphicsDeviceInstance = this;
+    }
+
+    GraphicsDevice::~GraphicsDevice()
+    {
+        __graphicsDeviceInstance = nullptr;
+    }
+
+    GraphicsDevice* GraphicsDevice::GetInstance()
+    {
+        ALIMER_ASSERT(__graphicsDeviceInstance);
+        return __graphicsDeviceInstance;
     }
 
     std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const GraphicsDeviceDescriptor& desc)
@@ -123,7 +123,7 @@ namespace alimer
 #if defined(ALIMER_VULKAN)
         case BackendType::Vulkan:
             ALIMER_LOGINFO("Using Vulkan render driver");
-            provider = std::make_unique<VulkanGraphicsProvider>(applicationName, flags);
+            device = std::make_unique<VulkanGraphicsDevice>(desc);
             break;
 #endif
 #if defined(ALIMER_D3D12)
