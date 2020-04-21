@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,33 +20,35 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GPUResource.h"
-#include "math/size.h"
+#include "D3D12GPUAdapter.h"
+#include "D3D12GPUProvider.h"
+#include "D3D12GPUDevice.h"
+#include "core/String.h"
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    D3D12GPUAdapter::D3D12GPUAdapter(D3D12GPUProvider* provider, ComPtr<IDXGIAdapter1> adapter)
+        : GPUAdapter(provider, BackendType::Direct3D12)
+        , _adapter(adapter)
     {
-        ALIMER_OBJECT(Texture, GPUResource);
-        
-    public:
-        /// Destructor.
-        virtual ~Texture() = default;
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
 
-    protected:
-        /// Constructor.
-        Texture(GPUDevice* device, const TextureDescriptor* descriptor);
+        _vendorId = desc.VendorId;
+        _deviceId = desc.DeviceId;
 
-        TextureType type = TextureType::Type2D;
-        TextureUsage usage = TextureUsage::Sampled;
-        /// Texture format.
-        PixelFormat format = PixelFormat::RGBA8UNorm;
+        std::wstring deviceName(desc.Description);
+        _name = alimer::ToUtf8(deviceName);
 
-        usize3 extent = { 1u, 1u, 1u };
-        uint32_t mipLevels = 1u;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        bool external = false;
-    };
-} 
+        // Detect adapter type.
+        {
+            ComPtr<ID3D12Device> tempDevice;
+            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), provider->GetMinFeatureLevel(), IID_PPV_ARGS(tempDevice.GetAddressOf())));
+            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
+            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+
+            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
+        }
+    }
+}
+

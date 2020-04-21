@@ -20,52 +20,27 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Types.h"
-#include "core/Object.h"
+#include "core/Assert.h"
+#include "graphics/GPUResource.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
-
-    /// Defines a graphics resource created by graphics device.
-    class GraphicsResource : public Object
+    GPUResource::GPUResource(GPUDevice* device, Type type)
+        : _device(device)
+        , _type(type)
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
+        //device->AddGPUResource(this);
+    }
 
-    public:
-        /// Resource types. 
-        enum class Type
-        {
-            /// Unknown resource type.
-            Unknown,
-            /// Buffer. Can be bound to all shader-stages
-            Buffer,
-            ///Texture. Can be bound as render-target, shader-resource and UAV
-            Texture
-        };
+    GPUResource::~GPUResource()
+    {
+        //device->RemoveGPUResource(this);
+    }
 
-    protected:
-        /// Constructor.
-        GraphicsResource() = default;
+    GPUDevice* GPUResource::GetDevice() const
+    {
+        return _device;
+    }
+}
 
-        GraphicsResource(GraphicsDevice &device, Type type);
-        virtual ~GraphicsResource();
-
-    public:
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        const GraphicsDevice& GetDevice() const;
-
-    protected:
-        GraphicsDevice &device;
-        Type type;
-        /// Size in bytes of the resource.
-        uint64_t size{ 0 };
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsResource);
-    };
-} 

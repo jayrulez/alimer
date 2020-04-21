@@ -24,25 +24,29 @@
 #include "core/Log.h"
 #include "core/Assert.h"
 #include "os/window.h"
-#include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/Swapchain.h"
+#include "graphics/GPUProvider.h"
 
-#if defined(ALIMER_VULKAN)
-#include "graphics/vulkan/VulkanGraphicsDevice.h"
+#if defined(ALIMER_GRAPHICS_VULKAN)
+//#include "graphics/vulkan/VulkanGraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_D3D12)
-#include "graphics/d3d12/D3D12GraphicsDevice.h"
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/d3d12/D3D12GPUProvider.h"
 #endif
 
-#if defined(ALIMER_OPENGL)
-#include "graphics/opengl/GLGPUDevice.h"
+#if defined(ALIMER_GRAPHICS_D3D11)
+//#include "graphics/d3d12/D3D12GraphicsDevice.h"
 #endif
+
+#if defined(ALIMER_GRAPHICS_OPENGL)
+//#include "graphics/opengl/GLGPUDevice.h"
+#endif
+
+using namespace std;
 
 namespace alimer
 {
-    std::set<BackendType> GraphicsDevice::GetAvailableBackends()
+    std::set<BackendType> GPUProvider::GetAvailableBackends()
     {
         static std::set<BackendType> availableProviders;
 
@@ -57,9 +61,11 @@ namespace alimer
             }
 #endif
 
-#if defined(ALIMER_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable())
+#if defined(ALIMER_GRAPHICS_D3D12)
+            if (D3D12GPUProvider::IsAvailable())
+            {
                 availableProviders.insert(BackendType::Direct3D12);
+            }
 #endif
 
 #if defined(ALIMER_DIRECT3D11)
@@ -76,49 +82,32 @@ namespace alimer
         return availableProviders;
     }
 
-    static GraphicsDevice* __graphicsDeviceInstance = nullptr;
-
-    GraphicsDevice::GraphicsDevice(const GraphicsDeviceDescriptor& desc_)
-        : desc(desc_)
+    GPUProvider::GPUProvider()
     {
-        ALIMER_ASSERT(__graphicsDeviceInstance == nullptr);
-        __graphicsDeviceInstance = this;
     }
 
-    GraphicsDevice::~GraphicsDevice()
+    unique_ptr<GPUProvider> GPUProvider::Create(BackendType preferredBackend, bool validation)
     {
-        __graphicsDeviceInstance = nullptr;
-    }
-
-    GraphicsDevice* GraphicsDevice::GetInstance()
-    {
-        ALIMER_ASSERT(__graphicsDeviceInstance);
-        return __graphicsDeviceInstance;
-    }
-
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const GraphicsDeviceDescriptor& desc)
-    {
-        BackendType backend = desc.preferredBackend;
-        if (desc.preferredBackend == BackendType::Count)
+        if (preferredBackend == BackendType::Count)
         {
             auto availableBackends = GetAvailableBackends();
 
             if (availableBackends.find(BackendType::Metal) != availableBackends.end())
-                backend = BackendType::Metal;
+                preferredBackend = BackendType::Metal;
             else if (availableBackends.find(BackendType::Direct3D12) != availableBackends.end())
-                backend = BackendType::Direct3D12;
+                preferredBackend = BackendType::Direct3D12;
             else if (availableBackends.find(BackendType::Vulkan) != availableBackends.end())
-                backend = BackendType::Vulkan;
+                preferredBackend = BackendType::Vulkan;
             else if (availableBackends.find(BackendType::Direct3D11) != availableBackends.end())
-                backend = BackendType::Direct3D11;
+                preferredBackend = BackendType::Direct3D11;
             else if (availableBackends.find(BackendType::OpenGL) != availableBackends.end())
-                backend = BackendType::OpenGL;
+                preferredBackend = BackendType::OpenGL;
             else
-                backend = BackendType::Null;
+                preferredBackend = BackendType::Null;
         }
 
-        std::unique_ptr<GraphicsDevice> device = nullptr;
-        switch (backend)
+        std::unique_ptr<GPUProvider> provider = nullptr;
+        switch (preferredBackend)
         {
 #if defined(ALIMER_VULKAN)
         case BackendType::Vulkan:
@@ -126,10 +115,10 @@ namespace alimer
             device = std::make_unique<VulkanGraphicsDevice>(desc);
             break;
 #endif
-#if defined(ALIMER_D3D12)
+#if defined(ALIMER_GRAPHICS_D3D12)
         case BackendType::Direct3D12:
-            ALIMER_LOGINFO("Using Direct3D12 render driver");
-            impl = new D3D12GraphicsDevice(desc.flags, desc.powerPreference);
+            ALIMER_LOGINFO("Creating Direct3D12 GPU provider");
+            provider = std::make_unique<D3D12GPUProvider>(validation);
             break;
 #endif
 
@@ -154,12 +143,6 @@ namespace alimer
             break;
         }
 
-        return device;
-    }
-
-    void GraphicsDevice::Present()
-    {
-        ALIMER_ASSERT(mainSwapchain.IsNotNull());
-        Present({ mainSwapchain.Get() });
+        return provider;
     }
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,31 +22,33 @@
 
 #pragma once
 
-#include "graphics/GPUResource.h"
-#include "math/size.h"
+#include "core/Ptr.h"
+#include "graphics/Types.h"
+#include <memory>
+#include <set>
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    class GPUDevice;
+
+    /// Defines a class for proving GPU adapters.
+    class ALIMER_API GPUProvider
     {
-        ALIMER_OBJECT(Texture, GPUResource);
-        
     public:
+        /// Get set of available graphics backends.
+        static std::set<BackendType> GetAvailableBackends();
+
         /// Destructor.
-        virtual ~Texture() = default;
+        virtual ~GPUProvider() = default;
+
+        /// Create new instance of GPUProvider class.
+        static std::unique_ptr<GPUProvider> Create(BackendType preferredBackend = BackendType::Count, bool validation = false);
+
+        /// Create new graphics device with given adapter power preference.
+        virtual RefPtr<GPUDevice> CreateDevice(GPUPowerPreference powerPreference) = 0;
 
     protected:
         /// Constructor.
-        Texture(GPUDevice* device, const TextureDescriptor* descriptor);
-
-        TextureType type = TextureType::Type2D;
-        TextureUsage usage = TextureUsage::Sampled;
-        /// Texture format.
-        PixelFormat format = PixelFormat::RGBA8UNorm;
-
-        usize3 extent = { 1u, 1u, 1u };
-        uint32_t mipLevels = 1u;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        bool external = false;
+        GPUProvider();
     };
-} 
+}

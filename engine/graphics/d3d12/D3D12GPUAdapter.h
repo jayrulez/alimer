@@ -20,27 +20,25 @@
 // THE SOFTWARE.
 //
 
-#include "core/Assert.h"
-#include "graphics/GraphicsResource.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "core/Ptr.h"
+#include "graphics/GPUAdapter.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice &device, Type type)
-        : device{ device }
-        , type{ type }
-    {
-        //device->AddGPUResource(this);
-    }
+    class D3D12GPUProvider;
 
-    GraphicsResource::~GraphicsResource()
+    class D3D12GPUAdapter final : public GPUAdapter
     {
-        //device->RemoveGPUResource(this);
-    }
+    public:
+        D3D12GPUAdapter(D3D12GPUProvider* provider, ComPtr<IDXGIAdapter1> adapter);
+        ~D3D12GPUAdapter() = default;
 
-    const GraphicsDevice& GraphicsResource::GetDevice() const
-    {
-        return device;
-    }
+        IDXGIAdapter1* GetHandle() const { return _adapter.Get(); }
+
+    private:
+        ComPtr<IDXGIAdapter1> _adapter;
+    };
 }
-

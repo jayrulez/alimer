@@ -22,31 +22,50 @@
 
 #pragma once
 
-#include "graphics/GPUResource.h"
-#include "math/size.h"
+#include "graphics/Types.h"
+#include "core/Object.h"
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    class GPUDevice;
+
+    /// Defines a GPUResource created by GPU device.
+    class ALIMER_API GPUResource : public Object
     {
-        ALIMER_OBJECT(Texture, GPUResource);
-        
+        ALIMER_OBJECT(GPUResource, Object);
+
     public:
-        /// Destructor.
-        virtual ~Texture() = default;
+        /// Resource types. 
+        enum class Type
+        {
+            /// Unknown resource type.
+            Unknown,
+            /// Buffer. Can be bound to all shader-stages
+            Buffer,
+            ///Texture. Can be bound as render-target, shader-resource and UAV
+            Texture
+        };
 
     protected:
         /// Constructor.
-        Texture(GPUDevice* device, const TextureDescriptor* descriptor);
+        GPUResource(GPUDevice* device, Type type);
 
-        TextureType type = TextureType::Type2D;
-        TextureUsage usage = TextureUsage::Sampled;
-        /// Texture format.
-        PixelFormat format = PixelFormat::RGBA8UNorm;
+        /// Destructor.
+        virtual ~GPUResource();
 
-        usize3 extent = { 1u, 1u, 1u };
-        uint32_t mipLevels = 1u;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        bool external = false;
+    public:
+        /// Release the GPU resource.
+        virtual void Destroy() {}
+
+        GPUDevice* GetDevice() const;
+
+    protected:
+        GPUDevice* _device;
+        Type _type;
+        /// Size in bytes of the resource.
+        uint64_t _size{ 0 };
+
+    private:
+        ALIMER_DISABLE_COPY_MOVE(GPUResource);
     };
 } 

@@ -54,9 +54,16 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
 
-if (ALIMER_D3D12)
+if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d)
-    #define_engine_source_files(graphics/d3d12)
+endif ()
+
+if (ALIMER_GRAPHICS_D3D11)
+    #define_engine_source_files(graphics/d3d11)
+endif ()
+
+if (ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(graphics/d3d12)
 endif ()
 
 group_sources()
@@ -80,7 +87,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    vgpu
     stb
     imgui
 )

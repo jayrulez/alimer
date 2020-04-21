@@ -22,54 +22,33 @@
 
 #pragma once
 
-#include "graphics/GraphicsSurface.h"
+#include "graphics/GPUAdapter.h"
 #include "graphics/SwapChain.h"
 #include "graphics/CommandContext.h"
 #include <memory>
-#include <set>
+#include <mutex>
 
 namespace alimer
 {
     class Swapchain;
 
-    struct GraphicsDeviceDescriptor
-    {
-        BackendType preferredBackend = BackendType::Count;
-        GPUVendorId preferredVendorId;
-
-        /// Enable device for debuging.
-        bool debug;
-
-        /// Enable device for profiling.
-        bool profile;
-
-        PresentationParameters presentationParameters;
-    };
-
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    /// Defines the logical GPU device class.
+    class ALIMER_API GPUDevice : public RefCounted
     {
     public:
-        /// Get set of available graphics backends.
-        static std::set<BackendType> GetAvailableBackends();
-
-        /// Create new GraphicsDevice with given preferred backend, fallback to supported one.
-        GraphicsDevice(const GraphicsDeviceDescriptor& desc_);
+        /// Constructor.
+        GPUDevice(GPUAdapter* adapter);
 
         /// Destructor.
-        virtual ~GraphicsDevice();
-
-        /**
-        * Gets the single instance of the graphics device.
-        *
-        * @return The single instance of the device.
-        */
-        static GraphicsDevice* GetInstance();
-
-        static std::unique_ptr<GraphicsDevice> Create(const GraphicsDeviceDescriptor& desc);
+        virtual ~GPUDevice() = default;
 
         /// Waits for the device to become idle.
         virtual void WaitForIdle() = 0;
+
+        /// Add a GPU resource to keep track of. Called by GPUResource.
+        void AddGPUResource(GPUResource* resource);
+        /// Remove a tracked GPU resource. Called by GPUResource.
+        void RemoveGPUResource(GPUResource* resource);
 
         /// Present the main swap chain on screen.
         void Present();
@@ -79,20 +58,31 @@ namespace alimer
         GraphicsContext* GetGraphicsContext() const { return graphicsContext.get(); }
 
         /// Get the features.
-        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        inline GPUAdapter* GetAdapter() const { return _adapter.get(); }
 
-    private:
-        virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
+        /// Get the features.
+        inline const GPUFeatures& GetFeatures() const { return _features; }
+
+        /// Get the limits.
+        inline const GPULimits& GetLimits() const { return _limits; }
 
     protected:
-        GraphicsDeviceDescriptor desc;
-        GraphicsDeviceCaps caps;
+        virtual void ReleaseTrackedResources();
+        //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
+
+    protected:
+        std::unique_ptr<GPUAdapter> _adapter;
+
+        GPUFeatures _features{};
+        GPULimits _limits{};
         std::shared_ptr<GraphicsContext> graphicsContext;
-        SharedPtr<Swapchain> mainSwapchain;
 
     private:
-        static SharedPtr<GraphicsDevice> instance;
+        /// Tracked gpu resource.
+        std::mutex _gpuResourceMutex;
+        std::vector<GPUResource*> _gpuResources;
 
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+    private:
+        ALIMER_DISABLE_COPY_MOVE(GPUDevice);
     };
 }

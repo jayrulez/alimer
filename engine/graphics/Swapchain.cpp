@@ -21,12 +21,12 @@
 //
 
 #include "graphics/Swapchain.h"
-#include "graphics/GraphicsDevice.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    Swapchain::Swapchain(GraphicsDevice& device, const PresentationParameters& parameters)
-        : device{ device }
+    Swapchain::Swapchain(GPUDevice* device, const PresentationParameters& parameters)
+        : _device(device)
         , colorFormat(parameters.colorFormat)
         , extent(parameters.extent)
         , depthStencilFormat(parameters.depthStencilFormat)

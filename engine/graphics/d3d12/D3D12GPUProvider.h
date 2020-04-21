@@ -20,14 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/GPUProvider.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device)
-        : GraphicsResource(device, Type::Buffer)
+    class D3D12GPUProvider final : public GPUProvider
     {
+    public:
+        static bool IsAvailable();
 
-    }
+        D3D12GPUProvider(bool validation);
+        ~D3D12GPUProvider() override;
+
+        RefPtr<GPUDevice> CreateDevice(GPUPowerPreference powerPreference) override;
+
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        bool IsTearingSupported() const { return isTearingSupported; }
+        D3D_FEATURE_LEVEL GetMinFeatureLevel() const { return _minFeatureLevel; }
+
+    private:
+        void ReportLiveObjects();
+        D3D_FEATURE_LEVEL _minFeatureLevel;
+
+        UINT dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory4> dxgiFactory;
+        bool isTearingSupported = false;
+    };
 }

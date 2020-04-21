@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_D3D12
 #include "D3D12CommandContext.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
@@ -54,9 +55,9 @@ namespace alimer
         currentAllocator = device.GetQueue(type).RequestAllocator();
         commandList->Reset(currentAllocator, nullptr);
 
-       /* m_CurGraphicsRootSignature = nullptr;
-        m_CurPipelineState = nullptr;
-        m_CurComputeRootSignature = nullptr;*/
+        /* m_CurGraphicsRootSignature = nullptr;
+         m_CurPipelineState = nullptr;
+         m_CurComputeRootSignature = nullptr;*/
         numBarriersToFlush = 0;
 
         //BindDescriptorHeaps();
@@ -157,3 +158,5 @@ namespace alimer
 
     }
 }
+
+#endif // TODO_D3D11

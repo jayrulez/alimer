@@ -20,20 +20,14 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GraphicsResource.h"
+#include "graphics/GPUBuffer.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    class GraphicsBuffer : public GraphicsResource
+    GPUBuffer::GPUBuffer(GPUDevice* device)
+        : GPUResource(device, Type::Buffer)
     {
-        ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
 
-    public:
-        /// Constructor.
-        GraphicsBuffer(GraphicsDevice& device);
-
-    private:
-    };
-} 
+    }
+}

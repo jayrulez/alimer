@@ -36,7 +36,7 @@ namespace alimer
     struct Configuration
     {
         /// The preferred GPU backend.
-        BackendType preferredGraphicsBackend = BackendType::Count;
+        BackendType preferredGPUBackend = BackendType::Count;
 
         /// Name of the application.
         std::string applicationName = "Alimer";
@@ -52,6 +52,8 @@ namespace alimer
     };
 
     class InputManager;
+    class GPUProvider;
+    class GPUDevice;
 
     class ALIMER_API Game : public Object
     {
@@ -104,6 +106,8 @@ namespace alimer
         GameTime time;
         std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
+        std::unique_ptr<GPUProvider> gpuProvider;
+        RefPtr<GPUDevice> gpuDevice;
         InputManager* input;
         bool headless{ false };
     };

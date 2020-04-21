@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Framebuffer.h"
+/*#include "graphics/Framebuffer.h"
 #include "graphics/GraphicsDevice.h"
 
 namespace alimer
@@ -35,5 +35,5 @@ namespace alimer
     {
         return extent;
     }
-}
+}*/
 

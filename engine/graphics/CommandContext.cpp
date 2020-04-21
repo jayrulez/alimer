@@ -21,7 +21,7 @@
 //
 
 #include "graphics/CommandContext.h"
-#include "graphics/GraphicsDevice.h"
+#include "graphics/GPUDevice.h"
 #include "graphics/Texture.h"
 #include "graphics/Swapchain.h"
 

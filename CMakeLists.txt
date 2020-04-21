@@ -19,6 +19,17 @@ option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
+# Options
+if (WIN32)
+    set(ALIMER_GRAPHICS_D3D11 ON CACHE BOOL "Include Direct3D11 renderer")
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend" ON)
+    option(ALIMER_GRAPHICS_OPENGL "Include OpenGL backend" ON)
+    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend" ON)
+elseif (WINDOWS_STORE)
+    set(ALIMER_GRAPHICS_D3D11 ON CACHE BOOL "Include Direct3D11 renderer")
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend" ON)
+endif ()
+
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
     set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable C# editor" FORCE)

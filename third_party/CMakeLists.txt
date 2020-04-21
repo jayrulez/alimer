@@ -1,8 +1,3 @@
-# vgpu
-set(VGPU_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
-
 # stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
@@ -35,20 +30,6 @@ set(IMGUI_FILES
 add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
-
-if (ALIMER_D3D12)
-    # D3D12MemoryAllocator
-    set(D3D12_MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator")
-    set(D3D12_MA_FILES
-        "${D3D12_MA_DIR}/D3D12MemAlloc.cpp"
-        "${D3D12_MA_DIR}/D3D12MemAlloc.h"
-        "${D3D12_MA_DIR}/D3D12MemAlloc.natvis"
-    )
-
-    add_library(D3D12MemoryAllocator STATIC ${D3D12_MA_FILES})
-    target_include_directories(D3D12MemoryAllocator PUBLIC ${D3D12_MA_DIR})
-    set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
-endif ()
 
 if (ALIMER_OPENGL)
     # Header-only library for khrplatform.h

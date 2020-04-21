@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    enum class FramebufferResizeResult
+    /*enum class FramebufferResizeResult
     {
         Success,
         NoSurface,
@@ -47,5 +47,5 @@ namespace alimer
 
     protected:
         usize extent{};
-    };
+    };*/
 } 

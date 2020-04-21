@@ -22,7 +22,8 @@
 
 #include "os/os.h"
 #include "Games/Game.h"
-#include "graphics/GraphicsDevice.h"
+#include "graphics/GPUProvider.h"
+#include "graphics/GPUDevice.h"
 #include "graphics/Swapchain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
@@ -35,6 +36,12 @@ namespace alimer
     {
         os::init();
         gameSystems.push_back(input);
+
+        bool validation = false;
+#ifdef _DEBUG
+        validation = true;
+#endif
+        gpuProvider = GPUProvider::Create(config_.preferredGPUBackend, validation);
     }
 
     Game::~Game()
@@ -45,18 +52,21 @@ namespace alimer
         }
 
         gameSystems.clear();
-        vgpu_wait_idle();
-        vgpu_shutdown();
+        gpuDevice->WaitForIdle();
+        gpuDevice.Reset();
+        gpuProvider.reset();
         os::shutdown();
     }
 
     void Game::InitBeforeRun()
     {
+        gpuDevice = gpuProvider->CreateDevice(GPUPowerPreference::HighPerformance);
+
         // Create main window.
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics device.
-        vgpu_config gpu_config = {};
+        /*vgpu_config gpu_config = {};
         gpu_config.preferred_backend = VGPU_BACKEND_D3D11;
         //gpu_config.preferred_backend = VGPU_BACKEND_VULKAN;
 #ifdef _DEBUG
@@ -75,7 +85,7 @@ namespace alimer
         if (!vgpu_init(&gpu_config))
         {
             headless = true;
-        }
+        }*/
 
         Initialize();
         if (exitCode)
@@ -88,10 +98,6 @@ namespace alimer
         BeginRun();
     }
 
-    static vgpu_buffer vertex_buffer;
-    static vgpu_shader shader;
-    static vgpu_pipeline render_pipeline;
-
     void Game::Initialize()
     {
         for (auto gameSystem : gameSystems)
@@ -99,6 +105,7 @@ namespace alimer
             gameSystem->Initialize();
         }
 
+#if TODO
         struct Vertex
         {
             float3 position;
@@ -151,6 +158,8 @@ float4 PSMain(PSInput input) : SV_TARGET
         vgpu_render_pipeline_desc pipeline_desc = {};
         pipeline_desc.shader = shader;
         render_pipeline = vgpu_create_render_pipeline(&pipeline_desc);
+#endif // TODO
+
     }
 
     void Game::BeginRun()
@@ -165,7 +174,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        vgpu_begin_frame();
+        //vgpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -196,13 +205,13 @@ float4 PSMain(PSInput input) : SV_TARGET
             gameSystem->EndDraw();
         }
 
-        auto clear_color = Colors::CornflowerBlue;
+        /*auto clear_color = Colors::CornflowerBlue;
         auto defaultRenderPass = vgpu_get_default_render_pass();
         vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
         vgpu_cmd_begin_render_pass(defaultRenderPass);
         vgpu_cmd_end_render_pass();
 
-        vgpu_end_frame();
+        vgpu_end_frame();*/
     }
 
     int Game::Run()

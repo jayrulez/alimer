@@ -21,7 +21,7 @@
 //
 
 #include "D3D12Backend.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GPUDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
@@ -37,7 +37,7 @@ namespace alimer
 #endif
 
     /* D3D12DescriptorHeap */
-    D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GraphicsDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_)
+    D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GPUDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_)
         : device(device_)
         , type(type_)
         , shaderVisible(shaderVisible_)
@@ -55,7 +55,7 @@ namespace alimer
     {
         Shutdown();
 
-        descriptorSize = device->GetD3DDevice()->GetDescriptorHandleIncrementSize(type);
+        /*descriptorSize = device->GetD3DDevice()->GetDescriptorHandleIncrementSize(type);
 
         numPersistent = numPersistent_;
         numTemporary = numTemporary_;
@@ -84,7 +84,7 @@ namespace alimer
 
         deadList.resize(numPersistent);
         for (uint32_t i = 0; i < numPersistent; ++i)
-            deadList[i] = uint32_t(i);
+            deadList[i] = uint32_t(i);*/
     }
 
     void D3D12DescriptorHeap::Shutdown()

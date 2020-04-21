@@ -22,56 +22,22 @@
 
 #pragma once
 
-#include "graphics/GraphicsImpl.h"
+#include "graphics/GPUDevice.h"
 #include "D3D12CommandQueue.h"
 
 namespace alimer
 {
-    class D3D12GraphicsAdapter;
-    class D3D12SwapChain;
-    class D3D12GraphicsContext;
-
-    namespace d3d12
-    {
-        /* Types */
-        struct Fence
-        {
-            uint64_t cpuValue;
-            uint64_t gpuValue;
-            ID3D12Fence* handle = nullptr;
-            HANDLE fenceEvent = INVALID_HANDLE_VALUE;
-        };
-
-        struct Swapchain
-        {
-            IDXGISwapChain3* handle;
-            uint32_t imageCount;
-            uint32_t syncInterval;
-            uint32_t flags;
-
-            GPUTexture textures[kMaxFrameLatency];
-        };
-
-        struct Resource
-        {
-            ID3D12Resource* handle;
-            D3D12_RESOURCE_STATES state;
-            D3D12_RESOURCE_STATES transitioning_state;
-            D3D12_GPU_VIRTUAL_ADDRESS gpu_virtual_address;
-            D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-        };
-    }
+    class D3D12GPUProvider;
+    class D3D12GPUAdapter;
 
     /// Direct3D12 GPU backend.
-    class ALIMER_API D3D12GraphicsDevice final : public GraphicsImpl
+    class ALIMER_API D3D12GPUDevice final : public GPUDevice
     {
     public:
-        static bool IsAvailable();
-
         /// Constructor.
-        D3D12GraphicsDevice(GraphicsProviderFlags flags, GPUPowerPreference powerPreference);
+        D3D12GPUDevice(D3D12GPUProvider* provider, D3D12GPUAdapter* adapter);
         /// Destructor.
-        ~D3D12GraphicsDevice() override;
+        ~D3D12GPUDevice() override;
 
         template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
         {
@@ -80,12 +46,10 @@ namespace alimer
             resource = nullptr;
         }
 
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
-        bool IsTearingSupported() const { return isTearingSupported; }
-        ID3D12Device* GetD3DDevice() const { return d3dDevice; }
+        ID3D12Device* GetD3DDevice() const { return d3dDevice.Get(); }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 
-        D3D12CommandQueue& GetQueue(QueueType type)
+        /*D3D12CommandQueue& GetQueue(QueueType type)
         {
             switch (type)
             {
@@ -109,24 +73,23 @@ namespace alimer
             default:
                 return graphicsQueue;
             }
-        }
+        }*/
 
         // The CPU will wait for a fence to reach a specified value
         void WaitForFence(uint64_t fenceValue);
 
         /* Access to resources. */
-        d3d12::Resource* GetTexture(GPUTexture handle);
+        //d3d12::Resource* GetTexture(GPUTexture handle);
 
     private:
-        bool Init() override;
         void Shutdown();
-        bool GetAdapter(IDXGIAdapter1** ppAdapter);
-        void InitCapabilities(IDXGIAdapter1* adapter);
+        void InitCapabilities();
 
         void ExecuteDeferredReleases();
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void WaitForIdle() override;
+#if TODO
         uint64_t PresentFrame(uint32_t count, const GpuSwapchain* pSwapchains) override;
 
         /* Fence */
@@ -146,7 +109,7 @@ namespace alimer
         /* Texture */
         GPUTexture CreateExternalTexture(ID3D12Resource* resource);
         void DestroyTexture(GPUTexture handle) override;
-        
+
 
         /* CommandBuffer */
         GpuCommandBuffer* CreateCommandBuffer(QueueType type) override;
@@ -154,14 +117,12 @@ namespace alimer
 
         GraphicsProviderFlags flags;
         GPUPowerPreference powerPreference;
+#endif // TODO
 
-        UINT dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory;
-        bool isTearingSupported = false;
 
         D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
-        ID3D12Device* d3dDevice = nullptr;
+        ComPtr<ID3D12Device> d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         D3D_FEATURE_LEVEL featureLevel{};
         /// Root signature version
@@ -176,17 +137,17 @@ namespace alimer
         D3D12DescriptorHeap RTVDescriptorHeap;
         D3D12DescriptorHeap DSVDescriptorHeap;
         
-        Pool<d3d12::Swapchain, kMaxSwapchains> swapchains;
-        Pool<d3d12::Resource, kMaxTextures> textures;
-        Pool<d3d12::Resource, kMaxBuffers> buffers;
+        //Pool<d3d12::Swapchain, kMaxSwapchains> swapchains;
+        //Pool<d3d12::Resource, kMaxTextures> textures;
+        //Pool<d3d12::Resource, kMaxBuffers> buffers;
 
-        D3D12CommandQueue graphicsQueue;
-        D3D12CommandQueue computeQueue;
-        D3D12CommandQueue copyQueue;
+        //D3D12CommandQueue graphicsQueue;
+        //D3D12CommandQueue computeQueue;
+        //D3D12CommandQueue copyQueue;
 
-        d3d12::Fence frameFence;
+        //d3d12::Fence frameFence;
 
-        std::unique_ptr<D3D12GraphicsContext> mainContext;
+        //std::unique_ptr<D3D12GraphicsContext> mainContext;
 
         struct ResourceRelease
         {
