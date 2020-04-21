@@ -34,10 +34,6 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
-    static constexpr uint32_t kMaxSwapchains = 16u;
-    static constexpr uint32_t kMaxTextures = 4096u;
-    static constexpr uint32_t kMaxBuffers = 4096u;
-
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
     {
@@ -156,7 +152,7 @@ namespace alimer
         void* windowHandle;
     };
 
-    struct PresentationParameters
+    struct SwapChainDescriptor
     {
         /// Platform data.
         PlatformData platformData;

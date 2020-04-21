@@ -46,6 +46,8 @@ namespace alimer
             resource = nullptr;
         }
 
+        SwapChain* CreateSwapChainCore(const SwapChainDescriptor* descriptor) override;
+
         ID3D12Device* GetD3DDevice() const { return d3dDevice.Get(); }
         D3D12MA::Allocator* GetMemoryAllocator() const { return allocator; }
 

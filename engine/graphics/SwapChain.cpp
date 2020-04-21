@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,34 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
-#include "core/String.h"
+#include "graphics/SwapChain.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    D3D12GPUAdapter::D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter)
-        : GPUAdapter(BackendType::Direct3D12)
-        , _adapter(adapter)
+    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
+        : colorFormat(descriptor->colorFormat)
+        , extent(descriptor->extent)
+        , depthStencilFormat(descriptor->depthStencilFormat)
     {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
+    }
 
-        _vendorId = desc.VendorId;
-        _deviceId = desc.DeviceId;
-
-        std::wstring deviceName(desc.Description);
-        _name = alimer::ToUtf8(deviceName);
-
-        // Detect adapter type.
+    SwapChain::ResizeResult SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        if (extent.width == newWidth && extent.height == newHeight)
         {
-            ComPtr<ID3D12Device> tempDevice;
-            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(tempDevice.GetAddressOf())));
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
-
-            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
+            return ResizeResult::Success;
         }
+
+        extent = { newWidth, newHeight };
+        return ResizeImpl(newWidth, newHeight);
+    }
+
+    Texture* SwapChain::GetCurrentTexture() const
+    {
+        //textureIndex = device.GetImpl()->GetNextTexture(handle);
+        return textures[textureIndex].Get();
+    }
+
+    const usize& SwapChain::GetExtent() const
+    {
+        return extent;
     }
 }
 

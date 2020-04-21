@@ -46,8 +46,9 @@
 
 namespace alimer
 {
-    GPUDevice::GPUDevice(GPUAdapter* adapter)
-        : _adapter(adapter)
+    GPUDevice::GPUDevice(GPUProvider* provider, GPUAdapter* adapter)
+        : _provider(provider)
+        , _adapter(adapter)
     {
     }
 
@@ -76,6 +77,15 @@ namespace alimer
 
             _gpuResources.clear();
         }
+    }
+
+    RefPtr<SwapChain> GPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
+    {
+        ALIMER_ASSERT(descriptor);
+        SwapChain* swapchain = CreateSwapChainCore(descriptor);
+        if (swapchain == nullptr)
+            return nullptr;
+        return ConstructRefPtr<SwapChain>(swapchain);
     }
 
 #if TOOD

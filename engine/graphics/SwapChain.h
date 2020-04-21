@@ -30,12 +30,12 @@ namespace alimer
 {
     class Texture;
 
-    class ALIMER_API Swapchain : public RefCounted
+    class ALIMER_API SwapChain : public RefCounted
     {
     public:
         /// Constructor.
-        Swapchain(GPUDevice* device, const PresentationParameters& parameters);
-        virtual ~Swapchain() = default;
+        SwapChain(const SwapChainDescriptor* descriptor);
+        virtual ~SwapChain() = default;
 
         enum class ResizeResult
         {
@@ -54,7 +54,7 @@ namespace alimer
         virtual ResizeResult ResizeImpl(uint32_t width, uint32_t height) = 0;
 
     protected:
-        GPUDevice* _device;
+        
         usize extent{};
         PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
         PixelFormat depthStencilFormat = PixelFormat::Undefined;
@@ -62,4 +62,4 @@ namespace alimer
         std::vector<RefPtr<Texture>> textures;
         mutable uint32_t textureIndex{ 0 };
     };
-} 
+}

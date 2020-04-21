@@ -21,6 +21,7 @@
 //
 
 #include "os/Window.h"
+#include "graphics/SwapChain.h"
 
 #if defined(GLFW_BACKEND)
 #   include "glfw/glfw_window.h"
@@ -32,17 +33,15 @@ using namespace std;
 
 namespace alimer
 {
-    Window::Window(const string& title, const usize& newSize, WindowStyle style)
+    Window::Window(GPUDevice* device, const string& title, const usize& size, WindowStyle style)
+        : impl(new WindowImpl(title, { centered, centered }, size, style))
+        , _device(device)
     {
-        create(title, { centered, centered }, newSize, style);
-    }
-
-    bool Window::create(const std::string& title, const int2& pos, const usize& size, WindowStyle style)
-    {
-        Close();
-
-        impl = new WindowImpl(title, pos, size, style);
-        return impl != nullptr;
+        SwapChainDescriptor desc = {};
+        desc.platformData.display = GetDisplay();
+        desc.platformData.windowHandle = GetHandle();
+        desc.extent = GetSize();
+        _swapChain = _device->CreateSwapChain(&desc);
     }
 
     Window::~Window()
@@ -82,11 +81,6 @@ namespace alimer
     usize Window::GetSize() const noexcept
     {
         return impl->get_size();
-    }
-
-    GraphicsSurfaceType Window::GetType() const noexcept
-    {
-        return GraphicsSurfaceType::Win32;
     }
 
     void* Window::GetHandle() const

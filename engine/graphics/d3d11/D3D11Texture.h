@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,39 +20,30 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Swapchain.h"
-#include "graphics/GPUDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    Swapchain::Swapchain(GPUDevice* device, const PresentationParameters& parameters)
-        : _device(device)
-        , colorFormat(parameters.colorFormat)
-        , extent(parameters.extent)
-        , depthStencilFormat(parameters.depthStencilFormat)
+    class ALIMER_API D3D11Texture final : public Texture
     {
-    }
+    public:
+        /// Constructor.
+        D3D11Texture(D3D11GPUDevice* device, const TextureDescriptor* descriptor);
+        /// Destructor.
+        ~D3D11Texture() override;
 
-    Swapchain::ResizeResult Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        if (extent.width == newWidth && extent.height == newHeight)
+    private:
+        void Destroy() override;
+        DXGI_FORMAT dxgiFormat;
+        union
         {
-            return ResizeResult::Success;
-        }
-
-        extent = { newWidth, newHeight };
-        return ResizeImpl(newWidth, newHeight);
-    }
-
-    Texture* Swapchain::GetCurrentTexture() const
-    {
-        //textureIndex = device.GetImpl()->GetNextTexture(handle);
-        return textures[textureIndex].Get();
-    }
-
-    const usize& Swapchain::GetExtent() const
-    {
-        return extent;
-    }
+            ID3D11Resource* resource;
+            ID3D11Texture1D* tex1d;
+            ID3D11Texture2D* tex2d;
+            ID3D11Texture3D* tex3d;
+        } handle;
+    };
 }
-

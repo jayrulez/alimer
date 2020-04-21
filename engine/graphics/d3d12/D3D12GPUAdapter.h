@@ -28,12 +28,10 @@
 
 namespace alimer
 {
-    class D3D12GPUProvider;
-
     class D3D12GPUAdapter final : public GPUAdapter
     {
     public:
-        D3D12GPUAdapter(D3D12GPUProvider* provider, ComPtr<IDXGIAdapter1> adapter);
+        D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter);
         ~D3D12GPUAdapter() = default;
 
         IDXGIAdapter1* GetHandle() const { return _adapter.Get(); }

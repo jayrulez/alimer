@@ -36,9 +36,6 @@ namespace alimer
         /// Destructor.
         virtual ~GPUAdapter() = default;
 
-        /// Get the creation provider.
-        inline GPUProvider* GetProvider() const noexcept { return _provider; }
-
         /// Get the backend type.
         BackendType GetBackendType() const noexcept { return _backend; }
 
@@ -56,13 +53,11 @@ namespace alimer
 
     protected:
         /// Constructor.
-        GPUAdapter(GPUProvider* provider, BackendType backend)
-            : _provider(provider)
-            , _backend(backend)
+        GPUAdapter(BackendType backend)
+            : _backend(backend)
         {
         }
 
-        GPUProvider* _provider;
         BackendType _backend;
         uint32_t _vendorId = 0;
         uint32_t _deviceId = 0;

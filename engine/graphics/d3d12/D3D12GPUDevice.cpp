@@ -35,7 +35,7 @@
 namespace alimer
 {
     D3D12GPUDevice::D3D12GPUDevice(D3D12GPUProvider* provider, D3D12GPUAdapter* adapter)
-        : GPUDevice(adapter)
+        : GPUDevice(provider, adapter)
         //, graphicsQueue(QueueType::Graphics)
         //, computeQueue(QueueType::Compute)
         //, copyQueue(QueueType::Copy)
@@ -181,7 +181,6 @@ namespace alimer
 
     void D3D12GPUDevice::InitCapabilities()
     {
-        
         // Determine maximum supported feature level for this device
         static const D3D_FEATURE_LEVEL s_featureLevels[] =
         {
@@ -246,10 +245,68 @@ namespace alimer
         {
             _features.raytracing = false;
         }
+
+        // Limits
+        _limits.maxVertexAttributes = kMaxVertexAttributes;
+        _limits.maxVertexBindings = kMaxVertexAttributes;
+        _limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        _limits.maxVertexBindingStride = kMaxVertexBufferStride;
+
+        //caps.limits.maxTextureDimension1D = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        _limits.maxTextureDimension2D = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        _limits.maxTextureDimension3D = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        _limits.maxTextureDimensionCube = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        _limits.maxTextureArrayLayers = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        _limits.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        _limits.maxUniformBufferSize = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        _limits.minUniformBufferOffsetAlignment = 256u;
+        _limits.maxStorageBufferSize = UINT32_MAX;
+        _limits.minStorageBufferOffsetAlignment = 16;
+        _limits.maxSamplerAnisotropy = D3D12_MAX_MAXANISOTROPY;
+        _limits.maxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        _limits.maxViewportWidth = D3D12_VIEWPORT_BOUNDS_MAX;
+        _limits.maxViewportHeight = D3D12_VIEWPORT_BOUNDS_MAX;
+        _limits.maxTessellationPatchSize = D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        _limits.pointSizeRangeMin = 1.0f;
+        _limits.pointSizeRangeMax = 1.0f;
+        _limits.lineWidthRangeMin = 1.0f;
+        _limits.lineWidthRangeMax = 1.0f;
+        _limits.maxComputeSharedMemorySize = D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        _limits.maxComputeWorkGroupCountX = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        _limits.maxComputeWorkGroupCountY = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        _limits.maxComputeWorkGroupCountZ = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        _limits.maxComputeWorkGroupInvocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        _limits.maxComputeWorkGroupSizeX = D3D12_CS_THREAD_GROUP_MAX_X;
+        _limits.maxComputeWorkGroupSizeY = D3D12_CS_THREAD_GROUP_MAX_Y;
+        _limits.maxComputeWorkGroupSizeZ = D3D12_CS_THREAD_GROUP_MAX_Z;
+
+        /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
+        /*UINT dxgi_fmt_caps = 0;
+        for (int fmt = (VGPUTextureFormat_Undefined + 1); fmt < VGPUTextureFormat_Count; fmt++)
+        {
+            DXGI_FORMAT dxgi_fmt = _vgpu_d3d_get_format((VGPUTextureFormat)fmt);
+            HRESULT hr = ID3D11Device1_CheckFormatSupport(renderer->d3d_device, dxgi_fmt, &dxgi_fmt_caps);
+            VGPU_ASSERT(SUCCEEDED(hr));
+            sg_pixelformat_info* info = &_sg.formats[fmt];
+            info->sample = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_TEXTURE2D);
+            info->filter = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE);
+            info->render = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_RENDER_TARGET);
+            info->blend = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_BLENDABLE);
+            info->msaa = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET);
+            info->depth = 0 != (dxgi_fmt_caps & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL);
+            if (info->depth) {
+                info->render = true;
+            }
+        }*/
     }
 
     void D3D12GPUDevice::WaitForIdle()
     {
+    }
+
+    SwapChain* D3D12GPUDevice::CreateSwapChainCore(const SwapChainDescriptor* descriptor)
+    {
+        return nullptr;
     }
 
 #if TODO

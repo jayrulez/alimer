@@ -35,7 +35,7 @@
 #endif
 
 #if defined(ALIMER_GRAPHICS_D3D11)
-//#include "graphics/d3d12/D3D12GraphicsDevice.h"
+#include "graphics/d3d11/D3D11GPUProvider.h"
 #endif
 
 #if defined(ALIMER_GRAPHICS_OPENGL)
@@ -68,8 +68,9 @@ namespace alimer
             }
 #endif
 
-#if defined(ALIMER_DIRECT3D11)
-            if (D3D11GraphicsDevice::IsAvailable()) {
+#if defined(ALIMER_GRAPHICS_D3D11)
+            if (D3D11GPUProvider::IsAvailable())
+            {
                 availableProviders.insert(BackendType::Direct3D11);
             }
 #endif
@@ -122,10 +123,10 @@ namespace alimer
             break;
 #endif
 
-#if defined(ALIMER_DIRECT3D11)
+#if defined(ALIMER_GRAPHICS_D3D11)
         case BackendType::Direct3D11:
-            ALIMER_LOGINFO("Using Direct3D11 render driver");
-            device = std::make_unique<D3D11GraphicsDevice>(desc);
+            ALIMER_LOGINFO("Creating Direct3D11 GPU provider");
+            provider = std::make_unique<D3D11GPUProvider>(validation);
             break;
 #endif
 

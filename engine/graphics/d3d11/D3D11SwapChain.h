@@ -20,34 +20,43 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
-#include "core/String.h"
+#pragma once
+
+#include "graphics/SwapChain.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    D3D12GPUAdapter::D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter)
-        : GPUAdapter(BackendType::Direct3D12)
-        , _adapter(adapter)
+    class D3D11SwapChain final : public SwapChain
     {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
+    public:
+        /// Constructor.
+        D3D11SwapChain(D3D11GPUDevice* device, const SwapChainDescriptor* descriptor);
 
-        _vendorId = desc.VendorId;
-        _deviceId = desc.DeviceId;
+        // Destructor
+        ~D3D11SwapChain() override;
 
-        std::wstring deviceName(desc.Description);
-        _name = alimer::ToUtf8(deviceName);
+        void Destroy();
+        HRESULT Present();
 
-        // Detect adapter type.
-        {
-            ComPtr<ID3D12Device> tempDevice;
-            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(tempDevice.GetAddressOf())));
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+    private:
+        ResizeResult ResizeImpl(uint32_t width, uint32_t height) override;
+        void AfterReset();
 
-            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
-        }
-    }
+        D3D11GPUDevice* _device;
+        IDXGIFactory2* factory;
+        IUnknown* deviceOrCommandQueue;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window;
+#else
+        IUnknown* window;
+#endif
+        uint32_t syncInterval;
+        uint32_t presentFlags = 0;
+        uint32_t swapChainFlags;
+
+        uint32_t backBufferCount;
+        DXGI_FORMAT dxgiColorFormat;
+        ComPtr<IDXGISwapChain1> handle;
+    };
 }
-

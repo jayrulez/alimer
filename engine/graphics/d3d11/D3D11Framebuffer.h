@@ -20,34 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
-#include "core/String.h"
+#pragma once
+
+#include "graphics/Framebuffer.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    D3D12GPUAdapter::D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter)
-        : GPUAdapter(BackendType::Direct3D12)
-        , _adapter(adapter)
+    class ALIMER_API D3D11Framebuffer final : public Framebuffer
     {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
+    public:
+        /// Constructor.
+        D3D11Framebuffer(D3D11GPUDevice* device, const SwapChainDescriptor* descriptor);
+        /// Destructor.
+        ~D3D11Framebuffer() override;
 
-        _vendorId = desc.VendorId;
-        _deviceId = desc.DeviceId;
+        HRESULT present(UINT sync_interval, UINT flags);
 
-        std::wstring deviceName(desc.Description);
-        _name = alimer::ToUtf8(deviceName);
+    private:
+        FramebufferResizeResult BackendResize();
 
-        // Detect adapter type.
-        {
-            ComPtr<ID3D12Device> tempDevice;
-            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(tempDevice.GetAddressOf())));
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = nullptr;
+#else
+        IUnknown* window = nullptr;
+#endif
 
-            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
-        }
-    }
+        UINT backBufferCount = 2;
+        bool flipPresentSupported = true;
+        bool tearingSupported = false;
+        IDXGISwapChain1* handle = nullptr;
+    };
 }
-

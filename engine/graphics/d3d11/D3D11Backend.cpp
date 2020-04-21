@@ -20,34 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
-#include "core/String.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    D3D12GPUAdapter::D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter)
-        : GPUAdapter(BackendType::Direct3D12)
-        , _adapter(adapter)
-    {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
-
-        _vendorId = desc.VendorId;
-        _deviceId = desc.DeviceId;
-
-        std::wstring deviceName(desc.Description);
-        _name = alimer::ToUtf8(deviceName);
-
-        // Detect adapter type.
-        {
-            ComPtr<ID3D12Device> tempDevice;
-            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(tempDevice.GetAddressOf())));
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
-
-            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
-        }
-    }
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+    // D3D11 functions.
+    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
+#endif
 }
-

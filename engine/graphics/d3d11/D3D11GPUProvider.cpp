@@ -20,13 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUProvider.h"
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
+#include "D3D11GPUProvider.h"
+#include "D3D11GPUAdapter.h"
+#include "D3D11GPUDevice.h"
 
 namespace alimer
 {
-    bool D3D12GPUProvider::IsAvailable()
+    bool D3D11GPUProvider::IsAvailable()
     {
         static bool availableInitialized = false;
         static bool available = false;
@@ -41,39 +41,41 @@ namespace alimer
         if (s_dxgiHandle == nullptr)
             return false;
 
+        CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory1");
         CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory2");
         if (CreateDXGIFactory2 == nullptr)
-            return false;
+        {
+            if (CreateDXGIFactory1)
+            {
+                return false;
+            }
+        }
 
         DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface1");
+        if (DXGIGetDebugInterface1 == nullptr)
+        {
+            DXGIGetDebugInterface = (PFN_GET_DXGI_DEBUG_INTERFACE)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface");
+            if (DXGIGetDebugInterface == nullptr)
+            {
+                return false;
+            }
+        }
 
-        static HMODULE s_d3d12Handle = LoadLibraryW(L"d3d12.dll");
-        if (s_d3d12Handle == nullptr)
+        static HMODULE s_d3d11Handle = LoadLibraryW(L"d3d11.dll");
+        if (s_d3d11Handle == nullptr)
             return false;
 
-        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(s_d3d12Handle, "D3D12CreateDevice");
-        if (D3D12CreateDevice == nullptr)
+        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(s_d3d11Handle, "D3D11CreateDevice");
+        if (D3D11CreateDevice == nullptr)
             return false;
-
-        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(s_d3d12Handle, "D3D12GetDebugInterface");
-        D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(s_d3d12Handle, "D3D12SerializeRootSignature");
-        D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(s_d3d12Handle, "D3D12CreateRootSignatureDeserializer");
-        D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(s_d3d12Handle, "D3D12SerializeVersionedRootSignature");
-        D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(s_d3d12Handle, "D3D12CreateVersionedRootSignatureDeserializer");
 #endif
 
         // Create temp factory and detect adapter support
         {
-            ComPtr<IDXGIFactory4> tempFactory;
-            HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(tempFactory.GetAddressOf()));
-            if (FAILED(hr))
+            ComPtr<IDXGIFactory1> dxgiFactory;
+            if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.GetAddressOf()))))
             {
                 return false;
-            }
-
-            if (SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
-            {
-                available = true;
             }
         }
 
@@ -81,45 +83,20 @@ namespace alimer
         return available;
     }
 
-    D3D12GPUProvider::D3D12GPUProvider(bool validation)
-        : _minFeatureLevel(D3D_FEATURE_LEVEL_11_0)
+    D3D11GPUProvider::D3D11GPUProvider(bool validation)
+        : _validation(validation)
     {
-#if defined(_DEBUG)
-        // Enable the debug layer (requires the Graphics Tools "optional feature").
-        //
-        // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (validation)
+        ALIMER_ASSERT(IsAvailable());
+
+#if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
+        bool debugDXGI = false;
         {
-            ComPtr<ID3D12Debug> debugController;
-
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
-            {
-                debugController->EnableDebugLayer();
-
-                ComPtr<ID3D12Debug1> debugController1;
-                if (SUCCEEDED(debugController.As(&debugController1)))
-                {
-                    const bool gpuValidation = false;
-                    if (gpuValidation)
-                    {
-                        debugController1->SetEnableGPUBasedValidation(TRUE);
-                        debugController1->SetEnableSynchronizedCommandQueueValidation(TRUE);
-                    }
-                    else
-                    {
-                        debugController1->SetEnableGPUBasedValidation(FALSE);
-                    }
-                }
-            }
-            else
-            {
-                OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
-            }
-
             ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
-                dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+                debugDXGI = true;
+
+                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -134,8 +111,15 @@ namespace alimer
                 dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
             }
         }
+
+        _validation = debugDXGI;
+
+        if (!debugDXGI)
 #endif
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+
+        {
+            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+        }
 
         BOOL allowTearing = FALSE;
         ComPtr<IDXGIFactory5> dxgiFactory5;
@@ -158,17 +142,17 @@ namespace alimer
         }
     }
 
-    D3D12GPUProvider::~D3D12GPUProvider()
+    D3D11GPUProvider::~D3D11GPUProvider()
     {
         dxgiFactory.Reset();
 
         ReportLiveObjects();
     }
 
-    void D3D12GPUProvider::ReportLiveObjects()
+    void D3D11GPUProvider::ReportLiveObjects()
     {
 #ifdef _DEBUG
-        ComPtr<IDXGIDebug1> dxgiDebug;
+        ComPtr<IDXGIDebug> dxgiDebug;
         if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
         {
             dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
@@ -176,7 +160,7 @@ namespace alimer
 #endif
     }
 
-    RefPtr<GPUDevice> D3D12GPUProvider::CreateDevice(GPUPowerPreference powerPreference)
+    RefPtr<GPUDevice> D3D11GPUProvider::CreateDevice(GPUPowerPreference powerPreference)
     {
         ComPtr<IDXGIAdapter1> dxgiAdapter;
 
@@ -203,16 +187,12 @@ namespace alimer
                     continue;
                 }
 
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), _minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
 #ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
 #endif
-                    break;
-                }
+                break;
             }
         }
 #endif
@@ -230,39 +210,22 @@ namespace alimer
                     continue;
                 }
 
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(dxgiAdapter.Get(), _minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
 #ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
 #endif
-                    break;
-                }
+                break;
             }
         }
-
-#if !defined(NDEBUG)
-        if (!dxgiAdapter)
-        {
-            // Try WARP12 instead
-            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(dxgiAdapter.ReleaseAndGetAddressOf()))))
-            {
-                throw std::exception("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-            }
-
-            OutputDebugStringA("Direct3D Adapter - WARP12\n");
-        }
-#endif
 
         if (!dxgiAdapter)
         {
             throw std::exception("No Direct3D 12 device found");
         }
 
-        auto adapter = new D3D12GPUAdapter(dxgiAdapter);
-        return MakeRefPtr<D3D12GPUDevice>(this, adapter);
+        auto adapter = new D3D11GPUAdapter(dxgiAdapter);
+        return MakeRefPtr<D3D11GPUDevice>(this, adapter);
     }
 }
 

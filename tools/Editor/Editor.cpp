@@ -41,6 +41,7 @@ namespace alimer
 
         Configuration config;
         config.windowTitle = "Alimer Studio";
+        config.preferredGPUBackend = BackendType::Direct3D11;
         return new Editor(config);
     }
 }

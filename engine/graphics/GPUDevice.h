@@ -22,22 +22,23 @@
 
 #pragma once
 
+#include "core/Ptr.h"
 #include "graphics/GPUAdapter.h"
-#include "graphics/SwapChain.h"
+#include "graphics/GPUResource.h"
 #include "graphics/CommandContext.h"
 #include <memory>
 #include <mutex>
 
 namespace alimer
 {
-    class Swapchain;
+    class SwapChain;
 
     /// Defines the logical GPU device class.
     class ALIMER_API GPUDevice : public RefCounted
     {
     public:
         /// Constructor.
-        GPUDevice(GPUAdapter* adapter);
+        GPUDevice(GPUProvider* provider, GPUAdapter* adapter);
 
         /// Destructor.
         virtual ~GPUDevice() = default;
@@ -50,12 +51,17 @@ namespace alimer
         /// Remove a tracked GPU resource. Called by GPUResource.
         void RemoveGPUResource(GPUResource* resource);
 
+        RefPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor);
+
         /// Present the main swap chain on screen.
         void Present();
         //uint64_t PresentFrame(const std::vector<Swapchain*>& swapchains);
 
         /// Get the default main graphics context.
         GraphicsContext* GetGraphicsContext() const { return graphicsContext.get(); }
+
+        /// Get the creation provider.
+        inline GPUProvider* GetProvider() const noexcept { return _provider; }
 
         /// Get the features.
         inline GPUAdapter* GetAdapter() const { return _adapter.get(); }
@@ -70,7 +76,11 @@ namespace alimer
         virtual void ReleaseTrackedResources();
         //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
 
+    private:
+        virtual SwapChain* CreateSwapChainCore(const SwapChainDescriptor* descriptor) = 0;
+
     protected:
+        GPUProvider* _provider;
         std::unique_ptr<GPUAdapter> _adapter;
 
         GPUFeatures _features{};

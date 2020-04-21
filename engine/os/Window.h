@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GraphicsSurface.h"
+#include "graphics/GPUDevice.h"
 #include "math/math.h"
 #include "math/size.h"
 #include <string>
@@ -45,22 +45,17 @@ namespace alimer
     constexpr static const int32_t centered = std::numeric_limits<int32_t>::max();
 
     class WindowImpl;
+    class SwapChain;
 
     /// Defines an OS Window.
-    class ALIMER_API Window final : public GraphicsSurface
+    class ALIMER_API Window final
     {
     public:
         /// Constructor.
-        Window() = default;
-
-        /// Constructor.
-        Window(const std::string& title, const usize& newSize, WindowStyle style);
+        Window(GPUDevice* device, const std::string& title, const usize& size, WindowStyle style);
 
         /// Destructor.
         ~Window();
-
-        /// Create the window.
-        bool create(const std::string& title, const int2& pos, const usize& size, WindowStyle style);
 
         /// Close the window.
         void Close();
@@ -80,8 +75,6 @@ namespace alimer
         /// Get the window size.
         usize GetSize() const noexcept;
 
-        GraphicsSurfaceType GetType() const noexcept;
-
         void* GetHandle() const;
         void* GetDisplay() const;
 
@@ -93,6 +86,8 @@ namespace alimer
 
     private:
         WindowImpl* impl = nullptr;
+        GPUDevice* _device;
+        RefPtr<SwapChain> _swapChain;
 
         ALIMER_DISABLE_COPY_MOVE(Window);
     };

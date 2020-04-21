@@ -23,57 +23,43 @@
 #pragma once
 
 #include "graphics/Types.h"
-#include "math/Color.h"
+#include "graphics/d3d/D3DCommon.h"
+#include <d3d11_1.h>
 
 namespace alimer
 {
-    class GraphicsDevice;
-    class SwapChain;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+    // D3D11 functions.
+    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
+#endif
 
-    /// Command context class for recording copy GPU commands.
-    class CopyContext
+    class D3D11GPUDevice;
+
+    static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
     {
-        friend class GraphicsDevice;
+        UINT bindFlags = 0;
+        if (any(usage & TextureUsage::Sampled))
+        {
+            bindFlags |= D3D11_BIND_SHADER_RESOURCE;
+        }
 
-    public:
-        /// Destructor.
-        virtual ~CopyContext();
+        if (any(usage & TextureUsage::Storage))
+        {
+            bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+        }
 
-        void BeginMarker(const std::string& name);
-        void EndMarker();
+        if (any(usage & TextureUsage::RenderTarget))
+        {
+            if (depthStencilFormat)
+            {
+                bindFlags |= D3D11_BIND_DEPTH_STENCIL;
+            }
+            else
+            {
+                bindFlags |= D3D11_BIND_RENDER_TARGET;
+            }
+        }
 
-        void Flush(bool wait = false);
-
-    protected:
-        /// Constructor.
-        CopyContext(GraphicsDevice& device_);
-
-        void SetName(const std::string& name_) { name = name_; }
-
-        GraphicsDevice& device;
-        std::string name;
-    };
-
-    /// Command context class for recording compute GPU commands.
-    class ALIMER_API ComputeContext : public CopyContext
-    {
-    public:
-
-    protected:
-        /// Constructor.
-        ComputeContext(GraphicsDevice& device_);
-    };
-
-    /// Command context class for recording graphics GPU commands.
-    class ALIMER_API GraphicsContext final : public ComputeContext
-    {
-    public:
-        /// Constructor.
-        GraphicsContext(GraphicsDevice& device_);
-
-        void BeginRenderPass(SwapChain* swapchain, const Color& clearColor);
-        void EndRenderPass();
-
-    protected:
-    };
+        return bindFlags;
+    }
 }

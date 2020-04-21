@@ -24,7 +24,6 @@
 #include "Games/Game.h"
 #include "graphics/GPUProvider.h"
 #include "graphics/GPUDevice.h"
-#include "graphics/Swapchain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -63,7 +62,7 @@ namespace alimer
         gpuDevice = gpuProvider->CreateDevice(GPUPowerPreference::HighPerformance);
 
         // Create main window.
-        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
+        mainWindow.reset(new Window(gpuDevice, config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
         // Init graphics device.
         /*vgpu_config gpu_config = {};

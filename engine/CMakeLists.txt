@@ -59,11 +59,15 @@ if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
 endif ()
 
 if (ALIMER_GRAPHICS_D3D11)
-    #define_engine_source_files(graphics/d3d11)
+    define_engine_source_files(graphics/d3d11)
 endif ()
 
 if (ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d12)
+endif ()
+
+if (ALIMER_GRAPHICS_OPENGL)
+    #define_engine_source_files(graphics/opengl)
 endif ()
 
 group_sources()
