@@ -122,9 +122,10 @@ if __name__ == "__main__":
      # Parse argument first.
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--target', help="Build target", choices=['windows', 'uwp', 'android', 'linux', 'ios', 'osx', 'html5'])
-    parser.add_argument('-g', '--generator', help="Generator to use", choices=['vs2019', 'vs2017', 'ninja', 'vs2019-ninja', 'vs2017-ninja'])
+    parser.add_argument('--generator', help="Generator to use", choices=['vs2019', 'vs2017', 'ninja', 'vs2019-ninja', 'vs2017-ninja'])
     parser.add_argument('-c', '--compiler', help="Build compiler", choices=['msvc', 'clang', 'gcc'])
     parser.add_argument('--architecture', help="Build architecture", choices=['x64', 'x86', 'arm', 'arm64', 'arm7', 'arm8'])
+    parser.add_argument('-g', '--graphics', help="Graphics api", choices=['d3d12', 'vulkan', 'd3d11', 'metal'])
     parser.add_argument('--config', help="Build config", choices=['Debug', 'Dev', 'Profile', 'Release'])
     parser.add_argument('--verbose', action='store_true', help="Log verbose")
     parser.add_argument('--compile', action='store_false', help='Run compile')
@@ -175,6 +176,14 @@ if __name__ == "__main__":
         compiler = "vc141"
     else:
         compiler = "gcc"
+    
+    if args.graphics is None:
+        if target == "windows":
+            graphics_api = "d3d12"
+        else:
+            graphics_api = "vulkan"
+    else:
+        graphics_api = args.graphics
 
     # Enable log verbosity first.
     if (args.verbose):
@@ -211,7 +220,7 @@ if __name__ == "__main__":
     if continuous:
         buildFolderName = "continuous"
     else:
-        buildFolderName = "%s-%s-%s" % (target, buildSystem, architecture)
+        buildFolderName = "%s-%s-%s-%s" % (target, buildSystem, architecture, graphics_api)
         if not multiConfig:
             buildFolderName += "-%s" % configuration
 
@@ -295,9 +304,9 @@ if __name__ == "__main__":
             serverFile.close()
         elif (target == "android"):
             androidNDKDir = os.environ.get('ANDROID_NDK')
-            batCmd.AddCommand("cmake -G \"Ninja\" -DANDROID_NDK=\"%s\" -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=21 -DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DCMAKE_ANDROID_STL_TYPE=c++_static -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (androidNDKDir, configuration))
+            batCmd.AddCommand("cmake -G \"Ninja\" -DANDROID_NDK=\"%s\" -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=21 -DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DCMAKE_ANDROID_STL_TYPE=c++_static -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" -DALIMER_GRAPHICS_API=%s ../../" % (androidNDKDir, configuration, graphics_api))
         else:
-            batCmd.AddCommand("cmake -G Ninja -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (configuration))
+            batCmd.AddCommand("cmake -G Ninja -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" -DALIMER_GRAPHICS_API=%s ../../" % (configuration, graphics_api))
 
         batCmd.AddCommand("ninja -j%d" % parallel)
 
@@ -311,9 +320,9 @@ if __name__ == "__main__":
             generator = "Visual Studio 15"
 
         if (buildSystem == "uwp"):
-            batCmd.AddCommand("cmake -G \"%s\" -T host=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A %s ../../" % (generator, vcArch))
+            batCmd.AddCommand("cmake -G \"%s\" -T host=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -DALIMER_GRAPHICS_API=%s -A %s ../../" % (generator, graphics_api, vcArch))
         else:
-            batCmd.AddCommand("cmake -G \"%s\" -T %shost=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -A %s ../../" % (generator, vcToolset, vcArch))
+            batCmd.AddCommand("cmake -G \"%s\" -T %shost=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DALIMER_GRAPHICS_API=%s -A %s ../../" % (generator, vcToolset, graphics_api, vcArch))
 
         batCmd.AddCommand("MSBuild ALL_BUILD.vcxproj /nologo /m:%d /v:m /p:Configuration=%s,Platform=%s" % (parallel, configuration, architecture))
 
