@@ -23,6 +23,7 @@
 #pragma once
 
 #include "graphics/Types.h"
+#include "graphics/BackendTypes.h"
 #include "core/Object.h"
 
 namespace alimer

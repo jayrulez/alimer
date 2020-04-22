@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    class D3D12CommandAllocatorPool;
+    /*class D3D12CommandAllocatorPool;
 
     class D3D12CommandQueue final 
     {
@@ -62,5 +62,5 @@ namespace alimer
         D3D12CommandAllocatorPool allocatorPool;
         std::mutex fenceMutex;
         std::mutex eventMutex;
-    };
+    };*/
 }

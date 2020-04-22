@@ -20,36 +20,83 @@
 // THE SOFTWARE.
 //
 
-#include "config.h"
 #include "core/Log.h"
 #include "core/Assert.h"
 #include "os/window.h"
 #include "graphics/GPUDevice.h"
 #include "graphics/GPUBuffer.h"
-#include "graphics/Swapchain.h"
-
-#if defined(ALIMER_GRAPHICS_VULKAN)
-//#include "graphics/vulkan/VulkanGraphicsDevice.h"
-#endif
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-#include "graphics/d3d12/D3D12GPUDevice.h"
-#endif
-
-#if defined(ALIMER_GRAPHICS_D3D11)
-//#include "graphics/d3d12/D3D12GraphicsDevice.h"
-#endif
-
-#if defined(ALIMER_GRAPHICS_OPENGL)
-//#include "graphics/opengl/GLGPUDevice.h"
-#endif
+#include "graphics/CommandQueue.h"
 
 namespace alimer
 {
-    GPUDevice::GPUDevice(GPUProvider* provider, GPUAdapter* adapter)
-        : _provider(provider)
-        , _adapter(adapter)
+    RefPtr<GPUDevice> GPUDevice::Create(Window* window, const Desc& desc)
     {
+        ALIMER_ASSERT(window);
+
+        RefPtr<GPUDevice> device(new GPUDevice(window, desc));
+        if (device->Init() == false) {
+            device = nullptr;
+        }
+
+        return device;
+    }
+
+    GPUDevice::GPUDevice(Window* window_, const Desc& desc)
+        : window(window_)
+        , desc{ desc }
+    {
+    }
+
+    GPUDevice::~GPUDevice()
+    {
+        WaitForIdle();
+
+        ReleaseTrackedResources();
+        //ExecuteDeferredReleases();
+
+        copyCommandQueue.reset();
+        computeCommandQueue.reset();
+        graphicsCommandQueue.reset();
+
+        mainSwapChain.reset();
+
+        ApiDestroy();
+    }
+
+    bool GPUDevice::Init()
+    {
+        if (ApiInit() == false) {
+            return false;
+        }
+
+        graphicsCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Graphics);
+        computeCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Compute);
+        copyCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Copy);
+
+        mainSwapChain.reset(new SwapChain(*this, window->GetHandle(), window->GetSize()));
+
+        return true;
+    }
+
+    std::shared_ptr<CommandQueue> GPUDevice::GetCommandQueue(CommandQueueType type) const
+    {
+        std::shared_ptr<CommandQueue> commandQueue;
+        switch (type)
+        {
+        case CommandQueueType::Graphics:
+            commandQueue = graphicsCommandQueue;
+            break;
+        case CommandQueueType::Compute:
+            commandQueue = computeCommandQueue;
+            break;
+        case CommandQueueType::Copy:
+            commandQueue = copyCommandQueue;
+            break;
+        default:
+            ALIMER_ASSERT_FAIL("Invalid command queue type.");
+        }
+
+        return commandQueue;
     }
 
     void GPUDevice::AddGPUResource(GPUResource* resource)
@@ -78,23 +125,4 @@ namespace alimer
             _gpuResources.clear();
         }
     }
-
-    RefPtr<SwapChain> GPUDevice::CreateSwapChain(const SwapChainDescriptor* descriptor)
-    {
-        ALIMER_ASSERT(descriptor);
-        SwapChain* swapchain = CreateSwapChainCore(descriptor);
-        if (swapchain == nullptr)
-            return nullptr;
-        return ConstructRefPtr<SwapChain>(swapchain);
-    }
-
-#if TOOD
-
-    void GPUDevice::Present()
-    {
-        ALIMER_ASSERT(mainSwapchain.IsNotNull());
-        Present({ mainSwapchain.Get() });
-    }
-#endif // TOOD
-
 }

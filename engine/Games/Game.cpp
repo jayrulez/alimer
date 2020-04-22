@@ -22,8 +22,8 @@
 
 #include "os/os.h"
 #include "Games/Game.h"
-#include "graphics/GPUProvider.h"
 #include "graphics/GPUDevice.h"
+#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -35,12 +35,6 @@ namespace alimer
     {
         os::init();
         gameSystems.push_back(input);
-
-        bool validation = false;
-#ifdef _DEBUG
-        validation = true;
-#endif
-        gpuProvider = GPUProvider::Create(config_.preferredGPUBackend, validation);
     }
 
     Game::~Game()
@@ -53,38 +47,22 @@ namespace alimer
         gameSystems.clear();
         gpuDevice->WaitForIdle();
         gpuDevice.Reset();
-        gpuProvider.reset();
         os::shutdown();
     }
 
     void Game::InitBeforeRun()
     {
-        gpuDevice = gpuProvider->CreateDevice(GPUPowerPreference::HighPerformance);
-
         // Create main window.
-        mainWindow.reset(new Window(gpuDevice, config.windowTitle, config.windowSize, WindowStyle::Resizable));
+        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
-        // Init graphics device.
-        /*vgpu_config gpu_config = {};
-        gpu_config.preferred_backend = VGPU_BACKEND_D3D11;
-        //gpu_config.preferred_backend = VGPU_BACKEND_VULKAN;
-#ifdef _DEBUG
-        gpu_config.debug = true;
-#endif
+        GPUDevice::Desc desc = {};
+        desc.powerPreference = GPUPowerPreference::HighPerformance;
+        gpuDevice = GPUDevice::Create(mainWindow.get(), desc);
 
-        vgpu_swapchain_desc swapchain_desc = {};
-        swapchain_desc.handle.display = mainWindow->GetDisplay();
-        swapchain_desc.handle.window_handle = mainWindow->GetHandle();
-        swapchain_desc.width = mainWindow->GetSize().width;
-        swapchain_desc.height = mainWindow->GetSize().height;
-        gpu_config.swapchain = &swapchain_desc;
-
-        //graphicsDesc.fullscreen.isFullScreen = mainWindow->IsFullScreen();
-
-        if (!vgpu_init(&gpu_config))
+        if (gpuDevice == nullptr)
         {
             headless = true;
-        }*/
+        }
 
         Initialize();
         if (exitCode)
@@ -283,7 +261,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !mainWindow->is_minimized()
+            && !mainWindow->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

@@ -52,7 +52,6 @@ namespace alimer
     };
 
     class InputManager;
-    class GPUProvider;
     class GPUDevice;
 
     class ALIMER_API Game : public Object
@@ -106,7 +105,6 @@ namespace alimer
         GameTime time;
         std::unique_ptr<Window> mainWindow;
         std::vector<GameSystem*> gameSystems;
-        std::unique_ptr<GPUProvider> gpuProvider;
         RefPtr<GPUDevice> gpuDevice;
         InputManager* input;
         bool headless{ false };

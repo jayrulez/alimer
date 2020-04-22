@@ -22,20 +22,28 @@
 
 #pragma once
 
-#include "graphics/GraphicsSurface.h"
 #include "graphics/Texture.h"
 #include <vector>
 
 namespace alimer
 {
+    class GPUDevice;
     class Texture;
 
-    class ALIMER_API SwapChain : public RefCounted
+
+    enum class PresentMode : uint32_t
+    {
+        Immediate,
+        Mailbox,
+        Fifo
+    };
+
+    class ALIMER_API SwapChain final
     {
     public:
         /// Constructor.
-        SwapChain(const SwapChainDescriptor* descriptor);
-        virtual ~SwapChain() = default;
+        SwapChain(GPUDevice& device, void* windowHandle, const usize& extent);
+        ~SwapChain();
 
         enum class ResizeResult
         {
@@ -50,14 +58,25 @@ namespace alimer
 
         const usize& GetExtent() const;
 
-    private:
-        virtual ResizeResult ResizeImpl(uint32_t width, uint32_t height) = 0;
+        /**
+        * Get the native API handle.
+        */
+        SwapChainHandle GetHandle() const { return handle; }
 
-    protected:
-        
+    private:
+        void Destroy();
+        ResizeResult ApiResize();
+
+        GPUDevice& device;
+        SwapChainHandle handle{};
         usize extent{};
-        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
-        PixelFormat depthStencilFormat = PixelFormat::Undefined;
+        void* windowHandle;
+
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Unknown;
+        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+        PresentMode presentMode = PresentMode::Fifo;
+        uint32_t imageCount = 2u;
 
         std::vector<RefPtr<Texture>> textures;
         mutable uint32_t textureIndex{ 0 };

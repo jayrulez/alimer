@@ -25,11 +25,17 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescriptor* descriptor)
-        : colorFormat(descriptor->colorFormat)
-        , extent(descriptor->extent)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+    SwapChain::SwapChain(GPUDevice& device, void* windowHandle, const usize& extent)
+        : device{ device }
+        , extent{ extent }
+        , windowHandle{ windowHandle }
     {
+        ApiResize();
+    }
+
+    SwapChain::~SwapChain()
+    {
+        Destroy();
     }
 
     SwapChain::ResizeResult SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
@@ -40,7 +46,7 @@ namespace alimer
         }
 
         extent = { newWidth, newHeight };
-        return ResizeImpl(newWidth, newHeight);
+        return ApiResize();
     }
 
     Texture* SwapChain::GetCurrentTexture() const

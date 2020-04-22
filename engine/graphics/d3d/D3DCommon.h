@@ -52,37 +52,18 @@
 #endif
 
 #if defined(_DEBUG)
-#include <dxgidebug.h>
+#   include <dxgidebug.h>
+
+#   if !defined(_XBOX_ONE) || !defined(_TITLE)
+#   pragma comment(lib,"dxguid.lib")
+#   endif
+
 #endif
 
-#include <wrl/client.h>
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY)(REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE)(UINT flags, REFIID _riid, void** _debug);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
-#endif
+#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1;
-    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE DXGIGetDebugInterface;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-
-#if defined(_DEBUG)
-    // Declare debug guids to avoid linking with "dxguid.lib"
-    static constexpr GUID g_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
-    static constexpr GUID g_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
-#endif
-
-    // Type alias for Win32 ComPtr template
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
     inline std::wstring GetDXErrorString(HRESULT hr)
@@ -108,146 +89,54 @@ namespace alimer
         return message;
     }
 
+    struct DxgiFormatDesc
+    {
+        PixelFormat format;
+        DXGI_FORMAT dxgiFormat;
+    };
+
+    extern const DxgiFormatDesc kDxgiFormatDesc[];
+
     static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format) {
         switch (format)
         {
-        case PixelFormat::BGRA8UNorm:
-        case PixelFormat::BGRA8UNormSrgb:
+        case PixelFormat::BGRA8Unorm:
+        case PixelFormat::BGRA8UnormSrgb:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case PixelFormat::RGBA8UNorm:
-        case PixelFormat::RGBA8UNormSrgb:
+        case PixelFormat::RGBA8Unorm:
+        case PixelFormat::RGBA8UnormSrgb:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
         case PixelFormat::RGBA16Float:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-        case PixelFormat::RGB10A2UNorm:
+        case PixelFormat::RGB10A2Unorm:
             return DXGI_FORMAT_R10G10B10A2_UNORM;
 
         default:
-            //ALIMER_LOGE("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
+            ALIMER_LOGE("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
             return DXGI_FORMAT_UNKNOWN;
         }
     }
 
     static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
     {
-        static DXGI_FORMAT formats[(unsigned)PixelFormat::Count] = {
-            DXGI_FORMAT_UNKNOWN,
-            // 8-bit pixel formats
-            DXGI_FORMAT_R8_UNORM,
-            DXGI_FORMAT_R8_SNORM,
-            DXGI_FORMAT_R8_UINT,
-            DXGI_FORMAT_R8_SINT,
-
-            // 16-bit pixel formats
-            DXGI_FORMAT_R16_UNORM,
-            DXGI_FORMAT_R16_SNORM,
-            DXGI_FORMAT_R16_UINT,
-            DXGI_FORMAT_R16_SINT,
-            DXGI_FORMAT_R16_FLOAT,
-            DXGI_FORMAT_R8G8_UNORM,
-            DXGI_FORMAT_R8G8_SNORM,
-            DXGI_FORMAT_R8G8_UINT,
-            DXGI_FORMAT_R8G8_SINT,
-
-            // 32-bit pixel formats
-            DXGI_FORMAT_R32_UINT,
-            DXGI_FORMAT_R32_SINT,
-            DXGI_FORMAT_R32_FLOAT,
-            DXGI_FORMAT_R16G16_UNORM,
-            DXGI_FORMAT_R16G16_SNORM,
-            DXGI_FORMAT_R16G16_UINT,
-            DXGI_FORMAT_R16G16_SINT,
-            DXGI_FORMAT_R16G16_FLOAT,
-            DXGI_FORMAT_R8G8B8A8_UNORM,
-            DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-            DXGI_FORMAT_R8G8B8A8_SNORM,
-            DXGI_FORMAT_R8G8B8A8_UINT,
-            DXGI_FORMAT_R8G8B8A8_SINT,
-            DXGI_FORMAT_B8G8R8A8_UNORM,
-            DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,
-
-            // Packed 32-Bit Pixel formats
-            DXGI_FORMAT_R10G10B10A2_UNORM,
-            DXGI_FORMAT_R11G11B10_FLOAT,
-
-            // 64-Bit Pixel Formats
-            DXGI_FORMAT_R32G32_UINT,
-            DXGI_FORMAT_R32G32_SINT,
-            DXGI_FORMAT_R32G32_FLOAT,
-            DXGI_FORMAT_R16G16B16A16_UNORM,
-            DXGI_FORMAT_R16G16B16A16_SNORM,
-            DXGI_FORMAT_R16G16B16A16_UINT,
-            DXGI_FORMAT_R16G16B16A16_SINT,
-            DXGI_FORMAT_R16G16B16A16_FLOAT,
-
-            // 128-Bit Pixel Formats
-            DXGI_FORMAT_R32G32B32A32_UINT,
-            DXGI_FORMAT_R32G32B32A32_SINT,
-            DXGI_FORMAT_R32G32B32A32_FLOAT,
-
-            // Depth-stencil formats
-            DXGI_FORMAT_D16_UNORM,
-            DXGI_FORMAT_D32_FLOAT,
-            DXGI_FORMAT_D24_UNORM_S8_UINT,
-            DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
-
-            // Compressed BC formats
-            DXGI_FORMAT_BC1_UNORM,
-            DXGI_FORMAT_BC1_UNORM_SRGB,
-            DXGI_FORMAT_BC2_UNORM,
-            DXGI_FORMAT_BC2_UNORM_SRGB,
-            DXGI_FORMAT_BC3_UNORM,
-            DXGI_FORMAT_BC3_UNORM_SRGB,
-            DXGI_FORMAT_BC4_UNORM,
-            DXGI_FORMAT_BC4_SNORM,
-            DXGI_FORMAT_BC5_UNORM,
-            DXGI_FORMAT_BC5_SNORM,
-            DXGI_FORMAT_BC6H_UF16,
-            DXGI_FORMAT_BC6H_SF16,
-            DXGI_FORMAT_BC7_UNORM,
-            DXGI_FORMAT_BC7_UNORM_SRGB,
-
-            // Compressed PVRTC Pixel Formats
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-
-            // Compressed ETC Pixel Formats
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-
-            // Compressed ASTC Pixel Formats
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN,
-            DXGI_FORMAT_UNKNOWN
-        };
-
-        static_assert((unsigned)PixelFormat::Count == ALIMER_COUNT_OF(formats), "Invalid PixelFormat size");
-        return formats[(unsigned)format];
+        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
+        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
     }
 
     static inline DXGI_FORMAT ToDXGITypelessDepthFormat(PixelFormat format)
     {
         switch (format)
         {
-        case PixelFormat::Depth16UNorm:
+        case PixelFormat::D16Unorm:
             return DXGI_FORMAT_R16_TYPELESS;
-        case PixelFormat::Depth32FloatStencil8:
+        case PixelFormat::D32FloatS8X24:
             return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-        case PixelFormat::Depth24UNormStencil8:
+        case PixelFormat::D24UnormS8:
             return DXGI_FORMAT_R24G8_TYPELESS;
-        case PixelFormat::Depth32Float:
+        case PixelFormat::D32Float:
             return DXGI_FORMAT_R32_TYPELESS;
         default:
             ALIMER_ASSERT(IsDepthFormat(format) == false);
@@ -282,24 +171,6 @@ namespace alimer
         }
 
         return "";
-    }
-
-    static inline UINT GetSyncInterval(PresentInterval interval)
-    {
-        switch (interval)
-        {
-        case PresentInterval::Default:
-        case PresentInterval::One:
-            return 1;
-        case PresentInterval::Two:
-            return 2;
-        case PresentInterval::Immediate:
-            return 0;
-        default:
-            ALIMER_UNREACHABLE();
-            return (UINT)-1;
-            break;
-        }
     }
 }
 

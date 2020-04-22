@@ -32,6 +32,34 @@ namespace alimer
         auto init() -> bool;
         void shutdown() noexcept;
 
+        enum class WindowEventId : uint8_t
+        {
+            none = 0,
+            Shown,
+            Hidden,
+            Exposed,
+            Moved,
+            Resized,
+            SizeChanged,
+            Minimized,
+            Maximized,
+            Restored,
+            Enter,
+            Leave,
+            FocusGained,
+            FocusLost,
+            Close
+        };
+
+        /// Defines a Window Event.
+        struct WindowEvent
+        {
+            uint32_t windowId{};
+            int32_t data1{};
+            int32_t data2{};
+            WindowEventId type{};
+        };
+
         /// Defines an OS Event.
         struct Event
         {
@@ -39,6 +67,11 @@ namespace alimer
             {
                 Unkwnown = 0,
                 Quit,
+                Window
+            };
+
+            union {
+                WindowEvent window;
             };
 
             Type type;
@@ -47,8 +80,6 @@ namespace alimer
         void push_event(Event&& e);
         void push_event(const Event& e);
         auto poll_event(Event& e) noexcept -> bool;
-
-        void* get_proc_address(const char* function);
 
         std::string get_clipboard_text() noexcept;
         void set_clipboard_text(const std::string& text);

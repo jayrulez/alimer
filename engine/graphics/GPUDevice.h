@@ -23,7 +23,7 @@
 #pragma once
 
 #include "core/Ptr.h"
-#include "graphics/GPUAdapter.h"
+#include "graphics/SwapChain.h"
 #include "graphics/GPUResource.h"
 #include "graphics/CommandContext.h"
 #include <memory>
@@ -31,63 +31,86 @@
 
 namespace alimer
 {
-    class SwapChain;
+#ifdef _DEBUG
+#   define DEFAULT_ENABLE_VALIDATION true
+#else
+#   define DEFAULT_ENABLE_VALIDATION false
+#endif
+
+    class Window;
+    class CommandQueue;
+    struct GPUDeviceApiData;
 
     /// Defines the logical GPU device class.
-    class ALIMER_API GPUDevice : public RefCounted
+    class ALIMER_API GPUDevice final : public RefCounted
     {
     public:
-        /// Constructor.
-        GPUDevice(GPUProvider* provider, GPUAdapter* adapter);
+        /**
+        * Device configuration
+        */
+        struct Desc
+        {
+            bool validation = DEFAULT_ENABLE_VALIDATION;
+            GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance;
+            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+            PixelFormat depthStencilFormat = PixelFormat::D32Float;
+        };
 
         /// Destructor.
-        virtual ~GPUDevice() = default;
+        ~GPUDevice();
+
+        /// Create new GPUDevice.
+        static RefPtr<GPUDevice> Create(Window* window, const Desc& desc);
 
         /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+        void WaitForIdle();
+
+        /**
+        * Get a command queue. Valid types are:
+        * - Graphics    : Can be used for draw, dispatch, or copy commands.
+        * - Compute     : Can be used for dispatch or copy commands.
+        * - Copy        : Can be used for copy commands.
+        */
+        std::shared_ptr<CommandQueue> GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
 
         /// Add a GPU resource to keep track of. Called by GPUResource.
         void AddGPUResource(GPUResource* resource);
         /// Remove a tracked GPU resource. Called by GPUResource.
         void RemoveGPUResource(GPUResource* resource);
 
-        RefPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor* descriptor);
-
-        /// Present the main swap chain on screen.
-        void Present();
-        //uint64_t PresentFrame(const std::vector<Swapchain*>& swapchains);
-
-        /// Get the default main graphics context.
-        GraphicsContext* GetGraphicsContext() const { return graphicsContext.get(); }
-
-        /// Get the creation provider.
-        inline GPUProvider* GetProvider() const noexcept { return _provider; }
-
         /// Get the features.
-        inline GPUAdapter* GetAdapter() const { return _adapter.get(); }
+        inline const GPUDeviceCaps& GetCaps() const { return caps; }
 
-        /// Get the features.
-        inline const GPUFeatures& GetFeatures() const { return _features; }
-
-        /// Get the limits.
-        inline const GPULimits& GetLimits() const { return _limits; }
+        /**
+        * Get the native API handle.
+        */
+        DeviceHandle GetHandle() const;
 
     protected:
         virtual void ReleaseTrackedResources();
         //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
 
     private:
-        virtual SwapChain* CreateSwapChainCore(const SwapChainDescriptor* descriptor) = 0;
+        GPUDevice(Window* window, const Desc& desc);
+
+        bool Init();
+
+        /* Backend methods */
+        bool ApiInit();
+        void ApiDestroy();
 
     protected:
-        GPUProvider* _provider;
-        std::unique_ptr<GPUAdapter> _adapter;
-
-        GPUFeatures _features{};
-        GPULimits _limits{};
-        std::shared_ptr<GraphicsContext> graphicsContext;
+        GPUDeviceCaps caps{};
+        std::unique_ptr<SwapChain> mainSwapChain;
+        std::shared_ptr<CommandQueue> graphicsCommandQueue;
+        std::shared_ptr<CommandQueue> computeCommandQueue;
+        std::shared_ptr<CommandQueue> copyCommandQueue;
 
     private:
+        Window* window;
+        Desc desc;
+        GPUDeviceApiData* apiData = nullptr;
+
         /// Tracked gpu resource.
         std::mutex _gpuResourceMutex;
         std::vector<GPUResource*> _gpuResources;

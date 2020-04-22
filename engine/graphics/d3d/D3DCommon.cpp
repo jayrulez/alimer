@@ -32,12 +32,79 @@
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1 = nullptr;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
-    PFN_GET_DXGI_DEBUG_INTERFACE DXGIGetDebugInterface = nullptr;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
-#endif
+    const DxgiFormatDesc kDxgiFormatDesc[] =
+    {
+        {PixelFormat::Unknown,                      DXGI_FORMAT_UNKNOWN},
+        // 8-bit pixel formats
+        {PixelFormat::R8Unorm,                      DXGI_FORMAT_R8_UNORM},
+        {PixelFormat::R8Snorm,                      DXGI_FORMAT_R8_SNORM},
+        {PixelFormat::R8Uint,                       DXGI_FORMAT_R8_UINT},
+        {PixelFormat::R8Sint,                       DXGI_FORMAT_R8_SINT},
+        // 16-bit pixel formats
+        {PixelFormat::R16Unorm,                     DXGI_FORMAT_R16_UNORM},
+        {PixelFormat::R16Snorm,                     DXGI_FORMAT_R16_SNORM},
+        {PixelFormat::R16Uint,                      DXGI_FORMAT_R16_UINT},
+        {PixelFormat::R16Sint,                      DXGI_FORMAT_R16_SINT},
+        {PixelFormat::R16Float,                     DXGI_FORMAT_R16_FLOAT},
+        {PixelFormat::RG8Unorm,                     DXGI_FORMAT_R8G8_UNORM},
+        {PixelFormat::RG8Snorm,                     DXGI_FORMAT_R8G8_SNORM},
+        {PixelFormat::RG8Uint,                      DXGI_FORMAT_R8G8_UINT},
+        {PixelFormat::RG8Sint,                      DXGI_FORMAT_R8G8_SINT},
+        // 32-bit pixel formats
+        {PixelFormat::R32Uint,                      DXGI_FORMAT_R32_UINT},
+        {PixelFormat::R32Sint,                      DXGI_FORMAT_R32_SINT},
+        {PixelFormat::R32Float,                     DXGI_FORMAT_R32_FLOAT},
+        {PixelFormat::RG16Unorm,                    DXGI_FORMAT_R16G16_UNORM},
+        {PixelFormat::RG16Snorm,                    DXGI_FORMAT_R16G16_SNORM},
+        {PixelFormat::RG16Uint,                     DXGI_FORMAT_R16G16_UINT},
+        {PixelFormat::RG16Sint,                     DXGI_FORMAT_R16G16_SINT},
+        {PixelFormat::RG16Float,                    DXGI_FORMAT_R16G16_FLOAT},
+        {PixelFormat::RGBA8Unorm,                   DXGI_FORMAT_R8G8B8A8_UNORM},
+        {PixelFormat::RGBA8UnormSrgb,               DXGI_FORMAT_R8G8B8A8_UNORM_SRGB},
+        {PixelFormat::RGBA8Snorm,                   DXGI_FORMAT_R8G8B8A8_SNORM},
+        {PixelFormat::RGBA8Uint,                    DXGI_FORMAT_R8G8B8A8_UINT},
+        {PixelFormat::RGBA8Sint,                    DXGI_FORMAT_R8G8B8A8_SINT},
+        {PixelFormat::BGRA8Unorm,                   DXGI_FORMAT_B8G8R8A8_UNORM},
+        {PixelFormat::BGRA8UnormSrgb,               DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
+        // Packed 32-Bit Pixel formats
+        {PixelFormat::RGB10A2Unorm,                 DXGI_FORMAT_R10G10B10A2_UNORM},
+        {PixelFormat::RG11B10Float,                 DXGI_FORMAT_R11G11B10_FLOAT},
+        // 64-Bit Pixel Formats
+        {PixelFormat::RG32Uint,                     DXGI_FORMAT_R32G32_UINT},
+        {PixelFormat::RG32Sint,                     DXGI_FORMAT_R32G32_SINT},
+        {PixelFormat::RG32Float,                    DXGI_FORMAT_R32G32_FLOAT},
+        {PixelFormat::RGBA16Unorm,                  DXGI_FORMAT_R16G16B16A16_UNORM},
+        {PixelFormat::RGBA16Snorm,                  DXGI_FORMAT_R16G16B16A16_SNORM},
+        {PixelFormat::RGBA16Uint,                   DXGI_FORMAT_R16G16B16A16_UINT},
+        {PixelFormat::RGBA16Sint,                   DXGI_FORMAT_R16G16B16A16_SINT},
+        {PixelFormat::RGBA16Float,                  DXGI_FORMAT_R16G16B16A16_FLOAT},
+        // 128-Bit Pixel Formats
+        {PixelFormat::RGBA32Uint,                   DXGI_FORMAT_R32G32B32A32_UINT},
+        {PixelFormat::RGBA32Sint,                   DXGI_FORMAT_R32G32B32A32_SINT},
+        {PixelFormat::RGBA32Float,                  DXGI_FORMAT_R32G32B32A32_FLOAT},
+        // Depth-stencil formats
+        {PixelFormat::D32Float,                     DXGI_FORMAT_D32_FLOAT},
+        {PixelFormat::D16Unorm,                     DXGI_FORMAT_D16_UNORM},
+        {PixelFormat::D32FloatS8X24,                DXGI_FORMAT_D32_FLOAT_S8X24_UINT},
+        {PixelFormat::D24UnormS8,                   DXGI_FORMAT_D24_UNORM_S8_UINT},
+
+        
+        {PixelFormat::BC1RGBAUnorm,                 DXGI_FORMAT_BC1_UNORM},
+        {PixelFormat::BC1RGBAUnormSrgb,             DXGI_FORMAT_BC1_UNORM_SRGB},
+        {PixelFormat::BC2RGBAUnorm,                 DXGI_FORMAT_BC2_UNORM},
+        {PixelFormat::BC2RGBAUnormSrgb,             DXGI_FORMAT_BC2_UNORM_SRGB},
+        {PixelFormat::BC3RGBAUnorm,                 DXGI_FORMAT_BC3_UNORM},
+        {PixelFormat::BC3RGBAUnormSrgb,             DXGI_FORMAT_BC3_UNORM_SRGB},
+        {PixelFormat::BC4RUnorm,                    DXGI_FORMAT_BC4_UNORM},
+        {PixelFormat::BC4RSnorm,                    DXGI_FORMAT_BC4_SNORM},
+        {PixelFormat::BC5RGUnorm,                   DXGI_FORMAT_BC5_UNORM},
+        {PixelFormat::BC5RGSnorm,                   DXGI_FORMAT_BC5_SNORM},
+        {PixelFormat::BC6HRGBUfloat,                DXGI_FORMAT_BC6H_UF16},
+        {PixelFormat::BC6HRGBSfloat,                DXGI_FORMAT_BC6H_SF16},
+        {PixelFormat::BC7RGBAUnorm,                 DXGI_FORMAT_BC7_UNORM},
+        {PixelFormat::BC7RGBAUnormSrgb,             DXGI_FORMAT_BC7_UNORM_SRGB},
+    };
+    static_assert((unsigned)PixelFormat::Count == ALIMER_COUNT_OF(kDxgiFormatDesc), "Invalid PixelFormat size");
 
 #if ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count)

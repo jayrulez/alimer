@@ -70,7 +70,7 @@ namespace alimer
         LowPower
     };
 
-    enum class GraphicsAdapterType : uint32_t
+    enum class GPUAdapterType : uint32_t
     {
         DiscreteGPU,
         IntegratedGPU,
@@ -88,11 +88,12 @@ namespace alimer
         Count32 = 32,
     };
 
-    enum class QueueType : uint32_t
+    enum class CommandQueueType : uint32_t
     {
         Graphics,
         Compute,
-        Copy
+        Copy,
+        Count
     };
 
     enum class BufferUsage : uint32_t
@@ -133,38 +134,6 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
-    enum class PresentInterval : uint32_t
-    {
-        /// Equivalent to setting One.
-        Default,
-        One,
-        Two,
-        Immediate
-    };
-
-    struct PlatformData
-    {
-        void* display;
-        /*
-        * Native window handle (HWND, IUnknown, ANativeWindow, NSWindow)..
-        * If null headless device will be created if supported by backend.
-        */
-        void* windowHandle;
-    };
-
-    struct SwapChainDescriptor
-    {
-        /// Platform data.
-        PlatformData platformData;
-
-        usize extent;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
-        PixelFormat depthStencilFormat = PixelFormat::Undefined;
-        bool isFullScreen = false;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        PresentInterval presentationInterval = PresentInterval::Default;
-    };
-
     /// Describes a Graphics buffer.
     struct BufferDescriptor
     {
@@ -182,7 +151,7 @@ namespace alimer
         TextureUsage usage = TextureUsage::Sampled;
 
         usize3 extent = { 1u, 1u, 1u };
-        PixelFormat format = PixelFormat::RGBA8UNorm;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
         uint32_t mipLevels = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
         /// Initial content to initialize with.
@@ -192,61 +161,72 @@ namespace alimer
         const char* label = nullptr;
     };
 
-    /// Describes GPUDevice features.
-    struct GPUFeatures
+    /// Describes GPUDevice capabilities.
+    struct GPUDeviceCaps
     {
-        bool    independentBlend = false;
-        bool    computeShader = false;
-        bool    geometryShader = false;
-        bool    tessellationShader = false;
-        bool    logicOp = false;
-        bool    multiViewport = false;
-        bool    fullDrawIndexUint32 = false;
-        bool    multiDrawIndirect = false;
-        bool    fillModeNonSolid = false;
-        bool    samplerAnisotropy = false;
-        bool    textureCompressionETC2 = false;
-        bool    textureCompressionASTC_LDR = false;
-        bool    textureCompressionBC = false;
-        /// Specifies whether cube array textures are supported.
-        bool    textureCubeArray = false;
-        /// Specifies whether raytracing is supported.
-        bool    raytracing = false;
-    };
+        BackendType backendType;
+        uint32_t vendorId;
+        uint32_t deviceId;
+        GPUAdapterType adapterType = GPUAdapterType::Unknown;
+        std::string adapterName;
 
-    /// Describes GPUDevice limits.
-    struct GPULimits
-    {
-        uint32_t        maxVertexAttributes;
-        uint32_t        maxVertexBindings;
-        uint32_t        maxVertexAttributeOffset;
-        uint32_t        maxVertexBindingStride;
-        uint32_t        maxTextureDimension2D;
-        uint32_t        maxTextureDimension3D;
-        uint32_t        maxTextureDimensionCube;
-        uint32_t        maxTextureArrayLayers;
-        uint32_t        maxColorAttachments;
-        uint32_t        maxUniformBufferSize;
-        uint64_t        minUniformBufferOffsetAlignment;
-        uint32_t        maxStorageBufferSize;
-        uint64_t        minStorageBufferOffsetAlignment;
-        uint32_t        maxSamplerAnisotropy;
-        uint32_t        maxViewports;
-        uint32_t        maxViewportWidth;
-        uint32_t        maxViewportHeight;
-        uint32_t        maxTessellationPatchSize;
-        float           pointSizeRangeMin;
-        float           pointSizeRangeMax;
-        float           lineWidthRangeMin;
-        float           lineWidthRangeMax;
-        uint32_t        maxComputeSharedMemorySize;
-        uint32_t        maxComputeWorkGroupCountX;
-        uint32_t        maxComputeWorkGroupCountY;
-        uint32_t        maxComputeWorkGroupCountZ;
-        uint32_t        maxComputeWorkGroupInvocations;
-        uint32_t        maxComputeWorkGroupSizeX;
-        uint32_t        maxComputeWorkGroupSizeY;
-        uint32_t        maxComputeWorkGroupSizeZ;
+        struct Features
+        {
+            bool    independentBlend = false;
+            bool    computeShader = false;
+            bool    geometryShader = false;
+            bool    tessellationShader = false;
+            bool    logicOp = false;
+            bool    multiViewport = false;
+            bool    fullDrawIndexUint32 = false;
+            bool    multiDrawIndirect = false;
+            bool    fillModeNonSolid = false;
+            bool    samplerAnisotropy = false;
+            bool    textureCompressionETC2 = false;
+            bool    textureCompressionASTC_LDR = false;
+            bool    textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool    textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool    raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t        maxVertexAttributes;
+            uint32_t        maxVertexBindings;
+            uint32_t        maxVertexAttributeOffset;
+            uint32_t        maxVertexBindingStride;
+            uint32_t        maxTextureDimension2D;
+            uint32_t        maxTextureDimension3D;
+            uint32_t        maxTextureDimensionCube;
+            uint32_t        maxTextureArrayLayers;
+            uint32_t        maxColorAttachments;
+            uint32_t        maxUniformBufferSize;
+            uint64_t        minUniformBufferOffsetAlignment;
+            uint32_t        maxStorageBufferSize;
+            uint64_t        minStorageBufferOffsetAlignment;
+            uint32_t        maxSamplerAnisotropy;
+            uint32_t        maxViewports;
+            uint32_t        maxViewportWidth;
+            uint32_t        maxViewportHeight;
+            uint32_t        maxTessellationPatchSize;
+            float           pointSizeRangeMin;
+            float           pointSizeRangeMax;
+            float           lineWidthRangeMin;
+            float           lineWidthRangeMax;
+            uint32_t        maxComputeSharedMemorySize;
+            uint32_t        maxComputeWorkGroupCountX;
+            uint32_t        maxComputeWorkGroupCountY;
+            uint32_t        maxComputeWorkGroupCountZ;
+            uint32_t        maxComputeWorkGroupInvocations;
+            uint32_t        maxComputeWorkGroupSizeX;
+            uint32_t        maxComputeWorkGroupSizeY;
+            uint32_t        maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
     };
 
     ALIMER_API std::string ToString(BackendType type);

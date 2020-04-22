@@ -21,27 +21,30 @@
 //
 
 #include "os/Window.h"
-#include "graphics/SwapChain.h"
-
-#if defined(GLFW_BACKEND)
-#   include "glfw/glfw_window.h"
-#elif defined(SDL_BACKEND)
-#   include "sdl/WindowImplSDL.hpp"
-#endif
-
-using namespace std;
 
 namespace alimer
 {
-    Window::Window(GPUDevice* device, const string& title, const usize& size, WindowStyle style)
-        : impl(new WindowImpl(title, { centered, centered }, size, style))
-        , _device(device)
+    Window::Window(const std::string& title, const usize& size, WindowStyle style)
+        : Window(title, int2{ centered, centered }, size, style)
     {
-        SwapChainDescriptor desc = {};
-        desc.platformData.display = GetDisplay();
-        desc.platformData.windowHandle = GetHandle();
-        desc.extent = GetSize();
-        _swapChain = _device->CreateSwapChain(&desc);
+    }
+
+    Window::Window(const std::string& title, int32_t x, int32_t y, uint32_t w, uint32_t h, WindowStyle style)
+        : Window(title, int2{ x, y }, usize{ w, h }, style)
+    {
+    }
+
+    Window::Window(const std::string& title, const int2& pos, const usize& size, WindowStyle style)
+        : title{ title }
+        , size{ size }
+        , resizable(any(style& WindowStyle::Resizable))
+        , fullscreen(any(style& WindowStyle::Fullscreen))
+        , exclusiveFullscreen(any(style& WindowStyle::ExclusiveFullscreen))
+        , visible(!any(style& WindowStyle::Hidden))
+        , borderless(any(style& WindowStyle::Borderless))
+    {
+        Create(style);
+        SetPosition(pos);
     }
 
     Window::~Window()
@@ -49,57 +52,13 @@ namespace alimer
         Close();
     }
 
-    void Window::Close()
-    {
-        if (impl != nullptr)
-        {
-            delete impl;
-            impl = nullptr;
-        }
-    }
-
-    auto Window::get_id() const noexcept -> uint32_t
-    {
-        return impl->get_id();
-    }
-
-    auto Window::is_open() const noexcept -> bool
-    {
-        return impl != nullptr && impl->is_open();
-    }
-
-    auto Window::is_minimized() const noexcept -> bool
-    {
-        return impl->is_minimized();
-    }
-
-    auto Window::is_maximized() const noexcept -> bool
-    {
-        return impl->is_maximized();
-    }
-
     usize Window::GetSize() const noexcept
     {
-        return impl->get_size();
+        return size;
     }
 
-    void* Window::GetHandle() const
+    std::string Window::GetTitle() const noexcept
     {
-        return impl->GetNativeHandle();
-    }
-
-    void* Window::GetDisplay() const
-    {
-        return impl->GetNativeDisplay();
-    }
-
-    auto Window::get_title() const noexcept -> std::string
-    {
-        return impl->get_title();
-    }
-
-    void Window::set_title(const std::string& title) noexcept
-    {
-        impl->set_title(title);
+        return title;
     }
 }

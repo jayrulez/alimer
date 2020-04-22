@@ -82,7 +82,7 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-message (STATUS "Graphics API:          ${ALIMER_GRAPHICS_API} (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER})")
+message (STATUS "Graphics API:          ${ALIMER_GRAPHICS_API_UPPER} (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER})")
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

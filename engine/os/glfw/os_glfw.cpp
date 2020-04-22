@@ -21,7 +21,6 @@
 //
 
 #include "os_glfw.h"
-#include "glfw_window.h"
 
 namespace alimer
 {
@@ -52,26 +51,6 @@ namespace alimer
         void shutdown() noexcept
         {
             glfwTerminate();
-        }
-
-        void pump_events() noexcept
-        {
-            glfwPollEvents();
-
-            // Fire quit event when all windows are closed.
-            auto& windows = impl::get_windows();
-            auto all_closed = std::all_of(std::begin(windows), std::end(windows),
-                [](const auto& e) { return glfwWindowShouldClose(e->get_impl()); });
-            if (all_closed)
-            {
-                Event evt = {};
-                evt.type = Event::Type::Quit;
-                push_event(evt);
-            }
-        }
-
-        void* get_proc_address(const char* function) {
-            return (void*)glfwGetProcAddress(function);
         }
 
         std::string get_clipboard_text() noexcept

@@ -22,21 +22,37 @@
 
 #pragma once
 
-#include "core/Ptr.h"
-#include "graphics/GPUAdapter.h"
-#include "D3D12Backend.h"
+#include "graphics/GPUResource.h"
 
 namespace alimer
 {
-    class D3D12GPUAdapter final : public GPUAdapter
+    struct CommandQueueApiData;
+
+    /**
+    * A queue that organizes command buffers to be executed by a GPU.
+    */
+    class ALIMER_API CommandQueue final
     {
     public:
-        D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter);
-        ~D3D12GPUAdapter() = default;
+        /// Constructor.
+        CommandQueue(GPUDevice& device, CommandQueueType queueType);
 
-        IDXGIAdapter1* GetHandle() const { return _adapter.Get(); }
+        /// Destructor
+        ~CommandQueue();
+
+        /**
+        * Get the native API handle.
+        */
+        CommandQueueHandle GetHandle() const;
 
     private:
-        ComPtr<IDXGIAdapter1> _adapter;
+        void ApiInit();
+        void ApiDestroy();
+
+    private:
+        GPUDevice& device;
+        CommandQueueType queueType;
+
+        CommandQueueApiData* apiData = nullptr;
     };
-}
+} 

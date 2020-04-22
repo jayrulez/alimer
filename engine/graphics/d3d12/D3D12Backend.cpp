@@ -21,21 +21,10 @@
 //
 
 #include "D3D12Backend.h"
-#include "D3D12GPUDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    // D3D12 functions.
-    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
-    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
-    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
-    PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer = nullptr;
-    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
-    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
-#endif
-
     /* D3D12DescriptorHeap */
     D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GPUDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_)
         : device(device_)
@@ -94,7 +83,7 @@ namespace alimer
         ALIMER_ASSERT(persistentAllocated == 0);
         for (uint32_t i = 0; i < NumHeaps; ++i)
         {
-            SafeRelease(heaps[i]);
+            SAFE_RELEASE(heaps[i]);
         }
     }
 

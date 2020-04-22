@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,45 +20,20 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Types.h"
-#include "core/Utils.h"
-#include "math/size.h"
+#include "graphics/CommandQueue.h"
+#include "graphics/GPUDevice.h"
 
 namespace alimer
 {
-    /// Defines a graphics surface type.
-    enum class GraphicsSurfaceType : uint32_t
+    CommandQueue::CommandQueue(GPUDevice& device, CommandQueueType queueType)
+        : device{ device }
+        , queueType{ queueType }
     {
-        Win32,
-        UwpCoreWindow,
-        UwpSwapChainPanel
-    };
+        ApiInit();
+    }
 
-    /// Defines the graphics surface which can be rendered on by a graphics device.
-    class ALIMER_API GraphicsSurface
+    CommandQueue::~CommandQueue()
     {
-    public:
-        /// Constructor.
-        GraphicsSurface() = default;
-
-        /// Destructor.
-        virtual ~GraphicsSurface() = default;
-
-        /// Get the surface size.
-        virtual usize GetSize() const = 0;
-
-        /// Get the surface type.
-        virtual GraphicsSurfaceType GetType() const = 0;
-
-        /// Get the surface handle.
-        virtual void* GetHandle() const = 0;
-
-        /// Get the surface display type.
-        virtual void* GetDisplay() const = 0;
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsSurface);
-    };
+        ApiDestroy();
+    }
 }

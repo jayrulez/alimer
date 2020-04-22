@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,34 +20,29 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUAdapter.h"
-#include "D3D12GPUDevice.h"
-#include "core/String.h"
+#pragma once
+
+#include "config.h"
+
+/* Forward backend type declaration. */
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#elif defined(ALIMER_GRAPHICS_D3D12)
+struct ID3D12Device;
+struct ID3D12CommandQueue;
+struct IDXGISwapChain3;
+#elif defined(ALIMER_GRAPHICS_D3D11)
+#elif defined(ALIMER_GRAPHICS_OPENGL)
+#endif
 
 namespace alimer
 {
-    D3D12GPUAdapter::D3D12GPUAdapter(ComPtr<IDXGIAdapter1> adapter)
-        : GPUAdapter(BackendType::Direct3D12)
-        , _adapter(adapter)
-    {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
-
-        _vendorId = desc.VendorId;
-        _deviceId = desc.DeviceId;
-
-        std::wstring deviceName(desc.Description);
-        _name = alimer::ToUtf8(deviceName);
-
-        // Detect adapter type.
-        {
-            ComPtr<ID3D12Device> tempDevice;
-            ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(tempDevice.GetAddressOf())));
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(tempDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
-
-            _adapterType = arch.UMA ? GraphicsAdapterType::IntegratedGPU : GraphicsAdapterType::DiscreteGPU;
-        }
-    }
+#if defined(ALIMER_GRAPHICS_VULKAN)
+    using DeviceHandle = VkDevice;
+#elif defined(ALIMER_GRAPHICS_D3D12)
+    using DeviceHandle = ID3D12Device*;
+    using CommandQueueHandle = ID3D12CommandQueue*;
+    using SwapChainHandle = IDXGISwapChain3*;
+#elif defined(ALIMER_GRAPHICS_D3D11)
+#elif defined(ALIMER_GRAPHICS_OPENGL)
+#endif
 }
-

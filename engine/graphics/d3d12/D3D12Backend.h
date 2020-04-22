@@ -54,17 +54,10 @@ namespace D3D12MA
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    // D3D12 functions.
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
-
     static constexpr uint32_t kMaxFrameLatency = 3;
+
+    extern IDXGIFactory4* GetDXGIFactory();
+    extern bool IsDXGITearingSupported();
 
     class D3D12GPUDevice;
 
@@ -111,15 +104,15 @@ namespace alimer
         uint32_t heapIndex = 0;
     };
 
-    static inline D3D12_COMMAND_LIST_TYPE D3D12GetCommandListType(QueueType type)
+    static inline D3D12_COMMAND_LIST_TYPE D3D12GetCommandListType(CommandQueueType type)
     {
         switch (type)
         {
-        case QueueType::Graphics:
+        case CommandQueueType::Graphics:
             return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        case QueueType::Compute:
+        case CommandQueueType::Compute:
             return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        case QueueType::Copy:
+        case CommandQueueType::Copy:
             return D3D12_COMMAND_LIST_TYPE_COPY;
         default:
             return D3D12_COMMAND_LIST_TYPE_DIRECT;

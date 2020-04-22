@@ -42,7 +42,7 @@ namespace alimer
         TextureType type = TextureType::Type2D;
         TextureUsage usage = TextureUsage::Sampled;
         /// Texture format.
-        PixelFormat format = PixelFormat::RGBA8UNorm;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
 
         usize3 extent = { 1u, 1u, 1u };
         uint32_t mipLevels = 1u;
