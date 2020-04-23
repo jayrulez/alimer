@@ -33,17 +33,16 @@ namespace alimer
     class D3D12CommandAllocatorPool final
     {
     public:
-        D3D12CommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type_);
+        D3D12CommandAllocatorPool(D3D12GPUDevice* device, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandAllocatorPool();
 
-        void Create(ID3D12Device* device_);
         void Destroy();
 
         ID3D12CommandAllocator* RequestAllocator(uint64_t fenceValue);
         void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
 
     private:
-        ID3D12Device* device;
+        D3D12GPUDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
 
         std::vector<ID3D12CommandAllocator*> allocators;

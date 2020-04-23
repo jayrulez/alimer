@@ -27,23 +27,14 @@
 
 namespace alimer
 {
-    class GPUDevice;
     class Texture;
 
-
-    enum class PresentMode : uint32_t
-    {
-        Immediate,
-        Mailbox,
-        Fifo
-    };
-
-    class ALIMER_API SwapChain final
+    class ALIMER_API SwapChain : public RefCounted
     {
     public:
         /// Constructor.
-        SwapChain(GPUDevice& device, void* windowHandle, const usize& extent);
-        ~SwapChain();
+        SwapChain(GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
+        virtual ~SwapChain() = default;
 
         enum class ResizeResult
         {
@@ -58,25 +49,17 @@ namespace alimer
 
         const usize& GetExtent() const;
 
-        /**
-        * Get the native API handle.
-        */
-        SwapChainHandle GetHandle() const { return handle; }
-
     private:
-        void Destroy();
-        ResizeResult ApiResize();
+        virtual ResizeResult ApiResize() = 0;
 
-        GPUDevice& device;
-        SwapChainHandle handle{};
+    protected:
+        GPUDevice* device;
         usize extent{};
         void* windowHandle;
 
-        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
-        PixelFormat depthStencilFormat = PixelFormat::Unknown;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        PresentMode presentMode = PresentMode::Fifo;
-        uint32_t imageCount = 2u;
+        TextureUsage usage;
+        PixelFormat format;
+        PresentMode presentMode;
 
         std::vector<RefPtr<Texture>> textures;
         mutable uint32_t textureIndex{ 0 };

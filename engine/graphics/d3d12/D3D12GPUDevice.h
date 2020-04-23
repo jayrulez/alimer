@@ -22,27 +22,32 @@
 
 #pragma once
 
-#include "config.h"
-
-/* Forward backend type declaration. */
-#if defined(ALIMER_GRAPHICS_VULKAN)
-#elif defined(ALIMER_GRAPHICS_D3D12)
-struct ID3D12Device;
-struct ID3D12CommandQueue;
-struct IDXGISwapChain3;
-#elif defined(ALIMER_GRAPHICS_D3D11)
-#elif defined(ALIMER_GRAPHICS_OPENGL)
-#endif
+#include "graphics/GPUDevice.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-#if defined(ALIMER_GRAPHICS_VULKAN)
-    using DeviceHandle = VkDevice;
-#elif defined(ALIMER_GRAPHICS_D3D12)
-    using DeviceHandle = ID3D12Device*;
-    using CommandQueueHandle = ID3D12CommandQueue*;
-    using SwapChainHandle = IDXGISwapChain3*;
-#elif defined(ALIMER_GRAPHICS_D3D11)
-#elif defined(ALIMER_GRAPHICS_OPENGL)
-#endif
+    class D3D12GPUDevice final : public GPUDevice
+    {
+    public:
+        D3D12GPUDevice();
+        ~D3D12GPUDevice() override;
+
+        static IDXGIFactory4* GetDXGIFactory();
+        static bool IsDXGITearingSupported();
+        ID3D12Device* GetHandle() const { return d3dDevice; }
+
+    private:
+        bool Init(GPUPowerPreference powerPreference) override;
+        void Shutdown();
+        void WaitForIdle() override;
+        SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) override;
+
+        ID3D12Device* d3dDevice = nullptr;
+        D3D12MA::Allocator* allocator = nullptr;
+        /// Current supported feature level.
+        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+        /// Root signature version
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    };
 }

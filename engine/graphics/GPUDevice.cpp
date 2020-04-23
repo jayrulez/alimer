@@ -20,62 +20,53 @@
 // THE SOFTWARE.
 //
 
+#include "config.h"
 #include "core/Log.h"
 #include "core/Assert.h"
-#include "os/window.h"
 #include "graphics/GPUDevice.h"
 #include "graphics/GPUBuffer.h"
 #include "graphics/CommandQueue.h"
+#include "graphics/SwapChain.h"
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/d3d12/D3D12GPUDevice.h"
+#endif
 
 namespace alimer
 {
-    RefPtr<GPUDevice> GPUDevice::Create(Window* window, const Desc& desc)
-    {
-        ALIMER_ASSERT(window);
+#ifdef _DEBUG
+#   define DEFAULT_ENABLE_VALIDATION true
+#else
+#   define DEFAULT_ENABLE_VALIDATION false
+#endif
 
-        RefPtr<GPUDevice> device(new GPUDevice(window, desc));
-        if (device->Init() == false) {
-            device = nullptr;
+    bool GPUDevice::enableValidation = DEFAULT_ENABLE_VALIDATION;
+    bool GPUDevice::enableGPUBasedValidation = false;
+
+    bool GPUDevice::IsEnabledValidation()
+    {
+        return enableValidation;
+    }
+
+    void GPUDevice::SetEnableValidation(bool value)
+    {
+        enableValidation = value;
+    }
+
+    RefPtr<GPUDevice> GPUDevice::Create(BackendType preferredBackend, GPUPowerPreference powerPreference)
+    {
+        GPUDevice* device = nullptr;
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+        device = new D3D12GPUDevice();
+#endif
+
+        if (device == nullptr || device->Init(powerPreference) == false)
+        {
+            return nullptr;
         }
 
-        return device;
-    }
-
-    GPUDevice::GPUDevice(Window* window_, const Desc& desc)
-        : window(window_)
-        , desc{ desc }
-    {
-    }
-
-    GPUDevice::~GPUDevice()
-    {
-        WaitForIdle();
-
-        ReleaseTrackedResources();
-        //ExecuteDeferredReleases();
-
-        copyCommandQueue.reset();
-        computeCommandQueue.reset();
-        graphicsCommandQueue.reset();
-
-        mainSwapChain.reset();
-
-        ApiDestroy();
-    }
-
-    bool GPUDevice::Init()
-    {
-        if (ApiInit() == false) {
-            return false;
-        }
-
-        graphicsCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Graphics);
-        computeCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Compute);
-        copyCommandQueue = std::make_shared<CommandQueue>(*this, CommandQueueType::Copy);
-
-        mainSwapChain.reset(new SwapChain(*this, window->GetHandle(), window->GetSize()));
-
-        return true;
+        return RefPtr<GPUDevice>(device);
     }
 
     std::shared_ptr<CommandQueue> GPUDevice::GetCommandQueue(CommandQueueType type) const
@@ -97,6 +88,20 @@ namespace alimer
         }
 
         return commandQueue;
+    }
+
+    /// Create new SwapChain.
+    RefPtr<SwapChain> GPUDevice::CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor)
+    {
+        ALIMER_ASSERT(windowHandle);
+        ALIMER_ASSERT(descriptor);
+
+        SwapChain* handle = CreateSwapChainCore(windowHandle, descriptor);
+        if (handle == nullptr) {
+            return nullptr;
+        }
+
+        return RefPtr<SwapChain>(handle);
     }
 
     void GPUDevice::AddGPUResource(GPUResource* resource)

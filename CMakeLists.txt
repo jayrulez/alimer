@@ -21,15 +21,13 @@ option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
 # Options
 if (WIN32)
-    set(ALIMER_GRAPHICS_API D3D12 CACHE STRING  "Select Graphics API [D3D12 | Vulkan]") 
-	set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 Vulkan)
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend" ON)
+    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-    set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use Direct3D12 Graphics API" FORCE)
+    set(ALIMER_GRAPHICS_D3D12 ON CACHE BOOL "Include Direct3D11 renderer")
 else ()
-    set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Use Vulkan Graphics API" FORCE)
+    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend" ON)
 endif ()
-string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
-set (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER} ON)
 
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
@@ -82,7 +80,12 @@ endif ()
 
 # Print current build configuration
 message (STATUS "Build Configuration:")
-message (STATUS "Graphics API:          ${ALIMER_GRAPHICS_API_UPPER} (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER})")
+if (ALIMER_GRAPHICS_D3D12)
+    message (STATUS "Graphics API:          Direct3D12 (ALIMER_GRAPHICS_D3D12)")
+endif()
+if (ALIMER_GRAPHICS_VULKAN)
+    message (STATUS "Graphics API:          Vulkan (ALIMER_GRAPHICS_VULKAN)")
+endif()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)

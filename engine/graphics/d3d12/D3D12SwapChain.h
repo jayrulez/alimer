@@ -22,43 +22,21 @@
 
 #pragma once
 
-#include "graphics/CommandQueue.h"
-#include "D3D12CommandAllocatorPool.h"
+#include "graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12CommandAllocatorPool;
-
-    class D3D12CommandQueue final : public CommandQueue
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12CommandQueue(D3D12GPUDevice* device, CommandQueueType queueType);
-        ~D3D12CommandQueue() override;
-        void WaitForIdle() override;
-       
-        uint64_t IncrementFence(void);
-        bool IsFenceComplete(uint64_t fenceValue);
-        void WaitForFence(uint64_t fenceValue);
-        ID3D12CommandQueue* GetHandle() { return handle; }
-        uint64_t GetNextFenceValue() { return nextFenceValue; }
-        uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
-
-        ID3D12CommandAllocator* RequestAllocator();
+        D3D12SwapChain(D3D12GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
+        ~D3D12SwapChain() override;
 
     private:
         void Destroy();
+        ResizeResult ApiResize() override;
 
-        const D3D12_COMMAND_LIST_TYPE commandListType;
-        ID3D12CommandQueue* handle = nullptr;
-
-        // Lifetime of these objects is managed by the descriptor cache
-        ID3D12Fence* fence;
-        uint64_t nextFenceValue;
-        uint64_t lastCompletedFenceValue;
-        HANDLE fenceEvent;
-
-        D3D12CommandAllocatorPool allocatorPool;
-        std::mutex fenceMutex;
-        std::mutex eventMutex;
+        IDXGISwapChain3* handle = nullptr;
     };
 }

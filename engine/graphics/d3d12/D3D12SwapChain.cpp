@@ -20,16 +20,15 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Backend.h"
-#include "graphics/SwapChain.h"
-#include "graphics/GPUDevice.h"
-#include "graphics/CommandQueue.h"
+#include "D3D12SwapChain.h"
+#include "D3D12GPUDevice.h"
+#include "D3D12CommandQueue.h"
 
 namespace alimer
 {
     namespace
     {
-        inline UINT GetSyncInterval(PresentMode interval)
+        UINT GetSyncInterval(PresentMode interval)
         {
             switch (interval)
             {
@@ -45,9 +44,39 @@ namespace alimer
                 break;
             }
         }
+
+        DXGI_USAGE D3D12SwapChainBufferUsage(TextureUsage usage)
+        {
+            DXGI_USAGE result = DXGI_CPU_ACCESS_NONE;
+            if (any(usage & TextureUsage::Sampled)) {
+                result |= DXGI_USAGE_SHADER_INPUT;
+            }
+
+            if (any(usage & TextureUsage::Storage)) {
+                result |= DXGI_USAGE_UNORDERED_ACCESS;
+            }
+
+            if (any(usage & TextureUsage::RenderTarget)) {
+                result |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            }
+            return result;
+        }
+
+        static constexpr unsigned int kFrameCount = 3;
+    }  // anonymous namespace
+
+    D3D12SwapChain::D3D12SwapChain(D3D12GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
+        : SwapChain(device, windowHandle, descriptor)
+    {
+        ApiResize();
     }
 
-    void SwapChain::Destroy()
+    D3D12SwapChain::~D3D12SwapChain()
+    {
+        Destroy();
+    }
+
+    void D3D12SwapChain::Destroy()
     {
         if (handle != nullptr)
         {
@@ -60,16 +89,16 @@ namespace alimer
         }
     }
 
-    SwapChain::ResizeResult SwapChain::ApiResize()
+    SwapChain::ResizeResult D3D12SwapChain::ApiResize()
     {
         HRESULT hr = S_OK;
 
-        auto dxgiFactory = GetDXGIFactory();
-        DXGI_FORMAT dxgiColorFormat = ToDXGISwapChainFormat(colorFormat);
+        auto dxgiFactory = D3D12GPUDevice::GetDXGIFactory();
+        DXGI_FORMAT dxgiColorFormat = ToDXGISwapChainFormat(format);
 
         UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
         if (presentMode == PresentMode::Immediate
-            && IsDXGITearingSupported())
+            && D3D12GPUDevice::IsDXGITearingSupported())
         {
             //presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
@@ -78,7 +107,7 @@ namespace alimer
         if (handle != nullptr)
         {
             hr = handle->ResizeBuffers(
-                imageCount,
+                kFrameCount,
                 extent.width, extent.height,
                 dxgiColorFormat, swapChainFlags);
         }
@@ -96,8 +125,8 @@ namespace alimer
             swapChainDesc.Width = extent.width;
             swapChainDesc.Height = extent.height;
             swapChainDesc.Format = dxgiColorFormat;
-            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swapChainDesc.BufferCount = imageCount;
+            swapChainDesc.BufferUsage = D3D12SwapChainBufferUsage(usage);
+            swapChainDesc.BufferCount = kFrameCount;
             swapChainDesc.SampleDesc.Count = 1;
             swapChainDesc.SampleDesc.Quality = 0;
             swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
@@ -105,7 +134,7 @@ namespace alimer
             swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
             swapChainDesc.Flags = swapChainFlags;
 
-            auto d3dCommandQueue = device.GetCommandQueue(CommandQueueType::Graphics)->GetHandle();
+            auto d3dCommandQueue = std::static_pointer_cast<D3D12CommandQueue>(device->GetCommandQueue(CommandQueueType::Graphics))->GetHandle();
             IDXGISwapChain1* tempSwapChain;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)

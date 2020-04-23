@@ -60,8 +60,8 @@ namespace alimer
         { PixelFormat::RGBA8Snorm,              "RGBA8Snorm",               PixelFormatType::SNorm,         32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
         { PixelFormat::RGBA8Uint,               "RGBA8Uint",                PixelFormatType::UInt,          32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
         { PixelFormat::RGBA8Sint,               "RGBA8Sint",                PixelFormatType::SInt,          32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-        { PixelFormat::BGRA8Unorm,              "BGRA8Unorm",               PixelFormatType::UNorm,         32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-        { PixelFormat::BGRA8UnormSrgb,          "BGRA8UnormSrgb",           PixelFormatType::UnormSrgb,     32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+        { PixelFormat::Bgra8Unorm,              "Bgra8Unorm",               PixelFormatType::UNorm,         32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+        { PixelFormat::Bgra8UnormSrgb,          "Bgra8UnormSrgb",           PixelFormatType::UnormSrgb,     32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
 
         // Packed 32-Bit Pixel formats
         { PixelFormat::RGB10A2Unorm,            "RGB10A2Unorm",             PixelFormatType::UNorm,         32,         {1, 1, 4, 1, 1},        {0, 0, 10, 10, 10, 2}},

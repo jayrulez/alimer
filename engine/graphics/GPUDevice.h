@@ -23,7 +23,6 @@
 #pragma once
 
 #include "core/Ptr.h"
-#include "graphics/SwapChain.h"
 #include "graphics/GPUResource.h"
 #include "graphics/CommandContext.h"
 #include <memory>
@@ -31,39 +30,24 @@
 
 namespace alimer
 {
-#ifdef _DEBUG
-#   define DEFAULT_ENABLE_VALIDATION true
-#else
-#   define DEFAULT_ENABLE_VALIDATION false
-#endif
-
-    class Window;
     class CommandQueue;
-    struct GPUDeviceApiData;
+    class SwapChain;
 
     /// Defines the logical GPU device class.
-    class ALIMER_API GPUDevice final : public RefCounted
+    class ALIMER_API GPUDevice : public RefCounted
     {
     public:
-        /**
-        * Device configuration
-        */
-        struct Desc
-        {
-            bool validation = DEFAULT_ENABLE_VALIDATION;
-            GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance;
-            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-            PixelFormat depthStencilFormat = PixelFormat::D32Float;
-        };
-
-        /// Destructor.
-        ~GPUDevice();
+        static bool IsEnabledValidation();
+        static void SetEnableValidation(bool value);
 
         /// Create new GPUDevice.
-        static RefPtr<GPUDevice> Create(Window* window, const Desc& desc);
+        static RefPtr<GPUDevice> Create(BackendType preferredBackend = BackendType::Count, GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance);
+
+        /// Destructor.
+        virtual ~GPUDevice() = default;
 
         /// Waits for the device to become idle.
-        void WaitForIdle();
+        virtual void WaitForIdle() = 0;
 
         /**
         * Get a command queue. Valid types are:
@@ -73,6 +57,9 @@ namespace alimer
         */
         std::shared_ptr<CommandQueue> GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
 
+        /// Create new SwapChain.
+        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor);
+
         /// Add a GPU resource to keep track of. Called by GPUResource.
         void AddGPUResource(GPUResource* resource);
         /// Remove a tracked GPU resource. Called by GPUResource.
@@ -81,39 +68,27 @@ namespace alimer
         /// Get the features.
         inline const GPUDeviceCaps& GetCaps() const { return caps; }
 
-        /**
-        * Get the native API handle.
-        */
-        DeviceHandle GetHandle() const;
-
     protected:
         virtual void ReleaseTrackedResources();
+        virtual SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) = 0;
         //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
 
-    private:
-        GPUDevice(Window* window, const Desc& desc);
-
-        bool Init();
-
-        /* Backend methods */
-        bool ApiInit();
-        void ApiDestroy();
-
     protected:
+        GPUDevice() = default;
+
+        virtual bool Init(GPUPowerPreference powerPreference) = 0;
+
         GPUDeviceCaps caps{};
-        std::unique_ptr<SwapChain> mainSwapChain;
         std::shared_ptr<CommandQueue> graphicsCommandQueue;
         std::shared_ptr<CommandQueue> computeCommandQueue;
         std::shared_ptr<CommandQueue> copyCommandQueue;
 
     private:
-        Window* window;
-        Desc desc;
-        GPUDeviceApiData* apiData = nullptr;
-
         /// Tracked gpu resource.
         std::mutex _gpuResourceMutex;
         std::vector<GPUResource*> _gpuResources;
+        static bool enableValidation;
+        static bool enableGPUBasedValidation;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GPUDevice);

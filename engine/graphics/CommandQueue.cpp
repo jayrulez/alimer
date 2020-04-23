@@ -25,15 +25,9 @@
 
 namespace alimer
 {
-    CommandQueue::CommandQueue(GPUDevice& device, CommandQueueType queueType)
+    CommandQueue::CommandQueue(GPUDevice* device, CommandQueueType queueType)
         : device{ device }
         , queueType{ queueType }
     {
-        ApiInit();
-    }
-
-    CommandQueue::~CommandQueue()
-    {
-        ApiDestroy();
     }
 }

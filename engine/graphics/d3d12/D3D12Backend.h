@@ -56,9 +56,6 @@ namespace alimer
 {
     static constexpr uint32_t kMaxFrameLatency = 3;
 
-    extern IDXGIFactory4* GetDXGIFactory();
-    extern bool IsDXGITearingSupported();
-
     class D3D12GPUDevice;
 
     struct PersistentDescriptorAlloc

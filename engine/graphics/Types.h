@@ -123,7 +123,6 @@ namespace alimer
         TypeCube
     };
 
-
     /// Defines the usage of Texture.
     enum class TextureUsage : uint32_t
     {
@@ -133,6 +132,23 @@ namespace alimer
         RenderTarget = 0x04,
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+
+    enum class PresentMode : uint32_t
+    {
+        Immediate,
+        Mailbox,
+        Fifo
+    };
+
+    /// Desribes a SwapChain
+    struct SwapChainDescriptor
+    {
+        uint32_t width;
+        uint32_t height;
+        TextureUsage usage = TextureUsage::RenderTarget;
+        PixelFormat format = PixelFormat::Bgra8UnormSrgb;
+        PresentMode presentMode = PresentMode::Fifo;
+    };
 
     /// Describes a Graphics buffer.
     struct BufferDescriptor

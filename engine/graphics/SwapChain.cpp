@@ -25,17 +25,14 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(GPUDevice& device, void* windowHandle, const usize& extent)
+    SwapChain::SwapChain(GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
         : device{ device }
-        , extent{ extent }
         , windowHandle{ windowHandle }
+        , extent{ descriptor->width, descriptor->height }
+        , usage(descriptor->usage)
+        , format(descriptor->format)
+        , presentMode(descriptor->presentMode)
     {
-        ApiResize();
-    }
-
-    SwapChain::~SwapChain()
-    {
-        Destroy();
     }
 
     SwapChain::ResizeResult SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)

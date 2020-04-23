@@ -20,8 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Backend.h"
-#include "graphics/GPUDevice.h"
+#include "D3D12GPUDevice.h"
+#include "D3D12CommandQueue.h"
+#include "D3D12SwapChain.h"
 #include "D3D12MemAlloc.h"
 #include "core/String.h"
 
@@ -37,21 +38,12 @@ namespace alimer
         uint32_t deviceCount = 0;
     } d3d12;
 
-    struct GPUDeviceApiData {
-        ID3D12Device* d3dDevice = nullptr;
-        D3D12MA::Allocator* allocator = nullptr;
-        /// Current supported feature level.
-        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-        /// Root signature version
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    };
-
-    IDXGIFactory4* GetDXGIFactory()
+    IDXGIFactory4* D3D12GPUDevice::GetDXGIFactory()
     {
         return d3d12.dxgiFactory;
     }
 
-    bool IsDXGITearingSupported()
+    bool D3D12GPUDevice::IsDXGITearingSupported()
     {
         return d3d12.isTearingSupported;
     }
@@ -139,14 +131,25 @@ namespace alimer
         return true;
     }
 
-    bool GPUDevice::ApiInit()
+    D3D12GPUDevice::D3D12GPUDevice()
     {
-        GPUDeviceApiData* pData = new GPUDeviceApiData;
-        apiData = pData;
+    }
 
+    D3D12GPUDevice::~D3D12GPUDevice()
+    {
+        WaitForIdle();
+
+        ReleaseTrackedResources();
+        //ExecuteDeferredReleases();
+
+        Shutdown();
+    }
+
+    bool D3D12GPUDevice::Init(GPUPowerPreference powerPreference)
+    {
         if (d3d12.deviceCount == 0)
         {
-            if (!CreateFactory(desc.validation))
+            if (!CreateFactory(IsEnabledValidation()))
             {
                 return false;
             }
@@ -161,7 +164,7 @@ namespace alimer
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == GPUPowerPreference::LowPower)
+            if (powerPreference == GPUPowerPreference::LowPower)
             {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
@@ -242,14 +245,14 @@ namespace alimer
         }
 
         // Create the DX12 API device object.
-        ThrowIfFailed(D3D12CreateDevice(adapter, s_minFeatureLevel, IID_PPV_ARGS(&pData->d3dDevice)));
+        ThrowIfFailed(D3D12CreateDevice(adapter, s_minFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
 
 #ifndef NDEBUG
-        if (desc.validation)
+        if (IsEnabledValidation())
         {
             // Configure debug device (if active).
             ID3D12InfoQueue* d3dInfoQueue;
-            if (SUCCEEDED(pData->d3dDevice->QueryInterface(&d3dInfoQueue)))
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
             {
 #ifdef _DEBUG
                 d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -277,12 +280,12 @@ namespace alimer
         {
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            desc.pDevice = pData->d3dDevice;
+            desc.pDevice = d3dDevice;
             desc.pAdapter = adapter;
 
-            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &pData->allocator));
+            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
 
-            switch (pData->allocator->GetD3D12Options().ResourceHeapTier)
+            switch (allocator->GetD3D12Options().ResourceHeapTier)
             {
             case D3D12_RESOURCE_HEAP_TIER_1:
                 ALIMER_LOGDEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
@@ -313,7 +316,7 @@ namespace alimer
             }
             else {
                 D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-                ThrowIfFailed(pData->d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+                ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
 
                 caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
             }
@@ -332,14 +335,14 @@ namespace alimer
                 _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
             };
 
-            HRESULT hr = pData->d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels));
+            HRESULT hr = d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels));
             if (SUCCEEDED(hr))
             {
-                pData->featureLevel = featLevels.MaxSupportedFeatureLevel;
+                featureLevel = featLevels.MaxSupportedFeatureLevel;
             }
             else
             {
-                pData->featureLevel = D3D_FEATURE_LEVEL_11_0;
+                featureLevel = D3D_FEATURE_LEVEL_11_0;
             }
 
             D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -347,11 +350,11 @@ namespace alimer
             // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
             featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-            if (FAILED(pData->d3dDevice->CheckFeatureSupport(
+            if (FAILED(d3dDevice->CheckFeatureSupport(
                 D3D12_FEATURE_ROOT_SIGNATURE,
                 &featureData, sizeof(featureData))))
             {
-                pData->rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+                rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
             }
 
             // Features
@@ -371,7 +374,7 @@ namespace alimer
             caps.features.textureCubeArray = true;
 
             D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
-            if (SUCCEEDED(pData->d3dDevice->CheckFeatureSupport(
+            if (SUCCEEDED(d3dDevice->CheckFeatureSupport(
                 D3D12_FEATURE_D3D12_OPTIONS5,
                 &d3d12options5, sizeof(d3d12options5)))
                 && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
@@ -439,45 +442,53 @@ namespace alimer
 
         SAFE_RELEASE(adapter);
 
+        // Init command queue's
+        {
+            graphicsCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Graphics);
+            computeCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Compute);
+            copyCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Copy);
+        }
+
         d3d12.deviceCount++;
 
         return true;
     }
 
-    void GPUDevice::ApiDestroy()
+    void D3D12GPUDevice::Shutdown()
     {
+        copyCommandQueue.reset();
+        computeCommandQueue.reset();
+        graphicsCommandQueue.reset();
+
+        //ApiDestroy();
+
         // Allocator
-        if (apiData != nullptr)
-        {
-            D3D12MA::Stats stats;
-            apiData->allocator->CalculateStats(&stats);
+        D3D12MA::Stats stats;
+        allocator->CalculateStats(&stats);
 
-            if (stats.Total.UsedBytes > 0) {
-                ALIMER_LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
-            }
-
-            apiData->allocator->Release();
-            apiData->allocator = nullptr;
+        if (stats.Total.UsedBytes > 0) {
+            ALIMER_LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
         }
 
+        allocator->Release();
+        allocator = nullptr;
+
+        ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
-        ULONG refCount = apiData->d3dDevice->Release();
         if (refCount > 0)
         {
             ALIMER_LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
-            if (SUCCEEDED(apiData->d3dDevice->QueryInterface(IID_PPV_ARGS(&debugDevice))))
+            if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(&debugDevice))))
             {
                 debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
                 debugDevice->Release();
             }
         }
 #else
-        d3dDevice.Reset();
+        (void)refCount; // avoid warning
 #endif
-
-        SafeDelete(apiData);
 
         d3d12.deviceCount--;
 
@@ -496,13 +507,15 @@ namespace alimer
         }
     }
 
-    void GPUDevice::WaitForIdle()
+    void D3D12GPUDevice::WaitForIdle()
     {
-
+        graphicsCommandQueue->WaitForIdle();
+        computeCommandQueue->WaitForIdle();
+        copyCommandQueue->WaitForIdle();
     }
 
-    DeviceHandle GPUDevice::GetHandle() const
+    SwapChain* D3D12GPUDevice::CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor)
     {
-        return apiData->d3dDevice;
+        return new D3D12SwapChain(this, windowHandle, descriptor);
     }
 }

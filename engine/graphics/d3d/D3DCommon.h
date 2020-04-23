@@ -100,8 +100,8 @@ namespace alimer
     static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format) {
         switch (format)
         {
-        case PixelFormat::BGRA8Unorm:
-        case PixelFormat::BGRA8UnormSrgb:
+        case PixelFormat::Bgra8Unorm:
+        case PixelFormat::Bgra8UnormSrgb:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
         case PixelFormat::RGBA8Unorm:

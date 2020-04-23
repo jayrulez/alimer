@@ -35,6 +35,13 @@ namespace alimer
     {
         os::init();
         gameSystems.push_back(input);
+
+        // Create graphics device.
+        gpuDevice = GPUDevice::Create(config.preferredGPUBackend, GPUPowerPreference::HighPerformance);
+        if (gpuDevice == nullptr)
+        {
+            headless = true;
+        }
     }
 
     Game::~Game()
@@ -45,6 +52,7 @@ namespace alimer
         }
 
         gameSystems.clear();
+        mainWindowSwapChain.Reset();
         gpuDevice->WaitForIdle();
         gpuDevice.Reset();
         os::shutdown();
@@ -55,14 +63,10 @@ namespace alimer
         // Create main window.
         mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
 
-        GPUDevice::Desc desc = {};
-        desc.powerPreference = GPUPowerPreference::HighPerformance;
-        gpuDevice = GPUDevice::Create(mainWindow.get(), desc);
-
-        if (gpuDevice == nullptr)
-        {
-            headless = true;
-        }
+        SwapChainDescriptor scDesc = {};
+        scDesc.width = mainWindow->GetSize().width;
+        scDesc.height = mainWindow->GetSize().height;
+        mainWindowSwapChain = gpuDevice->CreateSwapChain(mainWindow->GetHandle(), &scDesc);
 
         Initialize();
         if (exitCode)

@@ -26,33 +26,23 @@
 
 namespace alimer
 {
-    struct CommandQueueApiData;
-
     /**
     * A queue that organizes command buffers to be executed by a GPU.
     */
-    class ALIMER_API CommandQueue final
+    class ALIMER_API CommandQueue
     {
     public:
         /// Constructor.
-        CommandQueue(GPUDevice& device, CommandQueueType queueType);
+        CommandQueue(GPUDevice* device, CommandQueueType queueType);
 
         /// Destructor
-        ~CommandQueue();
+        virtual ~CommandQueue() = default;
 
-        /**
-        * Get the native API handle.
-        */
-        CommandQueueHandle GetHandle() const;
+        /// Waits for the queue to become idle.
+        virtual void WaitForIdle() = 0;
 
     private:
-        void ApiInit();
-        void ApiDestroy();
-
-    private:
-        GPUDevice& device;
+        GPUDevice* device;
         CommandQueueType queueType;
-
-        CommandQueueApiData* apiData = nullptr;
     };
 } 

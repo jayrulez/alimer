@@ -21,12 +21,14 @@
 //
 
 #include "D3D12CommandAllocatorPool.h"
+#include "D3D12GPUDevice.h"
 #include <algorithm>
 
 namespace alimer
 {
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type_)
-        : type(type_)
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GPUDevice* device, D3D12_COMMAND_LIST_TYPE type_)
+        : device{ device }
+        , type(type_)
     {
 
     }
@@ -34,12 +36,6 @@ namespace alimer
     D3D12CommandAllocatorPool::~D3D12CommandAllocatorPool()
     {
         Destroy();
-    }
-
-    void D3D12CommandAllocatorPool::Create(ID3D12Device* device_)
-    {
-        ALIMER_ASSERT(device_);
-        device = device_;
     }
 
     void D3D12CommandAllocatorPool::Destroy()
@@ -73,7 +69,7 @@ namespace alimer
         // If no allocator's were ready to be reused, create a new one
         if (commandAllocator == nullptr)
         {
-            ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+            ThrowIfFailed(device->GetHandle()->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 #if defined(_DEBUG)
             wchar_t AllocatorName[32];
             swprintf(AllocatorName, 32, L"CommandAllocator %zu", allocators.size());

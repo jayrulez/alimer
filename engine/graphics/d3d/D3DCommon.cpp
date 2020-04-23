@@ -64,8 +64,8 @@ namespace alimer
         {PixelFormat::RGBA8Snorm,                   DXGI_FORMAT_R8G8B8A8_SNORM},
         {PixelFormat::RGBA8Uint,                    DXGI_FORMAT_R8G8B8A8_UINT},
         {PixelFormat::RGBA8Sint,                    DXGI_FORMAT_R8G8B8A8_SINT},
-        {PixelFormat::BGRA8Unorm,                   DXGI_FORMAT_B8G8R8A8_UNORM},
-        {PixelFormat::BGRA8UnormSrgb,               DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
+        {PixelFormat::Bgra8Unorm,                   DXGI_FORMAT_B8G8R8A8_UNORM},
+        {PixelFormat::Bgra8UnormSrgb,               DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
         // Packed 32-Bit Pixel formats
         {PixelFormat::RGB10A2Unorm,                 DXGI_FORMAT_R10G10B10A2_UNORM},
         {PixelFormat::RG11B10Float,                 DXGI_FORMAT_R11G11B10_FLOAT},
