@@ -33,7 +33,9 @@ namespace alimer
         : config(config_)
         , input(new InputManager())
     {
-        os::init();
+        /* Init OS first */
+        os_init();
+
         gameSystems.push_back(input);
 
         // Create graphics device.
@@ -55,18 +57,22 @@ namespace alimer
         mainWindowSwapChain.Reset();
         graphicsDevice->WaitForIdle();
         graphicsDevice.Reset();
-        os::shutdown();
+        window_destroy(main_window);
+        os_shutdown();
     }
 
     void Game::InitBeforeRun()
     {
         // Create main window.
-        mainWindow.reset(new Window(config.windowTitle, config.windowSize, WindowStyle::Resizable));
+        main_window = window_create(
+            config.windowTitle.c_str(),
+            config.windowSize.width, config.windowSize.height,
+            WINDOW_FLAG_RESIZABLE);
+        window_set_centered(main_window);
 
         SwapChainDescriptor scDesc = {};
-        scDesc.width = mainWindow->GetSize().width;
-        scDesc.height = mainWindow->GetSize().height;
-        mainWindowSwapChain = graphicsDevice->CreateSwapChain(mainWindow->GetHandle(), &scDesc);
+        window_get_size(main_window, &scDesc.width, &scDesc.height);
+        mainWindowSwapChain = graphicsDevice->CreateSwapChain(window_handle(main_window), &scDesc);
 
         Initialize();
         if (exitCode)
@@ -202,6 +208,7 @@ float4 PSMain(PSInput input) : SV_TARGET
             return EXIT_FAILURE;
         }
 
+        
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         try
 #endif
@@ -218,10 +225,10 @@ float4 PSMain(PSInput input) : SV_TARGET
             // Main message loop
             while (running)
             {
-                os::Event evt{};
-                while (os::poll_event(evt))
+                os_event evt;
+                while (event_poll(&evt))
                 {
-                    if (evt.type == os::Event::Type::Quit)
+                    if (evt.type == OS_EVENT_QUIT)
                     {
                         running = false;
                         break;
@@ -265,7 +272,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !mainWindow->IsMinimized()
+            && !window_is_minimized(main_window)
             && BeginDraw())
         {
             Draw(time);

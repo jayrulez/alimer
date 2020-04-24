@@ -61,7 +61,7 @@ namespace alimer
             }
             return result;
         }
-    }  // anonymous namespace
+    }  
 
     D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
         : SwapChain(device, windowHandle, descriptor)

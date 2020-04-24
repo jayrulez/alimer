@@ -24,7 +24,7 @@
 
 #include "core/Object.h"
 #include "Games/GameTime.h"
-#include "os/window.h"
+#include "os/os.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
@@ -72,7 +72,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        inline Window* GetMainWindow() const { return mainWindow.get(); }
+        inline window_t* get_main_window() const { return main_window; }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -104,7 +104,7 @@ namespace alimer
         bool running = false;
         // Rendering loop timer.
         GameTime time;
-        std::unique_ptr<Window> mainWindow;
+        window_t* main_window;
         std::vector<GameSystem*> gameSystems;
         RefPtr<GraphicsDevice> graphicsDevice;
         RefPtr<SwapChain> mainWindowSwapChain;

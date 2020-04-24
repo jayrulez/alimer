@@ -49,11 +49,6 @@ define_engine_source_files(
     Games
 )
 
-# Sources per backend/platform
-if(NOT (EMSCRIPTEN OR ANDROID))
-    define_engine_source_files(os/glfw)
-endif ()
-
 if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d)
 endif ()

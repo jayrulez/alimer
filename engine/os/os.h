@@ -22,66 +22,118 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#if defined(ALIMER_SHARED_LIBRARY)
+#   if defined(_WIN32)
+#       if defined(ALIMER_IMPLEMENTATION)
+#           define OS_EXPORT __declspec(dllexport)
+#       else
+#           define OS_EXPORT __declspec(dllimport)
+#       endif
+#   else  // defined(_WIN32)
+#       if defined(ALIMER_IMPLEMENTATION)
+#           define OS_EXPORT __attribute__((visibility("default")))
+#       else
+#           define OS_EXPORT
+#       endif
+#   endif  // defined(_WIN32)
+#else       
+#   define OS_EXPORT
+#endif  // defined(ALIMER_SHARED_LIBRARY)
 
-namespace alimer
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+
+typedef struct window_t window_t;
+
+typedef enum {
+    OS_EVENT_UNKNOWN = 0,
+    OS_EVENT_QUIT,
+    OS_EVENT_WINDOW,
+    OS_EVENT_KEY_DOWN,
+    OS_EVENT_KEY_UP,
+} os_event_type;
+
+typedef enum window_flags {
+    WINDOW_FLAG_RESIZABLE = (1 << 0),
+    WINDOW_FLAG_FULLSCREEN = (1 << 1),
+    WINDOW_FLAG_EXCLUSIVE_FULLSCREEN = (1 << 2),
+    WINDOW_FLAG_HIDDEN = (1 << 3),
+    WINDOW_FLAG_BORDERLESS = (1 << 4),
+    WINDOW_FLAG_MINIMIZED = (1 << 5),
+    WINDOW_FLAG_MAXIMIZED = (1 << 6)
+} window_flags;
+
+typedef struct os_window_event {
+    uint32_t window_id;
+} os_window_event;
+
+typedef struct os_key_event {
+    uint32_t window_id;
+    int code;
+    bool alt;	
+    bool ctrl;	
+    bool shift;	
+    bool system;
+} os_key_event;
+
+typedef struct {
+    os_event_type type;
+
+    union {
+        os_window_event window;
+        os_key_event key;
+    };
+} os_event;
+
+#if defined(_WIN32) || defined(_WIN64)
+typedef struct HWND__* HWND;
+typedef struct HMONITOR__* HMONITOR;
+#endif
+
+#ifdef __cplusplus
+extern "C"
 {
-    namespace os
-    {
-        auto init() -> bool;
-        void shutdown() noexcept;
+#endif
 
-        enum class WindowEventId : uint8_t
-        {
-            none = 0,
-            Shown,
-            Hidden,
-            Exposed,
-            Moved,
-            Resized,
-            SizeChanged,
-            Minimized,
-            Maximized,
-            Restored,
-            Enter,
-            Leave,
-            FocusGained,
-            FocusLost,
-            Close
-        };
+    bool os_init(void);
+    void os_shutdown(void);
+    bool event_poll(os_event* event);
+    void event_push(os_event event);
 
-        /// Defines a Window Event.
-        struct WindowEvent
-        {
-            uint32_t windowId{};
-            int32_t data1{};
-            int32_t data2{};
-            WindowEventId type{};
-        };
+    /* Window functions */
+    OS_EXPORT window_t* window_create(const char* title, uint32_t width, uint32_t height, uint32_t flags);
+    OS_EXPORT void window_destroy(window_t* window);
+    OS_EXPORT uint32_t window_get_id(window_t* window);
+    OS_EXPORT window_t* window_from_id(uint32_t id);
 
-        /// Defines an OS Event.
-        struct Event
-        {
-            enum class Type : uint8_t
-            {
-                Unkwnown = 0,
-                Quit,
-                Window
-            };
+    OS_EXPORT void window_maximize(window_t* window);
+    OS_EXPORT void window_minimize(window_t* window);
+    OS_EXPORT void window_restore(window_t* window);
+    OS_EXPORT void window_resize(window_t* window, uint32_t width, uint32_t height);
 
-            union {
-                WindowEvent window;
-            };
+    OS_EXPORT void window_set_title(window_t* window, const char* title);
+    OS_EXPORT void window_get_position(window_t* window, int* x, int* y);
+    OS_EXPORT void window_set_position(window_t* window, int x, int y);
+    OS_EXPORT bool window_set_centered(window_t* window);
 
-            Type type;
-        };
+    OS_EXPORT void window_get_size(window_t* window, uint32_t* width, uint32_t* height);
+    OS_EXPORT bool window_is_open(window_t* window);
+    OS_EXPORT bool window_is_visible(window_t* window);
+    OS_EXPORT bool window_is_maximized(window_t* window);
+    OS_EXPORT bool window_is_minimized(window_t* window);
+    OS_EXPORT bool window_is_focused(window_t* window);
 
-        void push_event(Event&& e);
-        void push_event(const Event& e);
-        auto poll_event(Event& e) noexcept -> bool;
+#if defined(_WIN32) || defined(_WIN64)
+    OS_EXPORT HWND window_handle(window_t* window);
+    OS_EXPORT HMONITOR window_monitor(window_t* window);
+#endif
 
-        std::string get_clipboard_text() noexcept;
-        void set_clipboard_text(const std::string& text);
-    } // namespace os
-} // namespace alimer
+    /* Clipboard functions */
+    OS_EXPORT const char* clipboard_get_text(void);
+    OS_EXPORT void clipboard_set_text(const char* text);
+
+#ifdef __cplusplus
+}
+#endif
