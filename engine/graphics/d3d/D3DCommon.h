@@ -57,13 +57,32 @@
 #   if !defined(_XBOX_ONE) || !defined(_TITLE)
 #   pragma comment(lib,"dxguid.lib")
 #   endif
+#endif
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY)(REFIID _riid, void** _factory);
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
+typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE)(UINT flags, REFIID _riid, void** _debug);
+typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
 #define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 namespace alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
+
+#if defined(_DEBUG)
+    // Declare debug guids to avoid linking with "dxguid.lib"
+    static constexpr GUID g_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
+    static constexpr GUID g_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
+#endif
+
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
     inline std::wstring GetDXErrorString(HRESULT hr)
@@ -104,14 +123,14 @@ namespace alimer
         case PixelFormat::Bgra8UnormSrgb:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case PixelFormat::RGBA8Unorm:
-        case PixelFormat::RGBA8UnormSrgb:
+        case PixelFormat::Rgba8Unorm:
+        case PixelFormat::Rgba8UnormSrgb:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        case PixelFormat::RGBA16Float:
+        case PixelFormat::Rgba16Float:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-        case PixelFormat::RGB10A2Unorm:
+        case PixelFormat::Rgb10a2Unorm:
             return DXGI_FORMAT_R10G10B10A2_UNORM;
 
         default:
@@ -130,14 +149,15 @@ namespace alimer
     {
         switch (format)
         {
-        case PixelFormat::D16Unorm:
-            return DXGI_FORMAT_R16_TYPELESS;
-        case PixelFormat::D32FloatS8X24:
-            return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-        case PixelFormat::D24UnormS8:
-            return DXGI_FORMAT_R24G8_TYPELESS;
-        case PixelFormat::D32Float:
+        case PixelFormat::Depth32Float:
             return DXGI_FORMAT_R32_TYPELESS;
+        case PixelFormat::Depth16Unorm:
+            return DXGI_FORMAT_R16_TYPELESS;
+        case PixelFormat::Depth24Plus:
+            return DXGI_FORMAT_R24G8_TYPELESS;
+        case PixelFormat::Depth24PlusStencil8:
+            return DXGI_FORMAT_R24G8_TYPELESS;
+        
         default:
             ALIMER_ASSERT(IsDepthFormat(format) == false);
             return ToDXGIFormat(format);

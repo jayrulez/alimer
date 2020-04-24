@@ -42,63 +42,63 @@ namespace alimer
         R16Uint,
         R16Sint,
         R16Float,
-        RG8Unorm,
-        RG8Snorm,
-        RG8Uint,
-        RG8Sint,
+        Rg8Unorm,
+        Rg8Snorm,
+        Rg8Uint,
+        Rg8Sint,
         // 32-bit pixel formats
         R32Uint,
         R32Sint,
         R32Float,
-        RG16Unorm,
-        RG16Snorm,
-        RG16Uint,
-        RG16Sint,
-        RG16Float,
-        RGBA8Unorm,
-        RGBA8UnormSrgb,
-        RGBA8Snorm,
-        RGBA8Uint,
-        RGBA8Sint,
+        Rg16Unorm,
+        Rg16Snorm,
+        Rg16Uint,
+        Rg16Sint,
+        Rg16Float,
+        Rgba8Unorm,
+        Rgba8UnormSrgb,
+        Rgba8Snorm,
+        Rgba8Uint,
+        Rgba8Sint,
         Bgra8Unorm,
         Bgra8UnormSrgb,
         // Packed 32-Bit Pixel formats
-        RGB10A2Unorm,
-        RG11B10Float,
+        Rgb10a2Unorm,
+        Rg11b10Float,
         // 64-Bit Pixel Formats
         RG32Uint,
         RG32Sint,
         RG32Float,
-        RGBA16Unorm,
-        RGBA16Snorm,
-        RGBA16Uint,
-        RGBA16Sint,
-        RGBA16Float,
+        Rgba16Unorm,
+        Rgba16Snorm,
+        Rgba16Uint,
+        Rgba16Sint,
+        Rgba16Float,
         // 128-Bit Pixel Formats
-        RGBA32Uint,
-        RGBA32Sint,
-        RGBA32Float,
+        Rgba32Uint,
+        Rgba32Sint,
+        Rgba32Float,
         // Depth-stencil formats
-        D32Float,
-        D16Unorm,
-        D32FloatS8X24,
-        D24UnormS8,
+        Depth32Float,
+        Depth16Unorm,
+        Depth24Plus,
+        Depth24PlusStencil8,
 
         // Compressed BC formats
-        BC1RGBAUnorm,
-        BC1RGBAUnormSrgb,
-        BC2RGBAUnorm,
-        BC2RGBAUnormSrgb,
-        BC3RGBAUnorm,
-        BC3RGBAUnormSrgb,
-        BC4RUnorm,
-        BC4RSnorm,
-        BC5RGUnorm,
-        BC5RGSnorm,
-        BC6HRGBUfloat,
-        BC6HRGBSfloat,
-        BC7RGBAUnorm,
-        BC7RGBAUnormSrgb,
+        Bc1RgbaUnorm,
+        Bc1RgbaUnormSrgb,
+        Bc2RgbaUnorm,
+        Bc2RgbaUnormSrgb,
+        Bc3RgbaUnorm,
+        Bc3RgbaUnormSrgb,
+        Bc4RUnorm,
+        Bc4RSnorm,
+        Bc5RgUnorm,
+        Bc5RgSnorm,
+        Bc6HRgbUfloat,
+        Bc6HRgbSfloat,
+        Bc7RgbaUnorm,
+        Bc7RgbaUnormSrgb,
 
         Count
     };
@@ -189,7 +189,7 @@ namespace alimer
     inline bool IsCompressedFormat(PixelFormat format)
     {
         ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
-        return format >= PixelFormat::BC1RGBAUnorm && format <= PixelFormat::BC7RGBAUnormSrgb;
+        return format >= PixelFormat::Bc1RgbaUnorm && format <= PixelFormat::Bc7RgbaUnormSrgb;
     }
 
     /// Get the format compression ration along the x-axis
@@ -234,18 +234,18 @@ namespace alimer
     {
         switch (format)
         {
-        case PixelFormat::BC1RGBAUnormSrgb:
-            return PixelFormat::BC1RGBAUnorm;
-        case PixelFormat::BC2RGBAUnormSrgb:
-            return PixelFormat::BC2RGBAUnorm;
-        case PixelFormat::BC3RGBAUnormSrgb:
-            return PixelFormat::BC3RGBAUnorm;
+        case PixelFormat::Bc1RgbaUnormSrgb:
+            return PixelFormat::Bc1RgbaUnorm;
+        case PixelFormat::Bc2RgbaUnormSrgb:
+            return PixelFormat::Bc2RgbaUnorm;
+        case PixelFormat::Bc3RgbaUnormSrgb:
+            return PixelFormat::Bc3RgbaUnorm;
         case PixelFormat::Bgra8UnormSrgb:
             return PixelFormat::Bgra8Unorm;
-        case PixelFormat::RGBA8UnormSrgb:
-            return PixelFormat::RGBA8Unorm;
-        case PixelFormat::BC7RGBAUnormSrgb:
-            return PixelFormat::BC7RGBAUnorm;
+        case PixelFormat::Rgba8UnormSrgb:
+            return PixelFormat::Rgba8Unorm;
+        case PixelFormat::Bc7RgbaUnormSrgb:
+            return PixelFormat::Bc7RgbaUnorm;
         default:
             ALIMER_ASSERT(isSrgbFormat(format) == false);
             return format;
@@ -259,18 +259,18 @@ namespace alimer
     {
         switch (format)
         {
-        case PixelFormat::BC1RGBAUnorm:
-            return PixelFormat::BC1RGBAUnormSrgb;
-        case PixelFormat::BC2RGBAUnorm:
-            return PixelFormat::BC2RGBAUnormSrgb;
-        case PixelFormat::BC3RGBAUnorm:
-            return PixelFormat::BC3RGBAUnormSrgb;
+        case PixelFormat::Bc1RgbaUnorm:
+            return PixelFormat::Bc1RgbaUnormSrgb;
+        case PixelFormat::Bc2RgbaUnorm:
+            return PixelFormat::Bc2RgbaUnormSrgb;
+        case PixelFormat::Bc3RgbaUnorm:
+            return PixelFormat::Bc3RgbaUnormSrgb;
         case PixelFormat::Bgra8Unorm:
             return PixelFormat::Bgra8UnormSrgb;
-        case PixelFormat::RGBA8Unorm:
-            return PixelFormat::RGBA8UnormSrgb;
-        case PixelFormat::BC7RGBAUnorm:
-            return PixelFormat::BC7RGBAUnormSrgb;
+        case PixelFormat::Rgba8Unorm:
+            return PixelFormat::Rgba8UnormSrgb;
+        case PixelFormat::Bc7RgbaUnorm:
+            return PixelFormat::Bc7RgbaUnormSrgb;
         default:
             return format;
         }

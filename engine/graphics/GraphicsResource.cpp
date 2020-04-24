@@ -20,34 +20,28 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GPUDevice.h"
-#include "D3D12Backend.h"
+#include "core/Assert.h"
+#include "graphics/GraphicsResource.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class D3D12GPUDevice final : public GPUDevice
+    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-    public:
-        D3D12GPUDevice();
-        ~D3D12GPUDevice() override;
+        ALIMER_ASSERT(device);
+        device->AddGPUResource(this);
+    }
 
-        static IDXGIFactory4* GetDXGIFactory();
-        static bool IsDXGITearingSupported();
-        ID3D12Device* GetHandle() const { return d3dDevice; }
+    GraphicsResource::~GraphicsResource()
+    {
+        //device->RemoveGPUResource(this);
+    }
 
-    private:
-        bool Init(GPUPowerPreference powerPreference) override;
-        void Shutdown();
-        void WaitForIdle() override;
-        SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) override;
-
-        ID3D12Device* d3dDevice = nullptr;
-        D3D12MA::Allocator* allocator = nullptr;
-        /// Current supported feature level.
-        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-        /// Root signature version
-        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    };
+    GraphicsDevice* GraphicsResource::GetDevice() const
+    {
+        return device;
+    }
 }
+

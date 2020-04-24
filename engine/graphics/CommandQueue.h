@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GPUResource.h"
+#include "graphics/GraphicsResource.h"
 
 namespace alimer
 {
@@ -33,7 +33,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        CommandQueue(GPUDevice* device, CommandQueueType queueType);
+        CommandQueue(GraphicsDevice* device, CommandQueueType queueType);
 
         /// Destructor
         virtual ~CommandQueue() = default;
@@ -42,7 +42,7 @@ namespace alimer
         virtual void WaitForIdle() = 0;
 
     private:
-        GPUDevice* device;
+        GraphicsDevice* device;
         CommandQueueType queueType;
     };
 } 

@@ -33,7 +33,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        SwapChain(GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
+        SwapChain(GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
         virtual ~SwapChain() = default;
 
         enum class ResizeResult
@@ -53,7 +53,7 @@ namespace alimer
         virtual ResizeResult ApiResize() = 0;
 
     protected:
-        GPUDevice* device;
+        GraphicsDevice* device;
         usize extent{};
         void* windowHandle;
 

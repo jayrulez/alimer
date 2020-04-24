@@ -21,12 +21,12 @@
 //
 
 #include "D3D12CommandAllocatorPool.h"
-#include "D3D12GPUDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
 namespace alimer
 {
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GPUDevice* device, D3D12_COMMAND_LIST_TYPE type_)
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_)
         : device{ device }
         , type(type_)
     {

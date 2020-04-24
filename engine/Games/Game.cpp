@@ -22,7 +22,7 @@
 
 #include "os/os.h"
 #include "Games/Game.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
@@ -37,8 +37,8 @@ namespace alimer
         gameSystems.push_back(input);
 
         // Create graphics device.
-        gpuDevice = GPUDevice::Create(config.preferredGPUBackend, GPUPowerPreference::HighPerformance);
-        if (gpuDevice == nullptr)
+        graphicsDevice = GraphicsDevice::Create(config.preferredGPUBackend, GPUPowerPreference::HighPerformance);
+        if (graphicsDevice == nullptr)
         {
             headless = true;
         }
@@ -53,8 +53,8 @@ namespace alimer
 
         gameSystems.clear();
         mainWindowSwapChain.Reset();
-        gpuDevice->WaitForIdle();
-        gpuDevice.Reset();
+        graphicsDevice->WaitForIdle();
+        graphicsDevice.Reset();
         os::shutdown();
     }
 
@@ -66,7 +66,7 @@ namespace alimer
         SwapChainDescriptor scDesc = {};
         scDesc.width = mainWindow->GetSize().width;
         scDesc.height = mainWindow->GetSize().height;
-        mainWindowSwapChain = gpuDevice->CreateSwapChain(mainWindow->GetHandle(), &scDesc);
+        mainWindowSwapChain = graphicsDevice->CreateSwapChain(mainWindow->GetHandle(), &scDesc);
 
         Initialize();
         if (exitCode)

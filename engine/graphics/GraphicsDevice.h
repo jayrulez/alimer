@@ -23,9 +23,10 @@
 #pragma once
 
 #include "core/Ptr.h"
-#include "graphics/GPUResource.h"
+#include "graphics/GraphicsResource.h"
 #include "graphics/CommandContext.h"
 #include <memory>
+#include <set>
 #include <mutex>
 
 namespace alimer
@@ -33,21 +34,24 @@ namespace alimer
     class CommandQueue;
     class SwapChain;
 
-    /// Defines the logical GPU device class.
-    class ALIMER_API GPUDevice : public RefCounted
+    /// Defines the logical graphics device class.
+    class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
         static bool IsEnabledValidation();
         static void SetEnableValidation(bool value);
 
-        /// Create new GPUDevice.
-        static RefPtr<GPUDevice> Create(BackendType preferredBackend = BackendType::Count, GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance);
+        /// Get set of available graphics backends.
+        static std::set<BackendType> GetAvailableBackends();
+
+        /// Create new GraphicsDevice instance.
+        static RefPtr<GraphicsDevice> Create(BackendType preferredBackend = BackendType::Count, GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance);
 
         /// Destructor.
-        virtual ~GPUDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
         /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+        virtual void WaitForIdle();
 
         /**
         * Get a command queue. Valid types are:
@@ -61,12 +65,12 @@ namespace alimer
         RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor);
 
         /// Add a GPU resource to keep track of. Called by GPUResource.
-        void AddGPUResource(GPUResource* resource);
+        void AddGPUResource(GraphicsResource* resource);
         /// Remove a tracked GPU resource. Called by GPUResource.
-        void RemoveGPUResource(GPUResource* resource);
+        void RemoveGPUResource(GraphicsResource* resource);
 
-        /// Get the features.
-        inline const GPUDeviceCaps& GetCaps() const { return caps; }
+        /// Get the device capabilities.
+        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     protected:
         virtual void ReleaseTrackedResources();
@@ -74,11 +78,10 @@ namespace alimer
         //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
 
     protected:
-        GPUDevice() = default;
-
+        GraphicsDevice() = default;
         virtual bool Init(GPUPowerPreference powerPreference) = 0;
 
-        GPUDeviceCaps caps{};
+        GraphicsDeviceCaps caps;
         std::shared_ptr<CommandQueue> graphicsCommandQueue;
         std::shared_ptr<CommandQueue> computeCommandQueue;
         std::shared_ptr<CommandQueue> copyCommandQueue;
@@ -86,11 +89,11 @@ namespace alimer
     private:
         /// Tracked gpu resource.
         std::mutex _gpuResourceMutex;
-        std::vector<GPUResource*> _gpuResources;
+        std::vector<GraphicsResource*> _gpuResources;
         static bool enableValidation;
         static bool enableGPUBasedValidation;
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GPUDevice);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

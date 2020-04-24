@@ -21,12 +21,12 @@
 //
 
 #include "graphics/Texture.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    Texture::Texture(GPUDevice* device, const TextureDescriptor* descriptor)
-        : GPUResource(device, Type::Texture)
+    Texture::Texture(GraphicsDevice* device, const TextureDescriptor* descriptor)
+        : GraphicsResource(device, Type::Texture)
         , type(descriptor->type)
         , usage(descriptor->usage)
         , format(descriptor->format)

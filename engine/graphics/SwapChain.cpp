@@ -21,11 +21,11 @@
 //
 
 #include "graphics/SwapChain.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
+    SwapChain::SwapChain(GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
         : device{ device }
         , windowHandle{ windowHandle }
         , extent{ descriptor->width, descriptor->height }

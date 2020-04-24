@@ -21,7 +21,7 @@
 //
 
 #include "D3D12SwapChain.h"
-#include "D3D12GPUDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
 
 namespace alimer
@@ -61,11 +61,9 @@ namespace alimer
             }
             return result;
         }
-
-        static constexpr unsigned int kFrameCount = 3;
     }  // anonymous namespace
 
-    D3D12SwapChain::D3D12SwapChain(D3D12GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor)
         : SwapChain(device, windowHandle, descriptor)
     {
         ApiResize();
@@ -93,12 +91,12 @@ namespace alimer
     {
         HRESULT hr = S_OK;
 
-        auto dxgiFactory = D3D12GPUDevice::GetDXGIFactory();
+        auto dxgiFactory = D3D12GraphicsDevice::GetDXGIFactory();
         DXGI_FORMAT dxgiColorFormat = ToDXGISwapChainFormat(format);
 
         UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
         if (presentMode == PresentMode::Immediate
-            && D3D12GPUDevice::IsDXGITearingSupported())
+            && D3D12GraphicsDevice::IsDXGITearingSupported())
         {
             //presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
@@ -107,7 +105,7 @@ namespace alimer
         if (handle != nullptr)
         {
             hr = handle->ResizeBuffers(
-                kFrameCount,
+                kMaxFrameLatency,
                 extent.width, extent.height,
                 dxgiColorFormat, swapChainFlags);
         }
@@ -126,7 +124,7 @@ namespace alimer
             swapChainDesc.Height = extent.height;
             swapChainDesc.Format = dxgiColorFormat;
             swapChainDesc.BufferUsage = D3D12SwapChainBufferUsage(usage);
-            swapChainDesc.BufferCount = kFrameCount;
+            swapChainDesc.BufferCount = kMaxFrameLatency;
             swapChainDesc.SampleDesc.Count = 1;
             swapChainDesc.SampleDesc.Quality = 0;
             swapChainDesc.Scaling = DXGI_SCALING_STRETCH;

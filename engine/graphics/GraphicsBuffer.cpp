@@ -20,27 +20,14 @@
 // THE SOFTWARE.
 //
 
-#include "core/Assert.h"
-#include "graphics/GPUResource.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsBuffer.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    GPUResource::GPUResource(GPUDevice* device, Type type)
-        : _device(device)
-        , _type(type)
+    GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device)
+        : GraphicsResource(device, Type::Buffer)
     {
-        //device->AddGPUResource(this);
-    }
 
-    GPUResource::~GPUResource()
-    {
-        //device->RemoveGPUResource(this);
-    }
-
-    GPUDevice* GPUResource::GetDevice() const
-    {
-        return _device;
     }
 }
-

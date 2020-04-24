@@ -21,11 +21,11 @@
 //
 
 #include "graphics/CommandQueue.h"
-#include "graphics/GPUDevice.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    CommandQueue::CommandQueue(GPUDevice* device, CommandQueueType queueType)
+    CommandQueue::CommandQueue(GraphicsDevice* device, CommandQueueType queueType)
         : device{ device }
         , queueType{ queueType }
     {

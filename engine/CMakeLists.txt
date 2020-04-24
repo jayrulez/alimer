@@ -54,15 +54,19 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(os/glfw)
 endif ()
 
+if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(graphics/d3d)
+endif ()
+
 if (ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d)
     define_engine_source_files(graphics/d3d12)
-elseif (ALIMER_GRAPHICS_VULKAN)
-    define_engine_source_files(graphics/vulkan)
-elseif (ALIMER_GRAPHICS_D3D11)
-    define_engine_source_files(graphics/d3d)
-    define_engine_source_files(graphics/d3d11)
-elseif (ALIMER_GRAPHICS_OPENGL)
+endif ()
+
+if (ALIMER_GRAPHICS_VULKAN)
+    #define_engine_source_files(graphics/vulkan)
+endif ()
+
+if (ALIMER_GRAPHICS_OPENGL)
     define_engine_source_files(graphics/opengl)
 endif ()
 
@@ -90,15 +94,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     stb
     imgui
 )
-
-# Graphics specific libraries
-if (ALIMER_GRAPHICS_D3D12)
-    target_link_libraries(alimer PRIVATE d3d12 d3d11 dxgi)
-elseif (ALIMER_GRAPHICS_VULKAN)
-elseif (ALIMER_GRAPHICS_D3D11)
-    target_link_libraries(alimer PRIVATE d3d11 dxgi)
-elseif (ALIMER_GRAPHICS_OPENGL)
-endif ()
 
 # Link platform specific libraries
 if(ANDROID)

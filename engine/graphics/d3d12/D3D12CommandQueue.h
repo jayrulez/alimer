@@ -32,7 +32,7 @@ namespace alimer
     class D3D12CommandQueue final : public CommandQueue
     {
     public:
-        D3D12CommandQueue(D3D12GPUDevice* device, CommandQueueType queueType);
+        D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType);
         ~D3D12CommandQueue() override;
         void WaitForIdle() override;
        

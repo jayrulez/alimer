@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "graphics/GPUResource.h"
+#include "graphics/GraphicsResource.h"
 #include "math/size.h"
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    class ALIMER_API Texture : public GraphicsResource
     {
-        ALIMER_OBJECT(Texture, GPUResource);
+        ALIMER_OBJECT(Texture, GraphicsResource);
         
     public:
         /// Destructor.
@@ -37,12 +37,12 @@ namespace alimer
 
     protected:
         /// Constructor.
-        Texture(GPUDevice* device, const TextureDescriptor* descriptor);
+        Texture(GraphicsDevice* device, const TextureDescriptor* descriptor);
 
         TextureType type = TextureType::Type2D;
         TextureUsage usage = TextureUsage::Sampled;
         /// Texture format.
-        PixelFormat format = PixelFormat::RGBA8Unorm;
+        PixelFormat format = PixelFormat::Rgba8Unorm;
 
         usize3 extent = { 1u, 1u, 1u };
         uint32_t mipLevels = 1u;

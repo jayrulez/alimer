@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GPUDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
 #include "D3D12MemAlloc.h"
@@ -31,6 +31,8 @@ namespace alimer
     static constexpr D3D_FEATURE_LEVEL s_minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
     static struct {
+        bool availableInitialized = false;
+        bool available = false;
         UINT dxgiFactoryFlags = 0;
         IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
@@ -38,12 +40,12 @@ namespace alimer
         uint32_t deviceCount = 0;
     } d3d12;
 
-    IDXGIFactory4* D3D12GPUDevice::GetDXGIFactory()
+    IDXGIFactory4* D3D12GraphicsDevice::GetDXGIFactory()
     {
         return d3d12.dxgiFactory;
     }
 
-    bool D3D12GPUDevice::IsDXGITearingSupported()
+    bool D3D12GraphicsDevice::IsDXGITearingSupported()
     {
         return d3d12.isTearingSupported;
     }
@@ -131,11 +133,66 @@ namespace alimer
         return true;
     }
 
-    D3D12GPUDevice::D3D12GPUDevice()
+    bool D3D12GraphicsDevice::IsAvailable()
     {
+        if (d3d12.availableInitialized) {
+            return d3d12.available;
+        }
+
+        d3d12.availableInitialized = true;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        static HMODULE s_dxgiHandle = LoadLibraryW(L"dxgi.dll");
+        if (s_dxgiHandle == nullptr)
+            return false;
+
+        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory2");
+        if (CreateDXGIFactory2 == nullptr)
+            return false;
+
+        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface1");
+
+        static HMODULE s_d3d12Handle = LoadLibraryW(L"d3d12.dll");
+        if (s_d3d12Handle == nullptr)
+            return false;
+
+        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(s_d3d12Handle, "D3D12CreateDevice");
+        if (D3D12CreateDevice == nullptr)
+            return false;
+
+        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(s_d3d12Handle, "D3D12GetDebugInterface");
+        D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(s_d3d12Handle, "D3D12SerializeRootSignature");
+        D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(s_d3d12Handle, "D3D12CreateRootSignatureDeserializer");
+        D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(s_d3d12Handle, "D3D12SerializeVersionedRootSignature");
+        D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(s_d3d12Handle, "D3D12CreateVersionedRootSignatureDeserializer");
+#endif
+
+        // Create temp factory and detect adapter support
+        {
+            IDXGIFactory4* tempFactory;
+            HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&tempFactory));
+            if (FAILED(hr))
+            {
+                return false;
+            }
+            SafeRelease(tempFactory);
+
+            if (SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+            {
+                d3d12.available = true;
+            }
+        }
+
+        d3d12.available = true;
+        return d3d12.available;
     }
 
-    D3D12GPUDevice::~D3D12GPUDevice()
+    D3D12GraphicsDevice::D3D12GraphicsDevice()
+    {
+        ALIMER_ASSERT_MSG(IsAvailable(), "Direct3D12 backend is not supported");
+    }
+
+    D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         WaitForIdle();
 
@@ -145,7 +202,7 @@ namespace alimer
         Shutdown();
     }
 
-    bool D3D12GPUDevice::Init(GPUPowerPreference powerPreference)
+    bool D3D12GraphicsDevice::Init(GPUPowerPreference powerPreference)
     {
         if (d3d12.deviceCount == 0)
         {
@@ -454,7 +511,7 @@ namespace alimer
         return true;
     }
 
-    void D3D12GPUDevice::Shutdown()
+    void D3D12GraphicsDevice::Shutdown()
     {
         copyCommandQueue.reset();
         computeCommandQueue.reset();
@@ -507,14 +564,7 @@ namespace alimer
         }
     }
 
-    void D3D12GPUDevice::WaitForIdle()
-    {
-        graphicsCommandQueue->WaitForIdle();
-        computeCommandQueue->WaitForIdle();
-        copyCommandQueue->WaitForIdle();
-    }
-
-    SwapChain* D3D12GPUDevice::CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor)
+    SwapChain* D3D12GraphicsDevice::CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor)
     {
         return new D3D12SwapChain(this, windowHandle, descriptor);
     }

@@ -30,7 +30,7 @@ namespace alimer
     class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GPUDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
         ~D3D12SwapChain() override;
 
     private:

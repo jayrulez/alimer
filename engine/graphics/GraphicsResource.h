@@ -27,12 +27,12 @@
 
 namespace alimer
 {
-    class GPUDevice;
+    class GraphicsDevice;
 
-    /// Defines a GPUResource created by GPU device.
-    class ALIMER_API GPUResource : public Object
+    /// Defines a Graphics Resource created by device.
+    class ALIMER_API GraphicsResource : public Object
     {
-        ALIMER_OBJECT(GPUResource, Object);
+        ALIMER_OBJECT(GraphicsResource, Object);
 
     public:
         /// Resource types. 
@@ -48,24 +48,25 @@ namespace alimer
 
     protected:
         /// Constructor.
-        GPUResource(GPUDevice* device, Type type);
+        GraphicsResource(GraphicsDevice* device, Type type);
 
         /// Destructor.
-        virtual ~GPUResource();
+        virtual ~GraphicsResource();
 
     public:
         /// Release the GPU resource.
         virtual void Destroy() {}
 
-        GPUDevice* GetDevice() const;
+        /// Gets the creation device.
+        GraphicsDevice* GetDevice() const;
 
     protected:
-        GPUDevice* _device;
-        Type _type;
+        GraphicsDevice* device;
+        Type type;
         /// Size in bytes of the resource.
         uint64_t _size{ 0 };
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GPUResource);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsResource);
     };
 } 

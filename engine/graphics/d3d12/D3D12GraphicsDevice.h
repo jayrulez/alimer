@@ -20,14 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GPUBuffer.h"
-#include "graphics/GPUDevice.h"
+#pragma once
+
+#include "graphics/GraphicsDevice.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GPUBuffer::GPUBuffer(GPUDevice* device)
-        : GPUResource(device, Type::Buffer)
+    class D3D12GraphicsDevice final : public GraphicsDevice
     {
+    public:
+        static bool IsAvailable();
 
-    }
+        D3D12GraphicsDevice();
+        ~D3D12GraphicsDevice() override;
+
+        static IDXGIFactory4* GetDXGIFactory();
+        static bool IsDXGITearingSupported();
+        ID3D12Device* GetHandle() const { return d3dDevice; }
+
+    private:
+        bool Init(GPUPowerPreference powerPreference) override;
+        void Shutdown();
+        SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) override;
+
+        ID3D12Device* d3dDevice = nullptr;
+        D3D12MA::Allocator* allocator = nullptr;
+        /// Current supported feature level.
+        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+        /// Root signature version
+        D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    };
 }

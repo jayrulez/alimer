@@ -21,7 +21,7 @@
 //
 
 #include "D3D12CommandQueue.h"
-#include "D3D12GPUDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
 namespace alimer
@@ -36,7 +36,7 @@ namespace alimer
         return list_types[static_cast<uint32_t>(type)];
     }
 
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GPUDevice* device, CommandQueueType queueType)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType)
         : CommandQueue(device, queueType)
         , commandListType(GetD3D12CommandListType(queueType))
         , allocatorPool(device, GetD3D12CommandListType(queueType))

@@ -54,9 +54,17 @@ namespace D3D12MA
 
 namespace alimer
 {
-    static constexpr uint32_t kMaxFrameLatency = 3;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+    // D3D12 functions.
+    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
+    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
+    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
+    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
+#endif
 
-    class D3D12GPUDevice;
+    class D3D12GraphicsDevice;
 
     struct PersistentDescriptorAlloc
     {
@@ -67,7 +75,7 @@ namespace alimer
     class D3D12DescriptorHeap
     {
     public:
-        D3D12DescriptorHeap(D3D12GPUDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_);
+        D3D12DescriptorHeap(D3D12GraphicsDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_);
         ~D3D12DescriptorHeap();
 
         void Init(uint32_t numPersistent_, uint32_t numTemporary_);
@@ -82,7 +90,7 @@ namespace alimer
         uint32_t TotalNumDescriptors() const { return numPersistent + numTemporary; }
 
     private:
-        D3D12GPUDevice* device;
+        D3D12GraphicsDevice* device;
         const D3D12_DESCRIPTOR_HEAP_TYPE type;
         bool shaderVisible;
 

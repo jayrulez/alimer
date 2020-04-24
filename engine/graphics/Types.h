@@ -28,6 +28,7 @@
 
 namespace alimer
 {
+    static constexpr uint32_t kMaxFrameLatency = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -167,7 +168,7 @@ namespace alimer
         TextureUsage usage = TextureUsage::Sampled;
 
         usize3 extent = { 1u, 1u, 1u };
-        PixelFormat format = PixelFormat::RGBA8Unorm;
+        PixelFormat format = PixelFormat::Rgba8Unorm;
         uint32_t mipLevels = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
         /// Initial content to initialize with.
@@ -177,8 +178,8 @@ namespace alimer
         const char* label = nullptr;
     };
 
-    /// Describes GPUDevice capabilities.
-    struct GPUDeviceCaps
+    /// Describes GraphicsDevice capabilities.
+    struct GraphicsDeviceCaps
     {
         BackendType backendType;
         uint32_t vendorId;
