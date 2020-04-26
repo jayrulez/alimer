@@ -21,6 +21,7 @@
 //
 
 #include "os/os.h"
+#include "gpu/gpu.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/SwapChain.h"
@@ -37,13 +38,6 @@ namespace alimer
         os_init();
 
         gameSystems.push_back(input);
-
-        // Create graphics device.
-        graphicsDevice = GraphicsDevice::Create(config.preferredGPUBackend, GPUPowerPreference::HighPerformance);
-        if (graphicsDevice == nullptr)
-        {
-            headless = true;
-        }
     }
 
     Game::~Game()
@@ -55,8 +49,8 @@ namespace alimer
 
         gameSystems.clear();
         mainWindowSwapChain.Reset();
-        graphicsDevice->WaitForIdle();
-        graphicsDevice.Reset();
+        gpu_wait_idle();
+        gpu_shutdown();
         window_destroy(main_window);
         os_shutdown();
     }
@@ -70,9 +64,15 @@ namespace alimer
             WINDOW_FLAG_RESIZABLE);
         window_set_centered(main_window);
 
-        SwapChainDescriptor scDesc = {};
-        window_get_size(main_window, &scDesc.width, &scDesc.height);
-        mainWindowSwapChain = graphicsDevice->CreateSwapChain(window_handle(main_window), &scDesc);
+        // Create graphics device.
+        gpu_config gpu_config = {};
+#ifdef _DEBUG
+        gpu_config.debug = true;
+#endif
+        if (!gpu_init(window_handle(main_window), &gpu_config))
+        {
+            headless = true;
+        }
 
         Initialize();
         if (exitCode)
@@ -161,7 +161,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        //vgpu_begin_frame();
+        gpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -197,8 +197,9 @@ float4 PSMain(PSInput input) : SV_TARGET
         vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
         vgpu_cmd_begin_render_pass(defaultRenderPass);
         vgpu_cmd_end_render_pass();
+        */
 
-        vgpu_end_frame();*/
+        gpu_end_frame();
     }
 
     int Game::Run()

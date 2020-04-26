@@ -44,10 +44,15 @@ define_engine_source_files(
     core
     math
     os
+    gpu
     graphics
     Input
     Games
 )
+
+if(ALIMER_GRAPHICS_VULKAN)
+    define_engine_source_files(gpu/vk)
+endif ()
 
 if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d)
@@ -80,15 +85,19 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     CXX_EXTENSIONS NO
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(alimer PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(alimer PUBLIC
     stb
     imgui
 )
+
+if(ALIMER_GRAPHICS_VULKAN)
+    target_link_libraries(alimer PRIVATE vulkan)
+endif ()
 
 # Link platform specific libraries
 if(ANDROID)
