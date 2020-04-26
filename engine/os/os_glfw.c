@@ -197,7 +197,7 @@ window_t* window_create(const char* title, uint32_t width, uint32_t height, uint
 void window_destroy(window_t* window) {
     glfwSetWindowShouldClose(window->handle, GLFW_TRUE);
     glfwDestroyWindow(window->handle);
-    stbds_arrdel(window, window->id);
+    stbds_arrdel(os.windows, window->id);
 }
 
 uint32_t window_get_id(window_t* window) {
