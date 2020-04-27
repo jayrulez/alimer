@@ -54,22 +54,6 @@ if(ALIMER_GRAPHICS_VULKAN)
     define_engine_source_files(gpu/vk)
 endif ()
 
-if (ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d)
-endif ()
-
-if (ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d12)
-endif ()
-
-if (ALIMER_GRAPHICS_VULKAN)
-    #define_engine_source_files(graphics/vulkan)
-endif ()
-
-if (ALIMER_GRAPHICS_OPENGL)
-    define_engine_source_files(graphics/opengl)
-endif ()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -95,19 +79,22 @@ target_link_libraries(alimer PUBLIC
     imgui
 )
 
-if(ALIMER_GRAPHICS_VULKAN)
+if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(alimer PRIVATE vulkan)
+    target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
+endif ()
+
+if (ALIMER_GRAPHICS_D3D12)
+    target_compile_definitions(alimer PRIVATE GPU_D3D12_BACKEND)
 endif ()
 
 # Link platform specific libraries
 if(ANDROID)
-    target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
+    target_link_libraries(alimer PRIVATE log android native_app_glue)
 else()
-    if (DIRECT_TO_DISPLAY)
-        target_link_libraries(${PROJECT_NAME} PRIVATE dl)
-    elseif (NOT EMSCRIPTEN)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
-        target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
+        target_compile_definitions(alimer PRIVATE GLFW_BACKEND)
+        target_link_libraries(alimer PRIVATE glfw)
     endif()
 endif()
 
@@ -131,7 +118,8 @@ else()
 endif()
 
 if (MSVC)
-    set(ALIMER_WARNINGS /W3)
+    # Set warning level 3 and treat all other warnings as errors
+    set(ALIMER_WARNINGS /W3 /WX)
 else()
     set(ALIMER_WARNINGS
         -Wall -Wextra -Wno-unused-parameter

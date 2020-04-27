@@ -22,124 +22,6 @@
 
 #include "config.h"
 #include "gpu_backend.h"
-#include <stdarg.h>
-
-#if defined(__ANDROID__)
-#   include <android/log.h>
-#elif TARGET_OS_IOS || TARGET_OS_TV
-#   include <sys/syslog.h>
-#elif TARGET_OS_MAC || defined(__linux__)
-#   include <unistd.h>
-#elif defined(_WIN32)
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN
-#   endif
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   include <Windows.h>
-#   include <strsafe.h>
-#elif defined(__EMSCRIPTEN__)
-#   include <emscripten.h>
-#endif
-
-#define VGPU_MAX_LOG_MESSAGE (4096)
-static const char* vgpu_log_priority_prefixes[VGPU_LOG_LEVEL_COUNT] = {
-    NULL,
-    "VERBOSE",
-    "DEBUG",
-    "INFO",
-    "WARN",
-    "ERROR",
-    "CRITICAL"
-};
-
-static void vgpu_default_log_callback(void* user_data, vgpu_log_level level, const char* message);
-static vgpu_log_callback s_log_function = vgpu_default_log_callback;
-static void* s_log_user_data = NULL;
-
-void vgpu_get_log_callback_function(vgpu_log_callback* callback, void** user_data) {
-    if (callback) {
-        *callback = s_log_function;
-    }
-    if (user_data) {
-        *user_data = s_log_user_data;
-    }
-}
-
-void vgpu_set_log_callback_function(vgpu_log_callback callback, void* user_data) {
-    s_log_function = callback;
-    s_log_user_data = user_data;
-}
-
-void vgpu_default_log_callback(void* user_data, vgpu_log_level level, const char* message) {
-#if defined(_WIN32)
-    size_t length = strlen(vgpu_log_priority_prefixes[level]) + 2 + strlen(message) + 1 + 1 + 1;
-    char* output = VGPU_ALLOCA(char, length);
-    snprintf(output, length, "%s: %s\r\n", vgpu_log_priority_prefixes[level], message);
-
-    const int buffer_size = MultiByteToWideChar(CP_UTF8, 0, output, (int)length, nullptr, 0);
-    if (buffer_size == 0)
-        return;
-
-    WCHAR* buffer = VGPU_ALLOCA(WCHAR, buffer_size);
-    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer, buffer_size) == 0)
-        return;
-
-    OutputDebugStringW(buffer);
-
-#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-    HANDLE handle;
-    switch (level)
-    {
-    case VGPU_LOG_LEVEL_ERROR:
-    case VGPU_LOG_LEVEL_WARN:
-        handle = GetStdHandle(STD_ERROR_HANDLE);
-        break;
-    default:
-        handle = GetStdHandle(STD_OUTPUT_HANDLE);
-        break;
-    }
-
-    WriteConsoleW(handle, buffer, (DWORD)wcslen(buffer), NULL, NULL);
-#   endif
-
-#endif
-}
-
-void vgpu_log(vgpu_log_level level, const char* message) {
-    if (s_log_function) {
-        s_log_function(s_log_user_data, level, message);
-    }
-}
-
-void vgpu_log_message_v(vgpu_log_level level, const char* format, va_list args) {
-    if (s_log_function) {
-        char message[VGPU_MAX_LOG_MESSAGE];
-        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
-        vgpu_log(level, message);
-    }
-}
-
-void vgpu_log_format(vgpu_log_level level, const char* format, ...) {
-    if (s_log_function) {
-        va_list args;
-        va_start(args, format);
-        vgpu_log_message_v(level, format, args);
-        va_end(args);
-    }
-}
-
-void vgpu_log_error(const char* message) {
-    vgpu_log(VGPU_LOG_LEVEL_ERROR, message);
-}
-
-void vgpu_log_error_format(const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-    vgpu_log_message_v(VGPU_LOG_LEVEL_ERROR, format, args);
-    va_end(args);
-}
 
 vgpu_backend vgpu_get_default_platform_backend(void) {
 #if defined(_WIN32) || defined(_WIN64)
@@ -225,7 +107,7 @@ bool gpu_init(void* window_handle, const gpu_config* config)
 
 #if defined(ALIMER_GRAPHICS_VULKAN)
     case VGPU_BACKEND_VULKAN:
-        s_renderer = vk_init_renderer();
+        s_renderer = vk_gpu_create_renderer();
         break;
 #endif
 
@@ -236,12 +118,12 @@ bool gpu_init(void* window_handle, const gpu_config* config)
 #endif
     }
 
-    if (s_renderer == nullptr) {
+    if (s_renderer == NULL) {
         return false;
     }
 
     if (!s_renderer->init(window_handle, config)) {
-        s_renderer = nullptr;
+        s_renderer = NULL;
         return false;
     }
 
@@ -249,7 +131,7 @@ bool gpu_init(void* window_handle, const gpu_config* config)
 }
 
 void gpu_shutdown(void) {
-    if (s_renderer == nullptr) {
+    if (s_renderer == NULL) {
         return;
     }
 
@@ -266,11 +148,11 @@ vgpu_caps vgpu_query_caps(void) {
     return s_renderer->query_caps();
 }
 
-VGPURenderPass vgpu_get_default_render_pass(void)
+/*VGPURenderPass vgpu_get_default_render_pass(void)
 {
     VGPU_ASSERT(s_renderer);
     return s_renderer->get_default_render_pass();
-}
+}*/
 
 vgpu_pixel_format vgpu_get_default_depth_format(void) {
     VGPU_ASSERT(s_renderer);

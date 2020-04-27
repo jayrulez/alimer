@@ -61,17 +61,17 @@ enum {
     VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
 };
 
-typedef enum vgpu_log_level {
-    VGPU_LOG_LEVEL_OFF = 0,
-    VGPU_LOG_LEVEL_VERBOSE,
-    VGPU_LOG_LEVEL_DEBUG,
-    VGPU_LOG_LEVEL_INFO,
-    VGPU_LOG_LEVEL_WARN,
-    VGPU_LOG_LEVEL_ERROR,
-    VGPU_LOG_LEVEL_CRITICAL,
-    VGPU_LOG_LEVEL_COUNT,
-    _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
-} vgpu_log_level;
+typedef enum gpu_log_level {
+    GPU_LOG_LEVEL_OFF = 0,
+    GPU_LOG_LEVEL_VERBOSE,
+    GPU_LOG_LEVEL_DEBUG,
+    GPU_LOG_LEVEL_INFO,
+    GPU_LOG_LEVEL_WARN,
+    GPU_LOG_LEVEL_ERROR,
+    GPU_LOG_LEVEL_CRITICAL,
+    _GPU_LOG_LEVEL_COUNT,
+    _GPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+} gpu_log_level;
 
 typedef enum vgpu_backend {
     VGPU_BACKEND_DEFAULT,
@@ -354,14 +354,14 @@ typedef enum VGPUTextureLayout {
     VGPUTextureLayout_Force32 = 0x7FFFFFFF
 } VGPUTextureLayout;
 
-typedef enum agpu_device_preference {
+typedef enum gpu_device_preference {
     GPU_DEVICE_PREFERENCE_DISCRETE,   
     GPU_DEVICE_PREFERENCE_INTEGRATED, 
     GPU_DEVICE_PREFERENCE_DONTCARE    
 } gpu_device_preference;
 
 /* Callbacks */
-typedef void(*vgpu_log_callback)(void* user_data, vgpu_log_level level, const char* message);
+typedef void(*gpu_log_callback)(void* user_data, gpu_log_level level, const char* message);
 
 /* Structs */
 typedef struct VGPUExtent3D {
@@ -566,7 +566,7 @@ typedef struct {
     gpu_device_preference device_preference;
     bool debug;
     //void* (*get_proc_address)(const char*);
-    void (*callback)(void* context, const char* message, int level);
+    gpu_log_callback log_callback;
     void* context;
 } gpu_config;
 
@@ -575,24 +575,13 @@ extern "C"
 {
 #endif
 
-    /* Log functions */
-    /// Get the current log output function.
-    VGPU_EXPORT void vgpu_get_log_callback_function(vgpu_log_callback* callback, void** user_data);
-    /// Set the current log output function.
-    VGPU_EXPORT void vgpu_set_log_callback_function(vgpu_log_callback callback, void* user_data);
-
-    VGPU_EXPORT void vgpu_log(vgpu_log_level level, const char* message);
-    VGPU_EXPORT void vgpu_log_format(vgpu_log_level level, const char* format, ...);
-    VGPU_EXPORT void vgpu_log_error(const char* message);
-    VGPU_EXPORT void vgpu_log_error_format(const char* format, ...);
-
     VGPU_EXPORT vgpu_backend vgpu_get_default_platform_backend(void);
     VGPU_EXPORT bool vgpu_is_backend_supported(vgpu_backend backend);
     VGPU_EXPORT bool gpu_init(void* window_handle, const gpu_config* config);
     VGPU_EXPORT void gpu_shutdown(void);
     VGPU_EXPORT vgpu_backend vgpu_query_backend(void);
     VGPU_EXPORT vgpu_caps vgpu_query_caps(void);
-    VGPU_EXPORT VGPURenderPass vgpu_get_default_render_pass(void);
+    //VGPU_EXPORT VGPURenderPass vgpu_get_default_render_pass(void);
     VGPU_EXPORT vgpu_pixel_format vgpu_get_default_depth_format(void);
     VGPU_EXPORT vgpu_pixel_format vgpu_get_default_depth_stencil_format(void);
 

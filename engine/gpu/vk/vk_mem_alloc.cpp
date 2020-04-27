@@ -1,5 +1,3 @@
-#
-#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
 extern "C" PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;

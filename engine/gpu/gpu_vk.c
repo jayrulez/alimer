@@ -20,38 +20,11 @@
 // THE SOFTWARE.
 //
 
+#if defined(GPU_VK_BACKEND)
+
 #include "gpu_backend.h"
 #include "stb_ds.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-#   define   VK_SURFACE_EXT             "VK_KHR_win32_surface"
-#   define   VK_CREATE_SURFACE_FN        vkCreateWin32SurfaceKHR
-#   define   VK_CREATE_SURFACE_FN_TYPE   PFN_vkCreateWin32SurfaceKHR
-#   define   VK_USE_PLATFORM_WIN32_KHR
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-#endif
-#   include <Windows.h>
-#elif defined(__ANDROID__)
-#   include <dlfcn.h>
-#   define   VK_SURFACE_EXT             "VK_KHR_android_surface"
-#   define   VK_CREATE_SURFACE_FN        vkCreateAndroidSurfaceKHR
-#   define   VK_CREATE_SURFACE_FN_TYPE   PFN_vkCreateAndroidSurfaceKHR
-#   define   VK_USE_PLATFORM_ANDROID_KHR
-#else
-#   include <xcb/xcb.h>
-#   include <dlfcn.h>
-#   include <X11/Xlib-xcb.h>
-#   define   VK_SURFACE_EXT             "VK_KHR_xcb_surface"
-#   define   VK_CREATE_SURFACE_FN        vkCreateXcbSurfaceKHR
-#   define   VK_CREATE_SURFACE_FN_TYPE   PFN_vkCreateXcbSurfaceKHR
-#   define   VK_USE_PLATFORM_XCB_KHR
-#endif
-
-#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include "vk/vk_mem_alloc.h"
 
@@ -178,6 +151,11 @@ typedef struct {
     bool dedicated_allocation;
     bool image_format_list;
     bool debug_marker;
+    bool raytracing;
+    bool buffer_device_address;
+    bool deferred_host_operations;
+    bool descriptor_indexing;
+    bool pipeline_library;
 } vk_physical_device_features;
 
 typedef struct VGPUVkQueueFamilyIndices {
@@ -272,25 +250,19 @@ static struct {
     bool available_initialized;
     bool available;
 
-#if defined(_WIN32)
-    HMODULE library;
-#else
     void* library;
-#endif
 
     gpu_config config;
     bool headless;
 
-    uint32_t apiVersion;
     bool debug_utils;
     bool headless_extension;
     bool surface_capabilities2;
     bool physical_device_properties2;
     bool external_memory_capabilities;
     bool external_semaphore_capabilities;
-    bool full_screen_exclusive;
+    bool win32_full_screen_exclusive;
     VkInstance instance;
-
     VkDebugUtilsMessengerEXT debug_utils_messenger;
     VkDebugReportCallbackEXT debug_report_callback;
 
@@ -300,13 +272,10 @@ static struct {
     VkPhysicalDevice physical_device;
     VGPUVkQueueFamilyIndices queue_families;
 
-    bool api_version_12;
     vk_physical_device_features device_features;
-
     vgpu_caps caps;
 
     VkDevice device;
-    struct vk_device_table* table;
     VkQueue graphics_queue;
     VkQueue compute_queue;
     VkQueue copy_queue;
@@ -317,28 +286,28 @@ static struct {
     uint32_t max_inflight_frames;
 
     VGPUSwapchainVk swapchains[_VGPU_VK_MAX_SWAPCHAINS];
-
     RenderPassHashMap* renderPassHashMap;
 } vk;
 
-#define GPU_VK_THROW(s) if (vk.config.callback) { vk.config.callback(vk.config.context, s, true); }
-#define GPU_VK_CHECK(c, s) if (!(c)) { GPU_VK_THROW(s); }
+#define GPU_VK_THROW(str) if (vk.config.log_callback) { vk.config.log_callback(vk.config.context, GPU_LOG_LEVEL_ERROR, str); }
+#define GPU_VK_CHECK(c, str) if (!(c)) { GPU_VK_THROW(str); }
 #define VK_CHECK(res) do { VkResult r = (res); GPU_VK_CHECK(r >= 0, _gpu_vk_get_error_string(r)); } while (0)
 #define GPU_VK_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
 #if defined(VULKAN_DEBUG)
-VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity, VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data)
+VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags,
+    const VkDebugUtilsMessengerCallbackDataEXT* pData, void* user_data)
 {
-    // Log debug messge
-    if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_WARN, "%u - %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
-    }
-    else if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_ERROR, "%u - %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
+    if (vk.config.log_callback) {
+        if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        {
+            //vgpu_log_format(GPU_LOG_LEVEL_WARN, "%u - %s: %s", callback_data->messageIdNumber, callback_data->pMessageIdName, callback_data->pMessage);
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_WARN, pData->pMessage);
+        }
+        else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+        {
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_ERROR, pData->pMessage);
+        }
     }
 
     return VK_FALSE;
@@ -358,23 +327,26 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
     _VGPU_UNUSED(object);
     _VGPU_UNUSED(location);
     _VGPU_UNUSED(message_code);
-    _VGPU_UNUSED(user_data);
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_ERROR, "%s: %s", layer_prefix, message);
+
+    if (vk.config.log_callback) {
+        if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+        {
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_ERROR, message);
+        }
+        else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
+        {
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_WARN, message);
+        }
+        else if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
+        {
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_WARN, message);
+        }
+        else
+        {
+            vk.config.log_callback(user_data, GPU_LOG_LEVEL_INFO, message);
+        }
     }
-    else if (flags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_WARN, "%s: %s", layer_prefix, message);
-    }
-    else if (flags & VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_WARN, "%s: %s", layer_prefix, message);
-    }
-    else
-    {
-        vgpu_log_format(VGPU_LOG_LEVEL_INFO, "%s: %s", layer_prefix, message);
-    }
+
     return VK_FALSE;
 }
 #endif
@@ -407,7 +379,7 @@ static vk_physical_device_features vgpuVkQueryDeviceExtensionSupport(VkPhysicalD
         if (strcmp(available_extensions[i].extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
             result.swapchain = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_KHR_maintenance1") == 0) {
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_MAINTENANCE1_EXTENSION_NAME) == 0) {
             result.maintenance_1 = true;
         }
         else if (strcmp(available_extensions[i].extensionName, VK_KHR_MAINTENANCE2_EXTENSION_NAME) == 0) {
@@ -416,20 +388,35 @@ static vk_physical_device_features vgpuVkQueryDeviceExtensionSupport(VkPhysicalD
         else if (strcmp(available_extensions[i].extensionName, VK_KHR_MAINTENANCE3_EXTENSION_NAME) == 0) {
             result.maintenance_3 = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_KHR_get_memory_requirements2") == 0) {
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME) == 0) {
             result.get_memory_requirements2 = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_KHR_dedicated_allocation") == 0) {
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
             result.dedicated_allocation = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_KHR_image_format_list") == 0) {
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0) {
             result.image_format_list = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_EXT_debug_marker") == 0) {
+        else if (strcmp(available_extensions[i].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
             result.debug_marker = true;
         }
-        else if (strcmp(available_extensions[i].extensionName, "VK_EXT_full_screen_exclusive") == 0) {
-            vk.full_screen_exclusive = true;
+        else if (strcmp(available_extensions[i].extensionName, VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME) == 0) {
+            vk.win32_full_screen_exclusive = true;
+        }
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_RAY_TRACING_EXTENSION_NAME) == 0) {
+            result.raytracing = true;
+        }
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) == 0) {
+            result.buffer_device_address = true;
+        }
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) == 0) {
+            result.deferred_host_operations = true;
+        }
+        else if (strcmp(available_extensions[i].extensionName, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME) == 0) {
+            result.descriptor_indexing = true;
+        }
+        else if (strcmp(available_extensions[i].extensionName, VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME) == 0) {
+            result.pipeline_library = true;
         }
     }
 
@@ -564,10 +551,10 @@ static bool _gpu_vk_create_surface(void* window_handle, VkSurfaceKHR* pSurface) 
         .hinstance = (HINSTANCE)GetModuleHandle(NULL),
         .hwnd = hWnd
     };
+    result = vkCreateWin32SurfaceKHR(vk.instance, &surface_info, NULL, pSurface);
 #endif
-    result = VK_CREATE_SURFACE_FN(vk.instance, &surface_info, NULL, pSurface);
     if (result != VK_SUCCESS) {
-        vgpu_log_error("Failed to create surface");
+        //vgpu_log_error("Failed to create surface");
         return false;
     }
 
@@ -799,7 +786,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     memcpy(&vk.config, config, sizeof(gpu_config));
     vk.headless = window_handle == NULL;
 
-    uint32_t instance_extension_count;
+    uint32_t instance_extension_count = 0;
     VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, NULL));
 
     VkExtensionProperties* available_instance_extensions = VGPU_ALLOCA(VkExtensionProperties, instance_extension_count);
@@ -822,10 +809,10 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         {
             vk.surface_capabilities2 = true;
         }
-        else if (strcmp(available_instance_extensions[i].extensionName, "VK_KHR_get_physical_device_properties2") == 0)
+        else if (strcmp(available_instance_extensions[i].extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
         {
             vk.physical_device_properties2 = true;
-            enabled_instance_exts[enabled_ext_count++] = "VK_KHR_get_physical_device_properties2";
+            enabled_instance_exts[enabled_ext_count++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
         }
         else if (strcmp(available_instance_extensions[i].extensionName, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0)
         {
@@ -847,11 +834,13 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     }
     else
     {
-        enabled_instance_exts[enabled_ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
-        enabled_instance_exts[enabled_ext_count++] = VK_SURFACE_EXT;
+        enabled_instance_exts[enabled_ext_count++] = "VK_KHR_surface";
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+        enabled_instance_exts[enabled_ext_count++] = "VK_KHR_win32_surface";
+#endif
 
         if (vk.surface_capabilities2) {
-            enabled_instance_exts[enabled_ext_count++] = VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME;
+            enabled_instance_exts[enabled_ext_count++] = "VK_KHR_get_surface_capabilities2";
         }
     }
 
@@ -893,13 +882,13 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         return false;
     }
 
-    vk.apiVersion = 0;
-    if (vkEnumerateInstanceVersion(&vk.apiVersion) != VK_SUCCESS)
+    uint32_t apiVersion;
+    if (vkEnumerateInstanceVersion(&apiVersion) != VK_SUCCESS)
     {
-        vk.apiVersion = VK_API_VERSION_1_1;
+        apiVersion = VK_API_VERSION_1_1;
     }
 
-    if (vk.apiVersion < VK_API_VERSION_1_1) {
+    if (apiVersion < VK_API_VERSION_1_1) {
         return false;
     }
 
@@ -907,7 +896,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pApplicationInfo = &(VkApplicationInfo) {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .apiVersion = vk.apiVersion
+            .apiVersion = apiVersion
         },
         .enabledLayerCount = enabled_instance_layers_count,
         .ppEnabledLayerNames = enabled_instance_layers,
@@ -954,7 +943,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         result = vkCreateDebugUtilsMessengerEXT(vk.instance, &debug_utils_create_info, NULL, &vk.debug_utils_messenger);
         if (result != VK_SUCCESS)
         {
-            //vgpu_log_error("Could not create debug utils messenger");
+            GPU_VK_THROW("Could not create debug utils messenger");
             gpu_shutdown();
             return false;
         }
@@ -963,7 +952,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     {
         result = vkCreateDebugReportCallbackEXT(vk.instance, &debug_report_create_info, NULL, &vk.debug_report_callback);
         if (result != VK_SUCCESS) {
-            //vgpu_log_error("Could not create debug report callback");
+            GPU_VK_THROW("Could not create debug report callback");
             gpu_shutdown();
             return false;
         }
@@ -974,7 +963,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     vk.physical_device_count = _VK_GPU_MAX_PHYSICAL_DEVICES;
     result = vkEnumeratePhysicalDevices(vk.instance, &vk.physical_device_count, vk.physical_devices);
     if (result != VK_SUCCESS) {
-        //vgpu_log_error("Vulkan: Cannot enumerate physical devices.");
+        GPU_VK_THROW("Vulkan: Cannot enumerate physical devices.");
         gpu_shutdown();
         return false;
     }
@@ -1031,7 +1020,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     }
 
     if (best_device_index == VK_QUEUE_FAMILY_IGNORED) {
-        vgpu_log_error("Vulkan: Cannot find suitable physical device.");
+        GPU_VK_THROW("Vulkan: Cannot find suitable physical device.");
         gpu_shutdown();
         return false;
     }
@@ -1041,11 +1030,6 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
 
     VkPhysicalDeviceProperties gpu_props;
     vkGetPhysicalDeviceProperties(vk.physical_device, &gpu_props);
-
-    if (gpu_props.apiVersion >= VK_API_VERSION_1_2)
-    {
-        vk.api_version_12 = true;
-    }
 
     /* Setup device queue's. */
     uint32_t queue_count;
@@ -1112,34 +1096,39 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     /* Setup device extensions now. */
     uint32_t enabled_device_ext_count = 0;
     char* enabled_device_exts[64];
-    enabled_device_exts[enabled_device_ext_count++] = "VK_KHR_maintenance1";
+    enabled_device_exts[enabled_device_ext_count++] = VK_KHR_MAINTENANCE1_EXTENSION_NAME;
 
     if (!vk.headless) {
         enabled_device_exts[enabled_device_ext_count++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
     }
 
     if (vk.device_features.maintenance_2) {
-        enabled_device_exts[enabled_device_ext_count++] = "VK_KHR_maintenance2";
+        enabled_device_exts[enabled_device_ext_count++] = VK_KHR_MAINTENANCE2_EXTENSION_NAME;
     }
 
     if (vk.device_features.maintenance_3) {
-        enabled_device_exts[enabled_device_ext_count++] = "VK_KHR_maintenance3";
+        enabled_device_exts[enabled_device_ext_count++] = VK_KHR_MAINTENANCE3_EXTENSION_NAME;
     }
 
     if (vk.device_features.get_memory_requirements2 &&
         vk.device_features.dedicated_allocation)
     {
-        enabled_device_exts[enabled_device_ext_count++] = "VK_KHR_get_memory_requirements2";
-        enabled_device_exts[enabled_device_ext_count++] = "VK_KHR_dedicated_allocation";
+        enabled_device_exts[enabled_device_ext_count++] = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
+        enabled_device_exts[enabled_device_ext_count++] = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
     }
 
 #ifdef _WIN32
     if (vk.surface_capabilities2 &&
-        vk.full_screen_exclusive)
+        vk.win32_full_screen_exclusive)
     {
-        enabled_device_exts[enabled_device_ext_count++] = "VK_EXT_full_screen_exclusive";
+        enabled_device_exts[enabled_device_ext_count++] = VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME;
     }
 #endif
+
+    if (vk.device_features.buffer_device_address)
+    {
+        enabled_device_exts[enabled_device_ext_count++] = VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME;
+    }
 
     VkPhysicalDeviceFeatures2 features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2
@@ -1203,16 +1192,20 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
             allocator_flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
         }
 
+        if (vk.device_features.buffer_device_address)
+        {
+            allocator_flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+        }
+
         const VmaAllocatorCreateInfo allocator_info = {
             .flags = allocator_flags,
             .physicalDevice = vk.physical_device,
             .device = vk.device,
-            .instance = vk.instance,
-            //.vulkanApiVersion = vk.apiVersion
+            .instance = vk.instance
         };
         result = vmaCreateAllocator(&allocator_info, &vk.allocator);
         if (result != VK_SUCCESS) {
-            //vgpu_log_error("Vulkan: Cannot create memory allocator.");
+            GPU_VK_THROW("Vulkan: Cannot create memory allocator.");
             gpu_shutdown();
             return false;
         }
@@ -1402,7 +1395,7 @@ static void vk_shutdown(void) {
         vmaCalculateStats(vk.allocator, &stats);
 
         if (stats.total.usedBytes > 0) {
-            vgpu_log_format(VGPU_LOG_LEVEL_ERROR, "Total device memory leaked: %llx bytes.", stats.total.usedBytes);
+            //vgpu_log_format(GPU_LOG_LEVEL_ERROR, "Total device memory leaked: %llx bytes.", stats.total.usedBytes);
         }
 
         vmaDestroyAllocator(vk.allocator);
@@ -1612,12 +1605,22 @@ bool vgpu_vk_supported(void) {
 
     GPU_FOREACH_ANONYMOUS(GPU_LOAD_ANONYMOUS);
 
+    uint32_t ext_count;
+    VkResult result = vkEnumerateInstanceExtensionProperties(NULL, &ext_count, NULL);
+    if (result != VK_SUCCESS)
+    {
+        vk.available = false;
+        return false;
+    }
+
     vk.available = true;
     return true;
 }
 
-gpu_renderer* vk_init_renderer(void) {
+gpu_renderer* vk_gpu_create_renderer(void) {
     static gpu_renderer renderer = { NULL };
     ASSIGN_DRIVER(vk);
     return &renderer;
 }
+
+#endif /* defined(GPU_VK_BACKEND) */

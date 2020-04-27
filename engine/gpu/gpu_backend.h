@@ -95,6 +95,7 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 
 typedef struct gpu_renderer {
+
     bool (*init)(void* window_handle, const gpu_config* config);
     void (*shutdown)(void);
     vgpu_caps(*query_caps)(void);
@@ -150,7 +151,7 @@ typedef struct gpu_renderer {
 
 /* vulkan */
 extern bool vgpu_vk_supported(void);
-extern gpu_renderer* vk_init_renderer(void);
+extern gpu_renderer* vk_gpu_create_renderer(void);
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
