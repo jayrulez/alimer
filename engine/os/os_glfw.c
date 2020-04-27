@@ -184,7 +184,7 @@ window_t* window_create(const char* title, uint32_t width, uint32_t height, uint
     glfwSetKeyCallback(handle, glfw_key_callback);
 
     /* Setup os data. */
-    uint32_t window_id = arrlenu(os.windows);
+    uint32_t window_id = (uint32_t)arrlenu(os.windows);
     window_t window = {
         .id = window_id,
         .handle = handle

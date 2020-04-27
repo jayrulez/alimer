@@ -97,10 +97,17 @@ extern "C"
 {
 #endif
 
+    /* Platform functions */
     bool os_init(void);
     void os_shutdown(void);
     bool event_poll(os_event* event);
     void event_push(os_event event);
+
+    /* Dynamic library functions */
+    void* library_open(const char* lib_name);
+    bool library_is_valid(void* handle);
+    void library_close(void* handle);
+    void* library_symbol(void* handle, const char* name);
 
     /* Window functions */
     OS_EXPORT window_t* window_create(const char* title, uint32_t width, uint32_t height, uint32_t flags);
