@@ -94,19 +94,23 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_max(a,b) ((a>b)?a:b)
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 
-typedef struct gpu_renderer {
+typedef struct gpu_renderer gpu_renderer;
 
-    bool (*init)(void* window_handle, const gpu_config* config);
-    void (*shutdown)(void);
-    vgpu_caps(*query_caps)(void);
-    VGPURenderPass (*get_default_render_pass)(void);
+typedef struct gpu_device_t {
+    /* Opaque pointer for the renderer. */
+    gpu_renderer* renderer;
 
-    vgpu_pixel_format(*get_default_depth_format)(void);
-    vgpu_pixel_format(*get_default_depth_stencil_format)(void);
+    bool (*init)(gpu_device device, const gpu_config* config, const gpu_swapchain_desc* swapchain_desc);
+    void (*destroy)(gpu_device device);
+    vgpu_caps(*query_caps)(gpu_renderer* driver_data);
+    VGPURenderPass (*get_default_render_pass)(gpu_renderer* driver_data);
 
-    void (*wait_idle)(void);
-    void (*begin_frame)(void);
-    void (*end_frame)(void);
+    vgpu_pixel_format(*get_default_depth_format)(gpu_renderer* driver_data);
+    vgpu_pixel_format(*get_default_depth_stencil_format)(gpu_renderer* driver_data);
+
+    void (*wait_idle)(gpu_renderer* driver_data);
+    void (*begin_frame)(gpu_renderer* driver_data);
+    void (*end_frame)(gpu_renderer* driver_data);
 
 #if TODO
     /* Buffer */
@@ -143,20 +147,22 @@ typedef struct gpu_renderer {
     void (*cmdEndRenderPass)(VGPURenderer* driver_data);
 #endif // TODO
 
-} gpu_renderer;
+} gpu_device_t;
 
-/* d3d11 */
-//extern bool vgpu_d3d11_supported(void);
-//extern gpu_renderer d3d11_create_device(void);
+#if defined(GPU_D3D11_BACKEND)
+extern bool gpu_d3d11_supported(void);
+extern gpu_device d3d11_gpu_create_device(void);
+#endif
 
-/* vulkan */
-extern bool vgpu_vk_supported(void);
+#if defined(GPU_VK_BACKEND) && TODO_VK
+extern bool gpu_vk_supported(void);
 extern gpu_renderer* vk_gpu_create_renderer(void);
+#endif
 
-#define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
+#define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
-ASSIGN_DRIVER_FUNC(shutdown, name)\
+ASSIGN_DRIVER_FUNC(destroy, name)\
 ASSIGN_DRIVER_FUNC(query_caps, name)\
 ASSIGN_DRIVER_FUNC(get_default_render_pass, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\

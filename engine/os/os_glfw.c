@@ -308,6 +308,18 @@ bool window_set_centered(window_t* window) {
     return true;
 }
 
+uint32_t window_width(window_t* window) {
+    int width;
+    glfwGetWindowSize(window->handle, &width, NULL);
+    return (uint32_t)width;
+}
+
+uint32_t window_height(window_t* window) {
+    int height;
+    glfwGetWindowSize(window->handle, NULL, &height);
+    return (uint32_t)height;
+}
+
 void window_get_size(window_t* window, uint32_t* width, uint32_t* height) {
     int w, h;
     glfwGetWindowSize(window->handle, &w, &h);

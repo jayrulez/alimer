@@ -51,7 +51,7 @@ define_engine_source_files(
 )
 
 if(ALIMER_GRAPHICS_VULKAN)
-    define_engine_source_files(gpu/vk)
+    #define_engine_source_files(gpu/vk)
 endif ()
 
 group_sources()
@@ -83,6 +83,11 @@ if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(alimer PRIVATE vulkan)
     target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
 endif ()
+
+if (ALIMER_GRAPHICS_D3D11)
+    target_compile_definitions(alimer PRIVATE GPU_D3D11_BACKEND)
+endif ()
+
 
 if (ALIMER_GRAPHICS_D3D12)
     target_compile_definitions(alimer PRIVATE GPU_D3D12_BACKEND)

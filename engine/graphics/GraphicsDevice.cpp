@@ -70,11 +70,6 @@ namespace alimer
                 availableProviders.insert(BackendType::Direct3D12);
 #endif
 
-#if defined(ALIMER_GRAPHICS_D3D11)
-            if (D3D11GPUDevice::IsAvailable())
-                availableProviders.insert(BackendType::Direct3D11);
-#endif
-
 #if defined(ALIMER_GRAPHICS_OPENGL)
             availableProviders.insert(BackendType::OpenGL);
 #endif

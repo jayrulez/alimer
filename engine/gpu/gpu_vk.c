@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(GPU_VK_BACKEND)
+#if defined(GPU_VK_BACKEND) && defined(TODO_VK)
 
 #include "gpu_backend.h"
 #include "stb_ds.h"
@@ -63,10 +63,23 @@ X(vkGetPhysicalDeviceSurfacePresentModesKHR)\
 X(vkGetPhysicalDeviceSurfaceSupportKHR)\
 X(vkGetPhysicalDeviceFeatures2)
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+#define GPU_FOREACH_INSTANCE_SURFACE(X)\
+X(vkCreateAndroidSurfaceKHR)
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
 #define GPU_FOREACH_INSTANCE_SURFACE(X)\
 X(vkCreateWin32SurfaceKHR)\
 X(vkGetPhysicalDeviceWin32PresentationSupportKHR)
+#elif defined(VK_USE_PLATFORM_METAL_EXT)
+#define GPU_FOREACH_INSTANCE_SURFACE(X)\
+X(vkCreateMetalSurfaceEXT)
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+#define GPU_FOREACH_INSTANCE_SURFACE(X)\
+X(vkCreateMacOSSurfaceMVK)
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+#define GPU_FOREACH_INSTANCE_SURFACE(X)\
+X(vkCreateXcbSurfaceKHR)\
+X(vkGetPhysicalDeviceXcbPresentationSupportKHR)
 #endif
 
 // Functions that require a device
@@ -147,8 +160,8 @@ typedef struct {
     bool maintenance_1;
     bool maintenance_2;
     bool maintenance_3;
-    bool get_memory_requirements2;
-    bool dedicated_allocation;
+    bool KHR_get_memory_requirements2;
+    bool KHR_dedicated_allocation;
     bool image_format_list;
     bool debug_marker;
     bool raytracing;
@@ -258,7 +271,7 @@ static struct {
     bool debug_utils;
     bool headless_extension;
     bool surface_capabilities2;
-    bool physical_device_properties2;
+    bool KHR_get_physical_device_properties2;
     bool external_memory_capabilities;
     bool external_semaphore_capabilities;
     bool win32_full_screen_exclusive;
@@ -389,10 +402,10 @@ static vk_physical_device_features vgpuVkQueryDeviceExtensionSupport(VkPhysicalD
             result.maintenance_3 = true;
         }
         else if (strcmp(available_extensions[i].extensionName, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME) == 0) {
-            result.get_memory_requirements2 = true;
+            result.KHR_get_memory_requirements2 = true;
         }
         else if (strcmp(available_extensions[i].extensionName, VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME) == 0) {
-            result.dedicated_allocation = true;
+            result.KHR_dedicated_allocation = true;
         }
         else if (strcmp(available_extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0) {
             result.image_format_list = true;
@@ -779,7 +792,7 @@ static VkCompareOp get_vk_compare_op(vgpu_compare_function function)
 }
 
 static bool vk_init(void* window_handle, const gpu_config* config) {
-    if (!vgpu_vk_supported()) {
+    if (!gpu_vk_supported()) {
         return false;
     }
 
@@ -811,7 +824,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         }
         else if (strcmp(available_instance_extensions[i].extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
         {
-            vk.physical_device_properties2 = true;
+            vk.KHR_get_physical_device_properties2 = true;
             enabled_instance_exts[enabled_ext_count++] = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME;
         }
         else if (strcmp(available_instance_extensions[i].extensionName, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME) == 0)
@@ -834,7 +847,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     }
     else
     {
-        enabled_instance_exts[enabled_ext_count++] = "VK_KHR_surface";
+        enabled_instance_exts[enabled_ext_count++] = VK_KHR_SURFACE_EXTENSION_NAME;
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
         enabled_instance_exts[enabled_ext_count++] = "VK_KHR_win32_surface";
 #endif
@@ -1110,8 +1123,8 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         enabled_device_exts[enabled_device_ext_count++] = VK_KHR_MAINTENANCE3_EXTENSION_NAME;
     }
 
-    if (vk.device_features.get_memory_requirements2 &&
-        vk.device_features.dedicated_allocation)
+    if (vk.device_features.KHR_get_memory_requirements2 &&
+        vk.device_features.KHR_dedicated_allocation)
     {
         enabled_device_exts[enabled_device_ext_count++] = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
         enabled_device_exts[enabled_device_ext_count++] = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
@@ -1163,7 +1176,7 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
         .ppEnabledExtensionNames = enabled_device_exts
     };
 
-    if (vk.physical_device_properties2)
+    if (vk.KHR_get_physical_device_properties2)
         device_info.pNext = &features;
     else
         device_info.pEnabledFeatures = &features.features;
@@ -1186,8 +1199,8 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     /* Create memory allocator. */
     {
         VmaAllocatorCreateFlags allocator_flags = 0;
-        if (vk.device_features.get_memory_requirements2 &&
-            vk.device_features.dedicated_allocation)
+        if (vk.device_features.KHR_get_memory_requirements2 &&
+            vk.device_features.KHR_dedicated_allocation)
         {
             allocator_flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
         }
@@ -1246,9 +1259,10 @@ static bool vk_init(void* window_handle, const gpu_config* config) {
     vk.caps.features.textureCompressionASTC_LDR = features.features.textureCompressionASTC_LDR;
     vk.caps.features.textureCompressionBC = features.features.textureCompressionBC;
     vk.caps.features.textureCubeArray = features.features.imageCubeArray;
-    //renderer->features.raytracing = vk.KHR_get_physical_device_properties2
-    //    && renderer->device_features.get_memory_requirements2
-    //    || HasExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+    vk.caps.features.raytracing =
+        vk.KHR_get_physical_device_properties2 &&
+        vk.device_features.KHR_get_memory_requirements2 &&
+        vk.device_features.raytracing;
 
     // Limits
     vk.caps.limits.max_vertex_attributes = gpu_props.limits.maxVertexInputAttributes;
@@ -1569,7 +1583,7 @@ static void vk_end_frame(void) {
     vk.frame = &vk.frames[(vk.frame->index + 1) % vk.max_inflight_frames];
 }
 
-bool vgpu_vk_supported(void) {
+bool gpu_vk_supported(void) {
     if (vk.available_initialized) {
         return vk.available;
     }

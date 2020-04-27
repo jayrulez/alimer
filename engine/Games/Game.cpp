@@ -48,9 +48,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        mainWindowSwapChain.Reset();
-        gpu_wait_idle();
-        gpu_shutdown();
+        //gpu_wait_idle();
+        gpu_device_destroy(gpu_device);
         window_destroy(main_window);
         os_shutdown();
     }
@@ -65,11 +64,19 @@ namespace alimer
         window_set_centered(main_window);
 
         // Create graphics device.
+        gpu_swapchain_desc swapchain_desc = {};
+        swapchain_desc.window_handle = window_handle(main_window);
+        swapchain_desc.usage = GPU_TEXTURE_USAGE_RENDERTARGET;
+        swapchain_desc.width = window_width(main_window);
+        swapchain_desc.height = window_height(main_window);
+        swapchain_desc.present_mode = GPU_PRESENT_MODE_FIFO;
+
         gpu_config gpu_config = {};
 #ifdef _DEBUG
         gpu_config.debug = true;
 #endif
-        if (!gpu_init(window_handle(main_window), &gpu_config))
+        gpu_device = gpu_device_create(&gpu_config, &swapchain_desc);
+        if (!gpu_device)
         {
             headless = true;
         }
@@ -161,7 +168,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        gpu_begin_frame();
+        //gpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -199,7 +206,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         vgpu_cmd_end_render_pass();
         */
 
-        gpu_end_frame();
+        //gpu_end_frame();
     }
 
     int Game::Run()

@@ -22,56 +22,198 @@
 
 #include "config.h"
 #include "gpu_backend.h"
+#include <stdarg.h>
 
-vgpu_backend vgpu_get_default_platform_backend(void) {
-#if defined(_WIN32) || defined(_WIN64)
-    if (vgpu_is_backend_supported(VGPU_BACKEND_D3D12)) {
-        return VGPU_BACKEND_D3D12;
-    }
+#if defined(__ANDROID__)
+#   include <android/log.h>
+#elif TARGET_OS_IOS || TARGET_OS_TV
+#   include <sys/syslog.h>
+#elif TARGET_OS_MAC || defined(__linux__)
+#   include <unistd.h>
+#elif defined(_WIN32)
+#   ifndef WIN32_LEAN_AND_MEAN
+#       define WIN32_LEAN_AND_MEAN
+#   endif
+#   ifndef NOMINMAX
+#       define NOMINMAX
+#   endif
+#   include <Windows.h>
+#   include <strsafe.h>
+#elif defined(__EMSCRIPTEN__)
+#   include <emscripten.h>
+#endif
 
-    if (vgpu_is_backend_supported(VGPU_BACKEND_VULKAN)) {
-        return VGPU_BACKEND_VULKAN;
-    }
+#define GPU_MAX_LOG_MESSAGE (1024)
+static const char* vgpu_log_priority_prefixes[_GPU_LOG_LEVEL_COUNT] = {
+    "DEBUG",
+    "INFO",
+    "WARN",
+    "ERROR",
+};
 
-    if (vgpu_is_backend_supported(VGPU_BACKEND_D3D11)) {
-        return VGPU_BACKEND_D3D11;
-    }
+static void gpu_default_log_callback(void* user_data, gpu_log_level level, const char* message);
 
-    if (vgpu_is_backend_supported(VGPU_BACKEND_OPENGL)) {
-        return VGPU_BACKEND_OPENGL;
-    }
-
-    return VGPU_BACKEND_NULL;
-#elif defined(__linux__) || defined(__ANDROID__)
-    return VGPUBackendType_OpenGL;
-#elif defined(__APPLE__)
-    return VGPUBackendType_Vulkan;
+#ifdef _DEBUG
+static gpu_log_level s_log_level = GPU_LOG_LEVEL_DEBUG;
 #else
-    return VGPUBackendType_OpenGL;
+static gpu_log_level s_log_level = GPU_LOG_LEVEL_INFO;
+#endif
+static gpu_log_callback s_log_function = gpu_default_log_callback;
+static void* s_log_user_data = NULL;
+
+void gpu_log_set_level(gpu_log_level level) {
+    s_log_level = level;
+}
+
+void gpu_set_log_callback_function(gpu_log_callback callback, void* user_data) {
+    s_log_function = callback;
+    s_log_user_data = user_data;
+}
+
+void gpu_default_log_callback(void* user_data, gpu_log_level level, const char* message) {
+#if defined(_WIN32)
+    size_t length = strlen(vgpu_log_priority_prefixes[level]) + 2 + strlen(message) + 1 + 1 + 1;
+    char* output = VGPU_ALLOCA(char, length);
+    snprintf(output, length, "%s: %s\r\n", vgpu_log_priority_prefixes[level], message);
+
+    const int buffer_size = MultiByteToWideChar(CP_UTF8, 0, output, (int)length, nullptr, 0);
+    if (buffer_size == 0)
+        return;
+
+    WCHAR* buffer = VGPU_ALLOCA(WCHAR, buffer_size);
+    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer, buffer_size) == 0)
+        return;
+
+    OutputDebugStringW(buffer);
+
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+    HANDLE handle;
+    switch (level)
+    {
+    case GPU_LOG_LEVEL_ERROR:
+    case GPU_LOG_LEVEL_WARN:
+        handle = GetStdHandle(STD_ERROR_HANDLE);
+        break;
+    default:
+        handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        break;
+    }
+
+    WriteConsoleW(handle, buffer, (DWORD)wcslen(buffer), NULL, NULL);
+#   endif
+
 #endif
 }
 
-bool vgpu_is_backend_supported(vgpu_backend backend) {
-    if (backend == VGPU_BACKEND_DEFAULT || backend == VGPU_BACKEND_FORCE_U32) {
-        backend = vgpu_get_default_platform_backend();
+void gpu_log_debug(const char* format, ...) {
+    if (GPU_LOG_LEVEL_DEBUG < s_log_level) {
+        return;
+    }
+
+    if (s_log_function) {
+        char msg[GPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        s_log_function(s_log_user_data, GPU_LOG_LEVEL_DEBUG, msg);
+        va_end(args);
+    }
+}
+
+void gpu_log_info(const char* format, ...) {
+    if (GPU_LOG_LEVEL_INFO < s_log_level) {
+        return;
+    }
+
+    if (s_log_function) {
+        char msg[GPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        s_log_function(s_log_user_data, GPU_LOG_LEVEL_INFO, msg);
+        va_end(args);
+    }
+}
+
+void gpu_log_warn(const char* format, ...) {
+    if (GPU_LOG_LEVEL_WARN < s_log_level) {
+        return;
+    }
+
+    if (s_log_function) {
+        char msg[GPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        s_log_function(s_log_user_data, GPU_LOG_LEVEL_WARN, msg);
+        va_end(args);
+    }
+}
+
+void gpu_log_error(const char* format, ...) {
+    if (GPU_LOG_LEVEL_ERROR < s_log_level) {
+        return;
+    }
+
+    if (s_log_function) {
+        char msg[GPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        s_log_function(s_log_user_data, GPU_LOG_LEVEL_ERROR, msg);
+        va_end(args);
+    }
+}
+
+gpu_backend gpu_get_default_platform_backend(void) {
+#if defined(_WIN32) || defined(_WIN64)
+    if (gpu_is_backend_supported(GPU_BACKEND_D3D12)) {
+        return GPU_BACKEND_D3D12;
+    }
+
+    if (gpu_is_backend_supported(GPU_BACKEND_VULKAN)) {
+        return GPU_BACKEND_VULKAN;
+    }
+
+    if (gpu_is_backend_supported(GPU_BACKEND_D3D11)) {
+        return GPU_BACKEND_D3D11;
+    }
+
+    if (gpu_is_backend_supported(GPU_BACKEND_OPENGL)) {
+        return GPU_BACKEND_OPENGL;
+    }
+
+    return GPU_BACKEND_NULL;
+#elif defined(__linux__) || defined(__ANDROID__)
+    return GPU_BACKEND_VULKAN;
+#elif defined(__APPLE__)
+    return VGPUBackendType_Vulkan;
+#else
+    return GPU_BACKEND_OPENGL;
+#endif
+}
+
+bool gpu_is_backend_supported(gpu_backend backend) {
+    if (backend == GPU_BACKEND_DEFAULT) {
+        backend = gpu_get_default_platform_backend();
     }
 
     switch (backend)
     {
-    case VGPU_BACKEND_NULL:
+    case GPU_BACKEND_NULL:
         return true;
-#if defined(ALIMER_GRAPHICS_VULKAN)
-    case VGPU_BACKEND_VULKAN:
-        return vgpu_vk_supported();
+#if defined(GPU_VK_BACKEND) && TODO_VK
+    case GPU_BACKEND_VULKAN:
+        return gpu_vk_supported();
 #endif
 #if defined(VGPU_D3D12)
     case VGPU_BACKEND_DIRECT3D12:
         return vgpu_d3d12_supported();
 #endif /* defined(VGPU_D3D12_BACKEND) */
 
-#if defined(VGPU_D3D11)
-    case VGPU_BACKEND_D3D11:
-        return vgpu_d3d11_supported();
+#if defined(GPU_D3D11_BACKEND)
+    case GPU_BACKEND_D3D11:
+        return gpu_d3d11_supported();
 #endif
 
 #if defined(VGPU_BACKEND_GL)
@@ -84,70 +226,65 @@ bool vgpu_is_backend_supported(vgpu_backend backend) {
     }
 }
 
-static gpu_renderer* s_renderer = nullptr;
 
-bool gpu_init(void* window_handle, const gpu_config* config)
+gpu_device gpu_device_create(const gpu_config* config, const gpu_swapchain_desc* swapchain_desc)
 {
-    if (s_renderer != nullptr) {
-        return true;
-    }
-
-    VGPU_ASSERT(window_handle);
     VGPU_ASSERT(config);
 
-    vgpu_backend backend = config->preferred_backend;
-    if (backend == VGPU_BACKEND_DEFAULT || backend == VGPU_BACKEND_FORCE_U32) {
-        backend = vgpu_get_default_platform_backend();
+    gpu_backend backend = config->preferred_backend;
+    if (backend == GPU_BACKEND_DEFAULT) {
+        backend = gpu_get_default_platform_backend();
     }
 
+    gpu_device device = nullptr;
     switch (backend)
     {
-    case VGPU_BACKEND_NULL:
+    case GPU_BACKEND_NULL:
         break;
 
-#if defined(ALIMER_GRAPHICS_VULKAN)
-    case VGPU_BACKEND_VULKAN:
+#if defined(GPU_VK_BACKEND) && TODO_VK
+    case GPU_BACKEND_VULKAN:
         s_renderer = vk_gpu_create_renderer();
         break;
 #endif
 
-#if defined(VGPU_D3D11)
-    case VGPU_BACKEND_D3D11:
-        s_renderer = d3d11_create_device();
+#if defined(GPU_D3D11_BACKEND)
+    case GPU_BACKEND_D3D11:
+        device = d3d11_gpu_create_device();
         break;
 #endif
     }
 
-    if (s_renderer == NULL) {
+    if (device == NULL) {
         return false;
     }
 
-    if (!s_renderer->init(window_handle, config)) {
-        s_renderer = NULL;
-        return false;
+    if (!device->init(device, config, swapchain_desc)) {
+        return NULL;
     }
 
-    return true;
+    return device;
 }
 
-void gpu_shutdown(void) {
-    if (s_renderer == NULL) {
+void gpu_device_destroy(gpu_device device) {
+    if (device == NULL) {
         return;
     }
 
-    s_renderer->shutdown();
+    device->destroy(device);
 }
 
-vgpu_backend vgpu_query_backend(void) {
-    VGPU_ASSERT(s_renderer);
-    return s_renderer->query_caps().backend;
+gpu_backend vgpu_query_backend(gpu_device device) {
+    VGPU_ASSERT(device);
+    return device->query_caps(device->renderer).backend;
 }
 
-vgpu_caps vgpu_query_caps(void) {
-    VGPU_ASSERT(s_renderer);
-    return s_renderer->query_caps();
+vgpu_caps vgpu_query_caps(gpu_device device) {
+    VGPU_ASSERT(device);
+    return device->query_caps(device->renderer);
 }
 
+#if TODO
 /*VGPURenderPass vgpu_get_default_render_pass(void)
 {
     VGPU_ASSERT(s_renderer);
@@ -176,7 +313,7 @@ void gpu_end_frame(void) {
     s_renderer->end_frame();
 }
 
-#if TODO
+
 /* Buffer */
 vgpu_buffer vgpu_create_buffer(const vgpu_buffer_desc* descriptor)
 {

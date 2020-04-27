@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "vgpu/vgpu.h"
+#include "gpu.h"
 #include <d3dcommon.h>
 #include <dxgiformat.h>
 
@@ -127,10 +127,10 @@ static DXGI_FORMAT _vgpu_d3d_get_typeless_format(vgpu_pixel_format format)
     }
 }
 
-static inline DXGI_FORMAT _vgpu_d3d_get_texture_format(vgpu_pixel_format format, vgpu_texture_usage usage)
+static inline DXGI_FORMAT _vgpu_d3d_get_texture_format(vgpu_pixel_format format, gpu_texture_usage usage)
 {
     if (vgpu_is_depth_format(format) &&
-        (usage & VGPU_TEXTURE_USAGE_SAMPLED | VGPU_TEXTURE_USAGE_STORAGE) != VGPU_TEXTURE_USAGE_NONE)
+        (usage & GPU_TEXTURE_USAGE_SAMPLED | GPU_TEXTURE_USAGE_STORAGE) != GPU_TEXTURE_USAGE_NONE)
     {
         return _vgpu_d3d_get_typeless_format(format);
     }
@@ -157,22 +157,22 @@ static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(vgpu_pixel_format format) {
         return DXGI_FORMAT_R10G10B10A2_UNORM;
 
     default:
-        vgpu_log_error_format("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
+        //vgpu_log_error_format("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
         return DXGI_FORMAT_UNKNOWN;
     }
 }
 
-static UINT vgpuD3DGetSyncInterval(vgpu_present_mode mode)
+static UINT vgpuD3DGetSyncInterval(gpu_present_mode mode)
 {
     switch (mode)
     {
-    case VGPU_PRESENT_MODE_IMMEDIATE:
+    case GPU_PRESENT_MODE_IMMEDIATE:
         return 0;
 
-    case VGPU_PRESENT_MODE_MAILBOX:
+    case GPU_PRESENT_MODE_MAILBOX:
         return 2;
 
-    case VGPU_PRESENT_MODE_FIFO:
+    case GPU_PRESENT_MODE_FIFO:
     default:
         return 1;
     }

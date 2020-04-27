@@ -106,7 +106,7 @@ namespace alimer
         GameTime time;
         window_t* main_window;
         std::vector<GameSystem*> gameSystems;
-        RefPtr<SwapChain> mainWindowSwapChain;
+        gpu_device gpu_device;
         InputManager* input;
         bool headless{ false };
     };

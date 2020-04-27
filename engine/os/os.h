@@ -125,6 +125,8 @@ extern "C"
     OS_EXPORT void window_set_position(window_t* window, int x, int y);
     OS_EXPORT bool window_set_centered(window_t* window);
 
+    OS_EXPORT uint32_t window_width(window_t* window);
+    OS_EXPORT uint32_t window_height(window_t* window);
     OS_EXPORT void window_get_size(window_t* window, uint32_t* width, uint32_t* height);
     OS_EXPORT bool window_is_open(window_t* window);
     OS_EXPORT bool window_is_visible(window_t* window);
