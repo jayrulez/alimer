@@ -102,16 +102,16 @@ typedef struct GPUDeviceImpl {
     gpu_renderer* renderer;
 
     void (*destroyDevice)(GPUDevice device);
-    GPUDeviceCapabilities(*query_caps)(gpu_renderer* driver_data);
-    VGPURenderPass (*get_default_render_pass)(gpu_renderer* driver_data);
+    GPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
+    VGPURenderPass (*get_default_render_pass)(gpu_renderer* driverData);
 
-    GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driver_data, GPUSurface surface);
-    GPUTextureFormat(*getDefaultDepthFormat)(gpu_renderer* driver_data);
-    GPUTextureFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driver_data);
+    GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driverData, GPUSurface surface);
+    GPUTextureFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
+    GPUTextureFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
 
-    void (*wait_idle)(gpu_renderer* driver_data);
-    void (*begin_frame)(gpu_renderer* driver_data);
-    void (*end_frame)(gpu_renderer* driver_data);
+    void (*wait_idle)(gpu_renderer* driverData);
+    void (*begin_frame)(gpu_renderer* driverData);
+    void (*end_frame)(gpu_renderer* driverData);
 
     GPUSwapChain(*createSwapChain)(gpu_renderer* driverData, GPUSurface surface, const GPUSwapChainDescriptor* desc);
     void (*destroySwapChain)(gpu_renderer* driverData, GPUSwapChain handle);

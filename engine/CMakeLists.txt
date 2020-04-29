@@ -40,7 +40,7 @@ set(HEADER_FILES ${HEADER_FILES} ${GPU_HEADER_FILES})
 set(SOURCE_FILES ${SOURCE_FILES} ${GPU_SOURCE_FILES})
 
 define_engine_source_files(
-    .
+    foundation
     core
     math
     os
@@ -63,7 +63,9 @@ else ()
     add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
+target_compile_definitions(alimer PRIVATE ALIMER_COMPILE)
+
+set_target_properties(alimer PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO

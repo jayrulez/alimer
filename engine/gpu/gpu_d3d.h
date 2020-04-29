@@ -179,13 +179,13 @@ static UINT d3d_GetSyncInterval(GPUPresentMode mode)
 {
     switch (mode)
     {
-    case GPU_PRESENT_MODE_IMMEDIATE:
+    case GPUPresentMode_Immediate:
         return 0;
 
-    case GPU_PRESENT_MODE_MAILBOX:
+    case GPUPresentMode_Mailbox:
         return 2;
 
-    case GPU_PRESENT_MODE_FIFO:
+    case GPUPresentMode_Fifo:
     default:
         return 1;
     }

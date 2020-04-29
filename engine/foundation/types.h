@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,46 +22,5 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include <vector>
-
-namespace alimer
-{
-    class Texture;
-
-    class ALIMER_CLASS_API SwapChain : public RefCounted
-    {
-    public:
-        /// Constructor.
-        SwapChain(GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
-        virtual ~SwapChain() = default;
-
-        enum class ResizeResult
-        {
-            Success,
-            NoSurface,
-            Error
-        };
-
-        ResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
-
-        Texture* GetCurrentTexture() const;
-
-        const usize& GetExtent() const;
-
-    private:
-        virtual ResizeResult ApiResize() = 0;
-
-    protected:
-        GraphicsDevice* device;
-        usize extent{};
-        void* windowHandle;
-
-        TextureUsage usage;
-        PixelFormat format;
-        PresentMode presentMode;
-
-        std::vector<RefPtr<Texture>> textures;
-        mutable uint32_t textureIndex{ 0 };
-    };
-}
+#include <foundation/platform.h>
+#include <foundation/build.h>

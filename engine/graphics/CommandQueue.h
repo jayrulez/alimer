@@ -29,7 +29,7 @@ namespace alimer
     /**
     * A queue that organizes command buffers to be executed by a GPU.
     */
-    class ALIMER_API CommandQueue
+    class ALIMER_CLASS_API CommandQueue
     {
     public:
         /// Constructor.

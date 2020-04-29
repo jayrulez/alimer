@@ -81,7 +81,7 @@ static const GUID IID_ID3D12Device1 = { 0x77acce80, 0x638e, 0x4e65, {0x88, 0x95,
 static const GUID IID_ID3D12Device2 = { 0x30baa41e, 0xb15b, 0x475c, {0xa0, 0xbb, 0x1a, 0xf5, 0xc5, 0xb6, 0x43, 0x28 } };
 static const GUID IID_ID3D12Device3 = { 0x81dadc15, 0x2bad, 0x4392, {0x93, 0xc5, 0x10, 0x13, 0x45, 0xc4, 0xaa, 0x98 } };
 static const GUID IID_ID3D12CommandQueue = { 0x0ec870a6, 0x5d7e, 0x4c22, {0x8c, 0xfc, 0x5b, 0xaa, 0xe0, 0x76, 0x16, 0xed } };
-static const GUID IID_ID3D12Resource = { 0x696442be, 0xa72e, 0x4059, {0xbc, 0x79, 0x5b, 0x5c, 0x98, 0x04, 0x0f, 0xad }};
+static const GUID IID_ID3D12Resource = { 0x696442be, 0xa72e, 0x4059, {0xbc, 0x79, 0x5b, 0x5c, 0x98, 0x04, 0x0f, 0xad } };
 
 #ifdef _DEBUG
 static const GUID IID_ID3D12Debug = { 0x344488b7, 0x6846, 0x474b, {0xb9, 0x89, 0xf0, 0x27, 0x44, 0x82, 0x45, 0xe0} };
@@ -309,7 +309,7 @@ static void d3d12_destroyDevice(GPUDevice device)
     ULONG ref_count = ID3D12Device_Release(renderer->device);
     if (ref_count > 0)
     {
-        gpuLog(GPU_LOG_LEVEL_ERROR, "Direct3D12: There are %d unreleased references left on the device", ref_count);
+        gpuLog(GPULogLevel_Error, "Direct3D12: There are %d unreleased references left on the device", ref_count);
 
         ID3D12DebugDevice* d3d_debug = nullptr;
         if (SUCCEEDED(ID3D12Device_QueryInterface(renderer->device, &IID_ID3D12DebugDevice, (void**)&d3d_debug)))
@@ -450,7 +450,7 @@ static GPUSwapChain d3d12_createSwapChain(gpu_renderer* driverData, GPUSurface s
             .Height = desc->height,
             .Format = back_buffer_dxgi_format,
             .BufferUsage = d3d_GetSwapChainBufferUsage(desc->usage),
-            .BufferCount = desc->presentMode == GPU_PRESENT_MODE_FIFO ? 3u : 2u,
+            .BufferCount = desc->presentMode == GPUPresentMode_Fifo ? 3u : 2u,
             .SampleDesc = {
                 .Count = 1,
                 .Quality = 0
@@ -460,7 +460,7 @@ static GPUSwapChain d3d12_createSwapChain(gpu_renderer* driverData, GPUSurface s
             .Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
     };
 
-    if (desc->presentMode == GPU_PRESENT_MODE_IMMEDIATE && d3d12.tearingSupported)
+    if (desc->presentMode == GPUPresentMode_Immediate && d3d12.tearingSupported)
     {
         dxgiSwapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
@@ -480,30 +480,27 @@ static GPUSwapChain d3d12_createSwapChain(gpu_renderer* driverData, GPUSurface s
         backendSurface->window,
         &dxgiSwapChainDesc,
         &dxgi_swap_chain_fullscreen_desc,
-        nullptr,
+        NULL,
         &tempSwapChain
     ));
 
     // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-    VHR(IDXGIFactory2_MakeWindowAssociation(d3d12.factory, backendSurface->window, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER));
+    VHR(IDXGIFactory2_MakeWindowAssociation(d3d12.factory, backendSurface->window, DXGI_MWA_NO_ALT_ENTER));
 #else
     swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-    // Create a swap chain for the window.
-    IDXGISwapChain1* tempSwapChain;
-    VHR(d3d11.dxgiFactory->CreateSwapChainForCoreWindow(
-        d3d11.device,
-        swapChain->window,
-        &swapChainDesc,
-        nullptr,
+    VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
+        d3d12.factory,
+        (IUnknown*)renderer->graphicsQueue,
+        backendSurface->window,
+        &dxgiSwapChainDesc,
+        NULL,
         &tempSwapChain
     ));
 
-
-    VHR(swapChain.handle->SetRotation(DXGI_MODE_ROTATION_IDENTITY));
-
+    VHR(IDXGISwapChain1_SetRotation(tempSwapChain, DXGI_MODE_ROTATION_IDENTITY));
 #endif
-
+    
     GPUSwapChainD3D12* result = _VGPU_ALLOC_HANDLE(GPUSwapChainD3D12);
     VHR(IDXGISwapChain1_QueryInterface(tempSwapChain, &IID_IDXGISwapChain3, (void**)&result->handle));
     SAFE_RELEASE(tempSwapChain);
@@ -511,10 +508,18 @@ static GPUSwapChain d3d12_createSwapChain(gpu_renderer* driverData, GPUSurface s
     result->backbufferCount = dxgiSwapChainDesc.BufferCount;
     for (uint32_t i = 0; i < result->backbufferCount; i++)
     {
-        //ID3D12Resource* backBuffer = NULL;
-        //VHR(IDXGISwapChain3_GetBuffer(result->handle, i, &IID_ID3D12Resource, (void**)&backBuffer));
+        ID3D12Resource* backBuffer = NULL;
+        VHR(IDXGISwapChain3_GetBuffer(result->handle, i, &IID_ID3D12Resource, (void**)&backBuffer));
     }
 
+    result->syncInterval = d3d_GetSyncInterval(desc->presentMode);
+    if (desc->presentMode == GPUPresentMode_Immediate)
+    {
+        if (d3d12.tearingSupported)
+            result->presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+        else
+            result->presentFlags |= DXGI_PRESENT_RESTART;
+    }
     return (GPUSwapChain)result;
 }
 
@@ -1298,7 +1303,7 @@ static GPUDevice d3d12_createDevice(const GPUDeviceDescriptor* desc)
         DXGI_ADAPTER_DESC1 adapter_desc;
         VHR(IDXGIAdapter1_GetDesc1(adapter, &adapter_desc));
 
-        renderer->caps.backend = GPU_BACKEND_D3D12;
+        renderer->caps.backend = GPUBackendType_D3D12;
         renderer->caps.vendor_id = adapter_desc.VendorId;
         renderer->caps.device_id = adapter_desc.DeviceId;
 

@@ -55,7 +55,7 @@ namespace alimer
     };
 
     /// Command context class for recording compute GPU commands.
-    class ALIMER_API ComputeContext : public CopyContext
+    class ComputeContext : public CopyContext
     {
     public:
 
@@ -65,7 +65,7 @@ namespace alimer
     };
 
     /// Command context class for recording graphics GPU commands.
-    class ALIMER_API GraphicsContext final : public ComputeContext
+    class GraphicsContext final : public ComputeContext
     {
     public:
         /// Constructor.

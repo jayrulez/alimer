@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 #include <functional>
 
 namespace alimer
 {
     class Game;
 
-    class ALIMER_API GameTime final
+    class ALIMER_CLASS_API GameTime final
     {
 
     public:

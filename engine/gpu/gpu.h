@@ -65,31 +65,31 @@ enum {
 };
 
 typedef enum GPULogLevel {
-    GPU_LOG_LEVEL_OFF = 0,
-    GPU_LOG_LEVEL_ERROR = 1,
-    GPU_LOG_LEVEL_WARN = 2,
-    GPU_LOG_LEVEL_INFO = 3,
-    GPU_LOG_LEVEL_DEBUG = 4,
-    GPU_LOG_LEVEL_TRACE = 5,
-    _GPU_LOG_LEVEL_COUNT,
-    _GPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+    GPULogLevel_Off = 0,
+    GPULogLevel_Error = 1,
+    GPULogLevel_Warn = 2,
+    GPULogLevel_Info = 3,
+    GPULogLevel_Debug = 4,
+    GPULogLevel_Trace = 5,
+    _GPULogLevel_Count,
+    _GPULogLevel_Force32 = 0x7FFFFFFF
 } GPULogLevel;
 
 typedef enum GPUBackendType {
-    GPU_BACKEND_DEFAULT = 0,
-    GPU_BACKEND_NULL = 1,
-    GPU_BACKEND_VULKAN = 2,
-    GPU_BACKEND_D3D12 = 3,
-    GPU_BACKEND_D3D11 = 4,
-    GPU_BACKEND_OPENGL = 5,
-    _GPU_BACKEND_FORCE_U32 = 0x7FFFFFFF
+    GPUBackendType_Default = 0,
+    GPUBackendType_Null = 1,
+    GPUBackendType_Vulkan = 2,
+    GPUBackendType_D3D12 = 3,
+    GPUBackendType_D3D11 = 4,
+    GPUBackendType_OpenGL = 5,
+    _GPUBackendType_Force32 = 0x7FFFFFFF
 } GPUBackendType;
 
 typedef enum GPUPresentMode {
-    GPU_PRESENT_MODE_FIFO = 0,
-    GPU_PRESENT_MODE_MAILBOX = 1,
-    GPU_PRESENT_MODE_IMMEDIATE = 2,
-    _GPU_PRESENT_MODE_FORCE_U32 = 0x7FFFFFFF
+    GPUPresentMode_Fifo = 0,
+    GPUPresentMode_Mailbox = 1,
+    GPUPresentMode_Immediate = 2,
+    _GPUPresentMode_Force32 = 0x7FFFFFFF
 } GPUPresentMode;
 
 /// Defines pixel format.
@@ -288,11 +288,11 @@ typedef enum GPUPrimitiveTopology {
     GPUPrimitiveTopology_Force32 = 0x7FFFFFFF
 } GPUPrimitiveTopology;
 
-typedef enum VGPUIndexType {
-    VGPUIndexType_Uint16 = 0,
-    VGPUIndexType_Uint32 = 1,
-    VGPUIndexType_Force32 = 0x7FFFFFFF
-} VGPUIndexType;
+typedef enum GPUIndexFormat {
+    GPUIndexFormat_Uint16 = 0,
+    GPUIndexFormat_Uint32 = 1,
+    _GPUIndexFormat_Force32 = 0x7FFFFFFF
+} GPUIndexFormat;
 
 typedef enum vgpu_compare_function {
     VGPU_COMPARE_FUNCTION_UNDEFINED = 0,

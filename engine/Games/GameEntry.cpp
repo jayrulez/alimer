@@ -66,7 +66,6 @@ int main(int argc, char* argv[])
         args.push_back(alimer::ToUtf8(arg));
     }
 
-    alimer::Platform::SetArguments(args);
     alimer::Platform::OpenConsole();
 #endif
 

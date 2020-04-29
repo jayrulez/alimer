@@ -21,7 +21,7 @@
 //
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 
 namespace alimer
 {
@@ -48,6 +48,13 @@ namespace alimer
 #endif
 
 #if ALIMER_ENABLE_ASSERT
+
+#if defined(_MSC_VER)
+#define ALIMER_BREAKPOINT() __debugbreak();
+#else
+#define ALIMER_BREAKPOINT() __builtin_trap();
+#endif
+
 #   define ALIMER_ASSERT(cond) \
         do \
 		{ \

@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    class ALIMER_API GameSystem : public Object
+    class ALIMER_CLASS_API GameSystem : public Object
     {
         ALIMER_OBJECT(GameSystem, Object);
 

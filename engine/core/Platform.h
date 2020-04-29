@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
-#include <vector>
+#include <foundation/platform.h>
 #include <string>
 
 namespace alimer
@@ -79,36 +78,27 @@ namespace alimer
 
     using ProcessId = uint32_t;
 
-    class ALIMER_API Platform
+    class ALIMER_CLASS_API Platform
     {
     public:
         /// Return the current platform name.
-        ALIMER_API std::string GetName();
+        std::string GetName();
 
         /// Return the current platform ID.
-        ALIMER_API PlatformId GetId();
+        PlatformId GetId();
 
         /// Return the current platform family.
-        ALIMER_API PlatformFamily GetFamily();
+        PlatformFamily GetFamily();
 
 #if defined(_WIN32) || defined(_WIN64)
         /// Return the current windows version.
-        ALIMER_API WindowsVersion GetWindowsVersion();
+        WindowsVersion GetWindowsVersion();
 #endif
 
         /// Returns the current process id (pid)
-        ALIMER_API ProcessId GetCurrentProcessId();
-
-        /// Set command line arguments.
-        static void SetArguments(const std::vector<std::string>& args);
-
-        /// Return previously parsed arguments.
-        static const std::vector<std::string>& GetArguments();
+        ProcessId GetCurrentProcessId();
 
         /// Opens console window.
         static void OpenConsole();
-
-    private:
-        static std::vector<std::string> arguments;
     };
 }

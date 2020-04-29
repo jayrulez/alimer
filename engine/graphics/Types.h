@@ -246,5 +246,5 @@ namespace alimer
         Limits limits;
     };
 
-    ALIMER_API std::string ToString(BackendType type);
+    std::string ToString(BackendType type);
 }

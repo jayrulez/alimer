@@ -26,7 +26,7 @@
 
 namespace alimer
 {
-    class ALIMER_API GraphicsBuffer : public GraphicsResource
+    class GraphicsBuffer : public GraphicsResource
     {
         ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
 

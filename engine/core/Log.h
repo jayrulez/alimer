@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 #include <string>
 
 namespace alimer
@@ -39,7 +39,7 @@ namespace alimer
         Off
     };
 
-    class ALIMER_API Logger final
+    class ALIMER_CLASS_API Logger final
     {
     public:
         Logger(const std::string& name);
@@ -59,7 +59,7 @@ namespace alimer
         LogLevel _level;
     };
 
-    class ALIMER_API Log final
+    class ALIMER_CLASS_API Log final
     {
     public:
         static Logger* GetDefault();

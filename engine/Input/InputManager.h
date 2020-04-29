@@ -26,7 +26,7 @@
 
 namespace alimer
 {
-    class ALIMER_API InputManager final : public GameSystem
+    class ALIMER_CLASS_API InputManager final : public GameSystem
     {
         ALIMER_OBJECT(InputManager, GameSystem);
     public:

@@ -22,19 +22,19 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 #include <string>
 
 #if defined(__GNUC__) && !defined(__MINGW32__)
-#define XMGLOBALCONST extern const __attribute__((weak))
+#define ALIMER_SELECT_ANY __attribute__((weak))
 #else
-#define XMGLOBALCONST extern const __declspec(selectany)
+#define ALIMER_SELECT_ANY __declspec(selectany)
 #endif
 
 namespace alimer
 {
     /// Class specifying a floating-point RGBA color.
-    class ALIMER_API Color final
+    class ALIMER_CLASS_API Color final
     {
     public:
         /// Specifies the red component of the color.

@@ -55,7 +55,7 @@ namespace alimer
     class GraphicsDevice;
     class SwapChain;
 
-    class ALIMER_API Game : public Object
+    class ALIMER_CLASS_API Game : public Object
     {
         ALIMER_OBJECT(Game, Object);
 

@@ -44,7 +44,7 @@
 #endif
 
 #define GPU_MAX_LOG_MESSAGE (1024)
-static const char* vgpu_log_priority_prefixes[_GPU_LOG_LEVEL_COUNT] = {
+static const char* vgpu_log_priority_prefixes[_GPULogLevel_Count] = {
     NULL,
     "ERROR",
     "WARN",
@@ -56,9 +56,9 @@ static const char* vgpu_log_priority_prefixes[_GPU_LOG_LEVEL_COUNT] = {
 static void gpu_default_log_callback(void* user_data, GPULogLevel level, const char* message);
 
 #ifdef _DEBUG
-static GPULogLevel s_log_level = GPU_LOG_LEVEL_DEBUG;
+static GPULogLevel s_log_level = GPULogLevel_Debug;
 #else
-static GPULogLevel s_log_level = GPU_LOG_LEVEL_OFF;
+static GPULogLevel s_log_level = GPULogLevel_Off;
 #endif
 static GPULogCallback s_log_function = gpu_default_log_callback;
 static void* s_log_user_data = NULL;
@@ -92,8 +92,8 @@ void gpu_default_log_callback(void* user_data, GPULogLevel level, const char* me
     HANDLE handle;
     switch (level)
     {
-    case GPU_LOG_LEVEL_ERROR:
-    case GPU_LOG_LEVEL_WARN:
+    case GPULogLevel_Error:
+    case GPULogLevel_Warn:
         handle = GetStdHandle(STD_ERROR_HANDLE);
         break;
     default:
@@ -108,7 +108,7 @@ void gpu_default_log_callback(void* user_data, GPULogLevel level, const char* me
 }
 
 void gpuLog(GPULogLevel level, const char* format, ...) {
-    if (s_log_level == GPU_LOG_LEVEL_OFF || level == GPU_LOG_LEVEL_OFF) {
+    if (s_log_level == GPULogLevel_Off || level == GPULogLevel_Off) {
         return;
     }
 
@@ -128,52 +128,52 @@ void gpuLog(GPULogLevel level, const char* format, ...) {
 
 GPUBackendType gpu_get_default_platform_backend(void) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (gpu_is_backend_supported(GPU_BACKEND_D3D12)) {
-        return GPU_BACKEND_D3D12;
+    if (gpu_is_backend_supported(GPUBackendType_D3D12)) {
+        return GPUBackendType_D3D12;
     }
 
-    if (gpu_is_backend_supported(GPU_BACKEND_VULKAN)) {
-        return GPU_BACKEND_VULKAN;
+    if (gpu_is_backend_supported(GPUBackendType_Vulkan)) {
+        return GPUBackendType_Vulkan;
     }
 
-    if (gpu_is_backend_supported(GPU_BACKEND_D3D11)) {
-        return GPU_BACKEND_D3D11;
+    if (gpu_is_backend_supported(GPUBackendType_D3D11)) {
+        return GPUBackendType_D3D11;
     }
 
-    if (gpu_is_backend_supported(GPU_BACKEND_OPENGL)) {
-        return GPU_BACKEND_OPENGL;
+    if (gpu_is_backend_supported(GPUBackendType_OpenGL)) {
+        return GPUBackendType_OpenGL;
     }
 
-    return GPU_BACKEND_NULL;
+    return GPUBackendType_Null;
 #elif defined(__linux__) || defined(__ANDROID__)
-    return GPU_BACKEND_VULKAN;
+    return GPUBackendType_Vulkan;
 #elif defined(__APPLE__)
-    return VGPUBackendType_Vulkan;
+    return GPUBackendType_Vulkan;
 #else
-    return GPU_BACKEND_OPENGL;
+    return GPUBackendType_OpenGL;
 #endif
 }
 
 bool gpu_is_backend_supported(GPUBackendType backend) {
-    if (backend == GPU_BACKEND_DEFAULT) {
+    if (backend == GPUBackendType_Default) {
         backend = gpu_get_default_platform_backend();
     }
 
     switch (backend)
     {
-    case GPU_BACKEND_NULL:
+    case GPUBackendType_Null:
         return true;
 #if defined(GPU_VK_BACKEND) && TODO_VK
     case GPU_BACKEND_VULKAN:
         return gpu_vk_supported();
 #endif
 #if defined(GPU_D3D12_BACKEND)
-    case GPU_BACKEND_D3D12:
+    case GPUBackendType_D3D12:
         return d3d12_driver.supported();
 #endif 
 
 #if defined(GPU_D3D11_BACKEND)
-    case GPU_BACKEND_D3D11:
+    case GPUBackendType_D3D11:
         return d3d11_driver.supported();
 #endif
 
@@ -246,14 +246,14 @@ GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
     VGPU_ASSERT(desc);
 
     GPUBackendType backend = desc->preferredBackend;
-    if (backend == GPU_BACKEND_DEFAULT) {
+    if (backend == GPUBackendType_Default) {
         backend = gpu_get_default_platform_backend();
     }
 
     GPUDevice device = NULL;
     switch (backend)
     {
-    case GPU_BACKEND_NULL:
+    case GPUBackendType_Null:
         break;
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
@@ -263,13 +263,13 @@ GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
 #endif
 
 #if defined(GPU_D3D12_BACKEND)
-    case GPU_BACKEND_D3D12:
+    case GPUBackendType_D3D12:
         device = d3d12_driver.createDevice(desc);
         break;
 #endif
 
 #if defined(GPU_D3D11_BACKEND)
-    case GPU_BACKEND_D3D11:
+    case GPUBackendType_D3D11:
         device = d3d11_driver.createDevice(desc);
         break;
 #endif
@@ -325,7 +325,7 @@ static GPUSwapChainDescriptor SwapChainDescriptor_Default(const GPUSwapChainDesc
     def.format = _vgpu_def(desc->format, GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB);
     def.width = _vgpu_def(desc->width, 1);
     def.height = _vgpu_def(desc->height, 1);
-    def.presentMode = _vgpu_def(desc->presentMode, GPU_PRESENT_MODE_FIFO);
+    def.presentMode = _vgpu_def(desc->presentMode, GPUPresentMode_Fifo);
     return def;
 }
 

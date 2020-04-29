@@ -35,7 +35,7 @@ namespace alimer
     class SwapChain;
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class ALIMER_CLASS_API GraphicsDevice : public RefCounted
     {
     public:
         static bool IsEnabledValidation();

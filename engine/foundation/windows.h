@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,46 +22,62 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include <vector>
+#include <foundation/platform.h>
+#include <foundation/types.h>
 
-namespace alimer
-{
-    class Texture;
+#if ALIMER_PLATFORM_WINDOWS
 
-    class ALIMER_CLASS_API SwapChain : public RefCounted
-    {
-    public:
-        /// Constructor.
-        SwapChain(GraphicsDevice* device, void* windowHandle, const SwapChainDescriptor* descriptor);
-        virtual ~SwapChain() = default;
+#define STREAM_SEEK_END _STREAM_SEEK_END
 
-        enum class ResizeResult
-        {
-            Success,
-            NoSurface,
-            Error
-        };
+#undef UUID_DEFINED
+#undef UUID
 
-        ResizeResult Resize(uint32_t newWidth, uint32_t newHeight);
+#define UUID_DEFINED 1
+#define UUID uint128_t
 
-        Texture* GetCurrentTexture() const;
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif
 
-        const usize& GetExtent() const;
+#ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+#endif
 
-    private:
-        virtual ResizeResult ApiResize() = 0;
+#if defined(_MSC_VER)
+// Work around broken dbghlp.h header
+#pragma warning(disable : 4091)
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnonportable-system-include-path"
+#endif
+#include <Windows.h>
 
-    protected:
-        GraphicsDevice* device;
-        usize extent{};
-        void* windowHandle;
+#undef uuid_t
+#define clock_t clock_windows_t
 
-        TextureUsage usage;
-        PixelFormat format;
-        PresentMode presentMode;
+#include <WinSock2.h>
+#include <IPTypes.h>
+#include <WS2tcpip.h>
+#include <iphlpapi.h>
+#include <share.h>
+#include <io.h>
+#include <shellapi.h>
+#include <stdlib.h>
+#include <ShlObj.h>
+#include <DbgHelp.h>
+#include <crtdbg.h>
 
-        std::vector<RefPtr<Texture>> textures;
-        mutable uint32_t textureIndex{ 0 };
-    };
-}
+#undef min
+#undef max
+#undef STREAM_SEEK_END
+#undef UUID
+#undef uuid_t
+#undef clock_t
+
+#if defined(__clang__)
+#undef WINAPI
+#define WINAPI STDCALL
+#pragma clang diagnostic pop
+#endif
+
+#endif

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 #include <type_traits>
 
 namespace alimer

@@ -827,7 +827,7 @@ static GPUDevice d3d11_createDevice(const GPUDeviceDescriptor* desc) {
         DXGI_ADAPTER_DESC1 adapter_desc;
         VHR(IDXGIAdapter1_GetDesc1(adapter, &adapter_desc));
 
-        renderer->caps.backend = GPU_BACKEND_D3D11;
+        renderer->caps.backend = GPUBackendType_D3D11;
         renderer->caps.vendor_id = adapter_desc.VendorId;
         renderer->caps.device_id = adapter_desc.DeviceId;
 
@@ -985,7 +985,7 @@ static void d3d11_destroyDevice(GPUDevice device)
         ULONG ref_count = ID3D11Device1_Release(renderer->d3d_device);
         if (ref_count > 0)
         {
-            gpuLog(GPU_LOG_LEVEL_ERROR, "Direct3D11: There are %d unreleased references left on the device", ref_count);
+            gpuLog(GPULogLevel_Error, "Direct3D11: There are %d unreleased references left on the device", ref_count);
 
             ID3D11Debug* d3d_debug = nullptr;
             if (SUCCEEDED(ID3D11Device1_QueryInterface(renderer->d3d_device, &vgpu_IID_ID3D11Debug, (void**)&d3d_debug)))

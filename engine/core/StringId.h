@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "core/Preprocessor.h"
+#include <foundation/platform.h>
 #include <string>
 
 namespace alimer
 {
     /// 32-bit hash value for a string.
-    class ALIMER_API StringId32
+    class ALIMER_CLASS_API StringId32
     {
     public:
         /// Construct with zero value.
@@ -99,7 +99,7 @@ namespace alimer
     };
 
     /// 64-bit hash value for a string.
-    class ALIMER_API StringId64
+    class ALIMER_CLASS_API StringId64
     {
     public:
         /// Construct with zero value.

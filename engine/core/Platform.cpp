@@ -38,31 +38,9 @@ using namespace std;
 
 namespace alimer
 {
-    vector<string> Platform::arguments = {};
-
     string Platform::GetName()
     {
-#if defined(_XBOX_ONE)
-        return "XboxOne";
-#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-        return "UWP";
-#elif defined(_WIN64) || defined(_WIN32)
-        return "Windows";
-#elif defined(__ANDROID__)
-        return "Android";
-#elif defined (__EMSCRIPTEN__)
-        return "Web";
-#elif defined(__linux__)
-        return "Linux";
-#elif TARGET_OS_IOS 
-        return "iOS";
-#elif TARGET_OS_TV
-        return "tvOS";
-#elif TARGET_OS_MAC 
-        return "macOS";
-#else
-        return "(?)";
-#endif
+        return ALIMER_PLATFORM_NAME;
     }
 
     PlatformId Platform::GetId()
@@ -161,16 +139,6 @@ namespace alimer
 #else
         return getpid();
 #endif
-    }
-
-    void Platform::SetArguments(const vector<string>& args)
-    {
-        arguments = args;
-    }
-
-    const vector<string>& Platform::GetArguments()
-    {
-        return arguments;
     }
 
     void Platform::OpenConsole()

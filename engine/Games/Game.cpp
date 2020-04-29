@@ -87,7 +87,7 @@ namespace alimer
             swapChainDesc.format = GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB;
             swapChainDesc.width = window_width(main_window);
             swapChainDesc.height = window_height(main_window);
-            swapChainDesc.presentMode = GPU_PRESENT_MODE_FIFO;
+            swapChainDesc.presentMode = GPUPresentMode_Fifo;
             gpuSwapChain = gpuDeviceCreateSwapChain(gpuDevice, surface, &swapChainDesc);
         }
 
