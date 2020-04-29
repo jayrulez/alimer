@@ -37,6 +37,14 @@ namespace alimer
         /* Init OS first */
         os_init();
 
+        GPUInitConfig gpu_config = {};
+#ifdef _DEBUG
+        gpu_config.flags = GPUDebugFlags_Debug;
+#endif
+        if (!gpuInit(&gpu_config)) {
+            headless = true;
+        }
+
         gameSystems.push_back(input);
     }
 
@@ -49,7 +57,9 @@ namespace alimer
 
         gameSystems.clear();
         //gpu_wait_idle();
-        gpu_device_destroy(gpu_device);
+        gpuDeviceDestroySwapChain(gpuDevice, gpuSwapChain);
+        gpuDeviceDestroy(gpuDevice);
+        gpuShutdown();
         window_destroy(main_window);
         os_shutdown();
     }
@@ -57,28 +67,28 @@ namespace alimer
     void Game::InitBeforeRun()
     {
         // Create main window.
-        main_window = window_create(
-            config.windowTitle.c_str(),
-            config.windowSize.width, config.windowSize.height,
-            WINDOW_FLAG_RESIZABLE);
-        window_set_centered(main_window);
-
-        // Create graphics device.
-        gpu_swapchain_desc swapchain_desc = {};
-        swapchain_desc.window_handle = window_handle(main_window);
-        swapchain_desc.usage = GPU_TEXTURE_USAGE_RENDERTARGET;
-        swapchain_desc.width = window_width(main_window);
-        swapchain_desc.height = window_height(main_window);
-        swapchain_desc.present_mode = GPU_PRESENT_MODE_FIFO;
-
-        gpu_config gpu_config = {};
-#ifdef _DEBUG
-        gpu_config.debug = true;
-#endif
-        gpu_device = gpu_device_create(&gpu_config, &swapchain_desc);
-        if (!gpu_device)
+        if (!headless)
         {
-            headless = true;
+            main_window = window_create(
+                config.windowTitle.c_str(),
+                config.windowSize.width, config.windowSize.height,
+                WINDOW_FLAG_RESIZABLE);
+            window_set_centered(main_window);
+
+            GPUSurface surface = gpuCreateWin32Surface(window_hinstance(), window_handle(main_window));
+
+            // Create graphics device.
+            GPUDeviceDescriptor deviceDesc = {};
+            deviceDesc.compatibleSurface = surface;
+            gpuDevice = gpuDeviceCreate(&deviceDesc);
+
+            GPUSwapChainDescriptor swapChainDesc = {};
+            swapChainDesc.usage = GPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT;
+            swapChainDesc.format = GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB;
+            swapChainDesc.width = window_width(main_window);
+            swapChainDesc.height = window_height(main_window);
+            swapChainDesc.presentMode = GPU_PRESENT_MODE_FIFO;
+            gpuSwapChain = gpuDeviceCreateSwapChain(gpuDevice, surface, &swapChainDesc);
         }
 
         Initialize();

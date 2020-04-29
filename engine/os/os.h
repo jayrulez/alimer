@@ -88,7 +88,6 @@ typedef struct {
 } os_event;
 
 #if defined(_WIN32) || defined(_WIN64)
-typedef struct HWND__* HWND;
 typedef struct HMONITOR__* HMONITOR;
 #endif
 
@@ -135,7 +134,8 @@ extern "C"
     OS_EXPORT bool window_is_focused(window_t* window);
 
 #if defined(_WIN32) || defined(_WIN64)
-    OS_EXPORT HWND window_handle(window_t* window);
+    OS_EXPORT void* window_hinstance(void);
+    OS_EXPORT void* window_handle(window_t* window);
     OS_EXPORT HMONITOR window_monitor(window_t* window);
 #endif
 

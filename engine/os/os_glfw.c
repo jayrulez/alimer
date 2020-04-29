@@ -353,7 +353,11 @@ bool window_is_focused(window_t* window) {
 }
 
 #if defined(_WIN32) || defined(_WIN64)
-HWND window_handle(window_t* window) {
+void* window_hinstance(void) {
+    return GetModuleHandle(NULL);
+}
+
+void* window_handle(window_t* window) {
     return glfwGetWin32Window(window->handle);
 }
 

@@ -93,24 +93,28 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_min(a,b) ((a<b)?a:b)
 #define _vgpu_max(a,b) ((a>b)?a:b)
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
+#define GPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
 typedef struct gpu_renderer gpu_renderer;
 
-typedef struct gpu_device_t {
+typedef struct GPUDeviceImpl {
     /* Opaque pointer for the renderer. */
     gpu_renderer* renderer;
 
-    bool (*init)(gpu_device device, const gpu_config* config, const gpu_swapchain_desc* swapchain_desc);
-    void (*destroy)(gpu_device device);
-    vgpu_caps(*query_caps)(gpu_renderer* driver_data);
+    void (*destroyDevice)(GPUDevice device);
+    GPUDeviceCapabilities(*query_caps)(gpu_renderer* driver_data);
     VGPURenderPass (*get_default_render_pass)(gpu_renderer* driver_data);
 
-    vgpu_pixel_format(*get_default_depth_format)(gpu_renderer* driver_data);
-    vgpu_pixel_format(*get_default_depth_stencil_format)(gpu_renderer* driver_data);
+    GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driver_data, GPUSurface surface);
+    GPUTextureFormat(*getDefaultDepthFormat)(gpu_renderer* driver_data);
+    GPUTextureFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driver_data);
 
     void (*wait_idle)(gpu_renderer* driver_data);
     void (*begin_frame)(gpu_renderer* driver_data);
     void (*end_frame)(gpu_renderer* driver_data);
+
+    GPUSwapChain(*createSwapChain)(gpu_renderer* driverData, GPUSurface surface, const GPUSwapChainDescriptor* desc);
+    void (*destroySwapChain)(gpu_renderer* driverData, GPUSwapChain handle);
 
 #if TODO
     /* Buffer */
@@ -147,26 +151,55 @@ typedef struct gpu_device_t {
     void (*cmdEndRenderPass)(VGPURenderer* driver_data);
 #endif // TODO
 
-} gpu_device_t;
+} GPUDeviceImpl;
+
+typedef struct gpu_backend_surface gpu_backend_surface;
+
+typedef struct GPUSurfaceImpl {
+    uint64_t surface;
+#if defined(GPU_D3D12_BACKEND)
+    gpu_backend_surface* d3d12;
+#endif
 
 #if defined(GPU_D3D11_BACKEND)
-extern bool gpu_d3d11_supported(void);
-extern gpu_device d3d11_gpu_create_device(void);
+    gpu_backend_surface* d3d11;
+#endif
+} GPUSurfaceImpl;
+
+typedef struct gpu_driver {
+    bool (*supported)(void);
+    bool (*init)(const GPUInitConfig* config);
+    void (*shutdown)(void);
+
+    gpu_backend_surface* (*create_surface_from_windows_hwnd)(void* hinstance, void* hwnd);
+    GPUDevice (*createDevice)(const GPUDeviceDescriptor* desc);
+} gpu_driver;
+
+
+#if defined(GPU_D3D11_BACKEND)
+extern gpu_driver d3d11_driver;
+#endif
+
+#if defined(GPU_D3D12_BACKEND)
+extern gpu_driver d3d12_driver;
 #endif
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
+extern gpu_driver vulkan_driver;
 extern bool gpu_vk_supported(void);
 extern gpu_renderer* vk_gpu_create_renderer(void);
 #endif
 
 #define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-ASSIGN_DRIVER_FUNC(init, name)\
-ASSIGN_DRIVER_FUNC(destroy, name)\
+ASSIGN_DRIVER_FUNC(destroyDevice, name)\
 ASSIGN_DRIVER_FUNC(query_caps, name)\
 ASSIGN_DRIVER_FUNC(get_default_render_pass, name)\
-ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
-ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
+ASSIGN_DRIVER_FUNC(getPreferredSwapChainFormat, name)\
+ASSIGN_DRIVER_FUNC(getDefaultDepthFormat, name)\
+ASSIGN_DRIVER_FUNC(getDefaultDepthStencilFormat, name)\
 ASSIGN_DRIVER_FUNC(wait_idle, name)\
 ASSIGN_DRIVER_FUNC(begin_frame, name)\
-ASSIGN_DRIVER_FUNC(end_frame, name)
+ASSIGN_DRIVER_FUNC(end_frame, name)\
+ASSIGN_DRIVER_FUNC(createSwapChain, name)\
+ASSIGN_DRIVER_FUNC(destroySwapChain, name)

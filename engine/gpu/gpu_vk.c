@@ -305,7 +305,6 @@ static struct {
 #define GPU_VK_THROW(str) if (vk.config.log_callback) { vk.config.log_callback(vk.config.context, GPU_LOG_LEVEL_ERROR, str); }
 #define GPU_VK_CHECK(c, str) if (!(c)) { GPU_VK_THROW(str); }
 #define VK_CHECK(res) do { VkResult r = (res); GPU_VK_CHECK(r >= 0, _gpu_vk_get_error_string(r)); } while (0)
-#define GPU_VK_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
 #if defined(VULKAN_DEBUG)
 VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags,

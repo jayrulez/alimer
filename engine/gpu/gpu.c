@@ -45,32 +45,34 @@
 
 #define GPU_MAX_LOG_MESSAGE (1024)
 static const char* vgpu_log_priority_prefixes[_GPU_LOG_LEVEL_COUNT] = {
-    "DEBUG",
-    "INFO",
-    "WARN",
+    NULL,
     "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+    "TRACE",
 };
 
-static void gpu_default_log_callback(void* user_data, gpu_log_level level, const char* message);
+static void gpu_default_log_callback(void* user_data, GPULogLevel level, const char* message);
 
 #ifdef _DEBUG
-static gpu_log_level s_log_level = GPU_LOG_LEVEL_DEBUG;
+static GPULogLevel s_log_level = GPU_LOG_LEVEL_DEBUG;
 #else
-static gpu_log_level s_log_level = GPU_LOG_LEVEL_INFO;
+static GPULogLevel s_log_level = GPU_LOG_LEVEL_OFF;
 #endif
-static gpu_log_callback s_log_function = gpu_default_log_callback;
+static GPULogCallback s_log_function = gpu_default_log_callback;
 static void* s_log_user_data = NULL;
 
-void gpu_log_set_level(gpu_log_level level) {
+void gpuSetLogLevel(GPULogLevel level) {
     s_log_level = level;
 }
 
-void gpu_set_log_callback_function(gpu_log_callback callback, void* user_data) {
+void gpuSetLogCallback(GPULogCallback callback, void* user_data) {
     s_log_function = callback;
     s_log_user_data = user_data;
 }
 
-void gpu_default_log_callback(void* user_data, gpu_log_level level, const char* message) {
+void gpu_default_log_callback(void* user_data, GPULogLevel level, const char* message) {
 #if defined(_WIN32)
     size_t length = strlen(vgpu_log_priority_prefixes[level]) + 2 + strlen(message) + 1 + 1 + 1;
     char* output = VGPU_ALLOCA(char, length);
@@ -105,8 +107,12 @@ void gpu_default_log_callback(void* user_data, gpu_log_level level, const char* 
 #endif
 }
 
-void gpu_log_debug(const char* format, ...) {
-    if (GPU_LOG_LEVEL_DEBUG < s_log_level) {
+void gpuLog(GPULogLevel level, const char* format, ...) {
+    if (s_log_level == GPU_LOG_LEVEL_OFF || level == GPU_LOG_LEVEL_OFF) {
+        return;
+    }
+
+    if (s_log_level < level) {
         return;
     }
 
@@ -115,57 +121,12 @@ void gpu_log_debug(const char* format, ...) {
         va_list args;
         va_start(args, format);
         vsnprintf(msg, sizeof(msg), format, args);
-        s_log_function(s_log_user_data, GPU_LOG_LEVEL_DEBUG, msg);
+        s_log_function(s_log_user_data, level, msg);
         va_end(args);
     }
 }
 
-void gpu_log_info(const char* format, ...) {
-    if (GPU_LOG_LEVEL_INFO < s_log_level) {
-        return;
-    }
-
-    if (s_log_function) {
-        char msg[GPU_MAX_LOG_MESSAGE];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(msg, sizeof(msg), format, args);
-        s_log_function(s_log_user_data, GPU_LOG_LEVEL_INFO, msg);
-        va_end(args);
-    }
-}
-
-void gpu_log_warn(const char* format, ...) {
-    if (GPU_LOG_LEVEL_WARN < s_log_level) {
-        return;
-    }
-
-    if (s_log_function) {
-        char msg[GPU_MAX_LOG_MESSAGE];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(msg, sizeof(msg), format, args);
-        s_log_function(s_log_user_data, GPU_LOG_LEVEL_WARN, msg);
-        va_end(args);
-    }
-}
-
-void gpu_log_error(const char* format, ...) {
-    if (GPU_LOG_LEVEL_ERROR < s_log_level) {
-        return;
-    }
-
-    if (s_log_function) {
-        char msg[GPU_MAX_LOG_MESSAGE];
-        va_list args;
-        va_start(args, format);
-        vsnprintf(msg, sizeof(msg), format, args);
-        s_log_function(s_log_user_data, GPU_LOG_LEVEL_ERROR, msg);
-        va_end(args);
-    }
-}
-
-gpu_backend gpu_get_default_platform_backend(void) {
+GPUBackendType gpu_get_default_platform_backend(void) {
 #if defined(_WIN32) || defined(_WIN64)
     if (gpu_is_backend_supported(GPU_BACKEND_D3D12)) {
         return GPU_BACKEND_D3D12;
@@ -193,7 +154,7 @@ gpu_backend gpu_get_default_platform_backend(void) {
 #endif
 }
 
-bool gpu_is_backend_supported(gpu_backend backend) {
+bool gpu_is_backend_supported(GPUBackendType backend) {
     if (backend == GPU_BACKEND_DEFAULT) {
         backend = gpu_get_default_platform_backend();
     }
@@ -206,14 +167,14 @@ bool gpu_is_backend_supported(gpu_backend backend) {
     case GPU_BACKEND_VULKAN:
         return gpu_vk_supported();
 #endif
-#if defined(VGPU_D3D12)
-    case VGPU_BACKEND_DIRECT3D12:
-        return vgpu_d3d12_supported();
-#endif /* defined(VGPU_D3D12_BACKEND) */
+#if defined(GPU_D3D12_BACKEND)
+    case GPU_BACKEND_D3D12:
+        return d3d12_driver.supported();
+#endif 
 
 #if defined(GPU_D3D11_BACKEND)
     case GPU_BACKEND_D3D11:
-        return gpu_d3d11_supported();
+        return d3d11_driver.supported();
 #endif
 
 #if defined(VGPU_BACKEND_GL)
@@ -226,17 +187,70 @@ bool gpu_is_backend_supported(gpu_backend backend) {
     }
 }
 
-
-gpu_device gpu_device_create(const gpu_config* config, const gpu_swapchain_desc* swapchain_desc)
-{
+bool gpuInit(const GPUInitConfig* config) {
     VGPU_ASSERT(config);
+#if defined(GPU_D3D12_BACKEND)
+    if (d3d12_driver.supported()) {
+        if (!d3d12_driver.init(config)) {
+            return false;
+        }
+    }
+#endif
 
-    gpu_backend backend = config->preferred_backend;
+#if defined(GPU_D3D11_BACKEND)
+    if (d3d11_driver.supported()) {
+        if (!d3d11_driver.init(config)) {
+            return false;
+        }
+    }
+#endif
+
+    return true;
+}
+
+void gpuShutdown(void) {
+#if defined(GPU_D3D12_BACKEND)
+    if (d3d12_driver.supported()) {
+        d3d12_driver.shutdown();
+    }
+#endif
+
+#if defined(GPU_D3D11_BACKEND)
+    if (d3d11_driver.supported()) {
+        d3d11_driver.shutdown();
+    }
+#endif
+}
+
+GPUSurface gpuCreateWin32Surface(void* hinstance, void* hwnd) {
+#if defined(_WIN32)
+    GPUSurface result = _VGPU_ALLOC_HANDLE(GPUSurfaceImpl);
+#if defined(GPU_D3D12_BACKEND)
+    result->d3d12 = d3d12_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
+#endif
+
+#if defined(GPU_D3D11_BACKEND)
+    result->d3d11 = d3d11_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
+#endif
+
+#else
+    gpu_log_error("Cannot create Win32 surface on non windows OS");
+    return nullptr;
+#endif
+
+    return result;
+}
+
+GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
+{
+    VGPU_ASSERT(desc);
+
+    GPUBackendType backend = desc->preferredBackend;
     if (backend == GPU_BACKEND_DEFAULT) {
         backend = gpu_get_default_platform_backend();
     }
 
-    gpu_device device = nullptr;
+    GPUDevice device = NULL;
     switch (backend)
     {
     case GPU_BACKEND_NULL:
@@ -248,40 +262,86 @@ gpu_device gpu_device_create(const gpu_config* config, const gpu_swapchain_desc*
         break;
 #endif
 
+#if defined(GPU_D3D12_BACKEND)
+    case GPU_BACKEND_D3D12:
+        device = d3d12_driver.createDevice(desc);
+        break;
+#endif
+
 #if defined(GPU_D3D11_BACKEND)
     case GPU_BACKEND_D3D11:
-        device = d3d11_gpu_create_device();
+        device = d3d11_driver.createDevice(desc);
         break;
 #endif
     }
 
     if (device == NULL) {
-        return false;
-    }
-
-    if (!device->init(device, config, swapchain_desc)) {
         return NULL;
     }
 
     return device;
 }
 
-void gpu_device_destroy(gpu_device device) {
+void gpuDeviceDestroy(GPUDevice device) {
     if (device == NULL) {
         return;
     }
 
-    device->destroy(device);
+    device->destroyDevice(device);
 }
 
-gpu_backend vgpu_query_backend(gpu_device device) {
+GPUBackendType gpuQueryBackend(GPUDevice device) {
     VGPU_ASSERT(device);
     return device->query_caps(device->renderer).backend;
 }
 
-vgpu_caps vgpu_query_caps(gpu_device device) {
+GPUDeviceCapabilities gpuQueryCaps(GPUDevice device) {
     VGPU_ASSERT(device);
     return device->query_caps(device->renderer);
+}
+
+GPUTextureFormat gpuGetPreferredSwapChainFormat(GPUDevice device, GPUSurface surface)
+{
+    VGPU_ASSERT(device);
+    VGPU_ASSERT(surface);
+    return device->getPreferredSwapChainFormat(device->renderer, surface);
+}
+
+GPUTextureFormat gpuGetDefaultDepthFormat(GPUDevice device)
+{
+    VGPU_ASSERT(device);
+    return device->getDefaultDepthFormat(device->renderer);
+}
+
+GPUTextureFormat gpuGetDefaultDepthStencilFormat(GPUDevice device)
+{
+    VGPU_ASSERT(device);
+    return device->getDefaultDepthStencilFormat(device->renderer);
+}
+
+static GPUSwapChainDescriptor SwapChainDescriptor_Default(const GPUSwapChainDescriptor* desc) {
+    GPUSwapChainDescriptor def = *desc;
+    def.usage = _vgpu_def(desc->usage, GPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT);
+    def.format = _vgpu_def(desc->format, GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB);
+    def.width = _vgpu_def(desc->width, 1);
+    def.height = _vgpu_def(desc->height, 1);
+    def.presentMode = _vgpu_def(desc->presentMode, GPU_PRESENT_MODE_FIFO);
+    return def;
+}
+
+GPUSwapChain gpuDeviceCreateSwapChain(GPUDevice device, GPUSurface surface, const GPUSwapChainDescriptor* descriptor) {
+    VGPU_ASSERT(device);
+    VGPU_ASSERT(surface);
+    VGPU_ASSERT(descriptor);
+
+    GPUSwapChainDescriptor descDefault = SwapChainDescriptor_Default(descriptor);
+    return device->createSwapChain(device->renderer, surface, &descDefault);
+}
+
+void gpuDeviceDestroySwapChain(GPUDevice device, GPUSwapChain swapChain) {
+    VGPU_ASSERT(device);
+    VGPU_ASSERT(swapChain);
+    device->destroySwapChain(device->renderer, swapChain);
 }
 
 #if TODO
@@ -290,16 +350,6 @@ vgpu_caps vgpu_query_caps(gpu_device device) {
     VGPU_ASSERT(s_renderer);
     return s_renderer->get_default_render_pass();
 }*/
-
-vgpu_pixel_format vgpu_get_default_depth_format(void) {
-    VGPU_ASSERT(s_renderer);
-    return s_renderer->get_default_depth_format();
-}
-
-vgpu_pixel_format vgpu_get_default_depth_stencil_format(void) {
-    VGPU_ASSERT(s_renderer);
-    return s_renderer->get_default_depth_stencil_format();
-}
 
 void gpu_wait_idle(void) {
     s_renderer->wait_idle();
@@ -478,7 +528,7 @@ void vgpu_cmd_end_render_pass(void) {
 /* Pixel Format */
 typedef struct vgpu_pixel_format_desc
 {
-    vgpu_pixel_format format;
+    GPUTextureFormat format;
     const char* name;
     vgpu_pixel_format_type type;
     uint8_t bitsPerPixel;
@@ -504,88 +554,88 @@ typedef struct vgpu_pixel_format_desc
 
 const vgpu_pixel_format_desc FormatDesc[] =
 {
-    // format                                   name,                   type                                bpp         compression             bits
-    { VGPU_PIXELFORMAT_UNDEFINED,              "Undefined",            VGPU_PIXEL_FORMAT_TYPE_UNKNOWN,     0,          {0, 0, 0, 0, 0},        {0, 0, 0, 0, 0, 0}},
+    // format                                       name,                   type                                bpp         compression             bits
+    { GPU_TEXTURE_FORMAT_UNDEFINED,                 "Undefined",            VGPU_PIXEL_FORMAT_TYPE_UNKNOWN,     0,          {0, 0, 0, 0, 0},        {0, 0, 0, 0, 0, 0}},
     // 8-bit pixel formats
-    { VGPUTextureFormat_R8Unorm,               "R8Unorm",               VGPU_PIXEL_FORMAT_TYPE_UNORM,       8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
-    { VGPUTextureFormat_R8Snorm,               "R8Snorm",               VGPU_PIXEL_FORMAT_TYPE_SNORM,       8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
-    { VGPUTextureFormat_R8Uint,                "R8Uint",                VGPU_PIXEL_FORMAT_TYPE_UINT,        8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
-    { VGPUTextureFormat_R8Sint,                "R8Sint",                VGPU_PIXEL_FORMAT_TYPE_SINT,        8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R8_UNORM,                  "R8Unorm",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R8_SNORM,                  "R8Snorm",              VGPU_PIXEL_FORMAT_TYPE_SNORM,       8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R8_UINT,                   "R8Uint",               VGPU_PIXEL_FORMAT_TYPE_UINT,        8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R8_SINT,                   "R8Sint",               VGPU_PIXEL_FORMAT_TYPE_SINT,        8,          {1, 1, 1, 1, 1},        {0, 0, 8, 0, 0, 0}},
 
     // 16-bit pixel formats
-    { VGPUTextureFormat_R16Unorm,              "R16Unorm",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
-    { VGPUTextureFormat_R16Snorm,              "R16Snorm",              VGPU_PIXEL_FORMAT_TYPE_SNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
-    { VGPUTextureFormat_R16Uint,               "R16Uint",               VGPU_PIXEL_FORMAT_TYPE_UINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
-    { VGPUTextureFormat_R16Sint,               "R16Sint",               VGPU_PIXEL_FORMAT_TYPE_SINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
-    { VGPUTextureFormat_R16Float,              "R16Float",              VGPU_PIXEL_FORMAT_TYPE_FLOAT,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
-    { VGPUTextureFormat_RG8Unorm,              "RG8Unorm",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
-    { VGPUTextureFormat_RG8Snorm,              "RG8Snorm",              VGPU_PIXEL_FORMAT_TYPE_SNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
-    { VGPUTextureFormat_RG8Uint,               "RG8Uint",               VGPU_PIXEL_FORMAT_TYPE_UINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
-    { VGPUTextureFormat_RG8Sint,               "RG8Sint",               VGPU_PIXEL_FORMAT_TYPE_SINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
+    //{ GPU_TEXTURE_FORMAT_R16_UNORM,               "R16Unorm",             VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
+    //{ GPU_TEXTURE_FORMAT_R16_SNORM,               "R16Snorm",             VGPU_PIXEL_FORMAT_TYPE_SNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R16_UINT,                  "R16Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R16_SINT,                  "R16Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R16_FLOAT,                 "R16Float",             VGPU_PIXEL_FORMAT_TYPE_FLOAT,       16,         {1, 1, 2, 1, 1},        {0, 0, 16, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG8_UNORM,                 "RG8Unorm",             VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG8_SNORM,                 "RG8Snorm",             VGPU_PIXEL_FORMAT_TYPE_SNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG8_UINT,                  "RG8Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG8_SINT,                  "RG8Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,        16,         {1, 1, 2, 1, 1},        {0, 0, 8, 8, 0, 0}},
 
     // Packed 16-bit pixel formats
-    //{ VGPU_PIXEL_FORMAT_R5G6B5_UNORM,           "R5G6B5",             VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 5, 6, 5, 0}},
-    //{ VGPU_PIXEL_FORMAT_RGBA4_UNORM,            "RGBA4",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 4, 4, 4, 4}},
+    //{ VGPU_PIXEL_FORMAT_R5G6B5_UNORM,             "R5G6B5",             VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 5, 6, 5, 0}},
+    //{ VGPU_PIXEL_FORMAT_RGBA4_UNORM,              "RGBA4",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {0, 0, 4, 4, 4, 4}},
 
     // 32-bit pixel formats
-    { VGPUTextureFormat_R32Uint,               "R32Uint",                 VGPU_PIXEL_FORMAT_TYPE_UINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
-    { VGPUTextureFormat_R32Sint,               "R32Sint",                 VGPU_PIXEL_FORMAT_TYPE_SINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
-    { VGPUTextureFormat_R32Float,              "R32Float",                 VGPU_PIXEL_FORMAT_TYPE_FLOAT,        32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
-    //{ VGPUTextureFormat_RG16Unorm,             "RG16Unorm",                 VGPU_PIXEL_FORMAT_TYPE_UNORM,        32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    //{ VGPUTextureFormat_RG16Snorm,             "RG16Snorm",                VGPU_PIXEL_FORMAT_TYPE_SNORM,        32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    { VGPUTextureFormat_RG16Uint,               "RG16Uint",                VGPU_PIXEL_FORMAT_TYPE_UINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    { VGPUTextureFormat_RG16Sint,               "RG16Sint",                VGPU_PIXEL_FORMAT_TYPE_SINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    { VGPUTextureFormat_RG16Float,              "RG16Float",                VGPU_PIXEL_FORMAT_TYPE_FLOAT,        32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    { VGPUTextureFormat_RGBA8Unorm,             "RGBA8Unorm",                VGPU_PIXEL_FORMAT_TYPE_UNORM,        32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_RGBA8UnormSrgb,         "RGBA8UnormSrgb",            VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_RGBA8Snorm,             "RGBA8Snorm",               VGPU_PIXEL_FORMAT_TYPE_SNORM,        32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_RGBA8Uint,              "RGBA8Uint",               VGPU_PIXEL_FORMAT_TYPE_UINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_RGBA8Sint,              "RGBA8Sint",               VGPU_PIXEL_FORMAT_TYPE_SINT,         32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_BGRA8Unorm,             "BGRA8Unorm",                VGPU_PIXEL_FORMAT_TYPE_UNORM,        32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { VGPUTextureFormat_BGRA8UnormSrgb,         "BGRA8UnormSrgb",            VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_R32_UINT,                  "R32Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R32_SINT,                  "R32Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_R32_FLOAT,                 "R32Float",             VGPU_PIXEL_FORMAT_TYPE_FLOAT,           32,         {1, 1, 4, 1, 1},        {0, 0, 32, 0, 0, 0}},
+    //{ VGPUTextureFormat_RG16Unorm,                "RG16Unorm",            VGPU_PIXEL_FORMAT_TYPE_UNORM,           32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
+    //{ VGPUTextureFormat_RG16Snorm,                "RG16Snorm",            VGPU_PIXEL_FORMAT_TYPE_SNORM,           32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG16_UINT,                 "RG16Uint",             VGPU_PIXEL_FORMAT_TYPE_UINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG16_SINT,                 "RG16Sint",             VGPU_PIXEL_FORMAT_TYPE_SINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG16_FLOAT,                "RG16Float",            VGPU_PIXEL_FORMAT_TYPE_FLOAT,           32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RGBA8_UNORM,               "RGBA8Unorm",           VGPU_PIXEL_FORMAT_TYPE_UNORM,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB,          "RGBA8UnormSrgb",       VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,      32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_RGBA8_SNORM,               "RGBA8Snorm",           VGPU_PIXEL_FORMAT_TYPE_SNORM,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_RGBA8_UINT,                "RGBA8Uint",            VGPU_PIXEL_FORMAT_TYPE_UINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_RGBA8_SINT,                "RGBA8Sint",            VGPU_PIXEL_FORMAT_TYPE_SINT,            32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_BGRA8_UNORM,               "BGRA8Unorm",           VGPU_PIXEL_FORMAT_TYPE_UNORM,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB,          "BGRA8UnormSrgb",       VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,      32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
 
     // Packed 32-Bit Pixel formats
-    { VGPUTextureFormat_RGB10A2Unorm,          "RGB10A2Unorm",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       32,         {1, 1, 4, 1, 1},        {0, 0, 10, 10, 10, 2}},
-    //{ VGPU_PIXEL_FORMAT_RGB10A2_UINT,           "RGB10A2U",             VGPU_PIXEL_FORMAT_TYPE_UINT,        32,         {1, 1, 4, 1, 1},        {0, 0, 10, 10, 10, 2}},
-    { VGPUTextureFormat_RG11B10Float,          "RG11B10Float",             VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {0, 0, 11, 11, 10, 0}},
-    //{ VGPU_PIXEL_FORMAT_RGB9E5_FLOAT,           "RGB9E5F",              VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {0, 0, 9, 9, 9, 5}},
+    { GPU_TEXTURE_FORMAT_RGB10A2_UNORM,             "RGB10A2Unorm",              VGPU_PIXEL_FORMAT_TYPE_UNORM,       32,         {1, 1, 4, 1, 1},        {0, 0, 10, 10, 10, 2}},
+    //{ VGPU_PIXEL_FORMAT_RGB10A2_UINT,             "RGB10A2U",             VGPU_PIXEL_FORMAT_TYPE_UINT,        32,         {1, 1, 4, 1, 1},        {0, 0, 10, 10, 10, 2}},
+    { GPU_TEXTURE_FORMAT_RG11B10_FLOAT,             "RG11B10Float",             VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {0, 0, 11, 11, 10, 0}},
+    //{ VGPU_PIXEL_FORMAT_RGB9E5_FLOAT,             "RGB9E5F",              VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {0, 0, 9, 9, 9, 5}},
 
     // 64-Bit Pixel Formats
-    { VGPUTextureFormat_RG32Uint,              "RG32Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
-    { VGPUTextureFormat_RG32Sint,              "RG32Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
-    { VGPUTextureFormat_RG32Float,             "RG32Float",             VGPU_PIXEL_FORMAT_TYPE_FLOAT,       64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
-    //{ VGPU_PIXEL_FORMAT_RGBA16_UNORM,         "RGBA16",               VGPU_PIXEL_FORMAT_TYPE_UNORM,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
-    //{ VGPU_PIXEL_FORMAT_RGBA16_SNORM,         "RGBA16S",              VGPU_PIXEL_FORMAT_TYPE_SNORM,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
-    { VGPUTextureFormat_RGBA16Uint,            "RGBA16Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
-    { VGPUTextureFormat_RGBA16Sint,            "RGBA16Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
-    { VGPUTextureFormat_RGBA16Float,           "RGBA16F",              VGPU_PIXEL_FORMAT_TYPE_FLOAT,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
+    { GPU_TEXTURE_FORMAT_RG32_UINT,                 "RG32Uint",            VGPU_PIXEL_FORMAT_TYPE_UINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG32_SINT,                 "RG32Sint",            VGPU_PIXEL_FORMAT_TYPE_SINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
+    { GPU_TEXTURE_FORMAT_RG32_FLOAT,                "RG32Float",           VGPU_PIXEL_FORMAT_TYPE_FLOAT,       64,         {1, 1, 8, 1, 1},        {0, 0, 32, 32, 0, 0}},
+    //{ VGPU_PIXEL_FORMAT_RGBA16_UNORM,             "RGBA16",               VGPU_PIXEL_FORMAT_TYPE_UNORM,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
+    //{ VGPU_PIXEL_FORMAT_RGBA16_SNORM,             "RGBA16S",              VGPU_PIXEL_FORMAT_TYPE_SNORM,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
+    { GPU_TEXTURE_FORMAT_RGBA16_UINT,               "RGBA16Uint",          VGPU_PIXEL_FORMAT_TYPE_UINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
+    { GPU_TEXTURE_FORMAT_RGBA16_SINT,               "RGBA16Sint",          VGPU_PIXEL_FORMAT_TYPE_SINT,        64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
+    { GPU_TEXTURE_FORMAT_RGBA16_FLOAT,              "RGBA16Float",         VGPU_PIXEL_FORMAT_TYPE_FLOAT,       64,         {1, 1, 8, 1, 1},        {0, 0, 16, 16, 16, 16}},
 
     // 128-Bit Pixel Formats
-    { VGPUTextureFormat_RGBA32Uint,            "RGBA32Uint",              VGPU_PIXEL_FORMAT_TYPE_UINT,        128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
-    { VGPUTextureFormat_RGBA32Sint,            "RGBA32Sint",              VGPU_PIXEL_FORMAT_TYPE_SINT,        128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
-    { VGPUTextureFormat_RGBA32Float,           "RGBA32Float",              VGPU_PIXEL_FORMAT_TYPE_FLOAT,       128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
+    { GPU_TEXTURE_FORMAT_RGBA32_UINT,               "RGBA32Uint",           VGPU_PIXEL_FORMAT_TYPE_UINT,        128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
+    { GPU_TEXTURE_FORMAT_RGBA32_SINT,               "RGBA32Sint",           VGPU_PIXEL_FORMAT_TYPE_SINT,        128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
+    { GPU_TEXTURE_FORMAT_RGBA32_FLOAT,              "RGBA32Float",          VGPU_PIXEL_FORMAT_TYPE_FLOAT,       128,        {1, 1, 16, 1, 1},       {0, 0, 32, 32, 32, 32}},
 
     // Depth-stencil
-    { VGPU_PIXELFORMAT_DEPTH16_UNORM,           "Depth16Unorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {16, 0, 0, 0, 0, 0}},
-    { VGPU_PIXELFORMAT_DEPTH32_FLOAT,           "Depth32Float",         VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {32, 0, 0, 0, 0, 0}},
-    { VGPU_PIXELFORMAT_DEPTH24_PLUS,            "Depth24Plus",          VGPU_PIXEL_FORMAT_TYPE_UNORM,       32,         {1, 1, 4, 1, 1},        {24, 8, 0, 0, 0, 0}},
-    { VGPU_PIXELFORMAT_DEPTH24_PLUS_STENCIL8,    "Depth32FloatStencil8", VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {32, 8, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_DEPTH16_UNORM,             "Depth16Unorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,       16,         {1, 1, 2, 1, 1},        {16, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_DEPTH32_FLOAT,             "Depth32Float",         VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {32, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_DEPTH24_PLUS,              "Depth24Plus",          VGPU_PIXEL_FORMAT_TYPE_UNORM,       32,         {1, 1, 4, 1, 1},        {24, 8, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8,     "Depth32FloatStencil8", VGPU_PIXEL_FORMAT_TYPE_FLOAT,       32,         {1, 1, 4, 1, 1},        {32, 8, 0, 0, 0, 0}},
 
     // Compressed formats
-    { VGPUTextureFormat_BC1RGBAUnorm,           "BC1RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC1RGBAUnormSrgb,       "BC1RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC2RGBAUnorm,           "BC2RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC2RGBAUnormSrgb,       "BC2RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC3RGBAUnorm,           "BC3RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC3RGBAUnormSrgb,       "BC3RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC4RUnorm,              "BC4RUnorm",            VGPU_PIXEL_FORMAT_TYPE_UNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC4RSnorm,              "BC4RSnorm",            VGPU_PIXEL_FORMAT_TYPE_SNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC5RGUnorm,             "BC5RGUnorm",           VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC5RGSnorm,             "BC5RGSnorm",           VGPU_PIXEL_FORMAT_TYPE_SNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC6HRGBUfloat,          "BC6HRGBUfloat",        VGPU_PIXEL_FORMAT_TYPE_FLOAT,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC6HRGBSfloat,          "BC6HRGBSfloat",        VGPU_PIXEL_FORMAT_TYPE_FLOAT,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC7RGBAUnorm,           "BC7RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-    { VGPUTextureFormat_BC7RGBAUnormSrgb,       "BC7RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC1RGBA_UNORM,             "BC1RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC1RGBA_UNORM_SRGB,        "BC1RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC2RGBA_UNORM,             "BC2RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC2RGBA_UNORM_SRGB,        "BC2RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC3RGBA_UNORM,             "BC3RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC3RGBA_UNORM_SRGB,        "BC3RGBAUnormSrgb",     VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC4R_UNORM,                "BC4RUnorm",            VGPU_PIXEL_FORMAT_TYPE_UNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC4R_SNORM,                "BC4RSnorm",            VGPU_PIXEL_FORMAT_TYPE_SNORM,        4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC5RG_UNORM,               "BC5RGUnorm",           VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC5RG_SNORM,               "BC5RGSnorm",           VGPU_PIXEL_FORMAT_TYPE_SNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC6HRGB_UFLOAT,            "BC6HRGBUfloat",        VGPU_PIXEL_FORMAT_TYPE_FLOAT,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC6HRGB_SFLOAT,            "BC6HRGBSfloat",        VGPU_PIXEL_FORMAT_TYPE_FLOAT,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC7RGBA_UNORM,             "BC7RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM,        8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+    { GPU_TEXTURE_FORMAT_BC7RGBA_UNORM_SRGB,        "BC7RGBAUnorm",         VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,    8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
 
     /*
     // Compressed PVRTC Pixel Formats
@@ -609,60 +659,60 @@ const vgpu_pixel_format_desc FormatDesc[] =
     { VGPU_PIXEL_FORMAT_ASTC12x12,              "ASTC12x12",            VGPU_PIXEL_FORMAT_TYPE_UNORM,       3,          {12, 12, 16, 1, 1},     {0, 0, 0, 0, 0, 0} },*/
 };
 
-uint32_t vgpu_get_format_bits_per_pixel(vgpu_pixel_format format)
+uint32_t vgpu_get_format_bits_per_pixel(GPUTextureFormat format)
 {
     assert(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].bitsPerPixel;
 }
 
-uint32_t vgpu_get_format_block_size(vgpu_pixel_format format)
+uint32_t vgpu_get_format_block_size(GPUTextureFormat format)
 {
     assert(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockSize;
 }
 
-uint32_t vgpuGetFormatBlockWidth(vgpu_pixel_format format)
+uint32_t vgpuGetFormatBlockWidth(GPUTextureFormat format)
 {
     assert(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockWidth;
 }
 
-uint32_t vgpuGetFormatBlockHeight(vgpu_pixel_format format)
+uint32_t vgpuGetFormatBlockHeight(GPUTextureFormat format)
 {
     assert(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockHeight;
 }
 
-vgpu_pixel_format_type vgpu_get_format_type(vgpu_pixel_format format)
+vgpu_pixel_format_type vgpu_get_format_type(GPUTextureFormat format)
 {
     assert(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].type;
 }
 
-bool vgpu_is_depth_format(vgpu_pixel_format format)
+bool vgpu_is_depth_format(GPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.depth > 0;
 }
 
-bool vgpu_is_stencil_format(vgpu_pixel_format format)
+bool vgpu_is_stencil_format(GPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.stencil > 0;
 }
 
-bool vgpu_is_depth_stencil_format(vgpu_pixel_format format)
+bool vgpu_is_depth_stencil_format(GPUTextureFormat format)
 {
     return vgpu_is_depth_format(format) || vgpu_is_stencil_format(format);
 }
 
-bool vgpu_is_compressed_format(vgpu_pixel_format format)
+bool vgpu_is_compressed_format(GPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
-    return format >= VGPUTextureFormat_BC1RGBAUnorm && format <= VGPUTextureFormat_BC7RGBAUnormSrgb;
+    return format >= GPU_TEXTURE_FORMAT_BC1RGBA_UNORM && format <= GPU_TEXTURE_FORMAT_BC7RGBA_UNORM_SRGB;
 }
 
-const char* vgpu_get_format_name(vgpu_pixel_format format)
+const char* vgpu_get_format_name(GPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].name;

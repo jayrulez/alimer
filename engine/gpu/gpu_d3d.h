@@ -23,11 +23,10 @@
 #pragma once
 
 #include "gpu.h"
-#include <d3dcommon.h>
-#include <dxgiformat.h>
+#include <dxgi.h>
 
-static DXGI_FORMAT _vgpu_d3d_get_format(vgpu_pixel_format format) {
-    static DXGI_FORMAT formats[VGPU_PIXEL_FORMAT_COUNT] = {
+static DXGI_FORMAT _vgpu_d3d_get_format(GPUTextureFormat format) {
+    static DXGI_FORMAT formats[_GPU_PIXEL_FORMAT_COUNT] = {
         DXGI_FORMAT_UNKNOWN,
         // 8-bit pixel formats
         DXGI_FORMAT_R8_UNORM,
@@ -35,8 +34,8 @@ static DXGI_FORMAT _vgpu_d3d_get_format(vgpu_pixel_format format) {
         DXGI_FORMAT_R8_UINT,
         DXGI_FORMAT_R8_SINT,
         // 16-bit pixel formats
-        DXGI_FORMAT_R16_UNORM,
-        DXGI_FORMAT_R16_SNORM,
+        //DXGI_FORMAT_R16_UNORM,
+        //DXGI_FORMAT_R16_SNORM,
         DXGI_FORMAT_R16_UINT,
         DXGI_FORMAT_R16_SINT,
         DXGI_FORMAT_R16_FLOAT,
@@ -109,17 +108,17 @@ static DXGI_FORMAT _vgpu_d3d_get_format(vgpu_pixel_format format) {
     return formats[format];
 }
 
-static DXGI_FORMAT _vgpu_d3d_get_typeless_format(vgpu_pixel_format format)
+static DXGI_FORMAT _vgpu_d3d_get_typeless_format(GPUTextureFormat format)
 {
     switch (format)
     {
-    case VGPU_PIXELFORMAT_DEPTH16_UNORM:
+    case GPU_TEXTURE_FORMAT_DEPTH16_UNORM:
         return DXGI_FORMAT_R16_TYPELESS;
-    case VGPU_PIXELFORMAT_DEPTH32_FLOAT:
+    case GPU_TEXTURE_FORMAT_DEPTH32_FLOAT:
         return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-    case VGPU_PIXELFORMAT_DEPTH24_PLUS:
+    case GPU_TEXTURE_FORMAT_DEPTH24_PLUS:
         return DXGI_FORMAT_R24G8_TYPELESS;
-    case VGPU_PIXELFORMAT_DEPTH24_PLUS_STENCIL8:
+    case GPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8:
         return DXGI_FORMAT_R32_TYPELESS;
     default:
         assert(!vgpu_is_depth_format(format));
@@ -127,7 +126,7 @@ static DXGI_FORMAT _vgpu_d3d_get_typeless_format(vgpu_pixel_format format)
     }
 }
 
-static inline DXGI_FORMAT _vgpu_d3d_get_texture_format(vgpu_pixel_format format, gpu_texture_usage usage)
+static DXGI_FORMAT _vgpu_d3d_get_texture_format(GPUTextureFormat format, GPUTextureUsage usage)
 {
     if (vgpu_is_depth_format(format) &&
         (usage & GPU_TEXTURE_USAGE_SAMPLED | GPU_TEXTURE_USAGE_STORAGE) != GPU_TEXTURE_USAGE_NONE)
@@ -138,22 +137,22 @@ static inline DXGI_FORMAT _vgpu_d3d_get_texture_format(vgpu_pixel_format format,
     return _vgpu_d3d_get_format(format);
 }
 
-static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(vgpu_pixel_format format) {
+static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(GPUTextureFormat format) {
     switch (format)
     {
-    case VGPU_PIXELFORMAT_UNDEFINED:
-    case VGPUTextureFormat_BGRA8Unorm:
-    case VGPUTextureFormat_BGRA8UnormSrgb:
+    case GPU_TEXTURE_FORMAT_UNDEFINED:
+    case GPU_TEXTURE_FORMAT_BGRA8_UNORM:
+    case GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:
         return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    case VGPUTextureFormat_RGBA8Unorm:
-    case VGPUTextureFormat_RGBA8UnormSrgb:
+    case GPU_TEXTURE_FORMAT_RGBA8_UNORM:
+    case GPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    case VGPUTextureFormat_RGBA16Float:
+    case GPU_TEXTURE_FORMAT_RGBA16_FLOAT:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-    case VGPUTextureFormat_RGB10A2Unorm:
+    case GPU_TEXTURE_FORMAT_RGB10A2_UNORM:
         return DXGI_FORMAT_R10G10B10A2_UNORM;
 
     default:
@@ -162,7 +161,21 @@ static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(vgpu_pixel_format format) {
     }
 }
 
-static UINT vgpuD3DGetSyncInterval(gpu_present_mode mode)
+static DXGI_USAGE d3d_GetSwapChainBufferUsage(GPUTextureUsage textureUsage) {
+    DXGI_USAGE usage = 0;
+    if (textureUsage & GPU_TEXTURE_USAGE_SAMPLED) {
+        usage |= DXGI_USAGE_SHADER_INPUT;
+    }
+    if (textureUsage & GPU_TEXTURE_USAGE_STORAGE) {
+        usage |= DXGI_USAGE_UNORDERED_ACCESS;
+    }
+    if (textureUsage & GPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT) {
+        usage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    }
+    return usage;
+}
+
+static UINT d3d_GetSyncInterval(GPUPresentMode mode)
 {
     switch (mode)
     {
@@ -175,5 +188,24 @@ static UINT vgpuD3DGetSyncInterval(gpu_present_mode mode)
     case GPU_PRESENT_MODE_FIFO:
     default:
         return 1;
+    }
+}
+
+static D3D_PRIMITIVE_TOPOLOGY d3d_GetPrimitiveTopology(GPUPrimitiveTopology topology)
+{
+    switch (topology)
+    {
+    case GPUPrimitiveTopology_PointList:
+        return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+    case GPUPrimitiveTopology_LineList:
+        return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    case GPUPrimitiveTopology_LineStrip:
+        return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+    case GPUPrimitiveTopology_TriangleList:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    case GPUPrimitiveTopology_TriangleStrip:
+        return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+    default:
+        _VGPU_UNREACHABLE();
     }
 }
