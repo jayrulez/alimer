@@ -998,6 +998,55 @@ typedef volatile _Atomic(void*) atomicptr_t;
 #   define ALIMER_UNUSED(x) ((void)sizeof((x), 0))
 #endif
 
+// Format specifiers for 64bit and pointers
+#if ALIMER_COMPILER_MSVC
+#   define PRId32 "Id"
+#   define PRIi32 "Ii"
+#   define PRIo32 "Io"
+#   define PRIu32 "Iu"
+#   define PRIx32 "Ix"
+#   define PRIX32 "IX"
+#   define PRId64 "I64d"
+#   define PRIi64 "I64i"
+#   define PRIo64 "I64o"
+#   define PRIu64 "I64u"
+#   define PRIx64 "I64x"
+#   define PRIX64 "I64X"
+#   define PRIdPTR "Id"
+#   define PRIiPTR "Ii"
+#   define PRIoPTR "Io"
+#   define PRIuPTR "Iu"
+#   define PRIxPTR "Ix"
+#   define PRIXPTR "IX"
+#   define PRIsize "Iu"
+#else
+#   include <inttypes.h>
+#   define PRIsize "zu"
+#endif
+
+#define PRItick PRIi64
+#define PRIhash PRIx64
+
+#if ALIMER_SIZE_REAL == 8
+#   define PRIreal "lf"
+#else
+#   define PRIreal "f"
+#endif
+
+#if ALIMER_COMPILER_MSVC
+#   if ALIMER_SIZE_POINTER == 8
+#       define PRIfixPTR "016I64X"
+#   else
+#       define PRIfixPTR "08IX"
+#   endif
+#else
+#   if ALIMER_SIZE_POINTER == 8
+#       define PRIfixPTR "016" PRIXPTR
+#   else
+#       define PRIfixPTR "08" PRIXPTR
+#   endif
+#endif
+
 // Utility functions for large integer types
 static ALIMER_FORCEINLINE ALIMER_CONSTCALL uint128_t uint128_make(const uint64_t w0, const uint64_t w1) {
     uint128_t u = { {w0, w1} };
@@ -1016,3 +1065,5 @@ static ALIMER_FORCEINLINE ALIMER_CONSTCALL bool uint128_is_null(const uint128_t 
     return !u0.word[0] && !u0.word[1];
 
 }
+
+#include <foundation/build.h>

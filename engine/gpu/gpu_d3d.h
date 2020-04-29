@@ -25,8 +25,8 @@
 #include "gpu.h"
 #include <dxgi.h>
 
-static DXGI_FORMAT _vgpu_d3d_get_format(GPUTextureFormat format) {
-    static DXGI_FORMAT formats[_GPU_PIXEL_FORMAT_COUNT] = {
+static DXGI_FORMAT d3d_GetFormat(GPUTextureFormat format) {
+    static DXGI_FORMAT formats[_GPUTextureFormat_Count] = {
         DXGI_FORMAT_UNKNOWN,
         // 8-bit pixel formats
         DXGI_FORMAT_R8_UNORM,
@@ -108,7 +108,7 @@ static DXGI_FORMAT _vgpu_d3d_get_format(GPUTextureFormat format) {
     return formats[format];
 }
 
-static DXGI_FORMAT _vgpu_d3d_get_typeless_format(GPUTextureFormat format)
+static DXGI_FORMAT d3d_GetTypelessFormat(GPUTextureFormat format)
 {
     switch (format)
     {
@@ -121,32 +121,32 @@ static DXGI_FORMAT _vgpu_d3d_get_typeless_format(GPUTextureFormat format)
     case GPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8:
         return DXGI_FORMAT_R32_TYPELESS;
     default:
-        assert(!vgpu_is_depth_format(format));
-        return _vgpu_d3d_get_format(format);
+        assert(!gpuIsDepthFormat(format));
+        return d3d_GetFormat(format);
     }
 }
 
-static DXGI_FORMAT _vgpu_d3d_get_texture_format(GPUTextureFormat format, GPUTextureUsage usage)
+static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, GPUTextureUsage usage)
 {
-    if (vgpu_is_depth_format(format) &&
-        (usage & GPU_TEXTURE_USAGE_SAMPLED | GPU_TEXTURE_USAGE_STORAGE) != GPU_TEXTURE_USAGE_NONE)
+    if (gpuIsDepthFormat(format) &&
+        (usage & GPUTextureUsage_Sampled | GPUTextureUsage_Storage) != GPUTextureUsage_None)
     {
-        return _vgpu_d3d_get_typeless_format(format);
+        return d3d_GetTypelessFormat(format);
     }
 
-    return _vgpu_d3d_get_format(format);
+    return d3d_GetFormat(format);
 }
 
-static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(GPUTextureFormat format) {
+static DXGI_FORMAT d3d_GetSwapChainFormat(GPUTextureFormat format) {
     switch (format)
     {
     case GPU_TEXTURE_FORMAT_UNDEFINED:
-    case GPU_TEXTURE_FORMAT_BGRA8_UNORM:
-    case GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:
+    case GPUTextureFormat_BGRA8Unorm:
+    case GPUTextureFormat_BGRA8UnormSrgb:
         return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    case GPU_TEXTURE_FORMAT_RGBA8_UNORM:
-    case GPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:
+    case GPUTextureFormat_RGBA8Unorm:
+    case GPUTextureFormat_RGBA8UnormSrgb:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
     case GPU_TEXTURE_FORMAT_RGBA16_FLOAT:
@@ -163,16 +163,86 @@ static DXGI_FORMAT _vgpu_d3d_swapchain_pixel_format(GPUTextureFormat format) {
 
 static DXGI_USAGE d3d_GetSwapChainBufferUsage(GPUTextureUsage textureUsage) {
     DXGI_USAGE usage = 0;
-    if (textureUsage & GPU_TEXTURE_USAGE_SAMPLED) {
+    if (textureUsage & GPUTextureUsage_Sampled) {
         usage |= DXGI_USAGE_SHADER_INPUT;
     }
-    if (textureUsage & GPU_TEXTURE_USAGE_STORAGE) {
+    if (textureUsage & GPUTextureUsage_Storage) {
         usage |= DXGI_USAGE_UNORDERED_ACCESS;
     }
-    if (textureUsage & GPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT) {
+    if (textureUsage & GPUTextureUsage_OutputAttachment) {
         usage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
     }
     return usage;
+}
+
+
+static DXGI_FORMAT d3d_GetVertexFormat(GPUVertexFormat format) {
+    switch (format)
+    {
+    case GPUVertexFormat_UChar2:
+        return DXGI_FORMAT_R8G8_UINT;
+    case GPUVertexFormat_UChar4:
+        return DXGI_FORMAT_R8G8B8A8_UINT;
+    case GPUVertexFormat_Char2:
+        return DXGI_FORMAT_R8G8_SINT;
+    case GPUVertexFormat_Char4:
+        return DXGI_FORMAT_R8G8B8A8_SINT;
+    case GPUVertexFormat_UChar2Norm:
+        return DXGI_FORMAT_R8G8_UNORM;
+    case GPUVertexFormat_UChar4Norm:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case GPUVertexFormat_Char2Norm:
+        return DXGI_FORMAT_R8G8_SNORM;
+    case GPUVertexFormat_Char4Norm:
+        return DXGI_FORMAT_R8G8B8A8_SNORM;
+    case GPUVertexFormat_UShort2:
+        return DXGI_FORMAT_R16G16_UINT;
+    case GPUVertexFormat_UShort4:
+        return DXGI_FORMAT_R16G16B16A16_UINT;
+    case GPUVertexFormat_Short2:
+        return DXGI_FORMAT_R16G16_SINT;
+    case GPUVertexFormat_Short4:
+        return DXGI_FORMAT_R16G16B16A16_SINT;
+    case GPUVertexFormat_UShort2Norm:
+        return DXGI_FORMAT_R16G16_UNORM;
+    case GPUVertexFormat_UShort4Norm:
+        return DXGI_FORMAT_R16G16B16A16_UNORM;
+    case GPUVertexFormat_Short2Norm:
+        return DXGI_FORMAT_R16G16_SNORM;
+    case GPUVertexFormat_Short4Norm:
+        return DXGI_FORMAT_R16G16B16A16_SNORM;
+    case GPUVertexFormat_Half2:
+        return DXGI_FORMAT_R16G16_FLOAT;
+    case GPUVertexFormat_Half4:
+        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    case GPUVertexFormat_Float:
+        return DXGI_FORMAT_R32_FLOAT;
+    case GPUVertexFormat_Float2:
+        return DXGI_FORMAT_R32G32_FLOAT;
+    case GPUVertexFormat_Float3:
+        return DXGI_FORMAT_R32G32B32_FLOAT;
+    case GPUVertexFormat_Float4:
+        return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case GPUVertexFormat_UInt:
+        return DXGI_FORMAT_R32_UINT;
+    case GPUVertexFormat_UInt2:
+        return DXGI_FORMAT_R32G32_UINT;
+    case GPUVertexFormat_UInt3:
+        return DXGI_FORMAT_R32G32B32_UINT;
+    case GPUVertexFormat_UInt4:
+        return DXGI_FORMAT_R32G32B32A32_UINT;
+    case GPUVertexFormat_Int:
+        return DXGI_FORMAT_R32_SINT;
+    case GPUVertexFormat_Int2:
+        return DXGI_FORMAT_R32G32_SINT;
+    case GPUVertexFormat_Int3:
+        return DXGI_FORMAT_R32G32B32_SINT;
+    case GPUVertexFormat_Int4:
+        return DXGI_FORMAT_R32G32B32A32_SINT;
+
+    default:
+        _VGPU_UNREACHABLE();
+    }
 }
 
 static UINT d3d_GetSyncInterval(GPUPresentMode mode)

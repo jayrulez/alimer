@@ -23,11 +23,8 @@
 #include "core/Platform.h"
 #include "core/Assert.h"
 
-#if defined(_WIN32)
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#elif defined(__APPLE__)
-#include <TargetConditionals.h>
+#if ALIMER_PLATFORM_WINDOWS
+#   include <foundation/windows.h>
 #endif
 
 #if TARGET_OS_MAC || defined(__linux__)

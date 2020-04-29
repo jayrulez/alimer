@@ -56,7 +56,7 @@ namespace alimer
         }
 
         gameSystems.clear();
-        //gpu_wait_idle();
+        gpuDeviceWaitIdle(gpuDevice);
         gpuDeviceDestroySwapChain(gpuDevice, gpuSwapChain);
         gpuDeviceDestroy(gpuDevice);
         gpuShutdown();
@@ -83,8 +83,8 @@ namespace alimer
             gpuDevice = gpuDeviceCreate(&deviceDesc);
 
             GPUSwapChainDescriptor swapChainDesc = {};
-            swapChainDesc.usage = GPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT;
-            swapChainDesc.format = GPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB;
+            swapChainDesc.usage = GPUTextureUsage_OutputAttachment;
+            swapChainDesc.format = GPUTextureFormat_BGRA8UnormSrgb;
             swapChainDesc.width = window_width(main_window);
             swapChainDesc.height = window_height(main_window);
             swapChainDesc.presentMode = GPUPresentMode_Fifo;
@@ -202,12 +202,13 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     void Game::EndDraw()
     {
-        //auto currentTexture = mainSwapChain->GetCurrentTexture();
-
         for (auto gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
         }
+
+        auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
+        gpuSwapChainPresent(gpuSwapChain);
 
         /*auto clear_color = Colors::CornflowerBlue;
         auto defaultRenderPass = vgpu_get_default_render_pass();

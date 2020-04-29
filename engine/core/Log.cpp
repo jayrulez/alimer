@@ -33,15 +33,8 @@
 #   include <sys/syslog.h>
 #elif TARGET_OS_MAC || defined(__linux__)
 #   include <unistd.h>
-#elif defined(_WIN32)
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN
-#   endif
-
-#   include <Windows.h>
+#elif ALIMER_PLATFORM_WINDOWS
+#   include <foundation/windows.h>
 #   include <strsafe.h>
 #elif defined(__EMSCRIPTEN__)
 #   include <emscripten.h>

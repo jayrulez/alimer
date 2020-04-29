@@ -23,7 +23,6 @@
 #include "core/StringId.h"
 #include "core/String.h"
 #include "core/Hash.h"
-#include <inttypes.h> // PRIx64
 
 namespace alimer
 {

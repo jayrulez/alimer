@@ -23,9 +23,8 @@
 #include "core/Assert.h"
 #include <cstdio>
 
-#if defined(_WIN64)
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#if ALIMER_PLATFORM_WINDOWS
+#include <foundation/windows.h>
 #endif
 
 namespace alimer
