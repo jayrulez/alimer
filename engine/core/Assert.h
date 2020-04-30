@@ -39,14 +39,6 @@ namespace alimer
     ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line, const char* msg, ...);
 }
 
-#ifndef ALIMER_ENABLE_ASSERT
-#   ifdef _DEBUG
-#       define ALIMER_ENABLE_ASSERT 1
-#   else
-#       define ALIMER_ENABLE_ASSERT 0
-#   endif
-#endif
-
 #if ALIMER_ENABLE_ASSERT
 
 #if defined(_MSC_VER)
@@ -85,8 +77,13 @@ namespace alimer
 			    ALIMER_BREAKPOINT(); \
 		} while(0)
 
+#   define ALIMER_VERIFY(cond) ALIMER_ASSERT(cond)
+#   define ALIMER_VERIFY_MSG(cond, msg, ...) ALIMER_ASSERT_MSG(cond, msg, ##__VA_ARGS__)
+
 #else
-#   define ALIMER_ASSERT(condition) (void)(condition)
-#   define ALIMER_ASSERT_MSG(condition, msg, ...) do { (void)(condition); ALIMER_UNUSED(msg); } while(0)
+#   define ALIMER_ASSERT(condition) do { ALIMER_UNUSED(condition); } while(0)
+#   define ALIMER_ASSERT_MSG(condition, msg, ...) do { ALIMER_UNUSED(condition); POW2_UNUSED(msg); } while(0)
 #   define ALIMER_ASSERT_FAIL(msg, ...) do { ALIMER_UNUSED(msg); } while(0)
+#   define ALIMER_VERIFY(cond) (void)(cond)
+#   define ALIMER_VERIFY_MSG(cond, msg, ...) do { (void)(cond); ALIMER_UNUSED(msg); } while(0)
 #endif

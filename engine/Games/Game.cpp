@@ -24,7 +24,6 @@
 #include "gpu/gpu.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -37,14 +36,6 @@ namespace alimer
         /* Init OS first */
         os_init();
 
-        GPUInitConfig gpu_config = {};
-#ifdef _DEBUG
-        gpu_config.flags = GPUDebugFlags_Debug;
-#endif
-        if (!gpuInit(&gpu_config)) {
-            headless = true;
-        }
-
         gameSystems.push_back(input);
     }
 
@@ -56,10 +47,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        gpuDeviceWaitIdle(gpuDevice);
-        gpuDeviceDestroySwapChain(gpuDevice, gpuSwapChain);
-        gpuDeviceDestroy(gpuDevice);
-        gpuShutdown();
+        graphicsDevice->WaitForIdle();
+        graphicsDevice.Reset();
         window_destroy(main_window);
         os_shutdown();
     }
@@ -75,20 +64,17 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE);
             window_set_centered(main_window);
 
-            GPUSurface surface = gpuCreateWin32Surface(window_hinstance(), window_handle(main_window));
+            GraphicsDeviceInfo deviceInfo = {};
+            deviceInfo.preferredBackend = config.preferredGPUBackend;
+#ifdef _DEBUG
+            deviceInfo.flags = GraphicsDeviceFlags::Debug;
+#endif
 
-            // Create graphics device.
-            GPUDeviceDescriptor deviceDesc = {};
-            deviceDesc.compatibleSurface = surface;
-            gpuDevice = gpuDeviceCreate(&deviceDesc);
+            graphicsDevice = GraphicsDevice::Create(main_window, deviceInfo);
+            if (!graphicsDevice) {
+                headless = true;
+            }
 
-            GPUSwapChainDescriptor swapChainDesc = {};
-            swapChainDesc.usage = GPUTextureUsage_OutputAttachment;
-            swapChainDesc.format = GPUTextureFormat_BGRA8UnormSrgb;
-            swapChainDesc.width = window_width(main_window);
-            swapChainDesc.height = window_height(main_window);
-            swapChainDesc.presentMode = GPUPresentMode_Fifo;
-            gpuSwapChain = gpuDeviceCreateSwapChain(gpuDevice, surface, &swapChainDesc);
         }
 
         Initialize();
@@ -178,7 +164,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        //gpu_begin_frame();
+        graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -207,8 +193,8 @@ float4 PSMain(PSInput input) : SV_TARGET
             gameSystem->EndDraw();
         }
 
-        auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
-        gpuSwapChainPresent(gpuSwapChain);
+        //auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
+        graphicsDevice->PresentFrame();
 
         /*auto clear_color = Colors::CornflowerBlue;
         auto defaultRenderPass = vgpu_get_default_render_pass();

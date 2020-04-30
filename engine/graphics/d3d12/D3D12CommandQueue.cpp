@@ -26,23 +26,12 @@
 
 namespace alimer
 {
-    static D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType type) {
-        static const D3D12_COMMAND_LIST_TYPE list_types[static_cast<uint32_t>(CommandQueueType::Count)] = {
-            D3D12_COMMAND_LIST_TYPE_DIRECT,
-            D3D12_COMMAND_LIST_TYPE_COMPUTE,
-            D3D12_COMMAND_LIST_TYPE_COPY,
-        };
-
-        return list_types[static_cast<uint32_t>(type)];
-    }
-
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType)
-        : CommandQueue(device, queueType)
-        , commandListType(GetD3D12CommandListType(queueType))
-        , allocatorPool(device, GetD3D12CommandListType(queueType))
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type)
+        : commandListType(type)
+        , allocatorPool(device, type)
     {
         D3D12_COMMAND_QUEUE_DESC desc = {};
-        desc.Type = GetD3D12CommandListType(queueType);
+        desc.Type = type;
         desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
         desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         desc.NodeMask = 0;
@@ -61,17 +50,17 @@ namespace alimer
             ALIMER_LOGERROR("CreateEventEx failed");
         }
 
-        switch (queueType)
+        switch (type)
         {
-        case CommandQueueType::Copy:
+        case D3D12_COMMAND_LIST_TYPE_COPY:
             handle->SetName(L"COPY QUEUE");
             fence->SetName(L"COPY QUEUE FENCE");
             break;
-        case CommandQueueType::Compute:
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
             handle->SetName(L"COMPUTE QUEUE");
             fence->SetName(L"COMPUTE QUEUE FENCE");
             break;
-        case CommandQueueType::Graphics:
+        case D3D12_COMMAND_LIST_TYPE_DIRECT:
             handle->SetName(L"GRAPHICS QUEUE");
             fence->SetName(L"GRAPHICS QUEUE FENCE");
             break;

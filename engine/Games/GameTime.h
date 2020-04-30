@@ -29,7 +29,7 @@ namespace alimer
 {
     class Game;
 
-    class ALIMER_CLASS_API GameTime final
+    class ALIMER_API GameTime final
     {
 
     public:

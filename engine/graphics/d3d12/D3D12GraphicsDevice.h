@@ -27,6 +27,9 @@
 
 namespace alimer
 {
+    class D3D12CommandQueue;
+    class D3D12SwapChain;
+
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
@@ -36,19 +39,58 @@ namespace alimer
         ~D3D12GraphicsDevice() override;
 
         static IDXGIFactory4* GetDXGIFactory();
-        static bool IsDXGITearingSupported();
-        ID3D12Device* GetHandle() const { return d3dDevice; }
+        static bool IsTearingSupported();
+        ID3D12Device* GetHandle() const { return d3dDevice.Get(); }
+        D3D12CommandQueue* GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+
+        template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
+        {
+            IUnknown* base = resource;
+            DeferredRelease_(base, forceDeferred);
+            resource = nullptr;
+        }
 
     private:
-        bool Init(GPUPowerPreference powerPreference) override;
+        bool Init(window_t* window, const GraphicsDeviceInfo& info) override;
         void Shutdown();
-        SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) override;
+        void ProcessDeferredReleases(uint64_t frameIndex);
+        void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
-        ID3D12Device* d3dDevice = nullptr;
+        void WaitForIdle() override;
+        void BeginFrame() override;
+        void PresentFrame() override;
+        void HandleDeviceLost();
+
+        Microsoft::WRL::ComPtr<ID3D12Device> d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
         /// Root signature version
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+        UINT syncInterval = 1u;
+        UINT presentFlags = 0u;
+        bool shuttingDown = false;
+        bool isLost = false;
+
+        std::unique_ptr<D3D12CommandQueue> graphicsQueue;
+        std::unique_ptr<D3D12CommandQueue> computeQueue;
+        std::unique_ptr<D3D12CommandQueue> copyQueue;
+
+        /* Frame data and defer release data */
+        uint64_t currentCPUFrame = 0;
+        uint64_t currentGPUFrame = 0;
+        uint64_t currentFrameIndex = 0;
+        FenceD3D12 frameFence;
+        std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
+
+        struct SwapChain
+        {
+            Microsoft::WRL::ComPtr<IDXGISwapChain3> handle;
+            uint32_t currentBackBufferIndex;
+        };
+
+        void CreateSwapChain(SwapChain* swapChain, window_t* window, PixelFormat colorFormat);
+        SwapChain swapChain;
     };
 }

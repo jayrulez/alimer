@@ -28,7 +28,6 @@
 namespace alimer
 {
     class GraphicsDevice;
-    class SwapChain;
 
     /// Command context class for recording copy GPU commands.
     class CopyContext
@@ -71,8 +70,8 @@ namespace alimer
         /// Constructor.
         GraphicsContext(GraphicsDevice& device_);
 
-        void BeginRenderPass(SwapChain* swapchain, const Color& clearColor);
-        void EndRenderPass();
+        //void BeginRenderPass(SwapChain* swapchain, const Color& clearColor);
+        //void EndRenderPass();
 
     protected:
     };

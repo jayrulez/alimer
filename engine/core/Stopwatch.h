@@ -26,7 +26,7 @@
 
 namespace alimer
 {
-    class ALIMER_CLASS_API Stopwatch final
+    class ALIMER_API Stopwatch final
     {
     public:
         static constexpr uint64_t TicksPerMillisecond = 10000;

@@ -22,19 +22,18 @@
 
 #pragma once
 
-#include "graphics/CommandQueue.h"
 #include "D3D12CommandAllocatorPool.h"
 
 namespace alimer
 {
     class D3D12CommandAllocatorPool;
 
-    class D3D12CommandQueue final : public CommandQueue
+    class D3D12CommandQueue final 
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType);
-        ~D3D12CommandQueue() override;
-        void WaitForIdle() override;
+        D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type);
+        ~D3D12CommandQueue();
+        void WaitForIdle();
        
         uint64_t IncrementFence(void);
         bool IsFenceComplete(uint64_t fenceValue);

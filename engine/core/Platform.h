@@ -78,7 +78,7 @@ namespace alimer
 
     using ProcessId = uint32_t;
 
-    class ALIMER_CLASS_API Platform
+    class ALIMER_API Platform
     {
     public:
         /// Return the current platform name.

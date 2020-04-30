@@ -30,11 +30,7 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-if (MSVC)
-    if (WIN32)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX=1 -D_USE_MATH_DEFINES=1")
-    endif()
-else()
+if (NOT MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 

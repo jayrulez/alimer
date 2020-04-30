@@ -44,11 +44,19 @@ define_engine_source_files(
     core
     math
     os
-    gpu
+    #gpu
     graphics
     Input
     Games
 )
+
+if(ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(graphics/d3d)
+endif ()
+
+if(ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(graphics/d3d12)
+endif ()
 
 if(ALIMER_GRAPHICS_VULKAN)
     #define_engine_source_files(gpu/vk)
@@ -57,10 +65,10 @@ endif ()
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
-    add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
-    target_compile_definitions(${PROJECT_NAME} PUBLIC ALIMER_EXPORTS)
+    add_library(alimer SHARED ${SOURCE_FILES} ${HEADER_FILES})
+    target_compile_definitions(alimer PUBLIC ALIMER_SHARED_LIBRARY)
 else ()
-    add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+    add_library(alimer ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
 
 target_compile_definitions(alimer PRIVATE ALIMER_COMPILE)

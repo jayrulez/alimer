@@ -22,9 +22,9 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
-#include "D3D12SwapChain.h"
 #include "D3D12MemAlloc.h"
 #include "core/String.h"
+using Microsoft::WRL::ComPtr;
 
 namespace alimer
 {
@@ -45,13 +45,15 @@ namespace alimer
         return d3d12.dxgiFactory;
     }
 
-    bool D3D12GraphicsDevice::IsDXGITearingSupported()
+    bool D3D12GraphicsDevice::IsTearingSupported()
     {
         return d3d12.isTearingSupported;
     }
 
-    static bool CreateFactory(bool validation)
+    static bool CreateFactory(GraphicsDeviceFlags flags)
     {
+        const bool validation = any(flags & GraphicsDeviceFlags::Debug) || any(flags & GraphicsDeviceFlags::GPUBasedValidation);
+
 #if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
@@ -67,8 +69,7 @@ namespace alimer
                 ID3D12Debug1* debugController1;
                 if (SUCCEEDED(debugController->QueryInterface(&debugController1)))
                 {
-                    const bool gpuValidation = false;
-                    if (gpuValidation)
+                    if (any(flags & GraphicsDeviceFlags::GPUBasedValidation))
                     {
                         debugController1->SetEnableGPUBasedValidation(TRUE);
                         debugController1->SetEnableSynchronizedCommandQueueValidation(TRUE);
@@ -188,8 +189,9 @@ namespace alimer
     }
 
     D3D12GraphicsDevice::D3D12GraphicsDevice()
+        : frameFence(this)
     {
-        ALIMER_ASSERT_MSG(IsAvailable(), "Direct3D12 backend is not supported");
+        ALIMER_VERIFY_MSG(IsAvailable(), "Direct3D12 backend is not supported");
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
@@ -202,14 +204,21 @@ namespace alimer
         Shutdown();
     }
 
-    bool D3D12GraphicsDevice::Init(GPUPowerPreference powerPreference)
+    bool D3D12GraphicsDevice::Init(window_t* window, const GraphicsDeviceInfo& info)
     {
         if (d3d12.deviceCount == 0)
         {
-            if (!CreateFactory(IsEnabledValidation()))
+            if (!CreateFactory(info.flags))
             {
                 return false;
             }
+        }
+
+        syncInterval = info.enableVSync ? 1 : 0;
+        presentFlags = 0;
+        if (!info.enableVSync && IsTearingSupported())
+        {
+            presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
         }
 
         // Find adapter to use.
@@ -221,7 +230,7 @@ namespace alimer
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (powerPreference == GPUPowerPreference::LowPower)
+            if (info.powerPreference == GPUPowerPreference::LowPower)
             {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
@@ -305,39 +314,36 @@ namespace alimer
         ThrowIfFailed(D3D12CreateDevice(adapter, s_minFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
 
 #ifndef NDEBUG
-        if (IsEnabledValidation())
+        // Configure debug device (if active).
+        ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+        if (SUCCEEDED(d3dDevice.As(&d3dInfoQueue)))
         {
-            // Configure debug device (if active).
-            ID3D12InfoQueue* d3dInfoQueue;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
-            {
 #ifdef _DEBUG
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
 #endif
-                D3D12_MESSAGE_ID hide[] =
-                {
-                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
-                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-                    D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES
-                };
-                D3D12_INFO_QUEUE_FILTER filter = {};
-                filter.DenyList.NumIDs = _countof(hide);
-                filter.DenyList.pIDList = hide;
-                d3dInfoQueue->AddStorageFilterEntries(&filter);
-                d3dInfoQueue->Release();
-            }
+            D3D12_MESSAGE_ID hide[] =
+            {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
+                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                //D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
+                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES
+            };
+            D3D12_INFO_QUEUE_FILTER filter = {};
+            filter.DenyList.NumIDs = _countof(hide);
+            filter.DenyList.pIDList = hide;
+            d3dInfoQueue->AddStorageFilterEntries(&filter);
         }
 #endif
+
         // Create memory allocator
         {
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            desc.pDevice = d3dDevice;
+            desc.pDevice = d3dDevice.Get();
             desc.pAdapter = adapter;
 
             ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
@@ -367,8 +373,8 @@ namespace alimer
             caps.adapterName = alimer::ToUtf8(deviceName);
 
             // Detect adapter type.
-
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            {
                 caps.adapterType = GPUAdapterType::CPU;
             }
             else {
@@ -501,10 +507,21 @@ namespace alimer
 
         // Init command queue's
         {
-            graphicsCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Graphics);
-            computeCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Compute);
-            copyCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Copy);
+            graphicsQueue = std::make_unique<D3D12CommandQueue>(this, D3D12_COMMAND_LIST_TYPE_DIRECT);
+            computeQueue = std::make_unique<D3D12CommandQueue>(this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+            copyQueue = std::make_unique<D3D12CommandQueue>(this, D3D12_COMMAND_LIST_TYPE_COPY);
         }
+
+        shuttingDown = false;
+        currentCPUFrame = 0;
+        currentGPUFrame = 0;
+        currentFrameIndex = 0;
+        frameFence.Init(0);
+
+        if (window) {
+            CreateSwapChain(&swapChain, window, info.colorFormat);
+        }
+
 
         d3d12.deviceCount++;
 
@@ -513,9 +530,23 @@ namespace alimer
 
     void D3D12GraphicsDevice::Shutdown()
     {
-        copyCommandQueue.reset();
-        computeCommandQueue.reset();
-        graphicsCommandQueue.reset();
+        ALIMER_ASSERT(currentCPUFrame == currentGPUFrame);
+        shuttingDown = true;
+
+        for (uint64_t i = 0; i < _countof(deferredReleases); ++i)
+        {
+            ProcessDeferredReleases(i);
+        }
+
+        frameFence.Shutdown();
+
+        copyQueue.reset();
+        computeQueue.reset();
+        graphicsQueue.reset();
+
+        if (swapChain.handle) {
+            swapChain.handle.Reset();
+        }
 
         //ApiDestroy();
 
@@ -530,18 +561,18 @@ namespace alimer
         allocator->Release();
         allocator = nullptr;
 
-        ULONG refCount = d3dDevice->Release();
+        ULONG refCount = d3dDevice.Reset();
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
             ALIMER_LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
 
-            ID3D12DebugDevice* debugDevice;
+            /*ID3D12DebugDevice* debugDevice;
             if (SUCCEEDED(d3dDevice->QueryInterface(IID_PPV_ARGS(&debugDevice))))
             {
                 debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
                 debugDevice->Release();
-            }
+            }*/
         }
 #else
         (void)refCount; // avoid warning
@@ -564,8 +595,192 @@ namespace alimer
         }
     }
 
-    SwapChain* D3D12GraphicsDevice::CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor)
+    void D3D12GraphicsDevice::ProcessDeferredReleases(uint64_t frameIndex)
     {
-        return new D3D12SwapChain(this, windowHandle, descriptor);
+        for (size_t i = 0; i < deferredReleases[frameIndex].size(); ++i)
+        {
+            deferredReleases[frameIndex][i]->Release();
+        }
+
+        deferredReleases[frameIndex].clear();
+    }
+
+    void D3D12GraphicsDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
+    {
+        if (resource == nullptr)
+            return;
+
+        if ((currentCPUFrame == currentGPUFrame && forceDeferred == false) || shuttingDown || d3dDevice == nullptr)
+        {
+            // Free-for-all!
+            resource->Release();
+            return;
+        }
+
+        deferredReleases[currentFrameIndex].push_back(resource);
+    }
+
+    D3D12CommandQueue* D3D12GraphicsDevice::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
+    {
+        switch (type)
+        {
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+            return computeQueue.get();
+        case D3D12_COMMAND_LIST_TYPE_COPY:
+            return copyQueue.get();
+        default:
+            return graphicsQueue.get();
+        }
+    }
+
+
+    void D3D12GraphicsDevice::WaitForIdle()
+    {
+        // Wait for the GPU to fully catch up with the CPU
+        ALIMER_ASSERT(currentCPUFrame >= currentGPUFrame);
+        if (currentCPUFrame > currentGPUFrame)
+        {
+            frameFence.Wait(currentCPUFrame);
+            currentGPUFrame = currentCPUFrame;
+        }
+
+        // Clean up what we can now
+        for (uint64_t i = 1; i < kMaxFrameLatency; ++i)
+        {
+            uint64_t frameIndex = (i + currentFrameIndex) % kMaxFrameLatency;
+            ProcessDeferredReleases(frameIndex);
+        }
+
+        graphicsQueue->WaitForIdle();
+        computeQueue->WaitForIdle();
+        copyQueue->WaitForIdle();
+    }
+
+    void D3D12GraphicsDevice::BeginFrame()
+    {
+    }
+
+    void D3D12GraphicsDevice::PresentFrame()
+    {
+        HRESULT hr = S_OK;
+
+        /*for (size_t i = 0, count = swapChains.size(); i < count; i++)
+        {
+            hr = swapChains[i]->GetHandle()->Present(syncInterval, presentFlags);
+            isLost = d3dIsLost(hr);
+
+            if (isLost)
+            {
+                break;
+            }
+        }*/
+
+        if (!isLost)
+        {
+            if (SUCCEEDED(hr)
+                && swapChain.handle != nullptr)
+            {
+                hr = swapChain.handle->Present(syncInterval, presentFlags);
+                swapChain.currentBackBufferIndex = swapChain.handle->GetCurrentBackBufferIndex();
+            }
+        }
+
+        isLost = d3dIsLost(hr);
+        if (isLost)
+        {
+#ifdef _DEBUG
+            char buff[64] = {};
+            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+            OutputDebugStringA(buff);
+#endif
+
+            HandleDeviceLost();
+            return;
+        }
+
+        ThrowIfFailed(hr);
+
+        ++currentCPUFrame;
+
+        // Signal the fence with the current frame number, so that we can check back on it
+        frameFence.Signal(graphicsQueue->GetHandle(), currentCPUFrame);
+
+        // Wait for the GPU to catch up before we stomp an executing command buffer
+        const uint64_t gpuLag = currentCPUFrame - currentGPUFrame;
+        ALIMER_ASSERT(gpuLag <= kMaxFrameLatency);
+        if (gpuLag >= kMaxFrameLatency)
+        {
+            // Make sure that the previous frame is finished
+            frameFence.Wait(currentGPUFrame + 1);
+            ++currentGPUFrame;
+        }
+
+        currentFrameIndex = currentCPUFrame % kMaxFrameLatency;
+
+        // Process any deferred releases
+        ProcessDeferredReleases(currentFrameIndex);
+    }
+
+    void D3D12GraphicsDevice::HandleDeviceLost()
+    {
+
+    }
+
+    void D3D12GraphicsDevice::CreateSwapChain(SwapChain* swapChain, window_t* window, PixelFormat colorFormat)
+    {
+        UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        if (syncInterval
+            && d3d12.isTearingSupported)
+        {
+            //presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
+
+        // Create a descriptor for the swap chain.
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.Width = window_width(window);
+        swapChainDesc.Height = window_height(window);
+        swapChainDesc.Format = ToDXGISwapChainFormat(colorFormat);
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT/* | DXGI_USAGE_SHADER_INPUT*/;
+        swapChainDesc.BufferCount = kMaxFrameLatency;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapChainDesc.Flags = swapChainFlags;
+
+        ComPtr<IDXGISwapChain1> tempSwapChain;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND hwnd = reinterpret_cast<HWND>(window_handle(window));
+
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+        fsSwapChainDesc.Windowed = TRUE;
+
+        // Create a swap chain for the window.
+        ThrowIfFailed(d3d12.dxgiFactory->CreateSwapChainForHwnd(
+            graphicsQueue->GetHandle(),
+            hwnd,
+            &swapChainDesc,
+            &fsSwapChainDesc,
+            nullptr,
+            tempSwapChain.GetAddressOf()
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(d3d12.dxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+#else
+        IUnknown* window = reinterpret_cast<IUnknown*>(info.handle);
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
+            d3dCommandQueue,
+            window,
+            &swapChainDesc,
+            nullptr,
+            &tempSwapChain
+        ));
+#endif
+        ThrowIfFailed(tempSwapChain.As(&swapChain->handle));
+        swapChain->currentBackBufferIndex = swapChain->handle->GetCurrentBackBufferIndex();
     }
 }

@@ -65,10 +65,19 @@ namespace alimer
         Qualcomm = 0x5143
     };
 
+    enum class GraphicsDeviceFlags : uint32_t {
+        None = 0,
+        Debug = (1 << 0),
+        GPUBasedValidation = (1 << 1),
+        RenderDoc = (1 << 2)
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
+
     enum class GPUPowerPreference : uint32_t
     {
-        HighPerformance,
-        LowPower
+        Default,
+        LowPower,
+        HighPerformance
     };
 
     enum class GPUAdapterType : uint32_t
@@ -89,14 +98,6 @@ namespace alimer
         Count32 = 32,
     };
 
-    enum class CommandQueueType : uint32_t
-    {
-        Graphics,
-        Compute,
-        Copy,
-        Count
-    };
-
     enum class BufferUsage : uint32_t
     {
         None = 0,
@@ -111,7 +112,6 @@ namespace alimer
         Indirect = 1 << 8,
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
-
 
     /// Defines the type of Texture.
     enum class TextureType : uint32_t
@@ -128,27 +128,21 @@ namespace alimer
     enum class TextureUsage : uint32_t
     {
         None = 0,
-        Sampled = 0x01,
-        Storage = 0x02,
-        RenderTarget = 0x04,
+        Sampled = (1 << 0),
+        Storage = (1 << 1),
+        OutputAttachment = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
-    enum class PresentMode : uint32_t
+    /// Desribes a GraphicsDevice
+    struct GraphicsDeviceInfo
     {
-        Immediate,
-        Mailbox,
-        Fifo
-    };
-
-    /// Desribes a SwapChain
-    struct SwapChainDescriptor
-    {
-        uint32_t width;
-        uint32_t height;
-        TextureUsage usage = TextureUsage::RenderTarget;
-        PixelFormat format = PixelFormat::Bgra8UnormSrgb;
-        PresentMode presentMode = PresentMode::Fifo;
+        BackendType preferredBackend = BackendType::Count;
+        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
+        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+        bool enableVSync = true;
+        PixelFormat colorFormat = PixelFormat::Bgra8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
     };
 
     /// Describes a Graphics buffer.

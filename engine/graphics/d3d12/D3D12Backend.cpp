@@ -21,6 +21,7 @@
 //
 
 #include "D3D12Backend.h"
+#include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
@@ -33,6 +34,70 @@ namespace alimer
     PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
     PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
 #endif
+
+    /* Fence */
+    FenceD3D12::FenceD3D12(D3D12GraphicsDevice* device)
+        : device{ device }
+    {
+    }
+
+    FenceD3D12::~FenceD3D12()
+    {
+        Shutdown();
+    }
+
+    void FenceD3D12::Init(uint64_t initialValue)
+    {
+        Shutdown();
+        ThrowIfFailed(device->GetHandle()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
+        fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fenceEvent != INVALID_HANDLE_VALUE);
+    }
+
+    void FenceD3D12::Shutdown()
+    {
+        if (handle == nullptr)
+            return;
+
+        CloseHandle(fenceEvent);
+        device->DeferredRelease(handle);
+    }
+
+    void FenceD3D12::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        ThrowIfFailed(queue->Signal(handle, fenceValue));
+    }
+
+    void FenceD3D12::Wait(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        if (handle->GetCompletedValue() < fenceValue)
+        {
+            ThrowIfFailed(handle->SetEventOnCompletion(fenceValue, fenceEvent));
+            WaitForSingleObject(fenceEvent, INFINITE);
+        }
+    }
+
+    void FenceD3D12::GPUWait(ID3D12CommandQueue* queue, uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(queue != nullptr);
+        ALIMER_ASSERT(handle != nullptr);
+        ThrowIfFailed(queue->Wait(handle, fenceValue));
+    }
+
+    bool FenceD3D12::IsSignaled(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        return handle->GetCompletedValue() >= fenceValue;
+    }
+
+    void FenceD3D12::Clear(uint64_t fenceValue)
+    {
+        ALIMER_ASSERT(handle != nullptr);
+        handle->Signal(fenceValue);
+    }
+
     /* D3D12DescriptorHeap */
     D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GraphicsDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_)
         : device(device_)

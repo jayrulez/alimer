@@ -25,6 +25,7 @@
 #include "core/Ptr.h"
 #include "graphics/GraphicsResource.h"
 #include "graphics/CommandContext.h"
+#include "os/os.h"
 #include <memory>
 #include <set>
 #include <mutex>
@@ -32,37 +33,26 @@
 namespace alimer
 {
     class CommandQueue;
-    class SwapChain;
 
     /// Defines the logical graphics device class.
-    class ALIMER_CLASS_API GraphicsDevice : public RefCounted
+    class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
-        static bool IsEnabledValidation();
-        static void SetEnableValidation(bool value);
-
         /// Get set of available graphics backends.
         static std::set<BackendType> GetAvailableBackends();
 
         /// Create new GraphicsDevice instance.
-        static RefPtr<GraphicsDevice> Create(BackendType preferredBackend = BackendType::Count, GPUPowerPreference powerPreference = GPUPowerPreference::HighPerformance);
+        static RefPtr<GraphicsDevice> Create(window_t* window, const GraphicsDeviceInfo& info);
 
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
         /// Waits for the device to become idle.
-        virtual void WaitForIdle();
+        virtual void WaitForIdle() = 0;
 
-        /**
-        * Get a command queue. Valid types are:
-        * - Graphics    : Can be used for draw, dispatch, or copy commands.
-        * - Compute     : Can be used for dispatch or copy commands.
-        * - Copy        : Can be used for copy commands.
-        */
-        std::shared_ptr<CommandQueue> GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
-
-        /// Create new SwapChain.
-        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor);
+        /// Begin rendering frame.
+        virtual void BeginFrame() = 0;
+        virtual void PresentFrame() = 0;
 
         /// Add a GPU resource to keep track of. Called by GPUResource.
         void AddGPUResource(GraphicsResource* resource);
@@ -74,24 +64,17 @@ namespace alimer
 
     protected:
         virtual void ReleaseTrackedResources();
-        virtual SwapChain* CreateSwapChainCore(void* windowHandle, const SwapChainDescriptor* descriptor) = 0;
-        //virtual void Present(const std::vector<Swapchain*>& swapchains) = 0;
 
     protected:
         GraphicsDevice() = default;
-        virtual bool Init(GPUPowerPreference powerPreference) = 0;
+        virtual bool Init(window_t* window, const GraphicsDeviceInfo& info) = 0;
 
         GraphicsDeviceCaps caps;
-        std::shared_ptr<CommandQueue> graphicsCommandQueue;
-        std::shared_ptr<CommandQueue> computeCommandQueue;
-        std::shared_ptr<CommandQueue> copyCommandQueue;
 
     private:
         /// Tracked gpu resource.
         std::mutex _gpuResourceMutex;
         std::vector<GraphicsResource*> _gpuResources;
-        static bool enableValidation;
-        static bool enableGPUBasedValidation;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

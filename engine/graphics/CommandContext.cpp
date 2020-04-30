@@ -23,7 +23,6 @@
 #include "graphics/CommandContext.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/Texture.h"
-#include "graphics/SwapChain.h"
 
 namespace alimer
 {
@@ -65,15 +64,5 @@ namespace alimer
         : ComputeContext(device_)
     {
         //handle = device_.GetImpl()->CreateCommandBuffer(QueueType::Graphics);
-    }
-
-    void GraphicsContext::BeginRenderPass(SwapChain* swapchain, const Color& clearColor)
-    {
-        //handle->BeginRenderPass(swapchain->GetCurrentTexture()->GetHandle(), clearColor);
-    }
-
-    void GraphicsContext::EndRenderPass()
-    {
-        //handle->EndRenderPass();
     }
 }

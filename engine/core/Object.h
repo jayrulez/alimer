@@ -30,7 +30,7 @@
 namespace alimer
 {
     /// Type info.
-    class ALIMER_CLASS_API TypeInfo final
+    class ALIMER_API TypeInfo final
     {
     public:
         /// Construct.
@@ -62,7 +62,7 @@ namespace alimer
     };
 
     /// Base class for objects with type identification, subsystem access
-    class ALIMER_CLASS_API Object : public RefCounted
+    class ALIMER_API Object : public RefCounted
     {
     public:
         /// Constructor.

@@ -23,61 +23,31 @@
 #pragma once
 
 #include <foundation/platform.h>
-#include <foundation/types.h>
 
 #if ALIMER_PLATFORM_WINDOWS
 
-#define STREAM_SEEK_END _STREAM_SEEK_END
-
-#undef UUID_DEFINED
-#undef UUID
-
-#define UUID_DEFINED 1
-#define UUID uint128_t
-
+// Use the C++ standard templated min/max
 #ifndef NOMINMAX
 #   define NOMINMAX
 #endif
 
+// We don't need GDI
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+
+// Include <mcx.h> if you need this
+#define NOMCX
+
+// Include <winsvc.h> if you need this
+#define NOSERVICE
+
+// WinHelp is deprecated
+#define NOHELP
+
 #ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN
 #endif
-
-#if defined(_MSC_VER)
-// Work around broken dbghlp.h header
-#pragma warning(disable : 4091)
-#elif defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnonportable-system-include-path"
-#endif
 #include <Windows.h>
-
-#undef uuid_t
-#define clock_t clock_windows_t
-
-#include <WinSock2.h>
-#include <IPTypes.h>
-#include <WS2tcpip.h>
-#include <iphlpapi.h>
-#include <share.h>
-#include <io.h>
-#include <shellapi.h>
-#include <stdlib.h>
-#include <ShlObj.h>
-#include <DbgHelp.h>
-#include <crtdbg.h>
-
-#undef min
-#undef max
-#undef STREAM_SEEK_END
-#undef UUID
-#undef uuid_t
-#undef clock_t
-
-#if defined(__clang__)
-#undef WINAPI
-#define WINAPI STDCALL
-#pragma clang diagnostic pop
-#endif
 
 #endif

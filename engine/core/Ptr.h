@@ -29,7 +29,7 @@
 namespace alimer
 {
     /// Base class for intrusively reference counted objects that can be pointed to with RefPtr. These are noncopyable and non-assignable.
-    class ALIMER_CLASS_API RefCounted
+    class ALIMER_API RefCounted
     {
     public:
         /// Constructor

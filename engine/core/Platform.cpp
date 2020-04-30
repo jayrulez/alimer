@@ -95,7 +95,7 @@ namespace alimer
     {
         WindowsVersion version = WindowsVersion::Unknown;
         auto RtlGetVersion = reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
-        ALIMER_ASSERT_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
+        ALIMER_VERIFY_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
 
         RTL_OSVERSIONINFOEXW osinfo;
         osinfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);

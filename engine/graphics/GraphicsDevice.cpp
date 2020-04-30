@@ -24,8 +24,6 @@
 #include "core/Log.h"
 #include "core/Assert.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/CommandQueue.h"
-#include "graphics/SwapChain.h"
 
 #if defined(ALIMER_GRAPHICS_D3D12)
 #   include "graphics/d3d12/D3D12GraphicsDevice.h"
@@ -33,25 +31,6 @@
 
 namespace alimer
 {
-#ifdef _DEBUG
-#   define DEFAULT_ENABLE_VALIDATION true
-#else
-#   define DEFAULT_ENABLE_VALIDATION false
-#endif
-
-    bool GraphicsDevice::enableValidation = DEFAULT_ENABLE_VALIDATION;
-    bool GraphicsDevice::enableGPUBasedValidation = false;
-
-    bool GraphicsDevice::IsEnabledValidation()
-    {
-        return enableValidation;
-    }
-
-    void GraphicsDevice::SetEnableValidation(bool value)
-    {
-        enableValidation = value;
-    }
-
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()
     {
         static std::set<BackendType> availableProviders;
@@ -78,10 +57,10 @@ namespace alimer
         return availableProviders;
     }
 
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(BackendType preferredBackend, GPUPowerPreference powerPreference)
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(window_t* window, const GraphicsDeviceInfo& info)
     {
-        BackendType backend = preferredBackend;
-        if (preferredBackend == BackendType::Count)
+        BackendType backend = info.preferredBackend;
+        if (info.preferredBackend == BackendType::Count)
         {
             auto availableBackends = GetAvailableBackends();
 
@@ -136,54 +115,12 @@ namespace alimer
             break;
         }
 
-        if (device == nullptr || device->Init(powerPreference) == false)
+        if (device == nullptr || device->Init(window, info) == false)
         {
             return nullptr;
         }
 
         return RefPtr<GraphicsDevice>(device);
-    }
-
-    void GraphicsDevice::WaitForIdle()
-    {
-        graphicsCommandQueue->WaitForIdle();
-        computeCommandQueue->WaitForIdle();
-        copyCommandQueue->WaitForIdle();
-    }
-
-    std::shared_ptr<CommandQueue> GraphicsDevice::GetCommandQueue(CommandQueueType type) const
-    {
-        std::shared_ptr<CommandQueue> commandQueue;
-        switch (type)
-        {
-        case CommandQueueType::Graphics:
-            commandQueue = graphicsCommandQueue;
-            break;
-        case CommandQueueType::Compute:
-            commandQueue = computeCommandQueue;
-            break;
-        case CommandQueueType::Copy:
-            commandQueue = copyCommandQueue;
-            break;
-        default:
-            ALIMER_ASSERT_FAIL("Invalid command queue type.");
-        }
-
-        return commandQueue;
-    }
-
-    /// Create new SwapChain.
-    RefPtr<SwapChain> GraphicsDevice::CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor)
-    {
-        ALIMER_ASSERT(windowHandle);
-        ALIMER_ASSERT(descriptor);
-
-        SwapChain* handle = CreateSwapChainCore(windowHandle, descriptor);
-        if (handle == nullptr) {
-            return nullptr;
-        }
-
-        return RefPtr<SwapChain>(handle);
     }
 
     void GraphicsDevice::AddGPUResource(GraphicsResource* resource)

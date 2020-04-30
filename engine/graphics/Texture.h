@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    class ALIMER_CLASS_API Texture : public GraphicsResource
+    class ALIMER_API Texture : public GraphicsResource
     {
         ALIMER_OBJECT(Texture, GraphicsResource);
         

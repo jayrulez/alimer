@@ -40,6 +40,7 @@
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
+#include <wrl.h>
 #include <vector>
 
 // Forward declare memory allocator classes
@@ -65,6 +66,26 @@ namespace alimer
 #endif
 
     class D3D12GraphicsDevice;
+
+    class FenceD3D12
+    {
+    public:
+        FenceD3D12(D3D12GraphicsDevice* device);
+        ~FenceD3D12();
+
+        void Init(uint64_t initialValue = 0);
+        void Shutdown();
+        void Signal(ID3D12CommandQueue* queue, uint64_t fenceValue);
+        void Wait(uint64_t fenceValue);
+        void GPUWait(ID3D12CommandQueue* queue, uint64_t fenceValue);
+        bool IsSignaled(uint64_t fenceValue);
+        void Clear(uint64_t fenceValue);
+
+    private:
+        D3D12GraphicsDevice* device;
+        ID3D12Fence* handle = nullptr;
+        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+    };
 
     struct PersistentDescriptorAlloc
     {
@@ -108,19 +129,4 @@ namespace alimer
         SRWLOCK lock = SRWLOCK_INIT;
         uint32_t heapIndex = 0;
     };
-
-    static inline D3D12_COMMAND_LIST_TYPE D3D12GetCommandListType(CommandQueueType type)
-    {
-        switch (type)
-        {
-        case CommandQueueType::Graphics:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        case CommandQueueType::Compute:
-            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        case CommandQueueType::Copy:
-            return D3D12_COMMAND_LIST_TYPE_COPY;
-        default:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        }
-    }
 }

@@ -34,7 +34,7 @@
 namespace alimer
 {
     /// Class specifying a floating-point RGBA color.
-    class ALIMER_CLASS_API Color final
+    class ALIMER_API Color final
     {
     public:
         /// Specifies the red component of the color.
