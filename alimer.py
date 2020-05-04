@@ -297,7 +297,7 @@ if __name__ == "__main__":
             androidNDKDir = os.environ.get('ANDROID_NDK')
             batCmd.AddCommand("cmake -G \"Ninja\" -DANDROID_NDK=\"%s\" -DCMAKE_SYSTEM_NAME=Android -DCMAKE_SYSTEM_VERSION=21 -DCMAKE_ANDROID_ARCH_ABI=armeabi-v7a -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang -DCMAKE_ANDROID_STL_TYPE=c++_static -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (androidNDKDir, configuration))
         else:
-            batCmd.AddCommand("cmake -G Ninja -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" ../../" % (configuration))
+            batCmd.AddCommand("cmake -G Ninja -DCMAKE_BUILD_TYPE=\"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\"  -DCMAKE_SYSTEM_VERSION=10.0 ../../" % (configuration))
 
         batCmd.AddCommand("ninja -j%d" % parallel)
 
@@ -313,7 +313,7 @@ if __name__ == "__main__":
         if (buildSystem == "uwp"):
             batCmd.AddCommand("cmake -G \"%s\" -T host=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A %s ../../" % (generator, vcArch))
         else:
-            batCmd.AddCommand("cmake -G \"%s\" -T %shost=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -A %s ../../" % (generator, vcToolset, vcArch))
+            batCmd.AddCommand("cmake -G \"%s\" -T %shost=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_VERSION=10.0 -A %s ../../" % (generator, vcToolset, vcArch))
 
         batCmd.AddCommand("MSBuild ALL_BUILD.vcxproj /nologo /m:%d /v:m /p:Configuration=%s,Platform=%s" % (parallel, configuration, architecture))
 

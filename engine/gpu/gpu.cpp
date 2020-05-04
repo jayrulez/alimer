@@ -167,12 +167,12 @@ bool gpu_is_backend_supported(GPUBackendType backend) {
     case GPU_BACKEND_VULKAN:
         return gpu_vk_supported();
 #endif
-#if defined(GPU_D3D12_BACKEND)
+#if defined(GPU_D3D12_BACKEND) 
     case GPUBackendType_D3D12:
         return d3d12_driver.supported();
 #endif 
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND)&& TODO
     case GPUBackendType_D3D11:
         return d3d11_driver.supported();
 #endif
@@ -197,7 +197,7 @@ bool gpuInit(const GPUInitConfig* config) {
     }
 #endif
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
     if (d3d11_driver.supported()) {
         if (!d3d11_driver.init(config)) {
             return false;
@@ -215,7 +215,7 @@ void gpuShutdown(void) {
     }
 #endif
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
     if (d3d11_driver.supported()) {
         d3d11_driver.shutdown();
     }
@@ -229,7 +229,7 @@ GPUSurface gpuCreateWin32Surface(void* hinstance, void* hwnd) {
     result->d3d12 = d3d12_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
 #endif
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
     result->d3d11 = d3d11_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
 #endif
 
@@ -268,7 +268,7 @@ GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
         break;
 #endif
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
     case GPUBackendType_D3D11:
         device = d3d11_driver.createDevice(desc);
         break;
@@ -325,7 +325,6 @@ GPUTextureFormat gpuGetDefaultDepthStencilFormat(GPUDevice device)
 
 static GPUSwapChainDescriptor SwapChainDescriptor_Default(const GPUSwapChainDescriptor* desc) {
     GPUSwapChainDescriptor def = *desc;
-    def.usage = _vgpu_def(desc->usage, GPUTextureUsage_OutputAttachment);
     def.format = _vgpu_def(desc->format, GPUTextureFormat_BGRA8UnormSrgb);
     def.width = _vgpu_def(desc->width, 1);
     def.height = _vgpu_def(desc->height, 1);

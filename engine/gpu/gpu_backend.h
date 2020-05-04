@@ -95,6 +95,46 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define GPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
+#ifdef __cplusplus
+template <typename T, uint32_t MAX_COUNT>
+struct Pool
+{
+    void init()
+    {
+        values = (T*)mem;
+        for (int i = 0; i < MAX_COUNT; ++i) {
+            new (NewPlaceholder(), &values[i]) int(i + 1);
+        }
+        new (&values[MAX_COUNT - 1]) int(-1);
+        first_free = 0;
+    }
+
+    int alloc()
+    {
+        if (first_free == -1) return -1;
+
+        const int id = first_free;
+        first_free = *((int*)&values[id]);
+        new (&values[id]) T;
+        return id;
+    }
+
+    void dealloc(uint32_t idx)
+    {
+        values[idx].~T();
+        new (&values[idx]) int(first_free);
+        first_free = idx;
+    }
+
+    alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
+    T* values;
+    int first_free;
+
+    T& operator[](int idx) { return values[idx]; }
+    bool isFull() const { return first_free == -1; }
+};
+#endif
+
 typedef struct gpu_renderer gpu_renderer;
 typedef struct gpu_backend_surface gpu_backend_surface;
 typedef struct GPUBackendSwapChain GPUBackendSwapChain;
@@ -105,7 +145,7 @@ typedef struct GPUSurfaceImpl {
     gpu_backend_surface* d3d12;
 #endif
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
     gpu_backend_surface* d3d11;
 #endif
 } GPUSurfaceImpl;
@@ -135,7 +175,7 @@ typedef struct GPUDeviceImpl {
     void (*destroySwapChain)(gpu_renderer* driverData, GPUSwapChain handle);
 
     /* Texture */
-    GPUTexture (*createTexture)(gpu_renderer* driverData, const GPUTextureDescriptor* desc);
+    GPUTexture(*createTexture)(gpu_renderer* driverData, const GPUTextureDescriptor* desc);
     void (*destroyTexture)(gpu_renderer* driverData, GPUTexture handle);
 
 
@@ -144,7 +184,7 @@ typedef struct GPUDeviceImpl {
     vgpu_buffer(*create_buffer)(VGPURenderer* driverData, const vgpu_buffer_desc* desc);
     void (*destroy_buffer)(VGPURenderer* driverData, vgpu_buffer handle);
 
-   
+
     vgpu_texture_desc(*query_texture_desc)(vgpu_texture handle);
 
     /* Sampler */
@@ -180,11 +220,11 @@ typedef struct gpu_driver {
     void (*shutdown)(void);
 
     gpu_backend_surface* (*create_surface_from_windows_hwnd)(void* hinstance, void* hwnd);
-    GPUDevice (*createDevice)(const GPUDeviceDescriptor* desc);
+    GPUDevice(*createDevice)(const GPUDeviceDescriptor* desc);
 } gpu_driver;
 
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && TODO
 extern gpu_driver d3d11_driver;
 #endif
 

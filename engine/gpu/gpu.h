@@ -47,7 +47,7 @@
 typedef struct GPUSurfaceImpl* GPUSurface;
 typedef struct GPUDeviceImpl* GPUDevice;
 typedef struct GPUSwapChainImpl* GPUSwapChain;
-typedef struct GPUBufferImpl* GPUBuffer;
+typedef struct agpu_buffer { uint32_t id; } agpu_buffer;
 typedef struct GPUTextureImpl* GPUTexture;
 typedef struct GPUTextureViewImpl* GPUTextureView;
 typedef struct GPUSamplerImpl* GPUSampler;
@@ -563,7 +563,6 @@ typedef struct GPUSamplerDescriptor {
 } GPUSamplerDescriptor;
 
 typedef struct GPUSwapChainDescriptor {
-    GPUTextureUsageFlags    usage;
     GPUTextureFormat        format;
     uint32_t                width;
     uint32_t                height;

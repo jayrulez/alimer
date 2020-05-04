@@ -126,7 +126,7 @@ static DXGI_FORMAT d3d_GetTypelessFormat(GPUTextureFormat format)
     }
 }
 
-static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, GPUTextureUsage usage)
+static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, GPUTextureUsageFlags usage)
 {
     if (gpuIsDepthFormat(format) &&
         (usage & GPUTextureUsage_Sampled | GPUTextureUsage_Storage) != GPUTextureUsage_None)
@@ -159,20 +159,6 @@ static DXGI_FORMAT d3d_GetSwapChainFormat(GPUTextureFormat format) {
         //vgpu_log_error_format("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
         return DXGI_FORMAT_UNKNOWN;
     }
-}
-
-static DXGI_USAGE d3d_GetSwapChainBufferUsage(GPUTextureUsage textureUsage) {
-    DXGI_USAGE usage = 0;
-    if (textureUsage & GPUTextureUsage_Sampled) {
-        usage |= DXGI_USAGE_SHADER_INPUT;
-    }
-    if (textureUsage & GPUTextureUsage_Storage) {
-        usage |= DXGI_USAGE_UNORDERED_ACCESS;
-    }
-    if (textureUsage & GPUTextureUsage_OutputAttachment) {
-        usage |= DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    }
-    return usage;
 }
 
 

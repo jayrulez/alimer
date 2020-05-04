@@ -44,23 +44,12 @@ define_engine_source_files(
     core
     math
     os
-    #gpu
+    gpu
+    gpu/libs
     graphics
     Input
     Games
 )
-
-if(ALIMER_GRAPHICS_D3D11 OR ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d)
-endif ()
-
-if(ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d12)
-endif ()
-
-if(ALIMER_GRAPHICS_VULKAN)
-    #define_engine_source_files(gpu/vk)
-endif ()
 
 group_sources()
 
@@ -72,12 +61,6 @@ else ()
 endif ()
 
 target_compile_definitions(alimer PRIVATE ALIMER_COMPILE)
-
-set_target_properties(alimer PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-)
 
 target_include_directories(alimer PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>

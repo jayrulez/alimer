@@ -47,8 +47,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        graphicsDevice->WaitForIdle();
-        graphicsDevice.Reset();
+        gpuDeviceWaitIdle(gpuDevice);
+        gpuDeviceDestroy(gpuDevice);
         window_destroy(main_window);
         os_shutdown();
     }
@@ -64,14 +64,14 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE);
             window_set_centered(main_window);
 
-            GraphicsDeviceInfo deviceInfo = {};
-            deviceInfo.preferredBackend = config.preferredGPUBackend;
+            GPUDeviceDescriptor deviceInfo = {};
+            //deviceInfo.preferredBackend = config.preferredGPUBackend;
 #ifdef _DEBUG
-            deviceInfo.flags = GraphicsDeviceFlags::Debug;
+            //deviceInfo.flags = GraphicsDeviceFlags::Debug;
 #endif
 
-            graphicsDevice = GraphicsDevice::Create(main_window, deviceInfo);
-            if (!graphicsDevice) {
+            gpuDevice = gpuDeviceCreate(&deviceInfo);
+            if (!gpuDevice) {
                 headless = true;
             }
 
@@ -164,7 +164,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        graphicsDevice->BeginFrame();
+        //graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -194,7 +194,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         }
 
         //auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
-        graphicsDevice->PresentFrame();
+        //graphicsDevice->PresentFrame();
 
         /*auto clear_color = Colors::CornflowerBlue;
         auto defaultRenderPass = vgpu_get_default_render_pass();
