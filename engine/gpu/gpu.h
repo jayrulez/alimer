@@ -44,11 +44,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct GPUSurfaceImpl* GPUSurface;
 typedef struct GPUDeviceImpl* GPUDevice;
-typedef struct GPUSwapChainImpl* GPUSwapChain;
 typedef struct agpu_buffer { uint32_t id; } agpu_buffer;
-typedef struct GPUTextureImpl* GPUTexture;
+typedef struct agpu_texture { uint32_t id; } agpu_texture;
 typedef struct GPUTextureViewImpl* GPUTextureView;
 typedef struct GPUSamplerImpl* GPUSampler;
 typedef struct VGPURenderPassImpl* VGPURenderPass;
@@ -56,12 +54,14 @@ typedef struct vgpu_shader_t* vgpu_shader;
 typedef struct vgpu_pipeline_t* vgpu_pipeline;
 
 enum {
-    GPU_MAX_COLOR_ATTACHMENTS = 8u,
-    GPU_MAX_DEVICE_NAME_SIZE = 256,
-    GPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
-    GPU_MAX_VERTEX_ATTRIBUTES = 16u,
-    GPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
-    GPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
+    AGPU_INVALID_ID = 0xFFFFFFFF,
+    AGPU_NUM_INFLIGHT_FRAMES = 2u,
+    AGPU_MAX_COLOR_ATTACHMENTS = 8u,
+    AGPU_MAX_DEVICE_NAME_SIZE = 256,
+    AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+    AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+    AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+    AGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
 };
 
 typedef enum GPULogLevel {
@@ -71,26 +71,19 @@ typedef enum GPULogLevel {
     GPULogLevel_Info = 3,
     GPULogLevel_Debug = 4,
     GPULogLevel_Trace = 5,
-    _GPULogLevel_Count,
-    _GPULogLevel_Force32 = 0x7FFFFFFF
+    _AGPU_LOG_LEVEL_COUNT,
+    _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
 } GPULogLevel;
 
-typedef enum GPUBackendType {
-    GPUBackendType_Default = 0,
-    GPUBackendType_Null = 1,
-    GPUBackendType_Vulkan = 2,
-    GPUBackendType_D3D12 = 3,
-    GPUBackendType_D3D11 = 4,
-    GPUBackendType_OpenGL = 5,
-    _GPUBackendType_Force32 = 0x7FFFFFFF
-} GPUBackendType;
-
-typedef enum GPUPresentMode {
-    GPUPresentMode_Fifo = 0,
-    GPUPresentMode_Mailbox = 1,
-    GPUPresentMode_Immediate = 2,
-    _GPUPresentMode_Force32 = 0x7FFFFFFF
-} GPUPresentMode;
+typedef enum agpu_backend_type {
+    AGPU_BACKEND_TYPE_DEFAULT = 0,
+    AGPU_BACKEND_TYPE_NULL = 1,
+    AGPU_BACKEND_TYPE_VULKAN = 2,
+    AGPU_BACKEND_TYPE_D3D12 = 3,
+    AGPU_BACKEND_TYPE_D3D11 = 4,
+    AGPU_BACKEND_TYPE_OPENGL = 5,
+    _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+} agpu_backend_type;
 
 /// Defines pixel format.
 typedef enum GPUTextureFormat {
@@ -189,31 +182,21 @@ typedef enum vgpu_pixel_format_type {
     VGPU_PIXEL_FORMAT_TYPE_FORCE_U32 = 0x7FFFFFFF
 } vgpu_pixel_format_type;
 
-typedef enum GPUSampleCount {
-    GPUSampleCount_Count1 = 1,
-    GPUSampleCount_Count2 = 2,
-    GPUSampleCount_Count4 = 4,
-    GPUSampleCount_Count8 = 8,
-    GPUSampleCount_Count16 = 16,
-    GPUSampleCount_Count32 = 32,
-    _GPUSampleCount_Force32 = 0x7FFFFFFF
-} GPUSampleCount;
+typedef enum agpu_texture_type {
+    AGPU_TEXTURE_TYPE_2D = 0,
+    AGPU_TEXTURE_TYPE_3D,
+    AGPU_TEXTURE_TYPE_CUBE,
+    _AGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
+} agpu_texture_type;
 
-typedef enum GPUTextureType {
-    GPUTextureType_2D = 0,
-    GPUTextureType_3D,
-    GPUTextureType_Cube,
-    _GPUTextureType_Force32 = 0x7FFFFFFF
-} GPUTextureType;
-
-typedef enum GPUTextureUsage {
-    GPUTextureUsage_None = 0,
-    GPUTextureUsage_Sampled = 0x01,
-    GPUTextureUsage_Storage = 0x02,
-    GPUTextureUsage_OutputAttachment = 0x04,
-    _GPUTextureUsage_Force32 = 0x7FFFFFFF
-} GPUTextureUsage;
-typedef uint32_t GPUTextureUsageFlags;
+typedef enum agpu_texture_usage {
+    AGPU_TEXTURE_USAGE_NONE = 0,
+    AGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
+    AGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
+    AGPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT = (1 << 2),
+    _AGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
+} agpu_texture_usage;
+typedef uint32_t agpu_texture_usage_flags;
 
 typedef enum gpu_buffer_usage {
     GPU_BUFFER_USAGE_NONE = 0,
@@ -359,14 +342,13 @@ typedef enum GPUPowerPreference {
     _GPUPowerPreference_Force32 = 0x7FFFFFFF
 } GPUPowerPreference;
 
-typedef enum GPUDebugUsage {
-    GPUDebugFlags_None = 0,
-    GPUDebugFlags_Debug = 0x01,
-    GPUDebugFlags_GPUBasedValidation = 0x02,
-    GPUDebugFlags_RenderDoc = 0x04,
-    _GPUDebugFlags_Force32 = 0x7FFFFFFF
-} GPUDebugUsage;
-typedef uint32_t GPUDebugFlags;
+typedef enum agpu_device_flags {
+    AGPU_DEVICE_FLAGS_NONE = 0,
+    AGPU_DEVICE_FLAGS_DEBUG = (1 << 0),
+    AGPU_DEVICE_FLAGS_VSYNC = (1 << 1),
+    AGPU_DEVICE_FLAGS_GPU_VALIDATION = (1 << 2),
+    _AGPU_DEVICE_FLAGS_FORCE_U32 = 0x7FFFFFFF
+} agpu_device_flags;
 
 /* Callbacks */
 typedef void(*GPULogCallback)(void* userData, GPULogLevel level, const char* message);
@@ -454,12 +436,12 @@ typedef struct vgpu_limits {
 
 typedef struct GPUDeviceCapabilities {
     /// The backend type.
-    GPUBackendType backend;
+    agpu_backend_type backend;
 
     /// Selected GPU vendor PCI id.
     uint32_t vendor_id;
     uint32_t device_id;
-    char adapter_name[GPU_MAX_DEVICE_NAME_SIZE];
+    char adapter_name[AGPU_MAX_DEVICE_NAME_SIZE];
 
     vgpu_features features;
     vgpu_limits limits;
@@ -472,20 +454,19 @@ typedef struct vgpu_buffer_desc {
     const char* label;
 } vgpu_buffer_desc;
 
-typedef struct GPUTextureDescriptor {
-    GPUTextureType type;
+typedef struct agpu_texture_info {
+    agpu_texture_type type;
     GPUTextureFormat format;
-    GPUTextureUsageFlags usage;
+    agpu_texture_usage_flags usage;
     GPUExtent3D size;
-    uint32_t mipLevelCount;
-    GPUSampleCount sampleCount;
-    /// Pointer to external texture handle
-    const void* externalHandle;
+    uint32_t miplevels;
+    uint32_t sample_count;
+    const void* external_handle; /* Pointer to external texture handle */
     const char* label;
-} GPUTextureDescriptor;
+} agpu_texture_info;
 
 typedef struct {
-    GPUTexture texture;
+    agpu_texture texture;
     uint32_t mip_level;
     uint32_t slice;
     vgpu_load_action load_action;
@@ -494,7 +475,7 @@ typedef struct {
 } vgpu_color_attachment;
 
 typedef struct vgpu_depth_stencil_attachment {
-    GPUTexture        texture;
+    agpu_texture        texture;
     vgpu_load_action    depth_load_action;
     vgpu_store_action   depth_store_action;
     float               clear_depth;
@@ -504,7 +485,7 @@ typedef struct vgpu_depth_stencil_attachment {
 } vgpu_depth_stencil_attachment;
 
 typedef struct VGPURenderPassDescriptor {
-    vgpu_color_attachment           color_attachments[GPU_MAX_COLOR_ATTACHMENTS];
+    vgpu_color_attachment           color_attachments[AGPU_MAX_COLOR_ATTACHMENTS];
     vgpu_depth_stencil_attachment   depth_stencil_attachment;
 } VGPURenderPassDescriptor;
 
@@ -520,8 +501,8 @@ typedef struct VgpuVertexAttributeDescriptor {
 } VgpuVertexAttributeDescriptor;
 
 typedef struct VgpuVertexDescriptor {
-    GPUVertexBufferLayoutDescriptor     layouts[GPU_MAX_VERTEX_BUFFER_BINDINGS];
-    VgpuVertexAttributeDescriptor       attributes[GPU_MAX_VERTEX_ATTRIBUTES];
+    GPUVertexBufferLayoutDescriptor     layouts[AGPU_MAX_VERTEX_BUFFER_BINDINGS];
+    VgpuVertexAttributeDescriptor       attributes[AGPU_MAX_VERTEX_ATTRIBUTES];
 } VgpuVertexDescriptor;
 
 typedef struct vgpu_shader_stage_desc {
@@ -562,22 +543,20 @@ typedef struct GPUSamplerDescriptor {
     const char* label;
 } GPUSamplerDescriptor;
 
-typedef struct GPUSwapChainDescriptor {
-    GPUTextureFormat        format;
+typedef struct agpu_swapchain_info {
+    uintptr_t native_handle;
+
+    GPUTextureFormat        color_format; 
     uint32_t                width;
     uint32_t                height;
-    GPUPresentMode          presentMode;
-} GPUSwapChainDescriptor;
+} agpu_swapchain_info;
 
-typedef struct GPUInitConfig {
-    GPUDebugFlags flags;
-} GPUInitConfig;
-
-typedef struct GPUDeviceDescriptor {
-    GPUBackendType preferredBackend;
-    GPUPowerPreference powerPreference;
-    GPUSurface compatibleSurface;
-} GPUDeviceDescriptor;
+typedef struct agpu_device_info {
+    agpu_backend_type preferred_backend;
+    uint32_t flags;
+    GPUPowerPreference power_preference;
+    const agpu_swapchain_info* swapchain_info;
+} agpu_device_info;
 
 #ifdef __cplusplus
 extern "C"
@@ -589,39 +568,26 @@ extern "C"
     VGPU_EXPORT void gpuLog(GPULogLevel level, const char* format, ...);
 
     /* Backend functions */
-    VGPU_EXPORT GPUBackendType gpu_get_default_platform_backend(void);
-    VGPU_EXPORT bool gpu_is_backend_supported(GPUBackendType backend);
-    VGPU_EXPORT bool gpuInit(const GPUInitConfig* config);
-    VGPU_EXPORT void gpuShutdown(void);
-    VGPU_EXPORT GPUSurface gpuCreateWin32Surface(void* hinstance, void* hwnd);
+    VGPU_EXPORT agpu_backend_type gpu_get_default_platform_backend(void);
+    VGPU_EXPORT bool gpu_is_backend_supported(agpu_backend_type backend);
 
     /* Device functions */
-    VGPU_EXPORT GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc);
-    VGPU_EXPORT void gpuDeviceDestroy(GPUDevice device);
-    VGPU_EXPORT void gpuDeviceWaitIdle(GPUDevice device);
-    VGPU_EXPORT GPUBackendType gpuQueryBackend(GPUDevice device);
-    VGPU_EXPORT GPUDeviceCapabilities gpuQueryCaps(GPUDevice device);
-    VGPU_EXPORT GPUTextureFormat gpuGetPreferredSwapChainFormat(GPUDevice device, GPUSurface surface);
+    VGPU_EXPORT GPUDevice gpuDeviceCreate(const agpu_device_info* info);
+    VGPU_EXPORT void agpu_destroy_device(GPUDevice device);
+    VGPU_EXPORT void agpu_frame_begin(GPUDevice device);
+    VGPU_EXPORT void agpu_frame_end(GPUDevice device);
+    VGPU_EXPORT void agpu_wait_gpu(GPUDevice device);
+    VGPU_EXPORT agpu_backend_type gpu_query_backend(GPUDevice device);
+    VGPU_EXPORT GPUDeviceCapabilities gpu_query_caps(GPUDevice device);
     VGPU_EXPORT GPUTextureFormat gpuGetDefaultDepthFormat(GPUDevice device);
     VGPU_EXPORT GPUTextureFormat gpuGetDefaultDepthStencilFormat(GPUDevice device);
 
-    VGPU_EXPORT GPUSwapChain gpuDeviceCreateSwapChain(GPUDevice device, GPUSurface surface, const GPUSwapChainDescriptor* descriptor);
-    VGPU_EXPORT void gpuDeviceDestroySwapChain(GPUDevice device, GPUSwapChain swapChain);
-    VGPU_EXPORT GPUTextureView gpuSwapChainGetCurrentTextureView(GPUSwapChain swapChain);
-    VGPU_EXPORT void gpuSwapChainPresent(GPUSwapChain swapChain);
-
-    VGPU_EXPORT GPUTexture gpuDeviceCreateTexture(GPUDevice device, const GPUTextureDescriptor* descriptor);
-    VGPU_EXPORT void gpuDeviceDestroyTexture(GPUDevice device, GPUTexture texture);
+    VGPU_EXPORT agpu_texture agpu_create_texture(GPUDevice device, const agpu_texture_info* info);
+    VGPU_EXPORT void agpu_destroy_texture(GPUDevice device, agpu_texture texture);
 
 #if TODO
     //VGPU_EXPORT VGPURenderPass vgpu_get_default_render_pass(void);
     
-
-    
-    VGPU_EXPORT void gpu_begin_frame(void);
-    VGPU_EXPORT void gpu_end_frame(void);
-
-
     /* Buffer */
     VGPU_EXPORT vgpu_buffer vgpu_create_buffer(const vgpu_buffer_desc* desc);
     VGPU_EXPORT void vgpu_destroy_buffer(vgpu_buffer buffer);

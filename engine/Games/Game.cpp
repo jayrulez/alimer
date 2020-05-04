@@ -47,8 +47,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        gpuDeviceWaitIdle(gpuDevice);
-        gpuDeviceDestroy(gpuDevice);
+        agpu_wait_gpu(gpuDevice);
+        agpu_destroy_device(gpuDevice);
         window_destroy(main_window);
         os_shutdown();
     }
@@ -64,13 +64,19 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE);
             window_set_centered(main_window);
 
-            GPUDeviceDescriptor deviceInfo = {};
-            //deviceInfo.preferredBackend = config.preferredGPUBackend;
-#ifdef _DEBUG
-            //deviceInfo.flags = GraphicsDeviceFlags::Debug;
-#endif
+            agpu_swapchain_info swapchain = {};
+            swapchain.native_handle = window_handle(main_window);
 
-            gpuDevice = gpuDeviceCreate(&deviceInfo);
+            agpu_device_info device_info = {};
+            device_info.preferred_backend = AGPU_BACKEND_TYPE_D3D11;
+            device_info.flags = AGPU_DEVICE_FLAGS_VSYNC;
+
+#ifdef _DEBUG
+            device_info.flags = AGPU_DEVICE_FLAGS_DEBUG;
+#endif
+            device_info.swapchain_info = &swapchain;
+
+            gpuDevice = gpuDeviceCreate(&device_info);
             if (!gpuDevice) {
                 headless = true;
             }
@@ -164,7 +170,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        //graphicsDevice->BeginFrame();
+        agpu_frame_begin(gpuDevice);
 
         for (auto gameSystem : gameSystems)
         {
@@ -203,7 +209,7 @@ float4 PSMain(PSInput input) : SV_TARGET
         vgpu_cmd_end_render_pass();
         */
 
-        //gpu_end_frame();
+        agpu_frame_end(gpuDevice);
     }
 
     int Game::Run()

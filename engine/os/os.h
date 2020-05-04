@@ -87,10 +87,6 @@ typedef struct {
     };
 } os_event;
 
-#if defined(_WIN32) || defined(_WIN64)
-typedef struct HMONITOR__* HMONITOR;
-#endif
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -133,11 +129,7 @@ extern "C"
     OS_EXPORT bool window_is_minimized(window_t* window);
     OS_EXPORT bool window_is_focused(window_t* window);
 
-#if defined(_WIN32) || defined(_WIN64)
-    OS_EXPORT void* window_hinstance(void);
-    OS_EXPORT void* window_handle(window_t* window);
-    OS_EXPORT HMONITOR window_monitor(window_t* window);
-#endif
+    OS_EXPORT uintptr_t window_handle(window_t* window);
 
     /* Clipboard functions */
     OS_EXPORT const char* clipboard_get_text(void);

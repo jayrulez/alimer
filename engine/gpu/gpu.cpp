@@ -44,7 +44,7 @@
 #endif
 
 #define GPU_MAX_LOG_MESSAGE (1024)
-static const char* vgpu_log_priority_prefixes[_GPULogLevel_Count] = {
+static const char* vgpu_log_priority_prefixes[_AGPU_LOG_LEVEL_COUNT] = {
     NULL,
     "ERROR",
     "WARN",
@@ -126,25 +126,25 @@ void gpuLog(GPULogLevel level, const char* format, ...) {
     }
 }
 
-GPUBackendType gpu_get_default_platform_backend(void) {
+agpu_backend_type gpu_get_default_platform_backend(void) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (gpu_is_backend_supported(GPUBackendType_D3D12)) {
-        return GPUBackendType_D3D12;
+    if (gpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D12)) {
+        return AGPU_BACKEND_TYPE_D3D12;
     }
 
-    if (gpu_is_backend_supported(GPUBackendType_Vulkan)) {
-        return GPUBackendType_Vulkan;
+    if (gpu_is_backend_supported(AGPU_BACKEND_TYPE_VULKAN)) {
+        return AGPU_BACKEND_TYPE_VULKAN;
     }
 
-    if (gpu_is_backend_supported(GPUBackendType_D3D11)) {
-        return GPUBackendType_D3D11;
+    if (gpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D11)) {
+        return AGPU_BACKEND_TYPE_D3D11;
     }
 
-    if (gpu_is_backend_supported(GPUBackendType_OpenGL)) {
-        return GPUBackendType_OpenGL;
+    if (gpu_is_backend_supported(AGPU_BACKEND_TYPE_OPENGL)) {
+        return AGPU_BACKEND_TYPE_OPENGL;
     }
 
-    return GPUBackendType_Null;
+    return AGPU_BACKEND_TYPE_NULL;
 #elif defined(__linux__) || defined(__ANDROID__)
     return GPUBackendType_Vulkan;
 #elif defined(__APPLE__)
@@ -154,26 +154,26 @@ GPUBackendType gpu_get_default_platform_backend(void) {
 #endif
 }
 
-bool gpu_is_backend_supported(GPUBackendType backend) {
-    if (backend == GPUBackendType_Default) {
+bool gpu_is_backend_supported(agpu_backend_type backend) {
+    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
         backend = gpu_get_default_platform_backend();
     }
 
     switch (backend)
     {
-    case GPUBackendType_Null:
+    case AGPU_BACKEND_TYPE_NULL:
         return true;
 #if defined(GPU_VK_BACKEND) && TODO_VK
-    case GPU_BACKEND_VULKAN:
+    case AGPU_BACKEND_TYPE_VULKAN:
         return gpu_vk_supported();
 #endif
 #if defined(GPU_D3D12_BACKEND) 
-    case GPUBackendType_D3D12:
+    case AGPU_BACKEND_TYPE_D3D12:
         return d3d12_driver.supported();
 #endif 
 
-#if defined(GPU_D3D11_BACKEND)&& TODO
-    case GPUBackendType_D3D11:
+#if defined(GPU_D3D11_BACKEND)
+    case AGPU_BACKEND_TYPE_D3D11:
         return d3d11_driver.supported();
 #endif
 
@@ -187,90 +187,36 @@ bool gpu_is_backend_supported(GPUBackendType backend) {
     }
 }
 
-bool gpuInit(const GPUInitConfig* config) {
-    VGPU_ASSERT(config);
-#if defined(GPU_D3D12_BACKEND)
-    if (d3d12_driver.supported()) {
-        if (!d3d12_driver.init(config)) {
-            return false;
-        }
-    }
-#endif
-
-#if defined(GPU_D3D11_BACKEND) && TODO
-    if (d3d11_driver.supported()) {
-        if (!d3d11_driver.init(config)) {
-            return false;
-        }
-    }
-#endif
-
-    return true;
-}
-
-void gpuShutdown(void) {
-#if defined(GPU_D3D12_BACKEND)
-    if (d3d12_driver.supported()) {
-        d3d12_driver.shutdown();
-    }
-#endif
-
-#if defined(GPU_D3D11_BACKEND) && TODO
-    if (d3d11_driver.supported()) {
-        d3d11_driver.shutdown();
-    }
-#endif
-}
-
-GPUSurface gpuCreateWin32Surface(void* hinstance, void* hwnd) {
-#if defined(_WIN32)
-    GPUSurface result = _VGPU_ALLOC_HANDLE(GPUSurfaceImpl);
-#if defined(GPU_D3D12_BACKEND)
-    result->d3d12 = d3d12_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
-#endif
-
-#if defined(GPU_D3D11_BACKEND) && TODO
-    result->d3d11 = d3d11_driver.create_surface_from_windows_hwnd(hinstance, hwnd);
-#endif
-
-#else
-    gpu_log_error("Cannot create Win32 surface on non windows OS");
-    return nullptr;
-#endif
-
-    return result;
-}
-
-GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
+GPUDevice gpuDeviceCreate(const agpu_device_info* info)
 {
-    VGPU_ASSERT(desc);
+    VGPU_ASSERT(info);
 
-    GPUBackendType backend = desc->preferredBackend;
-    if (backend == GPUBackendType_Default) {
+    agpu_backend_type backend = info->preferred_backend;
+    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
         backend = gpu_get_default_platform_backend();
     }
 
     GPUDevice device = NULL;
     switch (backend)
     {
-    case GPUBackendType_Null:
+    case AGPU_BACKEND_TYPE_NULL:
         break;
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
-    case GPU_BACKEND_VULKAN:
+    case AGPU_BACKEND_TYPE_VULKAN:
         s_renderer = vk_gpu_create_renderer();
         break;
 #endif
 
 #if defined(GPU_D3D12_BACKEND)
-    case GPUBackendType_D3D12:
-        device = d3d12_driver.createDevice(desc);
+    case AGPU_BACKEND_TYPE_D3D12:
+        device = d3d12_driver.create_device(info);
         break;
 #endif
 
-#if defined(GPU_D3D11_BACKEND) && TODO
-    case GPUBackendType_D3D11:
-        device = d3d11_driver.createDevice(desc);
+#if defined(GPU_D3D11_BACKEND) 
+    case AGPU_BACKEND_TYPE_D3D11:
+        device = d3d11_driver.create_device(info);
         break;
 #endif
     }
@@ -282,7 +228,7 @@ GPUDevice gpuDeviceCreate(const GPUDeviceDescriptor* desc)
     return device;
 }
 
-void gpuDeviceDestroy(GPUDevice device) {
+void agpu_destroy_device(GPUDevice device) {
     if (device == NULL) {
         return;
     }
@@ -290,25 +236,26 @@ void gpuDeviceDestroy(GPUDevice device) {
     device->destroyDevice(device);
 }
 
-void gpuDeviceWaitIdle(GPUDevice device) {
-    device->waitIdle(device->renderer);
+void agpu_frame_begin(GPUDevice device) {
+    device->beginFrame(device->renderer);
 }
 
-GPUBackendType gpuQueryBackend(GPUDevice device) {
+void agpu_frame_end(GPUDevice device) {
+    device->presentFrame(device->renderer);
+}
+
+void agpu_wait_gpu(GPUDevice device) {
+    device->waitForGPU(device->renderer);
+}
+
+agpu_backend_type gpu_query_backend(GPUDevice device) {
     VGPU_ASSERT(device);
     return device->query_caps(device->renderer).backend;
 }
 
-GPUDeviceCapabilities gpuQueryCaps(GPUDevice device) {
+GPUDeviceCapabilities gpu_query_caps(GPUDevice device) {
     VGPU_ASSERT(device);
     return device->query_caps(device->renderer);
-}
-
-GPUTextureFormat gpuGetPreferredSwapChainFormat(GPUDevice device, GPUSurface surface)
-{
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(surface);
-    return device->getPreferredSwapChainFormat(device->renderer, surface);
 }
 
 GPUTextureFormat gpuGetDefaultDepthFormat(GPUDevice device)
@@ -323,66 +270,31 @@ GPUTextureFormat gpuGetDefaultDepthStencilFormat(GPUDevice device)
     return device->getDefaultDepthStencilFormat(device->renderer);
 }
 
-static GPUSwapChainDescriptor SwapChainDescriptor_Default(const GPUSwapChainDescriptor* desc) {
-    GPUSwapChainDescriptor def = *desc;
-    def.format = _vgpu_def(desc->format, GPUTextureFormat_BGRA8UnormSrgb);
-    def.width = _vgpu_def(desc->width, 1);
-    def.height = _vgpu_def(desc->height, 1);
-    def.presentMode = _vgpu_def(desc->presentMode, GPUPresentMode_Fifo);
-    return def;
-}
-
-GPUSwapChain gpuDeviceCreateSwapChain(GPUDevice device, GPUSurface surface, const GPUSwapChainDescriptor* descriptor) {
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(surface);
-    VGPU_ASSERT(descriptor);
-
-    GPUSwapChainDescriptor descDefault = SwapChainDescriptor_Default(descriptor);
-    return device->createSwapChain(device->renderer, surface, &descDefault);
-}
-
-void gpuDeviceDestroySwapChain(GPUDevice device, GPUSwapChain swapChain) {
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(swapChain);
-    device->destroySwapChain(device->renderer, swapChain);
-}
-
-GPUTextureView gpuSwapChainGetCurrentTextureView(GPUSwapChain swapChain)
-{
-    return swapChain->getCurrentTextureView(swapChain->backend);
-}
-
-void gpuSwapChainPresent(GPUSwapChain swapChain)
-{
-    swapChain->present(swapChain->backend);
-}
-
-
 /* Texture */
-static GPUTextureDescriptor TextureDescriptor_Default(const GPUTextureDescriptor* desc) {
-    GPUTextureDescriptor def = *desc;
-    def.type = _vgpu_def(desc->type, GPUTextureType_2D);
-    def.format = _vgpu_def(def.format, GPUTextureFormat_RGBA8Unorm);
-    def.size.width = _vgpu_def(desc->size.width, 1);
-    def.size.height = _vgpu_def(desc->size.height, 1);
-    def.size.depth = _vgpu_def(desc->size.depth, 1);
-    def.mipLevelCount = _vgpu_def(def.mipLevelCount, 1);
-    def.sampleCount = _vgpu_def(def.sampleCount, GPUSampleCount_Count1);
+static agpu_texture_info texture_info_default(const agpu_texture_info* info) {
+    agpu_texture_info def = *info;
+    def.type = _vgpu_def(info->type, AGPU_TEXTURE_TYPE_2D);
+    def.format = _vgpu_def(info->format, GPUTextureFormat_RGBA8Unorm);
+    def.size.width = _vgpu_def(info->size.width, 1);
+    def.size.height = _vgpu_def(info->size.height, 1);
+    def.size.depth = _vgpu_def(info->size.depth, 1);
+    def.miplevels = _vgpu_def(info->miplevels, 1);
+    def.sample_count = _vgpu_def(info->sample_count, 1u);
     return def;
 }
 
 
-GPUTexture gpuDeviceCreateTexture(GPUDevice device, const GPUTextureDescriptor* descriptor) {
+agpu_texture agpu_create_texture(GPUDevice device, const agpu_texture_info* info) {
     VGPU_ASSERT(device);
-    VGPU_ASSERT(descriptor);
+    VGPU_ASSERT(info);
 
-    GPUTextureDescriptor desc_def = TextureDescriptor_Default(descriptor);
-    return device->createTexture(device->renderer, &desc_def);
+    agpu_texture_info info_def = texture_info_default(info);
+    return device->createTexture(device->renderer, &info_def);
 }
 
-void gpuDeviceDestroyTexture(GPUDevice device, GPUTexture texture) {
+void agpu_destroy_texture(GPUDevice device, agpu_texture texture) {
     VGPU_ASSERT(device);
-    VGPU_ASSERT(texture);
+    VGPU_ASSERT(texture.id != AGPU_INVALID_ID);
     device->destroyTexture(device->renderer, texture);
 }
 

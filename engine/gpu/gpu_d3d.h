@@ -126,10 +126,10 @@ static DXGI_FORMAT d3d_GetTypelessFormat(GPUTextureFormat format)
     }
 }
 
-static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, GPUTextureUsageFlags usage)
+static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, agpu_texture_usage_flags usage)
 {
     if (gpuIsDepthFormat(format) &&
-        (usage & GPUTextureUsage_Sampled | GPUTextureUsage_Storage) != GPUTextureUsage_None)
+        (usage & AGPU_TEXTURE_USAGE_SAMPLED | AGPU_TEXTURE_USAGE_STORAGE) != 0)
     {
         return d3d_GetTypelessFormat(format);
     }
@@ -228,22 +228,6 @@ static DXGI_FORMAT d3d_GetVertexFormat(GPUVertexFormat format) {
 
     default:
         _VGPU_UNREACHABLE();
-    }
-}
-
-static UINT d3d_GetSyncInterval(GPUPresentMode mode)
-{
-    switch (mode)
-    {
-    case GPUPresentMode_Immediate:
-        return 0;
-
-    case GPUPresentMode_Mailbox:
-        return 2;
-
-    case GPUPresentMode_Fifo:
-    default:
-        return 1;
     }
 }
 

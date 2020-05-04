@@ -96,6 +96,7 @@ extern void __cdecl __debugbreak(void);
 #define GPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
 #ifdef __cplusplus
+#include <new>
 template <typename T, uint32_t MAX_COUNT>
 struct Pool
 {
@@ -103,7 +104,7 @@ struct Pool
     {
         values = (T*)mem;
         for (int i = 0; i < MAX_COUNT; ++i) {
-            new (NewPlaceholder(), &values[i]) int(i + 1);
+            new (&values[i]) int(i + 1);
         }
         new (&values[MAX_COUNT - 1]) int(-1);
         first_free = 0;
@@ -126,6 +127,7 @@ struct Pool
         first_free = idx;
     }
 
+
     alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
     T* values;
     int first_free;
@@ -136,47 +138,26 @@ struct Pool
 #endif
 
 typedef struct gpu_renderer gpu_renderer;
-typedef struct gpu_backend_surface gpu_backend_surface;
-typedef struct GPUBackendSwapChain GPUBackendSwapChain;
-
-typedef struct GPUSurfaceImpl {
-    uint64_t surface;
-#if defined(GPU_D3D12_BACKEND)
-    gpu_backend_surface* d3d12;
-#endif
-
-#if defined(GPU_D3D11_BACKEND) && TODO
-    gpu_backend_surface* d3d11;
-#endif
-} GPUSurfaceImpl;
-
-typedef struct GPUSwapChainImpl {
-    /* Opaque pointer for the backend. */
-    GPUBackendSwapChain* backend;
-
-    GPUTextureView(*getCurrentTextureView)(GPUBackendSwapChain* backend);
-    void (*present)(GPUBackendSwapChain* backend);
-} GPUSwapChainImpl;
 
 typedef struct GPUDeviceImpl {
     /* Opaque pointer for the renderer. */
     gpu_renderer* renderer;
 
     void (*destroyDevice)(GPUDevice device);
-    void (*waitIdle)(gpu_renderer* driverData);
+
+    void (*beginFrame)(gpu_renderer* driverData);
+    void (*presentFrame)(gpu_renderer* driverData);
+    void (*waitForGPU)(gpu_renderer* driverData);
 
     GPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
 
-    GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driverData, GPUSurface surface);
+    //GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driverData, GPUSurface surface);
     GPUTextureFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
     GPUTextureFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
 
-    GPUSwapChain(*createSwapChain)(gpu_renderer* driverData, GPUSurface surface, const GPUSwapChainDescriptor* desc);
-    void (*destroySwapChain)(gpu_renderer* driverData, GPUSwapChain handle);
-
     /* Texture */
-    GPUTexture(*createTexture)(gpu_renderer* driverData, const GPUTextureDescriptor* desc);
-    void (*destroyTexture)(gpu_renderer* driverData, GPUTexture handle);
+    agpu_texture(*createTexture)(gpu_renderer* driverData, const agpu_texture_info* info);
+    void (*destroyTexture)(gpu_renderer* driverData, agpu_texture handle);
 
 
 #if TODO
@@ -216,15 +197,11 @@ typedef struct GPUDeviceImpl {
 
 typedef struct gpu_driver {
     bool (*supported)(void);
-    bool (*init)(const GPUInitConfig* config);
-    void (*shutdown)(void);
-
-    gpu_backend_surface* (*create_surface_from_windows_hwnd)(void* hinstance, void* hwnd);
-    GPUDevice(*createDevice)(const GPUDeviceDescriptor* desc);
+    GPUDevice(*create_device)(const agpu_device_info* info);
 } gpu_driver;
 
 
-#if defined(GPU_D3D11_BACKEND) && TODO
+#if defined(GPU_D3D11_BACKEND)
 extern gpu_driver d3d11_driver;
 #endif
 
@@ -241,12 +218,11 @@ extern gpu_renderer* vk_gpu_create_renderer(void);
 #define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(destroyDevice, name)\
-ASSIGN_DRIVER_FUNC(waitIdle, name)\
+ASSIGN_DRIVER_FUNC(beginFrame, name)\
+ASSIGN_DRIVER_FUNC(presentFrame, name)\
+ASSIGN_DRIVER_FUNC(waitForGPU, name)\
 ASSIGN_DRIVER_FUNC(query_caps, name)\
-ASSIGN_DRIVER_FUNC(getPreferredSwapChainFormat, name)\
 ASSIGN_DRIVER_FUNC(getDefaultDepthFormat, name)\
 ASSIGN_DRIVER_FUNC(getDefaultDepthStencilFormat, name)\
-ASSIGN_DRIVER_FUNC(createSwapChain, name)\
-ASSIGN_DRIVER_FUNC(destroySwapChain, name)\
 ASSIGN_DRIVER_FUNC(createTexture, name)\
 ASSIGN_DRIVER_FUNC(destroyTexture, name)
