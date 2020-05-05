@@ -48,7 +48,7 @@ namespace alimer
 
         gameSystems.clear();
         agpu_wait_gpu(gpuDevice);
-        agpu_destroy_device(gpuDevice);
+        agpuDeviceDestroy(gpuDevice);
         window_destroy(main_window);
         os_shutdown();
     }
@@ -64,17 +64,17 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE);
             window_set_centered(main_window);
 
-            agpu_swapchain_info swapchain = {};
-            swapchain.native_handle = window_handle(main_window);
+            AGPUSwapChainDescriptor swapchain = {};
+            swapchain.nativeHandle = window_handle(main_window);
 
             agpu_device_info device_info = {};
-            device_info.preferred_backend = AGPU_BACKEND_TYPE_D3D11;
+            device_info.preferredBackend = AGPUBackendType_D3D11;
             device_info.flags = AGPU_DEVICE_FLAGS_VSYNC;
 
 #ifdef _DEBUG
-            device_info.flags = AGPU_DEVICE_FLAGS_DEBUG;
+            device_info.flags |= AGPU_DEVICE_FLAGS_DEBUG;
 #endif
-            device_info.swapchain_info = &swapchain;
+            device_info.swapchain = &swapchain;
 
             gpuDevice = agpuCreateDevice(&device_info);
             if (!gpuDevice) {

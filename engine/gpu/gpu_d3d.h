@@ -30,10 +30,10 @@
 #endif
 
 #define VHR(hr) if (FAILED(hr)) { VGPU_ASSERT(0); }
-#define SAFE_RELEASE(obj) if ((obj)) { (obj)->lpVtbl->Release(obj); (obj) = NULL; }
+#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 static DXGI_FORMAT d3d_GetFormat(AGPUPixelFormat format) {
-    static DXGI_FORMAT formats[_GPUTextureFormat_Count] = {
+    static DXGI_FORMAT formats[AGPUPixelFormat_Count] = {
         DXGI_FORMAT_UNKNOWN,
         // 8-bit pixel formats
         DXGI_FORMAT_R8_UNORM,
@@ -119,13 +119,13 @@ static DXGI_FORMAT d3d_GetTypelessFormat(AGPUPixelFormat format)
 {
     switch (format)
     {
-    case GPU_TEXTURE_FORMAT_DEPTH16_UNORM:
+    case AGPUPixelFormat_Depth16Unorm:
         return DXGI_FORMAT_R16_TYPELESS;
-    case GPU_TEXTURE_FORMAT_DEPTH32_FLOAT:
+    case AGPUPixelFormat_Depth32Float:
         return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-    case GPU_TEXTURE_FORMAT_DEPTH24_PLUS:
+    case AGPUPixelFormat_Depth24Plus:
         return DXGI_FORMAT_R24G8_TYPELESS;
-    case GPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8:
+    case AGPUPixelFormat_Depth24PlusStencil8:
         return DXGI_FORMAT_R32_TYPELESS;
     default:
         VGPU_ASSERT(!agpuIsDepthFormat(format));
@@ -147,19 +147,19 @@ static DXGI_FORMAT d3d_GetTextureFormat(AGPUPixelFormat format, AGPUTextureUsage
 static DXGI_FORMAT d3d_GetSwapChainFormat(AGPUPixelFormat format) {
     switch (format)
     {
-    case GPU_TEXTURE_FORMAT_UNDEFINED:
-    case GPUTextureFormat_BGRA8Unorm:
-    case GPUTextureFormat_BGRA8UnormSrgb:
+    case AGPUPixelFormat_Undefined:
+    case AGPUPixelFormat_BGRA8Unorm:
+    case AGPUPixelFormat_BGRA8UnormSrgb:
         return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    case GPUTextureFormat_RGBA8Unorm:
-    case GPUTextureFormat_RGBA8UnormSrgb:
+    case AGPUPixelFormat_RGBA8Unorm:
+    case AGPUPixelFormat_RGBA8UnormSrgb:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    case GPU_TEXTURE_FORMAT_RGBA16_FLOAT:
+    case AGPUPixelFormat_RGBA16Float:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-    case GPU_TEXTURE_FORMAT_RGB10A2_UNORM:
+    case AGPUPixelFormat_RGB10A2Unorm:
         return DXGI_FORMAT_R10G10B10A2_UNORM;
 
     default:
@@ -257,42 +257,31 @@ static D3D_PRIMITIVE_TOPOLOGY d3d_GetPrimitiveTopology(AGPUPrimitiveTopology top
     }
 }
 
-/* DXGI guids */
-static const GUID agpu_IID_IDXGIAdapter1 = { 0x29038f61, 0x3839, 0x4626, {0x91,0xfd,0x08,0x68,0x79,0x01,0x1a,0x05} };
-static const GUID agpu_IID_IDXGIFactory2 = { 0x50c83a1c, 0xe072, 0x4c48, {0x87,0xb0,0x36,0x30,0xfa,0x36,0xa6,0xd0} };
-static const GUID agpu_IID_IDXGIFactory4 = { 0x1bc6ea02, 0xef36, 0x464f, {0xbf,0x0c,0x21,0xca,0x39,0xe5,0x16,0x8a} };
-static const GUID agpu_IID_IDXGIFactory5 = { 0x7632e1f5, 0xee65, 0x4dca, {0x87,0xfd,0x84,0xcd,0x75,0xf8,0x83,0x8d} };
-static const GUID agpu_IID_IDXGIFactory6 = { 0xc1b6694f, 0xff09, 0x44a9, {0xb0,0x3c,0x77,0x90,0x0a,0x0a,0x1d,0x17} };
-static const GUID agpu_IID_IDXGIDevice3 = { 0x6007896c, 0x3244, 0x4afd, {0xbf, 0x18, 0xa6, 0xd3, 0xbe, 0xda, 0x50, 0x23 } };
+typedef enum AGPUFactoryCaps {
+    AGPU_FACTORY_FLIP_PRESENT = (1 << 0),
+    AGPU_FACTORY_TEARING = (1 << 1),
+} AGPUFactoryCaps;
 
 static inline IDXGISwapChain1* agpu_d3d_createSwapChain(
     IDXGIFactory2* dxgiFactory,
     IUnknown* deviceOrCommandQueue,
     uint32_t backBufferCount,
-    const agpu_swapchain_info* info)
+    uint32_t caps,
+    const AGPUSwapChainDescriptor* info)
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HWND window = (HWND)info->native_handle;
+    HWND window = (HWND)info->nativeHandle;
     if (!IsWindow(window)) {
-        agpuLog(GPULogLevel_Error, "Invalid HWND handle");
-        return nullptr;
+        agpuLog(AGPULogLevel_Error, "Invalid HWND handle");
+        return NULL;
     }
 #else
-    IUnknown* window = (IUnknown*)info->native_handle;
+    IUnknown* window = (IUnknown*)info->nativeHandle;
 #endif
 
     UINT flags = 0;
 
-    BOOL allowTearing = FALSE;
-    IDXGIFactory5* factory5;
-    HRESULT hr = IDXGIFactory2_QueryInterface(dxgiFactory, &agpu_IID_IDXGIFactory5, (void**)&factory5);
-    if (SUCCEEDED(hr))
-    {
-        hr = IDXGIFactory5_CheckFeatureSupport(factory5, DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
-        IDXGIFactory5_Release(factory5);
-    }
-
-    if (SUCCEEDED(hr) && allowTearing)
+    if (caps & AGPU_FACTORY_TEARING)
     {
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
@@ -302,19 +291,7 @@ static inline IDXGISwapChain1* agpu_d3d_createSwapChain(
     DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
     DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-    // Disable FLIP if not on a supporting OS
-    bool flip_present_supported = true;
-    {
-        IDXGIFactory4* factory4;
-        HRESULT hr = IDXGIFactory2_QueryInterface(dxgiFactory, &agpu_IID_IDXGIFactory4, (void**)&factory4);
-        if (FAILED(hr))
-        {
-            flip_present_supported = false;
-        }
-        IDXGIFactory4_Release(factory4);
-    }
-
-    if (!flip_present_supported)
+    if (!(caps & AGPU_FACTORY_FLIP_PRESENT))
     {
         swapEffect = DXGI_SWAP_EFFECT_DISCARD;
     }
@@ -323,30 +300,26 @@ static inline IDXGISwapChain1* agpu_d3d_createSwapChain(
     DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 #endif
 
-    const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
-        .Width = info->width,
-        .Height = info->height,
-        .Format = dxgiFormat,
-        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        .BufferCount = backBufferCount,
-        .SampleDesc = {
-            .Count = 1,
-            .Quality = 0
-        },
-        .AlphaMode = scaling,
-        .SwapEffect = swapEffect,
-        .Flags = flags
-    };
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.Width = info->width;
+    swapChainDesc.Height = info->height;
+    swapChainDesc.Format = dxgiFormat;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = backBufferCount;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.Scaling = scaling;
+    swapChainDesc.SwapEffect = swapEffect;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+    swapChainDesc.Flags = flags;
 
     IDXGISwapChain1* result = NULL;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    const DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {
-        .Windowed = TRUE
-    };
+    DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+    fsSwapChainDesc.Windowed = TRUE;
 
     // Create a SwapChain from a Win32 window.
-    VHR(IDXGIFactory2_CreateSwapChainForHwnd(
-        dxgiFactory,
+    VHR(dxgiFactory->CreateSwapChainForHwnd(
         deviceOrCommandQueue,
         window,
         &swapChainDesc,
@@ -356,10 +329,9 @@ static inline IDXGISwapChain1* agpu_d3d_createSwapChain(
     ));
 
     // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-    VHR(IDXGIFactory2_MakeWindowAssociation(dxgiFactory, window, DXGI_MWA_NO_ALT_ENTER));
+    VHR(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
-    VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
-        dxgiFactory,
+    VHR(dxgiFactory->CreateSwapChainForCoreWindow(
         deviceOrCommandQueue,
         window,
         &swapChainDesc,

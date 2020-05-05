@@ -32,10 +32,6 @@
 #   include <alloca.h>
 #endif
 
-#ifndef __cplusplus
-#  define nullptr ((void*)0)
-#endif
-
 #ifndef VGPU_ASSERT
 #   include <assert.h>
 #   define VGPU_ASSERT(c) assert(c)
@@ -127,7 +123,6 @@ struct Pool
         first_free = idx;
     }
 
-
     alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
     T* values;
     int first_free;
@@ -149,25 +144,20 @@ typedef struct GPUDeviceImpl {
     void (*presentFrame)(gpu_renderer* driverData);
     void (*waitForGPU)(gpu_renderer* driverData);
 
-    GPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
+    AGPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
 
-    //GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driverData, GPUSurface surface);
     AGPUPixelFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
     AGPUPixelFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
 
     /* Texture */
-    AGPUTexture(*createTexture)(gpu_renderer* driverData, const AGPUTextureDescriptor* descriptor);
-    void (*destroyTexture)(gpu_renderer* driverData, AGPUTexture handle);
+    TextureHandle(*createTexture)(gpu_renderer* driverData, const AGPUTextureDescriptor* descriptor);
+    void (*destroyTexture)(gpu_renderer* driverData, TextureHandle handle);
 
+    /* Buffer */
+    BufferHandle(*createBuffer)(gpu_renderer* driverData, const AGPUBufferDescriptor* desc);
+    void (*destroyBuffer)(gpu_renderer* driverData, BufferHandle handle);
 
 #if TODO
-    /* Buffer */
-    vgpu_buffer(*create_buffer)(VGPURenderer* driverData, const vgpu_buffer_desc* desc);
-    void (*destroy_buffer)(VGPURenderer* driverData, vgpu_buffer handle);
-
-
-    vgpu_texture_desc(*query_texture_desc)(vgpu_texture handle);
-
     /* Sampler */
     vgpu_sampler(*samplerCreate)(VGPURenderer* driver_data, const vgpu_sampler_desc* desc);
     void (*samplerDestroy)(VGPURenderer* driver_data, vgpu_sampler handle);
@@ -225,4 +215,6 @@ ASSIGN_DRIVER_FUNC(query_caps, name)\
 ASSIGN_DRIVER_FUNC(getDefaultDepthFormat, name)\
 ASSIGN_DRIVER_FUNC(getDefaultDepthStencilFormat, name)\
 ASSIGN_DRIVER_FUNC(createTexture, name)\
-ASSIGN_DRIVER_FUNC(destroyTexture, name)
+ASSIGN_DRIVER_FUNC(destroyTexture, name)\
+ASSIGN_DRIVER_FUNC(createBuffer, name)\
+ASSIGN_DRIVER_FUNC(destroyBuffer, name)
