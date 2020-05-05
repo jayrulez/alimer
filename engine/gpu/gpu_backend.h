@@ -152,12 +152,12 @@ typedef struct GPUDeviceImpl {
     GPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
 
     //GPUTextureFormat(*getPreferredSwapChainFormat)(gpu_renderer* driverData, GPUSurface surface);
-    GPUTextureFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
-    GPUTextureFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
+    AGPUPixelFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
+    AGPUPixelFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
 
     /* Texture */
-    agpu_texture(*createTexture)(gpu_renderer* driverData, const agpu_texture_info* info);
-    void (*destroyTexture)(gpu_renderer* driverData, agpu_texture handle);
+    AGPUTexture(*createTexture)(gpu_renderer* driverData, const AGPUTextureDescriptor* descriptor);
+    void (*destroyTexture)(gpu_renderer* driverData, AGPUTexture handle);
 
 
 #if TODO
@@ -205,7 +205,7 @@ typedef struct gpu_driver {
 extern gpu_driver d3d11_driver;
 #endif
 
-#if defined(GPU_D3D12_BACKEND)
+#if defined(GPU_D3D12_BACKEND) && defined(TODO_D3D12)
 extern gpu_driver d3d12_driver;
 #endif
 

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(GPU_D3D12_BACKEND)
+#if defined(GPU_D3D12_BACKEND) && defined(TODO_D3D12)
 
 #include "gpu_backend.h"
 
@@ -299,7 +299,7 @@ static void d3d12_createSwapChain(GPURendererD3D12* renderer, agpu_swapchain_d3d
         ID3D12Resource* backBuffer = NULL;
         VHR(swapchain->handle->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-        agpu_texture_info texture_info = {};
+        AGPUTextureDescriptor texture_info = {};
         texture_info.format = info->color_format;
         texture_info.size.width = info->width;
         texture_info.size.height = info->height;
@@ -307,7 +307,7 @@ static void d3d12_createSwapChain(GPURendererD3D12* renderer, agpu_swapchain_d3d
         texture_info.miplevels = 1;
         texture_info.external_handle = backBuffer;
 
-        swapchain->backbufferTextures[i] = agpu_create_texture(renderer->gpuDevice, &texture_info);
+        swapchain->backbufferTextures[i] = agpuDeviceCreateTexture(renderer->gpuDevice, &texture_info);
         backBuffer->Release();
     }
 
@@ -325,7 +325,7 @@ static void _agpu_d3d12_destroy_swapchain(GPURendererD3D12* renderer, agpu_swapc
 }
 
 /* Texture */
-static agpu_texture d3d12_createTexture(gpu_renderer* driverData, const agpu_texture_info* info)
+static agpu_texture d3d12_createTexture(gpu_renderer* driverData, const AGPUTextureDescriptor* info)
 {
     GPURendererD3D12* renderer = (GPURendererD3D12*)driverData;
 
@@ -419,7 +419,7 @@ static void d3d12_destroyDevice(GPUDevice device)
 #if !defined(NDEBUG)
     if (ref_count > 0)
     {
-        gpuLog(GPULogLevel_Error, "Direct3D12: There are %d unreleased references left on the device", ref_count);
+        agpuLog(GPULogLevel_Error, "Direct3D12: There are %d unreleased references left on the device", ref_count);
 
         ID3D12DebugDevice* d3d_debug = nullptr;
         if (SUCCEEDED(renderer->device->QueryInterface(IID_PPV_ARGS(&d3d_debug))))
@@ -909,7 +909,4 @@ gpu_driver d3d12_driver = {
     d3d12_createDevice
 };
 
-#undef VHR
-#undef SAFE_RELEASE
-
-#endif /* defined(GPU_D3D11_BACKEND) */
+#endif /* defined(GPU_D3D12_BACKEND) */

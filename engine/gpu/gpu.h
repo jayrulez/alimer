@@ -44,10 +44,12 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+typedef uint32_t AGPUFlags;
+
 typedef struct GPUDeviceImpl* GPUDevice;
-typedef struct agpu_buffer { uint32_t id; } agpu_buffer;
-typedef struct agpu_texture { uint32_t id; } agpu_texture;
-typedef struct GPUTextureViewImpl* GPUTextureView;
+typedef struct AGPUBufferImpl* AGPUBuffer;
+typedef struct AGPUTextureImpl* AGPUTexture;
+typedef struct AGPUTextureViewImpl* AGPUTextureView;
 typedef struct GPUSamplerImpl* GPUSampler;
 typedef struct VGPURenderPassImpl* VGPURenderPass;
 typedef struct vgpu_shader_t* vgpu_shader;
@@ -86,7 +88,7 @@ typedef enum agpu_backend_type {
 } agpu_backend_type;
 
 /// Defines pixel format.
-typedef enum GPUTextureFormat {
+typedef enum AGPUPixelFormat {
     GPU_TEXTURE_FORMAT_UNDEFINED = 0,
     // 8-bit pixel formats
     GPU_TEXTURE_FORMAT_R8_UNORM,
@@ -160,43 +162,43 @@ typedef enum GPUTextureFormat {
 
     _GPUTextureFormat_Count,
     _GPUTextureFormat_Force32 = 0x7FFFFFFF
-} GPUTextureFormat;
+} AGPUPixelFormat;
 
 /// Defines pixel format type.
-typedef enum vgpu_pixel_format_type {
+typedef enum AGPUPixelFormatType {
     /// Unknown format Type
-    VGPU_PIXEL_FORMAT_TYPE_UNKNOWN = 0,
+    AGPUPixelFormatType_Unknown = 0,
     /// floating-point formats.
-    VGPU_PIXEL_FORMAT_TYPE_FLOAT,
+    AGPUPixelFormatType_Float,
     /// Unsigned normalized formats.
-    VGPU_PIXEL_FORMAT_TYPE_UNORM,
+    AGPUPixelFormatType_Unorm,
     /// Unsigned normalized SRGB formats
-    VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB,
+    AGPUPixelFormatType_UnormSrgb,
     /// Signed normalized formats.
-    VGPU_PIXEL_FORMAT_TYPE_SNORM,
+    AGPUPixelFormatType_Snorm,
     /// Unsigned integer formats.
-    VGPU_PIXEL_FORMAT_TYPE_UINT,
+    AGPUPixelFormatType_Uint,
     /// Signed integer formats.
-    VGPU_PIXEL_FORMAT_TYPE_SINT,
+    AGPUPixelFormatType_Sint,
 
-    VGPU_PIXEL_FORMAT_TYPE_FORCE_U32 = 0x7FFFFFFF
-} vgpu_pixel_format_type;
+    AGPUPixelFormatType_Force32 = 0x7FFFFFFF
+} AGPUPixelFormatType;
 
-typedef enum agpu_texture_type {
-    AGPU_TEXTURE_TYPE_2D = 0,
-    AGPU_TEXTURE_TYPE_3D,
-    AGPU_TEXTURE_TYPE_CUBE,
-    _AGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
-} agpu_texture_type;
+typedef enum AGPUTextureType {
+    AGPUTextureType_2D = 0,
+    AGPUTextureType_3D,
+    AGPUTextureType_Cube,
+    AGPUTextureType_Force32 = 0x7FFFFFFF
+} AGPUTextureType;
 
-typedef enum agpu_texture_usage {
-    AGPU_TEXTURE_USAGE_NONE = 0,
-    AGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
-    AGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
-    AGPU_TEXTURE_USAGE_OUTPUT_ATTACHMENT = (1 << 2),
-    _AGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
-} agpu_texture_usage;
-typedef uint32_t agpu_texture_usage_flags;
+typedef enum AGPUTextureUsage {
+    AGPUTextureUsage_None = 0,
+    AGPUTextureUsage_Sampled = (1 << 0),
+    AGPUTextureUsage_Storage = (1 << 1),
+    AGPUTextureUsage_OutputAttachment = (1 << 2),
+    AGPUTextureUsage_Force32 = 0x7FFFFFFF
+} AGPUTextureUsage;
+typedef AGPUFlags AGPUTextureUsageFlags;
 
 typedef enum gpu_buffer_usage {
     GPU_BUFFER_USAGE_NONE = 0,
@@ -222,40 +224,40 @@ typedef enum vgpu_shader_stage {
 } vgpu_shader_stage;
 typedef uint32_t vgpu_shader_stage_flags;
 
-typedef enum GPUVertexFormat {
-    GPUVertexFormat_Invalid = 0,
-    GPUVertexFormat_UChar2,
-    GPUVertexFormat_UChar4,
-    GPUVertexFormat_Char2,
-    GPUVertexFormat_Char4,
-    GPUVertexFormat_UChar2Norm,
-    GPUVertexFormat_UChar4Norm,
-    GPUVertexFormat_Char2Norm,
-    GPUVertexFormat_Char4Norm,
-    GPUVertexFormat_UShort2,
-    GPUVertexFormat_UShort4,
-    GPUVertexFormat_Short2,
-    GPUVertexFormat_Short4,
-    GPUVertexFormat_UShort2Norm,
-    GPUVertexFormat_UShort4Norm,
-    GPUVertexFormat_Short2Norm,
-    GPUVertexFormat_Short4Norm,
-    GPUVertexFormat_Half2,
-    GPUVertexFormat_Half4,
-    GPUVertexFormat_Float,
-    GPUVertexFormat_Float2,
-    GPUVertexFormat_Float3,
-    GPUVertexFormat_Float4,
-    GPUVertexFormat_UInt,
-    GPUVertexFormat_UInt2,
-    GPUVertexFormat_UInt3,
-    GPUVertexFormat_UInt4,
-    GPUVertexFormat_Int,
-    GPUVertexFormat_Int2,
-    GPUVertexFormat_Int3,
-    GPUVertexFormat_Int4,
-    _GPUVertexFormat_Force32 = 0x7FFFFFFF
-} GPUVertexFormat;
+typedef enum AGPUVertexFormat {
+    AGPUVertexFormat_Invalid = 0,
+    AGPUVertexFormat_UChar2,
+    AGPUVertexFormat_UChar4,
+    AGPUVertexFormat_Char2,
+    AGPUVertexFormat_Char4,
+    AGPUVertexFormat_UChar2Norm,
+    AGPUVertexFormat_UChar4Norm,
+    AGPUVertexFormat_Char2Norm,
+    AGPUVertexFormat_Char4Norm,
+    AGPUVertexFormat_UShort2,
+    AGPUVertexFormat_UShort4,
+    AGPUVertexFormat_Short2,
+    AGPUVertexFormat_Short4,
+    AGPUVertexFormat_UShort2Norm,
+    AGPUVertexFormat_UShort4Norm,
+    AGPUVertexFormat_Short2Norm,
+    AGPUVertexFormat_Short4Norm,
+    AGPUVertexFormat_Half2,
+    AGPUVertexFormat_Half4,
+    AGPUVertexFormat_Float,
+    AGPUVertexFormat_Float2,
+    AGPUVertexFormat_Float3,
+    AGPUVertexFormat_Float4,
+    AGPUVertexFormat_UInt,
+    AGPUVertexFormat_UInt2,
+    AGPUVertexFormat_UInt3,
+    AGPUVertexFormat_UInt4,
+    AGPUVertexFormat_Int,
+    AGPUVertexFormat_Int2,
+    AGPUVertexFormat_Int3,
+    AGPUVertexFormat_Int4,
+    AGPUVertexFormat_Force32 = 0x7FFFFFFF
+} AGPUVertexFormat;
 
 typedef enum GPUInputStepMode {
     GPUInputStepMode_Vertex = 0,
@@ -263,20 +265,20 @@ typedef enum GPUInputStepMode {
     _GPUInputStepMode_Force32 = 0x7FFFFFFF
 } GPUInputStepMode;
 
-typedef enum GPUPrimitiveTopology {
-    GPUPrimitiveTopology_PointList = 0x00000000,
-    GPUPrimitiveTopology_LineList = 0x00000001,
-    GPUPrimitiveTopology_LineStrip = 0x00000002,
-    GPUPrimitiveTopology_TriangleList = 0x00000003,
-    GPUPrimitiveTopology_TriangleStrip = 0x00000004,
-    GPUPrimitiveTopology_Force32 = 0x7FFFFFFF
-} GPUPrimitiveTopology;
+typedef enum AGPUPrimitiveTopology {
+    AGPUPrimitiveTopology_PointList = 0x00000000,
+    AGPUPrimitiveTopology_LineList = 0x00000001,
+    AGPUPrimitiveTopology_LineStrip = 0x00000002,
+    AGPUPrimitiveTopology_TriangleList = 0x00000003,
+    AGPUPrimitiveTopology_TriangleStrip = 0x00000004,
+    AGPUPrimitiveTopology_Force32 = 0x7FFFFFFF
+} AGPUPrimitiveTopology;
 
-typedef enum GPUIndexFormat {
-    GPUIndexFormat_Uint16 = 0,
-    GPUIndexFormat_Uint32 = 1,
-    _GPUIndexFormat_Force32 = 0x7FFFFFFF
-} GPUIndexFormat;
+typedef enum AGPUIndexFormat {
+    AGPUIndexFormat_Uint16 = 0,
+    AGPUIndexFormat_Uint32 = 1,
+    AGPUIndexFormat_Force32 = 0x7FFFFFFF
+} AGPUIndexFormat;
 
 typedef enum GPUCompareFunction {
     GPUCompareFunction_Undefined = 0,
@@ -454,19 +456,19 @@ typedef struct vgpu_buffer_desc {
     const char* label;
 } vgpu_buffer_desc;
 
-typedef struct agpu_texture_info {
-    agpu_texture_type type;
-    GPUTextureFormat format;
-    agpu_texture_usage_flags usage;
+typedef struct AGPUTextureDescriptor {
+    AGPUTextureType type;
+    AGPUPixelFormat format;
+    AGPUTextureUsageFlags usage;
     GPUExtent3D size;
-    uint32_t miplevels;
-    uint32_t sample_count;
-    const void* external_handle; /* Pointer to external texture handle */
+    uint32_t mipLevelCount;
+    uint32_t sampleCount;
+    const void* externalHandle; /* Pointer to external texture handle */
     const char* label;
-} agpu_texture_info;
+} AGPUTextureDescriptor;
 
 typedef struct {
-    agpu_texture texture;
+    AGPUTexture texture;
     uint32_t mip_level;
     uint32_t slice;
     vgpu_load_action load_action;
@@ -475,7 +477,7 @@ typedef struct {
 } vgpu_color_attachment;
 
 typedef struct vgpu_depth_stencil_attachment {
-    agpu_texture        texture;
+    AGPUTexture        texture;
     vgpu_load_action    depth_load_action;
     vgpu_store_action   depth_store_action;
     float               clear_depth;
@@ -495,9 +497,9 @@ typedef struct GPUVertexBufferLayoutDescriptor {
 } GPUVertexBufferLayoutDescriptor;
 
 typedef struct VgpuVertexAttributeDescriptor {
-    GPUVertexFormat   format;
-    uint32_t            offset;
-    uint32_t            buffer_index;
+    AGPUVertexFormat format;
+    uint32_t offset;
+    uint32_t bufferIndex;
 } VgpuVertexAttributeDescriptor;
 
 typedef struct VgpuVertexDescriptor {
@@ -520,7 +522,7 @@ typedef struct vgpu_shader_desc {
 typedef struct vgpu_render_pipeline_desc {
     vgpu_shader                 shader;
     VgpuVertexDescriptor        vertexDescriptor;
-    GPUPrimitiveTopology        primitiveTopology;
+    AGPUPrimitiveTopology primitiveTopology;
 } vgpu_render_pipeline_desc;
 
 typedef struct VgpuComputePipelineDescriptor {
@@ -528,7 +530,7 @@ typedef struct VgpuComputePipelineDescriptor {
     //VgpuShader                  shader;
 } VgpuComputePipelineDescriptor;
 
-typedef struct GPUSamplerDescriptor {
+typedef struct AGPUSamplerDescriptor {
     GPUAddressMode addressModeU;
     GPUAddressMode addressModeV;
     GPUAddressMode addressModeW;
@@ -541,14 +543,14 @@ typedef struct GPUSamplerDescriptor {
     uint32_t maxAnisotropy;
     GPUBorderColor borderColor;
     const char* label;
-} GPUSamplerDescriptor;
+} AGPUSamplerDescriptor;
 
 typedef struct agpu_swapchain_info {
     uintptr_t native_handle;
 
-    GPUTextureFormat        color_format; 
-    uint32_t                width;
-    uint32_t                height;
+    AGPUPixelFormat colorFormat;
+    uint32_t width;
+    uint32_t height;
 } agpu_swapchain_info;
 
 typedef struct agpu_device_info {
@@ -563,27 +565,27 @@ extern "C"
 {
 #endif
     /* Log functions */
-    VGPU_EXPORT void gpuSetLogLevel(GPULogLevel level);
-    VGPU_EXPORT void gpuSetLogCallback(GPULogCallback callback, void* userData);
-    VGPU_EXPORT void gpuLog(GPULogLevel level, const char* format, ...);
+    VGPU_EXPORT void agpuSetLogLevel(GPULogLevel level);
+    VGPU_EXPORT void agpuSetLogCallback(GPULogCallback callback, void* userData);
+    VGPU_EXPORT void agpuLog(GPULogLevel level, const char* format, ...);
 
     /* Backend functions */
     VGPU_EXPORT agpu_backend_type gpu_get_default_platform_backend(void);
     VGPU_EXPORT bool gpu_is_backend_supported(agpu_backend_type backend);
 
     /* Device functions */
-    VGPU_EXPORT GPUDevice gpuDeviceCreate(const agpu_device_info* info);
+    VGPU_EXPORT GPUDevice agpuCreateDevice(const agpu_device_info* info);
     VGPU_EXPORT void agpu_destroy_device(GPUDevice device);
     VGPU_EXPORT void agpu_frame_begin(GPUDevice device);
     VGPU_EXPORT void agpu_frame_end(GPUDevice device);
     VGPU_EXPORT void agpu_wait_gpu(GPUDevice device);
     VGPU_EXPORT agpu_backend_type gpu_query_backend(GPUDevice device);
     VGPU_EXPORT GPUDeviceCapabilities gpu_query_caps(GPUDevice device);
-    VGPU_EXPORT GPUTextureFormat gpuGetDefaultDepthFormat(GPUDevice device);
-    VGPU_EXPORT GPUTextureFormat gpuGetDefaultDepthStencilFormat(GPUDevice device);
+    VGPU_EXPORT AGPUPixelFormat gpuGetDefaultDepthFormat(GPUDevice device);
+    VGPU_EXPORT AGPUPixelFormat gpuGetDefaultDepthStencilFormat(GPUDevice device);
 
-    VGPU_EXPORT agpu_texture agpu_create_texture(GPUDevice device, const agpu_texture_info* info);
-    VGPU_EXPORT void agpu_destroy_texture(GPUDevice device, agpu_texture texture);
+    VGPU_EXPORT AGPUTexture agpuDeviceCreateTexture(GPUDevice device, const AGPUTextureDescriptor* descriptor);
+    VGPU_EXPORT void agpuDeviceDestroyTexture(GPUDevice device, AGPUTexture texture);
 
 #if TODO
     //VGPU_EXPORT VGPURenderPass vgpu_get_default_render_pass(void);
@@ -642,26 +644,27 @@ extern "C"
 
     /* Helper methods */
     /// Get the number of bits per format
-    VGPU_EXPORT uint32_t vgpu_get_format_bits_per_pixel(GPUTextureFormat format);
-    VGPU_EXPORT uint32_t vgpu_get_format_block_size(GPUTextureFormat format);
+    VGPU_EXPORT uint32_t agpuGetFormatBitsPerPixel(AGPUPixelFormat format);
+    VGPU_EXPORT uint32_t agpuGetFormatBlockSize(AGPUPixelFormat format);
 
     /// Get the format compression ration along the x-axis.
-    VGPU_EXPORT uint32_t vgpuGetFormatBlockWidth(GPUTextureFormat format);
+    VGPU_EXPORT uint32_t agpuGetFormatBlockWidth(AGPUPixelFormat format);
     /// Get the format compression ration along the y-axis.
-    VGPU_EXPORT uint32_t vgpuGetFormatBlockHeight(GPUTextureFormat format);
+    VGPU_EXPORT uint32_t agpuGetFormatBlockHeight(AGPUPixelFormat format);
     /// Get the format Type.
-    VGPU_EXPORT vgpu_pixel_format_type vgpu_get_format_type(GPUTextureFormat format);
+    VGPU_EXPORT AGPUPixelFormatType agpuGetFormatType(AGPUPixelFormat format);
 
     /// Check if the format has a depth component.
-    VGPU_EXPORT bool gpuIsDepthFormat(GPUTextureFormat format);
+    VGPU_EXPORT bool agpuIsDepthFormat(AGPUPixelFormat format);
     /// Check if the format has a stencil component.
-    VGPU_EXPORT bool vgpuIsStencilFrmat(GPUTextureFormat format);
+    VGPU_EXPORT bool agpuIsStencilFrmat(AGPUPixelFormat format);
     /// Check if the format has depth or stencil components.
-    VGPU_EXPORT bool gpuIsDepthStencilFormat(GPUTextureFormat format);
+    VGPU_EXPORT bool agpuIsDepthStencilFormat(AGPUPixelFormat format);
     /// Check if the format is a compressed format.
-    VGPU_EXPORT bool vgpuIsCompressedFormat(GPUTextureFormat format);
+    VGPU_EXPORT bool agpuIsCompressedFormat(AGPUPixelFormat format);
     /// Get format string name.
-    VGPU_EXPORT const char* gpuGetFormatName(GPUTextureFormat format);
+    VGPU_EXPORT const char* agpuGetFormatName(AGPUPixelFormat format);
+    VGPU_EXPORT bool agpuIsSrgbFormat(AGPUPixelFormat format);
 
 #ifdef __cplusplus
 }

@@ -22,10 +22,17 @@
 
 #pragma once
 
-#include "gpu.h"
-#include <dxgi.h>
+#include "gpu_backend.h"
+#if defined(NTDDI_WIN10_RS2)
+#   include <dxgi1_6.h>
+#else
+#   include <dxgi1_5.h>
+#endif
 
-static DXGI_FORMAT d3d_GetFormat(GPUTextureFormat format) {
+#define VHR(hr) if (FAILED(hr)) { VGPU_ASSERT(0); }
+#define SAFE_RELEASE(obj) if ((obj)) { (obj)->lpVtbl->Release(obj); (obj) = NULL; }
+
+static DXGI_FORMAT d3d_GetFormat(AGPUPixelFormat format) {
     static DXGI_FORMAT formats[_GPUTextureFormat_Count] = {
         DXGI_FORMAT_UNKNOWN,
         // 8-bit pixel formats
@@ -108,7 +115,7 @@ static DXGI_FORMAT d3d_GetFormat(GPUTextureFormat format) {
     return formats[format];
 }
 
-static DXGI_FORMAT d3d_GetTypelessFormat(GPUTextureFormat format)
+static DXGI_FORMAT d3d_GetTypelessFormat(AGPUPixelFormat format)
 {
     switch (format)
     {
@@ -121,15 +128,15 @@ static DXGI_FORMAT d3d_GetTypelessFormat(GPUTextureFormat format)
     case GPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8:
         return DXGI_FORMAT_R32_TYPELESS;
     default:
-        assert(!gpuIsDepthFormat(format));
+        VGPU_ASSERT(!agpuIsDepthFormat(format));
         return d3d_GetFormat(format);
     }
 }
 
-static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, agpu_texture_usage_flags usage)
+static DXGI_FORMAT d3d_GetTextureFormat(AGPUPixelFormat format, AGPUTextureUsageFlags usage)
 {
-    if (gpuIsDepthFormat(format) &&
-        (usage & AGPU_TEXTURE_USAGE_SAMPLED | AGPU_TEXTURE_USAGE_STORAGE) != 0)
+    if (agpuIsDepthFormat(format) &&
+        (usage & AGPUTextureUsage_Sampled | AGPUTextureUsage_Storage) != AGPUTextureUsage_None)
     {
         return d3d_GetTypelessFormat(format);
     }
@@ -137,7 +144,7 @@ static DXGI_FORMAT d3d_GetTextureFormat(GPUTextureFormat format, agpu_texture_us
     return d3d_GetFormat(format);
 }
 
-static DXGI_FORMAT d3d_GetSwapChainFormat(GPUTextureFormat format) {
+static DXGI_FORMAT d3d_GetSwapChainFormat(AGPUPixelFormat format) {
     switch (format)
     {
     case GPU_TEXTURE_FORMAT_UNDEFINED:
@@ -162,68 +169,68 @@ static DXGI_FORMAT d3d_GetSwapChainFormat(GPUTextureFormat format) {
 }
 
 
-static DXGI_FORMAT d3d_GetVertexFormat(GPUVertexFormat format) {
+static DXGI_FORMAT d3d_GetVertexFormat(AGPUVertexFormat format) {
     switch (format)
     {
-    case GPUVertexFormat_UChar2:
+    case AGPUVertexFormat_UChar2:
         return DXGI_FORMAT_R8G8_UINT;
-    case GPUVertexFormat_UChar4:
+    case AGPUVertexFormat_UChar4:
         return DXGI_FORMAT_R8G8B8A8_UINT;
-    case GPUVertexFormat_Char2:
+    case AGPUVertexFormat_Char2:
         return DXGI_FORMAT_R8G8_SINT;
-    case GPUVertexFormat_Char4:
+    case AGPUVertexFormat_Char4:
         return DXGI_FORMAT_R8G8B8A8_SINT;
-    case GPUVertexFormat_UChar2Norm:
+    case AGPUVertexFormat_UChar2Norm:
         return DXGI_FORMAT_R8G8_UNORM;
-    case GPUVertexFormat_UChar4Norm:
+    case AGPUVertexFormat_UChar4Norm:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
-    case GPUVertexFormat_Char2Norm:
+    case AGPUVertexFormat_Char2Norm:
         return DXGI_FORMAT_R8G8_SNORM;
-    case GPUVertexFormat_Char4Norm:
+    case AGPUVertexFormat_Char4Norm:
         return DXGI_FORMAT_R8G8B8A8_SNORM;
-    case GPUVertexFormat_UShort2:
+    case AGPUVertexFormat_UShort2:
         return DXGI_FORMAT_R16G16_UINT;
-    case GPUVertexFormat_UShort4:
+    case AGPUVertexFormat_UShort4:
         return DXGI_FORMAT_R16G16B16A16_UINT;
-    case GPUVertexFormat_Short2:
+    case AGPUVertexFormat_Short2:
         return DXGI_FORMAT_R16G16_SINT;
-    case GPUVertexFormat_Short4:
+    case AGPUVertexFormat_Short4:
         return DXGI_FORMAT_R16G16B16A16_SINT;
-    case GPUVertexFormat_UShort2Norm:
+    case AGPUVertexFormat_UShort2Norm:
         return DXGI_FORMAT_R16G16_UNORM;
-    case GPUVertexFormat_UShort4Norm:
+    case AGPUVertexFormat_UShort4Norm:
         return DXGI_FORMAT_R16G16B16A16_UNORM;
-    case GPUVertexFormat_Short2Norm:
+    case AGPUVertexFormat_Short2Norm:
         return DXGI_FORMAT_R16G16_SNORM;
-    case GPUVertexFormat_Short4Norm:
+    case AGPUVertexFormat_Short4Norm:
         return DXGI_FORMAT_R16G16B16A16_SNORM;
-    case GPUVertexFormat_Half2:
+    case AGPUVertexFormat_Half2:
         return DXGI_FORMAT_R16G16_FLOAT;
-    case GPUVertexFormat_Half4:
+    case AGPUVertexFormat_Half4:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
-    case GPUVertexFormat_Float:
+    case AGPUVertexFormat_Float:
         return DXGI_FORMAT_R32_FLOAT;
-    case GPUVertexFormat_Float2:
+    case AGPUVertexFormat_Float2:
         return DXGI_FORMAT_R32G32_FLOAT;
-    case GPUVertexFormat_Float3:
+    case AGPUVertexFormat_Float3:
         return DXGI_FORMAT_R32G32B32_FLOAT;
-    case GPUVertexFormat_Float4:
+    case AGPUVertexFormat_Float4:
         return DXGI_FORMAT_R32G32B32A32_FLOAT;
-    case GPUVertexFormat_UInt:
+    case AGPUVertexFormat_UInt:
         return DXGI_FORMAT_R32_UINT;
-    case GPUVertexFormat_UInt2:
+    case AGPUVertexFormat_UInt2:
         return DXGI_FORMAT_R32G32_UINT;
-    case GPUVertexFormat_UInt3:
+    case AGPUVertexFormat_UInt3:
         return DXGI_FORMAT_R32G32B32_UINT;
-    case GPUVertexFormat_UInt4:
+    case AGPUVertexFormat_UInt4:
         return DXGI_FORMAT_R32G32B32A32_UINT;
-    case GPUVertexFormat_Int:
+    case AGPUVertexFormat_Int:
         return DXGI_FORMAT_R32_SINT;
-    case GPUVertexFormat_Int2:
+    case AGPUVertexFormat_Int2:
         return DXGI_FORMAT_R32G32_SINT;
-    case GPUVertexFormat_Int3:
+    case AGPUVertexFormat_Int3:
         return DXGI_FORMAT_R32G32B32_SINT;
-    case GPUVertexFormat_Int4:
+    case AGPUVertexFormat_Int4:
         return DXGI_FORMAT_R32G32B32A32_SINT;
 
     default:
@@ -231,21 +238,139 @@ static DXGI_FORMAT d3d_GetVertexFormat(GPUVertexFormat format) {
     }
 }
 
-static D3D_PRIMITIVE_TOPOLOGY d3d_GetPrimitiveTopology(GPUPrimitiveTopology topology)
+static D3D_PRIMITIVE_TOPOLOGY d3d_GetPrimitiveTopology(AGPUPrimitiveTopology topology)
 {
     switch (topology)
     {
-    case GPUPrimitiveTopology_PointList:
+    case AGPUPrimitiveTopology_PointList:
         return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-    case GPUPrimitiveTopology_LineList:
+    case AGPUPrimitiveTopology_LineList:
         return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-    case GPUPrimitiveTopology_LineStrip:
+    case AGPUPrimitiveTopology_LineStrip:
         return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-    case GPUPrimitiveTopology_TriangleList:
+    case AGPUPrimitiveTopology_TriangleList:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-    case GPUPrimitiveTopology_TriangleStrip:
+    case AGPUPrimitiveTopology_TriangleStrip:
         return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
     default:
         _VGPU_UNREACHABLE();
     }
+}
+
+/* DXGI guids */
+static const GUID agpu_IID_IDXGIAdapter1 = { 0x29038f61, 0x3839, 0x4626, {0x91,0xfd,0x08,0x68,0x79,0x01,0x1a,0x05} };
+static const GUID agpu_IID_IDXGIFactory2 = { 0x50c83a1c, 0xe072, 0x4c48, {0x87,0xb0,0x36,0x30,0xfa,0x36,0xa6,0xd0} };
+static const GUID agpu_IID_IDXGIFactory4 = { 0x1bc6ea02, 0xef36, 0x464f, {0xbf,0x0c,0x21,0xca,0x39,0xe5,0x16,0x8a} };
+static const GUID agpu_IID_IDXGIFactory5 = { 0x7632e1f5, 0xee65, 0x4dca, {0x87,0xfd,0x84,0xcd,0x75,0xf8,0x83,0x8d} };
+static const GUID agpu_IID_IDXGIFactory6 = { 0xc1b6694f, 0xff09, 0x44a9, {0xb0,0x3c,0x77,0x90,0x0a,0x0a,0x1d,0x17} };
+static const GUID agpu_IID_IDXGIDevice3 = { 0x6007896c, 0x3244, 0x4afd, {0xbf, 0x18, 0xa6, 0xd3, 0xbe, 0xda, 0x50, 0x23 } };
+
+static inline IDXGISwapChain1* agpu_d3d_createSwapChain(
+    IDXGIFactory2* dxgiFactory,
+    IUnknown* deviceOrCommandQueue,
+    uint32_t backBufferCount,
+    const agpu_swapchain_info* info)
+{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    HWND window = (HWND)info->native_handle;
+    if (!IsWindow(window)) {
+        agpuLog(GPULogLevel_Error, "Invalid HWND handle");
+        return nullptr;
+    }
+#else
+    IUnknown* window = (IUnknown*)info->native_handle;
+#endif
+
+    UINT flags = 0;
+
+    BOOL allowTearing = FALSE;
+    IDXGIFactory5* factory5;
+    HRESULT hr = IDXGIFactory2_QueryInterface(dxgiFactory, &agpu_IID_IDXGIFactory5, (void**)&factory5);
+    if (SUCCEEDED(hr))
+    {
+        hr = IDXGIFactory5_CheckFeatureSupport(factory5, DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+        IDXGIFactory5_Release(factory5);
+    }
+
+    if (SUCCEEDED(hr) && allowTearing)
+    {
+        flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    }
+
+    const DXGI_FORMAT dxgiFormat = d3d_GetSwapChainFormat(info->colorFormat);
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
+    DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+    // Disable FLIP if not on a supporting OS
+    bool flip_present_supported = true;
+    {
+        IDXGIFactory4* factory4;
+        HRESULT hr = IDXGIFactory2_QueryInterface(dxgiFactory, &agpu_IID_IDXGIFactory4, (void**)&factory4);
+        if (FAILED(hr))
+        {
+            flip_present_supported = false;
+        }
+        IDXGIFactory4_Release(factory4);
+    }
+
+    if (!flip_present_supported)
+    {
+        swapEffect = DXGI_SWAP_EFFECT_DISCARD;
+    }
+#else
+    DXGI_SCALING scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+    DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#endif
+
+    const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
+        .Width = info->width,
+        .Height = info->height,
+        .Format = dxgiFormat,
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = backBufferCount,
+        .SampleDesc = {
+            .Count = 1,
+            .Quality = 0
+        },
+        .AlphaMode = scaling,
+        .SwapEffect = swapEffect,
+        .Flags = flags
+    };
+
+    IDXGISwapChain1* result = NULL;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    const DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {
+        .Windowed = TRUE
+    };
+
+    // Create a SwapChain from a Win32 window.
+    VHR(IDXGIFactory2_CreateSwapChainForHwnd(
+        dxgiFactory,
+        deviceOrCommandQueue,
+        window,
+        &swapChainDesc,
+        &fsSwapChainDesc,
+        NULL,
+        &result
+    ));
+
+    // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+    VHR(IDXGIFactory2_MakeWindowAssociation(dxgiFactory, window, DXGI_MWA_NO_ALT_ENTER));
+#else
+    VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
+        dxgiFactory,
+        deviceOrCommandQueue,
+        window,
+        &swapChainDesc,
+        NULL,
+        &result
+    ));
+
+    IDXGIDevice3* dxgiDevice;
+    VHR(IUnknown_QueryInterface(deviceOrCommandQueue, &agpu_IID_IDXGIDevice3, (void**)&dxgiDevice));
+    VHR(IDXGIDevice3_SetMaximumFrameLatency(dxgiDevice, 1));
+#endif
+
+    return result;
 }

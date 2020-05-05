@@ -76,7 +76,7 @@ namespace alimer
 #endif
             device_info.swapchain_info = &swapchain;
 
-            gpuDevice = gpuDeviceCreate(&device_info);
+            gpuDevice = agpuCreateDevice(&device_info);
             if (!gpuDevice) {
                 headless = true;
             }
