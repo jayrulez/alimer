@@ -46,19 +46,11 @@
 
 typedef uint32_t AGPUFlags;
 
-static constexpr uint32_t kInvalidHandle = 0xFFFFFFFF;
-
-typedef struct GPUDeviceImpl* GPUDevice;
-struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-typedef struct AGPUTextureViewImpl* AGPUTextureView;
-typedef struct AGPUSamplerImpl* AGPUSampler;
-//typedef struct VGPURenderPassImpl* VGPURenderPass;
-//typedef struct vgpu_shader_t* vgpu_shader;
-//typedef struct vgpu_pipeline_t* vgpu_pipeline;
-
-static constexpr BufferHandle kInvalidBufferHandle = { kInvalidHandle };
-static constexpr TextureHandle kInvalidTextureHandle = { kInvalidHandle };
+typedef struct agpu_buffer_t* agpu_buffer;
+typedef struct agpu_texture_t* agpu_texture;
+typedef struct agpu_pass_t* agpu_pass;
+typedef struct agpu_shader_t* agpu_shader;
+typedef struct agpu_pipeline_t* agpu_pipeline;
 
 enum {
     AGPU_NUM_INFLIGHT_FRAMES = 2u,
@@ -81,15 +73,15 @@ typedef enum AGPULogLevel {
     AGPULogLevel_Force32 = 0x7FFFFFFF
 } AGPULogLevel;
 
-typedef enum AGPUBackendType {
-    AGPUBackendType_Default = 0,
-    AGPUBackendType_Null = 1,
-    AGPUBackendType_Vulkan = 2,
-    AGPUBackendType_D3D12 = 3,
-    AGPUBackendType_D3D11 = 4,
-    AGPUBackendType_OpenGL = 5,
-    AGPUBackendType_Force32 = 0x7FFFFFFF
-} AGPUBackendType;
+typedef enum agpu_backend_type {
+    AGPU_BACKEND_TYPE_DEFAULT = 0,
+    AGPU_BACKEND_TYPE_NULL = 1,
+    AGPU_BACKEND_TYPE_VULKAN = 2,
+    AGPU_BACKEND_TYPE_D3D12 = 3,
+    AGPU_BACKEND_TYPE_D3D11 = 4,
+    AGPU_BACKEND_TYPE_OPENGL = 5,
+    _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+} agpu_backend_type;
 
 /// Defines pixel format.
 typedef enum AGPUPixelFormat {
@@ -198,18 +190,6 @@ typedef enum AGPUTextureUsage {
 } AGPUTextureUsage;
 typedef AGPUFlags AGPUTextureUsageFlags;
 
-typedef enum gpu_buffer_usage {
-    GPU_BUFFER_USAGE_NONE = 0,
-    GPU_BUFFER_USAGE_VERTEX = (1 << 0),
-    GPU_BUFFER_USAGE_INDEX = (1 << 1),
-    GPU_BUFFER_USAGE_UNIFORM = (1 << 2),
-    GPU_BUFFER_USAGE_STORAGE = (1 << 3),
-    GPU_BUFFER_USAGE_INDIRECT = (1 << 4),
-    GPU_BUFFER_USAGE_DYNAMIC = (1 << 5),
-    GPU_BUFFER_USAGE_STAGING = (1 << 6)
-} gpu_buffer_usage;
-typedef AGPUFlags AGPUBufferUsageFlags;
-
 typedef enum vgpu_shader_stage {
     VGPU_SHADER_STAGE_NONE = 0,
     VGPU_SHADER_STAGE_VERTEX = 0x01,
@@ -262,15 +242,6 @@ typedef enum AGPUInputStepMode {
     AGPUInputStepMode_Instance = 1,
     AGPUInputStepMode_Force32 = 0x7FFFFFFF
 } AGPUInputStepMode;
-
-typedef enum AGPUPrimitiveTopology {
-    AGPUPrimitiveTopology_PointList = 0x00000000,
-    AGPUPrimitiveTopology_LineList = 0x00000001,
-    AGPUPrimitiveTopology_LineStrip = 0x00000002,
-    AGPUPrimitiveTopology_TriangleList = 0x00000003,
-    AGPUPrimitiveTopology_TriangleStrip = 0x00000004,
-    AGPUPrimitiveTopology_Force32 = 0x7FFFFFFF
-} AGPUPrimitiveTopology;
 
 typedef enum AGPUIndexFormat {
     AGPUIndexFormat_Uint16 = 0,
@@ -334,13 +305,6 @@ typedef enum GPUTextureLayout {
     GPUTextureLayout_Present,
     _GPUTextureLayout_Force32 = 0x7FFFFFFF
 } GPUTextureLayout;
-
-typedef enum AGPUPowerPreference {
-    AGPUPowerPreference_Default = 0,
-    AGPUPowerPreference_LowPower = 1,
-    AGPUPowerPreference_HighPerformance = 2,
-    AGPUPowerPreference_Force32 = 0x7FFFFFFF
-} AGPUPowerPreference;
 
 typedef enum agpu_device_flags {
     AGPU_DEVICE_FLAGS_NONE = 0,
@@ -436,7 +400,7 @@ typedef struct vgpu_limits {
 
 typedef struct AGPUDeviceCapabilities {
     /// The backend type.
-    AGPUBackendType backend;
+    agpu_backend_type backend;
 
     /// Selected GPU vendor PCI id.
     uint32_t vendor_id;
@@ -447,28 +411,8 @@ typedef struct AGPUDeviceCapabilities {
     vgpu_limits limits;
 } AGPUDeviceCapabilities;
 
-typedef struct AGPUBufferDescriptor {
-    AGPUBufferUsageFlags usage;
-    uint32_t size;
-    uint32_t stride;
-    const void* content;
-    const void* externalHandle; /* Pointer to external texture handle */
-    const char* label;
-} AGPUBufferDescriptor;
-
-typedef struct AGPUTextureDescriptor {
-    AGPUTextureType type;
-    AGPUPixelFormat format;
-    AGPUTextureUsageFlags usage;
-    GPUExtent3D size;
-    uint32_t mipLevelCount;
-    uint32_t sampleCount;
-    const void* externalHandle; /* Pointer to external texture handle */
-    const char* label;
-} AGPUTextureDescriptor;
-
 typedef struct {
-    TextureHandle texture;
+    agpu_texture texture;
     uint32_t mip_level;
     uint32_t slice;
     vgpu_load_action load_action;
@@ -477,7 +421,7 @@ typedef struct {
 } vgpu_color_attachment;
 
 typedef struct vgpu_depth_stencil_attachment {
-    TextureHandle        texture;
+    agpu_texture texture;
     vgpu_load_action    depth_load_action;
     vgpu_store_action   depth_store_action;
     float               clear_depth;
@@ -507,29 +451,6 @@ typedef struct VgpuVertexDescriptor {
     VgpuVertexAttributeDescriptor       attributes[AGPU_MAX_VERTEX_ATTRIBUTES];
 } VgpuVertexDescriptor;
 
-typedef struct vgpu_shader_stage_desc {
-    uint64_t        byte_code_size;
-    const uint8_t* byte_code;
-    const char* source;
-    const char* entry_point;
-} vgpu_shader_stage_desc;
-
-typedef struct vgpu_shader_desc {
-    vgpu_shader_stage_desc vertex;
-    vgpu_shader_stage_desc fragment;
-} vgpu_shader_desc;
-
-typedef struct vgpu_render_pipeline_desc {
-    //vgpu_shader                 shader;
-    VgpuVertexDescriptor        vertexDescriptor;
-    AGPUPrimitiveTopology primitiveTopology;
-} vgpu_render_pipeline_desc;
-
-typedef struct VgpuComputePipelineDescriptor {
-    uint32_t dummy;
-    //VgpuShader                  shader;
-} VgpuComputePipelineDescriptor;
-
 typedef struct AGPUSamplerDescriptor {
     const char* label;
     GPUAddressMode addressModeU;
@@ -554,12 +475,16 @@ typedef struct AGPUSwapChainDescriptor {
     uint32_t height;
 } AGPUSwapChainDescriptor;
 
-typedef struct agpu_device_info {
-    AGPUBackendType preferredBackend;
+typedef struct agpu_config {
+    agpu_backend_type preferred_backend;
     uint32_t flags;
-    AGPUPowerPreference powerPreference;
+    void (*callback)(void* context, const char* message, AGPULogLevel level);
+    void* context;
+    struct {
+        void* (*get_proc_address)(const char*);
+    } gl;
     const AGPUSwapChainDescriptor* swapchain;
-} agpu_device_info;
+} agpu_config;
 
 #ifdef __cplusplus
 extern "C"
@@ -571,68 +496,101 @@ extern "C"
     VGPU_EXPORT void agpuLog(AGPULogLevel level, const char* format, ...);
 
     /* Backend functions */
-    VGPU_EXPORT AGPUBackendType gpu_get_default_platform_backend(void);
-    VGPU_EXPORT bool gpu_is_backend_supported(AGPUBackendType backend);
+    VGPU_EXPORT agpu_backend_type agpu_get_default_platform_backend(void);
+    VGPU_EXPORT bool agpu_is_backend_supported(agpu_backend_type backend);
 
     /* Device functions */
-    VGPU_EXPORT GPUDevice agpuCreateDevice(const agpu_device_info* info);
-    VGPU_EXPORT void agpuDeviceDestroy(GPUDevice device);
-    VGPU_EXPORT void agpu_frame_begin(GPUDevice device);
-    VGPU_EXPORT void agpu_frame_end(GPUDevice device);
-    VGPU_EXPORT void agpu_wait_gpu(GPUDevice device);
-    VGPU_EXPORT AGPUBackendType agpuDeviceQueryBackend(GPUDevice device);
-    VGPU_EXPORT AGPUDeviceCapabilities agpuDeviceQueryCaps(GPUDevice device);
-    VGPU_EXPORT AGPUPixelFormat gpuGetDefaultDepthFormat(GPUDevice device);
-    VGPU_EXPORT AGPUPixelFormat gpuGetDefaultDepthStencilFormat(GPUDevice device);
+    VGPU_EXPORT bool agpu_init(const agpu_config* config);
+    VGPU_EXPORT void agpu_shutdown(void);
+    VGPU_EXPORT void agpu_frame_begin(void);
+    VGPU_EXPORT void agpu_frame_finish(void);
+    VGPU_EXPORT agpu_backend_type agpu_query_backend(void);
+    VGPU_EXPORT void agpu_query_caps(AGPUDeviceCapabilities* caps);
+    VGPU_EXPORT AGPUPixelFormat agpu_get_default_depth_format(void);
+    VGPU_EXPORT AGPUPixelFormat agpu_get_default_depth_stencil_format(void);
 
     /* Texture */
-    VGPU_EXPORT TextureHandle agpuCreateTexture(const AGPUTextureDescriptor* descriptor);
-    VGPU_EXPORT void agpuDestroyTexture(TextureHandle texture);
+    typedef struct {
+        AGPUTextureType type;
+        AGPUPixelFormat format;
+        AGPUTextureUsageFlags usage;
+        GPUExtent3D size;
+        uint32_t mipLevelCount;
+        uint32_t sampleCount;
+        const void* externalHandle; /* Pointer to external texture handle */
+        const char* label;
+    } agpu_texture_info;
+
+    VGPU_EXPORT agpu_texture agpu_texture_create(const agpu_texture_info* info);
+    VGPU_EXPORT void agpu_texture_destroy(agpu_texture texture);
 
     /* Buffer */
-    VGPU_EXPORT BufferHandle agpuCreateBuffer(const AGPUBufferDescriptor* descriptor);
-    VGPU_EXPORT void agpuDestroyBuffer(BufferHandle buffer);
+    typedef enum agpu_buffer_usage {
+        GPU_BUFFER_USAGE_NONE = 0,
+        GPU_BUFFER_USAGE_VERTEX = (1 << 0),
+        GPU_BUFFER_USAGE_INDEX = (1 << 1),
+        GPU_BUFFER_USAGE_UNIFORM = (1 << 2),
+        GPU_BUFFER_USAGE_STORAGE = (1 << 3),
+        GPU_BUFFER_USAGE_INDIRECT = (1 << 4),
+    } agpu_buffer_usage;
+    typedef uint32_t agpu_buffer_usage_flags;
 
-    /* Sampler */
-    VGPU_EXPORT AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor);
-    VGPU_EXPORT void agpuDeviceDestroySampler(GPUDevice device, AGPUSampler sampler);
+    typedef struct agpu_buffer_info {
+        uint32_t size;
+        agpu_buffer_usage_flags usage;
+        const void* content;
+        const char* label;
+    } agpu_buffer_info;
 
-#if TODO
-    /* RenderPass */
-    VGPU_EXPORT VGPURenderPass vgpuCreateRenderPass(const VGPURenderPassDescriptor* descriptor);
-    //VGPU_EXPORT VGPURenderPass vgpuRenderPassCreate(const VGPUSwapChainDescriptor* descriptor);
-    VGPU_EXPORT void vgpuDestroyRenderPass(VGPURenderPass renderPass);
-    VGPU_EXPORT void vgpuRenderPassGetExtent(VGPURenderPass renderPass, uint32_t* width, uint32_t* height);
-    VGPU_EXPORT void vgpu_render_pass_set_color_clear_value(VGPURenderPass render_pass, uint32_t attachment_index, const float colorRGBA[4]);
-    VGPU_EXPORT void vgpu_render_pass_set_depth_stencil_clear_value(VGPURenderPass render_pass, float depth, uint8_t stencil);
+    VGPU_EXPORT agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
+    VGPU_EXPORT void agpu_destroy_buffer(agpu_buffer buffer);
 
     /* Shader */
-    VGPU_EXPORT vgpu_shader vgpu_create_shader(const vgpu_shader_desc* desc);
-    VGPU_EXPORT void vgpu_destroy_shader(vgpu_shader shader);
+    typedef struct {
+        uint64_t code_size;
+        const void* code;
+        const char* source;
+        const char* entry_point;
+    } agpu_shader_source;
+
+    typedef struct {
+        agpu_shader_source vertex;
+        agpu_shader_source fragment;
+        agpu_shader_source compute;
+        const char* label;
+    } agpu_shader_info;
+
+    VGPU_EXPORT agpu_shader agpu_create_shader(const agpu_shader_info* info);
+    VGPU_EXPORT void agpu_destroy_shader(agpu_shader shader);
 
     /* Pipeline */
-    VGPU_EXPORT vgpu_pipeline vgpu_create_render_pipeline(const vgpu_render_pipeline_desc* desc);
-    VGPU_EXPORT vgpu_pipeline vgpu_create_compute_pipeline(const VgpuComputePipelineDescriptor* desc);
-    VGPU_EXPORT void vgpu_destroy_pipeline(vgpu_pipeline pipeline);
+    typedef enum agpu_primitive_topology {
+        AGPU_PRIMITIVE_TOPOLOGY_POINTS = 1,
+        AGPU_PRIMITIVE_TOPOLOGY_LINES = 2,
+        AGPU_PRIMITIVE_TOPOLOGY_LINE_STRIP = 3,
+        AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES = 4,
+        AGPU_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP = 5,
+        _AGPU_PrimitiveTopology_FORCE_U32 = 0x7FFFFFFF
+    } agpu_primitive_topology;
 
-    /* Commands */
-    VGPU_EXPORT void vgpu_cmd_begin_render_pass(VGPURenderPass renderPass);
-    VGPU_EXPORT void vgpu_cmd_end_render_pass(void);
-    /*VGPU_EXPORT void vgpuCmdSetShader(VgpuCommandBuffer commandBuffer, VgpuShader shader);
-    VGPU_EXPORT void vgpuCmdSetVertexBuffer(VgpuCommandBuffer commandBuffer, uint32_t binding, VgpuBuffer buffer, uint64_t offset, VgpuVertexInputRate inputRate);
-    VGPU_EXPORT void vgpuCmdSetIndexBuffer(VgpuCommandBuffer commandBuffer, VgpuBuffer buffer, uint64_t offset, VgpuIndexType indexType);
+    typedef struct {
+        agpu_shader shader;
+        //VgpuVertexDescriptor        vertexDescriptor;
+        agpu_primitive_topology topology;
+        const char* label;
+    } agpu_pipeline_info;
 
-    VGPU_EXPORT void vgpuCmdSetViewport(VgpuCommandBuffer commandBuffer, VgpuViewport viewport);
-    VGPU_EXPORT void vgpuCmdSetViewports(VgpuCommandBuffer commandBuffer, uint32_t viewportCount, const VgpuViewport* pViewports);
-    VGPU_EXPORT void vgpuCmdSetScissor(VgpuCommandBuffer commandBuffer, VgpuRect2D scissor);
-    VGPU_EXPORT void vgpuCmdSetScissors(VgpuCommandBuffer commandBuffer, uint32_t scissorCount, const VgpuRect2D* pScissors);
+    VGPU_EXPORT agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info);
+    VGPU_EXPORT void agpu_destroy_pipeline(agpu_pipeline pipeline);
 
-    VGPU_EXPORT void vgpuCmdSetPrimitiveTopology(VgpuCommandBuffer commandBuffer, VgpuPrimitiveTopology topology);
-    VGPU_EXPORT void vgpuCmdDraw(VgpuCommandBuffer commandBuffer, uint32_t vertexCount, uint32_t firstVertex);
-    VGPU_EXPORT void vgpuCmdDrawIndexed(VgpuCommandBuffer commandBuffer, uint32_t indexCount, uint32_t firstIndex, int32_t vertexOffset);
-    */
-#endif // TODO
+    /* Sampler */
+    //VGPU_EXPORT AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor);
+    //VGPU_EXPORT void agpuDeviceDestroySampler(GPUDevice device, AGPUSampler sampler);
 
+    /* CommandBuffer */
+    void agpu_set_pipeline(agpu_pipeline pipeline);
+    void agpu_set_vertex_buffers(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers);
+    void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 
     /* Helper methods */
     /// Get the number of bits per format

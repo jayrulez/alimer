@@ -34,7 +34,7 @@
 
 #ifndef VGPU_ASSERT
 #   include <assert.h>
-#   define VGPU_ASSERT(c) assert(c)
+#   define AGPU_ASSERT(c) assert(c)
 #endif
 
 #ifndef VGPU_ALLOCA
@@ -48,7 +48,7 @@
 #ifndef VGPU_MALLOC
 #   include <stdlib.h>
 #   define VGPU_MALLOC(s) malloc(s)
-#   define VGPU_FREE(p) free(p)
+#   define AGPU_FREE(p) free(p)
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -81,140 +81,91 @@ extern void __cdecl __debugbreak(void);
 #   define VGPU_THREADLOCAL
 #endif
 
-#define _VGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
-#define _VGPU_ALLOC_HANDLE(type) ((type*)(calloc(1, sizeof(type))))
+#define _AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
+#define _AGPU_ALLOC_HANDLE(type) ((type*)VGPU_MALLOC(sizeof(type)))
 
-#define _vgpu_def(val, def) (((val) == 0) ? (def) : (val))
-#define _vgpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
-#define _vgpu_min(a,b) ((a<b)?a:b)
-#define _vgpu_max(a,b) ((a>b)?a:b)
-#define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
+#define _agpu_def(val, def) (((val) == 0) ? (def) : (val))
+#define _agpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
+#define _agpu_min(a,b) ((a<b)?a:b)
+#define _agpu_max(a,b) ((a>b)?a:b)
+#define _agpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define GPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
-#ifdef __cplusplus
-#include <new>
-template <typename T, uint32_t MAX_COUNT>
-struct Pool
-{
-    void init()
-    {
-        values = (T*)mem;
-        for (int i = 0; i < MAX_COUNT; ++i) {
-            new (&values[i]) int(i + 1);
-        }
-        new (&values[MAX_COUNT - 1]) int(-1);
-        first_free = 0;
-    }
+typedef struct agpu_renderer {
+    bool (*init)(const agpu_config* config);
+    void (*shutdown)(void);
 
-    int alloc()
-    {
-        if (first_free == -1) return -1;
+    void (*frame_wait)(void);
+    void (*frame_finish)(void);
 
-        const int id = first_free;
-        first_free = *((int*)&values[id]);
-        new (&values[id]) T;
-        return id;
-    }
+    agpu_backend_type(*query_backend)(void);
+    void(*query_caps)(AGPUDeviceCapabilities* caps);
 
-    void dealloc(uint32_t idx)
-    {
-        values[idx].~T();
-        new (&values[idx]) int(first_free);
-        first_free = idx;
-    }
-
-    alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
-    T* values;
-    int first_free;
-
-    T& operator[](int idx) { return values[idx]; }
-    bool isFull() const { return first_free == -1; }
-};
-#endif
-
-typedef struct gpu_renderer gpu_renderer;
-
-typedef struct GPUDeviceImpl {
-    /* Opaque pointer for the renderer. */
-    gpu_renderer* renderer;
-
-    void (*destroyDevice)(GPUDevice device);
-
-    void (*beginFrame)(gpu_renderer* driverData);
-    void (*presentFrame)(gpu_renderer* driverData);
-    void (*waitForGPU)(gpu_renderer* driverData);
-
-    AGPUDeviceCapabilities(*query_caps)(gpu_renderer* driverData);
-
-    AGPUPixelFormat(*getDefaultDepthFormat)(gpu_renderer* driverData);
-    AGPUPixelFormat(*getDefaultDepthStencilFormat)(gpu_renderer* driverData);
-
-    /* Texture */
-    TextureHandle(*createTexture)(gpu_renderer* driverData, const AGPUTextureDescriptor* descriptor);
-    void (*destroyTexture)(gpu_renderer* driverData, TextureHandle handle);
+    AGPUPixelFormat(*get_default_depth_format)(void);
+    AGPUPixelFormat(*get_default_depth_stencil_format)(void);
 
     /* Buffer */
-    BufferHandle(*createBuffer)(gpu_renderer* driverData, const AGPUBufferDescriptor* desc);
-    void (*destroyBuffer)(gpu_renderer* driverData, BufferHandle handle);
+    agpu_buffer (*create_buffer)(const agpu_buffer_info* info);
+    void (*destroy_buffer)(agpu_buffer handle);
 
-#if TODO
-    /* Sampler */
-    vgpu_sampler(*samplerCreate)(VGPURenderer* driver_data, const vgpu_sampler_desc* desc);
-    void (*samplerDestroy)(VGPURenderer* driver_data, vgpu_sampler handle);
-
-    /* RenderPass */
-    VGPURenderPass(*renderPassCreate)(VGPURenderer* driver_data, const VGPURenderPassDescriptor* descriptor);
-    void (*renderPassDestroy)(VGPURenderer* driver_data, VGPURenderPass handle);
-    void (*renderPassGetExtent)(VGPURenderer* driver_data, VGPURenderPass handle, uint32_t* width, uint32_t* height);
-    void (*render_pass_set_color_clear_value)(VGPURenderPass handle, uint32_t attachment_index, const float colorRGBA[4]);
-    void (*render_pass_set_depth_stencil_clear_value)(VGPURenderPass handle, float depth, uint8_t stencil);
+    /* Texture */
+    agpu_texture (*create_texture)(const agpu_texture_info* info);
+    void (*destroy_texture)(agpu_texture handle);
 
     /* Shader */
-    vgpu_shader(*create_shader)(VGPURenderer* driver_data, const vgpu_shader_desc* desc);
-    void (*destroy_shader)(VGPURenderer* driver_data, vgpu_shader handle);
+    agpu_shader (*create_shader)(const agpu_shader_info* info);
+    void (*destroy_shader)(agpu_shader handle);
 
     /* Pipeline */
-    vgpu_pipeline(*create_render_pipeline)(VGPURenderer* driver_data, const vgpu_render_pipeline_desc* desc);
-    vgpu_pipeline(*create_compute_pipeline)(VGPURenderer* driver_data, const VgpuComputePipelineDescriptor* desc);
-    void (*destroy_pipeline)(VGPURenderer* driver_data, vgpu_pipeline handle);
+    agpu_pipeline (*create_pipeline)(const agpu_pipeline_info* info);
+    void (*destroy_pipeline)(agpu_pipeline handle);
 
-    /* Commands */
-    void (*cmdBeginRenderPass)(VGPURenderer* driver_data, VGPURenderPass handle);
-    void (*cmdEndRenderPass)(VGPURenderer* driver_data);
-#endif // TODO
+    /* CommandBuffer */
+    void (*set_pipeline)(agpu_pipeline pipeline);
+    void (*set_vertex_buffers)(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers);
+    void (*draw)(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 
-} GPUDeviceImpl;
+} agpu_renderer;
 
-typedef struct gpu_driver {
+typedef struct agpu_driver {
     bool (*supported)(void);
-    GPUDevice(*create_device)(const agpu_device_info* info);
-} gpu_driver;
+    agpu_renderer* (*create_renderer)(void);
+} agpu_driver;
 
+#if defined(GPU_GL_BACKEND)
+extern agpu_driver gl_driver;
+#endif
 
-#if defined(GPU_D3D11_BACKEND)
-extern gpu_driver d3d11_driver;
+#if defined(GPU_D3D11_BACKEND) && defined(TODO_D3D12)
+extern agpu_driver d3d11_driver;
 #endif
 
 #if defined(GPU_D3D12_BACKEND) && defined(TODO_D3D12)
-extern gpu_driver d3d12_driver;
+extern agpu_driver d3d12_driver;
 #endif
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
-extern gpu_driver vulkan_driver;
-extern bool gpu_vk_supported(void);
-extern gpu_renderer* vk_gpu_create_renderer(void);
+extern agpu_driver vulkan_driver;
 #endif
 
-#define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
+#define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-ASSIGN_DRIVER_FUNC(destroyDevice, name)\
-ASSIGN_DRIVER_FUNC(beginFrame, name)\
-ASSIGN_DRIVER_FUNC(presentFrame, name)\
-ASSIGN_DRIVER_FUNC(waitForGPU, name)\
+ASSIGN_DRIVER_FUNC(init, name)\
+ASSIGN_DRIVER_FUNC(shutdown, name)\
+ASSIGN_DRIVER_FUNC(frame_wait, name)\
+ASSIGN_DRIVER_FUNC(frame_finish, name)\
+ASSIGN_DRIVER_FUNC(query_backend, name)\
 ASSIGN_DRIVER_FUNC(query_caps, name)\
-ASSIGN_DRIVER_FUNC(getDefaultDepthFormat, name)\
-ASSIGN_DRIVER_FUNC(getDefaultDepthStencilFormat, name)\
-ASSIGN_DRIVER_FUNC(createTexture, name)\
-ASSIGN_DRIVER_FUNC(destroyTexture, name)\
-ASSIGN_DRIVER_FUNC(createBuffer, name)\
-ASSIGN_DRIVER_FUNC(destroyBuffer, name)
+ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
+ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
+ASSIGN_DRIVER_FUNC(create_buffer, name)\
+ASSIGN_DRIVER_FUNC(destroy_buffer, name)\
+ASSIGN_DRIVER_FUNC(create_texture, name)\
+ASSIGN_DRIVER_FUNC(destroy_texture, name)\
+ASSIGN_DRIVER_FUNC(create_shader, name)\
+ASSIGN_DRIVER_FUNC(destroy_shader, name)\
+ASSIGN_DRIVER_FUNC(create_pipeline, name)\
+ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
+ASSIGN_DRIVER_FUNC(set_pipeline, name)\
+ASSIGN_DRIVER_FUNC(set_vertex_buffers, name)\
+ASSIGN_DRIVER_FUNC(draw, name)

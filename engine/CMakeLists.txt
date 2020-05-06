@@ -45,7 +45,6 @@ define_engine_source_files(
     math
     os
     gpu
-    gpu/libs
     graphics
     Input
     Games
@@ -73,6 +72,19 @@ target_link_libraries(alimer PUBLIC
 )
 
 if (ALIMER_GRAPHICS_VULKAN)
+    target_include_directories(alimer PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/libs/glad/include>
+    )
+
+    target_compile_definitions(alimer PRIVATE GPU_GL_BACKEND)
+    target_sources(alimer PRIVATE
+        gpu/libs/glad/include/KHR/khrplatform.h
+        gpu/libs/glad/include/glad/glad.h
+        gpu/libs/glad/src/glad.c
+    )
+endif ()
+
+if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(alimer PRIVATE vulkan)
     target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
 endif ()
@@ -80,7 +92,6 @@ endif ()
 if (ALIMER_GRAPHICS_D3D11)
     target_compile_definitions(alimer PRIVATE GPU_D3D11_BACKEND)
 endif ()
-
 
 if (ALIMER_GRAPHICS_D3D12)
     target_compile_definitions(alimer PRIVATE GPU_D3D12_BACKEND)

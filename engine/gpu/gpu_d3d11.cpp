@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(GPU_D3D11_BACKEND) 
+#if defined(GPU_D3D11_BACKEND) && TODO_D3D
 
 #include "gpu_backend.h"
 

@@ -62,7 +62,8 @@ typedef enum window_flags {
     WINDOW_FLAG_HIDDEN = (1 << 3),
     WINDOW_FLAG_BORDERLESS = (1 << 4),
     WINDOW_FLAG_MINIMIZED = (1 << 5),
-    WINDOW_FLAG_MAXIMIZED = (1 << 6)
+    WINDOW_FLAG_MAXIMIZED = (1 << 6),
+    WINDOW_FLAG_OPENGL = (1 << 7),
 } window_flags;
 
 typedef struct os_window_event {
@@ -128,12 +129,16 @@ extern "C"
     OS_EXPORT bool window_is_maximized(window_t* window);
     OS_EXPORT bool window_is_minimized(window_t* window);
     OS_EXPORT bool window_is_focused(window_t* window);
+    OS_EXPORT void window_swap_buffers(window_t* window);
 
     OS_EXPORT uintptr_t window_handle(window_t* window);
 
     /* Clipboard functions */
     OS_EXPORT const char* clipboard_get_text(void);
     OS_EXPORT void clipboard_set_text(const char* text);
+
+    /* OpenGL functions */
+    OS_EXPORT void* gl_get_proc_address(const char* function);
 
 #ifdef __cplusplus
 }

@@ -133,13 +133,16 @@ static void glfw_key_callback(GLFWwindow* window, int key, int scancode, int act
 }
 
 window_t* window_create(const char* title, uint32_t width, uint32_t height, uint32_t flags) {
-#if defined(ALIMER_GRAPHICS_OPENGL)
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#else
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-#endif
+    if ((flags & WINDOW_FLAG_OPENGL)) {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    }
+    else
+    {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    }
 
     glfwWindowHint(GLFW_RESIZABLE, (flags & WINDOW_FLAG_RESIZABLE) ? GLFW_TRUE : GLFW_FALSE);
     glfwWindowHint(GLFW_VISIBLE, !(flags & WINDOW_FLAG_HIDDEN) ? GLFW_TRUE : GLFW_FALSE);
@@ -178,6 +181,11 @@ window_t* window_create(const char* title, uint32_t width, uint32_t height, uint
     {
         //ALIMER_LOGERROR("GLFW: Failed to create window.");
         return NULL;
+    }
+
+    if ((flags & WINDOW_FLAG_OPENGL)) {
+        glfwMakeContextCurrent(handle);
+        glfwSwapInterval(1);
     }
 
     glfwDefaultWindowHints();
@@ -352,6 +360,10 @@ bool window_is_focused(window_t* window) {
     return (window->handle && glfwGetWindowAttrib(window->handle, GLFW_FOCUSED));
 }
 
+void window_swap_buffers(window_t* window) {
+    glfwSwapBuffers(window->handle);
+}
+
 uintptr_t window_handle(window_t* window) {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
     return (uintptr_t)glfwGetWin32Window(window->handle);
@@ -371,6 +383,10 @@ const char* clipboard_get_text(void) {
 
 void clipboard_set_text(const char* text) {
     glfwSetClipboardString(NULL, text);
+}
+
+void* gl_get_proc_address(const char* function) {
+    return (void*)glfwGetProcAddress(function);
 }
 
 #endif /* defined(GLFW_BACKEND) */

@@ -47,11 +47,14 @@ namespace alimer
         }
 
         gameSystems.clear();
-        agpu_wait_gpu(gpuDevice);
-        agpuDeviceDestroy(gpuDevice);
+        agpu_shutdown();
         window_destroy(main_window);
         os_shutdown();
     }
+
+    static agpu_buffer buffer;
+    static agpu_shader shader;
+    static agpu_pipeline render_pipeline;
 
     void Game::InitBeforeRun()
     {
@@ -61,26 +64,72 @@ namespace alimer
             main_window = window_create(
                 config.windowTitle.c_str(),
                 config.windowSize.width, config.windowSize.height,
-                WINDOW_FLAG_RESIZABLE);
+                WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
 
             AGPUSwapChainDescriptor swapchain = {};
             swapchain.nativeHandle = window_handle(main_window);
+            swapchain.width = window_width(main_window);
+            swapchain.height = window_height(main_window);
 
-            agpu_device_info device_info = {};
-            device_info.preferredBackend = AGPUBackendType_D3D11;
-            device_info.flags = AGPU_DEVICE_FLAGS_VSYNC;
+            agpu_config gpu_config = {};
+            //device_info.preferredBackend = AGPUBackendType_D3D11;
+            gpu_config.flags = AGPU_DEVICE_FLAGS_VSYNC;
 
 #ifdef _DEBUG
-            device_info.flags |= AGPU_DEVICE_FLAGS_DEBUG;
+            gpu_config.flags |= AGPU_DEVICE_FLAGS_DEBUG;
 #endif
-            device_info.swapchain = &swapchain;
+            gpu_config.gl.get_proc_address = gl_get_proc_address;
 
-            gpuDevice = agpuCreateDevice(&device_info);
-            if (!gpuDevice) {
+            gpu_config.swapchain = &swapchain;
+
+            if (!agpu_init(&gpu_config)) {
                 headless = true;
             }
 
+            /*const float vertices[] = {
+                // positions            // colors
+                 0.0f,  0.5f, 0.5f,     1.0f, 0.0f, 0.0f, 1.0f,
+                 0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
+                -0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f
+            };*/
+
+            const float vertices[] = {
+                // positions           
+                0.0f, 0.5f, 0.5f,
+                0.5f, -0.5f, 0.5f,
+                -0.5f,  -0.5f, 0.5f
+            };
+
+            agpu_buffer_info buffer_info = {};
+            buffer_info.size = sizeof(vertices);
+            buffer_info.usage = GPU_BUFFER_USAGE_VERTEX;
+            buffer_info.content = vertices;
+            buffer = agpu_create_buffer(&buffer_info);
+
+            const char* vertexShaderSource = "#version 330 core\n"
+                "layout (location = 0) in vec3 aPos;\n"
+                "void main()\n"
+                "{\n"
+                "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+                "}\0";
+
+            const char* fragmentShaderSource = "#version 330 core\n"
+                "out vec4 FragColor;\n"
+                "void main()\n"
+                "{\n"
+                "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+                "}\n\0";
+
+
+            agpu_shader_info shader_info = {};
+            shader_info.vertex.source = vertexShaderSource;
+            shader_info.fragment.source = fragmentShaderSource;
+            shader = agpu_create_shader(&shader_info);
+
+            agpu_pipeline_info pipeline_info = {};
+            pipeline_info.shader = shader;
+            render_pipeline = agpu_create_pipeline(&pipeline_info);
         }
 
         Initialize();
@@ -100,62 +149,6 @@ namespace alimer
         {
             gameSystem->Initialize();
         }
-
-#if TODO
-        struct Vertex
-        {
-            float3 position;
-            float4 color;
-        };
-
-        // Define the geometry for a triangle.
-        Vertex triangle_vertices[] =
-        {
-            { { 0.0f, 0.5, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
-        };
-
-        vgpu_buffer_desc buffer_desc = {};
-        buffer_desc.usage = VGPU_BUFFER_USAGE_VERTEX;
-        buffer_desc.size = sizeof(triangle_vertices);
-        buffer_desc.content = triangle_vertices;
-        vertex_buffer = vgpu_create_buffer(&buffer_desc);
-
-        std::string shader_source = R"(
-            struct PSInput
-{
-    float4 position : SV_POSITION;
-    float4 color : COLOR;
-};
-
-PSInput VSMain(float4 position : POSITION, float4 color : COLOR)
-{
-    PSInput result;
-
-    result.position = position;
-    result.color = color;
-
-    return result;
-}
-
-float4 PSMain(PSInput input) : SV_TARGET
-{
-    return input.color;
-})";
-
-        vgpu_shader_desc shader_desc = {};
-        shader_desc.vertex.source = shader_source.c_str();
-        shader_desc.vertex.entry_point = "VSMain";
-        shader_desc.fragment.source = shader_source.c_str();
-        shader_desc.fragment.entry_point = "PSMain";
-        shader = vgpu_create_shader(&shader_desc);
-
-        vgpu_render_pipeline_desc pipeline_desc = {};
-        pipeline_desc.shader = shader;
-        render_pipeline = vgpu_create_render_pipeline(&pipeline_desc);
-#endif // TODO
-
     }
 
     void Game::BeginRun()
@@ -170,7 +163,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 
     bool Game::BeginDraw()
     {
-        agpu_frame_begin(gpuDevice);
+        agpu_frame_begin();
 
         for (auto gameSystem : gameSystems)
         {
@@ -209,7 +202,11 @@ float4 PSMain(PSInput input) : SV_TARGET
         vgpu_cmd_end_render_pass();
         */
 
-        agpu_frame_end(gpuDevice);
+        agpu_set_vertex_buffers(0, 1, &buffer);
+        agpu_set_pipeline(render_pipeline);
+        agpu_draw(3, 1, 0);
+        agpu_frame_finish();
+        window_swap_buffers(main_window);
     }
 
     int Game::Run()

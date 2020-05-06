@@ -126,42 +126,42 @@ void agpuLog(AGPULogLevel level, const char* format, ...) {
     }
 }
 
-AGPUBackendType gpu_get_default_platform_backend(void) {
+agpu_backend_type agpu_get_default_platform_backend(void) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (gpu_is_backend_supported(AGPUBackendType_D3D12)) {
-        return AGPUBackendType_D3D12;
+    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D12)) {
+        return AGPU_BACKEND_TYPE_D3D12;
     }
 
-    if (gpu_is_backend_supported(AGPUBackendType_Vulkan)) {
-        return AGPUBackendType_Vulkan;
+    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_VULKAN)) {
+        return AGPU_BACKEND_TYPE_VULKAN;
     }
 
-    if (gpu_is_backend_supported(AGPUBackendType_D3D11)) {
-        return AGPUBackendType_D3D11;
+    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D11)) {
+        return AGPU_BACKEND_TYPE_D3D11;
     }
 
-    if (gpu_is_backend_supported(AGPUBackendType_OpenGL)) {
-        return AGPUBackendType_OpenGL;
+    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_OPENGL)) {
+        return AGPU_BACKEND_TYPE_OPENGL;
     }
 
-    return AGPUBackendType_Null;
+    return AGPU_BACKEND_TYPE_NULL;
 #elif defined(__linux__) || defined(__ANDROID__)
-    return AGPUBackendType_Vulkan;
+    return AGPU_BACKEND_TYPE_VULKAN;
 #elif defined(__APPLE__)
-    return AGPUBackendType_Vulkan;
+    return AGPU_BACKEND_TYPE_VULKAN;
 #else
-    return AGPUBackendType_OpenGL;
+    return AGPU_BACKEND_TYPE_OPENGL;
 #endif
 }
 
-bool gpu_is_backend_supported(AGPUBackendType backend) {
-    if (backend == AGPUBackendType_Default) {
-        backend = gpu_get_default_platform_backend();
+bool agpu_is_backend_supported(agpu_backend_type backend) {
+    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
+        backend = agpu_get_default_platform_backend();
     }
 
     switch (backend)
     {
-    case AGPUBackendType_Null:
+    case AGPU_BACKEND_TYPE_NULL:
         return true;
 #if defined(GPU_VK_BACKEND) && TODO_VK
     case AGPUBackendType_Vulkan:
@@ -172,155 +172,173 @@ bool gpu_is_backend_supported(AGPUBackendType backend) {
         return d3d12_driver.supported();
 #endif 
 
-#if defined(GPU_D3D11_BACKEND)
+#if defined(GPU_D3D11_BACKEND) && defined(TODO_D3D11)
     case AGPUBackendType_D3D11:
         return d3d11_driver.supported();
 #endif
 
-#if defined(VGPU_BACKEND_GL)
-    case AGPUBackendType_OpenGL:
-        return agpu_gl_supported();
-#endif // defined(AGPU_BACKEND_GL)
+#if defined(GPU_GL_BACKEND)
+    case AGPU_BACKEND_TYPE_OPENGL:
+        return gl_driver.supported();
+#endif // defined(GPU_GL_BACKEND)
 
     default:
         return false;
     }
 }
 
-static GPUDevice s_gpuDevice = nullptr;
+static agpu_renderer* s_renderer = NULL;
 
-GPUDevice agpuCreateDevice(const agpu_device_info* info)
+bool agpu_init(const agpu_config* config)
 {
-    VGPU_ASSERT(info);
-
-    AGPUBackendType backend = info->preferredBackend;
-    if (backend == AGPUBackendType_Default) {
-        backend = gpu_get_default_platform_backend();
+    AGPU_ASSERT(config);
+    if (s_renderer) {
+        return true;
     }
 
-    GPUDevice device = NULL;
+    agpu_backend_type backend = config->preferred_backend;
+    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
+        backend = agpu_get_default_platform_backend();
+    }
+
     switch (backend)
     {
-    case AGPUBackendType_Null:
+    case AGPU_BACKEND_TYPE_NULL:
         break;
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
-    case AGPUBackendType_Vulkan:
+    case AGPU_BACKEND_TYPE_VULKAN:
         s_renderer = vk_gpu_create_renderer();
         break;
 #endif
 
 #if defined(GPU_D3D12_BACKEND) && defined(TODO_D3D12)
-    case AGPUBackendType_D3D12:
+    case AGPU_BACKEND_TYPE_D3D12:
         device = d3d12_driver.create_device(info);
         break;
 #endif
 
-#if defined(GPU_D3D11_BACKEND) 
-    case AGPUBackendType_D3D11:
+#if defined(GPU_D3D11_BACKEND) && defined(TODO_D3D11)
+    case AGPU_BACKEND_TYPE_D3D11:
         device = d3d11_driver.create_device(info);
+        break;
+#endif
+
+#if defined(GPU_GL_BACKEND)
+    case AGPU_BACKEND_TYPE_OPENGL:
+        s_renderer = gl_driver.create_renderer();
         break;
 #endif
     }
 
-    if (device == NULL) {
-        return NULL;
+    if (s_renderer == NULL || !s_renderer->init(config)) {
+        s_renderer = NULL;
+        return false;
     }
 
-    s_gpuDevice = device;
-
-    return device;
+    return true;
 }
 
-void agpuDeviceDestroy(GPUDevice device) {
-    if (device == NULL) {
+void agpu_shutdown(void) {
+    if (s_renderer == NULL) {
         return;
     }
 
-    device->destroyDevice(device);
-    s_gpuDevice = nullptr;
+    s_renderer->shutdown();
+    s_renderer = NULL;
 }
 
-void agpu_frame_begin(GPUDevice device) {
-    device->beginFrame(device->renderer);
+void agpu_frame_begin(void) {
+    s_renderer->frame_wait();
 }
 
-void agpu_frame_end(GPUDevice device) {
-    device->presentFrame(device->renderer);
+void agpu_frame_finish(void) {
+    s_renderer->frame_finish();
 }
 
-void agpu_wait_gpu(GPUDevice device) {
-    device->waitForGPU(device->renderer);
+agpu_backend_type agpu_query_backend(void) {
+    return s_renderer->query_backend();
 }
 
-AGPUBackendType agpuDeviceQueryBackend(GPUDevice device) {
-    VGPU_ASSERT(device);
-    return device->query_caps(device->renderer).backend;
+void agpu_query_caps(AGPUDeviceCapabilities* caps) {
+    s_renderer->query_caps(caps);
 }
 
-AGPUDeviceCapabilities agpuDeviceQueryCaps(GPUDevice device) {
-    VGPU_ASSERT(device);
-    return device->query_caps(device->renderer);
-}
-
-AGPUPixelFormat gpuGetDefaultDepthFormat(GPUDevice device)
+AGPUPixelFormat agpu_get_default_depth_format(void)
 {
-    VGPU_ASSERT(device);
-    return device->getDefaultDepthFormat(device->renderer);
+    return s_renderer->get_default_depth_format();
 }
 
-AGPUPixelFormat gpuGetDefaultDepthStencilFormat(GPUDevice device)
+AGPUPixelFormat agpu_get_default_depth_stencil_format(void)
 {
-    VGPU_ASSERT(device);
-    return device->getDefaultDepthStencilFormat(device->renderer);
+    return s_renderer->get_default_depth_stencil_format();
 }
 
 /* Texture */
-static AGPUTextureDescriptor texture_info_default(const AGPUTextureDescriptor* info) {
-    AGPUTextureDescriptor def = *info;
-    def.type = _vgpu_def(info->type, AGPUTextureType_2D);
-    def.format = _vgpu_def(info->format, AGPUPixelFormat_RGBA8Unorm);
-    def.size.width = _vgpu_def(info->size.width, 1);
-    def.size.height = _vgpu_def(info->size.height, 1);
-    def.size.depth = _vgpu_def(info->size.depth, 1);
-    def.mipLevelCount = _vgpu_def(info->mipLevelCount, 1);
-    def.sampleCount = _vgpu_def(info->sampleCount, 1u);
+static agpu_texture_info texture_info_default(const agpu_texture_info* info) {
+    agpu_texture_info def = *info;
+    def.type = _agpu_def(info->type, AGPUTextureType_2D);
+    def.format = _agpu_def(info->format, AGPUPixelFormat_RGBA8Unorm);
+    def.size.width = _agpu_def(info->size.width, 1);
+    def.size.height = _agpu_def(info->size.height, 1);
+    def.size.depth = _agpu_def(info->size.depth, 1);
+    def.mipLevelCount = _agpu_def(info->mipLevelCount, 1);
+    def.sampleCount = _agpu_def(info->sampleCount, 1u);
     return def;
 }
 
-TextureHandle agpuCreateTexture(const AGPUTextureDescriptor* descriptor)
-{
-    VGPU_ASSERT(s_gpuDevice);
-    VGPU_ASSERT(descriptor);
-
-    AGPUTextureDescriptor info_def = texture_info_default(descriptor);
-    return s_gpuDevice->createTexture(s_gpuDevice->renderer, &info_def);
+agpu_texture agpu_texture_create(const agpu_texture_info* info) {
+    AGPU_ASSERT(info);
+    agpu_texture_info info_def = texture_info_default(info);
+    return s_renderer->create_texture(&info_def);
 }
 
-void agpuDestroyTexture(TextureHandle texture)
-{
-    VGPU_ASSERT(s_gpuDevice);
-    VGPU_ASSERT(texture.isValid());
-    s_gpuDevice->destroyTexture(s_gpuDevice->renderer, texture);
+void agpu_texture_destroy(agpu_texture texture) {
+    AGPU_ASSERT(texture);
+    s_renderer->destroy_texture(texture);
 }
 
 /* Buffer */
-BufferHandle agpuCreateBuffer(const AGPUBufferDescriptor* descriptor)
-{
-    VGPU_ASSERT(s_gpuDevice);
-    VGPU_ASSERT(descriptor);
-
-    return s_gpuDevice->createBuffer(s_gpuDevice->renderer, descriptor);
+agpu_buffer agpu_create_buffer(const agpu_buffer_info* info) {
+    AGPU_ASSERT(info);
+    return s_renderer->create_buffer(info);
 }
 
-void agpuDestroyBuffer(BufferHandle buffer)
-{
-    VGPU_ASSERT(s_gpuDevice);
-    VGPU_ASSERT(buffer.isValid());
-    s_gpuDevice->destroyBuffer(s_gpuDevice->renderer, buffer);
+void agpu_destroy_buffer(agpu_buffer buffer) {
+    AGPU_ASSERT(buffer);
+    s_renderer->destroy_buffer( buffer);
 }
 
-AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor)
+/* Shader */
+agpu_shader agpu_create_shader(const agpu_shader_info* info) {
+    AGPU_ASSERT(info);
+    return s_renderer->create_shader(info);
+}
+
+void agpu_destroy_shader(agpu_shader shader) {
+    AGPU_ASSERT(shader);
+    s_renderer->destroy_shader(shader);
+}
+
+/* Pipeline */
+static agpu_pipeline_info pipeline_info_default(const agpu_pipeline_info* info) {
+    agpu_pipeline_info def = *info;
+    def.topology = _agpu_def(info->topology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
+    return def;
+}
+
+agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info) {
+    AGPU_ASSERT(info);
+    agpu_pipeline_info info_def = pipeline_info_default(info);
+    return s_renderer->create_pipeline(&info_def);
+}
+
+void agpu_destroy_pipeline(agpu_pipeline pipeline) {
+    AGPU_ASSERT(pipeline);
+    s_renderer->destroy_pipeline(pipeline);
+}
+
+/*AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor)
 {
     VGPU_ASSERT(device);
     VGPU_ASSERT(descriptor);
@@ -331,6 +349,19 @@ void agpuDeviceDestroySampler(GPUDevice device, AGPUSampler sampler)
 {
     VGPU_ASSERT(device);
     VGPU_ASSERT(sampler);
+}*/
+
+/* CommandBuffer */
+void agpu_set_pipeline(agpu_pipeline pipeline) {
+    s_renderer->set_pipeline(pipeline);
+}
+
+void agpu_set_vertex_buffers(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers) {
+    s_renderer->set_vertex_buffers(first_binding, count, buffers);
+}
+
+void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex) {
+    s_renderer->draw(vertex_count, instance_count, first_vertex);
 }
 
 #if TODO
@@ -583,43 +614,43 @@ const vgpu_pixel_format_desc FormatDesc[] =
 
 uint32_t agpuGetFormatBitsPerPixel(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].bitsPerPixel;
 }
 
 uint32_t agpuGetFormatBlockSize(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockSize;
 }
 
 uint32_t agpuGetFormatBlockWidth(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockWidth;
 }
 
 uint32_t agpuGetFormatBlockHeight(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].compression.blockHeight;
 }
 
 AGPUPixelFormatType agpuGetFormatType(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].type;
 }
 
 bool agpuIsDepthFormat(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[format].format == format);
+    AGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.depth > 0;
 }
 
 bool agpuIsStencilFrmat(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[format].format == format);
+    AGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.stencil > 0;
 }
 
@@ -630,21 +661,23 @@ bool agpuIsDepthStencilFormat(AGPUPixelFormat format)
 
 bool agpuIsCompressedFormat(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[format].format == format);
+    AGPU_ASSERT(FormatDesc[format].format == format);
     return format >= AGPUPixelFormat_BC1RGBAUnorm && format <= AGPUPixelFormat_BC7RGBAUnormSrgb;
 }
 
 const char* agpuGetFormatName(AGPUPixelFormat format)
 {
-    VGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
+    AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].name;
 }
 
-bool agpuIsSrgbFormat(AGPUPixelFormat format) {
+bool agpuIsSrgbFormat(AGPUPixelFormat format)
+{
     return (agpuGetFormatType(format) == AGPUPixelFormatType_UnormSrgb);
 }
 
-AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format) {
+AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format)
+{
     switch (format)
     {
     case AGPUPixelFormat_BC1RGBAUnormSrgb:
@@ -660,7 +693,7 @@ AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format) {
     case AGPUPixelFormat_BC7RGBAUnormSrgb:
         return AGPUPixelFormat_BC7RGBAUnorm;
     default:
-        VGPU_ASSERT(agpuIsSrgbFormat(format) == false);
+        AGPU_ASSERT(agpuIsSrgbFormat(format) == false);
         return format;
     }
 }
