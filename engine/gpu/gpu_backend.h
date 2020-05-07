@@ -53,16 +53,16 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #   if defined(__i386__) || defined(__x86_64__)
-#       define _VGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
+#       define AGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
 #   else
-#       define _VGPU_BREAKPOINT() ((void)0)
+#       define AGPU_BREAKPOINT() ((void)0)
 #   endif
-#   define _VGPU_UNREACHABLE() __builtin_unreachable()
+#   define AGPU_UNREACHABLE() __builtin_unreachable()
 
 #elif defined(_MSC_VER)
 extern void __cdecl __debugbreak(void);
-#   define _VGPU_BREAKPOINT() __debugbreak()
-#   define _VGPU_UNREACHABLE() __assume(false)
+#   define AGPU_BREAKPOINT() __debugbreak()
+#   define AGPU_UNREACHABLE() __assume(false)
 #else
 #   error "Unsupported compiler"
 #endif
@@ -99,7 +99,7 @@ typedef struct agpu_renderer {
     void (*frame_finish)(void);
 
     agpu_backend_type(*query_backend)(void);
-    void(*query_caps)(AGPUDeviceCapabilities* caps);
+    void(*get_limits)(agpu_limits* limits);
 
     AGPUPixelFormat(*get_default_depth_format)(void);
     AGPUPixelFormat(*get_default_depth_stencil_format)(void);
@@ -117,13 +117,15 @@ typedef struct agpu_renderer {
     void (*destroy_shader)(agpu_shader handle);
 
     /* Pipeline */
-    agpu_pipeline (*create_pipeline)(const agpu_pipeline_info* info);
+    agpu_pipeline (*create_render_pipeline)(const agpu_render_pipeline_info* info);
     void (*destroy_pipeline)(agpu_pipeline handle);
 
     /* CommandBuffer */
     void (*set_pipeline)(agpu_pipeline pipeline);
-    void (*set_vertex_buffers)(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers);
-    void (*draw)(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
+    void (*cmdSetVertexBuffer)(uint32_t slot, agpu_buffer buffer, uint64_t offset);
+    void (*cmdSetIndexBuffer)(agpu_buffer buffer, uint64_t offset);
+    void (*cmdDraw)(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+    void (*cmdDrawIndexed)(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
 
 } agpu_renderer;
 
@@ -155,7 +157,7 @@ ASSIGN_DRIVER_FUNC(shutdown, name)\
 ASSIGN_DRIVER_FUNC(frame_wait, name)\
 ASSIGN_DRIVER_FUNC(frame_finish, name)\
 ASSIGN_DRIVER_FUNC(query_backend, name)\
-ASSIGN_DRIVER_FUNC(query_caps, name)\
+ASSIGN_DRIVER_FUNC(get_limits, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
 ASSIGN_DRIVER_FUNC(create_buffer, name)\
@@ -164,8 +166,10 @@ ASSIGN_DRIVER_FUNC(create_texture, name)\
 ASSIGN_DRIVER_FUNC(destroy_texture, name)\
 ASSIGN_DRIVER_FUNC(create_shader, name)\
 ASSIGN_DRIVER_FUNC(destroy_shader, name)\
-ASSIGN_DRIVER_FUNC(create_pipeline, name)\
+ASSIGN_DRIVER_FUNC(create_render_pipeline, name)\
 ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
 ASSIGN_DRIVER_FUNC(set_pipeline, name)\
-ASSIGN_DRIVER_FUNC(set_vertex_buffers, name)\
-ASSIGN_DRIVER_FUNC(draw, name)
+ASSIGN_DRIVER_FUNC(cmdSetVertexBuffer, name)\
+ASSIGN_DRIVER_FUNC(cmdSetIndexBuffer, name)\
+ASSIGN_DRIVER_FUNC(cmdDraw, name)\
+ASSIGN_DRIVER_FUNC(cmdDrawIndexed, name)

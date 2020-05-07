@@ -260,8 +260,8 @@ agpu_backend_type agpu_query_backend(void) {
     return s_renderer->query_backend();
 }
 
-void agpu_query_caps(AGPUDeviceCapabilities* caps) {
-    s_renderer->query_caps(caps);
+void  agpu_get_limits(agpu_limits* limits) {
+    s_renderer->get_limits(limits);
 }
 
 AGPUPixelFormat agpu_get_default_depth_format(void)
@@ -321,16 +321,16 @@ void agpu_destroy_shader(agpu_shader shader) {
 }
 
 /* Pipeline */
-static agpu_pipeline_info pipeline_info_default(const agpu_pipeline_info* info) {
-    agpu_pipeline_info def = *info;
-    def.topology = _agpu_def(info->topology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
+static agpu_render_pipeline_info pipeline_info_default(const agpu_render_pipeline_info* info) {
+    agpu_render_pipeline_info def = *info;
+    def.primitive_topology = _agpu_def(info->primitive_topology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
     return def;
 }
 
-agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info) {
+agpu_pipeline agpu_create_render_pipeline(const agpu_render_pipeline_info* info) {
     AGPU_ASSERT(info);
-    agpu_pipeline_info info_def = pipeline_info_default(info);
-    return s_renderer->create_pipeline(&info_def);
+    agpu_render_pipeline_info info_def = pipeline_info_default(info);
+    return s_renderer->create_render_pipeline(&info_def);
 }
 
 void agpu_destroy_pipeline(agpu_pipeline pipeline) {
@@ -356,12 +356,20 @@ void agpu_set_pipeline(agpu_pipeline pipeline) {
     s_renderer->set_pipeline(pipeline);
 }
 
-void agpu_set_vertex_buffers(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers) {
-    s_renderer->set_vertex_buffers(first_binding, count, buffers);
+void agpuCmdSetVertexBuffers(uint32_t slot, agpu_buffer buffer, uint64_t offset) {
+    s_renderer->cmdSetVertexBuffer(slot, buffer, offset);
 }
 
-void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex) {
-    s_renderer->draw(vertex_count, instance_count, first_vertex);
+void agpuCmdSetIndexBuffer(agpu_buffer buffer, uint64_t offset) {
+    s_renderer->cmdSetIndexBuffer(buffer, offset);
+}
+
+void agpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {
+    s_renderer->cmdDraw(vertexCount, instanceCount, firstVertex);
+}
+
+void agpuCmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) {
+    s_renderer->cmdDrawIndexed(indexCount, instanceCount, firstIndex);
 }
 
 #if TODO
@@ -717,4 +725,91 @@ AGPUPixelFormat agpuLinearToSrgbFormat(AGPUPixelFormat format)
     default:
         return format;
     }
+}
+
+
+uint32_t agpuGetVertexFormatComponentsCount(AGPUVertexFormat format) {
+    switch (format) {
+    case AGPU_VERTEX_FORMAT_UCHAR4:
+    case AGPU_VERTEX_FORMAT_CHAR4:
+    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
+    case AGPU_VERTEX_FORMAT_CHAR4NORM:
+    case AGPU_VERTEX_FORMAT_USHORT4:
+    case AGPU_VERTEX_FORMAT_SHORT4:
+    case AGPU_VERTEX_FORMAT_USHORT4NORM:
+    case AGPU_VERTEX_FORMAT_SHORT4NORM:
+    case AGPUVertexFormat_Half4:
+    case AGPUVertexFormat_Float4:
+    case AGPUVertexFormat_UInt4:
+    case AGPUVertexFormat_Int4:
+        return 4;
+    case AGPUVertexFormat_Float3:
+    case AGPUVertexFormat_UInt3:
+    case AGPUVertexFormat_Int3:
+        return 3;
+    case AGPU_VERTEX_FORMAT_UCHAR2:
+    case AGPU_VERTEX_FORMAT_CHAR2:
+    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
+    case AGPU_VERTEX_FORMAT_CHAR2NORM:
+    case AGPU_VERTEX_FORMAT_USHORT2:
+    case AGPU_VERTEX_FORMAT_SHORT2:
+    case AGPU_VERTEX_FORMAT_USHORT2NORM:
+    case AGPU_VERTEX_FORMAT_SHORT2NORM:
+    case AGPUVertexFormat_Half2:
+    case AGPUVertexFormat_Float2:
+    case AGPUVertexFormat_UInt2:
+    case AGPUVertexFormat_Int2:
+        return 2;
+    case AGPUVertexFormat_Float:
+    case AGPUVertexFormat_UInt:
+    case AGPUVertexFormat_Int:
+        return 1;
+    default:
+        AGPU_UNREACHABLE();
+    }
+}
+
+uint32_t agpuGetVertexFormatComponentSize(AGPUVertexFormat format) {
+    switch (format) {
+    case AGPU_VERTEX_FORMAT_UCHAR2:
+    case AGPU_VERTEX_FORMAT_UCHAR4:
+    case AGPU_VERTEX_FORMAT_CHAR2:
+    case AGPU_VERTEX_FORMAT_CHAR4:
+    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
+    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
+    case AGPU_VERTEX_FORMAT_CHAR2NORM:
+    case AGPU_VERTEX_FORMAT_CHAR4NORM:
+        return 1u;
+    case AGPU_VERTEX_FORMAT_USHORT2:
+    case AGPU_VERTEX_FORMAT_USHORT4:
+    case AGPU_VERTEX_FORMAT_USHORT2NORM:
+    case AGPU_VERTEX_FORMAT_USHORT4NORM:
+    case AGPU_VERTEX_FORMAT_SHORT2:
+    case AGPU_VERTEX_FORMAT_SHORT4:
+    case AGPU_VERTEX_FORMAT_SHORT2NORM:
+    case AGPU_VERTEX_FORMAT_SHORT4NORM:
+    case AGPUVertexFormat_Half2:
+    case AGPUVertexFormat_Half4:
+        return 2u;
+    case AGPUVertexFormat_Float:
+    case AGPUVertexFormat_Float2:
+    case AGPUVertexFormat_Float3:
+    case AGPUVertexFormat_Float4:
+        return 4u;
+    case AGPUVertexFormat_UInt:
+    case AGPUVertexFormat_UInt2:
+    case AGPUVertexFormat_UInt3:
+    case AGPUVertexFormat_UInt4:
+    case AGPUVertexFormat_Int:
+    case AGPUVertexFormat_Int2:
+    case AGPUVertexFormat_Int3:
+    case AGPUVertexFormat_Int4:
+        return 4u;
+    default:
+        AGPU_UNREACHABLE();
+    }
+}
+
+uint32_t agpuGetVertexFormatSize(AGPUVertexFormat format) {
+    return agpuGetVertexFormatComponentsCount(format) * agpuGetVertexFormatComponentSize(format);
 }

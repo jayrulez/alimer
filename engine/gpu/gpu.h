@@ -202,53 +202,6 @@ typedef enum vgpu_shader_stage {
 } vgpu_shader_stage;
 typedef uint32_t vgpu_shader_stage_flags;
 
-typedef enum AGPUVertexFormat {
-    AGPUVertexFormat_Invalid = 0,
-    AGPUVertexFormat_UChar2,
-    AGPUVertexFormat_UChar4,
-    AGPUVertexFormat_Char2,
-    AGPUVertexFormat_Char4,
-    AGPUVertexFormat_UChar2Norm,
-    AGPUVertexFormat_UChar4Norm,
-    AGPUVertexFormat_Char2Norm,
-    AGPUVertexFormat_Char4Norm,
-    AGPUVertexFormat_UShort2,
-    AGPUVertexFormat_UShort4,
-    AGPUVertexFormat_Short2,
-    AGPUVertexFormat_Short4,
-    AGPUVertexFormat_UShort2Norm,
-    AGPUVertexFormat_UShort4Norm,
-    AGPUVertexFormat_Short2Norm,
-    AGPUVertexFormat_Short4Norm,
-    AGPUVertexFormat_Half2,
-    AGPUVertexFormat_Half4,
-    AGPUVertexFormat_Float,
-    AGPUVertexFormat_Float2,
-    AGPUVertexFormat_Float3,
-    AGPUVertexFormat_Float4,
-    AGPUVertexFormat_UInt,
-    AGPUVertexFormat_UInt2,
-    AGPUVertexFormat_UInt3,
-    AGPUVertexFormat_UInt4,
-    AGPUVertexFormat_Int,
-    AGPUVertexFormat_Int2,
-    AGPUVertexFormat_Int3,
-    AGPUVertexFormat_Int4,
-    AGPUVertexFormat_Force32 = 0x7FFFFFFF
-} AGPUVertexFormat;
-
-typedef enum AGPUInputStepMode {
-    AGPUInputStepMode_Vertex = 0,
-    AGPUInputStepMode_Instance = 1,
-    AGPUInputStepMode_Force32 = 0x7FFFFFFF
-} AGPUInputStepMode;
-
-typedef enum AGPUIndexFormat {
-    AGPUIndexFormat_Uint16 = 0,
-    AGPUIndexFormat_Uint32 = 1,
-    AGPUIndexFormat_Force32 = 0x7FFFFFFF
-} AGPUIndexFormat;
-
 typedef enum AGPUCompareFunction {
     AGPUCompareFunction_Undefined = 0x00000000,
     AGPUCompareFunction_Never = 0x00000001,
@@ -364,12 +317,11 @@ typedef struct vgpu_features {
     bool raytracing;
 } vgpu_features;
 
-typedef struct vgpu_limits {
+typedef struct agpu_limits {
     uint32_t        max_vertex_attributes;
     uint32_t        max_vertex_bindings;
     uint32_t        max_vertex_attribute_offset;
     uint32_t        max_vertex_binding_stride;
-    uint32_t        max_texture_size_1d;
     uint32_t        max_texture_size_2d;
     uint32_t        max_texture_size_3d;
     uint32_t        max_texture_size_cube;
@@ -396,7 +348,7 @@ typedef struct vgpu_limits {
     uint32_t        max_compute_work_group_size_x;
     uint32_t        max_compute_work_group_size_y;
     uint32_t        max_compute_work_group_size_z;
-} vgpu_limits;
+} agpu_limits;
 
 typedef struct AGPUDeviceCapabilities {
     /// The backend type.
@@ -408,7 +360,6 @@ typedef struct AGPUDeviceCapabilities {
     char adapter_name[AGPU_MAX_DEVICE_NAME_SIZE];
 
     vgpu_features features;
-    vgpu_limits limits;
 } AGPUDeviceCapabilities;
 
 typedef struct {
@@ -434,22 +385,6 @@ typedef struct VGPURenderPassDescriptor {
     vgpu_color_attachment           color_attachments[AGPU_MAX_COLOR_ATTACHMENTS];
     vgpu_depth_stencil_attachment   depth_stencil_attachment;
 } VGPURenderPassDescriptor;
-
-typedef struct GPUVertexBufferLayoutDescriptor {
-    uint32_t                stride;
-    AGPUInputStepMode        stepMode;
-} GPUVertexBufferLayoutDescriptor;
-
-typedef struct VgpuVertexAttributeDescriptor {
-    AGPUVertexFormat format;
-    uint32_t offset;
-    uint32_t bufferIndex;
-} VgpuVertexAttributeDescriptor;
-
-typedef struct VgpuVertexDescriptor {
-    GPUVertexBufferLayoutDescriptor     layouts[AGPU_MAX_VERTEX_BUFFER_BINDINGS];
-    VgpuVertexAttributeDescriptor       attributes[AGPU_MAX_VERTEX_ATTRIBUTES];
-} VgpuVertexDescriptor;
 
 typedef struct AGPUSamplerDescriptor {
     const char* label;
@@ -505,7 +440,7 @@ extern "C"
     VGPU_EXPORT void agpu_frame_begin(void);
     VGPU_EXPORT void agpu_frame_finish(void);
     VGPU_EXPORT agpu_backend_type agpu_query_backend(void);
-    VGPU_EXPORT void agpu_query_caps(AGPUDeviceCapabilities* caps);
+    VGPU_EXPORT void agpu_get_limits(agpu_limits* limits);
     VGPU_EXPORT AGPUPixelFormat agpu_get_default_depth_format(void);
     VGPU_EXPORT AGPUPixelFormat agpu_get_default_depth_stencil_format(void);
 
@@ -564,6 +499,40 @@ extern "C"
     VGPU_EXPORT void agpu_destroy_shader(agpu_shader shader);
 
     /* Pipeline */
+    typedef enum AGPUVertexFormat {
+        AGPU_VERTEX_FORMAT_UCHAR2,
+        AGPU_VERTEX_FORMAT_UCHAR4,
+        AGPU_VERTEX_FORMAT_CHAR2,
+        AGPU_VERTEX_FORMAT_CHAR4,
+        AGPU_VERTEX_FORMAT_UCHAR2NORM,
+        AGPU_VERTEX_FORMAT_UCHAR4NORM,
+        AGPU_VERTEX_FORMAT_CHAR2NORM,
+        AGPU_VERTEX_FORMAT_CHAR4NORM,
+        AGPU_VERTEX_FORMAT_USHORT2,
+        AGPU_VERTEX_FORMAT_USHORT4,
+        AGPU_VERTEX_FORMAT_SHORT2,
+        AGPU_VERTEX_FORMAT_SHORT4,
+        AGPU_VERTEX_FORMAT_USHORT2NORM,
+        AGPU_VERTEX_FORMAT_USHORT4NORM,
+        AGPU_VERTEX_FORMAT_SHORT2NORM,
+        AGPU_VERTEX_FORMAT_SHORT4NORM,
+        AGPUVertexFormat_Half2,
+        AGPUVertexFormat_Half4,
+        AGPUVertexFormat_Float,
+        AGPUVertexFormat_Float2,
+        AGPUVertexFormat_Float3,
+        AGPUVertexFormat_Float4,
+        AGPUVertexFormat_UInt,
+        AGPUVertexFormat_UInt2,
+        AGPUVertexFormat_UInt3,
+        AGPUVertexFormat_UInt4,
+        AGPUVertexFormat_Int,
+        AGPUVertexFormat_Int2,
+        AGPUVertexFormat_Int3,
+        AGPUVertexFormat_Int4,
+        AGPUVertexFormat_Force32 = 0x7FFFFFFF
+    } AGPUVertexFormat;
+
     typedef enum agpu_primitive_topology {
         AGPU_PRIMITIVE_TOPOLOGY_POINTS = 1,
         AGPU_PRIMITIVE_TOPOLOGY_LINES = 2,
@@ -573,14 +542,43 @@ extern "C"
         _AGPU_PrimitiveTopology_FORCE_U32 = 0x7FFFFFFF
     } agpu_primitive_topology;
 
-    typedef struct {
-        agpu_shader shader;
-        //VgpuVertexDescriptor        vertexDescriptor;
-        agpu_primitive_topology topology;
-        const char* label;
-    } agpu_pipeline_info;
+    typedef enum AGPUIndexFormat {
+        AGPUIndexFormat_Uint16 = 0x00000000,
+        AGPUIndexFormat_Uint32 = 0x00000001,
+        AGPUIndexFormat_Force32 = 0x7FFFFFFF
+    } AGPUIndexFormat;
 
-    VGPU_EXPORT agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info);
+    typedef enum AGPUInputStepMode {
+        AGPUInputStepMode_Vertex = 0x00000000,
+        AGPUInputStepMode_Instance = 0x00000001,
+        AGPUInputStepMode_Force32 = 0x7FFFFFFF
+    } AGPUInputStepMode;
+
+    typedef struct AGPUVertexAttributeDescriptor {
+        AGPUVertexFormat  format;
+        uint32_t            shaderLocation;
+    } AGPUVertexAttributeDescriptor;
+
+    typedef struct AGPUVertexBufferLayoutDescriptor {
+        AGPUInputStepMode stepMode;
+        uint32_t attributeCount;
+        const AGPUVertexAttributeDescriptor* attributes;
+    } AGPUVertexBufferLayoutDescriptor;
+
+    typedef struct AGPUVertexStateDescriptor {
+        AGPUIndexFormat indexFormat;
+        uintptr_t vertexBufferCount;
+        const AGPUVertexBufferLayoutDescriptor* vertexBuffers;
+    } AGPUVertexStateDescriptor;
+
+    typedef struct agpu_render_pipeline_info {
+        agpu_shader                 shader;
+        AGPUVertexStateDescriptor   vertexState;
+        agpu_primitive_topology     primitive_topology;
+        const char*                 label;
+    } agpu_render_pipeline_info;
+
+    VGPU_EXPORT agpu_pipeline agpu_create_render_pipeline(const agpu_render_pipeline_info* info);
     VGPU_EXPORT void agpu_destroy_pipeline(agpu_pipeline pipeline);
 
     /* Sampler */
@@ -589,10 +587,11 @@ extern "C"
 
     /* CommandBuffer */
     void agpu_set_pipeline(agpu_pipeline pipeline);
-    void agpu_set_vertex_buffers(uint32_t first_binding, uint32_t count, const agpu_buffer* buffers);
-    void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
+    void agpuCmdSetVertexBuffers(uint32_t slot, agpu_buffer buffer, uint64_t offset);
+    void agpuCmdSetIndexBuffer(agpu_buffer buffer, uint64_t offset);
+    void agpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+    void agpuCmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
 
-    /* Helper methods */
     /// Get the number of bits per format
     VGPU_EXPORT uint32_t agpuGetFormatBitsPerPixel(AGPUPixelFormat format);
     VGPU_EXPORT uint32_t agpuGetFormatBlockSize(AGPUPixelFormat format);
@@ -617,6 +616,10 @@ extern "C"
     VGPU_EXPORT bool agpuIsSrgbFormat(AGPUPixelFormat format);
     VGPU_EXPORT AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format);
     VGPU_EXPORT AGPUPixelFormat agpuLinearToSrgbFormat(AGPUPixelFormat format);
+
+    VGPU_EXPORT uint32_t agpuGetVertexFormatComponentsCount(AGPUVertexFormat format);
+    VGPU_EXPORT uint32_t agpuGetVertexFormatComponentSize(AGPUVertexFormat format);
+    VGPU_EXPORT uint32_t agpuGetVertexFormatSize(AGPUVertexFormat format);
 
 #ifdef __cplusplus
 }

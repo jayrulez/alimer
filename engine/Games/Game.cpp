@@ -26,6 +26,7 @@
 #include "graphics/GraphicsDevice.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
+#include <array>
 
 namespace alimer
 {
@@ -52,7 +53,8 @@ namespace alimer
         os_shutdown();
     }
 
-    static agpu_buffer buffer;
+    static agpu_buffer vertexBuffer;
+    static agpu_buffer indexBuffer;
     static agpu_shader shader;
     static agpu_pipeline render_pipeline;
 
@@ -87,38 +89,47 @@ namespace alimer
                 headless = true;
             }
 
-            /*const float vertices[] = {
-                // positions            // colors
-                 0.0f,  0.5f, 0.5f,     1.0f, 0.0f, 0.0f, 1.0f,
-                 0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
-                -0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f
-            };*/
-
             const float vertices[] = {
-                // positions           
-                0.0f, 0.5f, 0.5f,
-                0.5f, -0.5f, 0.5f,
-                -0.5f,  -0.5f, 0.5f
+                // positions            // colors
+                -0.5f,  0.5f, 0.5f,     1.0f, 0.0f, 0.0f, 1.0f,
+                0.5f,  0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
+                0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f,
+                -0.5f, -0.5f, 0.5f,     1.0f, 1.0f, 0.0f, 1.0f,
             };
 
             agpu_buffer_info buffer_info = {};
             buffer_info.size = sizeof(vertices);
             buffer_info.usage = GPU_BUFFER_USAGE_VERTEX;
             buffer_info.content = vertices;
-            buffer = agpu_create_buffer(&buffer_info);
+            vertexBuffer = agpu_create_buffer(&buffer_info);
+
+            /* create an index buffer */
+            uint16_t indices[] = {
+                0, 1, 2,    // first triangle
+                0, 2, 3,    // second triangle        
+            };
+            agpu_buffer_info indexBufferDesc = {};
+            indexBufferDesc.size = sizeof(indices);
+            indexBufferDesc.usage = GPU_BUFFER_USAGE_INDEX;
+            indexBufferDesc.content = indices;
+            indexBuffer = agpu_create_buffer(&indexBufferDesc);
 
             const char* vertexShaderSource = "#version 330 core\n"
-                "layout (location = 0) in vec3 aPos;\n"
+                "layout (location=0) in vec3 position;\n"
+                "layout (location=1) in vec4 color;\n"
+                "out vec4 vColor;\n"
                 "void main()\n"
                 "{\n"
-                "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+                "   gl_Position = vec4(position, 1.0);\n"
+                "   vColor = color;\n"
                 "}\0";
 
             const char* fragmentShaderSource = "#version 330 core\n"
+                "in vec4 vColor;\n"
                 "out vec4 FragColor;\n"
                 "void main()\n"
                 "{\n"
-                "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+                "   FragColor = vColor;\n"
                 "}\n\0";
 
 
@@ -127,9 +138,22 @@ namespace alimer
             shader_info.fragment.source = fragmentShaderSource;
             shader = agpu_create_shader(&shader_info);
 
-            agpu_pipeline_info pipeline_info = {};
+            std::array<AGPUVertexAttributeDescriptor, 2> vertexAttributes = {};
+            vertexAttributes[0].format = AGPUVertexFormat_Float3;
+            vertexAttributes[0].shaderLocation = 0;
+            vertexAttributes[1].format = AGPUVertexFormat_Float4;
+            vertexAttributes[1].shaderLocation = 1;
+
+            AGPUVertexBufferLayoutDescriptor bufferLayoutInfo = {};
+            bufferLayoutInfo.attributeCount = 2u;
+            bufferLayoutInfo.attributes = vertexAttributes.data();
+
+            agpu_render_pipeline_info pipeline_info = {};
             pipeline_info.shader = shader;
-            render_pipeline = agpu_create_pipeline(&pipeline_info);
+            pipeline_info.vertexState.vertexBufferCount = 1u;
+            pipeline_info.vertexState.vertexBuffers = &bufferLayoutInfo;
+            
+            render_pipeline = agpu_create_render_pipeline(&pipeline_info);
         }
 
         Initialize();
@@ -202,9 +226,10 @@ namespace alimer
         vgpu_cmd_end_render_pass();
         */
 
-        agpu_set_vertex_buffers(0, 1, &buffer);
         agpu_set_pipeline(render_pipeline);
-        agpu_draw(3, 1, 0);
+        agpuCmdSetVertexBuffers(0, vertexBuffer, 0);
+        agpuCmdSetIndexBuffer(indexBuffer, 0);
+        agpuCmdDrawIndexed(6, 1, 0);
         agpu_frame_finish();
         window_swap_buffers(main_window);
     }
