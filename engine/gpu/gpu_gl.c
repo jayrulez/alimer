@@ -47,53 +47,48 @@ typedef enum {
     GL_BUFFER_TARGET_VERTEX,    /* GL_ARRAY_BUFFER */
     GL_BUFFER_TARGET_INDIRECT,  /* GL_DRAW_INDIRECT_BUFFER */
     _GL_BUFFER_TARGET_COUNT
-} agpu_gl_buffer_target;
+} vgpu_gl_buffer_target;
 
-typedef struct agpu_buffer_gl {
-    GLuint id;
-} agpu_buffer_gl;
+typedef struct {
+    uint32_t id;
+    VGPUDeviceSize size;
+    vgpu_gl_buffer_target target;
+} vgpu_buffer_gl;
 
-typedef struct agpu_texture_gl {
+typedef struct {
     GLuint id;
-} agpu_texture_gl;
+} vgpu_texture_gl;
 
-typedef struct agpu_shader_gl {
+typedef struct {
     GLuint id;
-} agpu_shader_gl;
+} vgpu_shader_gl;
 
 typedef struct {
     int8_t buffer_index;        /* -1 if attr is not enabled */
     GLuint shaderLocation;
+    GLsizei stride;
     uint64_t offset;
     uint8_t size;
     GLenum type;
     GLboolean normalized;
     GLboolean integer;
     GLuint divisor;
-} agpu_vertex_attribute_gl;
+} vgpu_vertex_attribute_gl;
 
 typedef struct {
-    agpu_shader_gl* shader;
+    vgpu_shader_gl* shader;
     GLenum primitive_type;
     GLenum index_type;
     uint32_t attribute_count;
-    agpu_vertex_attribute_gl attributes[AGPU_MAX_VERTEX_ATTRIBUTES];
-    GLsizei vertex_buffer_strides[AGPU_MAX_VERTEX_BUFFER_BINDINGS];
-} agpu_pipeline_gl;
+    vgpu_vertex_attribute_gl attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
+} vgpu_pipeline_gl;
 
 typedef struct {
-    agpu_vertex_attribute_gl attribute;
+    vgpu_vertex_attribute_gl attribute;
     GLuint vertex_buffer;
-} agpu_vertex_attribute_cache_gl;
+} vgpu_vertex_attribute_cache_gl;
 
 static struct {
-    agpu_config config;
-
-    GLuint vao;
-    GLuint default_framebuffer;
-
-    agpu_limits limits;
-
     struct {
         uint32_t major;
         uint32_t minor;
@@ -105,24 +100,35 @@ static struct {
         bool texture_storage;
         bool direct_state_access;
     } ext;
+} gl;
+
+typedef struct VGPURendererGL {
+    /* Associated vgpu_device */
+    VGPUDevice gpuDevice;
+
+    GLuint vao;
+    GLuint defaultFramebuffer;
+
+    VGPUDeviceCaps caps;
 
     struct {
-        agpu_pipeline_gl* current_pipeline;
+        bool insidePass;
+        vgpu_pipeline_gl* current_pipeline;
         GLuint program;
         GLuint buffers[_GL_BUFFER_TARGET_COUNT];
         uint32_t primitiveRestart;
-        agpu_vertex_attribute_cache_gl attributes[AGPU_MAX_VERTEX_ATTRIBUTES];
+        vgpu_vertex_attribute_cache_gl attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
         uint16_t enabled_locations;
-        GLuint vertex_buffers[AGPU_MAX_VERTEX_BUFFER_BINDINGS];
-        uint64_t vertex_buffer_offsets[AGPU_MAX_VERTEX_BUFFER_BINDINGS];
+        GLuint vertex_buffers[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
+        uint64_t vertex_buffer_offsets[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
         struct {
             GLuint buffer;
             uint64_t offset;
         } index;
-    } state;
-} gl;
+    } cache;
+} VGPURendererGL;
 
-#define GL_THROW(s) if (gl.config.callback) { gl.config.callback(gl.config.context, s, true); }
+#define GL_THROW(s) vgpuLog(VGPULogLevel_Error, s)
 #define GL_CHECK_STR(c, s) if (!(c)) { GL_THROW(s); }
 
 #if defined(NDEBUG) || (defined(__APPLE__) && !defined(DEBUG))
@@ -169,7 +175,7 @@ static bool _agpu_gl_version(uint32_t major, uint32_t minor) {
     return gl.version.major == major && gl.version.minor >= minor;
 }
 
-static GLenum _agpu_gl_get_buffer_target(agpu_gl_buffer_target target) {
+static GLenum _agpu_gl_get_buffer_target(vgpu_gl_buffer_target target) {
     switch (target) {
     case GL_BUFFER_TARGET_COPY_SRC: return GL_COPY_READ_BUFFER;
     case GL_BUFFER_TARGET_COPY_DST: return GL_COPY_WRITE_BUFFER;
@@ -186,48 +192,80 @@ static GLenum _agpu_gl_get_buffer_target(agpu_gl_buffer_target target) {
     }
 }
 
-static void _agpu_gl_bind_buffer(agpu_gl_buffer_target target, GLuint buffer, bool force) {
-    if (force || gl.state.buffers[target] != target) {
+static GLenum _gl_GetBufferUsage(VGPUBufferUsage usage)
+{
+    if (usage && VGPUBufferUsage_Dynamic) {
+        return GL_STREAM_DRAW;
+    }
+
+    if (usage && VGPUBufferUsage_CPUAccessible) {
+        return GL_STREAM_DRAW;
+    }
+
+    return GL_STATIC_DRAW;
+}
+
+#if !defined(AGPU_WEBGL)
+static GLbitfield _gl_getBufferFlags(VGPUBufferUsage usage)
+{
+    GLbitfield flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
+    if (usage & VGPUBufferUsage_Dynamic) {
+        flags |= GL_DYNAMIC_STORAGE_BIT;
+    }
+
+    if (usage & VGPUBufferUsage_CPUAccessible) {
+        flags |= GL_MAP_READ_BIT;
+    }
+
+    return flags;
+}
+#endif
+
+static void _agpu_gl_bind_buffer(VGPURendererGL* renderer, vgpu_gl_buffer_target target, GLuint buffer, bool force) {
+    if (force || renderer->cache.buffers[target] != target) {
         GLenum gl_target = _agpu_gl_get_buffer_target(target);
         if (gl_target != GL_NONE) {
             GL_CHECK(glBindBuffer(gl_target, buffer));
         }
 
-        gl.state.buffers[target] = buffer;
+        renderer->cache.buffers[target] = buffer;
     }
 }
 
-static void _agpu_gl_use_program(uint32_t program) {
-    if (gl.state.program != program) {
-        gl.state.program = program;
+static void _agpu_gl_use_program(VGPURendererGL* renderer, uint32_t program) {
+    if (renderer->cache.program != program) {
+        renderer->cache.program = program;
         GL_CHECK(glUseProgram(program));
         /* TODO: Increate shader switches stats */
     }
 }
 
-static void _agpu_gl_reset_state_cache() {
-    memset(&gl.state, 0, sizeof(gl.state));
+static void _agpu_gl_reset_state_cache(VGPURendererGL* renderer) {
+    memset(&renderer->cache, 0, sizeof(renderer->cache));
+    renderer->cache.insidePass = false;
+
     for (uint32_t i = 0; i < _GL_BUFFER_TARGET_COUNT; i++) {
-        _agpu_gl_bind_buffer((agpu_gl_buffer_target)i, 0, true);
+        _agpu_gl_bind_buffer(renderer, (vgpu_gl_buffer_target)i, 0, true);
     }
 
-    gl.state.enabled_locations = 0;
-    for (uint32_t i = 0; i < gl.limits.max_vertex_attributes; i++) {
-        gl.state.attributes[i].attribute.buffer_index = -1;
-        gl.state.attributes[i].attribute.shaderLocation = (GLuint)-1;
+    renderer->cache.enabled_locations = 0;
+    for (uint32_t i = 0; i < renderer->caps.limits.maxVertexInputAttributes; i++)
+    {
+        renderer->cache.attributes[i].attribute.buffer_index = -1;
+        renderer->cache.attributes[i].attribute.shaderLocation = (GLuint)-1;
         GL_CHECK(glDisableVertexAttribArray(i));
     }
 
-    for (uint32_t i = 0; i < AGPU_MAX_VERTEX_BUFFER_BINDINGS; i++) {
-        gl.state.vertex_buffers[i] = 0;
-        gl.state.vertex_buffer_offsets[i] = 0;
+    for (uint32_t i = 0; i < VGPU_MAX_VERTEX_BUFFER_BINDINGS; i++)
+    {
+        renderer->cache.vertex_buffers[i] = 0;
+        renderer->cache.vertex_buffer_offsets[i] = 0;
     }
 
-    gl.state.index.buffer = 0;
-    gl.state.index.offset = 0;
-
-    gl.state.current_pipeline = NULL;
-    gl.state.program = 0;
+    renderer->cache.index.buffer = 0;
+    renderer->cache.index.offset = 0;
+    renderer->cache.current_pipeline = NULL;
+    renderer->cache.program = 0;
     GL_CHECK(glUseProgram(0));
 
     /* depth-stencil state */
@@ -264,22 +302,22 @@ static void _agpu_gl_reset_state_cache() {
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     glEnable(GL_PRIMITIVE_RESTART);
-    gl.state.primitiveRestart = 0xffffffff;
-    glPrimitiveRestartIndex(gl.state.primitiveRestart);
+    renderer->cache.primitiveRestart = 0xffffffff;
+    glPrimitiveRestartIndex(renderer->cache.primitiveRestart);
     _GPU_GL_CHECK_ERROR();
 #endif
 
     _GPU_GL_CHECK_ERROR();
 }
 
-static bool gl_init(const agpu_config* config) {
-    memcpy(&gl.config, config, sizeof(*config));
-
+static bool gl_init(VGPUDevice device, const VGpuDeviceDescriptor* descriptor) {
 #ifdef AGPU_GL
-    gladLoadGLLoader((GLADloadproc)config->gl.get_proc_address);
+    gladLoadGLLoader((GLADloadproc)descriptor->gl.GetProcAddress);
 #elif defined(AGPU_GLES)
-    gladLoadGLES2Loader((GLADloadproc)config->gl.get_proc_address);
+    gladLoadGLES2Loader((GLADloadproc)descriptor->gl.GetProcAddress);
 #endif
+
+    VGPURendererGL* renderer = (VGPURendererGL*)device->renderer;
 
 #ifdef AGPU_GL
     GL_CHECK(glGetIntegerv(GL_MAJOR_VERSION, (GLint*)&gl.version.major));
@@ -310,42 +348,45 @@ static bool gl_init(const agpu_config* config) {
 
 #endif
 
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&gl.default_framebuffer);
-    glGenVertexArrays(1, &gl.vao);
-    glBindVertexArray(gl.vao);
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&renderer->defaultFramebuffer);
+    glGenVertexArrays(1, &renderer->vao);
+    glBindVertexArray(renderer->vao);
     _GPU_GL_CHECK_ERROR();
 
     /* Init limits */
     _GPU_GL_CHECK_ERROR();
-    GL_CHECK(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, (GLint*)&gl.limits.max_vertex_attributes));
-    if (gl.limits.max_vertex_attributes > AGPU_MAX_VERTEX_ATTRIBUTES) {
-        gl.limits.max_vertex_attributes = AGPU_MAX_VERTEX_ATTRIBUTES;
-    }
-    gl.limits.max_vertex_bindings = gl.limits.max_vertex_attributes;
-    gl.limits.max_vertex_attribute_offset = AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET;
-    gl.limits.max_vertex_binding_stride = AGPU_MAX_VERTEX_BUFFER_STRIDE;
 
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&gl.limits.max_texture_size_2d);
-    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&gl.limits.max_texture_size_3d);
-    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&gl.limits.max_texture_size_cube);
-    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, (GLint*)&gl.limits.max_texture_array_layers);
-    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, (GLint*)&gl.limits.max_color_attachments);
-    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, (GLint*)&gl.limits.max_uniform_buffer_size);
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, (GLint*)&gl.limits.min_uniform_buffer_offset_alignment);
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&renderer->caps.limits.maxTextureDimension2D);
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&renderer->caps.limits.maxTextureDimension3D);
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&renderer->caps.limits.maxTextureDimensionCube);
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, (GLint*)&renderer->caps.limits.maxTextureArrayLayers);
+    glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, (GLint*)&renderer->caps.limits.maxColorAttachments);
+
+    GL_CHECK(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, (GLint*)&renderer->caps.limits.maxVertexInputAttributes));
+    if (renderer->caps.limits.maxVertexInputAttributes > VGPU_MAX_VERTEX_ATTRIBUTES) {
+        renderer->caps.limits.maxVertexInputAttributes = VGPU_MAX_VERTEX_ATTRIBUTES;
+    }
+    renderer->caps.limits.maxVertexInputBindings = renderer->caps.limits.maxVertexInputAttributes;
+    renderer->caps.limits.maxVertexInputAttributeOffset = VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET;
+    renderer->caps.limits.maxVertexInputBindingStride = VGPU_MAX_VERTEX_BUFFER_STRIDE;
+
+
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, (GLint*)&renderer->caps.limits.max_uniform_buffer_size);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, (GLint*)&renderer->caps.limits.min_uniform_buffer_offset_alignment);
 #if !defined(AGPU_WEBGL)
-    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, (GLint*)&gl.limits.max_storage_buffer_size);
-    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, (GLint*)&gl.limits.min_storage_buffer_offset_alignment);
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, (GLint*)&renderer->caps.limits.max_storage_buffer_size);
+    glGetIntegerv(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT, (GLint*)&renderer->caps.limits.min_storage_buffer_offset_alignment);
     if (GLAD_GL_EXT_texture_filter_anisotropic) {
         GLfloat attr = 0.0f;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &attr);
-        gl.limits.max_sampler_anisotropy = (uint32_t)attr;
+        renderer->caps.limits.max_sampler_anisotropy = (uint32_t)attr;
     }
 
     // Viewport
-    glGetIntegerv(GL_MAX_VIEWPORTS, (GLint*)&gl.limits.max_viewports);
+    glGetIntegerv(GL_MAX_VIEWPORTS, (GLint*)&renderer->caps.limits.maxViewports);
 
 #if !defined(AGPU_GLES)
-    glGetIntegerv(GL_MAX_PATCH_VERTICES, (GLint*)&gl.limits.max_tessellation_patch_size);
+    glGetIntegerv(GL_MAX_PATCH_VERTICES, (GLint*)&renderer->caps.limits.maxTessellationPatchSize);
 #endif
 
     float point_sizes[2];
@@ -356,14 +397,14 @@ static bool gl_init(const agpu_config* config) {
     // Compute
     if (gl.ext.compute)
     {
-        glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, (GLint*)&gl.limits.max_compute_shared_memory_size);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, (GLint*)&gl.limits.max_compute_work_group_count_x);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, (GLint*)&gl.limits.max_compute_work_group_count_y);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, (GLint*)&gl.limits.max_compute_work_group_count_z);
-        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, (GLint*)&gl.limits.max_compute_work_group_invocations);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, (GLint*)&gl.limits.max_compute_work_group_size_x);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, (GLint*)&gl.limits.max_compute_work_group_size_y);
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, (GLint*)&gl.limits.max_compute_work_group_size_z);
+        glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, (GLint*)&renderer->caps.limits.maxComputeSharedMemorySize);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, (GLint*)&renderer->caps.limits.maxComputeWorkGroupCount[0]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, (GLint*)&renderer->caps.limits.maxComputeWorkGroupCount[1]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, (GLint*)&renderer->caps.limits.maxComputeWorkGroupCount[2]);
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, (GLint*)&renderer->caps.limits.maxComputeWorkGroupInvocations);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, (GLint*)&renderer->caps.limits.maxComputeWorkGroupSize[0]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, (GLint*)&renderer->caps.limits.maxComputeWorkGroupSize[1]);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, (GLint*)&renderer->caps.limits.maxComputeWorkGroupSize[2]);
         _GPU_GL_CHECK_ERROR();
     }
 
@@ -377,111 +418,153 @@ static bool gl_init(const agpu_config* config) {
 
     GLint maxViewportDims[2];
     glGetIntegerv(GL_MAX_VIEWPORT_DIMS, maxViewportDims);
-    gl.limits.max_viewport_width = (uint32_t)maxViewportDims[0];
-    gl.limits.max_viewport_height = (uint32_t)maxViewportDims[1];
-    gl.limits.point_size_range_min = point_sizes[0];
-    gl.limits.point_size_range_max = point_sizes[1];
-    gl.limits.line_width_range_min = line_width_range[0];
-    gl.limits.line_width_range_max = line_width_range[1];
+    renderer->caps.limits.maxViewportDimensions[0] = (uint32_t)maxViewportDims[0];
+    renderer->caps.limits.maxViewportDimensions[1] = (uint32_t)maxViewportDims[1];
+    renderer->caps.limits.pointSizeRange[0] = point_sizes[0];
+    renderer->caps.limits.pointSizeRange[1] = point_sizes[1];
+    renderer->caps.limits.lineWidthRange[0] = line_width_range[0];
+    renderer->caps.limits.lineWidthRange[1] = line_width_range[1];
     _GPU_GL_CHECK_ERROR();
 
     /* Reset state cache. */
-    _agpu_gl_reset_state_cache();
+    _agpu_gl_reset_state_cache(renderer);
 
     return true;
 }
 
-static void gl_shutdown(void) {
+static void gl_destroy(VGPUDevice device) {
+    VGPURendererGL* renderer = (VGPURendererGL*)device->renderer;
+    if (renderer->vao) {
+        glDeleteVertexArrays(1, &renderer->vao);
+    }
+    _GPU_GL_CHECK_ERROR();
 
+    AGPU_FREE(renderer);
+    AGPU_FREE(device);
 }
 
-static void gl_frame_wait(void) {
+static void gl_frame_wait(VGPURenderer* driverData) {
     float clearColor[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
     GL_CHECK(glClearBufferfv(GL_COLOR, 0, clearColor));
 }
 
-static void gl_frame_finish(void) {
+static void gl_frame_finish(VGPURenderer* driverData) {
 
 }
 
-static agpu_backend_type gl_query_backend(void) {
-    return AGPU_BACKEND_TYPE_OPENGL;
+static VGPUBackendType gl_getBackend(void) {
+    return VGPUBackendType_OpenGL;
 }
 
-static void gl_get_limits(agpu_limits* limits) {
-    *limits = gl.limits;
+static const VGPUDeviceCaps* gl_get_caps(VGPURenderer* driverData) {
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    return &renderer->caps;
 }
 
-static AGPUPixelFormat gl_get_default_depth_format(void) {
+static AGPUPixelFormat gl_get_default_depth_format(VGPURenderer* driverData) {
     return AGPUPixelFormat_Depth32Float;
 }
 
-static AGPUPixelFormat gl_get_default_depth_stencil_format(void) {
+static AGPUPixelFormat gl_get_default_depth_stencil_format(VGPURenderer* driverData) {
     return AGPUPixelFormat_Depth24Plus;
 }
 
 /* Buffer */
-static agpu_buffer gl_create_buffer(const agpu_buffer_info* info) {
-    agpu_buffer_gl* buffer = _AGPU_ALLOC_HANDLE(agpu_buffer_gl);
-    const bool readable = false;
-    const bool dynamic = false;
+static VGPUBuffer* gl_bufferCreate(VGPURenderer* driverData, const VGPUBufferInfo* info) {
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    vgpu_buffer_gl* buffer = _AGPU_ALLOC_HANDLE(vgpu_buffer_gl);
+    buffer->size = info->size;
 
-    _GPU_GL_CHECK_ERROR();
+    if (info->usage & VGPUBufferUsage_Vertex) buffer->target = GL_BUFFER_TARGET_VERTEX;
+    else if (info->usage & VGPUBufferUsage_Index) buffer->target = GL_BUFFER_TARGET_INDEX;
+    else if (info->usage & VGPUBufferUsage_Uniform) buffer->target = GL_BUFFER_TARGET_UNIFORM;
+    else if (info->usage & VGPUBufferUsage_Storage) buffer->target = GL_BUFFER_TARGET_STORAGE;
+    else if (info->usage & VGPUBufferUsage_Indirect) buffer->target = GL_BUFFER_TARGET_INDIRECT;
+    else buffer->target = GL_BUFFER_TARGET_COPY_DST;
+
 #ifdef AGPU_GL
     if (gl.ext.direct_state_access)
     {
         glCreateBuffers(1, &buffer->id);
-        GLbitfield flags = GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_WRITE_BIT;
-        if (readable) {
-            flags |= GL_MAP_READ_BIT;
-        }
-        if (dynamic) {
-            flags |= GL_DYNAMIC_STORAGE_BIT;
-        }
 
-        glNamedBufferStorage(buffer->id, info->size, info->content, flags);
+        GLbitfield flags = _gl_getBufferFlags(info->usage);
+        glNamedBufferStorage(buffer->id, info->size, info->data, flags);
     }
     else
 #endif 
     {
         glGenBuffers(1, &buffer->id);
-        _agpu_gl_bind_buffer(GL_BUFFER_TARGET_COPY_DST, buffer->id, false);
-#if defined(AGPU_WEBGL)
-        GL_CHECK(glBufferData(GL_BUFFER_TARGET_COPY_DST, info->size, info->content, GL_STATIC_DRAW));
-#else
+        _agpu_gl_bind_buffer(renderer, buffer->target, buffer->id, false);
 
-        GLenum gl_target = _agpu_gl_get_buffer_target(GL_BUFFER_TARGET_COPY_DST);
+        GLenum gl_usage = _gl_GetBufferUsage(info->usage);
+
+#if defined(AGPU_WEBGL)
+        GL_CHECK(glBufferData(buffer->target, info->size, info->content, gl_usage));
+#else
+        GLenum gl_target = _agpu_gl_get_buffer_target(buffer->target);
         if (gl.ext.buffer_storage) {
             /* GL_BUFFER_TARGET_COPY_SRC doesnt work with write bit */
-            GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | (readable ? GL_MAP_READ_BIT : 0);
-            glBufferStorage(gl_target, info->size, info->content, flags);
+            GLbitfield flags = _gl_getBufferFlags(info->usage);
+            glBufferStorage(gl_target, info->size, info->data, flags);
             //buffer->data = glMapBufferRange(glType, 0, size, flags | GL_MAP_FLUSH_EXPLICIT_BIT);
         }
         else {
-            glBufferData(gl_target, info->size, info->content, GL_STATIC_DRAW);
+            glBufferData(gl_target, info->size, info->data, gl_usage);
         }
 #endif
     }
 
     _GPU_GL_CHECK_ERROR();
-    return (agpu_buffer)buffer;
+    return (VGPUBuffer*)buffer;
 }
 
-static void gl_destroy_buffer(agpu_buffer handle) {
-    agpu_buffer_gl* buffer = (agpu_buffer_gl*)handle;
+static void gl_bufferDestroy(VGPURenderer* driverData, VGPUBuffer* handle) {
+    vgpu_buffer_gl* buffer = (vgpu_buffer_gl*)handle;
     GL_CHECK(glDeleteBuffers(1, &buffer->id));
     AGPU_FREE(buffer);
 }
 
+
 /* Texture */
-static agpu_texture gl_create_texture(const agpu_texture_info* info)
+static VGPUTexture* gl_create_texture(VGPURenderer* driverData, const VGPUTextureInfo* info)
 {
-    agpu_texture_gl* texture = NULL;
-    return (agpu_texture)texture;
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    vgpu_texture_gl* texture = _AGPU_ALLOC_HANDLE(vgpu_texture_gl);
+
+#ifdef AGPU_GL
+    if (gl.ext.direct_state_access)
+    {
+        glCreateTextures(GL_TEXTURE_2D, 1, &texture->id);
+        glTextureParameteri(texture->id, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTextureParameteri(texture->id, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTextureParameteri(texture->id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(texture->id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTextureStorage2D(texture->id, 1, GL_RGBA8, info->size.width, info->size.height);
+        glTextureSubImage2D(texture->id, 0, 0, 0, info->size.width, info->size.height, GL_RGBA, GL_UNSIGNED_BYTE, info->data);
+
+        glBindTextureUnit(0, texture->id);
+    }
+    else
+#endif 
+    {
+        glGenTextures(1, &texture->id);
+        glBindTexture(GL_TEXTURE_2D, texture->id);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, info->size.width, info->size.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, info->data);
+        glActiveTexture(GL_TEXTURE0);
+    }
+
+    _GPU_GL_CHECK_ERROR();
+
+    return (VGPUTexture*)texture;
 }
 
-static void gl_destroy_texture(agpu_texture handle) {
-    agpu_texture_gl* texture = (agpu_texture_gl*)handle;
+static void gl_destroy_texture(VGPURenderer* driverData, VGPUTexture* handle) {
+    vgpu_texture_gl* texture = (vgpu_texture_gl*)handle;
     GL_CHECK(glDeleteTextures(1, &texture->id));
     AGPU_FREE(texture);
 }
@@ -518,7 +601,7 @@ static GLuint agpu_gl_compile_shader(GLenum type, const char* source) {
     return shader;
 }
 
-static agpu_shader gl_create_shader(const agpu_shader_info* info) {
+static vgpu_shader gl_create_shader(VGPURenderer* driverData, const vgpu_shader_info* info) {
     GLuint vertex_shader = agpu_gl_compile_shader(GL_VERTEX_SHADER, (const char*)info->vertex.source);
     GLuint fragment_shader = agpu_gl_compile_shader(GL_FRAGMENT_SHADER, (const char*)info->fragment.source);
     if (!(vertex_shader && fragment_shader)) {
@@ -563,13 +646,13 @@ static agpu_shader gl_create_shader(const agpu_shader_info* info) {
     }
 
     //_agpu_gl_use_program(program);
-    agpu_shader_gl* result = _AGPU_ALLOC_HANDLE(agpu_shader_gl);
+    vgpu_shader_gl* result = _AGPU_ALLOC_HANDLE(vgpu_shader_gl);
     result->id = program;
-    return (agpu_shader)result;
+    return (vgpu_shader)result;
 }
 
-static void gl_destroy_shader(agpu_shader handle) {
-    agpu_shader_gl* shader = (agpu_shader_gl*)handle;
+static void gl_destroy_shader(VGPURenderer* driverData, vgpu_shader handle) {
+    vgpu_shader_gl* shader = (vgpu_shader_gl*)handle;
     GL_CHECK(glDeleteProgram(shader->id));
     AGPU_FREE(shader);
 }
@@ -586,182 +669,204 @@ static GLenum get_gl_primitive_type(agpu_primitive_topology type) {
     return types[type];
 }
 
-static GLenum _agpu_gl_index_type(AGPUIndexFormat format) {
+static GLenum _agpu_gl_index_type(VGPUIndexType format) {
     static const GLenum types[] = {
-        [AGPUIndexFormat_Uint16] = GL_UNSIGNED_SHORT,
-        [AGPUIndexFormat_Uint32] = GL_UNSIGNED_INT,
+        [VGPUIndexType_UInt16] = GL_UNSIGNED_SHORT,
+        [VGPUIndexType_UInt32] = GL_UNSIGNED_INT,
     };
     return types[format];
 }
 
-static GLenum _agpu_gl_vertex_format_type(AGPUVertexFormat format) {
+static GLenum _agpu_gl_vertex_format_type(VGPUVertexFormat format) {
     switch (format) {
-    case AGPU_VERTEX_FORMAT_UCHAR2:
-    case AGPU_VERTEX_FORMAT_UCHAR4:
-    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
-    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
+    case VGPUVertexFormat_UChar2:
+    case VGPUVertexFormat_UChar4:
+    case VGPUVertexFormat_UChar2Norm:
+    case VGPUVertexFormat_UChar4Norm:
         return GL_UNSIGNED_BYTE;
-    case AGPU_VERTEX_FORMAT_CHAR2:
-    case AGPU_VERTEX_FORMAT_CHAR4:
-    case AGPU_VERTEX_FORMAT_CHAR2NORM:
-    case AGPU_VERTEX_FORMAT_CHAR4NORM:
+    case VGPUVertexFormat_Char2:
+    case VGPUVertexFormat_Char4:
+    case VGPUVertexFormat_Char2Norm:
+    case VGPUVertexFormat_Char4Norm:
         return GL_BYTE;
-    case AGPU_VERTEX_FORMAT_USHORT2:
-    case AGPU_VERTEX_FORMAT_USHORT4:
-    case AGPU_VERTEX_FORMAT_USHORT2NORM:
-    case AGPU_VERTEX_FORMAT_USHORT4NORM:
+    case VGPUVertexFormat_UShort2:
+    case VGPUVertexFormat_UShort4:
+    case VGPUVertexFormat_UShort2Norm:
+    case VGPUVertexFormat_UShort4Norm:
         return GL_UNSIGNED_SHORT;
-    case AGPU_VERTEX_FORMAT_SHORT2:
-    case AGPU_VERTEX_FORMAT_SHORT4:
-    case AGPU_VERTEX_FORMAT_SHORT2NORM:
-    case AGPU_VERTEX_FORMAT_SHORT4NORM:
+    case VGPUVertexFormat_Short2:
+    case VGPUVertexFormat_Short4:
+    case VGPUVertexFormat_Short2Norm:
+    case VGPUVertexFormat_Short4Norm:
         return GL_SHORT;
-    case AGPUVertexFormat_Half2:
-    case AGPUVertexFormat_Half4:
+    case VGPUVertexFormat_Half2:
+    case VGPUVertexFormat_Half4:
         return GL_HALF_FLOAT;
-    case AGPUVertexFormat_Float:
-    case AGPUVertexFormat_Float2:
-    case AGPUVertexFormat_Float3:
-    case AGPUVertexFormat_Float4:
+    case VGPUVertexFormat_Float:
+    case VGPUVertexFormat_Float2:
+    case VGPUVertexFormat_Float3:
+    case VGPUVertexFormat_Float4:
         return GL_FLOAT;
-    case AGPUVertexFormat_UInt:
-    case AGPUVertexFormat_UInt2:
-    case AGPUVertexFormat_UInt3:
-    case AGPUVertexFormat_UInt4:
+    case VGPUVertexFormat_UInt:
+    case VGPUVertexFormat_UInt2:
+    case VGPUVertexFormat_UInt3:
+    case VGPUVertexFormat_UInt4:
         return GL_UNSIGNED_INT;
-    case AGPUVertexFormat_Int:
-    case AGPUVertexFormat_Int2:
-    case AGPUVertexFormat_Int3:
-    case AGPUVertexFormat_Int4:
+    case VGPUVertexFormat_Int:
+    case VGPUVertexFormat_Int2:
+    case VGPUVertexFormat_Int3:
+    case VGPUVertexFormat_Int4:
         return GL_INT;
     default:
-        AGPU_UNREACHABLE();
+        VGPU_UNREACHABLE();
     }
 }
 
-static GLboolean _agpu_gl_vertex_format_normalized(AGPUVertexFormat format) {
+static GLboolean _agpu_gl_vertex_format_normalized(VGPUVertexFormat format) {
     switch (format) {
-    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
-    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
-    case AGPU_VERTEX_FORMAT_CHAR2NORM:
-    case AGPU_VERTEX_FORMAT_CHAR4NORM:
-    case AGPU_VERTEX_FORMAT_USHORT2NORM:
-    case AGPU_VERTEX_FORMAT_USHORT4NORM:
-    case AGPU_VERTEX_FORMAT_SHORT2NORM:
-    case AGPU_VERTEX_FORMAT_SHORT4NORM:
+    case VGPUVertexFormat_UChar2Norm:
+    case VGPUVertexFormat_UChar4Norm:
+    case VGPUVertexFormat_Char2Norm:
+    case VGPUVertexFormat_Char4Norm:
+    case VGPUVertexFormat_UShort2Norm:
+    case VGPUVertexFormat_UShort4Norm:
+    case VGPUVertexFormat_Short2Norm:
+    case VGPUVertexFormat_Short4Norm:
         return GL_TRUE;
     default:
         return GL_FALSE;
     }
 }
 
-static GLboolean _agpu_gl_vertex_format_integer(AGPUVertexFormat format) {
+static GLboolean _agpu_gl_vertex_format_integer(VGPUVertexFormat format) {
     switch (format) {
-    case AGPU_VERTEX_FORMAT_UCHAR2:
-    case AGPU_VERTEX_FORMAT_UCHAR4:
-    case AGPU_VERTEX_FORMAT_CHAR2:
-    case AGPU_VERTEX_FORMAT_CHAR4:
-    case AGPU_VERTEX_FORMAT_USHORT2:
-    case AGPU_VERTEX_FORMAT_USHORT4:
-    case AGPU_VERTEX_FORMAT_SHORT2:
-    case AGPU_VERTEX_FORMAT_SHORT4:
-    case AGPUVertexFormat_UInt:
-    case AGPUVertexFormat_UInt2:
-    case AGPUVertexFormat_UInt3:
-    case AGPUVertexFormat_UInt4:
-    case AGPUVertexFormat_Int:
-    case AGPUVertexFormat_Int2:
-    case AGPUVertexFormat_Int3:
-    case AGPUVertexFormat_Int4:
+    case VGPUVertexFormat_UChar2:
+    case VGPUVertexFormat_UChar4:
+    case VGPUVertexFormat_Char2:
+    case VGPUVertexFormat_Char4:
+    case VGPUVertexFormat_UShort2:
+    case VGPUVertexFormat_UShort4:
+    case VGPUVertexFormat_Short2:
+    case VGPUVertexFormat_Short4:
+    case VGPUVertexFormat_UInt:
+    case VGPUVertexFormat_UInt2:
+    case VGPUVertexFormat_UInt3:
+    case VGPUVertexFormat_UInt4:
+    case VGPUVertexFormat_Int:
+    case VGPUVertexFormat_Int2:
+    case VGPUVertexFormat_Int3:
+    case VGPUVertexFormat_Int4:
         return true;
     default:
         return false;
     }
 }
 
-static agpu_pipeline gl_create_render_pipeline(const agpu_render_pipeline_info* info) {
-    agpu_pipeline_gl* result = _AGPU_ALLOC_HANDLE(agpu_pipeline_gl);
-    result->shader = (agpu_shader_gl*)info->shader;
-    result->primitive_type = get_gl_primitive_type(info->primitive_topology);
-    result->index_type = _agpu_gl_index_type(info->vertexState.indexFormat);
+static agpu_pipeline gl_create_render_pipeline(VGPURenderer* driverData, const agpu_render_pipeline_info* info)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    vgpu_pipeline_gl* result = _AGPU_ALLOC_HANDLE(vgpu_pipeline_gl);
+    result->shader = (vgpu_shader_gl*)info->shader;
+    result->primitive_type = get_gl_primitive_type(info->primitiveTopology);
+    result->index_type = _agpu_gl_index_type(info->indexType);
     result->attribute_count = 0;
 
     /* Setup vertex attributes */
-    memset(result->vertex_buffer_strides, 0, sizeof(result->vertex_buffer_strides));
-    for (uint32_t bufferIndex = 0; bufferIndex < info->vertexState.vertexBufferCount; bufferIndex++) {
-        const AGPUVertexBufferLayoutDescriptor* layoutDesc = &info->vertexState.vertexBuffers[bufferIndex];
+    for (uint32_t attrIndex = 0; attrIndex < renderer->caps.limits.maxVertexInputAttributes; attrIndex++) {
+        const VGPUVertexAttributeInfo* attrDesc = &info->vertexInfo.attributes[attrIndex];
+        if (attrDesc->format == VGPUVertexFormat_Invalid) {
+            break;
+        }
 
-        for (uint32_t attr_index = 0; attr_index < layoutDesc->attributeCount; attr_index++) {
-            const AGPUVertexAttributeDescriptor* attrDesc = &layoutDesc->attributes[attr_index];
-            agpu_vertex_attribute_gl* gl_attr = &result->attributes[result->attribute_count++];
-            gl_attr->buffer_index = (int8_t)bufferIndex;
-            gl_attr->shaderLocation = attrDesc->shaderLocation;
-            gl_attr->offset = result->vertex_buffer_strides[bufferIndex];
-            gl_attr->size = agpuGetVertexFormatComponentsCount(attrDesc->format);
-            gl_attr->type = _agpu_gl_vertex_format_type(attrDesc->format);
-            gl_attr->normalized = _agpu_gl_vertex_format_normalized(attrDesc->format);
-            gl_attr->integer = _agpu_gl_vertex_format_integer(attrDesc->format);
-            if (layoutDesc->stepMode == AGPUInputStepMode_Vertex) {
-                gl_attr->divisor = 0;
-            }
-            else {
-                gl_attr->divisor = 1;
-            }
+        const VGPUVertexBufferLayoutInfo* layoutDesc = &info->vertexInfo.layouts[attrDesc->bufferIndex];
 
-            /* Increase stride */
-            result->vertex_buffer_strides[bufferIndex] += agpuGetVertexFormatSize(attrDesc->format);
+        vgpu_vertex_attribute_gl* gl_attr = &result->attributes[result->attribute_count++];
+        gl_attr->buffer_index = (int8_t)attrDesc->bufferIndex;
+        gl_attr->shaderLocation = attrIndex;
+        gl_attr->stride = (GLsizei)layoutDesc->stride;
+        gl_attr->offset = attrDesc->offset;
+        gl_attr->size = vgpuGetVertexFormatComponentsCount(attrDesc->format);
+        gl_attr->type = _agpu_gl_vertex_format_type(attrDesc->format);
+        gl_attr->normalized = _agpu_gl_vertex_format_normalized(attrDesc->format);
+        gl_attr->integer = _agpu_gl_vertex_format_integer(attrDesc->format);
+        if (layoutDesc->stepMode == AGPUInputStepMode_Vertex) {
+            gl_attr->divisor = 0;
+        }
+        else {
+            gl_attr->divisor = 1;
         }
     }
 
     return (agpu_pipeline)result;
 }
 
-static void gl_destroy_pipeline(agpu_pipeline handle) {
-    agpu_pipeline_gl* pipeline = (agpu_pipeline_gl*)handle;
+static void gl_destroy_pipeline(VGPURenderer* driverData, agpu_pipeline handle) {
+    vgpu_pipeline_gl* pipeline = (vgpu_pipeline_gl*)handle;
     AGPU_FREE(pipeline);
 }
 
 /* CommandBuffer */
-static void gl_set_pipeline(agpu_pipeline handle) {
-    agpu_pipeline_gl* pipeline = (agpu_pipeline_gl*)handle;
+static void gl_cmdBeginRenderPass(VGPURenderer* driverData, const VGPURenderPassDescriptor* descriptor)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    AGPU_ASSERT(!renderer->cache.insidePass);
+    renderer->cache.insidePass = true;
+}
+
+static void gl_cmdEndRenderPass(VGPURenderer* driverData)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    AGPU_ASSERT(renderer->cache.insidePass);
     _GPU_GL_CHECK_ERROR();
-    if (gl.state.current_pipeline != pipeline) {
-        _agpu_gl_use_program(pipeline->shader->id);
-        gl.state.current_pipeline = pipeline;
+
+    renderer->cache.insidePass = false;
+}
+
+static void gl_cmdSetPipeline(VGPURenderer* driverData, agpu_pipeline handle)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    vgpu_pipeline_gl* pipeline = (vgpu_pipeline_gl*)handle;
+    _GPU_GL_CHECK_ERROR();
+    if (renderer->cache.current_pipeline != pipeline) {
+        _agpu_gl_use_program(renderer, pipeline->shader->id);
+        renderer->cache.current_pipeline = pipeline;
     }
 }
 
-static void gl_cmdSetVertexBuffer(uint32_t slot, agpu_buffer buffer, uint64_t offset)
+static void gl_cmdSetVertexBuffer(VGPURenderer* driverData, uint32_t slot, VGPUBuffer* buffer, uint64_t offset)
 {
-    gl.state.vertex_buffers[slot] = ((agpu_buffer_gl*)buffer)->id;
-    gl.state.vertex_buffer_offsets[slot] = offset;
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    renderer->cache.vertex_buffers[slot] = ((vgpu_buffer_gl*)buffer)->id;
+    renderer->cache.vertex_buffer_offsets[slot] = offset;
 }
 
-static void gl_cmdSetIndexBuffer(agpu_buffer buffer, uint64_t offset)
+static void gl_cmdSetIndexBuffer(VGPURenderer* driverData, VGPUBuffer* buffer, uint64_t offset)
 {
-    gl.state.index.buffer = ((agpu_buffer_gl*)buffer)->id;
-    gl.state.index.offset = offset;
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    renderer->cache.index.buffer = ((vgpu_buffer_gl*)buffer)->id;
+    renderer->cache.index.offset = offset;
 }
 
-static void _agpu_gl_prepare_draw() {
-    if (gl.state.index.buffer != 0) {
-        _agpu_gl_bind_buffer(GL_BUFFER_TARGET_INDEX, gl.state.index.buffer, false);
+static void _agpu_gl_prepare_draw(VGPURendererGL* renderer)
+{
+    AGPU_ASSERT(renderer->cache.insidePass);
+
+    if (renderer->cache.index.buffer != 0) {
+        _agpu_gl_bind_buffer(renderer, GL_BUFFER_TARGET_INDEX, renderer->cache.index.buffer, false);
     }
 
     uint16_t current_enable_locations = 0;
-    for (uint32_t i = 0; i < gl.state.current_pipeline->attribute_count; i++) {
-        agpu_vertex_attribute_gl* gl_attr = &gl.state.current_pipeline->attributes[i];
-        agpu_vertex_attribute_cache_gl* cache_attr = &gl.state.attributes[i];
+    for (uint32_t i = 0; i < renderer->cache.current_pipeline->attribute_count; i++) {
+        vgpu_vertex_attribute_gl* gl_attr = &renderer->cache.current_pipeline->attributes[i];
+        vgpu_vertex_attribute_cache_gl* cache_attr = &renderer->cache.attributes[i];
 
         GLuint gl_vb = 0;
         uint64_t offset = 0;
-        GLsizei vb_stride = 0;
 
         bool cache_attr_dirty = false;
         if (gl_attr->buffer_index >= 0) {
-            gl_vb = gl.state.vertex_buffers[gl_attr->buffer_index];
-            offset = gl.state.vertex_buffer_offsets[gl_attr->buffer_index] + gl_attr->offset;
-            vb_stride = gl.state.current_pipeline->vertex_buffer_strides[gl_attr->buffer_index];
+            gl_vb = renderer->cache.vertex_buffers[gl_attr->buffer_index];
+            offset = renderer->cache.vertex_buffer_offsets[gl_attr->buffer_index] + gl_attr->offset;
             current_enable_locations |= (1 << i);
 
             if ((gl_vb != cache_attr->vertex_buffer) ||
@@ -773,13 +878,13 @@ static void _agpu_gl_prepare_draw() {
                 (gl_attr->divisor != cache_attr->attribute.divisor) ||
                 (offset != cache_attr->attribute.offset))
             {
-                _agpu_gl_bind_buffer(GL_BUFFER_TARGET_VERTEX, gl.state.vertex_buffers[gl_attr->buffer_index], false);
+                _agpu_gl_bind_buffer(renderer, GL_BUFFER_TARGET_VERTEX, renderer->cache.vertex_buffers[gl_attr->buffer_index], false);
                 if (gl_attr->integer) {
                     glVertexAttribIPointer(
                         gl_attr->shaderLocation,
                         gl_attr->size,
                         gl_attr->type,
-                        vb_stride,
+                        gl_attr->stride,
                         (const GLvoid*)(GLintptr)offset);
                 }
                 else {
@@ -788,7 +893,7 @@ static void _agpu_gl_prepare_draw() {
                         gl_attr->size,
                         gl_attr->type,
                         gl_attr->normalized,
-                        vb_stride,
+                        gl_attr->stride,
                         (const GLvoid*)(GLintptr)offset);
                 }
 
@@ -805,9 +910,9 @@ static void _agpu_gl_prepare_draw() {
         }
     }
 
-    uint16_t diff = current_enable_locations ^ gl.state.enabled_locations;
+    uint16_t diff = current_enable_locations ^ renderer->cache.enabled_locations;
     if (diff != 0) {
-        for (uint32_t i = 0; i < gl.limits.max_vertex_attributes; i++) {
+        for (uint32_t i = 0; i < renderer->caps.limits.maxVertexInputAttributes; i++) {
             if (diff & (1 << i)) {
                 if (current_enable_locations & (1 << i)) {
                     glEnableVertexAttribArray(i);
@@ -818,35 +923,38 @@ static void _agpu_gl_prepare_draw() {
             }
         }
 
-        gl.state.enabled_locations = current_enable_locations;
+        renderer->cache.enabled_locations = current_enable_locations;
     }
 }
 
-static void gl_cmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {
-
-    _agpu_gl_prepare_draw();
+static void gl_cmdDraw(VGPURenderer* driverData, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    _agpu_gl_prepare_draw(renderer);
 
     if (instanceCount > 1) {
-        glDrawArraysInstanced(gl.state.current_pipeline->primitive_type, firstVertex, vertexCount, instanceCount);
+        glDrawArraysInstanced(renderer->cache.current_pipeline->primitive_type, firstVertex, vertexCount, instanceCount);
     }
     else {
-        glDrawArrays(gl.state.current_pipeline->primitive_type, firstVertex, vertexCount);
+        glDrawArrays(renderer->cache.current_pipeline->primitive_type, firstVertex, vertexCount);
     }
     _GPU_GL_CHECK_ERROR();
 }
 
-static void gl_cmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) {
-    _agpu_gl_prepare_draw();
+static void gl_cmdDrawIndexed(VGPURenderer* driverData, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    _agpu_gl_prepare_draw(renderer);
 
-    GLenum glIndexType = gl.state.current_pipeline->index_type;
+    GLenum glIndexType = renderer->cache.current_pipeline->index_type;
     const int i_size = (glIndexType == GL_UNSIGNED_SHORT) ? 2 : 4;
-    const GLvoid* indices = (const GLvoid*)(GLintptr)(firstIndex * i_size + gl.state.index.offset);
+    const GLvoid* indices = (const GLvoid*)(GLintptr)(firstIndex * i_size + renderer->cache.index.offset);
 
     if (instanceCount > 1) {
-        glDrawElementsInstanced(gl.state.current_pipeline->primitive_type, indexCount, glIndexType, indices, instanceCount);
+        glDrawElementsInstanced(renderer->cache.current_pipeline->primitive_type, indexCount, glIndexType, indices, instanceCount);
     }
     else {
-        glDrawElements(gl.state.current_pipeline->primitive_type, indexCount, glIndexType, indices);
+        glDrawElements(renderer->cache.current_pipeline->primitive_type, indexCount, glIndexType, indices);
     }
     _GPU_GL_CHECK_ERROR();
 }
@@ -856,15 +964,26 @@ static bool gl_supported(void) {
     return true;
 }
 
-static agpu_renderer* gl_create_renderer(void) {
-    static agpu_renderer renderer = { 0 };
+static VGPUDeviceImpl* gl_create_device(void) {
+    VGPUDevice device;
+    VGPURendererGL* renderer;
+
+    device = (VGPUDeviceImpl*)VGPU_MALLOC(sizeof(VGPUDeviceImpl));
     ASSIGN_DRIVER(gl);
-    return &renderer;
+
+    /* Init the vk renderer */
+    renderer = (VGPURendererGL*)_AGPU_ALLOC_HANDLE(VGPURendererGL);
+
+    /* Reference vgpu_device and renderer together. */
+    renderer->gpuDevice = device;
+    device->renderer = (VGPURenderer*)renderer;
+
+    return device;
 }
 
 agpu_driver gl_driver = {
     gl_supported,
-    gl_create_renderer
+    gl_create_device
 };
 
 #endif /* defined(GPU_GL_BACKEND) */

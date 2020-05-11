@@ -53,36 +53,22 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #   if defined(__i386__) || defined(__x86_64__)
-#       define AGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
+#       define VGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
 #   else
-#       define AGPU_BREAKPOINT() ((void)0)
+#       define VGPU_BREAKPOINT() ((void)0)
 #   endif
-#   define AGPU_UNREACHABLE() __builtin_unreachable()
+#   define VGPU_UNREACHABLE() __builtin_unreachable()
 
 #elif defined(_MSC_VER)
 extern void __cdecl __debugbreak(void);
-#   define AGPU_BREAKPOINT() __debugbreak()
-#   define AGPU_UNREACHABLE() __assume(false)
+#   define VGPU_BREAKPOINT() __debugbreak()
+#   define VGPU_UNREACHABLE() __assume(false)
 #else
 #   error "Unsupported compiler"
 #endif
 
-#if defined( __clang__ )
-#   define VGPU_UNREACHABLE() __builtin_unreachable()
-#   define VGPU_THREADLOCAL _Thread_local
-#elif defined(__GNUC__)
-#   define VGPU_UNREACHABLE() __builtin_unreachable()
-#   define VGPU_THREADLOCAL __thread
-#elif defined(_MSC_VER)
-#   define VGPU_UNREACHABLE() __assume(false)
-#   define VGPU_THREADLOCAL __declspec(thread)
-#else
-#   define VGPU_UNREACHABLE()((void)0)
-#   define VGPU_THREADLOCAL
-#endif
-
 #define _AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
-#define _AGPU_ALLOC_HANDLE(type) ((type*)VGPU_MALLOC(sizeof(type)))
+#define _AGPU_ALLOC_HANDLE(T) (T*)calloc(1, sizeof(T))
 
 #define _agpu_def(val, def) (((val) == 0) ? (def) : (val))
 #define _agpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
@@ -91,47 +77,56 @@ extern void __cdecl __debugbreak(void);
 #define _agpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define GPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
-typedef struct agpu_renderer {
-    bool (*init)(const agpu_config* config);
-    void (*shutdown)(void);
+typedef struct VGPUDeviceImpl* VGPUDevice;
+typedef struct VGPURenderer VGPURenderer;
 
-    void (*frame_wait)(void);
-    void (*frame_finish)(void);
+typedef struct VGPUDeviceImpl {
+    /* Opaque pointer for the renderer. */
+    VGPURenderer* renderer;
 
-    agpu_backend_type(*query_backend)(void);
-    void(*get_limits)(agpu_limits* limits);
+    bool (*init)(VGPUDevice device, const VGpuDeviceDescriptor* descriptor);
+    void (*destroy)(VGPUDevice device);
 
-    AGPUPixelFormat(*get_default_depth_format)(void);
-    AGPUPixelFormat(*get_default_depth_stencil_format)(void);
+    void (*frame_wait)(VGPURenderer* driverData);
+    void (*frame_finish)(VGPURenderer* driverData);
+
+    VGPUBackendType(*getBackend)(void);
+    const VGPUDeviceCaps* (*get_caps)(VGPURenderer* driverData);
+
+    AGPUPixelFormat(*get_default_depth_format)(VGPURenderer* driverData);
+    AGPUPixelFormat(*get_default_depth_stencil_format)(VGPURenderer* driverData);
 
     /* Buffer */
-    agpu_buffer (*create_buffer)(const agpu_buffer_info* info);
-    void (*destroy_buffer)(agpu_buffer handle);
+    VGPUBuffer* (*bufferCreate)(VGPURenderer* driverData, const VGPUBufferInfo* info);
+    void (*bufferDestroy)(VGPURenderer* driverData, VGPUBuffer* handle);
 
     /* Texture */
-    agpu_texture (*create_texture)(const agpu_texture_info* info);
-    void (*destroy_texture)(agpu_texture handle);
+    VGPUTexture* (*create_texture)(VGPURenderer* driverData, const VGPUTextureInfo* info);
+    void (*destroy_texture)(VGPURenderer* driverData, VGPUTexture* handle);
 
     /* Shader */
-    agpu_shader (*create_shader)(const agpu_shader_info* info);
-    void (*destroy_shader)(agpu_shader handle);
+    vgpu_shader (*create_shader)(VGPURenderer* driverData, const vgpu_shader_info* info);
+    void (*destroy_shader)(VGPURenderer* driverData, vgpu_shader handle);
 
     /* Pipeline */
-    agpu_pipeline (*create_render_pipeline)(const agpu_render_pipeline_info* info);
-    void (*destroy_pipeline)(agpu_pipeline handle);
+    agpu_pipeline (*create_render_pipeline)(VGPURenderer* driverData, const agpu_render_pipeline_info* info);
+    void (*destroy_pipeline)(VGPURenderer* driverData, agpu_pipeline handle);
 
     /* CommandBuffer */
-    void (*set_pipeline)(agpu_pipeline pipeline);
-    void (*cmdSetVertexBuffer)(uint32_t slot, agpu_buffer buffer, uint64_t offset);
-    void (*cmdSetIndexBuffer)(agpu_buffer buffer, uint64_t offset);
-    void (*cmdDraw)(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
-    void (*cmdDrawIndexed)(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
+    void (*cmdBeginRenderPass)(VGPURenderer* driverData, const VGPURenderPassDescriptor* descriptor);
+    void (*cmdEndRenderPass)(VGPURenderer* driverData);
 
-} agpu_renderer;
+    void (*cmdSetPipeline)(VGPURenderer* driverData, agpu_pipeline pipeline);
+    void (*cmdSetVertexBuffer)(VGPURenderer* driverData, uint32_t slot, VGPUBuffer* buffer, uint64_t offset);
+    void (*cmdSetIndexBuffer)(VGPURenderer* driverData, VGPUBuffer* buffer, uint64_t offset);
+    void (*cmdDraw)(VGPURenderer* driverData, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+    void (*cmdDrawIndexed)(VGPURenderer* driverData, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
+
+} VGPUDeviceImpl;
 
 typedef struct agpu_driver {
     bool (*supported)(void);
-    agpu_renderer* (*create_renderer)(void);
+    VGPUDeviceImpl* (*create_device)(void);
 } agpu_driver;
 
 #if defined(GPU_GL_BACKEND)
@@ -150,25 +145,27 @@ extern agpu_driver d3d12_driver;
 extern agpu_driver vulkan_driver;
 #endif
 
-#define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
+#define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
-ASSIGN_DRIVER_FUNC(shutdown, name)\
+ASSIGN_DRIVER_FUNC(destroy, name)\
 ASSIGN_DRIVER_FUNC(frame_wait, name)\
 ASSIGN_DRIVER_FUNC(frame_finish, name)\
-ASSIGN_DRIVER_FUNC(query_backend, name)\
-ASSIGN_DRIVER_FUNC(get_limits, name)\
+ASSIGN_DRIVER_FUNC(getBackend, name)\
+ASSIGN_DRIVER_FUNC(get_caps, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
-ASSIGN_DRIVER_FUNC(create_buffer, name)\
-ASSIGN_DRIVER_FUNC(destroy_buffer, name)\
+ASSIGN_DRIVER_FUNC(bufferCreate, name)\
+ASSIGN_DRIVER_FUNC(bufferDestroy, name)\
 ASSIGN_DRIVER_FUNC(create_texture, name)\
 ASSIGN_DRIVER_FUNC(destroy_texture, name)\
 ASSIGN_DRIVER_FUNC(create_shader, name)\
 ASSIGN_DRIVER_FUNC(destroy_shader, name)\
 ASSIGN_DRIVER_FUNC(create_render_pipeline, name)\
 ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
-ASSIGN_DRIVER_FUNC(set_pipeline, name)\
+ASSIGN_DRIVER_FUNC(cmdBeginRenderPass, name)\
+ASSIGN_DRIVER_FUNC(cmdEndRenderPass, name)\
+ASSIGN_DRIVER_FUNC(cmdSetPipeline, name)\
 ASSIGN_DRIVER_FUNC(cmdSetVertexBuffer, name)\
 ASSIGN_DRIVER_FUNC(cmdSetIndexBuffer, name)\
 ASSIGN_DRIVER_FUNC(cmdDraw, name)\

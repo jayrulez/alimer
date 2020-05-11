@@ -26,7 +26,6 @@
 #include "graphics/GraphicsDevice.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
-#include <array>
 
 namespace alimer
 {
@@ -48,14 +47,14 @@ namespace alimer
         }
 
         gameSystems.clear();
-        agpu_shutdown();
+        vgpuShutdown();
         window_destroy(main_window);
         os_shutdown();
     }
 
-    static agpu_buffer vertexBuffer;
-    static agpu_buffer indexBuffer;
-    static agpu_shader shader;
+    static VGPUBuffer* vertexBuffer;
+    static VGPUBuffer* indexBuffer;
+    static vgpu_shader shader;
     static agpu_pipeline render_pipeline;
 
     void Game::InitBeforeRun()
@@ -69,89 +68,98 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
 
-            AGPUSwapChainDescriptor swapchain = {};
+            VGPUSwapChainInfo swapchain = {};
             swapchain.nativeHandle = window_handle(main_window);
             swapchain.width = window_width(main_window);
             swapchain.height = window_height(main_window);
 
-            agpu_config gpu_config = {};
-            //device_info.preferredBackend = AGPUBackendType_D3D11;
-            gpu_config.flags = AGPU_DEVICE_FLAGS_VSYNC;
+            VGpuDeviceDescriptor deviceDesc = {};
+            deviceDesc.preferredBackend = VGPUBackendType_Count;
+            deviceDesc.flags = AGPU_DEVICE_FLAGS_VSYNC;
 
 #ifdef _DEBUG
-            gpu_config.flags |= AGPU_DEVICE_FLAGS_DEBUG;
+            deviceDesc.flags |= AGPU_DEVICE_FLAGS_DEBUG;
 #endif
-            gpu_config.gl.get_proc_address = gl_get_proc_address;
+            deviceDesc.gl.GetProcAddress = gl_get_proc_address;
+            deviceDesc.swapchain = &swapchain;
 
-            gpu_config.swapchain = &swapchain;
-
-            if (!agpu_init(&gpu_config)) {
+            if (!vgpuInit(&deviceDesc)) {
                 headless = true;
             }
 
             const float vertices[] = {
-                // positions            // colors
-                -0.5f,  0.5f, 0.5f,     1.0f, 0.0f, 0.0f, 1.0f,
-                0.5f,  0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
-                0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f,
-                -0.5f, -0.5f, 0.5f,     1.0f, 1.0f, 0.0f, 1.0f,
+                // positions          // colors           // texture coords
+     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
+     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
+    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
             };
 
-            agpu_buffer_info buffer_info = {};
-            buffer_info.size = sizeof(vertices);
-            buffer_info.usage = GPU_BUFFER_USAGE_VERTEX;
-            buffer_info.content = vertices;
-            vertexBuffer = agpu_create_buffer(&buffer_info);
+            VGPUBufferInfo vertexBufferInfo = {};
+            vertexBufferInfo.size = sizeof(vertices);
+            vertexBufferInfo.usage = VGPUBufferUsage_Vertex;
+            vertexBufferInfo.data = vertices;
+            vertexBuffer = vgpuBufferCreate(&vertexBufferInfo);
 
             /* create an index buffer */
             uint16_t indices[] = {
                 0, 1, 2,    // first triangle
                 0, 2, 3,    // second triangle        
             };
-            agpu_buffer_info indexBufferDesc = {};
-            indexBufferDesc.size = sizeof(indices);
-            indexBufferDesc.usage = GPU_BUFFER_USAGE_INDEX;
-            indexBufferDesc.content = indices;
-            indexBuffer = agpu_create_buffer(&indexBufferDesc);
+            VGPUBufferInfo indexBufferInfo = {};
+            indexBufferInfo.size = sizeof(indices);
+            indexBufferInfo.usage = VGPUBufferUsage_Index;
+            indexBufferInfo.data = indices;
+            indexBuffer = vgpuBufferCreate(&indexBufferInfo);
+
+            uint32_t pixels[4 * 4] = {
+                0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+                0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+                0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+                0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            };
+            VGPUTextureInfo textureInfo = {};
+            textureInfo.size.width = 4;
+            textureInfo.size.height = 4;
+            textureInfo.format = AGPUPixelFormat_RGBA8UNorm;
+            textureInfo.data = pixels;
+            auto texture = vgpuTextureCreate(&textureInfo);
 
             const char* vertexShaderSource = "#version 330 core\n"
-                "layout (location=0) in vec3 position;\n"
-                "layout (location=1) in vec4 color;\n"
-                "out vec4 vColor;\n"
+                "layout (location=0) in vec3 inPosition;\n"
+                "layout (location=1) in vec3 inColor;\n"
+                "layout (location=2) in vec2 inTexCoord;\n"
+                "out vec3 Color;\n"
+                "out vec2 TexCoord;\n"
                 "void main()\n"
                 "{\n"
-                "   gl_Position = vec4(position, 1.0);\n"
-                "   vColor = color;\n"
+                "   gl_Position = vec4(inPosition, 1.0);\n"
+                "   Color = inColor;\n"
+                "   TexCoord = inTexCoord;\n"
                 "}\0";
 
             const char* fragmentShaderSource = "#version 330 core\n"
-                "in vec4 vColor;\n"
                 "out vec4 FragColor;\n"
+                "in vec3 Color;\n"
+                "in vec2 TexCoord;\n"
+                "uniform sampler2D texture1;\n"
                 "void main()\n"
                 "{\n"
-                "   FragColor = vColor;\n"
+                "   FragColor = texture(texture1, TexCoord) * vec4(Color, 1.0);\n"
                 "}\n\0";
 
 
-            agpu_shader_info shader_info = {};
+            vgpu_shader_info shader_info = {};
             shader_info.vertex.source = vertexShaderSource;
             shader_info.fragment.source = fragmentShaderSource;
-            shader = agpu_create_shader(&shader_info);
-
-            std::array<AGPUVertexAttributeDescriptor, 2> vertexAttributes = {};
-            vertexAttributes[0].format = AGPUVertexFormat_Float3;
-            vertexAttributes[0].shaderLocation = 0;
-            vertexAttributes[1].format = AGPUVertexFormat_Float4;
-            vertexAttributes[1].shaderLocation = 1;
-
-            AGPUVertexBufferLayoutDescriptor bufferLayoutInfo = {};
-            bufferLayoutInfo.attributeCount = 2u;
-            bufferLayoutInfo.attributes = vertexAttributes.data();
+            shader = vgpuShaderCreate(&shader_info);
 
             agpu_render_pipeline_info pipeline_info = {};
             pipeline_info.shader = shader;
-            pipeline_info.vertexState.vertexBufferCount = 1u;
-            pipeline_info.vertexState.vertexBuffers = &bufferLayoutInfo;
+            //pipeline_info.vertexInfo.layouts[0].stride = 28;
+            pipeline_info.vertexInfo.attributes[0].format = VGPUVertexFormat_Float3;
+            pipeline_info.vertexInfo.attributes[1].format = VGPUVertexFormat_Float3;
+            pipeline_info.vertexInfo.attributes[2].format = VGPUVertexFormat_Float2;
             
             render_pipeline = agpu_create_render_pipeline(&pipeline_info);
         }
@@ -187,7 +195,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        agpu_frame_begin();
+        vgpuFrameBegin();
 
         for (auto gameSystem : gameSystems)
         {
@@ -226,11 +234,16 @@ namespace alimer
         vgpu_cmd_end_render_pass();
         */
 
-        agpu_set_pipeline(render_pipeline);
-        agpuCmdSetVertexBuffers(0, vertexBuffer, 0);
-        agpuCmdSetIndexBuffer(indexBuffer, 0);
-        agpuCmdDrawIndexed(6, 1, 0);
-        agpu_frame_finish();
+        VGPURenderPassDescriptor renderPass;
+        memset(&renderPass, 0, sizeof(VGPURenderPassDescriptor));
+
+        vgpuCmdBeginRenderPass(&renderPass);
+        vgpuSetPipeline(render_pipeline);
+        vgpuCmdSetVertexBuffers(0, vertexBuffer, 0);
+        vgpuCmdSetIndexBuffer(indexBuffer, 0);
+        vgpuCmdDrawIndexed(6, 1, 0);
+        vgpuCmdEndRenderPass();
+        vgpuFrameFinish();
         window_swap_buffers(main_window);
     }
 

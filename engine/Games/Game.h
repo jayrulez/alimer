@@ -103,7 +103,7 @@ namespace alimer
         bool running = false;
         // Rendering loop timer.
         GameTime time;
-        window_t* main_window;
+        window_t* main_window = nullptr;
         std::vector<GameSystem*> gameSystems;
         InputManager* input;
         bool headless{ false };

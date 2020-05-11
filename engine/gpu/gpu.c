@@ -44,7 +44,7 @@
 #endif
 
 #define GPU_MAX_LOG_MESSAGE (1024)
-static const char* vgpu_log_priority_prefixes[AGPULogLevel_Count] = {
+static const char* vgpu_log_priority_prefixes[VGPULogLevel_Count] = {
     NULL,
     "ERROR",
     "WARN",
@@ -53,26 +53,26 @@ static const char* vgpu_log_priority_prefixes[AGPULogLevel_Count] = {
     "TRACE",
 };
 
-static void _s_agpuDefaultLogCallback(void* user_data, AGPULogLevel level, const char* message);
+static void vgpuDefaultLogCallback(void* user_data, VGPULogLevel level, const char* message);
 
 #ifdef _DEBUG
-static AGPULogLevel s_log_level = AGPULogLevel_Debug;
+static VGPULogLevel s_log_level = VGPULogLevel_Debug;
 #else
-static AGPULogLevel s_log_level = AGPULogLevel_Off;
+static VGPULogLevel s_log_level = VGPULogLevel_Off;
 #endif
-static GPULogCallback s_log_function = _s_agpuDefaultLogCallback;
+static GPULogCallback s_log_function = vgpuDefaultLogCallback;
 static void* s_log_user_data = NULL;
 
-void agpuSetLogLevel(AGPULogLevel level) {
+void vgpuSetLogLevel(VGPULogLevel level) {
     s_log_level = level;
 }
 
-void agpuSetLogCallback(GPULogCallback callback, void* user_data) {
+void vgpuSetLogCallback(GPULogCallback callback, void* user_data) {
     s_log_function = callback;
     s_log_user_data = user_data;
 }
 
-void _s_agpuDefaultLogCallback(void* user_data, AGPULogLevel level, const char* message) {
+void vgpuDefaultLogCallback(void* user_data, VGPULogLevel level, const char* message) {
 #if defined(_WIN32)
     size_t length = strlen(vgpu_log_priority_prefixes[level]) + 2 + strlen(message) + 1 + 1 + 1;
     char* output = VGPU_ALLOCA(char, length);
@@ -92,8 +92,8 @@ void _s_agpuDefaultLogCallback(void* user_data, AGPULogLevel level, const char* 
     HANDLE handle;
     switch (level)
     {
-    case AGPULogLevel_Error:
-    case AGPULogLevel_Warn:
+    case VGPULogLevel_Error:
+    case VGPULogLevel_Warn:
         handle = GetStdHandle(STD_ERROR_HANDLE);
         break;
     default:
@@ -107,8 +107,8 @@ void _s_agpuDefaultLogCallback(void* user_data, AGPULogLevel level, const char* 
 #endif
 }
 
-void agpuLog(AGPULogLevel level, const char* format, ...) {
-    if (s_log_level == AGPULogLevel_Off || level == AGPULogLevel_Off) {
+void vgpuLog(VGPULogLevel level, const char* format, ...) {
+    if (s_log_level == VGPULogLevel_Off || level == VGPULogLevel_Off) {
         return;
     }
 
@@ -126,42 +126,42 @@ void agpuLog(AGPULogLevel level, const char* format, ...) {
     }
 }
 
-agpu_backend_type agpu_get_default_platform_backend(void) {
+VGPUBackendType vgpuGetDefaultPlatformBackend(void) {
 #if defined(_WIN32) || defined(_WIN64)
-    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D12)) {
-        return AGPU_BACKEND_TYPE_D3D12;
+    if (vgpuIsBackendSupported(VGPUBackendType_D3D12)) {
+        return VGPUBackendType_D3D12;
     }
 
-    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_VULKAN)) {
-        return AGPU_BACKEND_TYPE_VULKAN;
+    if (vgpuIsBackendSupported(VGPUBackendType_Vulkan)) {
+        return VGPUBackendType_Vulkan;
     }
 
-    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_D3D11)) {
-        return AGPU_BACKEND_TYPE_D3D11;
+    if (vgpuIsBackendSupported(VGPUBackendType_D3D11)) {
+        return VGPUBackendType_D3D11;
     }
 
-    if (agpu_is_backend_supported(AGPU_BACKEND_TYPE_OPENGL)) {
-        return AGPU_BACKEND_TYPE_OPENGL;
+    if (vgpuIsBackendSupported(VGPUBackendType_OpenGL)) {
+        return VGPUBackendType_OpenGL;
     }
 
-    return AGPU_BACKEND_TYPE_NULL;
+    return VGPUBackendType_Null;
 #elif defined(__linux__) || defined(__ANDROID__)
-    return AGPU_BACKEND_TYPE_VULKAN;
+    return VGPUBackendType_Vulkan;
 #elif defined(__APPLE__)
-    return AGPU_BACKEND_TYPE_VULKAN;
+    return VGPUBackendType_Vulkan;
 #else
-    return AGPU_BACKEND_TYPE_OPENGL;
+    return VGPUBackendType_OpenGL;
 #endif
 }
 
-bool agpu_is_backend_supported(agpu_backend_type backend) {
-    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
-        backend = agpu_get_default_platform_backend();
+bool vgpuIsBackendSupported(VGPUBackendType backend) {
+    if (backend == VGPUBackendType_Count) {
+        backend = vgpuGetDefaultPlatformBackend();
     }
 
     switch (backend)
     {
-    case AGPU_BACKEND_TYPE_NULL:
+    case VGPUBackendType_Null:
         return true;
 #if defined(GPU_VK_BACKEND) && TODO_VK
     case AGPUBackendType_Vulkan:
@@ -178,7 +178,7 @@ bool agpu_is_backend_supported(agpu_backend_type backend) {
 #endif
 
 #if defined(GPU_GL_BACKEND)
-    case AGPU_BACKEND_TYPE_OPENGL:
+    case VGPUBackendType_OpenGL:
         return gl_driver.supported();
 #endif // defined(GPU_GL_BACKEND)
 
@@ -187,23 +187,25 @@ bool agpu_is_backend_supported(agpu_backend_type backend) {
     }
 }
 
-static agpu_renderer* s_renderer = NULL;
+static VGPUDevice s_gpu_device = NULL;
 
-bool agpu_init(const agpu_config* config)
+VGPUBool32 vgpuInit(const VGpuDeviceDescriptor* descriptor)
 {
-    AGPU_ASSERT(config);
-    if (s_renderer) {
+    if (s_gpu_device) {
         return true;
     }
 
-    agpu_backend_type backend = config->preferred_backend;
-    if (backend == AGPU_BACKEND_TYPE_DEFAULT) {
-        backend = agpu_get_default_platform_backend();
+    AGPU_ASSERT(descriptor);
+
+    VGPUBackendType backend = descriptor->preferredBackend;
+    if (backend == VGPUBackendType_Count) {
+        backend = vgpuGetDefaultPlatformBackend();
     }
 
+    VGPUDevice device = NULL;
     switch (backend)
     {
-    case AGPU_BACKEND_TYPE_NULL:
+    case VGPUBackendType_Null:
         break;
 
 #if defined(GPU_VK_BACKEND) && TODO_VK
@@ -225,60 +227,60 @@ bool agpu_init(const agpu_config* config)
 #endif
 
 #if defined(GPU_GL_BACKEND)
-    case AGPU_BACKEND_TYPE_OPENGL:
-        s_renderer = gl_driver.create_renderer();
+    case VGPUBackendType_OpenGL:
+        device = gl_driver.create_device();
         break;
 #endif
     }
 
-    if (s_renderer == NULL || !s_renderer->init(config)) {
-        s_renderer = NULL;
+    if (device == NULL || !device->init(device, descriptor)) {
         return false;
     }
 
+    s_gpu_device = device;
     return true;
 }
 
-void agpu_shutdown(void) {
-    if (s_renderer == NULL) {
+void vgpuShutdown(void) {
+    if (s_gpu_device == NULL) {
         return;
     }
 
-    s_renderer->shutdown();
-    s_renderer = NULL;
+    s_gpu_device->destroy(s_gpu_device);
+    s_gpu_device = NULL;
 }
 
-void agpu_frame_begin(void) {
-    s_renderer->frame_wait();
+void vgpuFrameBegin(void) {
+    s_gpu_device->frame_wait(s_gpu_device->renderer);
 }
 
-void agpu_frame_finish(void) {
-    s_renderer->frame_finish();
+void vgpuFrameFinish(void) {
+    s_gpu_device->frame_finish(s_gpu_device->renderer);
 }
 
-agpu_backend_type agpu_query_backend(void) {
-    return s_renderer->query_backend();
+VGPUBackendType vgpuGetBackend(void) {
+    return s_gpu_device->getBackend();
 }
 
-void  agpu_get_limits(agpu_limits* limits) {
-    s_renderer->get_limits(limits);
+const VGPUDeviceCaps* vgpuGetCaps(void) {
+    return s_gpu_device->get_caps(s_gpu_device->renderer);
 }
 
-AGPUPixelFormat agpu_get_default_depth_format(void)
-{
-    return s_renderer->get_default_depth_format();
+AGPUPixelFormat vgpuGetDefaultDepthFormat(void) {
+    AGPU_ASSERT(s_gpu_device);
+    return s_gpu_device->get_default_depth_format(s_gpu_device->renderer);
 }
 
-AGPUPixelFormat agpu_get_default_depth_stencil_format(void)
-{
-    return s_renderer->get_default_depth_stencil_format();
+AGPUPixelFormat vgpuGetDefaultDepthStencilFormat(void) {
+    AGPU_ASSERT(s_gpu_device);
+    return s_gpu_device->get_default_depth_stencil_format(s_gpu_device->renderer);
 }
 
 /* Texture */
-static agpu_texture_info texture_info_default(const agpu_texture_info* info) {
-    agpu_texture_info def = *info;
-    def.type = _agpu_def(info->type, AGPUTextureType_2D);
-    def.format = _agpu_def(info->format, AGPUPixelFormat_RGBA8Unorm);
+static VGPUTextureInfo texture_info_default(const VGPUTextureInfo* info) {
+    VGPUTextureInfo def = *info;
+    def.type = _agpu_def(info->type, VGPUTextureType_2D);
+    def.format = _agpu_def(info->format, AGPUPixelFormat_RGBA8UNorm);
     def.size.width = _agpu_def(info->size.width, 1);
     def.size.height = _agpu_def(info->size.height, 1);
     def.size.depth = _agpu_def(info->size.depth, 1);
@@ -287,55 +289,105 @@ static agpu_texture_info texture_info_default(const agpu_texture_info* info) {
     return def;
 }
 
-agpu_texture agpu_texture_create(const agpu_texture_info* info) {
-    AGPU_ASSERT(info);
-    agpu_texture_info info_def = texture_info_default(info);
-    return s_renderer->create_texture(&info_def);
+VGPUTexture* vgpuTextureCreate(const VGPUTextureInfo* descriptor) {
+    AGPU_ASSERT(s_gpu_device);
+    AGPU_ASSERT(descriptor);
+
+    VGPUTextureInfo info_def = texture_info_default(descriptor);
+    return s_gpu_device->create_texture(s_gpu_device->renderer,  &info_def);
 }
 
-void agpu_texture_destroy(agpu_texture texture) {
+void vgpuTextureDestroy(VGPUTexture* texture) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(texture);
-    s_renderer->destroy_texture(texture);
+    s_gpu_device->destroy_texture(s_gpu_device->renderer, texture);
 }
 
 /* Buffer */
-agpu_buffer agpu_create_buffer(const agpu_buffer_info* info) {
+VGPUBuffer* vgpuBufferCreate(const VGPUBufferInfo* info) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(info);
-    return s_renderer->create_buffer(info);
+
+    const bool dynamic = info->usage & VGPUBufferUsage_Dynamic;
+    const bool cpuAccessible = info->usage & VGPUBufferUsage_CPUAccessible;
+    AGPU_ASSERT(dynamic || cpuAccessible == false);
+
+    return s_gpu_device->bufferCreate(s_gpu_device->renderer, info);
 }
 
-void agpu_destroy_buffer(agpu_buffer buffer) {
+void vgpuBufferDestroy(VGPUBuffer* buffer) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(buffer);
-    s_renderer->destroy_buffer( buffer);
+    s_gpu_device->bufferDestroy(s_gpu_device->renderer, buffer);
 }
 
 /* Shader */
-agpu_shader agpu_create_shader(const agpu_shader_info* info) {
+vgpu_shader vgpuShaderCreate(const vgpu_shader_info* info) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(info);
-    return s_renderer->create_shader(info);
+    return s_gpu_device->create_shader(s_gpu_device->renderer, info);
 }
 
-void agpu_destroy_shader(agpu_shader shader) {
+void vgpuShaderDestroy(vgpu_shader shader) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(shader);
-    s_renderer->destroy_shader(shader);
+    s_gpu_device->destroy_shader(s_gpu_device->renderer, shader);
 }
 
 /* Pipeline */
 static agpu_render_pipeline_info pipeline_info_default(const agpu_render_pipeline_info* info) {
     agpu_render_pipeline_info def = *info;
-    def.primitive_topology = _agpu_def(info->primitive_topology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
+    def.primitiveTopology = _agpu_def(info->primitiveTopology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
+
+    /* resolve vertex layout strides and offsets */
+    uint32_t autoVboOffset[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
+    memset(autoVboOffset, 0, sizeof(autoVboOffset));
+
+    bool useAutoOffset = true;
+    for (uint32_t i = 0; i < VGPU_MAX_VERTEX_ATTRIBUTES; i++) {
+        /* to use computed offsets, *all* attr offsets must be 0 */
+        if (def.vertexInfo.attributes[i].offset != 0) {
+            useAutoOffset = false;
+        }
+    }
+
+    for (uint32_t i = 0; i < VGPU_MAX_VERTEX_ATTRIBUTES; i++) {
+        VGPUVertexAttributeInfo* attrDesc = &def.vertexInfo.attributes[i];
+        if (attrDesc->format == VGPUVertexFormat_Invalid) {
+            continue;
+        }
+
+        AGPU_ASSERT((attrDesc->bufferIndex >= 0) && (attrDesc->bufferIndex < VGPU_MAX_VERTEX_BUFFER_BINDINGS));
+        if (useAutoOffset) {
+            attrDesc->offset = autoVboOffset[attrDesc->bufferIndex];
+        }
+
+        autoVboOffset[attrDesc->bufferIndex] += vgpuGetVertexFormatSize(attrDesc->format);
+    }
+
+    /* compute vertex strides if needed */
+    for (uint32_t i = 0; i < VGPU_MAX_VERTEX_BUFFER_BINDINGS; i++) {
+        VGPUVertexBufferLayoutInfo* layoutDesc = &def.vertexInfo.layouts[i];
+        if (layoutDesc->stride == 0) {
+            layoutDesc->stride = autoVboOffset[i];
+        }
+    }
+
     return def;
 }
 
 agpu_pipeline agpu_create_render_pipeline(const agpu_render_pipeline_info* info) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(info);
     agpu_render_pipeline_info info_def = pipeline_info_default(info);
-    return s_renderer->create_render_pipeline(&info_def);
+
+    return s_gpu_device->create_render_pipeline(s_gpu_device->renderer, &info_def);
 }
 
 void agpu_destroy_pipeline(agpu_pipeline pipeline) {
+    AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(pipeline);
-    s_renderer->destroy_pipeline(pipeline);
+    s_gpu_device->destroy_pipeline(s_gpu_device->renderer, pipeline);
 }
 
 /*AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor)
@@ -352,24 +404,32 @@ void agpuDeviceDestroySampler(GPUDevice device, AGPUSampler sampler)
 }*/
 
 /* CommandBuffer */
-void agpu_set_pipeline(agpu_pipeline pipeline) {
-    s_renderer->set_pipeline(pipeline);
+void vgpuCmdBeginRenderPass(const VGPURenderPassDescriptor* descriptor) {
+    s_gpu_device->cmdBeginRenderPass(s_gpu_device->renderer, descriptor);
 }
 
-void agpuCmdSetVertexBuffers(uint32_t slot, agpu_buffer buffer, uint64_t offset) {
-    s_renderer->cmdSetVertexBuffer(slot, buffer, offset);
+void vgpuCmdEndRenderPass(void) {
+    s_gpu_device->cmdEndRenderPass(s_gpu_device->renderer);
 }
 
-void agpuCmdSetIndexBuffer(agpu_buffer buffer, uint64_t offset) {
-    s_renderer->cmdSetIndexBuffer(buffer, offset);
+void vgpuSetPipeline(agpu_pipeline pipeline) {
+    s_gpu_device->cmdSetPipeline(s_gpu_device->renderer, pipeline);
 }
 
-void agpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {
-    s_renderer->cmdDraw(vertexCount, instanceCount, firstVertex);
+void vgpuCmdSetVertexBuffers(uint32_t slot, VGPUBuffer* buffer, uint64_t offset) {
+    s_gpu_device->cmdSetVertexBuffer(s_gpu_device->renderer, slot, buffer, offset);
 }
 
-void agpuCmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) {
-    s_renderer->cmdDrawIndexed(indexCount, instanceCount, firstIndex);
+void vgpuCmdSetIndexBuffer(VGPUBuffer* buffer, uint64_t offset) {
+    s_gpu_device->cmdSetIndexBuffer(s_gpu_device->renderer, buffer, offset);
+}
+
+void vgpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {
+    s_gpu_device->cmdDraw(s_gpu_device->renderer, vertexCount, instanceCount, firstVertex);
+}
+
+void vgpuCmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) {
+    s_gpu_device->cmdDrawIndexed(s_gpu_device->renderer, indexCount, instanceCount, firstIndex);
 }
 
 #if TODO
@@ -547,8 +607,8 @@ const vgpu_pixel_format_desc FormatDesc[] =
     { AGPUPixelFormat_RG16Uint,                     "RG16Uint",             AGPUPixelFormatType_Uint,            32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
     { AGPUPixelFormat_RG16Sint,                     "RG16Sint",             AGPUPixelFormatType_Sint,            32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
     { AGPUPixelFormat_RG16Float,                    "RG16Float",            AGPUPixelFormatType_Float,           32,         {1, 1, 4, 1, 1},        {0, 0, 16, 16, 0, 0}},
-    { AGPUPixelFormat_RGBA8Unorm,                   "RGBA8Unorm",           AGPUPixelFormatType_Unorm,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
-    { AGPUPixelFormat_RGBA8UnormSrgb,               "RGBA8UnormSrgb",       AGPUPixelFormatType_UnormSrgb,      32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { AGPUPixelFormat_RGBA8UNorm,                   "RGBA8UNorm",           AGPUPixelFormatType_Unorm,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
+    { AGPUPixelFormat_RGBA8UNormSrgb,               "RGBA8UNormSrgb",       AGPUPixelFormatType_UnormSrgb,      32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
     { AGPUPixelFormat_RGBA8Snorm,                   "RGBA8Snorm",           AGPUPixelFormatType_Snorm,           32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
     { AGPUPixelFormat_RGBA8Uint,                    "RGBA8Uint",            AGPUPixelFormatType_Uint,            32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
     { AGPUPixelFormat_RGBA8Sint,                    "RGBA8Sint",            AGPUPixelFormatType_Sint,            32,         {1, 1, 4, 1, 1},        {0, 0, 8, 8, 8, 8}},
@@ -650,41 +710,41 @@ AGPUPixelFormatType agpuGetFormatType(AGPUPixelFormat format)
     return FormatDesc[(uint32_t)format].type;
 }
 
-bool agpuIsDepthFormat(AGPUPixelFormat format)
+bool vgpuIsDepthFormat(AGPUPixelFormat format)
 {
     AGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.depth > 0;
 }
 
-bool agpuIsStencilFrmat(AGPUPixelFormat format)
+bool vgpuIsStencilFrmat(AGPUPixelFormat format)
 {
     AGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.stencil > 0;
 }
 
-bool agpuIsDepthStencilFormat(AGPUPixelFormat format)
+bool vgpuIsDepthStencilFormat(AGPUPixelFormat format)
 {
-    return agpuIsDepthFormat(format) || agpuIsStencilFrmat(format);
+    return vgpuIsDepthFormat(format) || vgpuIsStencilFrmat(format);
 }
 
-bool agpuIsCompressedFormat(AGPUPixelFormat format)
+bool vgpuIsCompressedFormat(AGPUPixelFormat format)
 {
     AGPU_ASSERT(FormatDesc[format].format == format);
     return format >= AGPUPixelFormat_BC1RGBAUnorm && format <= AGPUPixelFormat_BC7RGBAUnormSrgb;
 }
 
-const char* agpuGetFormatName(AGPUPixelFormat format)
+const char* vgpuGetFormatName(AGPUPixelFormat format)
 {
     AGPU_ASSERT(FormatDesc[(uint32_t)format].format == format);
     return FormatDesc[(uint32_t)format].name;
 }
 
-bool agpuIsSrgbFormat(AGPUPixelFormat format)
+bool vgpuIsSrgbFormat(AGPUPixelFormat format)
 {
     return (agpuGetFormatType(format) == AGPUPixelFormatType_UnormSrgb);
 }
 
-AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format)
+AGPUPixelFormat vgpuSrgbToLinearFormat(AGPUPixelFormat format)
 {
     switch (format)
     {
@@ -696,17 +756,17 @@ AGPUPixelFormat agpuSrgbToLinearFormat(AGPUPixelFormat format)
         return AGPUPixelFormat_BC3RGBAUnorm;
     case AGPUPixelFormat_BGRA8UnormSrgb:
         return AGPUPixelFormat_BGRA8Unorm;
-    case AGPUPixelFormat_RGBA8UnormSrgb:
-        return AGPUPixelFormat_RGBA8Unorm;
+    case AGPUPixelFormat_RGBA8UNormSrgb:
+        return AGPUPixelFormat_RGBA8UNorm;
     case AGPUPixelFormat_BC7RGBAUnormSrgb:
         return AGPUPixelFormat_BC7RGBAUnorm;
     default:
-        AGPU_ASSERT(agpuIsSrgbFormat(format) == false);
+        AGPU_ASSERT(vgpuIsSrgbFormat(format) == false);
         return format;
     }
 }
 
-AGPUPixelFormat agpuLinearToSrgbFormat(AGPUPixelFormat format)
+AGPUPixelFormat vgpuLinearToSrgbFormat(AGPUPixelFormat format)
 {
     switch (format)
     {
@@ -718,8 +778,8 @@ AGPUPixelFormat agpuLinearToSrgbFormat(AGPUPixelFormat format)
         return AGPUPixelFormat_BC3RGBAUnormSrgb;
     case AGPUPixelFormat_BGRA8Unorm:
         return AGPUPixelFormat_BGRA8UnormSrgb;
-    case AGPUPixelFormat_RGBA8Unorm:
-        return AGPUPixelFormat_RGBA8UnormSrgb;
+    case AGPUPixelFormat_RGBA8UNorm:
+        return AGPUPixelFormat_RGBA8UNormSrgb;
     case AGPUPixelFormat_BC7RGBAUnorm:
         return AGPUPixelFormat_BC7RGBAUnormSrgb;
     default:
@@ -728,88 +788,88 @@ AGPUPixelFormat agpuLinearToSrgbFormat(AGPUPixelFormat format)
 }
 
 
-uint32_t agpuGetVertexFormatComponentsCount(AGPUVertexFormat format) {
+uint32_t vgpuGetVertexFormatComponentsCount(VGPUVertexFormat format) {
     switch (format) {
-    case AGPU_VERTEX_FORMAT_UCHAR4:
-    case AGPU_VERTEX_FORMAT_CHAR4:
-    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
-    case AGPU_VERTEX_FORMAT_CHAR4NORM:
-    case AGPU_VERTEX_FORMAT_USHORT4:
-    case AGPU_VERTEX_FORMAT_SHORT4:
-    case AGPU_VERTEX_FORMAT_USHORT4NORM:
-    case AGPU_VERTEX_FORMAT_SHORT4NORM:
-    case AGPUVertexFormat_Half4:
-    case AGPUVertexFormat_Float4:
-    case AGPUVertexFormat_UInt4:
-    case AGPUVertexFormat_Int4:
+    case VGPUVertexFormat_UChar4:
+    case VGPUVertexFormat_Char4:
+    case VGPUVertexFormat_UChar4Norm:
+    case VGPUVertexFormat_Char4Norm:
+    case VGPUVertexFormat_UShort4:
+    case VGPUVertexFormat_Short4:
+    case VGPUVertexFormat_UShort4Norm:
+    case VGPUVertexFormat_Short4Norm:
+    case VGPUVertexFormat_Half4:
+    case VGPUVertexFormat_Float4:
+    case VGPUVertexFormat_UInt4:
+    case VGPUVertexFormat_Int4:
         return 4;
-    case AGPUVertexFormat_Float3:
-    case AGPUVertexFormat_UInt3:
-    case AGPUVertexFormat_Int3:
+    case VGPUVertexFormat_Float3:
+    case VGPUVertexFormat_UInt3:
+    case VGPUVertexFormat_Int3:
         return 3;
-    case AGPU_VERTEX_FORMAT_UCHAR2:
-    case AGPU_VERTEX_FORMAT_CHAR2:
-    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
-    case AGPU_VERTEX_FORMAT_CHAR2NORM:
-    case AGPU_VERTEX_FORMAT_USHORT2:
-    case AGPU_VERTEX_FORMAT_SHORT2:
-    case AGPU_VERTEX_FORMAT_USHORT2NORM:
-    case AGPU_VERTEX_FORMAT_SHORT2NORM:
-    case AGPUVertexFormat_Half2:
-    case AGPUVertexFormat_Float2:
-    case AGPUVertexFormat_UInt2:
-    case AGPUVertexFormat_Int2:
+    case VGPUVertexFormat_UChar2:
+    case VGPUVertexFormat_Char2:
+    case VGPUVertexFormat_UChar2Norm:
+    case VGPUVertexFormat_Char2Norm:
+    case VGPUVertexFormat_UShort2:
+    case VGPUVertexFormat_Short2:
+    case VGPUVertexFormat_UShort2Norm:
+    case VGPUVertexFormat_Short2Norm:
+    case VGPUVertexFormat_Half2:
+    case VGPUVertexFormat_Float2:
+    case VGPUVertexFormat_UInt2:
+    case VGPUVertexFormat_Int2:
         return 2;
-    case AGPUVertexFormat_Float:
-    case AGPUVertexFormat_UInt:
-    case AGPUVertexFormat_Int:
+    case VGPUVertexFormat_Float:
+    case VGPUVertexFormat_UInt:
+    case VGPUVertexFormat_Int:
         return 1;
     default:
-        AGPU_UNREACHABLE();
+        VGPU_UNREACHABLE();
     }
 }
 
-uint32_t agpuGetVertexFormatComponentSize(AGPUVertexFormat format) {
+uint32_t vgpuGetVertexFormatComponentSize(VGPUVertexFormat format) {
     switch (format) {
-    case AGPU_VERTEX_FORMAT_UCHAR2:
-    case AGPU_VERTEX_FORMAT_UCHAR4:
-    case AGPU_VERTEX_FORMAT_CHAR2:
-    case AGPU_VERTEX_FORMAT_CHAR4:
-    case AGPU_VERTEX_FORMAT_UCHAR2NORM:
-    case AGPU_VERTEX_FORMAT_UCHAR4NORM:
-    case AGPU_VERTEX_FORMAT_CHAR2NORM:
-    case AGPU_VERTEX_FORMAT_CHAR4NORM:
+    case VGPUVertexFormat_UChar2:
+    case VGPUVertexFormat_UChar4:
+    case VGPUVertexFormat_Char2:
+    case VGPUVertexFormat_Char4:
+    case VGPUVertexFormat_UChar2Norm:
+    case VGPUVertexFormat_UChar4Norm:
+    case VGPUVertexFormat_Char2Norm:
+    case VGPUVertexFormat_Char4Norm:
         return 1u;
-    case AGPU_VERTEX_FORMAT_USHORT2:
-    case AGPU_VERTEX_FORMAT_USHORT4:
-    case AGPU_VERTEX_FORMAT_USHORT2NORM:
-    case AGPU_VERTEX_FORMAT_USHORT4NORM:
-    case AGPU_VERTEX_FORMAT_SHORT2:
-    case AGPU_VERTEX_FORMAT_SHORT4:
-    case AGPU_VERTEX_FORMAT_SHORT2NORM:
-    case AGPU_VERTEX_FORMAT_SHORT4NORM:
-    case AGPUVertexFormat_Half2:
-    case AGPUVertexFormat_Half4:
+    case VGPUVertexFormat_UShort2:
+    case VGPUVertexFormat_UShort4:
+    case VGPUVertexFormat_UShort2Norm:
+    case VGPUVertexFormat_UShort4Norm:
+    case VGPUVertexFormat_Short2:
+    case VGPUVertexFormat_Short4:
+    case VGPUVertexFormat_Short2Norm:
+    case VGPUVertexFormat_Short4Norm:
+    case VGPUVertexFormat_Half2:
+    case VGPUVertexFormat_Half4:
         return 2u;
-    case AGPUVertexFormat_Float:
-    case AGPUVertexFormat_Float2:
-    case AGPUVertexFormat_Float3:
-    case AGPUVertexFormat_Float4:
+    case VGPUVertexFormat_Float:
+    case VGPUVertexFormat_Float2:
+    case VGPUVertexFormat_Float3:
+    case VGPUVertexFormat_Float4:
         return 4u;
-    case AGPUVertexFormat_UInt:
-    case AGPUVertexFormat_UInt2:
-    case AGPUVertexFormat_UInt3:
-    case AGPUVertexFormat_UInt4:
-    case AGPUVertexFormat_Int:
-    case AGPUVertexFormat_Int2:
-    case AGPUVertexFormat_Int3:
-    case AGPUVertexFormat_Int4:
+    case VGPUVertexFormat_UInt:
+    case VGPUVertexFormat_UInt2:
+    case VGPUVertexFormat_UInt3:
+    case VGPUVertexFormat_UInt4:
+    case VGPUVertexFormat_Int:
+    case VGPUVertexFormat_Int2:
+    case VGPUVertexFormat_Int3:
+    case VGPUVertexFormat_Int4:
         return 4u;
     default:
-        AGPU_UNREACHABLE();
+        VGPU_UNREACHABLE();
     }
 }
 
-uint32_t agpuGetVertexFormatSize(AGPUVertexFormat format) {
-    return agpuGetVertexFormatComponentsCount(format) * agpuGetVertexFormatComponentSize(format);
+uint32_t vgpuGetVertexFormatSize(VGPUVertexFormat format) {
+    return vgpuGetVertexFormatComponentsCount(format) * vgpuGetVertexFormatComponentSize(format);
 }
