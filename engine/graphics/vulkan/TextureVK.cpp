@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsDevice.h"
+#include "TextureVK.h"
+#include "GraphicsDeviceVK.h"
+#include "core/Assert.h"
+#include "core/Log.h"
+#include "math/math.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device)
-        : GraphicsResource(device, Type::Buffer)
+    TextureVK::TextureVK(GraphicsDeviceVK* device_)
+        : device(device_)
+        , desc()
     {
 
+    }
+
+    TextureVK::~TextureVK()
+    {
+        Destroy();
+    }
+
+    bool TextureVK::Init(const TextureDesc* pDesc, const void* initialData)
+    {
+        memcpy(&desc, pDesc, sizeof(desc));
+        return true;
+    }
+
+    void TextureVK::Destroy()
+    {
+
+    }
+
+    IGraphicsDevice* TextureVK::GetDevice() const
+    {
+        return device;
     }
 }

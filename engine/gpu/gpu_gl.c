@@ -51,8 +51,9 @@ typedef enum {
 
 typedef struct {
     uint32_t id;
-    VGPUDeviceSize size;
+    GLsizeiptr size;
     vgpu_gl_buffer_target target;
+    void* data;
 } vgpu_buffer_gl;
 
 typedef struct {
@@ -81,6 +82,7 @@ typedef struct {
     GLenum index_type;
     uint32_t attribute_count;
     vgpu_vertex_attribute_gl attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
+    vgpu_depth_stencil_state depth_stencil;
 } vgpu_pipeline_gl;
 
 typedef struct {
@@ -102,6 +104,24 @@ static struct {
     } ext;
 } gl;
 
+
+typedef struct vgpu_gl_cache {
+    bool insidePass;
+    vgpu_pipeline_gl* current_pipeline;
+    GLuint program;
+    GLuint buffers[_GL_BUFFER_TARGET_COUNT];
+    uint32_t primitiveRestart;
+    vgpu_vertex_attribute_cache_gl attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
+    uint16_t enabled_locations;
+    GLuint vertex_buffers[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
+    uint64_t vertex_buffer_offsets[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
+    struct {
+        GLuint buffer;
+        uint64_t offset;
+    } index;
+    vgpu_depth_stencil_state depth_stencil;
+} vgpu_gl_cache;
+
 typedef struct VGPURendererGL {
     /* Associated vgpu_device */
     VGPUDevice gpuDevice;
@@ -110,22 +130,8 @@ typedef struct VGPURendererGL {
     GLuint defaultFramebuffer;
 
     VGPUDeviceCaps caps;
-
-    struct {
-        bool insidePass;
-        vgpu_pipeline_gl* current_pipeline;
-        GLuint program;
-        GLuint buffers[_GL_BUFFER_TARGET_COUNT];
-        uint32_t primitiveRestart;
-        vgpu_vertex_attribute_cache_gl attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
-        uint16_t enabled_locations;
-        GLuint vertex_buffers[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
-        uint64_t vertex_buffer_offsets[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
-        struct {
-            GLuint buffer;
-            uint64_t offset;
-        } index;
-    } cache;
+    vgpu_gl_cache cache;
+    vgpu_buffer_gl* ubo_buffer;
 } VGPURendererGL;
 
 #define GL_THROW(s) vgpuLog(VGPULogLevel_Error, s)
@@ -195,11 +201,11 @@ static GLenum _agpu_gl_get_buffer_target(vgpu_gl_buffer_target target) {
 static GLenum _gl_GetBufferUsage(VGPUBufferUsage usage)
 {
     if (usage && VGPUBufferUsage_Dynamic) {
-        return GL_STREAM_DRAW;
+        return GL_DYNAMIC_DRAW;
     }
 
     if (usage && VGPUBufferUsage_CPUAccessible) {
-        return GL_STREAM_DRAW;
+        return GL_DYNAMIC_DRAW;
     }
 
     return GL_STATIC_DRAW;
@@ -269,6 +275,7 @@ static void _agpu_gl_reset_state_cache(VGPURendererGL* renderer) {
     GL_CHECK(glUseProgram(0));
 
     /* depth-stencil state */
+    renderer->cache.depth_stencil.depth_compare = VGPU_COMPARE_FUNCTION_ALWAYS;
     glDisable(GL_DEPTH_TEST);
     glDepthFunc(GL_ALWAYS);
     glDepthMask(GL_FALSE);
@@ -429,6 +436,27 @@ static bool gl_init(VGPUDevice device, const VGpuDeviceDescriptor* descriptor) {
     /* Reset state cache. */
     _agpu_gl_reset_state_cache(renderer);
 
+    const vgpu_buffer_info ubo_buffer_info = {
+        .size = 1024 * 1024, // 1 MB starting size
+        .usage = VGPUBufferUsage_Uniform | VGPUBufferUsage_Dynamic
+    };
+    renderer->ubo_buffer = (vgpu_buffer_gl*)vgpu_buffer_create(&ubo_buffer_info);
+#ifdef AGPU_WEBGL
+    renderer->ubo_buffer->data = malloc(ubo_buffer_info->size);
+#else
+
+#ifdef AGPU_GL
+    if (gl.ext.direct_state_access)
+    {
+        renderer->ubo_buffer->data = glMapNamedBufferRange(renderer->ubo_buffer->id, 0, ubo_buffer_info.size, GL_MAP_WRITE_BIT);
+    }
+    else
+#endif 
+    {
+        renderer->ubo_buffer->data = glMapBufferRange(GL_UNIFORM_BUFFER, 0, ubo_buffer_info.size, GL_MAP_WRITE_BIT);
+    }
+#endif
+
     return true;
 }
 
@@ -445,7 +473,20 @@ static void gl_destroy(VGPUDevice device) {
 
 static void gl_frame_wait(VGPURenderer* driverData) {
     float clearColor[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
-    GL_CHECK(glClearBufferfv(GL_COLOR, 0, clearColor));
+    glClearBufferfv(GL_COLOR, 0, clearColor);
+
+    const bool doDepthClear = true;
+    if (doDepthClear) {
+        glDepthMask(GL_TRUE);
+    }
+
+    if (doDepthClear)
+    {
+        float clearDepth = 1.0f;
+        glClearBufferfv(GL_DEPTH, 0, &clearDepth);
+    }
+
+    _GPU_GL_CHECK_ERROR();
 }
 
 static void gl_frame_finish(VGPURenderer* driverData) {
@@ -470,10 +511,10 @@ static AGPUPixelFormat gl_get_default_depth_stencil_format(VGPURenderer* driverD
 }
 
 /* Buffer */
-static VGPUBuffer* gl_bufferCreate(VGPURenderer* driverData, const VGPUBufferInfo* info) {
+static vgpu_buffer* gl_buffer_create(VGPURenderer* driverData, const vgpu_buffer_info* info) {
     VGPURendererGL* renderer = (VGPURendererGL*)driverData;
     vgpu_buffer_gl* buffer = _AGPU_ALLOC_HANDLE(vgpu_buffer_gl);
-    buffer->size = info->size;
+    buffer->size = (GLsizeiptr)info->size;
 
     if (info->usage & VGPUBufferUsage_Vertex) buffer->target = GL_BUFFER_TARGET_VERTEX;
     else if (info->usage & VGPUBufferUsage_Index) buffer->target = GL_BUFFER_TARGET_INDEX;
@@ -515,15 +556,40 @@ static VGPUBuffer* gl_bufferCreate(VGPURenderer* driverData, const VGPUBufferInf
     }
 
     _GPU_GL_CHECK_ERROR();
-    return (VGPUBuffer*)buffer;
+    return (vgpu_buffer*)buffer;
 }
 
-static void gl_bufferDestroy(VGPURenderer* driverData, VGPUBuffer* handle) {
+static void gl_buffer_destroy(VGPURenderer* driverData, vgpu_buffer* handle) {
     vgpu_buffer_gl* buffer = (vgpu_buffer_gl*)handle;
     GL_CHECK(glDeleteBuffers(1, &buffer->id));
     AGPU_FREE(buffer);
 }
 
+static void gl_buffer_sub_data(VGPURenderer* driverData, vgpu_buffer* handle, VGPUDeviceSize offset, VGPUDeviceSize size, const void* pData)
+{
+    vgpu_buffer_gl* buffer = (vgpu_buffer_gl*)handle;
+#ifdef AGPU_GL
+    if (gl.ext.direct_state_access)
+    {
+        if (size == 0)
+            size = buffer->size - offset;
+
+        void* mapped_data = glMapNamedBufferRange(buffer->id, offset, size, GL_MAP_WRITE_BIT);
+        _GPU_GL_CHECK_ERROR();
+        memcpy(mapped_data, pData, size);
+        glUnmapNamedBuffer(buffer->id);
+        //glNamedBufferSubData(buffer->id, offset, buffer->size, pData);
+    }
+    else
+#endif 
+    {
+        VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+        _agpu_gl_bind_buffer(renderer, buffer->target, buffer->id, false);
+        GLenum gl_target = _agpu_gl_get_buffer_target(buffer->target);
+        glBufferSubData(gl_target, offset, buffer->size, pData);
+    }
+    _GPU_GL_CHECK_ERROR();
+}
 
 /* Texture */
 static VGPUTexture* gl_create_texture(VGPURenderer* driverData, const VGPUTextureInfo* info)
@@ -535,10 +601,11 @@ static VGPUTexture* gl_create_texture(VGPURenderer* driverData, const VGPUTextur
     if (gl.ext.direct_state_access)
     {
         glCreateTextures(GL_TEXTURE_2D, 1, &texture->id);
+        glTextureParameteri(texture->id, GL_TEXTURE_WRAP_R, GL_REPEAT);
         glTextureParameteri(texture->id, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTextureParameteri(texture->id, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTextureParameteri(texture->id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(texture->id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(texture->id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTextureParameteri(texture->id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 
         glTextureStorage2D(texture->id, 1, GL_RGBA8, info->size.width, info->size.height);
         glTextureSubImage2D(texture->id, 0, 0, 0, info->size.width, info->size.height, GL_RGBA, GL_UNSIGNED_BYTE, info->data);
@@ -658,6 +725,20 @@ static void gl_destroy_shader(VGPURenderer* driverData, vgpu_shader handle) {
 }
 
 /* Pipeline */
+static GLenum _vgpu_gl_compare_func(vgpu_compare_function cmp) {
+    switch (cmp) {
+    case VGPU_COMPARE_FUNCTION_NEVER:          return GL_NEVER;
+    case VGPU_COMPARE_FUNCTION_LESS:           return GL_LESS;
+    case VGPU_COMPARE_FUNCTION_LESS_EQUAL:     return GL_LEQUAL;
+    case VGPU_COMPARE_FUNCTION_GREATER:        return GL_GREATER;
+    case VGPU_COMPARE_FUNCTION_GREATER_EQUAL:  return GL_GEQUAL;
+    case VGPU_COMPARE_FUNCTION_EQUAL:          return GL_EQUAL;
+    case VGPU_COMPARE_FUNCTION_NOT_EQUAL:      return GL_NOTEQUAL;
+    case VGPU_COMPARE_FUNCTION_ALWAYS:         return GL_ALWAYS;
+    default: VGPU_UNREACHABLE();
+    }
+}
+
 static GLenum get_gl_primitive_type(agpu_primitive_topology type) {
     static const GLenum types[] = {
         [AGPU_PRIMITIVE_TOPOLOGY_POINTS] = GL_POINTS,
@@ -762,14 +843,14 @@ static GLboolean _agpu_gl_vertex_format_integer(VGPUVertexFormat format) {
     }
 }
 
-static agpu_pipeline gl_create_render_pipeline(VGPURenderer* driverData, const agpu_render_pipeline_info* info)
+static agpu_pipeline gl_create_pipeline(VGPURenderer* driverData, const vgpu_pipeline_info* info)
 {
     VGPURendererGL* renderer = (VGPURendererGL*)driverData;
-    vgpu_pipeline_gl* result = _AGPU_ALLOC_HANDLE(vgpu_pipeline_gl);
-    result->shader = (vgpu_shader_gl*)info->shader;
-    result->primitive_type = get_gl_primitive_type(info->primitiveTopology);
-    result->index_type = _agpu_gl_index_type(info->indexType);
-    result->attribute_count = 0;
+    vgpu_pipeline_gl* pipeline = _AGPU_ALLOC_HANDLE(vgpu_pipeline_gl);
+    pipeline->shader = (vgpu_shader_gl*)info->shader;
+    pipeline->primitive_type = get_gl_primitive_type(info->primitive_topology);
+    pipeline->index_type = _agpu_gl_index_type(info->indexType);
+    pipeline->attribute_count = 0;
 
     /* Setup vertex attributes */
     for (uint32_t attrIndex = 0; attrIndex < renderer->caps.limits.maxVertexInputAttributes; attrIndex++) {
@@ -780,7 +861,7 @@ static agpu_pipeline gl_create_render_pipeline(VGPURenderer* driverData, const a
 
         const VGPUVertexBufferLayoutInfo* layoutDesc = &info->vertexInfo.layouts[attrDesc->bufferIndex];
 
-        vgpu_vertex_attribute_gl* gl_attr = &result->attributes[result->attribute_count++];
+        vgpu_vertex_attribute_gl* gl_attr = &pipeline->attributes[pipeline->attribute_count++];
         gl_attr->buffer_index = (int8_t)attrDesc->bufferIndex;
         gl_attr->shaderLocation = attrIndex;
         gl_attr->stride = (GLsizei)layoutDesc->stride;
@@ -797,7 +878,11 @@ static agpu_pipeline gl_create_render_pipeline(VGPURenderer* driverData, const a
         }
     }
 
-    return (agpu_pipeline)result;
+    pipeline->depth_stencil = info->depth_stencil;
+    //pipeline->gl.blend = desc->blend;
+    //pipeline->gl.rast = desc->rasterizer;
+
+    return (agpu_pipeline)pipeline;
 }
 
 static void gl_destroy_pipeline(VGPURenderer* driverData, agpu_pipeline handle) {
@@ -828,23 +913,64 @@ static void gl_cmdSetPipeline(VGPURenderer* driverData, agpu_pipeline handle)
     vgpu_pipeline_gl* pipeline = (vgpu_pipeline_gl*)handle;
     _GPU_GL_CHECK_ERROR();
     if (renderer->cache.current_pipeline != pipeline) {
+        /* Apply depth-stencil state */
+        const vgpu_depth_stencil_state* new_ds = &pipeline->depth_stencil;
+        vgpu_depth_stencil_state* cache_ds = &renderer->cache.depth_stencil;
+
+        if (new_ds->depth_compare == VGPU_COMPARE_FUNCTION_ALWAYS &&
+            !new_ds->depth_write_enabled) {
+            glDisable(GL_DEPTH_TEST);
+        }
+        else {
+            glEnable(GL_DEPTH_TEST);
+        }
+
+        if (new_ds->depth_write_enabled != cache_ds->depth_write_enabled) {
+            cache_ds->depth_write_enabled = new_ds->depth_write_enabled;
+            glDepthMask(new_ds->depth_write_enabled);
+        }
+
+        if (new_ds->depth_compare != cache_ds->depth_compare) {
+            cache_ds->depth_compare = new_ds->depth_compare;
+            glDepthFunc(_vgpu_gl_compare_func(new_ds->depth_compare));
+        }
+
         _agpu_gl_use_program(renderer, pipeline->shader->id);
         renderer->cache.current_pipeline = pipeline;
     }
 }
 
-static void gl_cmdSetVertexBuffer(VGPURenderer* driverData, uint32_t slot, VGPUBuffer* buffer, uint64_t offset)
+static void gl_cmdSetVertexBuffer(VGPURenderer* driverData, uint32_t slot, vgpu_buffer* buffer, uint64_t offset)
 {
     VGPURendererGL* renderer = (VGPURendererGL*)driverData;
     renderer->cache.vertex_buffers[slot] = ((vgpu_buffer_gl*)buffer)->id;
     renderer->cache.vertex_buffer_offsets[slot] = offset;
 }
 
-static void gl_cmdSetIndexBuffer(VGPURenderer* driverData, VGPUBuffer* buffer, uint64_t offset)
+static void gl_cmdSetIndexBuffer(VGPURenderer* driverData, vgpu_buffer* buffer, uint64_t offset)
 {
     VGPURendererGL* renderer = (VGPURendererGL*)driverData;
     renderer->cache.index.buffer = ((vgpu_buffer_gl*)buffer)->id;
     renderer->cache.index.offset = offset;
+}
+
+static void gl_set_uniform_buffer(VGPURenderer* driverData, uint32_t set, uint32_t binding, vgpu_buffer* handle)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    vgpu_buffer_gl* buffer = (vgpu_buffer_gl*)handle;
+
+    //GLuint loc = glGetUniformBlockIndex(renderer->cache.program, "Transform");
+    //glUniformBlockBinding(renderer->cache.program, loc, 0);
+    glBindBufferBase(GL_UNIFORM_BUFFER, binding, buffer->id);
+    _GPU_GL_CHECK_ERROR();
+}
+
+static void gl_set_uniform_buffer_data(VGPURenderer* driverData, uint32_t set, uint32_t binding, const void* data, VGPUDeviceSize size)
+{
+    VGPURendererGL* renderer = (VGPURendererGL*)driverData;
+    memcpy(renderer->ubo_buffer->data, data, size);
+    glBindBufferRange(GL_UNIFORM_BUFFER, binding, renderer->ubo_buffer->id, 0, size);
+    _GPU_GL_CHECK_ERROR();
 }
 
 static void _agpu_gl_prepare_draw(VGPURendererGL* renderer)

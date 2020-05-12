@@ -25,105 +25,13 @@
 #include "core/Assert.h"
 #include "graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_GRAPHICS_D3D12)
-#   include "graphics/d3d12/D3D12GraphicsDevice.h"
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#   include "graphics/vulkan/GraphicsDeviceVK.h"
 #endif
 
 namespace alimer
 {
-    std::set<BackendType> GraphicsDevice::GetAvailableBackends()
-    {
-        static std::set<BackendType> availableProviders;
-
-        if (availableProviders.empty())
-        {
-            availableProviders.insert(BackendType::Null);
-
-#if defined(ALIMER_GRAPHICS_VULKAN)
-            //if (VulkanGraphicsProvider::IsAvailable())
-            //    availableProviders.insert(BackendType::Vulkan);
-#endif
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable())
-                availableProviders.insert(BackendType::Direct3D12);
-#endif
-
-#if defined(ALIMER_GRAPHICS_OPENGL)
-            availableProviders.insert(BackendType::OpenGL);
-#endif
-        }
-
-        return availableProviders;
-    }
-
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(window_t* window, const GraphicsDeviceInfo& info)
-    {
-        BackendType backend = info.preferredBackend;
-        if (info.preferredBackend == BackendType::Count)
-        {
-            auto availableBackends = GetAvailableBackends();
-
-            if (availableBackends.find(BackendType::Metal) != availableBackends.end())
-                backend = BackendType::Metal;
-            else if (availableBackends.find(BackendType::Direct3D12) != availableBackends.end())
-                backend = BackendType::Direct3D12;
-            else if (availableBackends.find(BackendType::Vulkan) != availableBackends.end())
-                backend = BackendType::Vulkan;
-            else if (availableBackends.find(BackendType::Direct3D11) != availableBackends.end())
-                backend = BackendType::Direct3D11;
-            else if (availableBackends.find(BackendType::OpenGL) != availableBackends.end())
-                backend = BackendType::OpenGL;
-            else
-                backend = BackendType::Null;
-        }
-
-        GraphicsDevice* device = nullptr;
-        switch (backend)
-        {
-#if defined(ALIMER_VULKAN)
-        case BackendType::Vulkan:
-            ALIMER_LOGINFO("Using Vulkan render driver");
-            provider = std::make_unique<VulkanGraphicsProvider>(applicationName, flags);
-            break;
-#endif
-#if defined(ALIMER_GRAPHICS_D3D12)
-        case BackendType::Direct3D12:
-            ALIMER_LOGINFO("Creating Direct3D12 GraphicsDevice");
-            device = new D3D12GraphicsDevice();
-            break;
-#endif
-
-#if defined(ALIMER_D3D11)
-        case BackendType::Direct3D11:
-            ALIMER_LOGINFO("Using Direct3D11 render driver");
-            gpuDevice = make_shared<D3D11GPUDevice>(window, desc);
-            break;
-#endif
-
-#if defined(ALIMER_OPENGL)
-        case BackendType::OpenGL:
-            ALIMER_LOGINFO("Using OpenGL render driver");
-            provider = make_shared<GLGPUDevice>(window, desc);
-            break;
-#endif
-
-        case BackendType::Metal:
-            break;
-        default:
-            /* TODO: create null backend. */
-            break;
-        }
-
-        if (device == nullptr || device->Init(window, info) == false)
-        {
-            return nullptr;
-        }
-
-        return RefPtr<GraphicsDevice>(device);
-    }
-
-    void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
+    /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(_gpuResourceMutex);
         _gpuResources.push_back(resource);
@@ -147,6 +55,72 @@ namespace alimer
             }
 
             _gpuResources.clear();
+        }
+    }*/
+
+    std::set<GraphicsAPI> GetAvailableGraphicsAPI()
+    {
+        static std::set<GraphicsAPI> availableProviders;
+
+        if (availableProviders.empty())
+        {
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (GraphicsDeviceVK::IsAvailable())
+                availableProviders.insert(GraphicsAPI::Vulkan);
+#endif
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+            //if (D3D12GraphicsDevice::IsAvailable())
+           //     availableProviders.insert(BackendType::Direct3D12);
+#endif
+
+#if defined(ALIMER_GRAPHICS_OPENGL)
+           // availableProviders.insert(BackendType::OpenGL);
+#endif
+        }
+
+        return availableProviders;
+    }
+
+
+    std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc* pDesc)
+    {
+        ALIMER_ASSERT(pDesc);
+
+        if (api == GraphicsAPI::Count)
+        {
+            auto availableBackends = GetAvailableGraphicsAPI();
+
+            if (availableBackends.find(GraphicsAPI::Metal) != availableBackends.end())
+                api = GraphicsAPI::Metal;
+            else if (availableBackends.find(GraphicsAPI::Direct3D12) != availableBackends.end())
+                api = GraphicsAPI::Direct3D12;
+            else if (availableBackends.find(GraphicsAPI::Vulkan) != availableBackends.end())
+                api = GraphicsAPI::Vulkan;
+            else if (availableBackends.find(GraphicsAPI::Direct3D11) != availableBackends.end())
+                api = GraphicsAPI::Direct3D11;
+            else if (availableBackends.find(GraphicsAPI::OpenGL) != availableBackends.end())
+                api = GraphicsAPI::OpenGL;
+            else
+                api = GraphicsAPI::Null;
+        }
+
+        switch (api)
+        {
+#if defined(ALIMER_GRAPHICS_VULKAN)
+        case GraphicsAPI::Vulkan:
+        {
+            ALIMER_LOGINFO("Using Vulkan render driver");
+            auto device = std::make_unique<GraphicsDeviceVK>();
+            if (device->Init(pDesc))
+            {
+                return device;
+            }
+            return nullptr;
+        }
+#endif
+        default:
+            return nullptr;
         }
     }
 }

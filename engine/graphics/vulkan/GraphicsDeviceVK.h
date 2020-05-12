@@ -29,40 +29,63 @@ namespace alimer
 {
     class VulkanGraphicsAdapter;
 
+    struct QueueFamilyIndices
+    {
+        uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
+        uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
+        uint32_t transferFamily = VK_QUEUE_FAMILY_IGNORED;
+
+        bool IsComplete()
+        {
+            return (graphicsFamily != VK_QUEUE_FAMILY_IGNORED) && (computeFamily != VK_QUEUE_FAMILY_IGNORED) && (transferFamily != VK_QUEUE_FAMILY_IGNORED);
+        }
+    };
+
     /// Vulkan GraphicsDevice.
-    class ALIMER_API VulkanGraphicsDevice final : public GraphicsDevice
+    class ALIMER_API GraphicsDeviceVK final : public IGraphicsDevice
     {
     public:
         static bool IsAvailable();
 
         /// Constructor.
-        VulkanGraphicsDevice(const GraphicsDeviceDescriptor& desc_);
+        GraphicsDeviceVK();
         /// Destructor.
-        ~VulkanGraphicsDevice() override;
+        ~GraphicsDeviceVK() override;
+
+        bool Init(const GraphicsDeviceDesc* pDesc);
 
         void Destroy();
 
         const VulkanDeviceFeatures& GetVulkanFeatures() const { return vk_features; }
         VkInstance GetInstance() const { return instance; }
-        VkPhysicalDevice GetPhysicalDevice() const { return physical_device; }
+        VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; }
+        const QueueFamilyIndices& GetQueueFamilyIndices() const { return queueFamilyIndices; }
         VkDevice GetDevice() const { return device; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
 
     private:
-        VkSurfaceKHR CreateSurface(void* nativeWindowHandle, uint32_t* width, uint32_t* height);
+        bool InitInstance(const GraphicsDeviceDesc* pDesc);
+        bool InitPhysicalDevice();
+        bool InitLogicalDevice(const GraphicsDeviceDesc* pDesc);
+        bool InitMemoryAllocator();
+
+        RefPtr<ISwapChain> CreateSwapChain(window_t* window, const SwapChainDesc* pDesc) override;
+        ITexture* CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
+
         void WaitForIdle() override;
-        void Present(const std::vector<Swapchain*>& swapchains) override;
+        //void Present(const std::vector<Swapchain*>& swapchains) override;
 
         VulkanDeviceFeatures vk_features{};
         VkInstance instance{ VK_NULL_HANDLE };
-        VkDebugUtilsMessengerEXT debug_messenger{ VK_NULL_HANDLE };
-        VkPhysicalDevice physical_device{ VK_NULL_HANDLE };
+        VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
+
+        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
+        QueueFamilyIndices queueFamilyIndices{};
+        PhysicalDeviceExtensions physicalDeviceExts;
+        VkPhysicalDeviceProperties physicalDeviceProperties{};
 
         VkDevice device{ VK_NULL_HANDLE };
 
-        uint32_t graphicsQueueFamily = VK_QUEUE_FAMILY_IGNORED;
-        uint32_t computeQueueFamily = VK_QUEUE_FAMILY_IGNORED;
-        uint32_t copyQueueFamily = VK_QUEUE_FAMILY_IGNORED;
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue computeQueue = VK_NULL_HANDLE;
         VkQueue copyQueue = VK_NULL_HANDLE;

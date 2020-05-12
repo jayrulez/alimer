@@ -50,6 +50,14 @@ define_engine_source_files(
     Games
 )
 
+if (ALIMER_GRAPHICS_OPENGL)
+    #define_engine_source_files(graphics/opengl)
+endif()
+
+if (ALIMER_GRAPHICS_VULKAN)
+    define_engine_source_files(graphics/vulkan)
+endif()
+
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -71,7 +79,7 @@ target_link_libraries(alimer PUBLIC
     imgui
 )
 
-if (ALIMER_GRAPHICS_VULKAN)
+if (ALIMER_GRAPHICS_OPENGL)
     target_include_directories(alimer PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/libs/glad/include>
     )
@@ -85,7 +93,7 @@ if (ALIMER_GRAPHICS_VULKAN)
 endif ()
 
 if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(alimer PRIVATE vulkan)
+    target_link_libraries(alimer PRIVATE volk vma)
     target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
 endif ()
 

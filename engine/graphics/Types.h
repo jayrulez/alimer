@@ -26,6 +26,12 @@
 #include "math/size.h"
 #include "graphics/PixelFormat.h"
 
+#define ALIMER_DECL_DEVICE_INTERFACE(ClassType) \
+	ClassType(const ClassType&) = delete; ClassType& operator=(const ClassType&) = delete; \
+    ClassType(ClassType&&) = delete; ClassType& operator=(ClassType&&) = delete; \
+	ClassType() = default; \
+	virtual ~ClassType() = default
+
 namespace alimer
 {
     static constexpr uint32_t kMaxFrameLatency = 3;
@@ -36,10 +42,8 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
     /// Enum describing the Device backend.
-    enum class BackendType : uint32_t
+    enum class GraphicsAPI : uint32_t
     {
-        /// Null backend.
-        Null,
         /// Vulkan backend.
         Vulkan,
         /// Direct3D 12 backend.
@@ -50,6 +54,8 @@ namespace alimer
         Metal,
         /// OpenGL backend.
         OpenGL,
+        /// Null renderer.
+        Null,
         /// Default best platform supported backend.
         Count
     };
@@ -69,16 +75,10 @@ namespace alimer
         None = 0,
         Debug = (1 << 0),
         GPUBasedValidation = (1 << 1),
-        RenderDoc = (1 << 2)
+        Headless = (1 << 2),
+        RenderDoc = (1 << 3)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
-
-    enum class GPUPowerPreference : uint32_t
-    {
-        Default,
-        LowPower,
-        HighPerformance
-    };
 
     enum class GPUAdapterType : uint32_t
     {
@@ -97,21 +97,6 @@ namespace alimer
         Count16 = 16,
         Count32 = 32,
     };
-
-    enum class BufferUsage : uint32_t
-    {
-        None = 0,
-        MapRead = 1 << 0,
-        MapWrite = 1 << 1,
-        CopySrc = 1 << 2,
-        CopyDst = 1 << 3,
-        Index = 1 << 4,
-        Vertex = 1 << 5,
-        Uniform = 1 << 6,
-        Storage = 1 << 7,
-        Indirect = 1 << 8,
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
 
     /// Defines the type of Texture.
     enum class TextureType : uint32_t
@@ -134,48 +119,9 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
-    /// Desribes a GraphicsDevice
-    struct GraphicsDeviceInfo
-    {
-        BackendType preferredBackend = BackendType::Count;
-        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
-        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        bool enableVSync = true;
-        PixelFormat colorFormat = PixelFormat::Bgra8UnormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-    };
-
-    /// Describes a Graphics buffer.
-    struct BufferDescriptor
-    {
-        const char* label = nullptr;
-        BufferUsage usage;
-        uint64_t size;
-        /// Initial content to initialize with.
-        const void* content = nullptr;
-    };
-
-    /// Describes a texture.
-    struct TextureDescriptor
-    {
-        TextureType type = TextureType::Type2D;
-        TextureUsage usage = TextureUsage::Sampled;
-
-        usize3 extent = { 1u, 1u, 1u };
-        PixelFormat format = PixelFormat::Rgba8Unorm;
-        uint32_t mipLevels = 1;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        /// Initial content to initialize with.
-        const void* content = nullptr;
-        /// Pointer to external texture handle
-        const void* externalHandle = nullptr;
-        const char* label = nullptr;
-    };
-
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
     {
-        BackendType backendType;
         uint32_t vendorId;
         uint32_t deviceId;
         GPUAdapterType adapterType = GPUAdapterType::Unknown;
@@ -239,6 +185,4 @@ namespace alimer
         Features features;
         Limits limits;
     };
-
-    std::string ToString(BackendType type);
 }

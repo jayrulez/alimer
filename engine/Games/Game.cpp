@@ -24,6 +24,7 @@
 #include "gpu/gpu.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
+#include "graphics/ISwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -52,8 +53,9 @@ namespace alimer
         os_shutdown();
     }
 
-    static VGPUBuffer* vertexBuffer;
-    static VGPUBuffer* indexBuffer;
+    static vgpu_buffer* vertexBuffer;
+    static vgpu_buffer* indexBuffer;
+    static vgpu_buffer* uboBuffer;
     static vgpu_shader shader;
     static agpu_pipeline render_pipeline;
 
@@ -68,7 +70,18 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
 
-            VGPUSwapChainInfo swapchain = {};
+            GraphicsDeviceDesc deviceDesc = { };
+#ifdef _DEBUG
+            deviceDesc.flags |= GraphicsDeviceFlags::Debug;
+#endif
+            graphicsDevice = CreateGraphicsDevice(GraphicsAPI::Vulkan, &deviceDesc);
+
+            SwapChainDesc swapChainDesc = {};
+            swapChainDesc.width = window_width(main_window);
+            swapChainDesc.height = window_height(main_window);
+            swapChain = graphicsDevice->CreateSwapChain(main_window, &swapChainDesc);
+
+            /*VGPUSwapChainInfo swapchain = {};
             swapchain.nativeHandle = window_handle(main_window);
             swapchain.width = window_width(main_window);
             swapchain.height = window_height(main_window);
@@ -88,29 +101,63 @@ namespace alimer
             }
 
             const float vertices[] = {
-                // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left 
+                // pos                  color                       uvs 
+                -1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 0.0f,
+                1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 0.0f,
+                1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 1.0f,
+                -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 1.0f,
+
+                -1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 0.0f,
+                1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 0.0f,
+                1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 1.0f,
+                -1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 1.0f,
+
+                -1.0f, -1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 0.0f,
+                -1.0f,  1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 0.0f,
+                -1.0f,  1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 1.0f,
+                -1.0f, -1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 1.0f,
+
+                1.0f, -1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 0.0f,
+                1.0f,  1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 0.0f,
+                1.0f,  1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 1.0f,
+                1.0f, -1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 1.0f,
+
+                -1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 0.0f,
+                -1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 0.0f,
+                1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 1.0f,
+                1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 1.0f,
+
+                -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 0.0f,
+                -1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 0.0f,
+                1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 1.0f,
+                1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 1.0f
             };
 
-            VGPUBufferInfo vertexBufferInfo = {};
+            vgpu_buffer_info vertexBufferInfo = {};
             vertexBufferInfo.size = sizeof(vertices);
             vertexBufferInfo.usage = VGPUBufferUsage_Vertex;
             vertexBufferInfo.data = vertices;
-            vertexBuffer = vgpuBufferCreate(&vertexBufferInfo);
+            vertexBuffer = vgpu_buffer_create(&vertexBufferInfo);
 
-            /* create an index buffer */
+            // create an index buffer 
             uint16_t indices[] = {
-                0, 1, 2,    // first triangle
-                0, 2, 3,    // second triangle        
+                0, 1, 2,  0, 2, 3,
+                6, 5, 4,  7, 6, 4,
+                8, 9, 10,  8, 10, 11,
+                14, 13, 12,  15, 14, 12,
+                16, 17, 18,  16, 18, 19,
+                22, 21, 20,  23, 22, 20
             };
-            VGPUBufferInfo indexBufferInfo = {};
+            vgpu_buffer_info indexBufferInfo = {};
             indexBufferInfo.size = sizeof(indices);
             indexBufferInfo.usage = VGPUBufferUsage_Index;
             indexBufferInfo.data = indices;
-            indexBuffer = vgpuBufferCreate(&indexBufferInfo);
+            indexBuffer = vgpu_buffer_create(&indexBufferInfo);
+
+            vgpu_buffer_info uboBufferInfo = {};
+            uboBufferInfo.size = 64;
+            uboBufferInfo.usage = VGPUBufferUsage_Uniform | VGPUBufferUsage_Dynamic;
+            uboBuffer = vgpu_buffer_create(&uboBufferInfo);
 
             uint32_t pixels[4 * 4] = {
                 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
@@ -126,16 +173,21 @@ namespace alimer
             auto texture = vgpuTextureCreate(&textureInfo);
 
             const char* vertexShaderSource = "#version 330 core\n"
+                "layout(std140) uniform;\n"
                 "layout (location=0) in vec3 inPosition;\n"
                 "layout (location=1) in vec3 inColor;\n"
                 "layout (location=2) in vec2 inTexCoord;\n"
                 "out vec3 Color;\n"
                 "out vec2 TexCoord;\n"
+                "uniform mat4 mvp;\n"
+                "uniform Transform {\n"
+                "   mat4 mvp;\n"
+                "} transform;\n"
                 "void main()\n"
                 "{\n"
-                "   gl_Position = vec4(inPosition, 1.0);\n"
+                "   gl_Position = transform.mvp * vec4(inPosition, 1.0);\n"
                 "   Color = inColor;\n"
-                "   TexCoord = inTexCoord;\n"
+                "   TexCoord = inTexCoord * 5.0;\n"
                 "}\0";
 
             const char* fragmentShaderSource = "#version 330 core\n"
@@ -154,14 +206,16 @@ namespace alimer
             shader_info.fragment.source = fragmentShaderSource;
             shader = vgpuShaderCreate(&shader_info);
 
-            agpu_render_pipeline_info pipeline_info = {};
+            vgpu_pipeline_info pipeline_info = {};
             pipeline_info.shader = shader;
             //pipeline_info.vertexInfo.layouts[0].stride = 28;
             pipeline_info.vertexInfo.attributes[0].format = VGPUVertexFormat_Float3;
-            pipeline_info.vertexInfo.attributes[1].format = VGPUVertexFormat_Float3;
+            pipeline_info.vertexInfo.attributes[1].format = VGPUVertexFormat_Float4;
             pipeline_info.vertexInfo.attributes[2].format = VGPUVertexFormat_Float2;
-            
-            render_pipeline = agpu_create_render_pipeline(&pipeline_info);
+            pipeline_info.depth_stencil.depth_compare = VGPU_COMPARE_FUNCTION_LESS_EQUAL;
+            pipeline_info.depth_stencil.depth_write_enabled = true;
+
+            render_pipeline = vgpu_create_pipeline(&pipeline_info);*/
         }
 
         Initialize();
@@ -195,7 +249,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        vgpuFrameBegin();
+        //vgpuFrameBegin();
 
         for (auto gameSystem : gameSystems)
         {
@@ -217,12 +271,22 @@ namespace alimer
         }
     }
 
+#include <DirectXMath.h>
+    using namespace DirectX;
+    using float4x4 = XMFLOAT4X4;
+
+    struct vs_params_t {
+        float4x4 mvp;
+    };
+
     void Game::EndDraw()
     {
         for (auto gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
         }
+
+        return;
 
         //auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
         //graphicsDevice->PresentFrame();
@@ -233,6 +297,27 @@ namespace alimer
         vgpu_cmd_begin_render_pass(defaultRenderPass);
         vgpu_cmd_end_render_pass();
         */
+        uint32_t width = window_width(main_window);
+        uint32_t height = window_height(main_window);
+
+        XMMATRIX proj = XMMatrixPerspectiveFovRH(XMConvertToRadians(60.0f), (float)width / (float)height, 0.01f, 10.0f);
+        XMMATRIX view = XMMatrixLookAtRH(XMVectorSet(0.0f, 1.5f, 6.0f, 0.0f), XMVectorZero(), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+        XMMATRIX view_proj = XMMatrixMultiply(view, proj);
+
+        static float rx = 0.0f;
+        static float ry = 0.0f;
+
+        /* rotated model matrix */
+        rx += 1.0f; ry += 2.0f;
+        XMMATRIX rxm = XMMatrixRotationAxis(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMConvertToRadians(rx));
+        XMMATRIX rym = XMMatrixRotationAxis(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMConvertToRadians(ry));
+        XMMATRIX model = XMMatrixMultiply(rxm, rym);
+
+        /* model-view-projection matrix for vertex shader */
+        vs_params_t vs_params;
+        XMMATRIX worldViewProjection = XMMatrixMultiply(model, view_proj);
+        XMStoreFloat4x4(&vs_params.mvp, worldViewProjection);
+        //vgpu_buffer_sub_data(uboBuffer, 0, 0, &vs_params);
 
         VGPURenderPassDescriptor renderPass;
         memset(&renderPass, 0, sizeof(VGPURenderPassDescriptor));
@@ -241,7 +326,8 @@ namespace alimer
         vgpuSetPipeline(render_pipeline);
         vgpuCmdSetVertexBuffers(0, vertexBuffer, 0);
         vgpuCmdSetIndexBuffer(indexBuffer, 0);
-        vgpuCmdDrawIndexed(6, 1, 0);
+        vgpu_set_uniform_buffer_data(0, 0, &vs_params, sizeof(vs_params));
+        vgpuCmdDrawIndexed(36, 1, 0);
         vgpuCmdEndRenderPass();
         vgpuFrameFinish();
         window_swap_buffers(main_window);
@@ -254,7 +340,7 @@ namespace alimer
             return EXIT_FAILURE;
         }
 
-        
+
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         try
 #endif

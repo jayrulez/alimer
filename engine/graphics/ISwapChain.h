@@ -20,11 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "core/Assert.h"
-#include "graphics/GraphicsResource.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "math/size.h"
 
 namespace alimer
 {
-}
+    /// Describes a texture.
+    struct SwapChainDesc
+    {
+        const char* name = nullptr;
+        uint32_t    width = 0;
+        uint32_t    height = 0;
+    };
 
+    class IGraphicsDevice;
+
+    class ALIMER_API ISwapChain : public GraphicsResource
+    {
+    public:
+        ALIMER_DECL_DEVICE_INTERFACE(ISwapChain);
+
+        /*
+        * Returns the device that created this resource.
+        *
+        * return - A pointer to the device that created this resource.
+        */
+        virtual IGraphicsDevice* GetDevice() const = 0;
+
+        virtual const SwapChainDesc& GetDesc() const = 0;
+    };
+} 

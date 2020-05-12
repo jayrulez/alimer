@@ -29,26 +29,47 @@ VK_DEFINE_HANDLE(VmaAllocator);
 
 namespace alimer
 {
-    class VulkanGraphicsProvider;
-    class VulkanGraphicsDevice;
+    class GraphicsDeviceVK;
+
+    struct PhysicalDeviceExtensions {
+        bool swapchain;
+        bool depth_clip_enable;
+        bool maintenance_1;
+        bool maintenance_2;
+        bool maintenance_3;
+        bool KHR_get_memory_requirements2;
+        bool KHR_dedicated_allocation;
+        bool KHR_bind_memory2;
+        bool EXT_memory_budget;
+        bool image_format_list;
+        bool debug_marker;
+        bool win32_full_screen_exclusive;
+        bool raytracing;
+        bool buffer_device_address;
+        bool deferred_host_operations;
+        bool descriptor_indexing;
+        bool pipeline_library;
+    };
 
     struct VulkanDeviceFeatures
     {
-        
+        /// VK_KHR_get_physical_device_properties2
+        bool physicalDeviceProperties2 = false;
+        /// VK_KHR_external_memory_capabilities
+        bool externalMemoryCapabilities = false;
+        /// VK_KHR_external_semaphore_capabilities
+        bool externalSemaphoreCapabilities = false;
+        /// VK_EXT_debug_utils
+        bool debugUtils = false;
+        /// VK_EXT_headless_surface
+        bool headless = false;
+        /// VK_KHR_surface
+        bool surface = false;
+        /// VK_KHR_get_surface_capabilities2
+        bool surfaceCapabilities2 = false;
+
         /// VK_KHR_external_memory_capabilities + VK_KHR_external_semaphore_capabilities
         bool external = false;
-
-        /// Device - VK_KHR_get_memory_requirements2
-        bool get_memory_requirements2 = false;
-
-        /// Device - VK_KHR_dedicated_allocation
-        bool dedicated = false;
-
-        /// Device - VK_KHR_bind_memory2
-        bool bind_memory2 = false;
-
-        /// Device - VK_EXT_memory_budget
-        bool memory_budget = false;
     };
 
     std::string to_string(VkResult result);

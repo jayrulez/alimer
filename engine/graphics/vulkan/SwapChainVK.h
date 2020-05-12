@@ -22,23 +22,36 @@
 
 #pragma once
 
-#include "graphics/GraphicsAdapter.h"
+#include "graphics/ISwapChain.h"
+#include "os/os.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API VulkanGraphicsAdapter final : public GraphicsAdapter
+    class ALIMER_API SwapChainVK final : public ISwapChain
     {
     public:
-        /// Constructor.
-        VulkanGraphicsAdapter(VulkanGraphicsProvider * provider_, VkPhysicalDevice handle_);
-        /// Destructor.
-        ~VulkanGraphicsAdapter() = default;
+        SwapChainVK(GraphicsDeviceVK* device_);
+        ~SwapChainVK() override;
 
-        SharedPtr<GraphicsDevice> CreateDevice(GraphicsSurface* surface) override;
+        bool Init(window_t* window, const SwapChainDesc* pDesc);
+        bool InitSwapChain(uint32_t width, uint32_t height);
+        void Destroy() override;
+
+        ALIMER_FORCEINLINE const SwapChainDesc& GetDesc() const override
+        {
+            return desc;
+        }
+
+        IGraphicsDevice* GetDevice() const override;
 
     private:
-        VkPhysicalDevice handle;
-        VkPhysicalDeviceProperties properties;
+        GraphicsDeviceVK* device;
+
+        VkSurfaceKHR    surface = VK_NULL_HANDLE;
+        VkSwapchainKHR  handle = VK_NULL_HANDLE;
+        VkSurfaceFormatKHR  vkFormat;
+
+        SwapChainDesc desc;
     };
 }

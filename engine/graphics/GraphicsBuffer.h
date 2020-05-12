@@ -26,14 +26,33 @@
 
 namespace alimer
 {
+    enum class BufferUsage : uint32_t
+    {
+        None = 0,
+        MapRead = 1 << 0,
+        MapWrite = 1 << 1,
+        CopySrc = 1 << 2,
+        CopyDst = 1 << 3,
+        Index = 1 << 4,
+        Vertex = 1 << 5,
+        Uniform = 1 << 6,
+        Storage = 1 << 7,
+        Indirect = 1 << 8,
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
+
+    /// Describes a Graphics buffer.
+    struct BufferDesc
+    {
+        const char* name = nullptr;
+        BufferUsage usage;
+        uint64_t size;
+    };
+
     class GraphicsBuffer : public GraphicsResource
     {
-        ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
+        ALIMER_DECL_DEVICE_INTERFACE(GraphicsBuffer);
 
-    public:
-        /// Constructor.
-        GraphicsBuffer(GraphicsDevice* device);
-
-    private:
+        virtual BufferDesc GetDesc() const = 0;
     };
 } 

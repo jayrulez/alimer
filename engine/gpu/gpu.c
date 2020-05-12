@@ -233,11 +233,16 @@ VGPUBool32 vgpuInit(const VGpuDeviceDescriptor* descriptor)
 #endif
     }
 
-    if (device == NULL || !device->init(device, descriptor)) {
+    if (device == NULL) {
         return false;
     }
 
     s_gpu_device = device;
+    if (!device->init(device, descriptor)) {
+        s_gpu_device = NULL;
+        return false;
+    }
+    
     return true;
 }
 
@@ -304,7 +309,7 @@ void vgpuTextureDestroy(VGPUTexture* texture) {
 }
 
 /* Buffer */
-VGPUBuffer* vgpuBufferCreate(const VGPUBufferInfo* info) {
+vgpu_buffer* vgpu_buffer_create(const vgpu_buffer_info* info) {
     AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(info);
 
@@ -312,13 +317,18 @@ VGPUBuffer* vgpuBufferCreate(const VGPUBufferInfo* info) {
     const bool cpuAccessible = info->usage & VGPUBufferUsage_CPUAccessible;
     AGPU_ASSERT(dynamic || cpuAccessible == false);
 
-    return s_gpu_device->bufferCreate(s_gpu_device->renderer, info);
+    return s_gpu_device->buffer_create(s_gpu_device->renderer, info);
 }
 
-void vgpuBufferDestroy(VGPUBuffer* buffer) {
+void vgpu_buffer_destroy(vgpu_buffer* buffer) {
     AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(buffer);
-    s_gpu_device->bufferDestroy(s_gpu_device->renderer, buffer);
+    s_gpu_device->buffer_destroy(s_gpu_device->renderer, buffer);
+}
+
+void vgpu_buffer_sub_data(vgpu_buffer* buffer, VGPUDeviceSize offset, VGPUDeviceSize size, const void* pData) {
+    AGPU_ASSERT(buffer);
+    s_gpu_device->buffer_sub_data(s_gpu_device->renderer, buffer, offset, size, pData);
 }
 
 /* Shader */
@@ -335,9 +345,9 @@ void vgpuShaderDestroy(vgpu_shader shader) {
 }
 
 /* Pipeline */
-static agpu_render_pipeline_info pipeline_info_default(const agpu_render_pipeline_info* info) {
-    agpu_render_pipeline_info def = *info;
-    def.primitiveTopology = _agpu_def(info->primitiveTopology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
+static vgpu_pipeline_info pipeline_info_default(const vgpu_pipeline_info* info) {
+    vgpu_pipeline_info def = *info;
+    def.primitive_topology = _agpu_def(info->primitive_topology, AGPU_PRIMITIVE_TOPOLOGY_TRIANGLES);
 
     /* resolve vertex layout strides and offsets */
     uint32_t autoVboOffset[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
@@ -373,18 +383,21 @@ static agpu_render_pipeline_info pipeline_info_default(const agpu_render_pipelin
         }
     }
 
+    /* Depth stencil state */
+    def.depth_stencil.depth_compare = _agpu_def(def.depth_stencil.depth_compare, VGPU_COMPARE_FUNCTION_ALWAYS);
+
     return def;
 }
 
-agpu_pipeline agpu_create_render_pipeline(const agpu_render_pipeline_info* info) {
+agpu_pipeline vgpu_create_pipeline(const vgpu_pipeline_info* info) {
     AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(info);
-    agpu_render_pipeline_info info_def = pipeline_info_default(info);
+    vgpu_pipeline_info info_def = pipeline_info_default(info);
 
-    return s_gpu_device->create_render_pipeline(s_gpu_device->renderer, &info_def);
+    return s_gpu_device->create_pipeline(s_gpu_device->renderer, &info_def);
 }
 
-void agpu_destroy_pipeline(agpu_pipeline pipeline) {
+void vgpu_destroy_pipeline(agpu_pipeline pipeline) {
     AGPU_ASSERT(s_gpu_device);
     AGPU_ASSERT(pipeline);
     s_gpu_device->destroy_pipeline(s_gpu_device->renderer, pipeline);
@@ -416,12 +429,20 @@ void vgpuSetPipeline(agpu_pipeline pipeline) {
     s_gpu_device->cmdSetPipeline(s_gpu_device->renderer, pipeline);
 }
 
-void vgpuCmdSetVertexBuffers(uint32_t slot, VGPUBuffer* buffer, uint64_t offset) {
+void vgpuCmdSetVertexBuffers(uint32_t slot, vgpu_buffer* buffer, uint64_t offset) {
     s_gpu_device->cmdSetVertexBuffer(s_gpu_device->renderer, slot, buffer, offset);
 }
 
-void vgpuCmdSetIndexBuffer(VGPUBuffer* buffer, uint64_t offset) {
+void vgpuCmdSetIndexBuffer(vgpu_buffer* buffer, uint64_t offset) {
     s_gpu_device->cmdSetIndexBuffer(s_gpu_device->renderer, buffer, offset);
+}
+
+void vgpu_set_uniform_buffer(uint32_t set, uint32_t binding, vgpu_buffer* buffer) {
+    s_gpu_device->set_uniform_buffer(s_gpu_device->renderer, set, binding, buffer);
+}
+
+void vgpu_set_uniform_buffer_data(uint32_t set, uint32_t binding, const void* data, VGPUDeviceSize size) {
+    s_gpu_device->set_uniform_buffer_data(s_gpu_device->renderer, set, binding, data, size);
 }
 
 void vgpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex) {

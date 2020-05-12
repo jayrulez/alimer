@@ -97,8 +97,9 @@ typedef struct VGPUDeviceImpl {
     AGPUPixelFormat(*get_default_depth_stencil_format)(VGPURenderer* driverData);
 
     /* Buffer */
-    VGPUBuffer* (*bufferCreate)(VGPURenderer* driverData, const VGPUBufferInfo* info);
-    void (*bufferDestroy)(VGPURenderer* driverData, VGPUBuffer* handle);
+    vgpu_buffer* (*buffer_create)(VGPURenderer* driverData, const vgpu_buffer_info* info);
+    void (*buffer_destroy)(VGPURenderer* driverData, vgpu_buffer* handle);
+    void (*buffer_sub_data)(VGPURenderer* driverData, vgpu_buffer* handle, VGPUDeviceSize offset, VGPUDeviceSize size, const void* pData);
 
     /* Texture */
     VGPUTexture* (*create_texture)(VGPURenderer* driverData, const VGPUTextureInfo* info);
@@ -109,7 +110,7 @@ typedef struct VGPUDeviceImpl {
     void (*destroy_shader)(VGPURenderer* driverData, vgpu_shader handle);
 
     /* Pipeline */
-    agpu_pipeline (*create_render_pipeline)(VGPURenderer* driverData, const agpu_render_pipeline_info* info);
+    agpu_pipeline (*create_pipeline)(VGPURenderer* driverData, const vgpu_pipeline_info* info);
     void (*destroy_pipeline)(VGPURenderer* driverData, agpu_pipeline handle);
 
     /* CommandBuffer */
@@ -117,8 +118,12 @@ typedef struct VGPUDeviceImpl {
     void (*cmdEndRenderPass)(VGPURenderer* driverData);
 
     void (*cmdSetPipeline)(VGPURenderer* driverData, agpu_pipeline pipeline);
-    void (*cmdSetVertexBuffer)(VGPURenderer* driverData, uint32_t slot, VGPUBuffer* buffer, uint64_t offset);
-    void (*cmdSetIndexBuffer)(VGPURenderer* driverData, VGPUBuffer* buffer, uint64_t offset);
+    void (*cmdSetVertexBuffer)(VGPURenderer* driverData, uint32_t slot, vgpu_buffer* buffer, uint64_t offset);
+    void (*cmdSetIndexBuffer)(VGPURenderer* driverData, vgpu_buffer* buffer, uint64_t offset);
+
+    void (*set_uniform_buffer)(VGPURenderer* driverData, uint32_t set, uint32_t binding, vgpu_buffer* handle);
+    void (*set_uniform_buffer_data)(VGPURenderer* driverData, uint32_t set, uint32_t binding, const void* data, VGPUDeviceSize size);
+
     void (*cmdDraw)(VGPURenderer* driverData, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
     void (*cmdDrawIndexed)(VGPURenderer* driverData, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
 
@@ -155,18 +160,21 @@ ASSIGN_DRIVER_FUNC(getBackend, name)\
 ASSIGN_DRIVER_FUNC(get_caps, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
 ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
-ASSIGN_DRIVER_FUNC(bufferCreate, name)\
-ASSIGN_DRIVER_FUNC(bufferDestroy, name)\
+ASSIGN_DRIVER_FUNC(buffer_create, name)\
+ASSIGN_DRIVER_FUNC(buffer_destroy, name)\
+ASSIGN_DRIVER_FUNC(buffer_sub_data, name)\
 ASSIGN_DRIVER_FUNC(create_texture, name)\
 ASSIGN_DRIVER_FUNC(destroy_texture, name)\
 ASSIGN_DRIVER_FUNC(create_shader, name)\
 ASSIGN_DRIVER_FUNC(destroy_shader, name)\
-ASSIGN_DRIVER_FUNC(create_render_pipeline, name)\
+ASSIGN_DRIVER_FUNC(create_pipeline, name)\
 ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
 ASSIGN_DRIVER_FUNC(cmdBeginRenderPass, name)\
 ASSIGN_DRIVER_FUNC(cmdEndRenderPass, name)\
 ASSIGN_DRIVER_FUNC(cmdSetPipeline, name)\
 ASSIGN_DRIVER_FUNC(cmdSetVertexBuffer, name)\
 ASSIGN_DRIVER_FUNC(cmdSetIndexBuffer, name)\
+ASSIGN_DRIVER_FUNC(set_uniform_buffer, name)\
+ASSIGN_DRIVER_FUNC(set_uniform_buffer_data, name)\
 ASSIGN_DRIVER_FUNC(cmdDraw, name)\
 ASSIGN_DRIVER_FUNC(cmdDrawIndexed, name)

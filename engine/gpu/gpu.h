@@ -51,7 +51,7 @@ typedef uint32_t VGPUBool32;
 typedef uint64_t VGPUDeviceSize;
 typedef uint32_t VGPUSampleMask;
 
-typedef struct VGPUBuffer VGPUBuffer;
+typedef struct vgpu_buffer vgpu_buffer;
 typedef struct VGPUTexture VGPUTexture;
 typedef struct vgpu_pass_t* vgpu_pass;
 typedef struct vgpu_shader_t* vgpu_shader;
@@ -180,17 +180,17 @@ typedef enum AGPUPixelFormatType {
 } AGPUPixelFormatType;
 
 typedef enum {
-    VGPUCompareFunction_Undefined = 0x00000000,
-    VGPUCompareFunction_Never = 0x00000001,
-    VGPUCompareFunction_Less = 0x00000002,
-    VGPUCompareFunction_LessEqual = 0x00000003,
-    VGPUCompareFunction_Greater = 0x00000004,
-    VGPUCompareFunction_GreaterEqual = 0x00000005,
-    VGPUCompareFunction_Equal = 0x00000006,
-    VGPUCompareFunction_NotEqual = 0x00000007,
-    VGPUCompareFunction_Always = 0x00000008,
-    VGPUCompareFunction_Force32 = 0x7FFFFFFF
-} VGPUCompareFunction;
+    VGPU_COMPARE_FUNCTION_UNDEFINED = 0,
+    VGPU_COMPARE_FUNCTION_NEVER = 1,
+    VGPU_COMPARE_FUNCTION_LESS = 2,
+    VGPU_COMPARE_FUNCTION_LESS_EQUAL = 3,
+    VGPU_COMPARE_FUNCTION_GREATER = 4,
+    VGPU_COMPARE_FUNCTION_GREATER_EQUAL = 5,
+    VGPU_COMPARE_FUNCTION_EQUAL = 6,
+    VGPU_COMPARE_FUNCTION_NOT_EQUAL = 7,
+    VGPU_COMPARE_FUNCTION_ALWAYS = 8,
+    VGPU_COMPARE_FUNCTION_FORCE_U32 = 0x7FFFFFFF
+} vgpu_compare_function;
 
 typedef enum GPUFilterMode {
     GPUFilterMode_Nearest = 0,
@@ -421,34 +421,10 @@ typedef struct AGPUSamplerDescriptor {
     GPUFilterMode mipmapFilter;
     float lodMinClamp;
     float lodMaxClamp;
-    VGPUCompareFunction compare;
+    vgpu_compare_function compare;
     uint32_t maxAnisotropy;
     GPUBorderColor borderColor;
 } AGPUSamplerDescriptor;
-
-typedef struct {
-    VGPUVertexFormat    format;
-    uint32_t            offset;
-    uint32_t            bufferIndex;
-} VGPUVertexAttributeInfo;
-
-typedef struct {
-    uint32_t stride;
-    AGPUInputStepMode stepMode;
-} VGPUVertexBufferLayoutInfo;
-
-typedef struct {
-    VGPUVertexBufferLayoutInfo  layouts[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
-    VGPUVertexAttributeInfo     attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
-} VGPUVertexInfo;
-
-typedef struct agpu_render_pipeline_info {
-    vgpu_shader                 shader;
-    VGPUVertexInfo              vertexInfo;
-    VGPUIndexType               indexType;
-    agpu_primitive_topology     primitiveTopology;
-    const char* label;
-} agpu_render_pipeline_info;
 
 typedef struct {
     const char* label;
@@ -538,17 +514,18 @@ typedef struct {
     VGPUFlags usage;
     const void* data;
     const char* label;
-} VGPUBufferInfo;
+} vgpu_buffer_info;
 
-VGPU_API VGPUBuffer* vgpuBufferCreate(const VGPUBufferInfo* info);
-VGPU_API void vgpuBufferDestroy(VGPUBuffer* buffer);
+VGPU_API vgpu_buffer* vgpu_buffer_create(const vgpu_buffer_info* info);
+VGPU_API void vgpu_buffer_destroy(vgpu_buffer* buffer);
+VGPU_API void vgpu_buffer_sub_data(vgpu_buffer* buffer, VGPUDeviceSize offset, VGPUDeviceSize size, const void* pData);
 
 /* Shader */
 typedef struct {
     uint64_t codeSize;
     const void* code;
     const char* source;
-    const char* entryEoint;
+    const char* entryPoint;
 } VGPUShaderSource;
 
 typedef struct {
@@ -562,8 +539,38 @@ VGPU_API vgpu_shader vgpuShaderCreate(const vgpu_shader_info* info);
 VGPU_API void vgpuShaderDestroy(vgpu_shader shader);
 
 /* Pipeline */
-VGPU_API agpu_pipeline agpu_create_render_pipeline(const agpu_render_pipeline_info* descriptor);
-VGPU_API void agpu_destroy_pipeline(agpu_pipeline pipeline);
+typedef struct {
+    VGPUVertexFormat    format;
+    uint32_t            offset;
+    uint32_t            bufferIndex;
+} VGPUVertexAttributeInfo;
+
+typedef struct {
+    uint32_t stride;
+    AGPUInputStepMode stepMode;
+} VGPUVertexBufferLayoutInfo;
+
+typedef struct {
+    VGPUVertexBufferLayoutInfo  layouts[VGPU_MAX_VERTEX_BUFFER_BINDINGS];
+    VGPUVertexAttributeInfo     attributes[VGPU_MAX_VERTEX_ATTRIBUTES];
+} VGPUVertexInfo;
+
+typedef struct {
+    bool depth_write_enabled;
+    vgpu_compare_function depth_compare;
+} vgpu_depth_stencil_state;
+
+typedef struct vgpu_pipeline_info {
+    vgpu_shader                 shader;
+    VGPUVertexInfo              vertexInfo;
+    VGPUIndexType               indexType;
+    agpu_primitive_topology     primitive_topology;
+    vgpu_depth_stencil_state    depth_stencil;
+    const char* label;
+} vgpu_pipeline_info;
+
+VGPU_API agpu_pipeline vgpu_create_pipeline(const vgpu_pipeline_info* info);
+VGPU_API void vgpu_destroy_pipeline(agpu_pipeline pipeline);
 
 /* Sampler */
 //VGPU_EXPORT AGPUSampler agpuDeviceCreateSampler(GPUDevice device, const AGPUSamplerDescriptor* descriptor);
@@ -573,8 +580,10 @@ VGPU_API void agpu_destroy_pipeline(agpu_pipeline pipeline);
 VGPU_API void vgpuCmdBeginRenderPass(const VGPURenderPassDescriptor* descriptor);
 VGPU_API void vgpuCmdEndRenderPass(void);
 VGPU_API void vgpuSetPipeline(agpu_pipeline pipeline);
-VGPU_API void vgpuCmdSetVertexBuffers(uint32_t slot, VGPUBuffer* buffer, uint64_t offset);
-VGPU_API void vgpuCmdSetIndexBuffer(VGPUBuffer* buffer, uint64_t offset);
+VGPU_API void vgpuCmdSetVertexBuffers(uint32_t slot, vgpu_buffer* buffer, uint64_t offset);
+VGPU_API void vgpuCmdSetIndexBuffer(vgpu_buffer* buffer, uint64_t offset);
+VGPU_API void vgpu_set_uniform_buffer(uint32_t set, uint32_t binding, vgpu_buffer* buffer);
+VGPU_API void vgpu_set_uniform_buffer_data(uint32_t set, uint32_t binding, const void* data, VGPUDeviceSize size);
 VGPU_API void vgpuCmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
 VGPU_API void vgpuCmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex);
 

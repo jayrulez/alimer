@@ -27,26 +27,24 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GraphicsResource
+    /// Describes a texture.
+    struct TextureDesc
     {
-        ALIMER_OBJECT(Texture, GraphicsResource);
-        
-    public:
-        /// Destructor.
-        virtual ~Texture() = default;
-
-    protected:
-        /// Constructor.
-        Texture(GraphicsDevice* device, const TextureDescriptor* descriptor);
-
+        const char* label = nullptr;
         TextureType type = TextureType::Type2D;
         TextureUsage usage = TextureUsage::Sampled;
-        /// Texture format.
-        PixelFormat format = PixelFormat::Rgba8Unorm;
 
         usize3 extent = { 1u, 1u, 1u };
-        uint32_t mipLevels = 1u;
+        PixelFormat format = PixelFormat::Rgba8Unorm;
+        uint32_t mipLevels = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
-        bool external = false;
+    };
+
+    class ALIMER_API ITexture : public GraphicsResource
+    {
+    public:
+        ALIMER_DECL_DEVICE_INTERFACE(ITexture);
+
+        virtual const TextureDesc& GetDesc() const = 0;
     };
 } 

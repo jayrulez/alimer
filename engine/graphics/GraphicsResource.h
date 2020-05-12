@@ -23,50 +23,26 @@
 #pragma once
 
 #include "graphics/Types.h"
-#include "core/Object.h"
+#include "core/Ptr.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
+    class IGraphicsDevice;
 
     /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public Object
+    class GraphicsResource : public RefCounted
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
     public:
-        /// Resource types. 
-        enum class Type
-        {
-            /// Unknown resource type.
-            Unknown,
-            /// Buffer. Can be bound to all shader-stages
-            Buffer,
-            ///Texture. Can be bound as render-target, shader-resource and UAV
-            Texture
-        };
+        ALIMER_DECL_DEVICE_INTERFACE(GraphicsResource);
 
-    protected:
-        /// Constructor.
-        GraphicsResource(GraphicsDevice* device, Type type);
-
-        /// Destructor.
-        virtual ~GraphicsResource();
-
-    public:
         /// Release the GPU resource.
         virtual void Destroy() {}
 
-        /// Gets the creation device.
-        GraphicsDevice* GetDevice() const;
-
-    protected:
-        GraphicsDevice* device;
-        Type type;
-        /// Size in bytes of the resource.
-        uint64_t _size{ 0 };
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsResource);
+        /*
+        * Returns the device that created this resource.
+        *
+        * return - A pointer to the device that created this resource.
+        */
+        virtual IGraphicsDevice* GetDevice() const = 0;
     };
 } 

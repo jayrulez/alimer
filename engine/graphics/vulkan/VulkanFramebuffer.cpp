@@ -69,110 +69,12 @@ namespace alimer
 
     FramebufferResizeResult VulkanFramebuffer::BackendResize()
     {
-        VkSurfaceCapabilitiesKHR surfaceCapabilities;
-        VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR };
-        surfaceInfo.surface = surface;
+      
 
         auto vkGPUDevice = StaticCast<VulkanGPUDevice>(device);
         VkPhysicalDevice gpu = vkGPUDevice->GetPhysicalDevice();
-        if (vkGPUDevice->GetVulkanFeatures().surface_capabilities2)
-        {
-            VkSurfaceCapabilities2KHR surfaceCapabilities2 = { VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR };
+        
 
-            // TODO: Add fullscreen exclusive.
-
-            if (vkGetPhysicalDeviceSurfaceCapabilities2KHR(gpu, &surfaceInfo, &surfaceCapabilities2) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-
-            surfaceCapabilities = surfaceCapabilities2.surfaceCapabilities;
-        }
-        else
-        {
-            if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surfaceCapabilities) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-        }
-
-        if (surfaceCapabilities.maxImageExtent.width == 0
-            && surfaceCapabilities.maxImageExtent.height == 0)
-        {
-            return FramebufferResizeResult::NoSurface;
-        }
-
-        uint32_t format_count;
-        vector<VkSurfaceFormatKHR> formats;
-
-        if (vkGPUDevice->GetVulkanFeatures().surface_capabilities2)
-        {
-            if (vkGetPhysicalDeviceSurfaceFormats2KHR(gpu, &surfaceInfo, &format_count, nullptr) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-
-            vector<VkSurfaceFormat2KHR> formats2(format_count);
-
-            for (VkSurfaceFormat2KHR& format2 : formats2)
-            {
-                format2 = {};
-                format2.sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR;
-            }
-
-            if (vkGetPhysicalDeviceSurfaceFormats2KHR(gpu, &surfaceInfo, &format_count, formats2.data()) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-
-            formats.reserve(format_count);
-            for (auto& f : formats2)
-                formats.push_back(f.surfaceFormat);
-        }
-        else
-        {
-            if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, nullptr) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-            formats.resize(format_count);
-            if (vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, formats.data()) != VK_SUCCESS)
-                return FramebufferResizeResult::Error;
-        }
-
-        const bool srgb = false;
-        VkSurfaceFormatKHR format;
-        if (format_count == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
-        {
-            format = formats[0];
-            format.format = VK_FORMAT_B8G8R8A8_UNORM;
-        }
-        else
-        {
-            if (format_count == 0)
-            {
-                ALIMER_LOGE("Vulkan: Surface has no formats.");
-                return FramebufferResizeResult::Error;
-            }
-
-            bool found = false;
-            for (uint32_t i = 0; i < format_count; i++)
-            {
-                if (srgb)
-                {
-                    if (formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||
-                        formats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
-                        formats[i].format == VK_FORMAT_A8B8G8R8_SRGB_PACK32)
-                    {
-                        format = formats[i];
-                        found = true;
-                    }
-                }
-                else
-                {
-                    if (formats[i].format == VK_FORMAT_R8G8B8A8_UNORM ||
-                        formats[i].format == VK_FORMAT_B8G8R8A8_UNORM ||
-                        formats[i].format == VK_FORMAT_A8B8G8R8_UNORM_PACK32)
-                    {
-                        format = formats[i];
-                        found = true;
-                    }
-                }
-            }
-
-            if (!found)
-                format = formats[0];
-        }
 
         const bool tripleBuffer = false;
         uint32_t imageCount = (tripleBuffer) ? 3 : surfaceCapabilities.minImageCount + 1;

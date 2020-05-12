@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,31 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
 #include "graphics/Texture.h"
-#include "graphics/GraphicsDevice.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice* device, const TextureDescriptor* descriptor)
-        : GraphicsResource(device, Type::Texture)
-        , type(descriptor->type)
-        , usage(descriptor->usage)
-        , format(descriptor->format)
-        , extent(descriptor->extent)
-        , mipLevels(descriptor->mipLevels)
-        , sampleCount(descriptor->sampleCount)
-        , external(descriptor->externalHandle != nullptr)
+    class ALIMER_API TextureVK final : public ITexture
     {
-    }
-}
+    public:
+        TextureVK(GraphicsDeviceVK* device_);
+        ~TextureVK() override;
 
+        bool Init(const TextureDesc* pDesc, const void* initialData);
+        void Destroy() override;
+
+        ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override
+        {
+            return desc;
+        }
+
+        IGraphicsDevice* GetDevice() const override;
+
+    private:
+        GraphicsDeviceVK* device;
+        TextureDesc desc;
+    };
+}

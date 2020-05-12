@@ -32,51 +32,37 @@
 
 namespace alimer
 {
-    class CommandQueue;
+    struct TextureDesc;
+    struct SwapChainDesc;
+
+    class ISwapChain;
+    class ITexture;
+
+    /// Desribes a GraphicsDevice
+    struct GraphicsDeviceDesc
+    {
+        const char* applicationName = "";
+        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
+    };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class ALIMER_API IGraphicsDevice
     {
     public:
-        /// Get set of available graphics backends.
-        static std::set<BackendType> GetAvailableBackends();
-
-        /// Create new GraphicsDevice instance.
-        static RefPtr<GraphicsDevice> Create(window_t* window, const GraphicsDeviceInfo& info);
-
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        ALIMER_DECL_DEVICE_INTERFACE(IGraphicsDevice);
 
         /// Waits for the device to become idle.
         virtual void WaitForIdle() = 0;
 
-        /// Begin rendering frame.
-        virtual void BeginFrame() = 0;
-        virtual void PresentFrame() = 0;
+        virtual RefPtr<ISwapChain> CreateSwapChain(window_t* window, const SwapChainDesc* pDesc) = 0;
 
-        /// Add a GPU resource to keep track of. Called by GPUResource.
-        void AddGPUResource(GraphicsResource* resource);
-        /// Remove a tracked GPU resource. Called by GPUResource.
-        void RemoveGPUResource(GraphicsResource* resource);
-
-        /// Get the device capabilities.
-        inline const GraphicsDeviceCaps& GetCaps() const { return caps; }
-
-    protected:
-        virtual void ReleaseTrackedResources();
-
-    protected:
-        GraphicsDevice() = default;
-        virtual bool Init(window_t* window, const GraphicsDeviceInfo& info) = 0;
-
-        GraphicsDeviceCaps caps;
-
-    private:
-        /// Tracked gpu resource.
-        std::mutex _gpuResourceMutex;
-        std::vector<GraphicsResource*> _gpuResources;
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        virtual ITexture* CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
     };
+
+
+    /// Get set of available graphics backends.
+    ALIMER_API std::set<GraphicsAPI> GetAvailableGraphicsAPI();
+
+    /// Create new graphics device
+    ALIMER_API std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc* pDesc);
 }
