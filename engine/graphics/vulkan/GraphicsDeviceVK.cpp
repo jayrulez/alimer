@@ -637,7 +637,7 @@ namespace alimer
         createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
         createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-        if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS)
+        if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &handle) != VK_SUCCESS)
         {
             return false;
         }
@@ -648,9 +648,9 @@ namespace alimer
             ALIMER_LOGI("Device extension '%s'", ext_name);
         }
 
-        vkGetDeviceQueue(device, queueFamilyIndices.graphicsFamily, 0, &graphicsQueue);
-        vkGetDeviceQueue(device, queueFamilyIndices.computeFamily, 0, &computeQueue);
-        vkGetDeviceQueue(device, queueFamilyIndices.transferFamily, 0, &copyQueue);
+        vkGetDeviceQueue(handle, queueFamilyIndices.graphicsFamily, 0, &graphicsQueue);
+        vkGetDeviceQueue(handle, queueFamilyIndices.computeFamily, 0, &computeQueue);
+        vkGetDeviceQueue(handle, queueFamilyIndices.transferFamily, 0, &copyQueue);
 
         return true;
     }
@@ -659,7 +659,7 @@ namespace alimer
     {
         VmaAllocatorCreateInfo createInfo{};
         createInfo.physicalDevice = physicalDevice;
-        createInfo.device = device;
+        createInfo.device = handle;
         createInfo.instance = instance;
 
         if (physicalDeviceExts.KHR_get_memory_requirements2
@@ -706,8 +706,8 @@ namespace alimer
             vmaDestroyAllocator(memoryAllocator);
         }
 
-        if (device != VK_NULL_HANDLE) {
-            vkDestroyDevice(device, nullptr);
+        if (handle != VK_NULL_HANDLE) {
+            vkDestroyDevice(handle, nullptr);
         }
 
         if (debugUtilsMessenger != VK_NULL_HANDLE) {
@@ -720,10 +720,7 @@ namespace alimer
 
     void GraphicsDeviceVK::WaitForIdle()
     {
-        if (device)
-        {
-            VK_CHECK(vkDeviceWaitIdle(device));
-        }
+        VK_CHECK(vkDeviceWaitIdle(handle));
     }
 
     RefPtr<ISwapChain> GraphicsDeviceVK::CreateSwapChain(window_t* window, const SwapChainDesc* pDesc)

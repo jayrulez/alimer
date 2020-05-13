@@ -286,10 +286,9 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        return;
+        swapChain->Present();
 
-        //auto currentTexture = gpuSwapChainGetCurrentTextureView(gpuSwapChain);
-        //graphicsDevice->PresentFrame();
+        return;
 
         /*auto clear_color = Colors::CornflowerBlue;
         auto defaultRenderPass = vgpu_get_default_render_pass();

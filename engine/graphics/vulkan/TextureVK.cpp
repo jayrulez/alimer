@@ -46,6 +46,15 @@ namespace alimer
         return true;
     }
 
+    void TextureVK::InitExternal(VkImage image, const TextureDesc* pDesc)
+    {
+        ALIMER_ASSERT(image != VK_NULL_HANDLE);
+        ALIMER_ASSERT(pDesc != nullptr);
+
+        handle = image;
+        memcpy(&desc, pDesc, sizeof(desc));
+    }
+
     void TextureVK::Destroy()
     {
 

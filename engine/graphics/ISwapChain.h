@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
+#include "graphics/GraphicsResource.h"
 #include "math/size.h"
 
 namespace alimer
@@ -41,6 +41,8 @@ namespace alimer
     {
     public:
         ALIMER_DECL_DEVICE_INTERFACE(ISwapChain);
+
+        virtual bool Present() = 0;
 
         /*
         * Returns the device that created this resource.

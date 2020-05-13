@@ -296,7 +296,7 @@ namespace alimer
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = oldSwapchain;
 
-        VkResult  result = vkCreateSwapchainKHR(device->GetDevice(), &createInfo, nullptr, &handle);
+        VkResult  result = vkCreateSwapchainKHR(device->GetHandle(), &createInfo, nullptr, &handle);
         if (result != VK_SUCCESS)
         {
             VK_THROW(result, "Cannot create Swapchain");
@@ -307,18 +307,131 @@ namespace alimer
 
         if (oldSwapchain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(device->GetDevice(), oldSwapchain, nullptr);
+            vkDestroySwapchainKHR(device->GetHandle(), oldSwapchain, nullptr);
         }
+
+        backBufferIndex = 0;
+        semaphoreIndex = 0;
 
         // Get SwapChain images
         uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(device->GetDevice(), handle, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, nullptr);
 
-        std::vector<VkImage> textures(imageCount);
-        result = vkGetSwapchainImagesKHR(device->GetDevice(), handle, &imageCount, textures.data());
+        std::vector<VkImage> images(imageCount);
+        result = vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, images.data());
         if (result != VK_SUCCESS)
         {
             VK_THROW(result, "[Vulkan]: Failed to retrive SwapChain-Images");
+            return false;
+        }
+
+        const char* names[] =
+        {
+            "BackBuffer[0]",
+            "BackBuffer[1]",
+            "BackBuffer[2]",
+            "BackBuffer[3]",
+            "BackBuffer[4]",
+        };
+
+        VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        imageAvailableSemaphores.resize(imageCount);
+        renderFinishedSemaphores.resize(imageCount);
+        for (uint32_t i = 0; i < imageCount; i++)
+        {
+            TextureDesc desc = {};
+            desc.name = names[i];
+            desc.type = TextureType::Type2D;
+            desc.usage = TextureUsage::OutputAttachment;
+            desc.format = PixelFormat::Bgra8Unorm;
+            desc.extent.width = newExtent.width;
+            desc.extent.height = newExtent.height;
+            desc.extent.depth = 1;
+            desc.mipLevels = 1;
+            desc.sampleCount = TextureSampleCount::Count1;
+
+            TextureVK* pTexture = new TextureVK(device);
+            pTexture->InitExternal(images[i], &desc);
+            buffers.emplace_back(pTexture);
+
+            VkResult result = vkCreateSemaphore(device->GetHandle(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]);
+            if (result != VK_SUCCESS)
+            {
+                VK_THROW(result, "Failed to create Semaphore");
+                return false;
+            }
+
+            result = vkCreateSemaphore(device->GetHandle(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]);
+            if (result != VK_SUCCESS)
+            {
+                VK_THROW(result, "Failed to create Semaphore");
+                return false;
+            }
+        }
+
+        result = AquireNextImage();
+        return result == VK_SUCCESS;
+    }
+
+    VkResult SwapChainVK::AquireNextImage()
+    {
+        VkSemaphore semaphore = imageAvailableSemaphores[semaphoreIndex];
+        VkResult result = vkAcquireNextImageKHR(
+            device->GetHandle(),
+            handle,
+            UINT64_MAX,
+            semaphore,
+            VK_NULL_HANDLE,
+            &backBufferIndex);
+        if (result != VK_SUCCESS)
+        {
+            return result;
+        }
+
+        //AddWaitSemaphore(semaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+        return result;
+    }
+
+    bool SwapChainVK::Present()
+    {
+        VkSemaphore waitSemaphores[] = { renderFinishedSemaphores[semaphoreIndex] };
+
+        // Perform empty submit on queue for signaling the semaphore
+        VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 0;
+        submitInfo.pCommandBuffers = nullptr;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = waitSemaphores;
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitSemaphores = nullptr;
+        submitInfo.pWaitDstStageMask = nullptr;
+
+        VkResult result = vkQueueSubmit(device->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+        if (result != VK_SUCCESS)
+        {
+            VK_THROW(result, "Submit failed");
+            return false;
+        }
+
+        VkPresentInfoKHR presentInfo { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &handle;
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = waitSemaphores;
+        presentInfo.pResults = nullptr;
+        presentInfo.pImageIndices = &backBufferIndex;
+
+        result = vkQueuePresentKHR(device->GetGraphicsQueue(), &presentInfo);
+        if (result == VK_SUCCESS)
+        {
+            semaphoreIndex = (semaphoreIndex + 1) % buffers.size();
+            result = AquireNextImage();
+        }
+
+        if (result != VK_SUCCESS)
+        {
+            VK_THROW(result, "Present failed");
             return false;
         }
 
@@ -327,10 +440,17 @@ namespace alimer
 
     void SwapChainVK::Destroy()
     {
+        // Destroy all semaphores.
+        for (auto semaphore : imageAvailableSemaphores)
+            vkDestroySemaphore(device->GetHandle(), semaphore, nullptr);
+
+        for (auto semaphore : renderFinishedSemaphores)
+            vkDestroySemaphore(device->GetHandle(), semaphore, nullptr);
+
         // Destroy swapchain
         if (handle != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(device->GetDevice(), handle, nullptr);
+            vkDestroySwapchainKHR(device->GetHandle(), handle, nullptr);
             handle = VK_NULL_HANDLE;
         }
 

@@ -60,8 +60,9 @@ namespace alimer
         VkInstance GetInstance() const { return instance; }
         VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; }
         const QueueFamilyIndices& GetQueueFamilyIndices() const { return queueFamilyIndices; }
-        VkDevice GetDevice() const { return device; }
+        VkDevice GetHandle() const { return handle; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
+        VkQueue GetGraphicsQueue() const { return graphicsQueue; }
 
     private:
         bool InitInstance(const GraphicsDeviceDesc* pDesc);
@@ -73,7 +74,6 @@ namespace alimer
         ITexture* CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
 
         void WaitForIdle() override;
-        //void Present(const std::vector<Swapchain*>& swapchains) override;
 
         VulkanDeviceFeatures vk_features{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -84,7 +84,7 @@ namespace alimer
         PhysicalDeviceExtensions physicalDeviceExts;
         VkPhysicalDeviceProperties physicalDeviceProperties{};
 
-        VkDevice device{ VK_NULL_HANDLE };
+        VkDevice handle = VK_NULL_HANDLE;
 
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue computeQueue = VK_NULL_HANDLE;

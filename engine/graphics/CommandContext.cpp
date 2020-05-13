@@ -22,7 +22,7 @@
 
 #include "graphics/CommandContext.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/Texture.h"
+#include "graphics/ITexture.h"
 
 namespace alimer
 {

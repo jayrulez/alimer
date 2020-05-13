@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
+#include "graphics/ITexture.h"
 #include "VulkanBackend.h"
 
 namespace alimer
@@ -34,6 +34,8 @@ namespace alimer
         ~TextureVK() override;
 
         bool Init(const TextureDesc* pDesc, const void* initialData);
+        void InitExternal(VkImage image, const TextureDesc* pDesc);
+
         void Destroy() override;
 
         ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override
@@ -46,5 +48,8 @@ namespace alimer
     private:
         GraphicsDeviceVK* device;
         TextureDesc desc;
+
+        VkImage handle = VK_NULL_HANDLE;
+        VmaAllocation allocation = VK_NULL_HANDLE;
     };
 }

@@ -25,9 +25,11 @@
 #include "graphics/ISwapChain.h"
 #include "os/os.h"
 #include "VulkanBackend.h"
+#include <vector>
 
 namespace alimer
 {
+    class TextureVK;
     class ALIMER_API SwapChainVK final : public ISwapChain
     {
     public:
@@ -35,8 +37,9 @@ namespace alimer
         ~SwapChainVK() override;
 
         bool Init(window_t* window, const SwapChainDesc* pDesc);
-        bool InitSwapChain(uint32_t width, uint32_t height);
-        void Destroy() override;
+        void Destroy();
+
+        bool Present() override;
 
         ALIMER_FORCEINLINE const SwapChainDesc& GetDesc() const override
         {
@@ -46,6 +49,9 @@ namespace alimer
         IGraphicsDevice* GetDevice() const override;
 
     private:
+        bool InitSwapChain(uint32_t width, uint32_t height);
+        VkResult AquireNextImage();
+
         GraphicsDeviceVK* device;
 
         VkSurfaceKHR    surface = VK_NULL_HANDLE;
@@ -53,5 +59,10 @@ namespace alimer
         VkSurfaceFormatKHR  vkFormat;
 
         SwapChainDesc desc;
+        uint32_t backBufferIndex = 0;
+        uint32_t semaphoreIndex = 0;
+        std::vector<TextureVK*> buffers;
+        std::vector<VkSemaphore> imageAvailableSemaphores;
+        std::vector<VkSemaphore> renderFinishedSemaphores;
     };
 }

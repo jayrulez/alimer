@@ -98,27 +98,6 @@ namespace alimer
         Count32 = 32,
     };
 
-    /// Defines the type of Texture.
-    enum class TextureType : uint32_t
-    {
-        /// Two dimensional texture
-        Type2D,
-        /// Three dimensional texture
-        Type3D,
-        /// Cube texture
-        TypeCube
-    };
-
-    /// Defines the usage of Texture.
-    enum class TextureUsage : uint32_t
-    {
-        None = 0,
-        Sampled = (1 << 0),
-        Storage = (1 << 1),
-        OutputAttachment = (1 << 2)
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
-
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
     {

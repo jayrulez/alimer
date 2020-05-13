@@ -26,6 +26,7 @@
 #include <string>
 
 VK_DEFINE_HANDLE(VmaAllocator);
+VK_DEFINE_HANDLE(VmaAllocation);
 
 namespace alimer
 {
