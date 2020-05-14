@@ -22,57 +22,17 @@
 
 #pragma once
 
-#include "graphics/Types.h"
-#include "math/Color.h"
+#include "graphics/GraphicsResource.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
+    class ISwapChain;
 
-    /// Command context class for recording copy GPU commands.
-    class CopyContext
-    {
-        friend class GraphicsDevice;
-
-    public:
-        /// Destructor.
-        virtual ~CopyContext();
-
-        void BeginMarker(const std::string& name);
-        void EndMarker();
-
-        void Flush(bool wait = false);
-
-    protected:
-        /// Constructor.
-        CopyContext(GraphicsDevice& device_);
-
-        void SetName(const std::string& name_) { name = name_; }
-
-        GraphicsDevice& device;
-        std::string name;
-    };
-
-    /// Command context class for recording compute GPU commands.
-    class ComputeContext : public CopyContext
+    class ALIMER_API ICommandBuffer 
     {
     public:
+        ALIMER_DECL_DEVICE_INTERFACE(ICommandBuffer);
 
-    protected:
-        /// Constructor.
-        ComputeContext(GraphicsDevice& device_);
+        virtual void Present(ISwapChain* swapChain) = 0;
     };
-
-    /// Command context class for recording graphics GPU commands.
-    class GraphicsContext final : public ComputeContext
-    {
-    public:
-        /// Constructor.
-        GraphicsContext(GraphicsDevice& device_);
-
-        //void BeginRenderPass(SwapChain* swapchain, const Color& clearColor);
-        //void EndRenderPass();
-
-    protected:
-    };
-}
+} 

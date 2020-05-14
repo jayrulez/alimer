@@ -24,7 +24,6 @@
 
 #include "core/Ptr.h"
 #include "graphics/GraphicsResource.h"
-#include "graphics/CommandContext.h"
 #include "os/os.h"
 #include <memory>
 #include <set>
@@ -34,7 +33,7 @@ namespace alimer
 {
     struct TextureDesc;
     struct SwapChainDesc;
-
+    class ICommandQueue;
     class ISwapChain;
     class ITexture;
 
@@ -54,9 +53,15 @@ namespace alimer
         /// Waits for the device to become idle.
         virtual void WaitForIdle() = 0;
 
-        virtual RefPtr<ISwapChain> CreateSwapChain(window_t* window, const SwapChainDesc* pDesc) = 0;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
-        virtual ITexture* CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+        virtual ICommandQueue* GetGraphicsQueue() const = 0;
+        virtual ICommandQueue* GetComputeQueue() const = 0;
+        virtual ICommandQueue* GetCopyQueue() const = 0;
+
+        virtual RefPtr<ISwapChain> CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc) = 0;
+        virtual RefPtr<ITexture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
     };
 
 

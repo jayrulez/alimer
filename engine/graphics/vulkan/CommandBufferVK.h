@@ -22,35 +22,32 @@
 
 #pragma once
 
-#include "graphics/ITexture.h"
+#include "graphics/ICommandBuffer.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API TextureVK final : public ITexture
+    class CommandQueueVK;
+    class CommandPoolVK;
+    class TextureVK;
+
+    class ALIMER_API CommandBufferVK final : public ICommandBuffer
     {
     public:
-        TextureVK(GraphicsDeviceVK * device_);
-        ~TextureVK() override;
+        CommandBufferVK(CommandQueueVK* queue, CommandPoolVK* pool, VkCommandBufferLevel level);
+        ~CommandBufferVK() override;
 
-        bool Init(const TextureDesc* pDesc, const void* initialData);
-        void InitExternal(VkImage image, const TextureDesc* pDesc);
+        VkCommandBuffer GetHandle() const { return handle; }
 
-        void Destroy() override;
-        void Barrier(VkCommandBuffer commandBuffer, TextureState newState);
-
-        ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override { return desc; }
-
-        IGraphicsDevice* GetDevice() const override;
-        TextureState GetState() const { return state; }
+        void Begin() const;
+        void End() const;
+        void TextureBarrier(TextureVK* texture, TextureState newState);
+        void Present(ISwapChain* swapChain) override;
 
     private:
-        GraphicsDeviceVK* device;
-        TextureDesc desc;
 
-        VkImage handle = VK_NULL_HANDLE;
-        VkFormat vkFormat = VK_FORMAT_UNDEFINED;
-        VmaAllocation allocation = VK_NULL_HANDLE;
-        TextureState state = TextureState::Undefined;
+        CommandQueueVK* queue;
+        CommandPoolVK* pool;
+        VkCommandBuffer handle = VK_NULL_HANDLE;
     };
 }

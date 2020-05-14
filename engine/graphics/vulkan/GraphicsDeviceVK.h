@@ -23,23 +23,12 @@
 #pragma once
 
 #include "graphics/GraphicsDevice.h"
-#include "VulkanBackend.h"
+#include "CommandQueueVK.h"
+#include "SyncPrimitivesPool.h"
 
 namespace alimer
 {
-    class VulkanGraphicsAdapter;
-
-    struct QueueFamilyIndices
-    {
-        uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
-        uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
-        uint32_t transferFamily = VK_QUEUE_FAMILY_IGNORED;
-
-        bool IsComplete()
-        {
-            return (graphicsFamily != VK_QUEUE_FAMILY_IGNORED) && (computeFamily != VK_QUEUE_FAMILY_IGNORED) && (transferFamily != VK_QUEUE_FAMILY_IGNORED);
-        }
-    };
+    class CommandPoolVK;
 
     /// Vulkan GraphicsDevice.
     class ALIMER_API GraphicsDeviceVK final : public IGraphicsDevice
@@ -53,8 +42,9 @@ namespace alimer
         ~GraphicsDeviceVK() override;
 
         bool Init(const GraphicsDeviceDesc* pDesc);
-
         void Destroy();
+
+        void SetObjectName(VkObjectType objectType, uint64_t objectHandle, const char* objectName);
 
         const VulkanDeviceFeatures& GetVulkanFeatures() const { return vk_features; }
         VkInstance GetInstance() const { return instance; }
@@ -62,7 +52,10 @@ namespace alimer
         const QueueFamilyIndices& GetQueueFamilyIndices() const { return queueFamilyIndices; }
         VkDevice GetHandle() const { return handle; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
-        VkQueue GetGraphicsQueue() const { return graphicsQueue; }
+
+        ICommandBuffer& RequestCommandBuffer(CommandQueueType queueType);
+        VkSemaphore RequestSemaphore();
+        VkFence RequestFence();
 
     private:
         bool InitInstance(const GraphicsDeviceDesc* pDesc);
@@ -70,26 +63,78 @@ namespace alimer
         bool InitLogicalDevice(const GraphicsDeviceDesc* pDesc);
         bool InitMemoryAllocator();
 
-        RefPtr<ISwapChain> CreateSwapChain(window_t* window, const SwapChainDesc* pDesc) override;
-        ITexture* CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
+        ICommandQueue* GetGraphicsQueue() const override {
+            return graphicsQueue;
+        }
+
+        ICommandQueue* GetComputeQueue() const override {
+            return computeQueue;
+        }
+
+        ICommandQueue* GetCopyQueue() const override {
+            return copyQueue;
+        }
+
+        CommandQueueVK* CreateCommandQueue(const char* name, CommandQueueType type);
+        RefPtr<ISwapChain> CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc) override;
+        RefPtr<ITexture> CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
 
         void WaitForIdle() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
 
         VulkanDeviceFeatures vk_features{};
-        VkInstance instance{ VK_NULL_HANDLE };
+        VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
 
-        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        // The GPU properties
+        VkPhysicalDeviceProperties physicalDeviceProperties{};
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+
         QueueFamilyIndices queueFamilyIndices{};
         PhysicalDeviceExtensions physicalDeviceExts;
-        VkPhysicalDeviceProperties physicalDeviceProperties{};
 
         VkDevice handle = VK_NULL_HANDLE;
-
-        VkQueue graphicsQueue = VK_NULL_HANDLE;
-        VkQueue computeQueue = VK_NULL_HANDLE;
-        VkQueue copyQueue = VK_NULL_HANDLE;
-
         VmaAllocator memoryAllocator{ VK_NULL_HANDLE };
+
+
+        uint32_t nextGraphicsQueue = 0;
+        uint32_t nextComputeQueue = 0;
+        uint32_t nextTransferQueue = 0;
+        CommandQueueVK* graphicsQueue = nullptr;
+        CommandQueueVK* computeQueue = nullptr;
+        CommandQueueVK* copyQueue = nullptr;
+
+        struct Frame
+        {
+            explicit Frame(GraphicsDeviceVK* device);
+            ~Frame();
+            void operator=(const Frame&) = delete;
+            Frame(const Frame&) = delete;
+
+            void Begin();
+
+            SyncPrimitivesPool syncPool;
+            std::unique_ptr<CommandPoolVK> commandPool;
+        };
+
+        Vector<std::unique_ptr<Frame>> frames;
+        uint32_t frameIndex = 0;
+        uint32_t maxInflightFrames{ 3 };
+
+        Frame& frame()
+        {
+            ALIMER_ASSERT(frameIndex < frames.size());
+            ALIMER_ASSERT(frames[frameIndex]);
+            return *frames[frameIndex];
+        }
+
+        const Frame& frame() const
+        {
+            ALIMER_ASSERT(frameIndex < frames.size());
+            ALIMER_ASSERT(frames[frameIndex]);
+            return *frames[frameIndex];
+        }
     };
 }

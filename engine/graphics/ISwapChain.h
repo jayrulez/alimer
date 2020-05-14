@@ -27,6 +27,9 @@
 
 namespace alimer
 {
+    class ITexture;
+    class ICommandQueue;
+
     /// Describes a texture.
     struct SwapChainDesc
     {
@@ -35,21 +38,13 @@ namespace alimer
         uint32_t    height = 0;
     };
 
-    class IGraphicsDevice;
-
     class ALIMER_API ISwapChain : public GraphicsResource
     {
     public:
         ALIMER_DECL_DEVICE_INTERFACE(ISwapChain);
 
-        virtual bool Present() = 0;
-
-        /*
-        * Returns the device that created this resource.
-        *
-        * return - A pointer to the device that created this resource.
-        */
-        virtual IGraphicsDevice* GetDevice() const = 0;
+        virtual ICommandQueue* GetCommandQueue() const = 0;
+        virtual ITexture* GetNextTexture() = 0;
 
         virtual const SwapChainDesc& GetDesc() const = 0;
     };

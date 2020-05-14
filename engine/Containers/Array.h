@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,38 +19,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-
 #pragma once
 
-#include "graphics/ITexture.h"
-#include "VulkanBackend.h"
+#include "core/Assert.h"
+#include "Containers/ArrayView.h"
+#include <vector>
 
 namespace alimer
 {
-    class ALIMER_API TextureVK final : public ITexture
-    {
-    public:
-        TextureVK(GraphicsDeviceVK * device_);
-        ~TextureVK() override;
-
-        bool Init(const TextureDesc* pDesc, const void* initialData);
-        void InitExternal(VkImage image, const TextureDesc* pDesc);
-
-        void Destroy() override;
-        void Barrier(VkCommandBuffer commandBuffer, TextureState newState);
-
-        ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override { return desc; }
-
-        IGraphicsDevice* GetDevice() const override;
-        TextureState GetState() const { return state; }
-
-    private:
-        GraphicsDeviceVK* device;
-        TextureDesc desc;
-
-        VkImage handle = VK_NULL_HANDLE;
-        VkFormat vkFormat = VK_FORMAT_UNDEFINED;
-        VmaAllocation allocation = VK_NULL_HANDLE;
-        TextureState state = TextureState::Undefined;
-    };
+    template <typename T>
+    using Vector = std::vector<T>;
 }

@@ -41,6 +41,7 @@ set(SOURCE_FILES ${SOURCE_FILES} ${GPU_SOURCE_FILES})
 
 define_engine_source_files(
     foundation
+    Containers
     core
     math
     os

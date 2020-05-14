@@ -21,9 +21,10 @@
 //
 
 #include "os/os.h"
-#include "gpu/gpu.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
+#include "graphics/ICommandQueue.h"
+#include "graphics/ICommandBuffer.h"
 #include "graphics/ISwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
@@ -48,7 +49,8 @@ namespace alimer
         }
 
         gameSystems.clear();
-        vgpuShutdown();
+        swapChain.Reset();
+        graphicsDevice.reset();
         window_destroy(main_window);
         os_shutdown();
     }
@@ -79,143 +81,7 @@ namespace alimer
             SwapChainDesc swapChainDesc = {};
             swapChainDesc.width = window_width(main_window);
             swapChainDesc.height = window_height(main_window);
-            swapChain = graphicsDevice->CreateSwapChain(main_window, &swapChainDesc);
-
-            /*VGPUSwapChainInfo swapchain = {};
-            swapchain.nativeHandle = window_handle(main_window);
-            swapchain.width = window_width(main_window);
-            swapchain.height = window_height(main_window);
-
-            VGpuDeviceDescriptor deviceDesc = {};
-            deviceDesc.preferredBackend = VGPUBackendType_Count;
-            deviceDesc.flags = AGPU_DEVICE_FLAGS_VSYNC;
-
-#ifdef _DEBUG
-            deviceDesc.flags |= AGPU_DEVICE_FLAGS_DEBUG;
-#endif
-            deviceDesc.gl.GetProcAddress = gl_get_proc_address;
-            deviceDesc.swapchain = &swapchain;
-
-            if (!vgpuInit(&deviceDesc)) {
-                headless = true;
-            }
-
-            const float vertices[] = {
-                // pos                  color                       uvs 
-                -1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 0.0f,
-                1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 0.0f,
-                1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 1.0f,
-                -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 1.0f,
-
-                -1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 0.0f,
-                1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 0.0f,
-                1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 1.0f,
-                -1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 1.0f,
-
-                -1.0f, -1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 0.0f,
-                -1.0f,  1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 0.0f,
-                -1.0f,  1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 1.0f,
-                -1.0f, -1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 1.0f,
-
-                1.0f, -1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 0.0f,
-                1.0f,  1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 0.0f,
-                1.0f,  1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 1.0f,
-                1.0f, -1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 1.0f,
-
-                -1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 0.0f,
-                -1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 0.0f,
-                1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 1.0f,
-                1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 1.0f,
-
-                -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 0.0f,
-                -1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 0.0f,
-                1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 1.0f,
-                1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 1.0f
-            };
-
-            vgpu_buffer_info vertexBufferInfo = {};
-            vertexBufferInfo.size = sizeof(vertices);
-            vertexBufferInfo.usage = VGPUBufferUsage_Vertex;
-            vertexBufferInfo.data = vertices;
-            vertexBuffer = vgpu_buffer_create(&vertexBufferInfo);
-
-            // create an index buffer 
-            uint16_t indices[] = {
-                0, 1, 2,  0, 2, 3,
-                6, 5, 4,  7, 6, 4,
-                8, 9, 10,  8, 10, 11,
-                14, 13, 12,  15, 14, 12,
-                16, 17, 18,  16, 18, 19,
-                22, 21, 20,  23, 22, 20
-            };
-            vgpu_buffer_info indexBufferInfo = {};
-            indexBufferInfo.size = sizeof(indices);
-            indexBufferInfo.usage = VGPUBufferUsage_Index;
-            indexBufferInfo.data = indices;
-            indexBuffer = vgpu_buffer_create(&indexBufferInfo);
-
-            vgpu_buffer_info uboBufferInfo = {};
-            uboBufferInfo.size = 64;
-            uboBufferInfo.usage = VGPUBufferUsage_Uniform | VGPUBufferUsage_Dynamic;
-            uboBuffer = vgpu_buffer_create(&uboBufferInfo);
-
-            uint32_t pixels[4 * 4] = {
-                0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
-                0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
-                0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
-                0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
-            };
-            VGPUTextureInfo textureInfo = {};
-            textureInfo.size.width = 4;
-            textureInfo.size.height = 4;
-            textureInfo.format = AGPUPixelFormat_RGBA8UNorm;
-            textureInfo.data = pixels;
-            auto texture = vgpuTextureCreate(&textureInfo);
-
-            const char* vertexShaderSource = "#version 330 core\n"
-                "layout(std140) uniform;\n"
-                "layout (location=0) in vec3 inPosition;\n"
-                "layout (location=1) in vec3 inColor;\n"
-                "layout (location=2) in vec2 inTexCoord;\n"
-                "out vec3 Color;\n"
-                "out vec2 TexCoord;\n"
-                "uniform mat4 mvp;\n"
-                "uniform Transform {\n"
-                "   mat4 mvp;\n"
-                "} transform;\n"
-                "void main()\n"
-                "{\n"
-                "   gl_Position = transform.mvp * vec4(inPosition, 1.0);\n"
-                "   Color = inColor;\n"
-                "   TexCoord = inTexCoord * 5.0;\n"
-                "}\0";
-
-            const char* fragmentShaderSource = "#version 330 core\n"
-                "out vec4 FragColor;\n"
-                "in vec3 Color;\n"
-                "in vec2 TexCoord;\n"
-                "uniform sampler2D texture1;\n"
-                "void main()\n"
-                "{\n"
-                "   FragColor = texture(texture1, TexCoord) * vec4(Color, 1.0);\n"
-                "}\n\0";
-
-
-            vgpu_shader_info shader_info = {};
-            shader_info.vertex.source = vertexShaderSource;
-            shader_info.fragment.source = fragmentShaderSource;
-            shader = vgpuShaderCreate(&shader_info);
-
-            vgpu_pipeline_info pipeline_info = {};
-            pipeline_info.shader = shader;
-            //pipeline_info.vertexInfo.layouts[0].stride = 28;
-            pipeline_info.vertexInfo.attributes[0].format = VGPUVertexFormat_Float3;
-            pipeline_info.vertexInfo.attributes[1].format = VGPUVertexFormat_Float4;
-            pipeline_info.vertexInfo.attributes[2].format = VGPUVertexFormat_Float2;
-            pipeline_info.depth_stencil.depth_compare = VGPU_COMPARE_FUNCTION_LESS_EQUAL;
-            pipeline_info.depth_stencil.depth_write_enabled = true;
-
-            render_pipeline = vgpu_create_pipeline(&pipeline_info);*/
+            swapChain = graphicsDevice->CreateSwapChain(main_window, graphicsDevice->GetGraphicsQueue(), &swapChainDesc);
         }
 
         Initialize();
@@ -249,7 +115,9 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        //vgpuFrameBegin();
+        if (!graphicsDevice->BeginFrame()) {
+            return false;
+        }
 
         for (auto gameSystem : gameSystems)
         {
@@ -261,14 +129,17 @@ namespace alimer
 
     void Game::Draw(const GameTime& gameTime)
     {
-        //auto context = graphicsDevice->GetGraphicsContext();
-        //context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
-        //context->EndMarker();
-
         for (auto gameSystem : gameSystems)
         {
             gameSystem->Draw(time);
         }
+
+        auto texture = swapChain->GetNextTexture();
+
+        ICommandBuffer& commandBuffer = graphicsDevice->GetGraphicsQueue()->RequestCommandBuffer();
+        //context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
+        commandBuffer.Present(swapChain);
+        graphicsDevice->GetGraphicsQueue()->Submit(commandBuffer);
     }
 
 #include <DirectXMath.h>
@@ -286,7 +157,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        swapChain->Present();
+        graphicsDevice->EndFrame();
 
         return;
 

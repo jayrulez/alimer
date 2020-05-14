@@ -22,35 +22,42 @@
 
 #pragma once
 
-#include "graphics/ITexture.h"
+#include "graphics/ICommandQueue.h"
 #include "VulkanBackend.h"
+#include "Containers/Array.h"
+#include <memory>
 
 namespace alimer
 {
-    class ALIMER_API TextureVK final : public ITexture
+    class ISwapChain;
+    class CommandPoolVK;
+
+    class CommandQueueVK final : public ICommandQueue
     {
     public:
-        TextureVK(GraphicsDeviceVK * device_);
-        ~TextureVK() override;
+        CommandQueueVK(GraphicsDeviceVK* device_, CommandQueueType type_);
+        ~CommandQueueVK() override;
 
-        bool Init(const TextureDesc* pDesc, const void* initialData);
-        void InitExternal(VkImage image, const TextureDesc* pDesc);
-
+        bool Init(const char* name, uint32_t queueFamilyIndex_, uint32_t index);
         void Destroy() override;
-        void Barrier(VkCommandBuffer commandBuffer, TextureState newState);
+        bool SupportPresent(VkSurfaceKHR surface);
+        void AddWaitSemaphore(VkSemaphore semaphore, VkPipelineStageFlags waitStage);
 
-        ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override { return desc; }
+        ICommandBuffer& RequestCommandBuffer() override;
+        void Submit(const ICommandBuffer& commandBuffer) override;
+        void Present(VkSwapchainKHR swapChain, uint32_t imageIndex);
 
         IGraphicsDevice* GetDevice() const override;
-        TextureState GetState() const { return state; }
+        ALIMER_FORCEINLINE VkQueue GetHandle() const { return handle; }
+        ALIMER_FORCEINLINE CommandQueueType GetType() const override { return type; }
 
     private:
         GraphicsDeviceVK* device;
-        TextureDesc desc;
-
-        VkImage handle = VK_NULL_HANDLE;
-        VkFormat vkFormat = VK_FORMAT_UNDEFINED;
-        VmaAllocation allocation = VK_NULL_HANDLE;
-        TextureState state = TextureState::Undefined;
+        CommandQueueType type;
+        VkQueue handle = VK_NULL_HANDLE;
+        uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        Vector<VkSemaphore> waitSemaphores;
+        Vector<VkPipelineStageFlags> waitStages;
+        Vector<VkSemaphore> signalSemaphores;
     };
 }

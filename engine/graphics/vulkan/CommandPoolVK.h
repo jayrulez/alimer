@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,49 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/CommandContext.h"
-#include "graphics/GraphicsDevice.h"
-#include "graphics/ITexture.h"
+#pragma once
+
+#include "graphics/ICommandBuffer.h"
+#include "Containers/Array.h"
+#include "VulkanBackend.h"
+#include <memory>
 
 namespace alimer
 {
-    /* CopyContext */
-    CopyContext::CopyContext(GraphicsDevice& device_)
-        : device(device_)
+    class CommandQueueVK;
+    class CommandBufferVK;
+
+    class CommandPoolVK final
     {
-    }
+    public:
+        CommandPoolVK(GraphicsDeviceVK* device, CommandQueueVK* queue, uint32_t queueFamilyIndex);
+        ~CommandPoolVK();
 
-    CopyContext::~CopyContext()
-    {
-        //device.GetImpl()->DestroyCommandBuffer(handle);
-    }
+        void Reset();
+        ICommandBuffer& RequestCommandBuffer(VkCommandBufferLevel level);
+        GraphicsDeviceVK* GetDevice() const { return device; }
+        VkCommandPool GetHandle() const { return handle; }
 
-    void CopyContext::BeginMarker(const std::string& name)
-    {
+    private:
+        GraphicsDeviceVK* device;
+        CommandQueueVK* queue;
+        VkCommandPool handle;
 
-    }
-
-    void CopyContext::EndMarker()
-    {
-
-    }
-
-    void CopyContext::Flush(bool wait)
-    {
-        //handle->Flush(wait);
-    }
-
-    /* ComputeContext */
-    ComputeContext::ComputeContext(GraphicsDevice& device_)
-        : CopyContext(device_)
-    {
-
-    }
-
-    /* GraphicsContext */
-    GraphicsContext::GraphicsContext(GraphicsDevice& device_)
-        : ComputeContext(device_)
-    {
-        //handle = device_.GetImpl()->CreateCommandBuffer(QueueType::Graphics);
-    }
+        uint32_t activePrimaryCommandBufferCount{ 0 };
+        Vector<std::unique_ptr<CommandBufferVK>> primaryCommandBuffers;
+    };
 }

@@ -22,6 +22,9 @@
 
 #include "GraphicsDeviceVK.h"
 #include "SwapChainVK.h"
+#include "CommandQueueVK.h"
+#include "CommandPoolVK.h"
+#include "CommandBufferVK.h"
 #include "TextureVK.h"
 #include "core/Utils.h"
 #include "core/Assert.h"
@@ -116,75 +119,6 @@ namespace alimer
             return {};
         }
 
-        uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilies)
-        {
-            if (queueFlags & VK_QUEUE_COMPUTE_BIT)
-            {
-                for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
-                {
-                    if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
-                    {
-                        return i;
-                    }
-                }
-            }
-
-            if (queueFlags & VK_QUEUE_TRANSFER_BIT)
-            {
-                for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
-                {
-                    if ((queueFamilies[i].queueFlags & queueFlags) && ((queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) && ((queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
-                    {
-                        return i;
-                    }
-                }
-            }
-
-            for (uint32_t i = 0; i < uint32_t(queueFamilies.size()); i++)
-            {
-                if (queueFamilies[i].queueFlags & queueFlags)
-                {
-                    return i;
-                }
-            }
-
-            return UINT32_MAX;
-        }
-
-        QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice)
-        {
-            QueueFamilyIndices indices = {};
-
-            uint32_t queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-
-            std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilies.data());
-
-
-            for (uint32_t i = 0; i < queueFamilyCount; i++)
-            {
-                VkBool32 supportPresent = true;
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-                supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, i);
-#elif ALIMER_LINUX || ALIMER_OSX
-                supportPresent = glfwGetPhysicalDevicePresentationSupport(instance, physicalDevice, i);
-#endif
-
-                static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT;
-                if (supportPresent && ((queueFamilies[i].queueFlags & required) == required))
-                {
-                    indices.graphicsFamily = i;
-                    break;
-                }
-            }
-
-            indices.computeFamily = GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilies);
-            indices.transferFamily = GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilies);
-
-            return indices;
-        }
-
         PhysicalDeviceExtensions CheckDeviceExtensionSupport(VkPhysicalDevice device) {
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -265,7 +199,7 @@ namespace alimer
                 return 0;
             }
 
-            QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
+            QueueFamilyIndices indices = FindQueueFamilies(physicalDevice, VK_NULL_HANDLE);
 
             if (!indices.IsComplete())
             {
@@ -353,6 +287,15 @@ namespace alimer
 
         if (!InitMemoryAllocator()) {
             return false;
+        }
+
+        graphicsQueue = CreateCommandQueue("Graphics Queue", CommandQueueType::Graphics);
+        //computeQueue = CreateCommandQueue("Compute Queue", CommandQueueType::Compute);
+        //copyQueue = CreateCommandQueue("Copy Queue", CommandQueueType::Copy);
+
+        for (uint32_t i = 0; i < maxInflightFrames; i++)
+        {
+            frames.push_back(std::make_unique<Frame>(this));
         }
 
         return true;
@@ -564,10 +507,17 @@ namespace alimer
         }
 
         physicalDevice = physicalDeviceCandidates.rbegin()->second;
-        queueFamilyIndices = FindQueueFamilies(physicalDevice);
+        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
+
+        // Store the properties of each queuefamily
+        uint32_t queueFamilyCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        queueFamilyProperties.resize(queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
+
+        queueFamilyIndices = FindQueueFamilies(physicalDevice, VK_NULL_HANDLE);
         physicalDeviceExts = CheckDeviceExtensionSupport(physicalDevice);
 
-        vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties);
         ALIMER_TRACE("Physical device:");
         ALIMER_TRACE("\t          Name: %s", physicalDeviceProperties.deviceName);
         ALIMER_TRACE("\t   API version: %x", physicalDeviceProperties.apiVersion);
@@ -648,10 +598,6 @@ namespace alimer
             ALIMER_LOGI("Device extension '%s'", ext_name);
         }
 
-        vkGetDeviceQueue(handle, queueFamilyIndices.graphicsFamily, 0, &graphicsQueue);
-        vkGetDeviceQueue(handle, queueFamilyIndices.computeFamily, 0, &computeQueue);
-        vkGetDeviceQueue(handle, queueFamilyIndices.transferFamily, 0, &copyQueue);
-
         return true;
     }
 
@@ -706,6 +652,10 @@ namespace alimer
             vmaDestroyAllocator(memoryAllocator);
         }
 
+        SafeDelete(copyQueue);
+        SafeDelete(computeQueue);
+        SafeDelete(graphicsQueue);
+
         if (handle != VK_NULL_HANDLE) {
             vkDestroyDevice(handle, nullptr);
         }
@@ -718,18 +668,87 @@ namespace alimer
         instance = VK_NULL_HANDLE;
     }
 
+    void GraphicsDeviceVK::SetObjectName(VkObjectType objectType, uint64_t objectHandle, const char* objectName)
+    {
+        if (!vk_features.debugUtils)
+        {
+            return;
+        }
+
+        VkDebugUtilsObjectNameInfoEXT info;
+        info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        info.pNext = nullptr;
+        info.objectType = objectType;
+        info.objectHandle = objectHandle;
+        info.pObjectName = objectName;
+        vkSetDebugUtilsObjectNameEXT(handle, &info);
+    }
+
     void GraphicsDeviceVK::WaitForIdle()
     {
         VK_CHECK(vkDeviceWaitIdle(handle));
     }
 
-    RefPtr<ISwapChain> GraphicsDeviceVK::CreateSwapChain(window_t* window, const SwapChainDesc* pDesc)
+    bool GraphicsDeviceVK::BeginFrame()
+    {
+        frame().Begin();
+        //computeQueue->BeginFrame();
+        //copyQueue->BeginFrame();
+        return true;
+    }
+
+    void GraphicsDeviceVK::EndFrame()
+    {
+        //computeQueue->EndFrame();
+        //copyQueue->EndFrame();
+
+        frameIndex = (frameIndex + 1u) % maxInflightFrames;
+    }
+
+    CommandQueueVK* GraphicsDeviceVK::CreateCommandQueue(const char* name, CommandQueueType type)
+    {
+        uint32_t index = 0;
+        uint32_t queueFamilyIndex = 0;
+        if (type == CommandQueueType::Graphics)
+        {
+            queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+            index = nextGraphicsQueue++;
+        }
+        else if (type == CommandQueueType::Compute)
+        {
+            queueFamilyIndex = queueFamilyIndices.computeFamily;
+            index = nextComputeQueue++;
+        }
+        else if (type == CommandQueueType::Copy)
+        {
+            queueFamilyIndex = queueFamilyIndices.transferFamily;
+            index = nextTransferQueue++;
+        }
+        else
+        {
+            return nullptr;
+        }
+
+        ALIMER_VERIFY(queueFamilyIndex < uint32_t(queueFamilyProperties.size()));
+        ALIMER_VERIFY(index < queueFamilyProperties[queueFamilyIndex].queueCount);
+
+        CommandQueueVK* commandQueue = new CommandQueueVK(this, type);
+        if (!commandQueue->Init(name, queueFamilyIndex, index))
+        {
+            commandQueue->Destroy();
+            return nullptr;
+        }
+
+        return commandQueue;
+    }
+
+    RefPtr<ISwapChain> GraphicsDeviceVK::CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc)
     {
         ALIMER_ASSERT(window != nullptr);
         ALIMER_ASSERT(pDesc != nullptr);
 
         SwapChainVK* swapChain = new SwapChainVK(this);
-        if (!swapChain->Init(window, pDesc))
+        if (!swapChain->Init(window, commandQueue, pDesc))
         {
             swapChain->Destroy();
             return nullptr;
@@ -738,7 +757,7 @@ namespace alimer
         return RefPtr<ISwapChain>(swapChain);
     }
 
-    ITexture* GraphicsDeviceVK::CreateTexture(const TextureDesc* pDesc, const void* initialData)
+    RefPtr<ITexture> GraphicsDeviceVK::CreateTexture(const TextureDesc* pDesc, const void* initialData)
     {
         ALIMER_ASSERT(pDesc != nullptr);
 
@@ -749,6 +768,41 @@ namespace alimer
             return nullptr;
         }
 
-        return texture;
+        return RefPtr<ITexture>(texture);
+    }
+
+    ICommandBuffer& GraphicsDeviceVK::RequestCommandBuffer(CommandQueueType queueType)
+    {
+        return frame().commandPool->RequestCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+    }
+
+    VkSemaphore GraphicsDeviceVK::RequestSemaphore()
+    {
+        return frame().syncPool.RequestSemaphore();
+    }
+
+    VkFence GraphicsDeviceVK::RequestFence()
+    {
+        return frame().syncPool.RequestFence();
+    }
+
+    /* Frame */
+    GraphicsDeviceVK::Frame::Frame(GraphicsDeviceVK* device)
+        : syncPool(*device)
+        , commandPool(new CommandPoolVK(device, device->graphicsQueue, device->queueFamilyIndices.graphicsFamily))
+    {
+
+    }
+
+    GraphicsDeviceVK::Frame::~Frame()
+    {
+        Begin();
+    }
+
+    void GraphicsDeviceVK::Frame::Begin()
+    {
+        VK_CHECK(syncPool.Wait());
+        syncPool.Reset();
+        commandPool->Reset();
     }
 }

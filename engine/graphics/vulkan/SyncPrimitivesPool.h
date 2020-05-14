@@ -22,35 +22,38 @@
 
 #pragma once
 
-#include "graphics/ITexture.h"
+#include "Containers/Array.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API TextureVK final : public ITexture
+    class GraphicsDeviceVK;
+
+    class SyncPrimitivesPool
     {
     public:
-        TextureVK(GraphicsDeviceVK * device_);
-        ~TextureVK() override;
+        /// Constructor.
+        SyncPrimitivesPool(GraphicsDeviceVK &device);
+        ~SyncPrimitivesPool();
 
-        bool Init(const TextureDesc* pDesc, const void* initialData);
-        void InitExternal(VkImage image, const TextureDesc* pDesc);
+        SyncPrimitivesPool(const SyncPrimitivesPool&) = delete;
+        SyncPrimitivesPool(SyncPrimitivesPool&& other) = delete;
+        SyncPrimitivesPool& operator=(const SyncPrimitivesPool&) = delete;
+        SyncPrimitivesPool& operator=(SyncPrimitivesPool&&) = delete;
 
-        void Destroy() override;
-        void Barrier(VkCommandBuffer commandBuffer, TextureState newState);
+        VkResult Wait(uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
+        VkFence RequestFence();
 
-        ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override { return desc; }
-
-        IGraphicsDevice* GetDevice() const override;
-        TextureState GetState() const { return state; }
+        void Reset();
+        VkSemaphore RequestSemaphore();
 
     private:
-        GraphicsDeviceVK* device;
-        TextureDesc desc;
+        GraphicsDeviceVK& device;
 
-        VkImage handle = VK_NULL_HANDLE;
-        VkFormat vkFormat = VK_FORMAT_UNDEFINED;
-        VmaAllocation allocation = VK_NULL_HANDLE;
-        TextureState state = TextureState::Undefined;
+        uint32_t activeSemaphoreCount{ 0 };
+        Vector<VkSemaphore> semaphores;
+
+        uint32_t activeFenceCount{ 0 };
+        Vector<VkFence> fences;
     };
 }

@@ -88,6 +88,13 @@ namespace alimer
         Unknown
     };
 
+    enum class CommandQueueType : uint8_t
+    {
+        Graphics,
+        Compute,
+        Copy
+    };
+
     enum class TextureSampleCount : uint32_t
     {
         Count1 = 1,

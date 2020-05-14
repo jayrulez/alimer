@@ -30,29 +30,31 @@
 namespace alimer
 {
     class TextureVK;
+    class CommandQueueVK;
+
     class ALIMER_API SwapChainVK final : public ISwapChain
     {
     public:
         SwapChainVK(GraphicsDeviceVK* device_);
         ~SwapChainVK() override;
 
-        bool Init(window_t* window, const SwapChainDesc* pDesc);
+        bool Init(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc);
         void Destroy();
 
-        bool Present() override;
-
-        ALIMER_FORCEINLINE const SwapChainDesc& GetDesc() const override
-        {
-            return desc;
-        }
+        ALIMER_FORCEINLINE const SwapChainDesc& GetDesc() const override { return desc; }
+        VkSwapchainKHR GetHandle() const { return handle; }
+        uint32_t GetCurrentBackBufferIndex() const { return backBufferIndex; }
+        TextureVK* GetCurrentTexture() const { return buffers[backBufferIndex]; }
 
         IGraphicsDevice* GetDevice() const override;
+        ICommandQueue* GetCommandQueue() const override;
+        ITexture* GetNextTexture() override;
 
     private:
         bool InitSwapChain(uint32_t width, uint32_t height);
-        VkResult AquireNextImage();
 
         GraphicsDeviceVK* device;
+        CommandQueueVK* commandQueue = nullptr;
 
         VkSurfaceKHR    surface = VK_NULL_HANDLE;
         VkSwapchainKHR  handle = VK_NULL_HANDLE;
@@ -62,7 +64,5 @@ namespace alimer
         uint32_t backBufferIndex = 0;
         uint32_t semaphoreIndex = 0;
         std::vector<TextureVK*> buffers;
-        std::vector<VkSemaphore> imageAvailableSemaphores;
-        std::vector<VkSemaphore> renderFinishedSemaphores;
     };
 }
