@@ -25,8 +25,8 @@
 #include "core/Assert.h"
 #include "graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_GRAPHICS_VULKAN) && defined(BLAH)
-#   include "graphics/vulkan/GraphicsDeviceVK.h"
+#if defined(ALIMER_GRAPHICS_VULKAN) 
+#include "graphics/vulkan/GraphicsDeviceVK.h"
 #endif
 
 namespace alimer
@@ -64,6 +64,10 @@ namespace alimer
 
         if (availableProviders.empty())
         {
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (GraphicsDeviceVK::IsAvailable())
+                availableProviders.insert(GraphicsAPI::Vulkan);
+#endif
 
 #if defined(ALIMER_GRAPHICS_D3D12)
             //if (D3D12GraphicsDevice::IsAvailable())
@@ -79,10 +83,8 @@ namespace alimer
     }
 
 
-    std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc* pDesc)
+    std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc& desc)
     {
-        ALIMER_ASSERT(pDesc);
-
         if (api == GraphicsAPI::Count)
         {
             auto availableBackends = GetAvailableGraphicsAPI();
@@ -101,6 +103,23 @@ namespace alimer
                 api = GraphicsAPI::Null;
         }
 
-        return nullptr;
+        switch (api)
+        {
+        case GraphicsAPI::Vulkan:
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (GraphicsDeviceVK::IsAvailable())
+            {
+                auto device = std::make_unique<GraphicsDeviceVK>();
+                if (device->Init(desc))
+                {
+                    return device;
+                }
+                return nullptr;
+            }
+#endif
+
+        default:
+            return nullptr;
+        }
     }
 }

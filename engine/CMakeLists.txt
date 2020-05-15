@@ -35,9 +35,7 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-set(HEADER_FILES ${HEADER_FILES} ${GPU_HEADER_FILES})
-set(SOURCE_FILES ${SOURCE_FILES} ${GPU_SOURCE_FILES})
+set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     foundation
@@ -45,11 +43,14 @@ define_engine_source_files(
     core
     math
     os
-    #gpu
     graphics
     Input
     Games
 )
+
+if (ALIMER_GRAPHICS_VULKAN)
+    define_engine_source_files(graphics/vulkan)
+endif()
 
 group_sources()
 
@@ -68,10 +69,14 @@ target_include_directories(alimer PUBLIC
 )
 
 target_link_libraries(alimer PUBLIC
-    vgpu
     stb
     imgui
 )
+
+if (ALIMER_GRAPHICS_VULKAN)
+    target_link_libraries(alimer PRIVATE volk vma)
+    target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
+endif ()
 
 # Link platform specific libraries
 if(ANDROID)

@@ -25,7 +25,6 @@
 #include "core/Ptr.h"
 #include "core/StringId.h"
 #include <memory>
-#include <vector>
 
 namespace alimer
 {
@@ -89,8 +88,6 @@ namespace alimer
         template<typename T> T* Cast() { return IsInstanceOf<T>() ? static_cast<T*>(this) : nullptr; }
         /// Cast the object to specified most derived class.
         template<typename T> const T* Cast() const { return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr; }
-    private:
-        static std::vector<std::string> arguments;
     };
 }
 

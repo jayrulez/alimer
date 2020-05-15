@@ -9888,6 +9888,22 @@ typedef struct VkAccelerationStructureGeometryTrianglesDataKHR
     VkDeviceOrHostAddressConstKHR transformData;
 } VkAccelerationStructureGeometryTrianglesDataKHR;
 
+typedef struct VkAccelerationStructureGeometryAabbsDataKHR
+{
+    VkStructureType sType;
+    const void* pNext;
+    VkDeviceOrHostAddressConstKHR data;
+    VkDeviceSize stride;
+} VkAccelerationStructureGeometryAabbsDataKHR;
+
+typedef struct VkAccelerationStructureGeometryInstancesDataKHR
+{
+    VkStructureType sType;
+    const void* pNext;
+    VkBool32 arrayOfPointers;
+    VkDeviceOrHostAddressConstKHR data;
+} VkAccelerationStructureGeometryInstancesDataKHR;
+
 typedef union VkAccelerationStructureGeometryDataKHR
 {
     VkAccelerationStructureGeometryTrianglesDataKHR triangles;
@@ -9918,22 +9934,6 @@ typedef struct VkAccelerationStructureBuildGeometryInfoKHR
     const VkAccelerationStructureGeometryKHR* const* ppGeometries;
     VkDeviceOrHostAddressKHR scratchData;
 } VkAccelerationStructureBuildGeometryInfoKHR;
-
-typedef struct VkAccelerationStructureGeometryAabbsDataKHR
-{
-    VkStructureType sType;
-    const void* pNext;
-    VkDeviceOrHostAddressConstKHR data;
-    VkDeviceSize stride;
-} VkAccelerationStructureGeometryAabbsDataKHR;
-
-typedef struct VkAccelerationStructureGeometryInstancesDataKHR
-{
-    VkStructureType sType;
-    const void* pNext;
-    VkBool32 arrayOfPointers;
-    VkDeviceOrHostAddressConstKHR data;
-} VkAccelerationStructureGeometryInstancesDataKHR;
 
 typedef struct VkAccelerationStructureCreateGeometryTypeInfoKHR
 {

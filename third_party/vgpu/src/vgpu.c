@@ -23,26 +23,8 @@
 #include "vgpu_backend.h"
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
+#include <stdio.h>
 #include <stdarg.h>
-
-#if defined(__ANDROID__)
-#   include <android/log.h>
-#elif TARGET_OS_IOS || TARGET_OS_TV
-#   include <sys/syslog.h>
-#elif TARGET_OS_MAC || defined(__linux__)
-#   include <unistd.h>
-#elif defined(_WIN32)
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN
-#   endif
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   include <Windows.h>
-#   include <strsafe.h>
-#elif defined(__EMSCRIPTEN__)
-#   include <emscripten.h>
-#endif
 
 #define VGPU_MAX_LOG_MESSAGE (4096)
 static const char* vgpu_log_priority_prefixes[_VGPU_LOG_LEVEL_COUNT] = {
@@ -54,62 +36,11 @@ static const char* vgpu_log_priority_prefixes[_VGPU_LOG_LEVEL_COUNT] = {
     "TRACE",
 };
 
-static void vgpu_default_log_callback(void* user_data, vgpu_log_level level, const char* message);
-
-#ifdef _DEBUG
-static vgpu_log_level s_log_level = VGPU_LOG_LEVEL_DEBUG;
-#else
-static vgpu_log_level s_log_level = VGPU_LOG_LEVEL_OFF;
-#endif
-
-static vgpu_log_callback s_log_function = vgpu_default_log_callback;
+static vgpu_log_callback s_log_function = NULL;
 static void* s_log_user_data = NULL;
 
-void vgpu_set_log_level(vgpu_log_level level) {
-    s_log_level = level;
-}
-
-void vgpu_default_log_callback(void* user_data, vgpu_log_level level, const char* message) {
-#if defined(_WIN32)
-    size_t length = strlen(vgpu_log_priority_prefixes[level]) + 2 + strlen(message) + 1 + 1 + 1;
-    char* output = VGPU_ALLOCA(char, length);
-    snprintf(output, length, "%s: %s\r\n", vgpu_log_priority_prefixes[level], message);
-
-    const int buffer_size = MultiByteToWideChar(CP_UTF8, 0, output, (int)length, nullptr, 0);
-    if (buffer_size == 0)
-        return;
-
-    WCHAR* buffer = VGPU_ALLOCA(WCHAR, buffer_size);
-    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer, buffer_size) == 0)
-        return;
-
-    OutputDebugStringW(buffer);
-
-#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-    HANDLE handle;
-    switch (level)
-    {
-    case VGPU_LOG_LEVEL_ERROR:
-    case VGPU_LOG_LEVEL_WARN:
-        handle = GetStdHandle(STD_ERROR_HANDLE);
-        break;
-    default:
-        handle = GetStdHandle(STD_OUTPUT_HANDLE);
-        break;
-    }
-
-    WriteConsoleW(handle, buffer, (DWORD)wcslen(buffer), NULL, NULL);
-#   endif
-
-#endif
-}
-
 void vgpu_log(vgpu_log_level level, const char* format, ...) {
-    if (s_log_level == VGPU_LOG_LEVEL_OFF || level == VGPU_LOG_LEVEL_OFF) {
-        return;
-    }
-
-    if (s_log_level < level) {
+    if (level == VGPU_LOG_LEVEL_OFF) {
         return;
     }
 
@@ -158,30 +89,37 @@ vgpu_bool vgpuIsBackendSupported(vgpu_backend_type backend) {
 
     switch (backend)
     {
+#if defined(VGPU_BACKEND_VK)
     case VGPU_BACKEND_TYPE_VULKAN:
-        return vgpu_vk_supported();
+        return vk_driver.supported();
+#endif
 
-    case VGPU_BACKEND_TYPE_DIRECT3D12:
+    /*case VGPU_BACKEND_TYPE_DIRECT3D12:
         return vgpu_d3d12_supported();
 
     case VGPU_BACKEND_TYPE_DIRECT3D11:
-        return vgpu_d3d11_supported();
+        return vgpu_d3d11_supported();*/
 
+#if defined(VGPU_BACKEND_OPENGL)
     case VGPU_BACKEND_TYPE_OPENGL:
-        return vgpu_opengl_supported();
+        return gl_driver.supported();
+#endif
 
     default:
         return false;
     }
 }
 
-static vgpu_renderer* s_gpu_device = nullptr;
+static vgpu_renderer* s_gpu_device = NULL;
 
-bool vgpu_init(const vgpu_config* config)
+vgpu_bool vgpu_init(const vgpu_config* config)
 {
-    if (s_gpu_device != nullptr) {
+    if (s_gpu_device) {
         return true;
     }
+
+    s_log_user_data = config->context;
+    s_log_function = config->callback;
 
     vgpu_backend_type backend = config->type;
     if (backend == VGPU_BACKEND_TYPE_COUNT) {
@@ -190,7 +128,7 @@ bool vgpu_init(const vgpu_config* config)
 
     switch (backend)
     {
-    case VGPU_BACKEND_TYPE_VULKAN:
+    /*case VGPU_BACKEND_TYPE_VULKAN:
         s_gpu_device = vgpu_vk_create_device();
         break;
 
@@ -200,19 +138,21 @@ bool vgpu_init(const vgpu_config* config)
 
     case VGPU_BACKEND_TYPE_DIRECT3D11:
         s_gpu_device = vgpu_d3d11_create_device();
-        break;
+        break;*/
 
+#if defined(VGPU_BACKEND_OPENGL)
     case VGPU_BACKEND_TYPE_OPENGL:
-        s_gpu_device = vgpu_opengl_create_device();
+        s_gpu_device = gl_driver.init_renderer();
         break;
     }
+#endif
 
-    if (s_gpu_device == nullptr) {
+    if (s_gpu_device == NULL) {
         return false;
     }
 
     if (!s_gpu_device->init(config)) {
-        s_gpu_device = nullptr;
+        s_gpu_device = NULL;
         return false;
     }
 
@@ -220,7 +160,7 @@ bool vgpu_init(const vgpu_config* config)
 }
 
 void vgpu_shutdown(void) {
-    if (s_gpu_device == nullptr) {
+    if (s_gpu_device == NULL) {
         return;
     }
 
@@ -255,17 +195,6 @@ void vgpu_frame_end(void) {
     s_gpu_device->end_frame();
 }
 
-/* Buffer */
-VGPUBuffer vgpuCreateBuffer(const VGPUBufferDescriptor* descriptor)
-{
-    return s_gpu_device->bufferCreate(descriptor);
-}
-
-void vgpuDestroyBuffer(VGPUBuffer buffer)
-{
-    s_gpu_device->bufferDestroy(buffer);
-}
-
 /* Texture */
 static VGPUTextureDescriptor _vgpu_texture_desc_defaults(const VGPUTextureDescriptor* desc) {
     VGPUTextureDescriptor def = *desc;
@@ -279,32 +208,49 @@ static VGPUTextureDescriptor _vgpu_texture_desc_defaults(const VGPUTextureDescri
     return def;
 }
 
-VGPUTexture vgpuCreateTexture(const VGPUTextureDescriptor* descriptor)
+vgpu_texture vgpuCreateTexture(const VGPUTextureDescriptor* descriptor)
 {
     VGPUTextureDescriptor desc_def = _vgpu_texture_desc_defaults(descriptor);
     return s_gpu_device->create_texture(&desc_def);
 }
 
-void vgpuDestroyTexture(VGPUTexture texture)
-{
+void vgpuDestroyTexture(vgpu_texture texture) {
     s_gpu_device->destroy_texture(texture);
 }
 
-/* Sampler */
-VGPUSampler vgpuCreateSampler(const VGPUSamplerDescriptor* descriptor)
-{
-    VGPU_ASSERT(s_gpu_device);
-    VGPU_ASSERT(descriptor);
-
-    return s_gpu_device->samplerCreate(descriptor);
+/* Buffer */
+vgpu_buffer vgpu_create_buffer(const vgpu_buffer_info* info) {
+    return s_gpu_device->create_buffer(info);
 }
 
-void vgpuDestroySampler(VGPUSampler sampler)
+void vgpu_destroy_buffer(vgpu_buffer buffer) {
+    s_gpu_device->destroy_buffer(buffer);
+}
+
+/* Sampler */
+vgpu_sampler vgpu_create_sampler(const vgpu_sampler_info* info)
 {
     VGPU_ASSERT(s_gpu_device);
-    VGPU_ASSERT(sampler.id != VGPU_INVALID_ID);
+    VGPU_ASSERT(info);
+    return s_gpu_device->create_sampler(info);
+}
 
-    s_gpu_device->samplerDestroy( sampler);
+void vgpu_destroy_sampler(vgpu_sampler sampler)
+{
+    VGPU_ASSERT(s_gpu_device);
+    s_gpu_device->destroy_sampler( sampler);
+}
+
+/* Shader */
+vgpu_shader vgpu_create_shader(const vgpu_shader_info* info) {
+    VGPU_ASSERT(s_gpu_device);
+    VGPU_ASSERT(info);
+    return s_gpu_device->create_shader(info);
+}
+
+void vgpu_destroy_shader(vgpu_shader shader) {
+    VGPU_ASSERT(s_gpu_device);
+    s_gpu_device->destroy_shader(shader);
 }
 
 /* Commands */
@@ -482,24 +428,24 @@ VGPUTextureFormatType vgpuGetFormatType(VGPUTextureFormat format)
     return FormatDesc[(uint32_t)format].type;
 }
 
-bool vgpu_is_depth_format(VGPUTextureFormat format)
+vgpu_bool vgpu_is_depth_format(VGPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.depth > 0;
 }
 
-bool vgpu_is_stencil_format(VGPUTextureFormat format)
+vgpu_bool vgpu_is_stencil_format(VGPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].bits.stencil > 0;
 }
 
-bool vgpu_is_depth_stencil_format(VGPUTextureFormat format)
+vgpu_bool vgpu_is_depth_stencil_format(VGPUTextureFormat format)
 {
     return vgpu_is_depth_format(format) || vgpu_is_stencil_format(format);
 }
 
-bool vgpu_is_compressed_format(VGPUTextureFormat format)
+vgpu_bool vgpu_is_compressed_format(VGPUTextureFormat format)
 {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return format >= VGPUTextureFormat_BC1RGBAUnorm && format <= VGPUTextureFormat_BC7RGBAUnormSrgb;

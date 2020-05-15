@@ -41,7 +41,7 @@ namespace alimer
         /// Destructor.
         ~GraphicsDeviceVK() override;
 
-        bool Init(const GraphicsDeviceDesc* pDesc);
+        bool Init(const GraphicsDeviceDesc& desc);
         void Destroy();
 
         void SetObjectName(VkObjectType objectType, uint64_t objectHandle, const char* objectName);
@@ -58,9 +58,9 @@ namespace alimer
         VkFence RequestFence();
 
     private:
-        bool InitInstance(const GraphicsDeviceDesc* pDesc);
+        bool InitInstance(const GraphicsDeviceDesc& desc);
         bool InitPhysicalDevice();
-        bool InitLogicalDevice(const GraphicsDeviceDesc* pDesc);
+        bool InitLogicalDevice(const GraphicsDeviceDesc& desc);
         bool InitMemoryAllocator();
 
         ICommandQueue* GetGraphicsQueue() const override {
@@ -90,7 +90,7 @@ namespace alimer
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         // The GPU properties
         VkPhysicalDeviceProperties physicalDeviceProperties{};
-        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+        Vector<VkQueueFamilyProperties> queueFamilyProperties;
 
         QueueFamilyIndices queueFamilyIndices{};
         PhysicalDeviceExtensions physicalDeviceExts;

@@ -22,13 +22,13 @@
 
 #pragma once
 
+#include "Containers/Array.h"
 #include "core/Object.h"
 #include "Games/GameTime.h"
 #include "os/os.h"
 #include "Games/GameSystem.h"
 #include "math/Size.h"
 #include "graphics/types.h"
-#include <vector>
 #include <memory>
 
 namespace alimer
@@ -49,6 +49,7 @@ namespace alimer
     };
 
     class InputManager;
+    class IGraphicsDevice;
 
     class ALIMER_API Game : public Object
     {
@@ -100,13 +101,14 @@ namespace alimer
         // Rendering loop timer.
         GameTime time;
         window_t* main_window = nullptr;
-        std::vector<GameSystem*> gameSystems;
+        Vector<GameSystem*> gameSystems;
+        std::unique_ptr<IGraphicsDevice> graphicsDevice;
 
         InputManager* input;
         bool headless{ false };
     };
 
-    extern Game* ApplicationCreate(const std::vector<std::string>& args);
+    extern Game* ApplicationCreate(const Vector<std::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.

@@ -31,7 +31,6 @@
 #include "core/Log.h"
 #include "math/math.h"
 #include <algorithm>
-#include <vector>
 #include <map>
 
 #define VMA_IMPLEMENTATION
@@ -59,7 +58,7 @@ namespace alimer
             return VK_FALSE;
         }
 
-        static bool HasLayers(const vector<const char*>& required, const vector<VkLayerProperties>& available)
+        static bool HasLayers(const Vector<const char*>& required, const Vector<VkLayerProperties>& available)
         {
             for (auto layer : required)
             {
@@ -82,9 +81,9 @@ namespace alimer
             return true;
         }
 
-        vector<const char*> GetOptimalValidationLayers(const vector<VkLayerProperties>& supported_instance_layers)
+        Vector<const char*> GetOptimalValidationLayers(const Vector<VkLayerProperties>& supported_instance_layers)
         {
-            vector<vector<const char*>> validationLayerPriorityList =
+            Vector<Vector<const char*>> validationLayerPriorityList =
             {
                 // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
                 {"VK_LAYER_KHRONOS_validation"},
@@ -123,7 +122,7 @@ namespace alimer
             uint32_t extensionCount;
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+            Vector<VkExtensionProperties> availableExtensions(extensionCount);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
 
             PhysicalDeviceExtensions exts = {};
@@ -266,13 +265,13 @@ namespace alimer
         Destroy();
     }
 
-    bool GraphicsDeviceVK::Init(const GraphicsDeviceDesc* pDesc)
+    bool GraphicsDeviceVK::Init(const GraphicsDeviceDesc& desc)
     {
         if (!IsAvailable()) {
             return false;
         }
 
-        if (!InitInstance(pDesc)) {
+        if (!InitInstance(desc)) {
             return false;
         }
 
@@ -281,7 +280,7 @@ namespace alimer
             return false;
         }
 
-        if (!InitLogicalDevice(pDesc)) {
+        if (!InitLogicalDevice(desc)) {
             return false;
         }
 
@@ -295,18 +294,18 @@ namespace alimer
 
         for (uint32_t i = 0; i < maxInflightFrames; i++)
         {
-            frames.push_back(std::make_unique<Frame>(this));
+            frames.Push(std::make_unique<Frame>(this));
         }
 
         return true;
     }
 
-    bool GraphicsDeviceVK::InitInstance(const GraphicsDeviceDesc* pDesc)
+    bool GraphicsDeviceVK::InitInstance(const GraphicsDeviceDesc& desc)
     {
         const uint32_t apiVersion = volkGetInstanceVersion();
 
         VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-        appInfo.pApplicationName = pDesc->applicationName;
+        appInfo.pApplicationName = desc.applicationName;
         appInfo.applicationVersion = 0;
         appInfo.pEngineName = "Alimer";
         appInfo.engineVersion = 0;
@@ -315,14 +314,14 @@ namespace alimer
             appInfo.apiVersion = VK_API_VERSION_1_2;
         }
 
-        const bool headless = any(pDesc->flags & GraphicsDeviceFlags::Headless);
+        const bool headless = any(desc.flags & GraphicsDeviceFlags::Headless);
 
         // Enumerate supported extensions and setup instance extensions.
-        std::vector<const char*> enabledExtensions;
+        Vector<const char*> enabledExtensions;
         uint32_t instanceExtensionCount;
         VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
 
-        vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
+        Vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
         VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
 
         for (auto& available_extension : availableInstanceExtensions)
@@ -330,7 +329,7 @@ namespace alimer
             if (strcmp(available_extension.extensionName, "VK_KHR_get_physical_device_properties2") == 0)
             {
                 vk_features.physicalDeviceProperties2 = true;
-                enabledExtensions.push_back("VK_KHR_get_physical_device_properties2");
+                enabledExtensions.Push("VK_KHR_get_physical_device_properties2");
             }
             else if (strcmp(available_extension.extensionName, "VK_KHR_external_memory_capabilities") == 0)
             {
@@ -362,13 +361,13 @@ namespace alimer
             vk_features.externalMemoryCapabilities &&
             vk_features.externalSemaphoreCapabilities)
         {
-            enabledExtensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-            enabledExtensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
         }
 
         if (vk_features.debugUtils)
         {
-            enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            enabledExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 
         // Try to enable headless surface extension if it exists
@@ -381,52 +380,49 @@ namespace alimer
             else
             {
                 ALIMER_LOGI("%s is available, enabling it", VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-                enabledExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledExtensions.Push(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
         }
         else
         {
-            enabledExtensions.push_back("VK_KHR_surface");
+            enabledExtensions.Push(VK_KHR_SURFACE_EXTENSION_NAME);
             // Enable surface extensions depending on os
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
-            enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
-            enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(_DIRECT2DISPLAY)
-            enabledExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_DISPLAY_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            enabledExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
-            enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
-            enabledExtensions.push_back(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_MVK_IOS_SURFACE_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
                 // TODO: Support VK_EXT_metal_surface
-            enabledExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+            enabledExtensions.Push(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 #endif
 
             if (vk_features.surfaceCapabilities2)
             {
-                enabledExtensions.push_back("VK_KHR_get_surface_capabilities2");
+                enabledExtensions.Push("VK_KHR_get_surface_capabilities2");
             }
         }
 
-        const bool validation =
-            any(pDesc->flags & GraphicsDeviceFlags::Debug) ||
-            any(pDesc->flags & GraphicsDeviceFlags::GPUBasedValidation);
-
-        vector<const char*> enabledLayers;
+        const bool validation = any(desc.flags & GraphicsDeviceFlags::Debug);
+        Vector<const char*> enabledLayers;
 
         if (validation)
         {
             uint32_t layerCount;
             VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, nullptr));
 
-            vector<VkLayerProperties> queriedLayers(layerCount);
+            Vector<VkLayerProperties> queriedLayers(layerCount);
             VK_CHECK(vkEnumerateInstanceLayerProperties(&layerCount, queriedLayers.data()));
 
-            std::vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(queriedLayers);
-            enabledLayers.insert(enabledLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
+            Vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(queriedLayers);
+            enabledLayers.Push(optimalValidationLayers);
         }
 
         VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
@@ -487,7 +483,7 @@ namespace alimer
             return false;
         }
 
-        vector<VkPhysicalDevice> physicalDevices(deviceCount);
+        Vector<VkPhysicalDevice> physicalDevices(deviceCount);
         if (vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data()) != VK_SUCCESS) {
             return false;
         }
@@ -512,7 +508,7 @@ namespace alimer
         // Store the properties of each queuefamily
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
-        queueFamilyProperties.resize(queueFamilyCount);
+        queueFamilyProperties.Resize(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
         queueFamilyIndices = FindQueueFamilies(physicalDevice, VK_NULL_HANDLE);
@@ -529,9 +525,9 @@ namespace alimer
         return true;
     }
 
-    bool GraphicsDeviceVK::InitLogicalDevice(const GraphicsDeviceDesc* pDesc)
+    bool GraphicsDeviceVK::InitLogicalDevice(const GraphicsDeviceDesc& desc)
     {
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        Vector<VkDeviceQueueCreateInfo> queueCreateInfos;
         std::set<uint32_t> uniqueQueueFamilies =
         {
             queueFamilyIndices.graphicsFamily,
@@ -547,35 +543,35 @@ namespace alimer
             queueCreateInfo.queueFamilyIndex = queueFamily;
             queueCreateInfo.queueCount = 1;
             queueCreateInfo.pQueuePriorities = &queuePriority;
-            queueCreateInfos.push_back(queueCreateInfo);
+            queueCreateInfos.Push(queueCreateInfo);
         }
 
-        vector<const char*> enabledExtensions;
+        Vector<const char*> enabledExtensions;
 
         if (!vk_features.headless)
-            enabledExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
         if (physicalDeviceExts.KHR_get_memory_requirements2)
         {
-            enabledExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
         }
 
         if (physicalDeviceExts.KHR_get_memory_requirements2
             && physicalDeviceExts.KHR_dedicated_allocation)
         {
-            enabledExtensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
         }
 
         if (physicalDeviceProperties.apiVersion >= VK_API_VERSION_1_1
             || physicalDeviceExts.KHR_bind_memory2)
         {
-            enabledExtensions.push_back(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
+            enabledExtensions.Push(VK_KHR_BIND_MEMORY_2_EXTENSION_NAME);
         }
 
         if (physicalDeviceProperties.apiVersion >= VK_API_VERSION_1_1
             || physicalDeviceExts.EXT_memory_budget)
         {
-            enabledExtensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+            enabledExtensions.Push(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
         }
 
         VkDeviceCreateInfo createInfo = {};

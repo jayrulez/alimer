@@ -52,8 +52,8 @@ namespace alimer
             vkDestroyFence(device.GetHandle(), fence, nullptr);
         }
 
-        semaphores.clear();
-        fences.clear();
+        semaphores.Clear();
+        fences.Clear();
     }
 
     void SyncPrimitivesPool::Reset()
@@ -90,7 +90,7 @@ namespace alimer
         // Check if there is an available fence
         if (activeFenceCount < fences.size())
         {
-            return fences.at(activeFenceCount++);
+            return fences.At(activeFenceCount++);
         }
 
         VkFenceCreateInfo createInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -103,9 +103,9 @@ namespace alimer
             return VK_NULL_HANDLE;
         }
 
-        fences.push_back(fence);
+        fences.Push(fence);
         activeFenceCount++;
-        return fences.back();
+        return fences.Back();
     }
 
     VkSemaphore SyncPrimitivesPool::RequestSemaphore()
@@ -113,7 +113,7 @@ namespace alimer
         // Check if there is an available semaphore
         if (activeSemaphoreCount < semaphores.size())
         {
-            return semaphores.at(activeSemaphoreCount++);
+            return semaphores.At(activeSemaphoreCount++);
         }
 
         VkSemaphoreCreateInfo createInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
@@ -127,7 +127,7 @@ namespace alimer
             return VK_NULL_HANDLE;
         }
 
-        semaphores.push_back(semaphore);
+        semaphores.Push(semaphore);
         activeSemaphoreCount++;
         return semaphore;
     }

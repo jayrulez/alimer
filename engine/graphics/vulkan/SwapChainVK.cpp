@@ -27,7 +27,6 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "math/math.h"
-#include <vector>
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
 #include <foundation/windows.h>
@@ -37,10 +36,10 @@ namespace alimer
 {
     namespace {
         static VkPresentModeKHR ChooseSwapPresentMode(
-            const std::vector<VkPresentModeKHR>& availablePresentModes, bool vsyncEnabled)
+            const Vector<VkPresentModeKHR>& availablePresentModes, bool vsyncEnabled)
         {
             // Try to match the correct present mode to the vsync state.
-            std::vector<VkPresentModeKHR> desiredModes;
+            Vector<VkPresentModeKHR> desiredModes;
             if (vsyncEnabled) desiredModes = { VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
             else desiredModes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR };
 
@@ -105,14 +104,14 @@ namespace alimer
         };
 
         uint32_t format_count;
-        std::vector<VkSurfaceFormatKHR> formats;
+        Vector<VkSurfaceFormatKHR> formats;
 
         if (device->GetVulkanFeatures().surfaceCapabilities2)
         {
             if (vkGetPhysicalDeviceSurfaceFormats2KHR(device->GetPhysicalDevice(), &surfaceInfo, &format_count, nullptr) != VK_SUCCESS)
                 return false;
 
-            std::vector<VkSurfaceFormat2KHR> formats2(format_count);
+            Vector<VkSurfaceFormat2KHR> formats2(format_count);
 
             for (VkSurfaceFormat2KHR& format2 : formats2)
             {
@@ -123,15 +122,17 @@ namespace alimer
             if (vkGetPhysicalDeviceSurfaceFormats2KHR(device->GetPhysicalDevice(), &surfaceInfo, &format_count, formats2.data()) != VK_SUCCESS)
                 return false;
 
-            formats.reserve(format_count);
+            formats.Reserve(format_count);
             for (auto& f : formats2)
-                formats.push_back(f.surfaceFormat);
+            {
+                formats.Push(f.surfaceFormat);
+            }
         }
         else
         {
             if (vkGetPhysicalDeviceSurfaceFormatsKHR(device->GetPhysicalDevice(), surface, &format_count, nullptr) != VK_SUCCESS)
                 return false;
-            formats.resize(format_count);
+            formats.Resize(format_count);
             if (vkGetPhysicalDeviceSurfaceFormatsKHR(device->GetPhysicalDevice(), surface, &format_count, formats.data()) != VK_SUCCESS)
                 return false;
         }
@@ -217,10 +218,10 @@ namespace alimer
 
         /* Choose present mode. */
         uint32_t num_present_modes;
-        std::vector<VkPresentModeKHR> presentModes;
+        Vector<VkPresentModeKHR> presentModes;
         if (vkGetPhysicalDeviceSurfacePresentModesKHR(device->GetPhysicalDevice(), surface, &num_present_modes, nullptr) != VK_SUCCESS)
             return false;
-        presentModes.resize(num_present_modes);
+        presentModes.Resize(num_present_modes);
         if (vkGetPhysicalDeviceSurfacePresentModesKHR(device->GetPhysicalDevice(), surface, &num_present_modes, presentModes.data()) != VK_SUCCESS)
             return false;
 
@@ -316,7 +317,7 @@ namespace alimer
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, nullptr);
 
-        std::vector<VkImage> images(imageCount);
+        Vector<VkImage> images(imageCount);
         result = vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, images.data());
         if (result != VK_SUCCESS)
         {
@@ -348,7 +349,7 @@ namespace alimer
 
             TextureVK* pTexture = new TextureVK(device);
             pTexture->InitExternal(images[i], &desc);
-            buffers.emplace_back(pTexture);
+            buffers.EmplaceBack(pTexture);
         }
 
         return result == VK_SUCCESS;

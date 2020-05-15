@@ -21,7 +21,7 @@
 //
 
 #include "core/Log.h"
-#include <vector>
+#include "Containers/Array.h"
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -44,7 +44,7 @@ using namespace std;
 
 namespace alimer
 {
-    static vector<Logger*> _loggers;
+    static Vector<Logger*> _loggers;
 
     Logger::Logger(const string& name)
         : _name(name)
@@ -54,7 +54,7 @@ namespace alimer
         , _level{ LogLevel::Info }
 #endif
     {
-        _loggers.emplace_back(this);
+        _loggers.Push(this);
     }
 
     Logger::~Logger()
@@ -133,7 +133,7 @@ namespace alimer
             if (bufferSize == 0)
                 return;
 
-            vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
+            Vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
             if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer.data(), static_cast<int>(buffer.size())) == 0)
                 return;
 

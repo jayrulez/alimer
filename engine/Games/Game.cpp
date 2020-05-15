@@ -37,8 +37,7 @@ namespace alimer
     {
         /* Init OS first */
         os_init();
-
-        gameSystems.push_back(input);
+        gameSystems.Push(input);
     }
 
     Game::~Game()
@@ -48,8 +47,8 @@ namespace alimer
             SafeDelete(gameSystem);
         }
 
-        gameSystems.clear();
-        vgpu_shutdown();
+        gameSystems.Clear();
+        graphicsDevice.reset();
         window_destroy(main_window);
         os_shutdown();
     }
@@ -59,10 +58,6 @@ namespace alimer
     static vgpu_buffer* uboBuffer;
     static vgpu_shader shader;
     static agpu_pipeline render_pipeline;*/
-
-    static void  gpu_callback(void* context, vgpu_log_level level, const char* message)
-    {
-    }
 
     void Game::InitBeforeRun()
     {
@@ -75,22 +70,19 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
 
-            vgpu_swapchain_info swapchain_info = {};
+            /*vgpu_swapchain_info swapchain_info = {};
             swapchain_info.handle = window_handle(main_window);
             swapchain_info.width = window_width(main_window);
-            swapchain_info.height = window_height(main_window);
+            swapchain_info.height = window_height(main_window);*/
 
-            vgpu_config gpu_config = { };
-            gpu_config.type = VGPU_BACKEND_TYPE_VULKAN;
-            //deviceDesc.type = VGPU_BACKEND_TYPE_OPENGL;
+            GraphicsDeviceDesc deviceDesc = {};
+            deviceDesc.applicationName = config.applicationName.c_str();
 #ifdef _DEBUG
-            gpu_config.debug = true;
+            deviceDesc.flags |= GraphicsDeviceFlags::Debug;
 #endif
-            gpu_config.callback = gpu_callback;
-            gpu_config.context = this;
-            gpu_config.get_proc_address = gl_get_proc_address;
-            gpu_config.swapchain_info = &swapchain_info;
-            if (!vgpu_init(&gpu_config)) {
+
+            graphicsDevice = CreateGraphicsDevice(GraphicsAPI::Vulkan, deviceDesc);
+            if (graphicsDevice == nullptr) {
                 headless = true;
             }
         }
@@ -126,7 +118,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        vgpu_frame_begin();
+        graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -166,17 +158,8 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_frame_end();
+#if defined(TODO_VGPU)
 
-        return;
-
-#if TODO
-        /*auto clear_color = Colors::CornflowerBlue;
-auto defaultRenderPass = vgpu_get_default_render_pass();
-vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
-vgpu_cmd_begin_render_pass(defaultRenderPass);
-vgpu_cmd_end_render_pass();
-*/
         uint32_t width = window_width(main_window);
         uint32_t height = window_height(main_window);
 
@@ -209,10 +192,10 @@ vgpu_cmd_end_render_pass();
         vgpu_set_uniform_buffer_data(0, 0, &vs_params, sizeof(vs_params));
         vgpuCmdDrawIndexed(36, 1, 0);
         vgpuCmdEndRenderPass();
-        vgpuFrameFinish();
-        window_swap_buffers(main_window);
-#endif // TODO
+#endif
 
+        graphicsDevice->EndFrame();
+        window_swap_buffers(main_window);
     }
 
     int Game::Run()
@@ -293,4 +276,4 @@ vgpu_cmd_end_render_pass();
             EndDraw();
         }
     }
-        }
+}

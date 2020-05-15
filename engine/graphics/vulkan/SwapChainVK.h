@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include "Containers/Array.h"
 #include "graphics/ISwapChain.h"
 #include "os/os.h"
 #include "VulkanBackend.h"
-#include <vector>
 
 namespace alimer
 {
@@ -63,6 +63,6 @@ namespace alimer
         SwapChainDesc desc;
         uint32_t backBufferIndex = 0;
         uint32_t semaphoreIndex = 0;
-        std::vector<TextureVK*> buffers;
+        Vector<TextureVK*> buffers;
     };
 }

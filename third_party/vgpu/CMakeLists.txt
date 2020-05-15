@@ -87,12 +87,12 @@ set(SOURCE_FILES
     include/vgpu/vgpu.h
     src/stb_ds.h
     src/vgpu_backend.h
-    src/vgpu.cpp
+    src/vgpu.c
+    src/vgpu_gl.c
     src/vgpu_vk.cpp
-    src/vgpu_d3d11.cpp
-    src/vgpu_d3d12.cpp
-    src/vgpu_gl.cpp
-    src/vgpu_d3d.h
+    #src/vgpu_d3d11.cpp
+    #src/vgpu_d3d12.cpp
+    #src/vgpu_d3d.h
 )
 
 if (VGPU_BUILD_SHARED)
@@ -104,7 +104,7 @@ endif ()
 target_compile_definitions(vgpu PRIVATE VGPU_IMPLEMENTATION)
 
 if (VGPU_BACKEND_D3D11)
-    target_compile_definitions(vgpu PRIVATE VGPU_BACKEND_D3D11)
+    #target_compile_definitions(vgpu PRIVATE VGPU_BACKEND_D3D11)
 endif ()
 
 if (VGPU_BACKEND_VULKAN)

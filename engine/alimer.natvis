@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="alimer::ArrayView&lt;*&gt;">
+        <DisplayString Condition="(end_ - begin_) == 0">Empty</DisplayString>
+        <DisplayString Condition="(end_ - begin_) != 0">size = {end_ - begin_}</DisplayString>
+        <Expand>
+            <Item Name="[size]" ExcludeView="simple">(end_ - begin_)</Item>
+            <ArrayItems>
+                <Size>(end_ - begin_)</Size>
+                <ValuePointer>($T1*)begin_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="alimer::Vector&lt;*,*&gt;">
+        <DisplayString Condition="size_ == 0">Empty</DisplayString>
+        <DisplayString Condition="size_ != 0">size = {size_}</DisplayString>
+        <Expand>
+            <Item Name="[size]" ExcludeView="simple">size_</Item>
+            <Item Name="[capacity]" ExcludeView="simple">capacity_</Item>
+            <ArrayItems>
+                <Size>size_</Size>
+                <ValuePointer>($T1*)data_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+</AutoVisualizer>

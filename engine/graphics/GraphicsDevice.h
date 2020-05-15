@@ -69,5 +69,5 @@ namespace alimer
     ALIMER_API std::set<GraphicsAPI> GetAvailableGraphicsAPI();
 
     /// Create new graphics device
-    ALIMER_API std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc* pDesc);
+    ALIMER_API std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc& desc);
 }

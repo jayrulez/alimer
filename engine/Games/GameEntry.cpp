@@ -25,6 +25,7 @@
 #include "Games/Game.h"
 #include "core/Platform.h"
 #include "core/String.h"
+#include "Containers/Array.h"
 
 #ifdef _WIN32
     #include <foundation/windows.h>
@@ -57,12 +58,11 @@ int main(int argc, char* argv[])
     int     argc;
     argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     // Ignore the first argument containing the application full path
-    vector<wstring> arg_strings(argv + 1, argv + argc);
-    vector<string>  args;
+    alimer::Vector<string>  args;
 
-    for (auto& arg : arg_strings)
+    for (int i = 0; i < argc;  i++)
     {
-        args.push_back(alimer::ToUtf8(arg));
+        args.Push(alimer::ToUtf8(argv[i]));
     }
 
     alimer::Platform::OpenConsole();
