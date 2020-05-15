@@ -34,7 +34,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-#define STB_DS_IMPLEMENTATION
+//#define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
 
 typedef struct window_t {

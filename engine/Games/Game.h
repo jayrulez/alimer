@@ -49,8 +49,6 @@ namespace alimer
     };
 
     class InputManager;
-    class IGraphicsDevice;
-    class ISwapChain;
 
     class ALIMER_API Game : public Object
     {
@@ -103,8 +101,6 @@ namespace alimer
         GameTime time;
         window_t* main_window = nullptr;
         std::vector<GameSystem*> gameSystems;
-        std::unique_ptr<IGraphicsDevice> graphicsDevice;
-        RefPtr<ISwapChain> swapChain;
 
         InputManager* input;
         bool headless{ false };

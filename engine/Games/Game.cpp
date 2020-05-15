@@ -49,17 +49,20 @@ namespace alimer
         }
 
         gameSystems.clear();
-        swapChain.Reset();
-        graphicsDevice.reset();
+        vgpu_shutdown();
         window_destroy(main_window);
         os_shutdown();
     }
 
-    static vgpu_buffer* vertexBuffer;
+    /*static vgpu_buffer* vertexBuffer;
     static vgpu_buffer* indexBuffer;
     static vgpu_buffer* uboBuffer;
     static vgpu_shader shader;
-    static agpu_pipeline render_pipeline;
+    static agpu_pipeline render_pipeline;*/
+
+    static void  gpu_callback(void* context, vgpu_log_level level, const char* message)
+    {
+    }
 
     void Game::InitBeforeRun()
     {
@@ -72,16 +75,24 @@ namespace alimer
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
 
-            GraphicsDeviceDesc deviceDesc = { };
-#ifdef _DEBUG
-            deviceDesc.flags |= GraphicsDeviceFlags::Debug;
-#endif
-            graphicsDevice = CreateGraphicsDevice(GraphicsAPI::Vulkan, &deviceDesc);
+            vgpu_swapchain_info swapchain_info = {};
+            swapchain_info.handle = window_handle(main_window);
+            swapchain_info.width = window_width(main_window);
+            swapchain_info.height = window_height(main_window);
 
-            SwapChainDesc swapChainDesc = {};
-            swapChainDesc.width = window_width(main_window);
-            swapChainDesc.height = window_height(main_window);
-            swapChain = graphicsDevice->CreateSwapChain(main_window, graphicsDevice->GetGraphicsQueue(), &swapChainDesc);
+            vgpu_config gpu_config = { };
+            gpu_config.type = VGPU_BACKEND_TYPE_VULKAN;
+            //deviceDesc.type = VGPU_BACKEND_TYPE_OPENGL;
+#ifdef _DEBUG
+            gpu_config.debug = true;
+#endif
+            gpu_config.callback = gpu_callback;
+            gpu_config.context = this;
+            gpu_config.get_proc_address = gl_get_proc_address;
+            gpu_config.swapchain_info = &swapchain_info;
+            if (!vgpu_init(&gpu_config)) {
+                headless = true;
+            }
         }
 
         Initialize();
@@ -115,9 +126,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        if (!graphicsDevice->BeginFrame()) {
-            return false;
-        }
+        vgpu_frame_begin();
 
         for (auto gameSystem : gameSystems)
         {
@@ -134,12 +143,12 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
-        auto texture = swapChain->GetNextTexture();
+        /*auto texture = swapChain->GetNextTexture();
 
         ICommandBuffer& commandBuffer = graphicsDevice->GetGraphicsQueue()->RequestCommandBuffer();
         //context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
         commandBuffer.Present(swapChain);
-        graphicsDevice->GetGraphicsQueue()->Submit(commandBuffer);
+        graphicsDevice->GetGraphicsQueue()->Submit(commandBuffer);*/
     }
 
 #include <DirectXMath.h>
@@ -157,16 +166,17 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->EndFrame();
+        vgpu_frame_end();
 
         return;
 
+#if TODO
         /*auto clear_color = Colors::CornflowerBlue;
-        auto defaultRenderPass = vgpu_get_default_render_pass();
-        vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
-        vgpu_cmd_begin_render_pass(defaultRenderPass);
-        vgpu_cmd_end_render_pass();
-        */
+auto defaultRenderPass = vgpu_get_default_render_pass();
+vgpu_render_pass_set_color_clear_value(defaultRenderPass, 0, &clear_color.r);
+vgpu_cmd_begin_render_pass(defaultRenderPass);
+vgpu_cmd_end_render_pass();
+*/
         uint32_t width = window_width(main_window);
         uint32_t height = window_height(main_window);
 
@@ -201,6 +211,8 @@ namespace alimer
         vgpuCmdEndRenderPass();
         vgpuFrameFinish();
         window_swap_buffers(main_window);
+#endif // TODO
+
     }
 
     int Game::Run()
@@ -281,4 +293,4 @@ namespace alimer
             EndDraw();
         }
     }
-}
+        }

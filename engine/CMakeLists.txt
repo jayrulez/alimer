@@ -45,19 +45,11 @@ define_engine_source_files(
     core
     math
     os
-    gpu
+    #gpu
     graphics
     Input
     Games
 )
-
-if (ALIMER_GRAPHICS_OPENGL)
-    #define_engine_source_files(graphics/opengl)
-endif()
-
-if (ALIMER_GRAPHICS_VULKAN)
-    define_engine_source_files(graphics/vulkan)
-endif()
 
 group_sources()
 
@@ -76,35 +68,10 @@ target_include_directories(alimer PUBLIC
 )
 
 target_link_libraries(alimer PUBLIC
+    vgpu
     stb
     imgui
 )
-
-if (ALIMER_GRAPHICS_OPENGL)
-    target_include_directories(alimer PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/gpu/libs/glad/include>
-    )
-
-    target_compile_definitions(alimer PRIVATE GPU_GL_BACKEND)
-    target_sources(alimer PRIVATE
-        gpu/libs/glad/include/KHR/khrplatform.h
-        gpu/libs/glad/include/glad/glad.h
-        gpu/libs/glad/src/glad.c
-    )
-endif ()
-
-if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(alimer PRIVATE volk vma)
-    target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
-endif ()
-
-if (ALIMER_GRAPHICS_D3D11)
-    target_compile_definitions(alimer PRIVATE GPU_D3D11_BACKEND)
-endif ()
-
-if (ALIMER_GRAPHICS_D3D12)
-    target_compile_definitions(alimer PRIVATE GPU_D3D12_BACKEND)
-endif ()
 
 # Link platform specific libraries
 if(ANDROID)

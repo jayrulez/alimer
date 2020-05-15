@@ -25,7 +25,7 @@
 #include "core/Assert.h"
 #include "graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_GRAPHICS_VULKAN)
+#if defined(ALIMER_GRAPHICS_VULKAN) && defined(BLAH)
 #   include "graphics/vulkan/GraphicsDeviceVK.h"
 #endif
 
@@ -64,10 +64,6 @@ namespace alimer
 
         if (availableProviders.empty())
         {
-#if defined(ALIMER_GRAPHICS_VULKAN)
-            if (GraphicsDeviceVK::IsAvailable())
-                availableProviders.insert(GraphicsAPI::Vulkan);
-#endif
 
 #if defined(ALIMER_GRAPHICS_D3D12)
             //if (D3D12GraphicsDevice::IsAvailable())
@@ -105,22 +101,6 @@ namespace alimer
                 api = GraphicsAPI::Null;
         }
 
-        switch (api)
-        {
-#if defined(ALIMER_GRAPHICS_VULKAN)
-        case GraphicsAPI::Vulkan:
-        {
-            ALIMER_LOGINFO("Using Vulkan render driver");
-            auto device = std::make_unique<GraphicsDeviceVK>();
-            if (device->Init(pDesc))
-            {
-                return device;
-            }
-            return nullptr;
-        }
-#endif
-        default:
-            return nullptr;
-        }
+        return nullptr;
     }
 }

@@ -63,39 +63,8 @@ else()
     set(VGPU_BACKEND_OPENGL ON CACHE BOOL "Include OpenGL renderer")
 endif ()
 
-option (VGPU_BUILD_SAMPLES "Build the vgpu samples" ON)
-option (VGPU_INSTALL "Generate installation target" ON)
-option(BUILD_SHARED_LIBS "Build shared library" ON)
-
-include(GNUInstallDirs)
-
-# Setup
-if (EMSCRIPTEN)
-  string(CONCAT VGPU_EMSCRIPTEN_FLAGS
-    "-O3 "
-    "-s WASM=1 "
-    "-s USE_GLFW=3 "
-    "-s USE_WEBGL2=1 "
-    "-s GL_PREINITIALIZED_CONTEXT=1 "
-    "-s USE_ZLIB=1 "
-    "-s USE_PTHREADS=0 "
-    "-s FULL_ES3=1 "
-    "-s FORCE_FILESYSTEM=1 "
-    "-s ALLOW_MEMORY_GROWTH=1 "
-    "-s \"EXTRA_EXPORTED_RUNTIME_METHODS=['getValue','setValue']\" "
-    "--shell-file \"${CMAKE_CURRENT_SOURCE_DIR}/src/resources/vgpu.html\""
-  )
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${VGPU_EMSCRIPTEN_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${VGPU_EMSCRIPTEN_FLAGS}")
-  set(CMAKE_EXECUTABLE_SUFFIX ".html")
-
-elseif (ANDROID)
-elseif (UNIX)
-  if (APPLE)
-    set (CMAKE_MACOSX_RPATH 1)
-  endif ()
-  find_package(PkgConfig)
-endif ()
+option(VGPU_BUILD_SAMPLES "Build the vgpu samples" ON)
+option(VGPU_BUILD_SHARED  "Build as shared library" OFF)
 
 # third_party
 
@@ -118,54 +87,68 @@ set(SOURCE_FILES
     include/vgpu/vgpu.h
     src/stb_ds.h
     src/vgpu_backend.h
-    src/vgpu.c
+    src/vgpu.cpp
+    src/vgpu_vk.cpp
+    src/vgpu_d3d11.cpp
+    src/vgpu_d3d12.cpp
+    src/vgpu_gl.cpp
+    src/vgpu_d3d.h
 )
 
-add_library (vgpu ${SOURCE_FILES})
+if (VGPU_BUILD_SHARED)
+    add_library (vgpu SHARED ${SOURCE_FILES})
+    target_compile_definitions(vgpu PRIVATE VGPU_SHARED_LIBRARY)
+else ()
+    add_library (vgpu ${SOURCE_FILES})
+endif ()
 target_compile_definitions(vgpu PRIVATE VGPU_IMPLEMENTATION)
 
-if (BUILD_SHARED_LIBS)
-    target_compile_definitions(vgpu PRIVATE VGPU_SHARED_LIBRARY)
-endif ()
-
 if (VGPU_BACKEND_D3D11)
-    target_sources(vgpu PRIVATE
-        src/vgpu_d3d.h
-        src/vgpu_d3d11.c
-    )
-
-    target_compile_definitions(vgpu PRIVATE VGPU_D3D11)
+    target_compile_definitions(vgpu PRIVATE VGPU_BACKEND_D3D11)
 endif ()
 
 if (VGPU_BACKEND_VULKAN)
     target_sources(vgpu PRIVATE
-        src/vk/vkbind.h
-        src/vk/vk_mem_alloc.h
-        src/vk/vk_mem_alloc.cpp
-        src/vgpu_vk.c
+        src/lib/vkbind/vkbind.h
+        src/lib/vma/vk_mem_alloc.h
     )
 
     if (MSVC)
         target_sources(vgpu PRIVATE
-            src/vk/vk_mem_alloc.natvis
+            src/lib/vma/vk_mem_alloc.natvis
         )
     endif ()
 
-    target_compile_definitions(vgpu PRIVATE VGPU_VULKAN)
-    #target_link_libraries(vgpu PRIVATE vulkan)
+    target_compile_definitions(vgpu PRIVATE VGPU_BACKEND_VULKAN)
+endif ()
+
+# OpenGL files
+if (VGPU_BACKEND_OPENGL)
+    target_sources(vgpu PRIVATE
+        src/lib/glad/include/KHR/khrplatform.h
+        src/lib/glad/include/glad/glad.h
+        src/lib/glad/src/glad.c
+    )
+
+    target_include_directories(vgpu PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lib/glad/include>
+    )
+
+    target_compile_definitions(vgpu PRIVATE VGPU_BACKEND_OPENGL)
 endif ()
 
 set_target_properties(vgpu PROPERTIES
     VERSION ${VGPU_VERSION}
     SOVERSION ${VGPU_VERSION_MAJOR}
     POSITION_INDEPENDENT_CODE ON
-    CXX_STANDARD 11
-    C_STANDARD 99
 )
 
 target_include_directories(vgpu PUBLIC
     "$<BUILD_INTERFACE:${VGPU_ROOT_DIR}/include>"
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_FULL_INCLUDEDIR}>"
+)
+
+target_include_directories(vgpu PRIVATE
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lib>"
 )
 
 if (MSVC)
@@ -176,29 +159,28 @@ if (MSVC)
     )
 endif ()
 
-if (VGPU_INSTALL)
-    install(TARGETS vgpu
-        EXPORT vgpu
-        RUNTIME DESTINATION "bin"
-        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    )
-endif()
-
 # samples
 if (VGPU_BUILD_SAMPLES)
     add_subdirectory(samples)
 endif ()
 
-if (VGPU_INSTALL)
-    install(DIRECTORY include/vgpu DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN vgpu.h)
-endif ()
-
 # Print current build configuration
-message(STATUS "Build Configuration:")
-if (BUILD_SHARED_LIBS)
+message(STATUS "VGPU Build Configuration:")
+if (VGPU_BUILD_SHARED)
     message(STATUS "  Library         SHARED")
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
-message(STATUS "  Renderer        ${VGPU_RENDERER}")
+
+if (VGPU_BACKEND_D3D11)
+    message (STATUS "Build Renderer:        Direct3D11")
+endif()
+if (VGPU_BACKEND_D3D12)
+    message (STATUS "Build Renderer:        Direct3D12")
+endif()
+if (VGPU_BACKEND_VULKAN)
+    message (STATUS "Build Renderer:        Vulkan")
+endif()
+if (VGPU_BACKEND_OPENGL)
+    message (STATUS "Build Renderer:        OpenGL")
+endif()

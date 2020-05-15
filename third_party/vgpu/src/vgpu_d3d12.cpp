@@ -20,10 +20,8 @@
 // THE SOFTWARE.
 //
 
-#define VGPU_IMPLEMENTATION
-#include "vgpu_internal.h"
-
-#if VGPU_D3D12
+#include "vgpu_backend.h"
+#if defined(VGPU_BACKEND_D3D12) 
 
 #if TODO_D3D12
 #include <wrl/client.h>
@@ -2920,15 +2918,22 @@ void VgpuRendererD3D12::cmdEndRenderPass(VgpuCommandBuffer commandBuffer) {
 
 }
 
-
-VgpuBool32 vgpuIsD3D12Supported(VgpuBool32 headless)
-{
-    return false; // d3d12::isSupported();
+bool vgpu_d3d12_supported(void) {
+    return false;
 }
 
-VgpuRendererI* vgpuCreateD3D12Backend()
-{
-    return new VgpuRendererD3D12();
+VGPUDevice vgpu_d3d12_create_device(void) {
+    return nullptr;
 }
 
-#endif // VGPU_D3D12
+#else
+
+bool vgpu_d3d12_supported(void) {
+    return false;
+}
+
+vgpu_renderer* vgpu_d3d12_create_device(void) {
+    return nullptr;
+}
+
+#endif // defined(VGPU_BACKEND_D3D12)

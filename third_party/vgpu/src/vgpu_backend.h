@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019 Amer Koleci.
+// Copyright (c) 2019-2020 Amer Koleci.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,16 +24,12 @@
 
 #include "vgpu/vgpu.h"
 #include <string.h> /* memset */
-#include <float.h> /* FLT_MAX */
+#include <new>
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #   include <malloc.h>
 #else
 #   include <alloca.h>
-#endif
-
-#ifndef __cplusplus
-#  define nullptr ((void*)0)
 #endif
 
 #ifndef VGPU_ASSERT
@@ -55,7 +51,7 @@
 #   define VGPU_FREE(p) free(p)
 #endif
 
-#define VGPU_CHECK(c, s) if (!(c)) { vgpu_log_error(s); _VGPU_BREAKPOINT(); }
+#define VGPU_CHECK(c, s) if (!(c)) { vgpu_log(VGPU_LOG_LEVEL_ERROR, s); _VGPU_BREAKPOINT(); }
 
 #if defined(__GNUC__) || defined(__clang__)
 #   if defined(__i386__) || defined(__x86_64__)
@@ -96,94 +92,170 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_max(a,b) ((a>b)?a:b)
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 
-typedef struct VGPUDeviceImpl* VGPUDevice;
-typedef struct VGPURenderer VGPURenderer;
+namespace vgpu
+{
+    template <typename T, uint32_t MAX_COUNT>
+    struct Pool
+    {
+        void init()
+        {
+            values = (T*)mem;
+            for (int i = 0; i < MAX_COUNT + 1; ++i) {
+                new (&values[i]) int(i + 1);
+            }
+            new (&values[MAX_COUNT]) int(-1);
+            first_free = 1;
+        }
 
-typedef struct VGPUDeviceImpl {
-    /* Opaque pointer for the renderer. */
-    VGPURenderer* renderer;
+        int alloc()
+        {
+            if (first_free == -1) return -1;
 
-    bool (*init)(VGPUDevice device, const vgpu_config* config);
-    void (*destroy)(VGPUDevice device);
-    vgpu_caps(*query_caps)(VGPURenderer* driver_data);
-    VGPURenderPass (*get_default_render_pass)(VGPURenderer* driver_data);
+            const int id = first_free;
+            first_free = *((int*)&values[id]);
+            new (&values[id]) T;
+            return id;
+        }
 
-    vgpu_pixel_format(*get_default_depth_format)(VGPURenderer* driver_data);
-    vgpu_pixel_format(*get_default_depth_stencil_format)(VGPURenderer* driver_data);
+        void dealloc(uint32_t idx)
+        {
+            values[idx].~T();
+            new (&values[idx]) int(first_free);
+            first_free = idx;
+        }
 
-    void (*wait_idle)(VGPURenderer* driver_data);
-    void (*begin_frame)(VGPURenderer* driver_data);
-    void (*end_frame)(VGPURenderer* driver_data);
+        alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)];
+        T* values;
+        int first_free;
 
-    /* Buffer */
-    vgpu_buffer(*create_buffer)(VGPURenderer* driverData, const vgpu_buffer_desc* desc);
-    void (*destroy_buffer)(VGPURenderer* driverData, vgpu_buffer handle);
+        T& operator[](int idx) { return values[idx]; }
+        bool isFull() const { return first_free == -1; }
+    };
+
+    using Hash = uint64_t;
+
+    class Hasher
+    {
+    public:
+        explicit Hasher(Hash h_)
+            : h(h_)
+        {
+        }
+
+        Hasher() = default;
+
+        template <typename T>
+        inline void data(const T* data_, size_t size)
+        {
+            size /= sizeof(*data_);
+            for (size_t i = 0; i < size; i++)
+                h = (h * 0x100000001b3ull) ^ data_[i];
+        }
+
+        inline void u32(uint32_t value)
+        {
+            h = (h * 0x100000001b3ull) ^ value;
+        }
+
+        inline void s32(int32_t value)
+        {
+            u32(uint32_t(value));
+        }
+
+        inline void f32(float value)
+        {
+            union
+            {
+                float f32;
+                uint32_t u32;
+            } u;
+            u.f32 = value;
+            u32(u.u32);
+        }
+
+        inline void u64(uint64_t value)
+        {
+            u32(value & 0xffffffffu);
+            u32(value >> 32);
+        }
+
+        template <typename T>
+        inline void pointer(T* ptr)
+        {
+            u64(reinterpret_cast<uintptr_t>(ptr));
+        }
+
+        inline void string(const char* str)
+        {
+            char c;
+            u32(0xff);
+            while ((c = *str++) != '\0')
+                u32(uint8_t(c));
+        }
+
+        inline Hash get() const
+        {
+            return h;
+        }
+
+    private:
+        Hash h = 0xcbf29ce484222325ull;
+    };
+}
+
+struct vgpu_renderer {
+    bool (*init)(const vgpu_config* config);
+    void (*destroy)(void);
+    vgpu_backend_type(*get_backend)(void);
+    vgpu_caps(*get_caps)(void);
+    VGPUTextureFormat(*GetDefaultDepthFormat)(void);
+    VGPUTextureFormat(*GetDefaultDepthStencilFormat)(void);
+
+    void (*begin_frame)(void);
+    void (*end_frame)(void);
 
     /* Texture */
-    vgpu_texture(*create_texture)(VGPURenderer* driverData, const vgpu_texture_desc* desc);
-    void (*destroy_texture)(VGPURenderer* driverData, vgpu_texture handle);
-    vgpu_texture_desc(*query_texture_desc)(vgpu_texture handle);
+    VGPUTexture(*create_texture)(const VGPUTextureDescriptor* desc);
+    void (*destroy_texture)(VGPUTexture handle);
+
+    /* Buffer */
+    VGPUBuffer(*bufferCreate)(const VGPUBufferDescriptor* desc);
+    void (*bufferDestroy)(VGPUBuffer handle);
 
     /* Sampler */
-    vgpu_sampler(*samplerCreate)(VGPURenderer* driver_data, const vgpu_sampler_desc* desc);
-    void (*samplerDestroy)(VGPURenderer* driver_data, vgpu_sampler handle);
-
-    /* RenderPass */
-    VGPURenderPass (*renderPassCreate)(VGPURenderer* driver_data, const VGPURenderPassDescriptor* descriptor);
-    void (*renderPassDestroy)(VGPURenderer* driver_data, VGPURenderPass handle);
-    void (*renderPassGetExtent)(VGPURenderer* driver_data, VGPURenderPass handle, uint32_t* width, uint32_t* height);
-    void (*render_pass_set_color_clear_value)(VGPURenderPass handle, uint32_t attachment_index, const float colorRGBA[4]);
-    void (*render_pass_set_depth_stencil_clear_value)(VGPURenderPass handle, float depth, uint8_t stencil);
-
-    /* Shader */
-    vgpu_shader(*create_shader)(VGPURenderer* driver_data, const vgpu_shader_desc* desc);
-    void (*destroy_shader)(VGPURenderer* driver_data, vgpu_shader handle);
-
-    /* Pipeline */
-    vgpu_pipeline(*create_render_pipeline)(VGPURenderer* driver_data, const vgpu_render_pipeline_desc* desc);
-    vgpu_pipeline(*create_compute_pipeline)(VGPURenderer* driver_data, const VgpuComputePipelineDescriptor* desc);
-    void (*destroy_pipeline)(VGPURenderer* driver_data, vgpu_pipeline handle);
+    VGPUSampler(*samplerCreate)(const VGPUSamplerDescriptor* desc);
+    void (*samplerDestroy)(VGPUSampler handle);
 
     /* Commands */
-    void (*cmdBeginRenderPass)(VGPURenderer* driver_data, VGPURenderPass handle);
-    void (*cmdEndRenderPass)(VGPURenderer* driver_data);
-} VGPUDeviceImpl;
+    void (*cmdBeginRenderPass)(const VGPURenderPassDescriptor* descriptor);
+    void (*cmdEndRenderPass)(void);
+};
 
 /* d3d11 */
 extern bool vgpu_d3d11_supported(void);
-extern VGPUDevice d3d11_create_device(void);
+extern vgpu_renderer* vgpu_d3d11_create_device(void);
+
+/* d3d12 */
+extern bool vgpu_d3d12_supported(void);
+extern vgpu_renderer* vgpu_d3d12_create_device(void);
 
 /* vulkan */
 extern bool vgpu_vk_supported(void);
-extern VGPUDevice vk_create_device(void);
+extern vgpu_renderer* vgpu_vk_create_device(void);
 
-#define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
+/* opengl */
+extern bool vgpu_opengl_supported(void);
+extern vgpu_renderer* vgpu_opengl_create_device(void);
+
+#define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
 ASSIGN_DRIVER_FUNC(destroy, name)\
-ASSIGN_DRIVER_FUNC(query_caps, name)\
-ASSIGN_DRIVER_FUNC(get_default_render_pass, name)\
-ASSIGN_DRIVER_FUNC(get_default_depth_format, name)\
-ASSIGN_DRIVER_FUNC(get_default_depth_stencil_format, name)\
-ASSIGN_DRIVER_FUNC(wait_idle, name)\
+ASSIGN_DRIVER_FUNC(get_backend, name)\
+ASSIGN_DRIVER_FUNC(get_caps, name)\
+ASSIGN_DRIVER_FUNC(GetDefaultDepthFormat, name)\
+ASSIGN_DRIVER_FUNC(GetDefaultDepthStencilFormat, name)\
 ASSIGN_DRIVER_FUNC(begin_frame, name)\
 ASSIGN_DRIVER_FUNC(end_frame, name)\
-ASSIGN_DRIVER_FUNC(create_buffer, name)\
-ASSIGN_DRIVER_FUNC(destroy_buffer, name)\
 ASSIGN_DRIVER_FUNC(create_texture, name)\
-ASSIGN_DRIVER_FUNC(destroy_texture, name)\
-ASSIGN_DRIVER_FUNC(query_texture_desc, name)\
-ASSIGN_DRIVER_FUNC(samplerCreate, name)\
-ASSIGN_DRIVER_FUNC(samplerDestroy, name)\
-ASSIGN_DRIVER_FUNC(renderPassCreate, name)\
-ASSIGN_DRIVER_FUNC(renderPassDestroy, name)\
-ASSIGN_DRIVER_FUNC(renderPassGetExtent, name)\
-ASSIGN_DRIVER_FUNC(render_pass_set_color_clear_value, name)\
-ASSIGN_DRIVER_FUNC(render_pass_set_depth_stencil_clear_value, name)\
-ASSIGN_DRIVER_FUNC(create_shader, name)\
-ASSIGN_DRIVER_FUNC(destroy_shader, name)\
-ASSIGN_DRIVER_FUNC(create_render_pipeline, name)\
-ASSIGN_DRIVER_FUNC(create_compute_pipeline, name)\
-ASSIGN_DRIVER_FUNC(destroy_pipeline, name)\
-ASSIGN_DRIVER_FUNC(cmdBeginRenderPass, name)\
-ASSIGN_DRIVER_FUNC(cmdEndRenderPass, name)
+ASSIGN_DRIVER_FUNC(destroy_texture, name)

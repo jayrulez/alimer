@@ -81,18 +81,6 @@ if (ALIMER_BUILD_SAMPLES)
     add_subdirectory(samples)
 endif ()
 
-# Print current build configuration
-message (STATUS "Build Configuration:")
-if (ALIMER_GRAPHICS_D3D11)
-    message (STATUS "Graphics API:          Direct3D11 (ALIMER_GRAPHICS_D3D11)")
-endif()
-if (ALIMER_GRAPHICS_D3D12)
-    message (STATUS "Graphics API:          Direct3D12 (ALIMER_GRAPHICS_D3D12)")
-endif()
-if (ALIMER_GRAPHICS_VULKAN)
-    message (STATUS "Graphics API:          Vulkan (ALIMER_GRAPHICS_VULKAN)")
-endif()
-
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
     set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Editor")
