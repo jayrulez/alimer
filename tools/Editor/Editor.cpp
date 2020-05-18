@@ -35,7 +35,7 @@ namespace alimer
 
     }
 
-    Game* ApplicationCreate(const Vector<std::string>& args)
+    Game* ApplicationCreate(const std::vector<std::string>& args)
     {
         ApplicationDummy();
 

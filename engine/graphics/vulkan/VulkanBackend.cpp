@@ -21,7 +21,7 @@
 //
 
 #include "VulkanBackend.h"
-#include "Containers/Array.h"
+#include <vector>
 
 namespace alimer
 {
@@ -142,7 +142,7 @@ namespace alimer
         return "UNKNOWN";
     }
 
-    uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const Vector<VkQueueFamilyProperties>& queueFamilyProperties)
+    uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilyProperties)
     {
         // Dedicated queue for compute
         // Try to find a queue family index that supports compute but not graphics
@@ -190,7 +190,7 @@ namespace alimer
         uint32_t queueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
 
-        Vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
         QueueFamilyIndices indices = {};

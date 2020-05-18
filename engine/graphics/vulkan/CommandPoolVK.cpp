@@ -40,7 +40,7 @@ namespace alimer
 
     CommandPoolVK::~CommandPoolVK()
     {
-        primaryCommandBuffers.Clear();
+        primaryCommandBuffers.clear();
 
         if (handle != VK_NULL_HANDLE)
         {
@@ -68,15 +68,15 @@ namespace alimer
         {
             if (activePrimaryCommandBufferCount < primaryCommandBuffers.size())
             {
-                auto &result = primaryCommandBuffers.At(activePrimaryCommandBufferCount++);
+                auto &result = primaryCommandBuffers.at(activePrimaryCommandBufferCount++);
                 result->Begin();
                 return *result;
             }
 
-            primaryCommandBuffers.EmplaceBack(std::make_unique<CommandBufferVK>(queue, this, level));
-            primaryCommandBuffers.Back()->Begin();
+            primaryCommandBuffers.emplace_back(std::make_unique<CommandBufferVK>(queue, this, level));
+            primaryCommandBuffers.back()->Begin();
             activePrimaryCommandBufferCount++;
-            return *primaryCommandBuffers.Back();
+            return *primaryCommandBuffers.back();
         }
         else
         {

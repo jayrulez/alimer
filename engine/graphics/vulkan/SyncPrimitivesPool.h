@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Containers/Array.h"
 #include "VulkanBackend.h"
+#include <vector>
 
 namespace alimer
 {
@@ -51,9 +51,9 @@ namespace alimer
         GraphicsDeviceVK& device;
 
         uint32_t activeSemaphoreCount{ 0 };
-        Vector<VkSemaphore> semaphores;
+        std::vector<VkSemaphore> semaphores;
 
         uint32_t activeFenceCount{ 0 };
-        Vector<VkFence> fences;
+        std::vector<VkFence> fences;
     };
 }

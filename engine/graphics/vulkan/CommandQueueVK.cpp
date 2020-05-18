@@ -95,10 +95,10 @@ namespace alimer
             return;
         }
 
-        signalSemaphores.Push(signalSemaphore);
+        signalSemaphores.push_back(signalSemaphore);
 
-        waitSemaphores.Clear();
-        waitStages.Clear();
+        waitSemaphores.clear();
+        waitStages.clear();
     }
 
     void CommandQueueVK::Present(VkSwapchainKHR swapChain, uint32_t imageIndex)
@@ -118,13 +118,13 @@ namespace alimer
             //handle_surface_changes();
         }
 
-        signalSemaphores.Clear();
+        signalSemaphores.clear();
     }
 
     void CommandQueueVK::AddWaitSemaphore(VkSemaphore semaphore, VkPipelineStageFlags waitStage)
     {
-        waitSemaphores.Push(semaphore);
-        waitStages.Push(waitStage);
+        waitSemaphores.push_back(semaphore);
+        waitStages.push_back(waitStage);
     }
 
     IGraphicsDevice* CommandQueueVK::GetDevice() const

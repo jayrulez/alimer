@@ -37,7 +37,7 @@ namespace alimer
     {
         /* Init OS first */
         os_init();
-        gameSystems.Push(input);
+        gameSystems.push_back(input);
     }
 
     Game::~Game()
@@ -47,7 +47,7 @@ namespace alimer
             SafeDelete(gameSystem);
         }
 
-        gameSystems.Clear();
+        gameSystems.clear();
         graphicsDevice.reset();
         window_destroy(main_window);
         os_shutdown();

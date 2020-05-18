@@ -90,7 +90,7 @@ namespace alimer
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         // The GPU properties
         VkPhysicalDeviceProperties physicalDeviceProperties{};
-        Vector<VkQueueFamilyProperties> queueFamilyProperties;
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
 
         QueueFamilyIndices queueFamilyIndices{};
         PhysicalDeviceExtensions physicalDeviceExts;
@@ -119,7 +119,7 @@ namespace alimer
             std::unique_ptr<CommandPoolVK> commandPool;
         };
 
-        Vector<std::unique_ptr<Frame>> frames;
+        std::vector<std::unique_ptr<Frame>> frames;
         uint32_t frameIndex = 0;
         uint32_t maxInflightFrames{ 3 };
 

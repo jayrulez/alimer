@@ -23,8 +23,8 @@
 #pragma once
 
 #include "graphics/ICommandBuffer.h"
-#include "Containers/Array.h"
 #include "VulkanBackend.h"
+#include <vector>
 #include <memory>
 
 namespace alimer
@@ -49,6 +49,6 @@ namespace alimer
         VkCommandPool handle;
 
         uint32_t activePrimaryCommandBufferCount{ 0 };
-        Vector<std::unique_ptr<CommandBufferVK>> primaryCommandBuffers;
+        std::vector<std::unique_ptr<CommandBufferVK>> primaryCommandBuffers;
     };
 }

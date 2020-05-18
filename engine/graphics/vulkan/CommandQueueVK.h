@@ -24,7 +24,7 @@
 
 #include "graphics/ICommandQueue.h"
 #include "VulkanBackend.h"
-#include "Containers/Array.h"
+#include <vector>
 #include <memory>
 
 namespace alimer
@@ -56,8 +56,8 @@ namespace alimer
         CommandQueueType type;
         VkQueue handle = VK_NULL_HANDLE;
         uint32_t queueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        Vector<VkSemaphore> waitSemaphores;
-        Vector<VkPipelineStageFlags> waitStages;
-        Vector<VkSemaphore> signalSemaphores;
+        std::vector<VkSemaphore> waitSemaphores;
+        std::vector<VkPipelineStageFlags> waitStages;
+        std::vector<VkSemaphore> signalSemaphores;
     };
 }

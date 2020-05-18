@@ -35,11 +35,10 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-set(SOURCE_FILES alimer.natvis)
+#set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     foundation
-    Containers
     core
     math
     os
@@ -51,6 +50,11 @@ define_engine_source_files(
 if (ALIMER_GRAPHICS_VULKAN)
     define_engine_source_files(graphics/vulkan)
 endif()
+
+if (ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(graphics/d3d)
+    define_engine_source_files(graphics/d3d12)
+endif ()
 
 group_sources()
 
