@@ -31,6 +31,70 @@
 
 namespace alimer
 {
+    std::set<GraphicsAPI> GraphicsDevice::GetAvailableGraphicsAPI()
+    {
+        static std::set<GraphicsAPI> availableProviders;
+
+        if (availableProviders.empty())
+        {
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (GraphicsDeviceVK::IsAvailable())
+                availableProviders.insert(GraphicsAPI::Vulkan);
+#endif
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+            //if (D3D12GraphicsDevice::IsAvailable())
+           //     availableProviders.insert(BackendType::Direct3D12);
+#endif
+
+#if defined(ALIMER_GRAPHICS_OPENGL)
+           // availableProviders.insert(BackendType::OpenGL);
+#endif
+        }
+
+        return availableProviders;
+    }
+
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(GraphicsAPI api, window_t* window, const GraphicsDeviceDesc& desc)
+    {
+        if (api == GraphicsAPI::Count)
+        {
+            auto availableBackends = GetAvailableGraphicsAPI();
+
+            if (availableBackends.find(GraphicsAPI::Metal) != availableBackends.end())
+                api = GraphicsAPI::Metal;
+            else if (availableBackends.find(GraphicsAPI::Direct3D12) != availableBackends.end())
+                api = GraphicsAPI::Direct3D12;
+            else if (availableBackends.find(GraphicsAPI::Vulkan) != availableBackends.end())
+                api = GraphicsAPI::Vulkan;
+            else if (availableBackends.find(GraphicsAPI::Direct3D11) != availableBackends.end())
+                api = GraphicsAPI::Direct3D11;
+            else if (availableBackends.find(GraphicsAPI::OpenGL) != availableBackends.end())
+                api = GraphicsAPI::OpenGL;
+            else
+                api = GraphicsAPI::Null;
+        }
+
+        switch (api)
+        {
+        case GraphicsAPI::Vulkan:
+#if defined(ALIMER_GRAPHICS_VULKAN)
+            if (GraphicsDeviceVK::IsAvailable())
+            {
+                auto device = std::make_unique<GraphicsDeviceVK>();
+                if (device->Init(window, desc))
+                {
+                    return device;
+                }
+                return nullptr;
+            }
+#endif
+
+        default:
+            return nullptr;
+        }
+    }
+
     /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(_gpuResourceMutex);
@@ -58,68 +122,4 @@ namespace alimer
         }
     }*/
 
-    std::set<GraphicsAPI> GetAvailableGraphicsAPI()
-    {
-        static std::set<GraphicsAPI> availableProviders;
-
-        if (availableProviders.empty())
-        {
-#if defined(ALIMER_GRAPHICS_VULKAN)
-            if (GraphicsDeviceVK::IsAvailable())
-                availableProviders.insert(GraphicsAPI::Vulkan);
-#endif
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-            //if (D3D12GraphicsDevice::IsAvailable())
-           //     availableProviders.insert(BackendType::Direct3D12);
-#endif
-
-#if defined(ALIMER_GRAPHICS_OPENGL)
-           // availableProviders.insert(BackendType::OpenGL);
-#endif
-        }
-
-        return availableProviders;
-    }
-
-
-    std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc& desc)
-    {
-        if (api == GraphicsAPI::Count)
-        {
-            auto availableBackends = GetAvailableGraphicsAPI();
-
-            if (availableBackends.find(GraphicsAPI::Metal) != availableBackends.end())
-                api = GraphicsAPI::Metal;
-            else if (availableBackends.find(GraphicsAPI::Direct3D12) != availableBackends.end())
-                api = GraphicsAPI::Direct3D12;
-            else if (availableBackends.find(GraphicsAPI::Vulkan) != availableBackends.end())
-                api = GraphicsAPI::Vulkan;
-            else if (availableBackends.find(GraphicsAPI::Direct3D11) != availableBackends.end())
-                api = GraphicsAPI::Direct3D11;
-            else if (availableBackends.find(GraphicsAPI::OpenGL) != availableBackends.end())
-                api = GraphicsAPI::OpenGL;
-            else
-                api = GraphicsAPI::Null;
-        }
-
-        switch (api)
-        {
-        case GraphicsAPI::Vulkan:
-#if defined(ALIMER_GRAPHICS_VULKAN)
-            if (GraphicsDeviceVK::IsAvailable())
-            {
-                auto device = std::make_unique<GraphicsDeviceVK>();
-                if (device->Init(desc))
-                {
-                    return device;
-                }
-                return nullptr;
-            }
-#endif
-
-        default:
-            return nullptr;
-        }
-    }
 }

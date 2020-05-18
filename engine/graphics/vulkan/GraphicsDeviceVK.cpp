@@ -21,10 +21,7 @@
 //
 
 #include "GraphicsDeviceVK.h"
-#include "SwapChainVK.h"
-#include "CommandQueueVK.h"
-#include "CommandPoolVK.h"
-#include "CommandBufferVK.h"
+#include "GraphicsContextVK.h"
 #include "TextureVK.h"
 #include "core/Utils.h"
 #include "core/Assert.h"
@@ -184,7 +181,7 @@ namespace alimer
         }
 
 
-        int32_t RatePhysicalDevice(VkPhysicalDevice physicalDevice)
+        int32_t RatePhysicalDevice(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
             VkPhysicalDeviceProperties deviceProperties;
             vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
@@ -198,7 +195,7 @@ namespace alimer
                 return 0;
             }
 
-            QueueFamilyIndices indices = FindQueueFamilies(physicalDevice, VK_NULL_HANDLE);
+            QueueFamilyIndices indices = FindQueueFamilies(physicalDevice, surface);
 
             if (!indices.IsComplete())
             {
@@ -255,27 +252,33 @@ namespace alimer
     }
 
     GraphicsDeviceVK::GraphicsDeviceVK()
-        : IGraphicsDevice()
+        : GraphicsDevice()
     {
     }
 
     GraphicsDeviceVK::~GraphicsDeviceVK()
     {
-        WaitForIdle();
-        Destroy();
+        waitForIdle();
+        destroy();
     }
 
-    bool GraphicsDeviceVK::Init(const GraphicsDeviceDesc& desc)
+    bool GraphicsDeviceVK::Init(window_t* window, const GraphicsDeviceDesc& desc)
     {
         if (!IsAvailable()) {
             return false;
         }
 
-        if (!InitInstance(desc)) {
+        const bool headless = window == nullptr;
+        if (!InitInstance(desc, headless)) {
             return false;
         }
 
-        if (!InitPhysicalDevice()) {
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        if (window != nullptr) {
+            surface = createSurface(window_handle(window));
+        }
+
+        if (!InitPhysicalDevice(surface)) {
             ALIMER_LOGERROR("[Vulkan]: Cannot detect suitable physical device");
             return false;
         }
@@ -288,9 +291,8 @@ namespace alimer
             return false;
         }
 
-        graphicsQueue = CreateCommandQueue("Graphics Queue", CommandQueueType::Graphics);
-        //computeQueue = CreateCommandQueue("Compute Queue", CommandQueueType::Compute);
-        //copyQueue = CreateCommandQueue("Copy Queue", CommandQueueType::Copy);
+        // Create main context.
+        mainContext = std::make_unique<GraphicsContextVK>(this, surface, window_width(window), window_height(window));
 
         for (uint32_t i = 0; i < maxInflightFrames; i++)
         {
@@ -300,7 +302,7 @@ namespace alimer
         return true;
     }
 
-    bool GraphicsDeviceVK::InitInstance(const GraphicsDeviceDesc& desc)
+    bool GraphicsDeviceVK::InitInstance(const GraphicsDeviceDesc& desc, bool headless)
     {
         const uint32_t apiVersion = volkGetInstanceVersion();
 
@@ -313,8 +315,6 @@ namespace alimer
         if (apiVersion >= VK_API_VERSION_1_2) {
             appInfo.apiVersion = VK_API_VERSION_1_2;
         }
-
-        const bool headless = any(desc.flags & GraphicsDeviceFlags::Headless);
 
         // Enumerate supported extensions and setup instance extensions.
         std::vector<const char*> enabledExtensions;
@@ -474,7 +474,7 @@ namespace alimer
         return true;
     }
 
-    bool GraphicsDeviceVK::InitPhysicalDevice()
+    bool GraphicsDeviceVK::InitPhysicalDevice(VkSurfaceKHR surface)
     {
         uint32_t deviceCount;
         if (vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr) != VK_SUCCESS ||
@@ -491,7 +491,7 @@ namespace alimer
         std::multimap<int32_t, VkPhysicalDevice> physicalDeviceCandidates;
         for (VkPhysicalDevice physicalDevice : physicalDevices)
         {
-            int32_t score = RatePhysicalDevice(physicalDevice);
+            int32_t score = RatePhysicalDevice(physicalDevice, surface);
             physicalDeviceCandidates.insert(std::make_pair(score, physicalDevice));
         }
 
@@ -511,7 +511,7 @@ namespace alimer
         queueFamilyProperties.resize(queueFamilyCount);
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
-        queueFamilyIndices = FindQueueFamilies(physicalDevice, VK_NULL_HANDLE);
+        queueFamilyIndices = FindQueueFamilies(physicalDevice, surface);
         physicalDeviceExts = CheckDeviceExtensionSupport(physicalDevice);
 
         ALIMER_TRACE("Physical device:");
@@ -527,23 +527,61 @@ namespace alimer
 
     bool GraphicsDeviceVK::InitLogicalDevice(const GraphicsDeviceDesc& desc)
     {
-        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-        std::set<uint32_t> uniqueQueueFamilies =
-        {
-            queueFamilyIndices.graphicsFamily,
-            queueFamilyIndices.computeFamily,
-            queueFamilyIndices.transferFamily
-        };
+        // Setup queues first.
+        uint32_t universal_queue_index = 1;
+        const uint32_t graphicsQueueIndex = 0;
+        uint32_t computeQueueIndex = 0;
+        uint32_t copyQueueIndex = 0;
 
-        float queuePriority = 1.0f;
-        for (uint32_t queueFamily : uniqueQueueFamilies)
+        if (queueFamilyIndices.computeFamily == VK_QUEUE_FAMILY_IGNORED)
         {
-            VkDeviceQueueCreateInfo queueCreateInfo = {};
-            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queueCreateInfo.queueFamilyIndex = queueFamily;
-            queueCreateInfo.queueCount = 1;
-            queueCreateInfo.pQueuePriorities = &queuePriority;
-            queueCreateInfos.push_back(queueCreateInfo);
+            queueFamilyIndices.computeFamily = queueFamilyIndices.graphicsFamily;
+            computeQueueIndex = min(queueFamilyProperties[queueFamilyIndices.graphicsFamily].queueCount - 1, universal_queue_index);
+            universal_queue_index++;
+        }
+
+        if (queueFamilyIndices.transferFamily == VK_QUEUE_FAMILY_IGNORED)
+        {
+            queueFamilyIndices.transferFamily = queueFamilyIndices.graphicsFamily;
+            copyQueueIndex = min(queueFamilyProperties[queueFamilyIndices.graphicsFamily].queueCount - 1, universal_queue_index);
+            universal_queue_index++;
+        }
+        else if (queueFamilyIndices.transferFamily == queueFamilyIndices.computeFamily)
+        {
+            copyQueueIndex = min(queueFamilyProperties[queueFamilyIndices.computeFamily].queueCount - 1, 1u);
+        }
+
+        static const float graphics_queue_prio = 0.5f;
+        static const float compute_queue_prio = 1.0f;
+        static const float transfer_queue_prio = 1.0f;
+        float prio[3] = { graphics_queue_prio, compute_queue_prio, transfer_queue_prio };
+
+        uint32_t queueFamilyCount = 0;
+        VkDeviceQueueCreateInfo queueCreateInfo[3] = {};
+
+        queueCreateInfo[queueFamilyCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo[queueFamilyCount].queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+        queueCreateInfo[queueFamilyCount].queueCount = min(universal_queue_index, queueFamilyProperties[queueFamilyIndices.graphicsFamily].queueCount);
+        queueCreateInfo[queueFamilyCount].pQueuePriorities = prio;
+        queueFamilyCount++;
+
+        if (queueFamilyIndices.computeFamily != queueFamilyIndices.graphicsFamily)
+        {
+            queueCreateInfo[queueFamilyCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo[queueFamilyCount].queueFamilyIndex = queueFamilyIndices.computeFamily;
+            queueCreateInfo[queueFamilyCount].queueCount = min(queueFamilyIndices.transferFamily == queueFamilyIndices.computeFamily ? 2u : 1u, queueFamilyProperties[queueFamilyIndices.computeFamily].queueCount);
+            queueCreateInfo[queueFamilyCount].pQueuePriorities = prio + 1;
+            queueFamilyCount++;
+        }
+
+        if (queueFamilyIndices.transferFamily != queueFamilyIndices.graphicsFamily
+            && queueFamilyIndices.transferFamily != queueFamilyIndices.computeFamily)
+        {
+            queueCreateInfo[queueFamilyCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo[queueFamilyCount].queueFamilyIndex = queueFamilyIndices.transferFamily;
+            queueCreateInfo[queueFamilyCount].queueCount = 1;
+            queueCreateInfo[queueFamilyCount].pQueuePriorities = prio + 2;
+            queueFamilyCount++;
         }
 
         std::vector<const char*> enabledExtensions;
@@ -578,8 +616,8 @@ namespace alimer
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         createInfo.pNext = nullptr;
         createInfo.flags = 0;
-        createInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
-        createInfo.pQueueCreateInfos = queueCreateInfos.data();
+        createInfo.queueCreateInfoCount = queueFamilyCount;
+        createInfo.pQueueCreateInfos = queueCreateInfo;
         createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
         createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
@@ -593,6 +631,11 @@ namespace alimer
         {
             ALIMER_LOGI("Device extension '%s'", ext_name);
         }
+
+        volkLoadDeviceTable(&deviceTable, handle);
+        deviceTable.vkGetDeviceQueue(handle, queueFamilyIndices.graphicsFamily, graphicsQueueIndex, &graphicsQueue);
+        deviceTable.vkGetDeviceQueue(handle, queueFamilyIndices.computeFamily, computeQueueIndex, &computeQueue);
+        deviceTable.vkGetDeviceQueue(handle, queueFamilyIndices.transferFamily, copyQueueIndex, &copyQueue);
 
         return true;
     }
@@ -630,11 +673,13 @@ namespace alimer
         return true;
     }
 
-    void GraphicsDeviceVK::Destroy()
+    void GraphicsDeviceVK::destroy()
     {
         if (instance == VK_NULL_HANDLE) {
             return;
         }
+
+        mainContext.reset();
 
         if (memoryAllocator != VK_NULL_HANDLE)
         {
@@ -648,10 +693,6 @@ namespace alimer
             vmaDestroyAllocator(memoryAllocator);
         }
 
-        SafeDelete(copyQueue);
-        SafeDelete(computeQueue);
-        SafeDelete(graphicsQueue);
-
         if (handle != VK_NULL_HANDLE) {
             vkDestroyDevice(handle, nullptr);
         }
@@ -662,6 +703,27 @@ namespace alimer
 
         vkDestroyInstance(instance, nullptr);
         instance = VK_NULL_HANDLE;
+    }
+
+    VkSurfaceKHR GraphicsDeviceVK::createSurface(uintptr_t handle)
+    {
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        VkResult result = VK_ERROR_UNKNOWN;
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+        VkWin32SurfaceCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+        createInfo.hinstance = GetModuleHandle(NULL);
+        createInfo.hwnd = reinterpret_cast<HWND>(handle);
+        result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
+#endif
+
+        if (result != VK_SUCCESS)
+        {
+            ALIMER_LOGERROR("Failed to create surface for SwapChain");
+            return VK_NULL_HANDLE;
+        }
+
+        return surface;
     }
 
     void GraphicsDeviceVK::SetObjectName(VkObjectType objectType, uint64_t objectHandle, const char* objectName)
@@ -680,80 +742,17 @@ namespace alimer
         vkSetDebugUtilsObjectNameEXT(handle, &info);
     }
 
-    void GraphicsDeviceVK::WaitForIdle()
+    void GraphicsDeviceVK::waitForIdle()
     {
         VK_CHECK(vkDeviceWaitIdle(handle));
     }
 
-    bool GraphicsDeviceVK::BeginFrame()
+    GraphicsContext& GraphicsDeviceVK::getMainContext() const
     {
-        frame().Begin();
-        //computeQueue->BeginFrame();
-        //copyQueue->BeginFrame();
-        return true;
+        return *mainContext.get();
     }
 
-    void GraphicsDeviceVK::EndFrame()
-    {
-        //computeQueue->EndFrame();
-        //copyQueue->EndFrame();
-
-        frameIndex = (frameIndex + 1u) % maxInflightFrames;
-    }
-
-    CommandQueueVK* GraphicsDeviceVK::CreateCommandQueue(const char* name, CommandQueueType type)
-    {
-        uint32_t index = 0;
-        uint32_t queueFamilyIndex = 0;
-        if (type == CommandQueueType::Graphics)
-        {
-            queueFamilyIndex = queueFamilyIndices.graphicsFamily;
-            index = nextGraphicsQueue++;
-        }
-        else if (type == CommandQueueType::Compute)
-        {
-            queueFamilyIndex = queueFamilyIndices.computeFamily;
-            index = nextComputeQueue++;
-        }
-        else if (type == CommandQueueType::Copy)
-        {
-            queueFamilyIndex = queueFamilyIndices.transferFamily;
-            index = nextTransferQueue++;
-        }
-        else
-        {
-            return nullptr;
-        }
-
-        ALIMER_VERIFY(queueFamilyIndex < uint32_t(queueFamilyProperties.size()));
-        ALIMER_VERIFY(index < queueFamilyProperties[queueFamilyIndex].queueCount);
-
-        CommandQueueVK* commandQueue = new CommandQueueVK(this, type);
-        if (!commandQueue->Init(name, queueFamilyIndex, index))
-        {
-            commandQueue->Destroy();
-            return nullptr;
-        }
-
-        return commandQueue;
-    }
-
-    RefPtr<ISwapChain> GraphicsDeviceVK::CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc)
-    {
-        ALIMER_ASSERT(window != nullptr);
-        ALIMER_ASSERT(pDesc != nullptr);
-
-        SwapChainVK* swapChain = new SwapChainVK(this);
-        if (!swapChain->Init(window, commandQueue, pDesc))
-        {
-            swapChain->Destroy();
-            return nullptr;
-        }
-
-        return RefPtr<ISwapChain>(swapChain);
-    }
-
-    RefPtr<ITexture> GraphicsDeviceVK::CreateTexture(const TextureDesc* pDesc, const void* initialData)
+    RefPtr<Texture> GraphicsDeviceVK::CreateTexture(const TextureDesc* pDesc, const void* initialData)
     {
         ALIMER_ASSERT(pDesc != nullptr);
 
@@ -764,12 +763,7 @@ namespace alimer
             return nullptr;
         }
 
-        return RefPtr<ITexture>(texture);
-    }
-
-    ICommandBuffer& GraphicsDeviceVK::RequestCommandBuffer(CommandQueueType queueType)
-    {
-        return frame().commandPool->RequestCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+        return RefPtr<Texture>(texture);
     }
 
     VkSemaphore GraphicsDeviceVK::RequestSemaphore()
@@ -785,7 +779,7 @@ namespace alimer
     /* Frame */
     GraphicsDeviceVK::Frame::Frame(GraphicsDeviceVK* device)
         : syncPool(*device)
-        , commandPool(new CommandPoolVK(device, device->graphicsQueue, device->queueFamilyIndices.graphicsFamily))
+        //, commandPool(new CommandPoolVK(device, device->graphicsQueue, device->queueFamilyIndices.graphicsFamily))
     {
 
     }
@@ -799,6 +793,6 @@ namespace alimer
     {
         VK_CHECK(syncPool.Wait());
         syncPool.Reset();
-        commandPool->Reset();
+        //commandPool->Reset();
     }
 }

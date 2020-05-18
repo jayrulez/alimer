@@ -20,52 +20,15 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GraphicsResource.h"
-#include "math/size.h"
+#include "graphics/Texture.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    /// Defines the type of Texture.
-    enum class TextureType : uint32_t
+    Texture::Texture(GraphicsDevice& device)
+        : GraphicsResource(device)
     {
-        /// Two dimensional texture
-        Type2D,
-        /// Three dimensional texture
-        Type3D,
-        /// Cube texture
-        TypeCube
-    };
 
-    /// Defines the usage of Texture.
-    enum class TextureUsage : uint32_t
-    {
-        None = 0,
-        Sampled = (1 << 0),
-        Storage = (1 << 1),
-        OutputAttachment = (1 << 2)
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+    }
+}
 
-    /// Describes a texture.
-    struct TextureDesc
-    {
-        const char* name = nullptr;
-        TextureType type = TextureType::Type2D;
-        TextureUsage usage = TextureUsage::Sampled;
-
-        usize3 extent = { 1u, 1u, 1u };
-        PixelFormat format = PixelFormat::Rgba8Unorm;
-        uint32_t mipLevels = 1;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-    };
-
-    class ALIMER_API ITexture : public GraphicsResource
-    {
-    public:
-        ALIMER_DECL_DEVICE_INTERFACE(ITexture);
-
-        virtual const TextureDesc& GetDesc() const = 0;
-    };
-} 

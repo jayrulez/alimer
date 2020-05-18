@@ -23,15 +23,14 @@
 #pragma once
 
 #include "graphics/GraphicsDevice.h"
-#include "CommandQueueVK.h"
 #include "SyncPrimitivesPool.h"
 
 namespace alimer
 {
-    class CommandPoolVK;
+    class GraphicsContextVK;
 
     /// Vulkan GraphicsDevice.
-    class ALIMER_API GraphicsDeviceVK final : public IGraphicsDevice
+    class ALIMER_API GraphicsDeviceVK final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
@@ -41,47 +40,35 @@ namespace alimer
         /// Destructor.
         ~GraphicsDeviceVK() override;
 
-        bool Init(const GraphicsDeviceDesc& desc);
-        void Destroy();
+        bool Init(window_t* window, const GraphicsDeviceDesc& desc);
+        void destroy();
 
+        VkSurfaceKHR createSurface(uintptr_t handle);
         void SetObjectName(VkObjectType objectType, uint64_t objectHandle, const char* objectName);
 
         const VulkanDeviceFeatures& GetVulkanFeatures() const { return vk_features; }
         VkInstance GetInstance() const { return instance; }
         VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; }
         const QueueFamilyIndices& GetQueueFamilyIndices() const { return queueFamilyIndices; }
-        VkDevice GetHandle() const { return handle; }
-        VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
+        VkDevice getHandle() const { return handle; }
+        const VolkDeviceTable& getDeviceTable() const { return deviceTable; }
+        VkQueue getGraphicsQueue() const { return graphicsQueue; }
+        VkQueue getComputeQueue() const { return computeQueue; }
+        VkQueue getCopyQueue() const { return copyQueue; }
+        VmaAllocator getMemoryAllocator() const { return memoryAllocator; }
+        GraphicsContext& getMainContext() const override;
 
-        ICommandBuffer& RequestCommandBuffer(CommandQueueType queueType);
         VkSemaphore RequestSemaphore();
         VkFence RequestFence();
 
     private:
-        bool InitInstance(const GraphicsDeviceDesc& desc);
-        bool InitPhysicalDevice();
+        bool InitInstance(const GraphicsDeviceDesc& desc, bool headless);
+        bool InitPhysicalDevice(VkSurfaceKHR surface);
         bool InitLogicalDevice(const GraphicsDeviceDesc& desc);
         bool InitMemoryAllocator();
 
-        ICommandQueue* GetGraphicsQueue() const override {
-            return graphicsQueue;
-        }
-
-        ICommandQueue* GetComputeQueue() const override {
-            return computeQueue;
-        }
-
-        ICommandQueue* GetCopyQueue() const override {
-            return copyQueue;
-        }
-
-        CommandQueueVK* CreateCommandQueue(const char* name, CommandQueueType type);
-        RefPtr<ISwapChain> CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc) override;
-        RefPtr<ITexture> CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
-
-        void WaitForIdle() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
+        RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) override;
+        void waitForIdle();
 
         VulkanDeviceFeatures vk_features{};
         VkInstance instance = VK_NULL_HANDLE;
@@ -96,15 +83,14 @@ namespace alimer
         PhysicalDeviceExtensions physicalDeviceExts;
 
         VkDevice handle = VK_NULL_HANDLE;
+        VolkDeviceTable deviceTable = {};
+        VkQueue graphicsQueue = VK_NULL_HANDLE;
+        VkQueue computeQueue = VK_NULL_HANDLE;
+        VkQueue copyQueue = VK_NULL_HANDLE;
+
         VmaAllocator memoryAllocator{ VK_NULL_HANDLE };
 
-
-        uint32_t nextGraphicsQueue = 0;
-        uint32_t nextComputeQueue = 0;
-        uint32_t nextTransferQueue = 0;
-        CommandQueueVK* graphicsQueue = nullptr;
-        CommandQueueVK* computeQueue = nullptr;
-        CommandQueueVK* copyQueue = nullptr;
+        std::unique_ptr<GraphicsContextVK> mainContext;
 
         struct Frame
         {
@@ -116,7 +102,7 @@ namespace alimer
             void Begin();
 
             SyncPrimitivesPool syncPool;
-            std::unique_ptr<CommandPoolVK> commandPool;
+            //std::unique_ptr<CommandPoolVK> commandPool;
         };
 
         std::vector<std::unique_ptr<Frame>> frames;

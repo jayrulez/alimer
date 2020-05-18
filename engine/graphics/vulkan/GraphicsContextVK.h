@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/ISwapChain.h"
+#include "graphics/GraphicsContext.h"
 #include "os/os.h"
 #include "VulkanBackend.h"
 #include <vector>
@@ -32,37 +32,34 @@ namespace alimer
     class TextureVK;
     class CommandQueueVK;
 
-    class ALIMER_API SwapChainVK final : public ISwapChain
+    class ALIMER_API GraphicsContextVK final : public GraphicsContext
     {
     public:
-        SwapChainVK(GraphicsDeviceVK* device_);
-        ~SwapChainVK() override;
+        GraphicsContextVK(GraphicsDeviceVK* device, VkSurfaceKHR surface, uint32_t width, uint32_t height);
+        ~GraphicsContextVK() override;
 
-        bool Init(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc);
         void Destroy();
 
-        ALIMER_FORCEINLINE const SwapChainDesc& GetDesc() const override { return desc; }
-        VkSwapchainKHR GetHandle() const { return handle; }
-        uint32_t GetCurrentBackBufferIndex() const { return backBufferIndex; }
-        TextureVK* GetCurrentTexture() const { return buffers[backBufferIndex]; }
+        bool beginFrame() override;
+        void endFrame() override;
 
-        IGraphicsDevice* GetDevice() const override;
-        ICommandQueue* GetCommandQueue() const override;
-        ITexture* GetNextTexture() override;
+        VkSwapchainKHR getHandle() const { return handle; }
+        uint32_t getCurrentBackBufferIndex() const { return frameIndex; }
+        TextureVK* getCurrentTexture() const { return buffers[frameIndex]; }
 
     private:
-        bool InitSwapChain(uint32_t width, uint32_t height);
+        bool resize(uint32_t width, uint32_t height);
 
         GraphicsDeviceVK* device;
+        const VolkDeviceTable* table;
         CommandQueueVK* commandQueue = nullptr;
 
         VkSurfaceKHR    surface = VK_NULL_HANDLE;
         VkSwapchainKHR  handle = VK_NULL_HANDLE;
         VkSurfaceFormatKHR  vkFormat;
 
-        SwapChainDesc desc;
-        uint32_t backBufferIndex = 0;
-        uint32_t semaphoreIndex = 0;
         std::vector<TextureVK*> buffers;
+        uint32_t frameIndex = 0;
+        uint32_t maxInflightFrames{ 3 };
     };
 }

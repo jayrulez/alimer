@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_VK
 #include "CommandQueueVK.h"
 #include "CommandPoolVK.h"
 #include "CommandBufferVK.h"
@@ -29,7 +30,7 @@
 
 namespace alimer
 {
-    
+
     CommandQueueVK::CommandQueueVK(GraphicsDeviceVK* device_, CommandQueueType type_)
         : device(device_)
         , type(type_)
@@ -126,9 +127,6 @@ namespace alimer
         waitSemaphores.push_back(semaphore);
         waitStages.push_back(waitStage);
     }
-
-    IGraphicsDevice* CommandQueueVK::GetDevice() const
-    {
-        return device;
-    }
 }
+
+#endif // TODO_VK

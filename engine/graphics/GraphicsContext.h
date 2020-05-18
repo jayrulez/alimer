@@ -22,17 +22,38 @@
 
 #pragma once
 
-#include "graphics/GraphicsResource.h"
+#include "graphics/Types.h"
 
 namespace alimer
 {
-    class ISwapChain;
+    class GraphicsDevice;
+    class ITexture;
 
-    class ALIMER_API ICommandBuffer 
+    /// Describes a texture.
+    struct SwapChainDesc
+    {
+        const char* name = nullptr;
+        uint32_t    width = 0;
+        uint32_t    height = 0;
+    };
+
+    class ALIMER_API GraphicsContext 
     {
     public:
-        ALIMER_DECL_DEVICE_INTERFACE(ICommandBuffer);
+        GraphicsContext(GraphicsDevice& device);
+        virtual ~GraphicsContext() = default;
 
-        virtual void Present(ISwapChain* swapChain) = 0;
+        virtual bool beginFrame() = 0;
+        virtual void endFrame() = 0;
+
+        /*
+        * Returns the device that created this resource.
+        *
+        * return - A pointer to the device that created this resource.
+        */
+        const GraphicsDevice& getDevice() const;
+
+    protected:
+        GraphicsDevice& device;
     };
 } 

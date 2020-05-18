@@ -27,25 +27,46 @@
 
 namespace alimer
 {
-    class ITexture;
-    class ICommandQueue;
+    /// Defines the type of Texture.
+    enum class TextureType : uint32_t
+    {
+        /// Two dimensional texture
+        Type2D,
+        /// Three dimensional texture
+        Type3D,
+        /// Cube texture
+        TypeCube
+    };
+
+    /// Defines the usage of Texture.
+    enum class TextureUsage : uint32_t
+    {
+        None = 0,
+        Sampled = (1 << 0),
+        Storage = (1 << 1),
+        OutputAttachment = (1 << 2)
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
     /// Describes a texture.
-    struct SwapChainDesc
+    struct TextureDesc
     {
         const char* name = nullptr;
-        uint32_t    width = 0;
-        uint32_t    height = 0;
+        TextureType type = TextureType::Type2D;
+        TextureUsage usage = TextureUsage::Sampled;
+
+        usize3 extent = { 1u, 1u, 1u };
+        PixelFormat format = PixelFormat::Rgba8Unorm;
+        uint32_t mipLevels = 1;
+        TextureSampleCount sampleCount = TextureSampleCount::Count1;
     };
 
-    class ALIMER_API ISwapChain : public GraphicsResource
+    class ALIMER_API Texture : public GraphicsResource
     {
     public:
-        ALIMER_DECL_DEVICE_INTERFACE(ISwapChain);
+        Texture(GraphicsDevice& device);
+        virtual ~Texture() = default;
 
-        virtual ICommandQueue* GetCommandQueue() const = 0;
-        virtual ITexture* GetNextTexture() = 0;
-
-        virtual const SwapChainDesc& GetDesc() const = 0;
+        virtual const TextureDesc& GetDesc() const = 0;
     };
-} 
+}

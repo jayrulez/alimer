@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_VK
 #include "CommandBufferVK.h"
 #include "CommandPoolVK.h"
 #include "CommandQueueVK.h"
@@ -92,3 +93,5 @@ namespace alimer
         queue->Present(vkSwapChain->GetHandle(), vkSwapChain->GetCurrentBackBufferIndex());
     }
 }
+#endif // TODO_VK
+

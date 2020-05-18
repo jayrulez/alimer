@@ -74,8 +74,7 @@ namespace alimer
     enum class GraphicsDeviceFlags : uint32_t {
         None = 0,
         Debug = (1 << 0),
-        Headless = (1 << 1),
-        RenderDoc = (1 << 2)
+        RenderDoc = (1 << 1)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
 

@@ -77,13 +77,13 @@ namespace alimer
     struct QueueFamilyIndices
     {
         uint32_t graphicsFamily = VK_QUEUE_FAMILY_IGNORED;
-        uint32_t presentFamily = VK_QUEUE_FAMILY_IGNORED;
         uint32_t computeFamily = VK_QUEUE_FAMILY_IGNORED;
         uint32_t transferFamily = VK_QUEUE_FAMILY_IGNORED;
+        uint32_t timestampValidBits;
 
         bool IsComplete()
         {
-            return (graphicsFamily != VK_QUEUE_FAMILY_IGNORED) && (computeFamily != VK_QUEUE_FAMILY_IGNORED) && (transferFamily != VK_QUEUE_FAMILY_IGNORED);
+            return (graphicsFamily != VK_QUEUE_FAMILY_IGNORED);
         }
     };
 

@@ -21,10 +21,3 @@
 //
 
 #include "graphics/Types.h"
-
-using namespace std;
-
-namespace alimer
-{
-}
-

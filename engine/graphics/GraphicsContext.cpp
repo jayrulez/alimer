@@ -20,22 +20,19 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GraphicsResource.h"
+#include "graphics/GraphicsContext.h"
 
 namespace alimer
 {
-    class ICommandBuffer;
-
-    class ALIMER_API ICommandQueue : public GraphicsResource
+    GraphicsContext::GraphicsContext(GraphicsDevice& device)
+        : device{ device }
     {
-    public:
-        ALIMER_DECL_DEVICE_INTERFACE(ICommandQueue);
 
-        virtual ICommandBuffer& RequestCommandBuffer() = 0;
-        virtual void Submit(const ICommandBuffer& commandBuffer) = 0;
+    }
 
-        virtual CommandQueueType GetType() const = 0;
-    };
-} 
+    const GraphicsDevice& GraphicsContext::getDevice() const
+    {
+        return device;
+    }
+}
+

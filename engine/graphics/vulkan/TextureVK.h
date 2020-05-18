@@ -22,15 +22,15 @@
 
 #pragma once
 
-#include "graphics/ITexture.h"
+#include "graphics/Texture.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API TextureVK final : public ITexture
+    class ALIMER_API TextureVK final : public Texture
     {
     public:
-        TextureVK(GraphicsDeviceVK * device_);
+        TextureVK(GraphicsDeviceVK* device);
         ~TextureVK() override;
 
         bool Init(const TextureDesc* pDesc, const void* initialData);
@@ -41,11 +41,9 @@ namespace alimer
 
         ALIMER_FORCEINLINE const TextureDesc& GetDesc() const override { return desc; }
 
-        IGraphicsDevice* GetDevice() const override;
         TextureState GetState() const { return state; }
 
     private:
-        GraphicsDeviceVK* device;
         TextureDesc desc;
 
         VkImage handle = VK_NULL_HANDLE;

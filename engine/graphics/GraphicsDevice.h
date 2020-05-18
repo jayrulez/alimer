@@ -23,19 +23,16 @@
 #pragma once
 
 #include "core/Ptr.h"
+#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsResource.h"
 #include "os/os.h"
 #include <memory>
 #include <set>
-#include <mutex>
 
 namespace alimer
 {
     struct TextureDesc;
-    struct SwapChainDesc;
-    class ICommandQueue;
-    class ISwapChain;
-    class ITexture;
+    class Texture;
 
     /// Desribes a GraphicsDevice
     struct GraphicsDeviceDesc
@@ -45,29 +42,24 @@ namespace alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API IGraphicsDevice
+    class ALIMER_API GraphicsDevice
     {
     public:
-        ALIMER_DECL_DEVICE_INTERFACE(IGraphicsDevice);
+        GraphicsDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
-        /// Waits for the device to become idle.
-        virtual void WaitForIdle() = 0;
+        static std::set<GraphicsAPI> GetAvailableGraphicsAPI();
 
-        virtual bool BeginFrame() = 0;
-        virtual void EndFrame() = 0;
+        /**
+        * Create new device.
+        */
+        static std::unique_ptr<GraphicsDevice> Create(GraphicsAPI api, window_t* window, const GraphicsDeviceDesc& desc);
 
-        virtual ICommandQueue* GetGraphicsQueue() const = 0;
-        virtual ICommandQueue* GetComputeQueue() const = 0;
-        virtual ICommandQueue* GetCopyQueue() const = 0;
+        /// Get the main context.
+        virtual GraphicsContext& getMainContext() const = 0;
 
-        virtual RefPtr<ISwapChain> CreateSwapChain(window_t* window, ICommandQueue* commandQueue, const SwapChainDesc* pDesc) = 0;
-        virtual RefPtr<ITexture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+
+    private:
     };
-
-
-    /// Get set of available graphics backends.
-    ALIMER_API std::set<GraphicsAPI> GetAvailableGraphicsAPI();
-
-    /// Create new graphics device
-    ALIMER_API std::unique_ptr<IGraphicsDevice> CreateGraphicsDevice(GraphicsAPI api, const GraphicsDeviceDesc& desc);
 }

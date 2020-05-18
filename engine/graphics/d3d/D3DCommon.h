@@ -26,6 +26,7 @@
 #include "core/Log.h"
 #include "graphics/Types.h"
 #include "graphics/PixelFormat.h"
+#include "graphics/Texture.h"
 
 #ifndef NOMINMAX
 #   define NOMINMAX

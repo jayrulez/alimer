@@ -142,49 +142,6 @@ namespace alimer
         return "UNKNOWN";
     }
 
-    uint32_t GetQueueFamilyIndex(VkQueueFlagBits queueFlags, const std::vector<VkQueueFamilyProperties>& queueFamilyProperties)
-    {
-        // Dedicated queue for compute
-        // Try to find a queue family index that supports compute but not graphics
-        if (queueFlags & VK_QUEUE_COMPUTE_BIT)
-        {
-            for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilyProperties.size()); i++)
-            {
-                if ((queueFamilyProperties[i].queueFlags & queueFlags)
-                    && ((queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0))
-                {
-                    return i;
-                }
-            }
-        }
-
-        // Dedicated queue for transfer
-        // Try to find a queue family index that supports transfer but not graphics and compute
-        if (queueFlags & VK_QUEUE_TRANSFER_BIT)
-        {
-            for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilyProperties.size()); i++)
-            {
-                if ((queueFamilyProperties[i].queueFlags & queueFlags)
-                    && ((queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)
-                    && ((queueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
-                {
-                    return i;
-                }
-            }
-        }
-
-        // For other queue types or if no separate compute queue is present, return the first one to support the requested flags
-        for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilyProperties.size()); i++)
-        {
-            if (queueFamilyProperties[i].queueFlags & queueFlags)
-            {
-                return i;
-            }
-        }
-
-        return UINT32_MAX;
-    }
-
     QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
     {
         uint32_t queueFamilyCount = 0;
@@ -194,34 +151,60 @@ namespace alimer
         vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
         QueueFamilyIndices indices = {};
-        indices.graphicsFamily = GetQueueFamilyIndex(VK_QUEUE_GRAPHICS_BIT, queueFamilyProperties);
-        indices.computeFamily = GetQueueFamilyIndex(VK_QUEUE_COMPUTE_BIT, queueFamilyProperties);
-        indices.transferFamily = GetQueueFamilyIndex(VK_QUEUE_TRANSFER_BIT, queueFamilyProperties);
-
-        for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilyProperties.size()); i++)
+        for (uint32_t i = 0; i < queueFamilyCount; i++)
         {
-            VkBool32 supportPresent = true;
+            VkBool32 supported = surface == VK_NULL_HANDLE;
             if (surface != VK_NULL_HANDLE)
-            {
-                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supportPresent);
-            }
-            else
-            {
-
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-                supportPresent = vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, i);
-#elif ALIMER_LINUX || ALIMER_OSX
-                supportPresent = glfwGetPhysicalDevicePresentationSupport(instance, physicalDevice, i);
-#endif
-            }
+                vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &supported);
 
             static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT;
-            if (supportPresent && ((queueFamilyProperties[i].queueFlags & required) == required))
+            if (supported && ((queueFamilyProperties[i].queueFlags & required) == required))
             {
-                indices.presentFamily = i;
+                indices.graphicsFamily = i;
+
+                // This assumes timestamp valid bits is the same for all queue types.
+                indices.timestampValidBits = queueFamilyProperties[i].timestampValidBits;
                 break;
             }
         }
+
+        for (uint32_t i = 0; i < queueFamilyCount; i++)
+        {
+            static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT;
+            if (i != indices.graphicsFamily
+                && (queueFamilyProperties[i].queueFlags & required) == required)
+            {
+                indices.computeFamily = i;
+                break;
+            }
+        }
+
+        for (uint32_t i = 0; i < queueFamilyCount; i++)
+        {
+            static const VkQueueFlags required = VK_QUEUE_TRANSFER_BIT;
+            if (i != indices.graphicsFamily
+                && i != indices.computeFamily
+                && (queueFamilyProperties[i].queueFlags & required) == required)
+            {
+                indices.transferFamily = i;
+                break;
+            }
+        }
+
+        /* Find dedicated transfer family. */
+        if (indices.transferFamily == VK_QUEUE_FAMILY_IGNORED)
+        {
+            for (uint32_t i = 0; i < queueFamilyCount; i++)
+            {
+                static const VkQueueFlags required = VK_QUEUE_TRANSFER_BIT;
+                if (i != indices.graphicsFamily && (queueFamilyProperties[i].queueFlags & required) == required)
+                {
+                    indices.transferFamily = i;
+                    break;
+                }
+            }
+        }
+
 
         return indices;
     }

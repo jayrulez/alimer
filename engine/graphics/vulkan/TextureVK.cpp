@@ -136,8 +136,8 @@ namespace alimer
         }
     }
 
-    TextureVK::TextureVK(GraphicsDeviceVK* device_)
-        : device(device_)
+    TextureVK::TextureVK(GraphicsDeviceVK* device)
+        : Texture(*device)
         , desc()
     {
 
@@ -202,10 +202,5 @@ namespace alimer
             0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         state = newState;
-    }
-
-    IGraphicsDevice* TextureVK::GetDevice() const
-    {
-        return device;
     }
 }

@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "SwapChainVK.h"
+#include "GraphicsContextVK.h"
 #include "TextureVK.h"
-#include "CommandQueueVK.h"
 #include "GraphicsDeviceVK.h"
 #include "core/Assert.h"
 #include "core/Log.h"
@@ -59,43 +58,34 @@ namespace alimer
         }
     }
 
-    SwapChainVK::SwapChainVK(GraphicsDeviceVK* device_)
-        : device(device_)
+    GraphicsContextVK::GraphicsContextVK(GraphicsDeviceVK* device, VkSurfaceKHR surface, uint32_t width, uint32_t height)
+        : GraphicsContext(*device)
+        , device{ device }
+        , surface{ surface }
+        , table(&device->getDeviceTable())
         , vkFormat{ VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }
-        , desc()
     {
-
+        resize(width, height);
     }
 
-    SwapChainVK::~SwapChainVK()
+    GraphicsContextVK::~GraphicsContextVK()
     {
         Destroy();
     }
 
-    bool SwapChainVK::Init(window_t* window, ICommandQueue* commandQueue_, const SwapChainDesc* pDesc)
+    bool GraphicsContextVK::beginFrame()
+    {
+        return true;
+    }
+
+    void GraphicsContextVK::endFrame()
+    {
+        
+    }
+
+    bool GraphicsContextVK::resize(uint32_t width, uint32_t height)
     {
         VkResult result = VK_ERROR_UNKNOWN;
-
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-        VkWin32SurfaceCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-        createInfo.hinstance = GetModuleHandle(NULL);
-        createInfo.hwnd = reinterpret_cast<HWND>(window_handle(window));
-        result = vkCreateWin32SurfaceKHR(device->GetInstance(), &createInfo, nullptr, &surface);
-#endif
-
-        if (result != VK_SUCCESS)
-        {
-            ALIMER_LOGERROR("Failed to create surface for SwapChain");
-            return false;
-        }
-
-        commandQueue = static_cast<CommandQueueVK*>(commandQueue_);
-        if (!commandQueue->SupportPresent(surface))
-        {
-            ALIMER_LOGERROR("[Vulkan]: Queue does not support presentation");
-            return false;
-        }
-
 
         VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = {
             VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
@@ -179,18 +169,6 @@ namespace alimer
             if (!found)
                 vkFormat = formats[0];
         }
-
-        memcpy(&desc, pDesc, sizeof(desc));
-        return InitSwapChain(desc.width, desc.height);
-    }
-
-    bool SwapChainVK::InitSwapChain(uint32_t width, uint32_t height)
-    {
-        VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = {
-            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
-            nullptr,
-            surface
-        };
 
         VkSurfaceCapabilitiesKHR capabilities;
         if (device->GetVulkanFeatures().surfaceCapabilities2)
@@ -296,7 +274,7 @@ namespace alimer
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = oldSwapchain;
 
-        VkResult  result = vkCreateSwapchainKHR(device->GetHandle(), &createInfo, nullptr, &handle);
+        result = vkCreateSwapchainKHR(device->getHandle(), &createInfo, nullptr, &handle);
         if (result != VK_SUCCESS)
         {
             VK_THROW(result, "Cannot create Swapchain");
@@ -307,18 +285,18 @@ namespace alimer
 
         if (oldSwapchain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(device->GetHandle(), oldSwapchain, nullptr);
+            table->vkDestroySwapchainKHR(device->getHandle(), oldSwapchain, nullptr);
         }
 
-        backBufferIndex = 0;
-        semaphoreIndex = 0;
+        frameIndex = 0;
 
         // Get SwapChain images
-        uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, nullptr);
+        if (table->vkGetSwapchainImagesKHR(device->getHandle(), handle, &maxInflightFrames, nullptr) != VK_SUCCESS) {
+            return false;
+        }
 
-        std::vector<VkImage> images(imageCount);
-        result = vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, images.data());
+        std::vector<VkImage> images(maxInflightFrames);
+        result = table->vkGetSwapchainImagesKHR(device->getHandle(), handle, &maxInflightFrames, images.data());
         if (result != VK_SUCCESS)
         {
             VK_THROW(result, "[Vulkan]: Failed to retrive SwapChain-Images");
@@ -334,7 +312,7 @@ namespace alimer
             "BackBuffer[4]",
         };
 
-        for (uint32_t i = 0; i < imageCount; i++)
+        for (uint32_t i = 0; i < maxInflightFrames; i++)
         {
             TextureDesc desc = {};
             desc.name = names[i];
@@ -355,12 +333,12 @@ namespace alimer
         return result == VK_SUCCESS;
     }
 
-    void SwapChainVK::Destroy()
+    void GraphicsContextVK::Destroy()
     {
         // Destroy swapchain
         if (handle != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(device->GetHandle(), handle, nullptr);
+            vkDestroySwapchainKHR(device->getHandle(), handle, nullptr);
             handle = VK_NULL_HANDLE;
         }
 
@@ -370,37 +348,5 @@ namespace alimer
             vkDestroySurfaceKHR(device->GetInstance(), surface, nullptr);
             surface = VK_NULL_HANDLE;
         }
-    }
-
-    IGraphicsDevice* SwapChainVK::GetDevice() const
-    {
-        return device;
-    }
-
-    ICommandQueue* SwapChainVK::GetCommandQueue() const
-    {
-        return commandQueue;
-    }
-
-    ITexture* SwapChainVK::GetNextTexture()
-    {
-        VkSemaphore aquiredSemaphore = device->RequestSemaphore();
-
-        VkResult result = vkAcquireNextImageKHR(
-            device->GetHandle(),
-            handle,
-            UINT64_MAX,
-            aquiredSemaphore,
-            VK_NULL_HANDLE,
-            &backBufferIndex);
-
-        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
-        {
-            return nullptr;
-        }
-
-        commandQueue->AddWaitSemaphore(aquiredSemaphore, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
-        return buffers[backBufferIndex];
     }
 }

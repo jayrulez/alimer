@@ -26,5 +26,15 @@
 
 namespace alimer
 {
+    GraphicsResource::GraphicsResource(GraphicsDevice& device)
+        : device{ device }
+    {
+
+    }
+
+    const GraphicsDevice& GraphicsResource::getDevice() const
+    {
+        return device;
+    }
 }
 

@@ -43,13 +43,13 @@ namespace alimer
         // Destroy all semaphores
         for (VkSemaphore semaphore : semaphores)
         {
-            vkDestroySemaphore(device.GetHandle(), semaphore, nullptr);
+            vkDestroySemaphore(device.getHandle(), semaphore, nullptr);
         }
 
         // Destroy all fences
         for (VkFence fence : fences)
         {
-            vkDestroyFence(device.GetHandle(), fence, nullptr);
+            vkDestroyFence(device.getHandle(), fence, nullptr);
         }
 
         semaphores.clear();
@@ -65,7 +65,7 @@ namespace alimer
             return;
         }
 
-        VkResult result = vkResetFences(device.GetHandle(), activeFenceCount, fences.data());
+        VkResult result = vkResetFences(device.getHandle(), activeFenceCount, fences.data());
 
         if (result != VK_SUCCESS)
         {
@@ -82,7 +82,7 @@ namespace alimer
             return VK_SUCCESS;
         }
 
-        return vkWaitForFences(device.GetHandle(), activeFenceCount, fences.data(), true, timeout);
+        return vkWaitForFences(device.getHandle(), activeFenceCount, fences.data(), true, timeout);
     }
 
     VkFence SyncPrimitivesPool::RequestFence()
@@ -96,10 +96,10 @@ namespace alimer
         VkFenceCreateInfo createInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 
         VkFence fence;
-        VkResult result = vkCreateFence(device.GetHandle(), &createInfo, nullptr, &fence);
+        VkResult result = vkCreateFence(device.getHandle(), &createInfo, nullptr, &fence);
         if (result != VK_SUCCESS)
         {
-            throw std::runtime_error("Failed to create fence.");
+            ALIMER_LOGERROR("Failed to create fence.");
             return VK_NULL_HANDLE;
         }
 
@@ -119,7 +119,7 @@ namespace alimer
         VkSemaphoreCreateInfo createInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
         VkSemaphore semaphore;
-        VkResult result = vkCreateSemaphore(device.GetHandle(), &createInfo, nullptr, &semaphore);
+        VkResult result = vkCreateSemaphore(device.getHandle(), &createInfo, nullptr, &semaphore);
 
         if (result != VK_SUCCESS)
         {

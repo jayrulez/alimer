@@ -23,9 +23,6 @@
 #include "os/os.h"
 #include "Games/Game.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/ICommandQueue.h"
-#include "graphics/ICommandBuffer.h"
-#include "graphics/ISwapChain.h"
 #include "Input/InputManager.h"
 #include "core/Log.h"
 
@@ -81,7 +78,7 @@ namespace alimer
             deviceDesc.flags |= GraphicsDeviceFlags::Debug;
 #endif
 
-            graphicsDevice = CreateGraphicsDevice(GraphicsAPI::Vulkan, deviceDesc);
+            graphicsDevice = GraphicsDevice::Create(GraphicsAPI::Vulkan, main_window, deviceDesc);
             if (graphicsDevice == nullptr) {
                 headless = true;
             }
@@ -118,7 +115,9 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        graphicsDevice->BeginFrame();
+        if (!graphicsDevice->getMainContext().beginFrame()) {
+            return false;
+        }
 
         for (auto gameSystem : gameSystems)
         {
@@ -194,8 +193,7 @@ namespace alimer
         vgpuCmdEndRenderPass();
 #endif
 
-        graphicsDevice->EndFrame();
-        window_swap_buffers(main_window);
+        graphicsDevice->getMainContext().endFrame();
     }
 
     int Game::Run()

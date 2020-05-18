@@ -27,13 +27,14 @@
 
 namespace alimer
 {
-    class IGraphicsDevice;
+    class GraphicsDevice;
 
     /// Defines a Graphics Resource created by device.
     class GraphicsResource : public RefCounted
     {
     public:
-        ALIMER_DECL_DEVICE_INTERFACE(GraphicsResource);
+        GraphicsResource(GraphicsDevice &device);
+        virtual ~GraphicsResource() = default;
 
         /// Release the GPU resource.
         virtual void Destroy() {}
@@ -43,6 +44,9 @@ namespace alimer
         *
         * return - A pointer to the device that created this resource.
         */
-        virtual IGraphicsDevice* GetDevice() const = 0;
+        const GraphicsDevice& getDevice() const;
+
+    protected:
+        GraphicsDevice& device;
     };
-} 
+}

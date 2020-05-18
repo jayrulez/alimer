@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_VK
 #include "CommandPoolVK.h"
 #include "CommandBufferVK.h"
 #include "GraphicsDeviceVK.h"
@@ -68,7 +69,7 @@ namespace alimer
         {
             if (activePrimaryCommandBufferCount < primaryCommandBuffers.size())
             {
-                auto &result = primaryCommandBuffers.at(activePrimaryCommandBufferCount++);
+                auto& result = primaryCommandBuffers.at(activePrimaryCommandBufferCount++);
                 result->Begin();
                 return *result;
             }
@@ -85,3 +86,5 @@ namespace alimer
         }
     }
 }
+#endif // TODO_VK
+

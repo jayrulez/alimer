@@ -47,7 +47,6 @@ namespace alimer
         void Submit(const ICommandBuffer& commandBuffer) override;
         void Present(VkSwapchainKHR swapChain, uint32_t imageIndex);
 
-        IGraphicsDevice* GetDevice() const override;
         ALIMER_FORCEINLINE VkQueue GetHandle() const { return handle; }
         ALIMER_FORCEINLINE CommandQueueType GetType() const override { return type; }
 
