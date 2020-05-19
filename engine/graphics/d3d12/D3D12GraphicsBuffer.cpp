@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if TOOD
+#if TODO_D3D12
 #include "D3D12GPUBuffer.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12MemAlloc.h"
@@ -69,5 +69,5 @@ namespace alimer
 
     }
 }
-#endif // TOOD
+#endif // TODO_D3D12
 

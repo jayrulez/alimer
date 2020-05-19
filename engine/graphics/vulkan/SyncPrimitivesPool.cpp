@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_VK
 #include "SyncPrimitivesPool.h"
 #include "GraphicsDeviceVK.h"
 #include "core/Assert.h"
@@ -132,3 +133,5 @@ namespace alimer
         return semaphore;
     }
 }
+
+#endif // 0

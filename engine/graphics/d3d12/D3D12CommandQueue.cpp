@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_D3D12
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
@@ -152,3 +153,5 @@ namespace alimer
         return nextFenceValue++;
     }
 }
+#endif // TODO_D3D12
+

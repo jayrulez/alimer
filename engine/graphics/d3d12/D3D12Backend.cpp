@@ -21,7 +21,7 @@
 //
 
 #include "D3D12Backend.h"
-#include "D3D12GraphicsDevice.h"
+//#include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
 namespace alimer
@@ -49,7 +49,7 @@ namespace alimer
     void FenceD3D12::Init(uint64_t initialValue)
     {
         Shutdown();
-        ThrowIfFailed(device->GetHandle()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
+        //ThrowIfFailed(device->GetHandle()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
         fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
         ALIMER_ASSERT(fenceEvent != INVALID_HANDLE_VALUE);
     }
@@ -60,7 +60,7 @@ namespace alimer
             return;
 
         CloseHandle(fenceEvent);
-        device->DeferredRelease(handle);
+        //device->DeferredRelease(handle);
     }
 
     void FenceD3D12::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)

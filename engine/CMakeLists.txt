@@ -53,7 +53,7 @@ endif()
 
 if (ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d)
-    #define_engine_source_files(graphics/d3d12)
+    define_engine_source_files(graphics/d3d12)
 endif ()
 
 group_sources()

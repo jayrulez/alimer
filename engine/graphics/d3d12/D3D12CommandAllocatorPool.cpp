@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_D3D12
 #include "D3D12CommandAllocatorPool.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
@@ -90,3 +91,5 @@ namespace alimer
         readyAllocators.push(std::make_pair(fenceValue, commandAllocator));
     }
 }
+#endif // TODO_d3D12
+

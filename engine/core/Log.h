@@ -36,6 +36,7 @@ namespace alimer
         Info,
         Warning,
         Error,
+        Critical,
         Off
     };
 

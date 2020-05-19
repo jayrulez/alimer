@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,15 @@
 
 #pragma once
 
-#include "graphics/Framebuffer.h"
-#include "VulkanBackend.h"
+#include "graphics/graphics_backend.h"
 
 namespace alimer
 {
-    class ALIMER_API VulkanFramebuffer final : public Framebuffer
+    namespace graphics
     {
-    public:
-        /// Constructor.
-        VulkanFramebuffer(VulkanGPUDevice* device, VkSurfaceKHR surface, uint32_t width, uint32_t height, const SwapChainDescriptor* descriptor);
-        /// Destructor.
-        ~VulkanFramebuffer() override;
-
-    private:
-        FramebufferResizeResult BackendResize();
-
-        VkSurfaceKHR surface{ VK_NULL_HANDLE };
-        VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
-    };
+        namespace d3d12
+        {
+            Renderer* CreateRenderer();
+        }
+    }
 }

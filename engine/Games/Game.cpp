@@ -28,6 +28,27 @@
 
 namespace alimer
 {
+    static void GraphicsLogCallback(void* userData, const char* message, graphics::LogLevel level)
+    {
+        switch (level)
+        {
+        case graphics::LogLevel::Error:
+            Log::GetDefault()->Log(LogLevel::Error, message);
+            break;
+        case graphics::LogLevel::Warn:
+            Log::GetDefault()->Log(LogLevel::Warning, message);
+            break;
+        case graphics::LogLevel::Info:
+            Log::GetDefault()->Log(LogLevel::Info, message);
+            break;
+        case graphics::LogLevel::Debug:
+            Log::GetDefault()->Log(LogLevel::Debug, message);
+            break;
+        default:
+            break;
+        }
+    }
+
     Game::Game(const Configuration& config_)
         : config(config_)
         , input(new InputManager())
@@ -35,6 +56,18 @@ namespace alimer
         /* Init OS first */
         os_init();
         gameSystems.push_back(input);
+
+        /* Init graphics system */
+        graphics::Configuration configuration = {};
+#ifdef _DEBUG
+        configuration.debug = true;
+#endif
+        configuration.logCallback = GraphicsLogCallback;
+        configuration.userData = this;
+
+        if (!graphics::Initialize(configuration)) {
+            headless = true;
+        }
     }
 
     Game::~Game()
@@ -45,16 +78,11 @@ namespace alimer
         }
 
         gameSystems.clear();
-        graphicsDevice.reset();
         window_destroy(main_window);
+        graphics::DestroyContext(mainContext);
+        graphics::Shutdown();
         os_shutdown();
     }
-
-    /*static vgpu_buffer* vertexBuffer;
-    static vgpu_buffer* indexBuffer;
-    static vgpu_buffer* uboBuffer;
-    static vgpu_shader shader;
-    static agpu_pipeline render_pipeline;*/
 
     void Game::InitBeforeRun()
     {
@@ -66,22 +94,12 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
-
-            /*vgpu_swapchain_info swapchain_info = {};
-            swapchain_info.handle = window_handle(main_window);
-            swapchain_info.width = window_width(main_window);
-            swapchain_info.height = window_height(main_window);*/
-
-            GraphicsDeviceDesc deviceDesc = {};
-            deviceDesc.applicationName = config.applicationName.c_str();
-#ifdef _DEBUG
-            deviceDesc.flags |= GraphicsDeviceFlags::Debug;
-#endif
-
-            graphicsDevice = GraphicsDevice::Create(GraphicsAPI::Vulkan, main_window, deviceDesc);
-            if (graphicsDevice == nullptr) {
-                headless = true;
-            }
+            
+            graphics::ContextInfo contextInfo = {};
+            contextInfo.handle = window_handle(main_window);
+            contextInfo.width = window_width(main_window);
+            contextInfo.height = window_height(main_window);
+            mainContext = graphics::CreateContext(contextInfo);
         }
 
         Initialize();
@@ -115,7 +133,7 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        if (!graphicsDevice->getMainContext().beginFrame()) {
+        if (!graphics::BeginFrame(mainContext)) {
             return false;
         }
 
@@ -193,7 +211,7 @@ namespace alimer
         vgpuCmdEndRenderPass();
 #endif
 
-        graphicsDevice->getMainContext().endFrame();
+        graphics::EndFrame(mainContext);
     }
 
     int Game::Run()

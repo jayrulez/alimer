@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_VK
 #include "TextureVK.h"
 #include "GraphicsDeviceVK.h"
 #include "core/Assert.h"
@@ -204,3 +205,5 @@ namespace alimer
         state = newState;
     }
 }
+
+#endif // TODO_VK

@@ -26,8 +26,8 @@
 #include "Games/GameTime.h"
 #include "os/os.h"
 #include "Games/GameSystem.h"
+#include "graphics/graphics.h"
 #include "math/Size.h"
-#include "graphics/types.h"
 #include <vector>
 #include <memory>
 
@@ -49,7 +49,6 @@ namespace alimer
     };
 
     class InputManager;
-    class GraphicsDevice;
 
     class ALIMER_API Game : public Object
     {
@@ -102,7 +101,7 @@ namespace alimer
         GameTime time;
         window_t* main_window = nullptr;
         std::vector<GameSystem*> gameSystems;
-        std::unique_ptr<GraphicsDevice> graphicsDevice;
+        graphics::ContextHandle mainContext = graphics::kInvalidContext;
 
         InputManager* input;
         bool headless{ false };

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO_D3D12
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12MemAlloc.h"
@@ -593,7 +594,7 @@ namespace alimer
             }
 #endif
         }
-    }
+        }
 
     void D3D12GraphicsDevice::ProcessDeferredReleases(uint64_t frameIndex)
     {
@@ -783,4 +784,6 @@ namespace alimer
         ThrowIfFailed(tempSwapChain.As(&swapChain->handle));
         swapChain->currentBackBufferIndex = swapChain->handle->GetCurrentBackBufferIndex();
     }
-}
+    }
+
+#endif // TODO_D3D12

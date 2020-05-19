@@ -22,38 +22,15 @@
 
 #pragma once
 
-#include "graphics/Types.h"
+#include "graphics/graphics_backend.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
-    class ITexture;
-
-    /// Describes a texture.
-    struct SwapChainDesc
+    namespace graphics
     {
-        const char* name = nullptr;
-        uint32_t    width = 0;
-        uint32_t    height = 0;
-    };
-
-    class ALIMER_API GraphicsContext 
-    {
-    public:
-        GraphicsContext(GraphicsDevice& device);
-        virtual ~GraphicsContext() = default;
-
-        virtual bool beginFrame() = 0;
-        virtual void endFrame() = 0;
-
-        /*
-        * Returns the device that created this resource.
-        *
-        * return - A pointer to the device that created this resource.
-        */
-        const GraphicsDevice& getDevice() const;
-
-    protected:
-        GraphicsDevice& device;
-    };
-} 
+        namespace vulkan
+        {
+            Renderer* CreateRenderer();
+        }
+    }
+}

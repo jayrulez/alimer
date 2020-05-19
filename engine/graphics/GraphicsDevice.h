@@ -23,7 +23,6 @@
 #pragma once
 
 #include "core/Ptr.h"
-#include "graphics/GraphicsContext.h"
 #include "graphics/GraphicsResource.h"
 #include "os/os.h"
 #include <memory>
@@ -54,9 +53,6 @@ namespace alimer
         * Create new device.
         */
         static std::unique_ptr<GraphicsDevice> Create(GraphicsAPI api, window_t* window, const GraphicsDeviceDesc& desc);
-
-        /// Get the main context.
-        virtual GraphicsContext& getMainContext() const = 0;
 
         virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
 
