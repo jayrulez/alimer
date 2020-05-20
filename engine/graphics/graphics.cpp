@@ -27,6 +27,10 @@
 #include "graphics/vulkan/graphics_vulkan.h"
 #endif
 
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/d3d12/graphics_d3d12.h"
+#endif
+
 #include <cstdarg>
 #include <cstdio>
 
@@ -95,8 +99,37 @@ namespace alimer
             s_logCallback = config.logCallback;
             s_logCallbackUserData = config.userData;
 
-            s_renderer = vulkan::CreateRenderer();
-            if (!s_renderer->IsSupported() || !s_renderer->Init(config)) {
+            BackendType backendType = config.backendType;
+            if (config.backendType == BackendType::Count)
+            {
+                backendType = BackendType::Vulkan;
+            }
+
+            switch (backendType)
+            {
+            case BackendType::Direct3D12:
+#if defined(ALIMER_GRAPHICS_VULKAN)
+                if (d3d12::IsSupported())
+                {
+                    s_renderer = d3d12::CreateRenderer();
+                }
+#endif
+                break;
+
+            case BackendType::Vulkan:
+#if defined(ALIMER_GRAPHICS_VULKAN)
+                if (vulkan::IsSupported())
+                {
+                    s_renderer = vulkan::CreateRenderer();
+                }
+#endif
+                break;
+
+            default:
+                return nullptr;
+            }
+
+            if (s_renderer == nullptr || !s_renderer->Init(config)) {
                 s_renderer = nullptr;
                 return false;
             }
@@ -137,9 +170,32 @@ namespace alimer
             return s_renderer->BeginFrame(handle);
         }
 
+        void BeginRenderPass(ContextHandle handle, const Color& clearColor, float clearDepth, uint8_t clearStencil)
+        {
+            s_renderer->BeginRenderPass(handle, clearColor, clearDepth, clearStencil);
+        }
+
+        void EndRenderPass(ContextHandle handle)
+        {
+            s_renderer->EndRenderPass(handle);
+        }
+
         void EndFrame(ContextHandle handle)
         {
             s_renderer->EndFrame(handle);
+        }
+
+        TextureHandle CreateTexture(const TextureInfo& info)
+        {
+            return s_renderer->CreateTexture(info);
+        }
+
+        void DestroyTexture(TextureHandle handle)
+        {
+            if (handle.isValid())
+            {
+                s_renderer->DestroyTexture(handle);
+            }
         }
     }
 }

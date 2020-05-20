@@ -32,10 +32,9 @@ namespace alimer
 
     Editor::~Editor()
     {
-
     }
 
-    Game* ApplicationCreate(const std::vector<std::string>& args)
+    Game* ApplicationCreate(const Array<std::string>& args)
     {
         ApplicationDummy();
 

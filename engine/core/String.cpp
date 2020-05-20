@@ -22,7 +22,7 @@
 
 #include "core/String.h"
 #include "core/Hash.h"
-#include <vector>
+#include "containers/array.h"
 
 #if defined(_WIN32)
 #   define WIN32_LEAN_AND_MEAN
@@ -36,13 +36,13 @@ namespace alimer
 #ifdef _WIN32
     std::string ToUtf8(const wchar_t* wstr, size_t len)
     {
-        std::vector<char> char_buffer;
+        Array<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
             return EMPTY_STRING;
-        char_buffer.resize(ret);
-        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
-        return std::string(char_buffer.data(), char_buffer.size());
+        char_buffer.Resize(ret);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.Data(), static_cast<int>(char_buffer.Size()), nullptr, nullptr);
+        return std::string(char_buffer.Data(), char_buffer.Size());
     }
 
     std::string ToUtf8(const std::wstring& wstr)
@@ -52,13 +52,13 @@ namespace alimer
 
     std::wstring ToUtf16(const char* str, size_t len)
     {
-        std::vector<wchar_t> wchar_buffer;
+        Array<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
         if (ret < 0)
             return L"";
-        wchar_buffer.resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return std::wstring(wchar_buffer.data(), wchar_buffer.size());
+        wchar_buffer.Resize(ret);
+        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.Data(), static_cast<int>(wchar_buffer.Size()));
+        return std::wstring(wchar_buffer.Data(), wchar_buffer.Size());
     }
 
     std::wstring ToUtf16(const std::string& str)

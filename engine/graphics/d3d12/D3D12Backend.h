@@ -41,7 +41,7 @@
 #include <pix.h>
 
 #include <wrl.h>
-#include <vector>
+#include "containers/array.h"
 
 // Forward declare memory allocator classes
 namespace D3D12MA
@@ -120,7 +120,7 @@ namespace alimer
         uint32_t numPersistent = 0;
         uint32_t persistentAllocated = 0;
         uint32_t numTemporary = 0;
-        std::vector<uint32_t> deadList;
+        Array<uint32_t> deadList;
 
         ID3D12DescriptorHeap* heaps[kMaxFrameLatency] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE CPUStart[kMaxFrameLatency] = {};

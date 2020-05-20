@@ -31,8 +31,6 @@
     #include <shellapi.h>
 #endif
 
-using namespace std;
-
 namespace alimer
 {
     // Make sure this is linked in.
@@ -57,17 +55,17 @@ int main(int argc, char* argv[])
     int     argc;
     argv = CommandLineToArgvW(GetCommandLineW(), &argc);
     // Ignore the first argument containing the application full path
-    std::vector<string>  args;
+    alimer::Array<std::string>  args;
 
     for (int i = 0; i < argc;  i++)
     {
-        args.push_back(alimer::ToUtf8(argv[i]));
+        args.Push(alimer::ToUtf8(argv[i]));
     }
 
     alimer::Platform::OpenConsole();
 #endif
 
-    auto app = unique_ptr<alimer::Game>(alimer::ApplicationCreate(args));
+    auto app = std::unique_ptr<alimer::Game>(alimer::ApplicationCreate(args));
     app->Run();
     return EXIT_SUCCESS;
 }

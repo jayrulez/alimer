@@ -120,18 +120,18 @@ namespace alimer
     static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format) {
         switch (format)
         {
-        case PixelFormat::Bgra8Unorm:
-        case PixelFormat::Bgra8UnormSrgb:
+        case PixelFormat::BGRA8UNorm:
+        case PixelFormat::BGRA8UNormSrgb:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case PixelFormat::Rgba8Unorm:
-        case PixelFormat::Rgba8UnormSrgb:
+        case PixelFormat::RGBA8UNorm:
+        case PixelFormat::RGBA8UNormSrgb:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        case PixelFormat::Rgba16Float:
+        case PixelFormat::RGBA16Float:
             return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-        case PixelFormat::Rgb10a2Unorm:
+        case PixelFormat::RGB10A2UNorm:
             return DXGI_FORMAT_R10G10B10A2_UNORM;
 
         default:
@@ -152,7 +152,7 @@ namespace alimer
         {
         case PixelFormat::Depth32Float:
             return DXGI_FORMAT_R32_TYPELESS;
-        case PixelFormat::Depth16Unorm:
+        case PixelFormat::Depth16UNorm:
             return DXGI_FORMAT_R16_TYPELESS;
         case PixelFormat::Depth24Plus:
             return DXGI_FORMAT_R24G8_TYPELESS;
@@ -165,7 +165,7 @@ namespace alimer
         }
     }
 
-    static inline DXGI_FORMAT ToDXGIFormatWithUsage(PixelFormat format, TextureUsage usage)
+    /*static inline DXGI_FORMAT ToDXGIFormatWithUsage(PixelFormat format, TextureUsage usage)
     {
         if (IsDepthFormat(format) &&
             (any(usage & TextureUsage::Sampled | TextureUsage::Storage)))
@@ -174,7 +174,7 @@ namespace alimer
         }
 
         return ToDXGIFormat(format);
-    }
+    }*/
 
     static inline bool d3dIsLost(HRESULT hr)
     {

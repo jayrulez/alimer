@@ -23,6 +23,7 @@
 #pragma once
 
 #include "graphics/graphics.h"
+#include <malloc.h>
 
 namespace alimer
 {
@@ -32,6 +33,15 @@ namespace alimer
         void LogWarn(const char* format, ...);
         void LogInfo(const char* format, ...);
         void LogDebug(const char* format, ...);
+
+
+        template <typename T> ALIMER_FORCEINLINE T* StackAlloc(size_t N) {
+#if defined(_MSC_VER)
+            return (T*)_malloca(N * sizeof(T));
+#else
+            return (T*)alloca(N * sizeof(T));
+#endif
+        }
 
         template <typename T, uint32_t MAX_COUNT>
         class Pool
@@ -74,7 +84,6 @@ namespace alimer
 
         struct Renderer
         {
-            bool (*IsSupported)(void);
             bool (*Init)(const Configuration& config);
             void (*Shutdown)(void);
 
@@ -84,6 +93,12 @@ namespace alimer
 
             bool(*BeginFrame)(ContextHandle handle);
             void(*EndFrame)(ContextHandle handle);
+            void(*BeginRenderPass)(ContextHandle handle, const Color& clearColor, float clearDepth, uint8_t clearStencil);
+            void(*EndRenderPass)(ContextHandle handle);
+
+            /* Texture */
+            TextureHandle(*CreateTexture)(const TextureInfo& info);
+            void(*DestroyTexture)(TextureHandle handle);
         };
     }
 }

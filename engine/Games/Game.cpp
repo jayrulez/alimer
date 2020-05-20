@@ -55,7 +55,7 @@ namespace alimer
     {
         /* Init OS first */
         os_init();
-        gameSystems.push_back(input);
+        gameSystems.Push(input);
 
         /* Init graphics system */
         graphics::Configuration configuration = {};
@@ -77,7 +77,7 @@ namespace alimer
             SafeDelete(gameSystem);
         }
 
-        gameSystems.clear();
+        gameSystems.Clear();
         window_destroy(main_window);
         graphics::DestroyContext(mainContext);
         graphics::Shutdown();

@@ -35,10 +35,11 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-#set(SOURCE_FILES alimer.natvis)
+set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     foundation
+    containers
     core
     math
     os

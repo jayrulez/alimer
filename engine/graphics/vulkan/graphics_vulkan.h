@@ -30,7 +30,8 @@ namespace alimer
     {
         namespace vulkan
         {
-            Renderer* CreateRenderer();
+            bool IsSupported(void);
+            Renderer* CreateRenderer(void);
         }
     }
 }

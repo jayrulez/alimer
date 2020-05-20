@@ -21,7 +21,7 @@
 //
 
 #include "core/Log.h"
-#include <vector>
+#include "containers/array.h"
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -44,7 +44,7 @@ using namespace std;
 
 namespace alimer
 {
-    static std::vector<Logger*> _loggers;
+    static Array<Logger*> _loggers;
 
     Logger::Logger(const string& name)
         : _name(name)
@@ -54,7 +54,7 @@ namespace alimer
         , _level{ LogLevel::Info }
 #endif
     {
-        _loggers.push_back(this);
+        _loggers.Push(this);
     }
 
     Logger::~Logger()
@@ -133,14 +133,14 @@ namespace alimer
             if (bufferSize == 0)
                 return;
 
-            std::vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
-            if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer.data(), static_cast<int>(buffer.size())) == 0)
+            Array<WCHAR> buffer(bufferSize + 1); // +1 for the newline
+            if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer.Data(), static_cast<int>(buffer.Size())) == 0)
                 return;
 
-            if (FAILED(StringCchCatW(buffer.data(), buffer.size(), L"\n")))
+            if (FAILED(StringCchCatW(buffer.Data(), buffer.Size(), L"\n")))
                 return;
 
-            OutputDebugStringW(buffer.data());
+            OutputDebugStringW(buffer.Data());
 #   ifdef _DEBUG
             HANDLE handle;
             switch (level)
@@ -155,7 +155,7 @@ namespace alimer
             }
 
             DWORD bytesWritten;
-            WriteConsoleW(handle, buffer.data(), static_cast<DWORD>(wcslen(buffer.data())), &bytesWritten, nullptr);
+            WriteConsoleW(handle, buffer.Data(), static_cast<DWORD>(wcslen(buffer.Data())), &bytesWritten, nullptr);
 #   endif
 #elif defined(__EMSCRIPTEN__)
             int flags = EM_LOG_NO_PATHS;

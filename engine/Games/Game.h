@@ -22,13 +22,13 @@
 
 #pragma once
 
+#include "containers/array.h"
 #include "core/Object.h"
 #include "Games/GameTime.h"
 #include "os/os.h"
 #include "Games/GameSystem.h"
 #include "graphics/graphics.h"
 #include "math/Size.h"
-#include <vector>
 #include <memory>
 
 namespace alimer
@@ -100,14 +100,14 @@ namespace alimer
         // Rendering loop timer.
         GameTime time;
         window_t* main_window = nullptr;
-        std::vector<GameSystem*> gameSystems;
+        Array<GameSystem*> gameSystems;
         graphics::ContextHandle mainContext = graphics::kInvalidContext;
 
         InputManager* input;
         bool headless{ false };
     };
 
-    extern Game* ApplicationCreate(const std::vector<std::string>& args);
+    extern Game* ApplicationCreate(const Array<std::string>& args);
 
     // Call this to ensure application-main is linked in correctly without having to mess around
     // with -Wl,--whole-archive.

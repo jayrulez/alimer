@@ -30,7 +30,8 @@ namespace alimer
     {
         namespace d3d12
         {
-            Renderer* CreateRenderer();
+            bool IsSupported(void);
+            Renderer* CreateRenderer(void);
         }
     }
 }

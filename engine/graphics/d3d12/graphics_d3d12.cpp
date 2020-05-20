@@ -47,7 +47,7 @@
 #endif
 
 #include <d3d12.h>
-#include <wrl.h>
+#include <wrl/client.h>
 
 #if defined(_DEBUG)
 #   include <dxgidebug.h>
@@ -56,8 +56,6 @@
 #   pragma comment(lib,"dxguid.lib")
 #   endif
 #endif
-
-#include <vector>
 
 #define VHR(obj) if (FAILED(hr)) { assert(false); }
 #define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
@@ -75,11 +73,22 @@ namespace alimer
         {
             using Microsoft::WRL::ComPtr;
 
-
             struct Context
             {
                 enum { MAX_COUNT = 16 };
             };
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            static PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
+            static PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
+
+            static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
+            static PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
+            static PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
+            static PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer = nullptr;
+            static PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
+            static PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
+#endif
 
             static struct {
                 bool availableInitialized = false;
@@ -89,19 +98,9 @@ namespace alimer
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
                 HMODULE dxgiDLL = nullptr;
                 HMODULE d3d12DLL = nullptr;
-
-                PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
-                PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
-
-                PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
-                PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
-                PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
-                PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer = nullptr;
-                PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
-                PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
 #endif
 
-                ComPtr<IDXGIFactory4> factory;
+                IDXGIFactory4* factory = {};
                 Pool<Context, Context::MAX_COUNT> contexts;
             } state;
 
@@ -117,25 +116,25 @@ namespace alimer
                 if (state.dxgiDLL == nullptr)
                     return false;
 
-                state.CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(state.dxgiDLL, "CreateDXGIFactory2");
-                if (state.CreateDXGIFactory2 == nullptr)
+                CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(state.dxgiDLL, "CreateDXGIFactory2");
+                if (CreateDXGIFactory2 == nullptr)
                     return false;
 
-                state.DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(state.dxgiDLL, "DXGIGetDebugInterface1");
+                DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(state.dxgiDLL, "DXGIGetDebugInterface1");
 
                 state.d3d12DLL = LoadLibraryW(L"d3d12.dll");
                 if (state.d3d12DLL == nullptr)
                     return false;
 
-                state.D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(state.d3d12DLL, "D3D12CreateDevice");
-                if (state.D3D12CreateDevice == nullptr)
+                D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(state.d3d12DLL, "D3D12CreateDevice");
+                if (D3D12CreateDevice == nullptr)
                     return false;
 
-                state.D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(state.d3d12DLL, "D3D12GetDebugInterface");
-                state.D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(state.d3d12DLL, "D3D12SerializeRootSignature");
-                state.D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(state.d3d12DLL, "D3D12CreateRootSignatureDeserializer");
-                state.D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(state.d3d12DLL, "D3D12SerializeVersionedRootSignature");
-                state.D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(state.d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
+                D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(state.d3d12DLL, "D3D12GetDebugInterface");
+                D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(state.d3d12DLL, "D3D12SerializeRootSignature");
+                D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(state.d3d12DLL, "D3D12CreateRootSignatureDeserializer");
+                D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(state.d3d12DLL, "D3D12SerializeVersionedRootSignature");
+                D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(state.d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
 #endif
 
                 ComPtr<IDXGIFactory4> tempFactory;
@@ -164,9 +163,12 @@ namespace alimer
                 memset(&state, 0, sizeof(state));
             }
 
-            Renderer* CreateRenderer() {
+            bool IsSupported(void) {
+                return D3D12IsSupported();
+            }
+
+            Renderer* CreateRenderer(void) {
                 static Renderer renderer = { nullptr };
-                renderer.IsSupported = D3D12IsSupported;
                 renderer.Init = D3D12Init;
                 renderer.Shutdown = D3D12Shutdown;
                 return &renderer;

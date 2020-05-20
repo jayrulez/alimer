@@ -24,7 +24,7 @@
 
 #include "graphics/Types.h"
 #include "D3D12Backend.h"
-#include <vector>
+#include "containers/array.h"
 #include <queue>
 #include <mutex>
 

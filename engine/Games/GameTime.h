@@ -22,13 +22,10 @@
 
 #pragma once
 
-#include <foundation/platform.h>
-#include <functional>
+#include "core/Stopwatch.h"
 
 namespace alimer
 {
-    class Game;
-
     class ALIMER_API GameTime final
     {
 
@@ -36,7 +33,80 @@ namespace alimer
         GameTime();
          ~GameTime() = default;
 
-         void Tick(const std::function<void()> update);
+         template<typename TUpdate>
+         void Tick(const TUpdate& update)
+         {
+             // Query the current time.
+             uint64_t currentTime = Stopwatch::GetTimestamp();
+             uint64_t timeDelta = currentTime - qpcLastTime;
+
+             qpcLastTime = currentTime;
+             qpcSecondCounter += timeDelta;
+
+             // Clamp excessively large time deltas (e.g. after paused in the debugger).
+             if (timeDelta > qpcMaxDelta)
+             {
+                 timeDelta = qpcMaxDelta;
+             }
+
+             // Convert QPC units into a canonical tick format. This cannot overflow due to the previous clamp.
+             timeDelta *= TicksPerSecond;
+             timeDelta /= qpcFrequency;
+
+             uint32_t lastFrameCount = frameCount;
+
+             if (isFixedTimeStep)
+             {
+                 // Fixed timestep update logic
+
+                 // If the app is running very close to the target elapsed time (within 1/4 of a millisecond) just clamp
+                 // the clock to exactly match the target value. This prevents tiny and irrelevant errors
+                 // from accumulating over time. Without this clamping, a game that requested a 60 fps
+                 // fixed update, running with vsync enabled on a 59.94 NTSC display, would eventually
+                 // accumulate enough tiny errors that it would drop a frame. It is better to just round
+                 // small deviations down to zero to leave things running smoothly.
+
+                 if (static_cast<uint64_t>(std::abs(static_cast<int64_t>(timeDelta - targetElapsedTicks))) < TicksPerSecond / 4000)
+                 {
+                     timeDelta = targetElapsedTicks;
+                 }
+
+                 leftOverTicks += timeDelta;
+
+                 while (leftOverTicks >= targetElapsedTicks)
+                 {
+                     elapsedTicks = targetElapsedTicks;
+                     totalTicks += targetElapsedTicks;
+                     leftOverTicks -= targetElapsedTicks;
+                     frameCount++;
+
+                     update();
+                 }
+             }
+             else
+             {
+                 // Variable timestep update logic.
+                 elapsedTicks = timeDelta;
+                 totalTicks += timeDelta;
+                 leftOverTicks = 0;
+                 frameCount++;
+
+                 update();
+             }
+
+             // Track the current framerate.
+             if (frameCount != lastFrameCount)
+             {
+                 framesThisSecond++;
+             }
+
+             if (qpcSecondCounter >= qpcFrequency)
+             {
+                 framesPerSecond = framesThisSecond;
+                 framesThisSecond = 0;
+                 qpcSecondCounter %= qpcFrequency;
+             }
+         }
 
          // Get elapsed time since the previous Update call.
          uint64_t GetElapsedTicks() const { return elapsedTicks; }
