@@ -22,8 +22,6 @@
 
 #include "graphics_vulkan.h"
 #include "volk.h"
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
 #include "containers/array.h"
 #include <map>
 #include <algorithm>
@@ -141,10 +139,12 @@ namespace alimer
             {
                 enum { MAX_COUNT = 4096 };
 
-                VkFormat format;
                 VkImage handle;
-                TextureState state;
                 VkImageView view;
+
+                VkFormat format;
+                VkImageAspectFlags aspect;
+                TextureState state;
             };
 
             struct Buffer
@@ -186,7 +186,7 @@ namespace alimer
                 VkQueue computeQueue = VK_NULL_HANDLE;
                 VkQueue copyQueue = VK_NULL_HANDLE;
 
-                VmaAllocator memoryAllocator = VK_NULL_HANDLE;
+                //VmaAllocator memoryAllocator = VK_NULL_HANDLE;
 
                 Pool<Context, Context::MAX_COUNT> contexts;
                 Pool<Texture, Texture::MAX_COUNT> textures;
@@ -291,6 +291,31 @@ namespace alimer
                 }
 
                 return VK_FORMAT_UNDEFINED;
+            }
+
+            static VkImageAspectFlags FormatToAspectMask(VkFormat format)
+            {
+                switch (format)
+                {
+                case VK_FORMAT_UNDEFINED:
+                    return 0;
+
+                case VK_FORMAT_S8_UINT:
+                    return VK_IMAGE_ASPECT_STENCIL_BIT;
+
+                case VK_FORMAT_D16_UNORM_S8_UINT:
+                case VK_FORMAT_D24_UNORM_S8_UINT:
+                case VK_FORMAT_D32_SFLOAT_S8_UINT:
+                    return VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
+
+                case VK_FORMAT_D16_UNORM:
+                case VK_FORMAT_D32_SFLOAT:
+                case VK_FORMAT_X8_D24_UNORM_PACK32:
+                    return VK_IMAGE_ASPECT_DEPTH_BIT;
+
+                default:
+                    return VK_IMAGE_ASPECT_COLOR_BIT;
+                }
             }
 
             static bool VulkanIsSupported(void)
@@ -995,7 +1020,7 @@ namespace alimer
                 state.deviceTable.vkGetDeviceQueue(state.device, state.queueFamilyIndices.transferFamily, copyQueueIndex, &state.copyQueue);
 
                 // Create memory allocator.
-                {
+                /*{
                     VmaAllocatorCreateInfo createInfo{};
                     createInfo.physicalDevice = state.physicalDevice;
                     createInfo.device = state.device;
@@ -1023,7 +1048,7 @@ namespace alimer
                         //VK_THROW(result, "Cannot create allocator");
                         return false;
                     }
-                }
+                }*/
 
                 return true;
             }
@@ -1035,7 +1060,7 @@ namespace alimer
 
                 state.deviceTable.vkDeviceWaitIdle(state.device);
 
-                if (state.memoryAllocator != VK_NULL_HANDLE)
+                /*if (state.memoryAllocator != VK_NULL_HANDLE)
                 {
                     VmaStats stats;
                     vmaCalculateStats(state.memoryAllocator, &stats);
@@ -1045,7 +1070,7 @@ namespace alimer
                     }
 
                     vmaDestroyAllocator(state.memoryAllocator);
-                }
+                }*/
 
                 vkDestroyDevice(state.device, NULL);
 
@@ -1099,11 +1124,11 @@ namespace alimer
                     return VK_ACCESS_SHADER_WRITE_BIT;
 
                     //case TextureState::ResolveDest:
-                    case TextureState::CopyDest:
-                        return VK_ACCESS_TRANSFER_WRITE_BIT;
+                case TextureState::CopyDest:
+                    return VK_ACCESS_TRANSFER_WRITE_BIT;
                     //case TextureState::ResolveSource:
-                    case TextureState::CopySource:
-                        return VK_ACCESS_TRANSFER_READ_BIT;
+                case TextureState::CopySource:
+                    return VK_ACCESS_TRANSFER_READ_BIT;
 
                 default:
                     ALIMER_UNREACHABLE();
@@ -1155,7 +1180,7 @@ namespace alimer
                 {
                 case TextureState::Undefined:
                 case TextureState::General:
-                    assert(src);
+                    ALIMER_ASSERT(src);
                     return src ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : (VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
                 case TextureState::ShaderRead:
                 case TextureState::ShaderWrite:
@@ -1192,10 +1217,11 @@ namespace alimer
                     return;
                 }
 
-                const VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // GetVkAspectMask(texture.format);
+                const VkImageAspectFlags aspectMask = texture.aspect;
 
                 // Create an image barrier object
-                VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                VkImageMemoryBarrier barrier = {};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
                 barrier.pNext = nullptr;
                 barrier.srcAccessMask = VkGetAccessMask(texture.state, aspectMask);
                 barrier.dstAccessMask = VkGetAccessMask(newState, aspectMask);
@@ -1238,7 +1264,7 @@ namespace alimer
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
                 VkWin32SurfaceCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-                createInfo.hinstance = GetModuleHandle(NULL);
+                //createInfo.hinstance = GetModuleHandle(NULL);
                 createInfo.hwnd = reinterpret_cast<HWND>(info.handle);
                 result = vkCreateWin32SurfaceKHR(state.instance, &createInfo, nullptr, &context.surface);
 #endif
@@ -1287,6 +1313,10 @@ namespace alimer
                     state.deviceTable.vkDestroySemaphore(state.device, frame->renderCompleteSemaphore, nullptr);
                 }
 
+                for (uint32_t i = 0; i < context.imageCount; i++) {
+                    DestroyTexture(context.backbuffers[i]);
+                }
+
                 free(context.frames);
 
                 if (context.handle != VK_NULL_HANDLE)
@@ -1303,6 +1333,78 @@ namespace alimer
                 }
 
                 state.contexts.dealloc(handle.value);
+            }
+
+            static VkSurfaceFormatKHR ChooseSurfaceFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, PixelFormat colorFormat)
+            {
+                const VkFormat vkColorFormat = GetVkFormat(colorFormat);
+
+                VkSurfaceFormatKHR surfaceFormat = { VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+                uint32_t formatCount = 0;
+                VkSurfaceFormatKHR* formats;
+
+                if (state.surfaceCapabilities2)
+                {
+                    VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = {};
+                    surfaceInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
+                    surfaceInfo.surface = surface;
+
+                    if (vkGetPhysicalDeviceSurfaceFormats2KHR(state.physicalDevice, &surfaceInfo, &formatCount, nullptr) != VK_SUCCESS)
+                    {
+                        return surfaceFormat;
+                    }
+
+                    VkSurfaceFormat2KHR* formats2 = StackAlloc<VkSurfaceFormat2KHR>(formatCount);
+
+                    for (uint32_t i = 0; i < formatCount; i++)
+                    {
+                        formats2[i] = {};
+                        formats2[i].sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR;
+                    }
+
+                    if (vkGetPhysicalDeviceSurfaceFormats2KHR(state.physicalDevice, &surfaceInfo, &formatCount, formats2) != VK_SUCCESS)
+                        return { VK_FORMAT_UNDEFINED, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+
+                    formats = StackAlloc<VkSurfaceFormatKHR>(formatCount);
+                    for (uint32_t i = 0; i < formatCount; i++)
+                    {
+                        formats[i] = formats2[i].surfaceFormat;
+                    }
+                }
+                else
+                {
+                    if (vkGetPhysicalDeviceSurfaceFormatsKHR(state.physicalDevice, surface, &formatCount, nullptr) != VK_SUCCESS)
+                        return surfaceFormat;
+
+                    formats = StackAlloc<VkSurfaceFormatKHR>(formatCount);
+                    if (vkGetPhysicalDeviceSurfaceFormatsKHR(state.physicalDevice, surface, &formatCount, formats) != VK_SUCCESS)
+                        return surfaceFormat;
+                }
+
+                if (formatCount == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
+                {
+                    surfaceFormat = formats[0];
+                    surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
+                }
+                else
+                {
+                    bool found = false;
+
+                    for (uint32_t i = 0; i < formatCount; i++)
+                    {
+                        if (formats[i].format == vkColorFormat)
+                        {
+                            surfaceFormat = formats[i];
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                        surfaceFormat = formats[0];
+                }
+
+                return surfaceFormat;
             }
 
             static VkPresentModeKHR ChooseSwapPresentMode(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool vsyncEnabled)
@@ -1347,84 +1449,6 @@ namespace alimer
                     nullptr,
                     context.surface
                 };
-
-                uint32_t format_count;
-                VkSurfaceFormatKHR* formats;
-
-                if (state.surfaceCapabilities2)
-                {
-                    if (vkGetPhysicalDeviceSurfaceFormats2KHR(state.physicalDevice, &surfaceInfo, &format_count, nullptr) != VK_SUCCESS)
-                        return false;
-
-                    VkSurfaceFormat2KHR* formats2 = StackAlloc<VkSurfaceFormat2KHR>(format_count);
-
-                    for (uint32_t i = 0; i < format_count; i++)
-                    {
-                        formats2[i] = {};
-                        formats2[i].sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR;
-                    }
-
-                    if (vkGetPhysicalDeviceSurfaceFormats2KHR(state.physicalDevice, &surfaceInfo, &format_count, formats2) != VK_SUCCESS)
-                        return false;
-
-                    formats = StackAlloc<VkSurfaceFormatKHR>(format_count);
-                    for (uint32_t i = 0; i < format_count; i++)
-                    {
-                        formats[i] = formats2[i].surfaceFormat;
-                    }
-                }
-                else
-                {
-                    if (vkGetPhysicalDeviceSurfaceFormatsKHR(state.physicalDevice, context.surface, &format_count, nullptr) != VK_SUCCESS)
-                        return false;
-
-                    formats = StackAlloc<VkSurfaceFormatKHR>(format_count);
-                    if (vkGetPhysicalDeviceSurfaceFormatsKHR(state.physicalDevice, context.surface, &format_count, formats) != VK_SUCCESS)
-                        return false;
-                }
-
-                const bool srgb = false;
-                if (format_count == 1 && formats[0].format == VK_FORMAT_UNDEFINED)
-                {
-                    context.surfaceFormat = formats[0];
-                    context.surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
-                }
-                else
-                {
-                    if (format_count == 0)
-                    {
-                        LogError("Vulkan: Surface has no formats.");
-                        return false;
-                    }
-
-                    bool found = false;
-                    for (uint32_t i = 0; i < format_count; i++)
-                    {
-                        if (srgb)
-                        {
-                            if (formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||
-                                formats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
-                                formats[i].format == VK_FORMAT_A8B8G8R8_SRGB_PACK32)
-                            {
-                                context.surfaceFormat = formats[i];
-                                found = true;
-                            }
-                        }
-                        else
-                        {
-                            if (formats[i].format == VK_FORMAT_R8G8B8A8_UNORM ||
-                                formats[i].format == VK_FORMAT_B8G8R8A8_UNORM ||
-                                formats[i].format == VK_FORMAT_A8B8G8R8_UNORM_PACK32)
-                            {
-                                context.surfaceFormat = formats[i];
-                                found = true;
-                            }
-                        }
-                    }
-
-                    if (!found)
-                        context.surfaceFormat = formats[0];
-                }
 
                 VkSurfaceCapabilitiesKHR capabilities;
                 if (state.surfaceCapabilities2)
@@ -1502,11 +1526,14 @@ namespace alimer
                 if (capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
                     compositeMode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
+                context.surfaceFormat = ChooseSurfaceFormat(state.physicalDevice, context.surface, PixelFormat::BGRA8UNormSrgb);
                 VkPresentModeKHR presentMode = ChooseSwapPresentMode(state.physicalDevice, context.surface, true);
 
                 VkSwapchainKHR oldSwapchain = context.handle;
 
-                VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+                VkSwapchainCreateInfoKHR createInfo = {};
+                createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+                createInfo.pNext = nullptr;
                 createInfo.surface = context.surface;
                 createInfo.minImageCount = minImageCount;
                 createInfo.imageFormat = context.surfaceFormat.format;
@@ -1600,7 +1627,7 @@ namespace alimer
                     TextureInfo textureInfo = {};
                     textureInfo.width = context.surfaceExtent.width;
                     textureInfo.height = context.surfaceExtent.height;
-                    textureInfo.format = PixelFormat::BGRA8UNorm;
+                    textureInfo.format = PixelFormat::BGRA8UNormSrgb;
                     textureInfo.usage = TextureUsage::OutputAttachment;
                     textureInfo.label = names[i];
                     textureInfo.externalHandle = swapChainImages[i];
@@ -1698,6 +1725,14 @@ namespace alimer
                 Context& context = state.contexts[handle.value];
                 Frame* frame = &context.frames[context.frameIndex];
 
+                if (context.handle)
+                {
+                    TextureBarrier(context.backbuffers[context.imageIndex],
+                        frame->commandBuffer,
+                        TextureState::Present
+                    );
+                }
+
                 // End frame command buffer.
                 VK_CHECK(state.deviceTable.vkEndCommandBuffer(frame->commandBuffer));
 
@@ -1771,6 +1806,8 @@ namespace alimer
                 const int id = state.textures.alloc();
                 Texture& texture = state.textures[id];
                 texture.format = GetVkFormat(info.format);
+                texture.aspect = FormatToAspectMask(texture.format);
+
                 if (info.externalHandle != nullptr)
                 {
                     texture.handle = (VkImage)info.externalHandle;
@@ -1803,6 +1840,12 @@ namespace alimer
             static void VulkanDestroyTexture(TextureHandle handle)
             {
                 Texture& texture = state.textures[handle.value];
+
+                if (texture.view != VK_NULL_HANDLE)
+                {
+                    state.deviceTable.vkDestroyImageView(state.device, texture.view, nullptr);
+                }
+
                 state.textures.dealloc(handle.value);
             }
 
@@ -1822,9 +1865,12 @@ namespace alimer
                 renderer.EndFrame = VulkanEndFrame;
                 renderer.BeginRenderPass = VulkanBeginRenderPass;
                 renderer.EndRenderPass = VulkanEndRenderPass;
-
+                /* Texture*/
                 renderer.CreateTexture = VulkanCreateTexture;
                 renderer.DestroyTexture = VulkanDestroyTexture;
+                /* RenderPass*/
+                //renderer.CreateRenderPass = VulkanCreateRenderPass;
+                //renderer.DestroyRenderPass = VulkanDestroyRenderPass;
                 return &renderer;
             }
         }

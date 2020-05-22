@@ -28,20 +28,20 @@
 
 namespace alimer
 {
-    static void GraphicsLogCallback(void* userData, const char* message, graphics::LogLevel level)
+    static void GPULogCallback(void* userData, GPULogLevel level, const char* message)
     {
         switch (level)
         {
-        case graphics::LogLevel::Error:
+        case GPULogLevel_Error:
             Log::GetDefault()->Log(LogLevel::Error, message);
             break;
-        case graphics::LogLevel::Warn:
+        case GPULogLevel_Warn:
             Log::GetDefault()->Log(LogLevel::Warning, message);
             break;
-        case graphics::LogLevel::Info:
+        case GPULogLevel_Info:
             Log::GetDefault()->Log(LogLevel::Info, message);
             break;
-        case graphics::LogLevel::Debug:
+        case GPULogLevel_Debug:
             Log::GetDefault()->Log(LogLevel::Debug, message);
             break;
         default:
@@ -57,17 +57,7 @@ namespace alimer
         os_init();
         gameSystems.Push(input);
 
-        /* Init graphics system */
-        graphics::Configuration configuration = {};
-#ifdef _DEBUG
-        configuration.debug = true;
-#endif
-        configuration.logCallback = GraphicsLogCallback;
-        configuration.userData = this;
-
-        if (!graphics::Initialize(configuration)) {
-            headless = true;
-        }
+        gpuSetLogCallback(GPULogCallback, this);
     }
 
     Game::~Game()
@@ -79,8 +69,7 @@ namespace alimer
 
         gameSystems.Clear();
         window_destroy(main_window);
-        graphics::DestroyContext(mainContext);
-        graphics::Shutdown();
+        gpuDeviceDestroy(gpuDevice);
         os_shutdown();
     }
 
@@ -94,12 +83,31 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
             window_set_centered(main_window);
+
+            GPUSwapChainDescriptor swapChainDescriptor = {};
+            swapChainDescriptor.windowHandle = window_handle(main_window);
+            swapChainDescriptor.width = window_width(main_window);
+            swapChainDescriptor.height = window_height(main_window);
+
+            bool debug = false;
+#ifdef _DEBUG
+            debug = true;
+#endif
+            gpuDevice = gpuDeviceCreate(GPUBackendType_Direct3D11, debug, &swapChainDescriptor);
+
+            /* Create texture. */
+            /*gpu_texture_info texture_info = {};
+            texture_info.format = GPU_TEXTURE_FORMAT_RGBA8;
+            texture_info.usage = GPU_TEXTURE_USAGE_RENDER_TARGET;
+            texture_info.width = window_width(main_window);
+            texture_info.height = window_height(main_window);
+            texture_info.depth = 1u;
+            texture_info.mip_levels = 1u;
+            texture_info.array_layers = 1;
+            auto texture = gpu_texture_create(&texture_info);*/
             
-            graphics::ContextInfo contextInfo = {};
-            contextInfo.handle = window_handle(main_window);
-            contextInfo.width = window_width(main_window);
-            contextInfo.height = window_height(main_window);
-            mainContext = graphics::CreateContext(contextInfo);
+            /* Create swapchain. */
+            //swapchain = gpu_swapchain_create(&swapchain_info);
         }
 
         Initialize();
@@ -133,9 +141,10 @@ namespace alimer
 
     bool Game::BeginDraw()
     {
-        if (!graphics::BeginFrame(mainContext)) {
+        gpuBeginFrame(gpuDevice);
+        /*if (!graphics::BeginFrame(mainContext)) {
             return false;
-        }
+        }*/
 
         for (auto gameSystem : gameSystems)
         {
@@ -211,7 +220,8 @@ namespace alimer
         vgpuCmdEndRenderPass();
 #endif
 
-        graphics::EndFrame(mainContext);
+        gpuEndFrame(gpuDevice);
+        //graphics::EndFrame(mainContext);
     }
 
     int Game::Run()

@@ -92,7 +92,7 @@ namespace alimer
         // Depth-stencil formats
         {PixelFormat::Depth32Float,                 DXGI_FORMAT_D32_FLOAT},
         {PixelFormat::Depth16UNorm,                 DXGI_FORMAT_D16_UNORM},
-        {PixelFormat::Depth24Plus,                  DXGI_FORMAT_D32_FLOAT},
+        //{PixelFormat::Depth24Plus,                  DXGI_FORMAT_D32_FLOAT},
         {PixelFormat::Depth24PlusStencil8,          DXGI_FORMAT_D24_UNORM_S8_UINT},
         // Compressed BC formats
         {PixelFormat::BC1RGBAUNorm,                 DXGI_FORMAT_BC1_UNORM},

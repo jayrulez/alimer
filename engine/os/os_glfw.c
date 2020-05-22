@@ -364,13 +364,13 @@ void window_swap_buffers(window_t* window) {
     glfwSwapBuffers(window->handle);
 }
 
-uintptr_t window_handle(window_t* window) {
+void* window_handle(window_t* window) {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-    return (uintptr_t)glfwGetWin32Window(window->handle);
+    return glfwGetWin32Window(window->handle);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
-    return (uintptr_t)glfwGetX11Window(window->handle);
+    return glfwGetX11Window(window->handle);
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-    return (uintptr_t)glfwGetCocoaWindow(window->handle);
+    return glfwGetCocoaWindow(window->handle);
 #else
     return 0;
 #endif

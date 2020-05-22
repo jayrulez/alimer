@@ -154,8 +154,8 @@ namespace alimer
             return DXGI_FORMAT_R32_TYPELESS;
         case PixelFormat::Depth16UNorm:
             return DXGI_FORMAT_R16_TYPELESS;
-        case PixelFormat::Depth24Plus:
-            return DXGI_FORMAT_R24G8_TYPELESS;
+        //case PixelFormat::Depth24Plus:
+        //    return DXGI_FORMAT_R24G8_TYPELESS;
         case PixelFormat::Depth24PlusStencil8:
             return DXGI_FORMAT_R24G8_TYPELESS;
         

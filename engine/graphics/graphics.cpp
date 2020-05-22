@@ -23,10 +23,6 @@
 #include "config.h"
 #include "graphics/graphics_backend.h"
 
-#if defined(ALIMER_GRAPHICS_VULKAN) 
-#include "graphics/vulkan/graphics_vulkan.h"
-#endif
-
 #if defined(ALIMER_GRAPHICS_D3D12)
 #include "graphics/d3d12/graphics_d3d12.h"
 #endif
@@ -116,15 +112,6 @@ namespace alimer
 #endif
                 break;
 
-            case BackendType::Vulkan:
-#if defined(ALIMER_GRAPHICS_VULKAN)
-                if (vulkan::IsSupported())
-                {
-                    s_renderer = vulkan::CreateRenderer();
-                }
-#endif
-                break;
-
             default:
                 return nullptr;
             }
@@ -195,6 +182,19 @@ namespace alimer
             if (handle.isValid())
             {
                 s_renderer->DestroyTexture(handle);
+            }
+        }
+
+        RenderPassHandle CreateRenderPass(const RenderPassInfo& info)
+        {
+            return s_renderer->CreateRenderPass(info);
+        }
+
+        void DestroyRenderPass(RenderPassHandle handle)
+        {
+            if (handle.isValid())
+            {
+                s_renderer->DestroyRenderPass(handle);
             }
         }
     }

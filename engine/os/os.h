@@ -131,7 +131,7 @@ extern "C"
     OS_EXPORT bool window_is_focused(window_t* window);
     OS_EXPORT void window_swap_buffers(window_t* window);
 
-    OS_EXPORT uintptr_t window_handle(window_t* window);
+    OS_EXPORT void* window_handle(window_t* window);
 
     /* Clipboard functions */
     OS_EXPORT const char* clipboard_get_text(void);

@@ -43,14 +43,12 @@ define_engine_source_files(
     core
     math
     os
+    gpu
+    gpu/vk
     graphics
     Input
     Games
 )
-
-if (ALIMER_GRAPHICS_VULKAN)
-    define_engine_source_files(graphics/vulkan)
-endif()
 
 if (ALIMER_GRAPHICS_D3D12)
     define_engine_source_files(graphics/d3d)
@@ -79,8 +77,8 @@ target_link_libraries(alimer PUBLIC
 )
 
 if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(alimer PRIVATE volk vma)
-    target_compile_definitions(alimer PRIVATE GPU_VK_BACKEND)
+    target_link_libraries(alimer PRIVATE vulkan)
+    target_compile_definitions(alimer PRIVATE GPU_DRIVER_VULKAN)
 endif ()
 
 # Link platform specific libraries
@@ -134,12 +132,13 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 if (WIN32)
     # Enable unicode strings
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
+    target_compile_definitions(alimer PRIVATE _UNICODE)
+    target_compile_definitions(alimer PRIVATE GPU_DRIVER_D3D11)
 endif()
 
 # SDK installation
-install(TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}
+install(TARGETS alimer
+    EXPORT alimer
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
     RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
     ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}

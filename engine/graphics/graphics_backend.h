@@ -99,6 +99,10 @@ namespace alimer
             /* Texture */
             TextureHandle(*CreateTexture)(const TextureInfo& info);
             void(*DestroyTexture)(TextureHandle handle);
+
+            /* RenderPass */
+            RenderPassHandle(*CreateRenderPass)(const RenderPassInfo& info);
+            void(*DestroyRenderPass)(RenderPassHandle handle);
         };
     }
 }

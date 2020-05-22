@@ -27,7 +27,7 @@
 #include "Games/GameTime.h"
 #include "os/os.h"
 #include "Games/GameSystem.h"
-#include "graphics/graphics.h"
+#include "gpu/gpu.h"
 #include "math/Size.h"
 #include <memory>
 
@@ -101,7 +101,7 @@ namespace alimer
         GameTime time;
         window_t* main_window = nullptr;
         Array<GameSystem*> gameSystems;
-        graphics::ContextHandle mainContext = graphics::kInvalidContext;
+        GPUDevice* gpuDevice;
 
         InputManager* input;
         bool headless{ false };

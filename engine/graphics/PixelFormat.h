@@ -81,7 +81,6 @@ namespace alimer
         // Depth-stencil formats
         Depth32Float,
         Depth16UNorm,
-        Depth24Plus,
         Depth24PlusStencil8,
         // Compressed BC formats
         BC1RGBAUNorm,
