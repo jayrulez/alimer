@@ -20,27 +20,48 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Core/StringId.h"
+#include "Core/String.h"
+#include "Core/Hash.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    const StringId32 StringId32::Zero;
+    const StringId64 StringId64::Zero;
+
+    /* StringId32 */
+    StringId32::StringId32(const char* str) noexcept
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        value = murmur32(str, (uint32_t)strlen(str), 0);
+    }
 
-        }
-    };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
+    StringId32::StringId32(const std::string& str) noexcept
     {
-        ApplicationDummy();
+        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
+    }
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+    std::string StringId32::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%08X", value);
+        return std::string(tempBuffer);
+    }
+
+    /* StringId64 */
+    StringId64::StringId64(const char* str) noexcept
+    {
+        value = murmur64(str, (uint64_t)strlen(str), 0);
+    }
+
+    StringId64::StringId64(const std::string& str) noexcept
+    {
+        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
+    }
+
+    std::string StringId64::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%16" PRIx64, value);
+        return std::string(tempBuffer);
     }
 }

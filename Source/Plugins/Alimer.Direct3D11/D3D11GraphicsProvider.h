@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,38 @@
 
 #pragma once
 
-#include "Application/GameSystem.h"
+#include "graphics/GraphicsProvider.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-    class ALIMER_API InputManager final : public GameSystem
+    class D3D11GraphicsProvider final : public GraphicsProvider
     {
-        ALIMER_OBJECT(InputManager, GameSystem);
     public:
-        /// Constructor.
-        InputManager();
-        /// Destructor.
-        ~InputManager();
+        static bool IsAvailable();
+
+        D3D11GraphicsProvider(bool validation);
+        ~D3D11GraphicsProvider() override;
+
+        std::vector<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
+
+        //RefPtr<GPUDevice> CreateDevice(GPUPowerPreference powerPreference) override;
+
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        bool IsTearingSupported() const { return isTearingSupported; }
+        bool IsValidationEnabled() const { return _validation; }
 
     private:
+        UINT dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory2> dxgiFactory;
+        bool isTearingSupported = false;
+        bool _validation;
+    };
+
+    class D3D11GraphicsProviderFactory final : public GraphicsProviderFactory
+    {
+    public:
+        BackendType GetBackendType() const override { return BackendType::Direct3D11; }
+        std::unique_ptr<GraphicsProvider> CreateProvider(bool validation) override;
     };
 }

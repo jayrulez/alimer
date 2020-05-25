@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "graphics/GraphicsAdapter.h"
+#include <memory>
+#include <vector>
 
 namespace Alimer
 {
-    class MyGame : public Application
-    {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+    class GraphicsDevice;
 
-        }
+    /// Defines the entry point for interacting with graphics subsystem.
+    class GraphicsProvider
+    {
+    public:
+        GraphicsProvider() = default;
+        virtual ~GraphicsProvider() = default;
+
+        virtual std::vector<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
     };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    class GraphicsProviderFactory
     {
-        ApplicationDummy();
+    public:
+        GraphicsProviderFactory() = default;
+        virtual ~GraphicsProviderFactory() = default;
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
+        virtual BackendType GetBackendType() const = 0;
+        virtual std::unique_ptr<GraphicsProvider> CreateProvider(bool validation) = 0;
+    };
 }

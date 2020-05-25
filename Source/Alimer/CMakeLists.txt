@@ -34,20 +34,17 @@ set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     foundation
-    containers
-    core
-    math
+    Core
+    Math
     os
-    gpu
-    gpu/vk
-    graphics
+    Graphics
     Input
-    Games
+    Application
 )
 
 if (ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(graphics/d3d)
-    define_engine_source_files(graphics/d3d12)
+    #define_engine_source_files(graphics/d3d)
+    #define_engine_source_files(graphics/d3d12)
 endif ()
 
 group_sources()

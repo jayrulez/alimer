@@ -1,0 +1,115 @@
+//
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+//
+
+#include "config.h"
+#include "graphics/graphics_backend.h"
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/d3d12/graphics_d3d12.h"
+#endif
+
+#include <cstdarg>
+#include <cstdio>
+
+namespace alimer
+{
+    namespace graphics
+    {
+        static Renderer* s_renderer = nullptr;
+        static LogCallback s_logCallback = nullptr;
+        static void* s_logCallbackUserData = nullptr;
+
+        void Shutdown()
+        {
+            if (s_renderer == NULL) {
+                return;
+            }
+
+            s_renderer->Shutdown();
+            s_renderer = NULL;
+        }
+
+        ContextHandle CreateContext(const ContextInfo& info)
+        {
+            return s_renderer->CreateContext(info);
+        }
+
+        void DestroyContext(ContextHandle handle)
+        {
+            if (handle.isValid())
+            {
+                s_renderer->DestroyContext(handle);
+            }
+        }
+
+        bool ResizeContext(ContextHandle handle, uint32_t width, uint32_t height)
+        {
+            return s_renderer->ResizeContext(handle, width, height);
+        }
+
+        bool BeginFrame(ContextHandle handle)
+        {
+            return s_renderer->BeginFrame(handle);
+        }
+
+        /*void BeginRenderPass(ContextHandle handle, const Color& clearColor, float clearDepth, uint8_t clearStencil)
+        {
+            s_renderer->BeginRenderPass(handle, clearColor, clearDepth, clearStencil);
+        }*/
+
+        void EndRenderPass(ContextHandle handle)
+        {
+            s_renderer->EndRenderPass(handle);
+        }
+
+        void EndFrame(ContextHandle handle)
+        {
+            s_renderer->EndFrame(handle);
+        }
+
+        TextureHandle CreateTexture(const TextureInfo& info)
+        {
+            return s_renderer->CreateTexture(info);
+        }
+
+        void DestroyTexture(TextureHandle handle)
+        {
+            if (handle.isValid())
+            {
+                s_renderer->DestroyTexture(handle);
+            }
+        }
+
+        RenderPassHandle CreateRenderPass(const RenderPassInfo& info)
+        {
+            return s_renderer->CreateRenderPass(info);
+        }
+
+        void DestroyRenderPass(RenderPassHandle handle)
+        {
+            if (handle.isValid())
+            {
+                s_renderer->DestroyRenderPass(handle);
+            }
+        }
+    }
+}

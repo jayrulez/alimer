@@ -20,27 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Object.h"
+#include "Application/GameTime.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class ALIMER_API GameSystem : public Object
     {
-        ALIMER_OBJECT(MyGame, Application);
+        ALIMER_OBJECT(GameSystem, Object);
+
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        GameSystem();
 
-        }
+        /// Destructor.
+        virtual ~GameSystem() = default;
+
+        virtual void Initialize() {}
+        virtual void Update(const GameTime& gameTime) {}
+        virtual void BeginDraw() {}
+        virtual void Draw(const GameTime& gameTime) {}
+        virtual void EndDraw() {}
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

@@ -20,27 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include <foundation/platform.h>
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class ALIMER_API Stopwatch final
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        static constexpr uint64_t TicksPerMillisecond = 10000;
+        static constexpr uint64_t TicksPerSecond = 10000000;
 
-        }
+        /// Constructor.
+        Stopwatch();
+        /// Destructor.
+        ~Stopwatch();
+
+        void Reset();
+        void Start();
+        void Stop();
+        void Restart();
+
+        bool IsRunning() const { return isRunning; }
+        uint64_t GetElapsedTicks() const;
+        uint64_t GetElapsedMilliseconds() const;
+
+        static uint64_t GetFrequency();
+        static uint64_t GetTimestamp();
+
+    private:
+        
+        bool isRunning = false;
+        uint64_t elapsed = 0;
+        uint64_t startTimeStamp = 0;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

@@ -20,26 +20,56 @@
 // THE SOFTWARE.
 //
 
-#include "Editor.h"
+#include "Core/Plugin.h"
+#include "Core/Log.h"
+#include "Core/NativeLibrary.h"
+#include "os/os.h"
 
 namespace Alimer
 {
-    Editor::Editor(const Configuration& config)
-        : Application(config)
+    PluginManager::PluginManager(Engine& engine)
+        : engine{ engine }
     {
 
     }
 
-    Editor::~Editor()
+    void PluginManager::InitPlugins()
     {
+        for (uint32_t i = 0, count = plugins.Size(); i < count; ++i)
+        {
+            plugins[i]->Init();
+        }
     }
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    IPlugin* PluginManager::Load(const char* path)
     {
-        ApplicationDummy();
+        LOG_INFO("Loading plugin '%s'", path);
 
-        Configuration config;
-        config.windowTitle = "Alimer Studio";
-        return new Editor(config);
+        std::string error;
+        CreatePluginFn creator;
+        std::unique_ptr<NativeLibrary> lib(new NativeLibrary());
+        if (!lib->Open(path, &error) ||
+            !lib->GetProc(&creator, "AlimerCreatePlugin", &error))
+        {
+            return nullptr;
+        }
+
+        IPlugin* plugin = creator(engine);
+        if (!plugin)
+        {
+            // TODO: Return error?
+            ALIMER_ASSERT_FAIL("Plugin creation failed.");
+            return nullptr;
+        }
+
+        AddPlugin(plugin);
+        libraries.Push(std::move(lib));
+        LOG_INFO("Plugin '%s' loaded with success.", plugin->GetName());
+        return plugin;
+    }
+
+    void PluginManager::AddPlugin(IPlugin* plugin)
+    {
+        plugins.Push(plugin);
     }
 }

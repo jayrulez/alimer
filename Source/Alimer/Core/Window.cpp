@@ -20,27 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Core/Window.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    Window::Window()
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
     }
 }

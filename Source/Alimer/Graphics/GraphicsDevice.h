@@ -20,27 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Ptr.h"
+#include "graphics/GraphicsResource.h"
+#include "os/os.h"
+#include <memory>
+#include <set>
 
 namespace Alimer
 {
-    class MyGame : public Application
-    {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+    struct TextureDesc;
+    class Texture;
 
-        }
+    /// Desribes a GraphicsDevice
+    struct GraphicsDeviceDesc
+    {
+        const char* applicationName = "";
+        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
     };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    /// Defines the logical graphics device class.
+    class ALIMER_API GraphicsDevice
     {
-        ApplicationDummy();
+    public:
+        GraphicsDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
+        virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+
+    private:
+    };
 }

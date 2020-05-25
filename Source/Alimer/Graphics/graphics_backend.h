@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
 
-namespace Alimer
+#include "graphics/graphics.h"
+
+namespace alimer
 {
-    class MyGame : public Application
+    namespace graphics
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
+        struct Renderer
         {
+            bool (*Init)(const Configuration& config);
+            void (*Shutdown)(void);
 
-        }
-    };
+            ContextHandle(*CreateContext)(const ContextInfo& info);
+            void(*DestroyContext)(ContextHandle handle);
+            bool(*ResizeContext)(ContextHandle handle, uint32_t width, uint32_t height);
 
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
+            bool(*BeginFrame)(ContextHandle handle);
+            void(*EndFrame)(ContextHandle handle);
+            //void(*BeginRenderPass)(ContextHandle handle, const Color& clearColor, float clearDepth, uint8_t clearStencil);
+            void(*EndRenderPass)(ContextHandle handle);
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+            /* Texture */
+            TextureHandle(*CreateTexture)(const TextureInfo& info);
+            void(*DestroyTexture)(TextureHandle handle);
+
+            /* RenderPass */
+            RenderPassHandle(*CreateRenderPass)(const RenderPassInfo& info);
+            void(*DestroyRenderPass)(RenderPassHandle handle);
+        };
     }
 }

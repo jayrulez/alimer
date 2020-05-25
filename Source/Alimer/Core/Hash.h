@@ -20,27 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include <foundation/platform.h>
 
 namespace Alimer
 {
-    class MyGame : public Application
-    {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
+    ALIMER_API uint32_t murmur32(const void* key, uint32_t len, uint32_t seed);
+    ALIMER_API uint64_t murmur64(const void* key, uint64_t len, uint64_t seed);
 }

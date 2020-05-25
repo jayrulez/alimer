@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "Games/Game.h"
+#include "Application/Application.h"
 
-namespace alimer
+namespace Alimer
 {
-    class Editor final : public Game
+    class Editor final : public Application
     {
-        ALIMER_OBJECT(Editor, Game);
+        ALIMER_OBJECT(Editor, Application);
     public:
         /// Constructor.
         Editor(const Configuration& config);

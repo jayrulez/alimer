@@ -20,27 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Assert.h"
+#include <string>
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class ALIMER_API NativeLibrary final 
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        NativeLibrary() = default;
+        ~NativeLibrary();
+        NativeLibrary(const NativeLibrary&) = delete;
+        NativeLibrary& operator=(const NativeLibrary&) = delete;
+        NativeLibrary(NativeLibrary&& other) noexcept;
+        NativeLibrary& operator=(NativeLibrary&& other) noexcept;
 
+        bool IsValid() const;
+        bool Open(const std::string& filename, std::string* error = nullptr);
+        void Close();
+
+        void* GetProc(const std::string& procName, std::string* error = nullptr) const;
+
+        template <typename T>
+        bool GetProc(T** proc, const std::string& procName, std::string* error = nullptr) const {
+            ALIMER_ASSERT(proc != nullptr);
+            static_assert(std::is_function<T>::value, "");
+            *proc = reinterpret_cast<T*>(GetProc(procName, error));
+            return *proc != nullptr;
         }
+
+    private:
+        void* handle = nullptr;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

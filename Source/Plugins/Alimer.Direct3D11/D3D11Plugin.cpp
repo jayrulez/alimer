@@ -20,27 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "D3D11Plugin.h"
+#include "D3D11GraphicsProvider.h"
+#include "Core/Engine.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    D3D11Plugin::D3D11Plugin(Engine& engine)
+        : engine{ engine }
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
 
-        }
-    };
+    }
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    void D3D11Plugin::Init()
     {
-        ApplicationDummy();
+        engine.RegisterGraphicsProviderFactory(new D3D11GraphicsProviderFactory());
+    }
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+    const char* D3D11Plugin::GetName() const
+    {
+        static const std::string sPluginName = "Alimer.Direct3D11";
+        return sPluginName.c_str();
+    }
+}
+
+extern "C"
+{
+    ALIMER_INTERFACE_EXPORT Alimer::IPlugin* AlimerCreatePlugin(Alimer::Engine& engine)
+    {
+        return new Alimer::D3D11Plugin(engine);
     }
 }

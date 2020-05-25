@@ -20,27 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include <foundation/platform.h>
+#include <string>
 
 namespace Alimer
 {
-    class MyGame : public Application
-    {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
 
-        }
-    };
+    extern const std::string EMPTY_STRING;
 
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
+#ifdef _WIN32
+    std::string ToUtf8(const wchar_t* wstr, size_t len);
+    std::string ToUtf8(const std::wstring& wstr);
+    std::wstring ToUtf16(const char* str, size_t len);
+    std::wstring ToUtf16(const std::string& str);
+#endif
 }

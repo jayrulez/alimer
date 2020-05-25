@@ -20,27 +20,51 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#if defined(__CYGWIN32__)
+#   define ALIMER_INTERFACE_EXPORT __declspec(dllexport)
+#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(WINAPI_FAMILY)
+#   define ALIMER_INTERFACE_EXPORT __declspec(dllexport)
+#elif defined(__MACH__) || defined(__ANDROID__) || defined(__linux__)
+#   define ALIMER_INTERFACE_EXPORT
+#else
+#   define ALIMER_INTERFACE_EXPORT
+#endif
+
+#include <foundation/platform.h>
+#include "Core/Array.h"
+#include <memory>
 
 namespace Alimer
 {
-    class MyGame : public Application
+    struct ALIMER_API IPlugin
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
+        virtual void Init() = 0;
+        virtual const char* GetName() const = 0;
     };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
+    class NativeLibrary;
+    class Engine;
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
+    class ALIMER_API PluginManager
+    {
+    public:
+        /// Constructor.
+        PluginManager(Engine& engine);
+        /// Destructor.
+        virtual ~PluginManager() = default;
+
+        void InitPlugins();
+        IPlugin* Load(const char* path);
+        void AddPlugin(IPlugin* plugin);
+
+    private:
+        Engine& engine;
+        Array<std::unique_ptr<NativeLibrary>> libraries;
+        Array<IPlugin*> plugins;
+    };
+
+    
+    typedef IPlugin* (*CreatePluginFn)(Engine& engine);
 }

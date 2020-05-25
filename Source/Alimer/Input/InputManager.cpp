@@ -22,7 +22,7 @@
 
 #include "Input/InputManager.h"
 
-namespace alimer
+namespace Alimer
 {
     InputManager::InputManager()
     {

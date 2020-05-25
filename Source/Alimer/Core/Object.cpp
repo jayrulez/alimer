@@ -20,27 +20,57 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
+        : type(typeName_)
+        , typeName(typeName_)
+        , baseTypeInfo(baseTypeInfo_)
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
+
+    }
+
+    bool TypeInfo::IsTypeOf(StringId32 type) const
+    {
+        const TypeInfo* current = this;
+        while (current)
         {
+            if (current->GetType() == type)
+                return true;
 
+            current = current->GetBaseTypeInfo();
         }
-    };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+        return false;
+    }
+
+    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
     {
-        ApplicationDummy();
+        if (typeInfo == nullptr)
+            return false;
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current == typeInfo || current->GetType() == typeInfo->GetType())
+                return true;
+
+            current = current->GetBaseTypeInfo();
+        }
+
+        return false;
+    }
+
+    /* Object */
+    bool Object::IsInstanceOf(StringId32 type) const
+    {
+        return GetTypeInfo()->IsTypeOf(type);
+    }
+
+    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    {
+        return GetTypeInfo()->IsTypeOf(typeInfo);
     }
 }

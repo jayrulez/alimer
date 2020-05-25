@@ -20,27 +20,40 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Object.h"
+#include <memory>
+#include <vector>
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class PluginManager;
+    class GraphicsProvider;
+    class GraphicsProviderFactory;
+
+    class ALIMER_API Engine final : public Object
     {
-        ALIMER_OBJECT(MyGame, Application);
+        ALIMER_OBJECT(Engine, Object);
+
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        /// Constructor.
+        Engine();
+        /// Destructor.
+        virtual ~Engine();
 
-        }
+        /// Initialize engine with all subsystems and load all plugins.
+        bool Initialize();
+
+        void RegisterGraphicsProviderFactory(GraphicsProviderFactory* factory);
+
+        PluginManager& GetPluginManager() { return *pluginManager; }
+        PluginManager& GetPluginManager() const { return *pluginManager; }
+
+    private:
+        bool initialized = false;
+        PluginManager* pluginManager;
+        std::unique_ptr<GraphicsProvider> graphicsProvider;
+        std::vector<std::unique_ptr<GraphicsProviderFactory>> graphicsProviderFactories;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

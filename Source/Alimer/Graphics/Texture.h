@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,17 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "graphics/GraphicsResource.h"
+#include "math/size.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class ALIMER_API Texture : public GraphicsResource
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
+        Texture(GraphicsDevice& device);
+        virtual ~Texture() = default;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

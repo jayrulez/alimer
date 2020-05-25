@@ -20,27 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "config.h"
+#include "Core/Log.h"
+#include "Core/Assert.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+
+    /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+        std::lock_guard<std::mutex> lock(_gpuResourceMutex);
+        _gpuResources.push_back(resource);
     }
+
+    void GraphicsDevice::RemoveGPUResource(GraphicsResource* resource)
+    {
+        std::lock_guard<std::mutex> lock(_gpuResourceMutex);
+        _gpuResources.erase(std::remove(_gpuResources.begin(), _gpuResources.end(), resource), _gpuResources.end());
+    }
+
+    void GraphicsDevice::ReleaseTrackedResources()
+    {
+        {
+            std::lock_guard<std::mutex> lock(_gpuResourceMutex);
+
+            // Release all GPU objects that still exist
+            for (auto i = _gpuResources.begin(); i != _gpuResources.end(); ++i)
+            {
+                (*i)->Release();
+            }
+
+            _gpuResources.clear();
+        }
+    }*/
+
 }

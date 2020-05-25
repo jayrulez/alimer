@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,37 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    enum class BufferUsage : uint32_t
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        None = 0,
+        MapRead = 1 << 0,
+        MapWrite = 1 << 1,
+        CopySrc = 1 << 2,
+        CopyDst = 1 << 3,
+        Index = 1 << 4,
+        Vertex = 1 << 5,
+        Uniform = 1 << 6,
+        Storage = 1 << 7,
+        Indirect = 1 << 8,
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
 
-        }
+    /// Describes a Graphics buffer.
+    struct BufferDesc
+    {
+        const char* name = nullptr;
+        BufferUsage usage;
+        uint64_t size;
     };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    class GraphicsBuffer : public GraphicsResource
     {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
-}
+        virtual BufferDesc GetDesc() const = 0;
+    };
+} 

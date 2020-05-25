@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D11Texture.h"
 #include "D3D11GPUDevice.h"
 
@@ -99,3 +100,5 @@ namespace alimer
         }
     }
 }
+#endif // TODO
+

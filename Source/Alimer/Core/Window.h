@@ -20,27 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "Core/Stopwatch.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    /// Defines an OS window.
+    class ALIMER_API Window
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        Window();
+        virtual ~Window() = default;
 
-        }
+    protected:
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

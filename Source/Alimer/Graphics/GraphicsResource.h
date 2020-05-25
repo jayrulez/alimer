@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "graphics/Types.h"
+#include "Core/Ptr.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class GraphicsDevice;
+
+    /// Defines a Graphics Resource created by device.
+    class GraphicsResource : public RefCounted
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        GraphicsResource(GraphicsDevice &device);
+        virtual ~GraphicsResource() = default;
 
-        }
+        /// Release the GPU resource.
+        virtual void Destroy() {}
+
+        /*
+        * Returns the device that created this resource.
+        *
+        * return - A pointer to the device that created this resource.
+        */
+        const GraphicsDevice& getDevice() const;
+
+    protected:
+        GraphicsDevice& device;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

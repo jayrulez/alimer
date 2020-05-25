@@ -23,19 +23,24 @@
 #pragma once
 
 #include "graphics/Types.h"
-#include "graphics/d3d/D3DCommon.h"
+#include "D3DCommon.h"
 #include <d3d11_1.h>
+#include <wrl.h>
 
-namespace alimer
+namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
     // D3D11 functions.
     extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
 
+    // Type alias for Win32 ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
+
     class D3D11GPUDevice;
 
-    static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
+    /*static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
     {
         UINT bindFlags = 0;
         if (any(usage & TextureUsage::Sampled))
@@ -61,5 +66,5 @@ namespace alimer
         }
 
         return bindFlags;
-    }
+    }*/
 }

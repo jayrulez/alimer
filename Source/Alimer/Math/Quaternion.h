@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include <foundation/platform.h>
+#include <string>
 
 namespace Alimer
 {
-    class MyGame : public Application
+    /// Class specifying a four-dimensional quaternion.
+    class ALIMER_API Quaternion
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        /// Specifies the x-component of the quaternion.
+        float x = 0.0f;
+        /// Specifies the y-component of the quaternion.
+        float y = 0.0f;
+        /// Specifies the z-component of the quaternion.
+        float z = 0.0f;
+        /// Specifies the w-component of the quaternion.
+        float w = 1.0f;
 
-        }
+        /// Constructor.
+        Quaternion() noexcept = default;
+
+        /// Return float data.
+        const float* Data() const { return &x; }
+
+        /// Return as string.
+        std::string ToString() const;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
-}
+} 

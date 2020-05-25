@@ -20,27 +20,31 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "D3D11GraphicsAdapter.h"
+#include "D3D11GraphicsProvider.h"
+//#include "D3D11GraphicsDevice.h"
+#include "core/String.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    D3D11GraphicsAdapter::D3D11GraphicsAdapter(D3D11GraphicsProvider* provider, ComPtr<IDXGIAdapter1> adapter)
+        : GraphicsAdapter(*provider, BackendType::Direct3D11)
+        , _adapter(adapter)
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
 
-        }
-    };
+        vendorId = desc.VendorId;
+        deviceId = desc.DeviceId;
 
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
+        std::wstring deviceName(desc.Description);
+        name = Alimer::ToUtf8(deviceName);
 
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+        // TODO: Detect adapter type.
+        //_adapterType = GraphicsAdapterType::DiscreteGPU;
     }
+
+    D3D11GraphicsAdapter::~D3D11GraphicsAdapter() = default;
 }
+
+

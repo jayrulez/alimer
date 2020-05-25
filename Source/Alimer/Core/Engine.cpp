@@ -20,27 +20,47 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "Core/Engine.h"
+#include "Core/Utils.h"
+#include "Core/Plugin.h"
+#include "graphics/GraphicsProvider.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    Engine::Engine()
+        : pluginManager(new PluginManager(*this))
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
 
+    }
+
+    Engine::~Engine()
+    {
+        SafeDelete(pluginManager);
+        graphicsProvider.reset();
+    }
+
+    bool Engine::Initialize()
+    {
+        if (initialized)
+            return true;
+
+        pluginManager->Load("Alimer.Direct3D11.dll");
+        pluginManager->InitPlugins();
+
+        if (!graphicsProviderFactories.empty()) {
+            bool validation = false;
+#ifdef _DEBUG
+            validation = true;
+#endif
+            graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
         }
-    };
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+        initialized = true;
+        return true;
+    }
+
+    void Engine::RegisterGraphicsProviderFactory(GraphicsProviderFactory* factory)
     {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
+        graphicsProviderFactories.emplace_back(factory);
     }
 }

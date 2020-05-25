@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,25 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#pragma once
+
+#include "core/Ptr.h"
+#include "graphics/GraphicsAdapter.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-    class MyGame : public Application
+    class D3D11GraphicsProvider;
+
+    class D3D11GraphicsAdapter final : public GraphicsAdapter
     {
-        ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
+        D3D11GraphicsAdapter(D3D11GraphicsProvider* provider, ComPtr<IDXGIAdapter1> adapter);
+        ~D3D11GraphicsAdapter() override;
 
-        }
+        IDXGIAdapter1* GetHandle() const { return _adapter.Get(); }
+
+    private:
+        ComPtr<IDXGIAdapter1> _adapter;
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }

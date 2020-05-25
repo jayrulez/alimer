@@ -20,27 +20,54 @@
 // THE SOFTWARE.
 //
 
+#if !defined(ALIMER_EXPORTS)
+
 #include "Application/Application.h"
+#include "Core/Platform.h"
+#include "Core/String.h"
+
+#ifdef _WIN32
+    #include <foundation/windows.h>
+    #include <shellapi.h>
+#endif
 
 namespace Alimer
 {
-    class MyGame : public Application
+    // Make sure this is linked in.
+    void ApplicationDummy()
     {
-        ALIMER_OBJECT(MyGame, Application);
-    public:
-        MyGame(const Configuration& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
     }
 }
+
+#ifdef _WIN32
+int CALLBACK WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+#else
+int main(int argc, char* argv[])
+#endif
+{
+#ifdef _WIN32
+    ALIMER_UNUSED(hInstance);
+    ALIMER_UNUSED(hPrevInstance);
+    ALIMER_UNUSED(lpCmdLine);
+    ALIMER_UNUSED(nCmdShow);
+
+    LPWSTR* argv;
+    int     argc;
+    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    // Ignore the first argument containing the application full path
+    Alimer::Array<std::string>  args;
+
+    for (int i = 0; i < argc;  i++)
+    {
+        args.Push(Alimer::ToUtf8(argv[i]));
+    }
+
+    Alimer::Platform::OpenConsole();
+#endif
+
+    auto app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(args));
+    app->Run();
+    return EXIT_SUCCESS;
+}
+
+#endif /* !defined(ALIMER_EXPORTS) */
