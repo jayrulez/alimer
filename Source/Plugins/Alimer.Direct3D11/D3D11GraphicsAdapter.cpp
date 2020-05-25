@@ -21,30 +21,20 @@
 //
 
 #include "D3D11GraphicsAdapter.h"
-#include "D3D11GraphicsProvider.h"
-//#include "D3D11GraphicsDevice.h"
-#include "core/String.h"
+
 
 namespace Alimer
 {
-    D3D11GraphicsAdapter::D3D11GraphicsAdapter(D3D11GraphicsProvider* provider, ComPtr<IDXGIAdapter1> adapter)
-        : GraphicsAdapter(*provider, BackendType::Direct3D11)
-        , _adapter(adapter)
+    D3D11GraphicsAdapter::D3D11GraphicsAdapter(IDXGIAdapter1* adapter_, const std::string& name_, uint32_t vendorId_, uint32_t deviceId_)
+        : GraphicsAdapter(name_, vendorId_, deviceId_)
+        , adapter(adapter_)
     {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(adapter->GetDesc1(&desc));
-
-        vendorId = desc.VendorId;
-        deviceId = desc.DeviceId;
-
-        std::wstring deviceName(desc.Description);
-        name = Alimer::ToUtf8(deviceName);
-
-        // TODO: Detect adapter type.
-        //_adapterType = GraphicsAdapterType::DiscreteGPU;
     }
 
-    D3D11GraphicsAdapter::~D3D11GraphicsAdapter() = default;
+    D3D11GraphicsAdapter::~D3D11GraphicsAdapter()
+    {
+        SafeRelease(adapter);
+    }
 }
 
 

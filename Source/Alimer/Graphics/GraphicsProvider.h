@@ -38,6 +38,7 @@ namespace Alimer
         virtual ~GraphicsProvider() = default;
 
         virtual std::vector<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
+        virtual std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) = 0;
     };
 
     class GraphicsProviderFactory

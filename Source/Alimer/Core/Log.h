@@ -76,7 +76,7 @@ namespace Alimer
 #define LOG_TRACE(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Trace, __VA_ARGS__)
 #define LOG_DEBUG(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Debug, __VA_ARGS__)
 #define LOG_INFO(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Info, __VA_ARGS__)
-#define LOG_WARN(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Warning, "%s -- %s", __current__func__, __VA_ARGS__)
+#define LOG_WARN(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Warning, __VA_ARGS__)
 
 #ifdef ALIMER_ERRORS_AS_WARNINGS
 #define LOG_ERROR LOG_WARN

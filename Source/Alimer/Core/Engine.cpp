@@ -35,8 +35,10 @@ namespace Alimer
 
     Engine::~Engine()
     {
-        SafeDelete(pluginManager);
+        graphicsDevice.reset();
         graphicsProvider.reset();
+        graphicsProviderFactories.clear();
+        SafeDelete(pluginManager);
     }
 
     bool Engine::Initialize()
@@ -53,6 +55,8 @@ namespace Alimer
             validation = true;
 #endif
             graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
+            auto adapter = graphicsProvider->EnumerateGraphicsAdapters();
+            graphicsDevice = graphicsProvider->CreateDevice(adapter[0]);
         }
 
         initialized = true;

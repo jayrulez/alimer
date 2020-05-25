@@ -29,6 +29,7 @@
 namespace Alimer
 {
     class PluginManager;
+    class GraphicsDevice;
     class GraphicsProvider;
     class GraphicsProviderFactory;
 
@@ -54,6 +55,7 @@ namespace Alimer
         bool initialized = false;
         PluginManager* pluginManager;
         std::unique_ptr<GraphicsProvider> graphicsProvider;
+        std::shared_ptr<GraphicsDevice> graphicsDevice;
         std::vector<std::unique_ptr<GraphicsProviderFactory>> graphicsProviderFactories;
     };
 }

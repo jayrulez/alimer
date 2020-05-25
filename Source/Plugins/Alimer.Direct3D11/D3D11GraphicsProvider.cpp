@@ -22,7 +22,8 @@
 
 #include "D3D11GraphicsProvider.h"
 #include "D3D11GraphicsAdapter.h"
-//#include "D3D11GPUDevice.h"
+#include "D3D11GraphicsDevice.h"
+#include "core/String.h"
 
 namespace Alimer
 {
@@ -41,62 +42,34 @@ namespace Alimer
         if (s_dxgiHandle == nullptr)
             return false;
 
-        CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory1");
-        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory2");
-        if (CreateDXGIFactory2 == nullptr)
-        {
-            if (CreateDXGIFactory1)
-            {
-                return false;
-            }
-        }
-
-        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface1");
-        if (DXGIGetDebugInterface1 == nullptr)
-        {
-            DXGIGetDebugInterface = (PFN_GET_DXGI_DEBUG_INTERFACE)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface");
-            if (DXGIGetDebugInterface == nullptr)
-            {
-                return false;
-            }
-        }
-
-        static HMODULE s_d3d11Handle = LoadLibraryW(L"d3d11.dll");
-        if (s_d3d11Handle == nullptr)
-            return false;
-
-        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(s_d3d11Handle, "D3D11CreateDevice");
-        if (D3D11CreateDevice == nullptr)
-            return false;
+        CreateDXGIFactory2Func = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory2");
+        DXGIGetDebugInterface1Func = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface1");
 #endif
-
-        // Create temp factory and detect adapter support
-        {
-            ComPtr<IDXGIFactory1> dxgiFactory;
-            if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.GetAddressOf()))))
-            {
-                return false;
-            }
-        }
 
         available = true;
         return available;
     }
 
-    D3D11GraphicsProvider::D3D11GraphicsProvider(bool validation)
-        : _validation(validation)
+    D3D11GraphicsProvider::D3D11GraphicsProvider(bool validation_)
+        : validation(validation_)
     {
         ALIMER_ASSERT(IsAvailable());
 
-#if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
+#if defined(_DEBUG)
         bool debugDXGI = false;
+        if (validation)
         {
-            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+            IDXGIInfoQueue* dxgiInfoQueue;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            if (DXGIGetDebugInterface1Func != nullptr &&
+                SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+#else
+            if (SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+#endif
             {
                 debugDXGI = true;
 
-                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+                ThrowIfFailed(CreateDXGIFactory2Func(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
 
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -109,21 +82,22 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->Release();
             }
         }
 
-        _validation = debugDXGI;
+        validation = debugDXGI;
 
         if (!debugDXGI)
 #endif
 
         {
-            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
         }
 
         BOOL allowTearing = FALSE;
-        ComPtr<IDXGIFactory5> dxgiFactory5;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+        IDXGIFactory5* dxgiFactory5 = nullptr;
+        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory5);
         if (SUCCEEDED(hr))
         {
             hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -140,99 +114,90 @@ namespace Alimer
         {
             isTearingSupported = true;
         }
+
+        SafeRelease(dxgiFactory5);
     }
 
     D3D11GraphicsProvider::~D3D11GraphicsProvider()
     {
-        dxgiFactory.Reset();
-
+        SafeRelease(dxgiFactory);
 
 #ifdef _DEBUG
-        ComPtr<IDXGIDebug> dxgiDebug;
+        IDXGIDebug* dxgiDebug;
         if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
         {
             dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            dxgiDebug->Release();
         }
 #endif
     }
 
     std::vector<std::shared_ptr<GraphicsAdapter>> D3D11GraphicsProvider::EnumerateGraphicsAdapters()
     {
+        IDXGIAdapter1* dxgiAdapter;
         std::vector<std::shared_ptr<GraphicsAdapter>> adapters;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        IDXGIFactory6* dxgiFactory6 = nullptr;
+        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
+        if (SUCCEEDED(hr))
+        {
+            UINT adapterIndex = 0;
+            while (dxgiFactory6->EnumAdapterByGpuPreference(adapterIndex++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&dxgiAdapter)) != DXGI_ERROR_NOT_FOUND)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    dxgiAdapter->Release();
+
+                    continue;
+                }
+
+                adapters.push_back(std::make_shared<D3D11GraphicsAdapter>(
+                    dxgiAdapter,
+                    Alimer::ToUtf8(desc.Description), desc.VendorId, desc.DeviceId)
+                );
+            }
+        }
+
+        SafeRelease(dxgiFactory6);
+#endif
+
+        if (adapters.empty())
+        {
+            UINT adapterIndex = 0;
+            while (dxgiFactory6->EnumAdapters1(adapterIndex++, &dxgiAdapter) != DXGI_ERROR_NOT_FOUND)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    dxgiAdapter->Release();
+
+                    continue;
+                }
+
+                adapters.push_back(std::make_shared<D3D11GraphicsAdapter>(
+                    dxgiAdapter,
+                    Alimer::ToUtf8(desc.Description), desc.VendorId, desc.DeviceId)
+                );
+            }
+        }
+
         return adapters;
     }
 
-#if TODO
-    RefPtr<GPUDevice> D3D11GPUProvider::CreateDevice(GPUPowerPreference powerPreference)
+    std::shared_ptr<GraphicsDevice> D3D11GraphicsProvider::CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter)
     {
-        ComPtr<IDXGIAdapter1> dxgiAdapter;
-
-#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> dxgiFactory6;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
-        if (SUCCEEDED(hr))
-        {
-            DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (powerPreference == GPUPowerPreference::LowPower)
-            {
-                gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
-            }
-
-            UINT adapterIndex = 0;
-            while (dxgiFactory6->EnumAdapterByGpuPreference(adapterIndex++, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(dxgiAdapter.ReleaseAndGetAddressOf())) != DXGI_ERROR_NOT_FOUND)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    continue;
-                }
-
-#ifdef _DEBUG
-                wchar_t buff[256] = {};
-                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                OutputDebugStringW(buff);
-#endif
-                break;
-            }
-        }
-#endif
-        if (!dxgiAdapter)
-        {
-            UINT adapterIndex = 0;
-            while (dxgiFactory6->EnumAdapters1(adapterIndex++, dxgiAdapter.ReleaseAndGetAddressOf()) != DXGI_ERROR_NOT_FOUND)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    continue;
-                }
-
-#ifdef _DEBUG
-                wchar_t buff[256] = {};
-                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                OutputDebugStringW(buff);
-#endif
-                break;
-            }
-        }
-
-        if (!dxgiAdapter)
-        {
-            throw std::exception("No Direct3D 12 device found");
-        }
-
-        auto adapter = new D3D11GPUAdapter(dxgiAdapter);
-        return MakeRefPtr<D3D11GPUDevice>(this, adapter);
+        return std::make_shared<D3D11GraphicsDevice>(this, adapter);
     }
-#endif // TODO
 
-
+    /* D3D11GraphicsProviderFactory */
     std::unique_ptr<GraphicsProvider> D3D11GraphicsProviderFactory::CreateProvider(bool validation)
     {
         return std::make_unique<D3D11GraphicsProvider>(validation);

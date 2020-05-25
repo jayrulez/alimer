@@ -7,7 +7,7 @@ file (GLOB_RECURSE SOURCE_FILES *.cpp)
 add_library(${TARGET_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
 
 target_link_libraries(${TARGET_NAME} PUBLIC Alimer)
-#target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi dxguid)
+target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
 
 install(TARGETS ${TARGET_NAME}
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}

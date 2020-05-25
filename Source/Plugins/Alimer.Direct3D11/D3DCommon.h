@@ -61,21 +61,18 @@
 #endif
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY)(REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE)(UINT flags, REFIID _riid, void** _debug);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
-
-#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1;
-    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2Func;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1Func;
+#else
+#define CreateDXGIFactory2Func CreateDXGIFactory2
+#define DXGIGetDebugInterface1Func DXGIGetDebugInterface1
 #endif
 
 #if defined(_DEBUG)

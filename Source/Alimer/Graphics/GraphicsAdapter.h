@@ -33,17 +33,19 @@ namespace Alimer
     class GraphicsAdapter
     {
     public:
-        GraphicsAdapter(GraphicsProvider &provider, BackendType backendType);
+        explicit GraphicsAdapter(const std::string& name_, uint32_t vendorId_, uint32_t deviceId_)
+            : name(name_)
+            , vendorId(vendorId_)
+            , deviceId(deviceId_)
+        {
+
+        }
+
         virtual ~GraphicsAdapter() = default;
 
-        /// Returns the provider that created this resource.
-        const GraphicsProvider& GetProvider() const;
-
     protected:
-        GraphicsProvider& provider;
-        BackendType backendType;
+        std::string name;
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;
-        std::string name;
     };
 }

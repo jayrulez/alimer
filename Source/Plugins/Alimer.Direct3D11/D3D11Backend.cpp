@@ -24,8 +24,4 @@
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    // D3D11 functions.
-    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
-#endif
 }

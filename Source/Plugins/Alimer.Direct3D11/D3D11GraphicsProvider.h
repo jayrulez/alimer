@@ -32,22 +32,21 @@ namespace Alimer
     public:
         static bool IsAvailable();
 
-        D3D11GraphicsProvider(bool validation);
+        D3D11GraphicsProvider(bool validation_);
         ~D3D11GraphicsProvider() override;
 
         std::vector<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
+        std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) override;
 
-        //RefPtr<GPUDevice> CreateDevice(GPUPowerPreference powerPreference) override;
-
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return isTearingSupported; }
-        bool IsValidationEnabled() const { return _validation; }
+        bool IsValidationEnabled() const { return validation; }
 
     private:
         UINT dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory2> dxgiFactory;
+        IDXGIFactory2* dxgiFactory = nullptr;
         bool isTearingSupported = false;
-        bool _validation;
+        bool validation;
     };
 
     class D3D11GraphicsProviderFactory final : public GraphicsProviderFactory

@@ -20,77 +20,59 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D11GPUDevice.h"
-#include "D3D11GPUProvider.h"
-#include "D3D11GPUAdapter.h"
-#include "D3D11SwapChain.h"
+#include "D3D11GraphicsDevice.h"
+#include "D3D11GraphicsProvider.h"
+#include "D3D11GraphicsAdapter.h"
+//#include "D3D11SwapChain.h"
 #include "core/String.h"
 
-namespace alimer
+namespace Alimer
 {
-#if defined(_DEBUG)
-    // Check for SDK Layer support.
-    inline bool SdkLayersAvailable()
-    {
-        HRESULT hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
-            nullptr,
-            D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
-            nullptr,                    // Any feature level will do.
-            0,
-            D3D11_SDK_VERSION,
-            nullptr,                    // No need to keep the D3D device reference.
-            nullptr,                    // No need to know the feature level.
-            nullptr                     // No need to keep the D3D device context reference.
-        );
-
-        return SUCCEEDED(hr);
-    }
-#endif
-
-    D3D11GPUDevice::D3D11GPUDevice(D3D11GPUProvider* provider, D3D11GPUAdapter* adapter)
-        : GPUDevice(provider, adapter)
+    D3D11GraphicsDevice::D3D11GraphicsDevice(D3D11GraphicsProvider* provider, const std::shared_ptr<GraphicsAdapter>& adapter)
+        : GraphicsDevice(adapter)
+        , validation(provider->IsValidationEnabled())
         , dxgiFactory(provider->GetDXGIFactory())
         , isTearingSupported(provider->IsTearingSupported())
-        , _validation(provider->IsValidationEnabled())
     {
         CreateDeviceResources();
     }
 
-    D3D11GPUDevice::~D3D11GPUDevice()
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
     {
-        WaitForIdle();
         Shutdown();
     }
 
-    void D3D11GPUDevice::Shutdown()
+    void D3D11GraphicsDevice::Shutdown()
     {
-        d3dContext.Reset();
+        SafeRelease(d3dContext);
         //d3dAnnotation.Reset();
 
-        ReleaseTrackedResources();
+        //ReleaseTrackedResources();
 
+        ULONG refCount = d3dDevice->Release();
 #ifdef _DEBUG
+        if (refCount > 0)
         {
-            ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(d3dDevice.As(&d3dDebug)))
+            LOG_WARN("Direct3D11: There are %d unreleased references left on the device", refCount);
+
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
             {
-                d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY);
+                d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
+                d3dDebug->Release();
             }
         }
+#else
+        (void)refCount; // avoid warning
 #endif
-
-        d3dDevice.Reset();
     }
 
-    void D3D11GPUDevice::CreateDeviceResources()
+    void D3D11GraphicsDevice::CreateDeviceResources()
     {
         UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-        if (_validation)
+        if (validation)
         {
             if (SdkLayersAvailable())
             {
@@ -113,10 +95,10 @@ namespace alimer
         };
 
         // Create the Direct3D 11 API device object and a corresponding context.
-        ComPtr<ID3D11Device> device;
-        ComPtr<ID3D11DeviceContext> context;
+        ID3D11Device* tempD3D11Device;
+        ID3D11DeviceContext* tempD3D11Context;
 
-        auto dxgiAdapter = static_cast<D3D11GPUAdapter*>(_adapter.get())->GetHandle();
+        IDXGIAdapter1* dxgiAdapter = std::static_pointer_cast<D3D11GraphicsAdapter>(adapter)->GetDXGIAdapter();
 
         HRESULT hr = D3D11CreateDevice(dxgiAdapter,
             D3D_DRIVER_TYPE_UNKNOWN,
@@ -125,22 +107,22 @@ namespace alimer
             s_featureLevels,
             _countof(s_featureLevels),
             D3D11_SDK_VERSION,
-            device.GetAddressOf(),  // Returns the Direct3D device created.
-            &d3dFeatureLevel,     // Returns feature level of device created.
-            context.GetAddressOf()  // Returns the device immediate context.
+            &tempD3D11Device,
+            &d3dFeatureLevel, 
+            &tempD3D11Context
         );
 
 
         ThrowIfFailed(hr);
 
 #ifndef NDEBUG
-        if (_validation)
+        if (validation)
         {
-            ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(device.As(&d3dDebug)))
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(tempD3D11Device->QueryInterface(&d3dDebug)))
             {
-                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
+                ID3D11InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug->QueryInterface(&d3dInfoQueue)))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -156,69 +138,74 @@ namespace alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
                 }
+
+                d3dDebug->Release();
             }
         }
 #endif
 
-        ThrowIfFailed(device.As(&d3dDevice));
-        ThrowIfFailed(context.As(&d3dContext));
+        ThrowIfFailed(tempD3D11Device->QueryInterface(&d3dDevice));
+        ThrowIfFailed(tempD3D11Context->QueryInterface(&d3dContext));
         ///ThrowIfFailed(context.As(&d3dAnnotation));
+        SafeRelease(tempD3D11Device);
+        SafeRelease(tempD3D11Context);
 
         // Init caps and features.
         InitCapabilities();
     }
 
-    void D3D11GPUDevice::InitCapabilities()
+    void D3D11GraphicsDevice::InitCapabilities()
     {
-        _features.independentBlend = true;
-        _features.computeShader = true;
-        _features.geometryShader = true;
-        _features.tessellationShader = true;
-        _features.multiViewport = true;
-        _features.fullDrawIndexUint32 = true;
-        _features.multiDrawIndirect = true;
-        _features.fillModeNonSolid = true;
-        _features.samplerAnisotropy = true;
-        _features.textureCompressionETC2 = false;
-        _features.textureCompressionASTC_LDR = false;
-        _features.textureCompressionBC = true;
-        _features.textureCubeArray = true;
-        _features.raytracing = false;
+        caps.features.independentBlend = true;
+        caps.features.computeShader = true;
+        caps.features.geometryShader = true;
+        caps.features.tessellationShader = true;
+        caps.features.multiViewport = true;
+        caps.features.fullDrawIndexUint32 = true;
+        caps.features.multiDrawIndirect = true;
+        caps.features.fillModeNonSolid = true;
+        caps.features.samplerAnisotropy = true;
+        caps.features.textureCompressionETC2 = false;
+        caps.features.textureCompressionASTC_LDR = false;
+        caps.features.textureCompressionBC = true;
+        caps.features.textureCubeArray = true;
+        caps.features.raytracing = false;
 
         // Limits
-        _limits.maxVertexAttributes = kMaxVertexAttributes;
-        _limits.maxVertexBindings = kMaxVertexAttributes;
-        _limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
-        _limits.maxVertexBindingStride = kMaxVertexBufferStride;
+        caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+        caps.limits.maxVertexBindings = kMaxVertexAttributes;
+        caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
 
         //caps.limits.maxTextureDimension1D = D3D11_REQ_TEXTURE1D_U_DIMENSION;
-        _limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        _limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        _limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
-        _limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        _limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
-        _limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
-        _limits.minUniformBufferOffsetAlignment = 256u;
-        _limits.maxStorageBufferSize = UINT32_MAX;
-        _limits.minStorageBufferOffsetAlignment = 16;
-        _limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
-        _limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        _limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
-        _limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
-        _limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
-        _limits.pointSizeRangeMin = 1.0f;
-        _limits.pointSizeRangeMax = 1.0f;
-        _limits.lineWidthRangeMin = 1.0f;
-        _limits.lineWidthRangeMax = 1.0f;
-        _limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
-        _limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        _limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        _limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        _limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
-        _limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
-        _limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
-        _limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
+        caps.limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        caps.limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        caps.limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
+        caps.limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        caps.limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        caps.limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        caps.limits.minUniformBufferOffsetAlignment = 256u;
+        caps.limits.maxStorageBufferSize = UINT32_MAX;
+        caps.limits.minStorageBufferOffsetAlignment = 16;
+        caps.limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
+        caps.limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        caps.limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        caps.limits.pointSizeRangeMin = 1.0f;
+        caps.limits.pointSizeRangeMax = 1.0f;
+        caps.limits.lineWidthRangeMin = 1.0f;
+        caps.limits.lineWidthRangeMax = 1.0f;
+        caps.limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        caps.limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        caps.limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
+        caps.limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
+        caps.limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
 
         /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
         /*UINT dxgi_fmt_caps = 0;
@@ -240,17 +227,12 @@ namespace alimer
         }*/
     }
 
-    void D3D11GPUDevice::WaitForIdle()
-    {
-        d3dContext->Flush();
-    }
-
-    SwapChain* D3D11GPUDevice::CreateSwapChainCore(const SwapChainDescriptor* descriptor)
+    /*SwapChain* D3D11GPUDevice::CreateSwapChainCore(const SwapChainDescriptor* descriptor)
     {
         return new D3D11SwapChain(this, descriptor);
     }
 
-    /*void D3D11GraphicsDevice::Present(const std::vector<Swapchain*>& swapchains)
+    void D3D11GraphicsDevice::Present(const std::vector<Swapchain*>& swapchains)
     {
         // Present swap chains.
         HRESULT hr = S_OK;
@@ -273,5 +255,4 @@ namespace alimer
         }
     }*/
 }
-#endif // TODO
 

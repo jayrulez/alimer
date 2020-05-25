@@ -87,6 +87,50 @@ namespace Alimer
         Copy
     };
 
+    enum class TextureSampleCount : uint32_t
+    {
+        Count1 = 1,
+        Count2 = 2,
+        Count4 = 4,
+        Count8 = 8,
+        Count16 = 16,
+        Count32 = 32,
+    };
+
+    enum class TextureType : uint32_t
+    {
+        /// Two dimensional texture
+        Type2D,
+        /// Three dimensional texture
+        Type3D,
+        /// Cube texture
+        TypeCube
+    };
+
+    enum class TextureState : uint32_t
+    {
+        Undefined,
+        General,
+        RenderTarget,
+        DepthStencil,
+        DepthStencilReadOnly,
+        ShaderRead,
+        ShaderWrite,
+        CopyDest,
+        CopySource,
+        Present
+    };
+
+    /// Defines the usage of Texture.
+    enum class TextureUsage : uint32_t
+    {
+        None = 0,
+        Sampled = (1 << 0),
+        Storage = (1 << 1),
+        OutputAttachment = (1 << 2)
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
     {
@@ -152,5 +196,20 @@ namespace Alimer
 
         Features features;
         Limits limits;
+    };
+
+    struct TextureDescriptor
+    {
+        TextureType type = TextureType::Type2D;
+        PixelFormat format = PixelFormat::RGBA8UNorm;
+        TextureUsage usage = TextureUsage::Sampled;
+        uint32_t width = 1;
+        uint32_t height = 1;
+        uint32_t depth = 1;
+        uint32_t mipLevels = 1;
+        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+
+        const char* label = nullptr;
+        const void* externalHandle;
     };
 }

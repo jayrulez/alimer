@@ -24,16 +24,5 @@
 
 namespace Alimer
 {
-    GraphicsAdapter::GraphicsAdapter(GraphicsProvider& provider, BackendType backendType)
-        : provider{ provider }
-        , backendType{ backendType }
-    {
-
-    }
-
-    const GraphicsProvider& GraphicsAdapter::GetProvider() const
-    {
-        return provider;
-    }
 }
 

@@ -30,6 +30,7 @@
 
 namespace Alimer
 {
+    class GraphicsAdapter;
     struct TextureDesc;
     class Texture;
 
@@ -41,14 +42,22 @@ namespace Alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
     {
     public:
-        GraphicsDevice() = default;
+        GraphicsDevice(const std::shared_ptr<GraphicsAdapter>& adapter);
         virtual ~GraphicsDevice() = default;
 
-        virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+        //virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+
+        GraphicsAdapter* GetAdapter() const;
+        const GraphicsDeviceCaps& GetCaps() const;
+
+    protected:
+        std::shared_ptr<GraphicsAdapter> adapter;
+        GraphicsDeviceCaps caps{};
 
     private:
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

@@ -28,17 +28,15 @@
 
 namespace Alimer
 {
-    class D3D11GraphicsProvider;
-
     class D3D11GraphicsAdapter final : public GraphicsAdapter
     {
     public:
-        D3D11GraphicsAdapter(D3D11GraphicsProvider* provider, ComPtr<IDXGIAdapter1> adapter);
+        D3D11GraphicsAdapter(IDXGIAdapter1* adapter_, const std::string& name_, uint32_t vendorId_, uint32_t deviceId_);
         ~D3D11GraphicsAdapter() override;
 
-        IDXGIAdapter1* GetHandle() const { return _adapter.Get(); }
+        IDXGIAdapter1* GetDXGIAdapter() const { return adapter; }
 
     private:
-        ComPtr<IDXGIAdapter1> _adapter;
+        IDXGIAdapter1* adapter;
     };
 }

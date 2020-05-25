@@ -20,13 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "config.h"
+#include "graphics/GraphicsDevice.h"
+#include "graphics/GraphicsAdapter.h"
 #include "Core/Log.h"
 #include "Core/Assert.h"
-#include "graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
+    GraphicsDevice::GraphicsDevice(const std::shared_ptr<GraphicsAdapter>& adapter)
+        : adapter{ adapter }
+    {
+
+    }
+
+    GraphicsAdapter* GraphicsDevice::GetAdapter() const
+    {
+        return adapter.get();
+    }
+
+    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
+    {
+        return caps;
+    }
 
     /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
     {

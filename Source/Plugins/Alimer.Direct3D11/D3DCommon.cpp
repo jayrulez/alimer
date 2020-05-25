@@ -33,10 +33,8 @@
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY CreateDXGIFactory1 = nullptr;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface = nullptr;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2Func = nullptr;
+    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1Func = nullptr;
 #endif
 
     const DxgiFormatDesc kDxgiFormatDesc[] =

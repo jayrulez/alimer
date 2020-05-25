@@ -25,22 +25,33 @@
 #include "graphics/Types.h"
 #include "D3DCommon.h"
 #include <d3d11_1.h>
-#include <wrl.h>
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    // D3D11 functions.
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+#if defined(_DEBUG)
+    // Check for SDK Layer support.
+    static inline bool SdkLayersAvailable()
+    {
+        HRESULT hr = D3D11CreateDevice(
+            nullptr,
+            D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+            nullptr,
+            D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
+            nullptr,                    // Any feature level will do.
+            0,
+            D3D11_SDK_VERSION,
+            nullptr,                    // No need to keep the D3D device reference.
+            nullptr,                    // No need to know the feature level.
+            nullptr                     // No need to keep the D3D device context reference.
+        );
 
-    // Type alias for Win32 ComPtr template
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
+        return SUCCEEDED(hr);
+    }
+#endif
 
     class D3D11GPUDevice;
 
-    /*static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
+    static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
     {
         UINT bindFlags = 0;
         if (any(usage & TextureUsage::Sampled))
@@ -53,7 +64,7 @@ namespace Alimer
             bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
         }
 
-        if (any(usage & TextureUsage::RenderTarget))
+        if (any(usage & TextureUsage::OutputAttachment))
         {
             if (depthStencilFormat)
             {
@@ -66,5 +77,5 @@ namespace Alimer
         }
 
         return bindFlags;
-    }*/
+    }
 }
