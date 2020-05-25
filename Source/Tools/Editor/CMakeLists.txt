@@ -9,7 +9,7 @@ if (WIN32)
 else ()
     add_executable(Editor ${SOURCE_FILES})
 endif ()
-target_link_libraries(Editor alimer)
+target_link_libraries(Editor Alimer)
 
 install(TARGETS Editor
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}

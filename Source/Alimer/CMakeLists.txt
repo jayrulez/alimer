@@ -1,9 +1,4 @@
-# CMake version
-cmake_minimum_required(VERSION 3.10)
-
-# Project declaration
-project(alimer LANGUAGES C CXX)
-set(TARGET alimer)
+set(TARGET_NAME Alimer)
 
 macro (define_engine_source_files)
     cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
@@ -58,36 +53,36 @@ endif ()
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
-    add_library(alimer SHARED ${SOURCE_FILES} ${HEADER_FILES})
-    target_compile_definitions(alimer PUBLIC ALIMER_SHARED_LIBRARY)
+    add_library(${TARGET_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
+    target_compile_definitions(${TARGET_NAME} PUBLIC ALIMER_SHARED_LIBRARY)
 else ()
-    add_library(alimer ${SOURCE_FILES} ${HEADER_FILES})
+    add_library(${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
 
-target_compile_definitions(alimer PRIVATE ALIMER_COMPILE)
+target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_COMPILE)
 
-target_include_directories(alimer PUBLIC
+target_include_directories(${TARGET_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(alimer PUBLIC
+target_link_libraries(${TARGET_NAME} PUBLIC
     stb
     imgui
 )
 
 if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(alimer PRIVATE vulkan)
-    target_compile_definitions(alimer PRIVATE GPU_DRIVER_VULKAN)
+    target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
+    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_VULKAN)
 endif ()
 
 # Link platform specific libraries
 if(ANDROID)
-    target_link_libraries(alimer PRIVATE log android native_app_glue)
+    target_link_libraries(${TARGET_NAME} PRIVATE log android native_app_glue)
 else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
-        target_compile_definitions(alimer PRIVATE GLFW_BACKEND)
-        target_link_libraries(alimer PRIVATE glfw)
+        target_compile_definitions(${TARGET_NAME} PRIVATE GLFW_BACKEND)
+        target_link_libraries(${TARGET_NAME} PRIVATE glfw)
     endif()
 endif()
 
@@ -123,7 +118,7 @@ else()
     )
 endif()
 
-target_compile_options(${PROJECT_NAME} PRIVATE
+target_compile_options(${TARGET_NAME} PRIVATE
         ${ALIMER_WARNINGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
@@ -132,13 +127,13 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 if (WIN32)
     # Enable unicode strings
-    target_compile_definitions(alimer PRIVATE _UNICODE)
-    target_compile_definitions(alimer PRIVATE GPU_DRIVER_D3D11)
+    target_compile_definitions(${TARGET_NAME} PRIVATE _UNICODE)
+    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_D3D11)
 endif()
 
 # SDK installation
-install(TARGETS alimer
-    EXPORT alimer
+install(TARGETS ${TARGET_NAME}
+    EXPORT ${TARGET_NAME}
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
     RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
     ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}

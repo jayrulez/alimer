@@ -131,12 +131,14 @@ typedef enum GPUTextureType {
     GPUTextureType_Force32 = 0x7FFFFFFF
 } GPUTextureType;
 
-typedef enum {
-    GPU_BUFFER_USAGE_VERTEX = (1 << 0),
-    GPU_BUFFER_USAGE_INDEX = (1 << 1),
-    GPU_BUFFER_USAGE_UNIFORM = (1 << 2),
-    GPU_BUFFER_USAGE_COMPUTE = (1 << 3)
-} gpu_buffer_usage;
+typedef enum GPUBufferUsage {
+    GPUBufferUsage_None = 0,
+    GPUBufferUsage_Vertex = (1 << 0),
+    GPUBufferUsage_Index = (1 << 1),
+    GPUBufferUsage_Uniform = (1 << 2),
+    GPUBufferUsage_Storage = (1 << 3),
+    GPUBufferUsage_Force32 = 0x7FFFFFFF
+} GPUBufferUsage;
 
 typedef enum GPUPresentInterval
 {
