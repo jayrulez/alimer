@@ -20,27 +20,24 @@
 // THE SOFTWARE.
 //
 
-#if TODO_D3D12
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
-namespace alimer
+namespace Alimer
 {
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type)
         : commandListType(type)
         , allocatorPool(device, type)
     {
-        D3D12_COMMAND_QUEUE_DESC desc = {};
-        desc.Type = type;
-        desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-        desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        desc.NodeMask = 0;
+        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        queueDesc.Type = type;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
-        lastCompletedFenceValue = ((uint64_t)desc.Type << 56);
-        nextFenceValue = (uint64_t)desc.Type << 56 | 1;
+        lastCompletedFenceValue = ((uint64_t)queueDesc.Type << 56);
+        nextFenceValue = (uint64_t)queueDesc.Type << 56 | 1;
 
-        ThrowIfFailed(device->GetHandle()->CreateCommandQueue(&desc, IID_PPV_ARGS(&handle)));
+        ThrowIfFailed(device->GetHandle()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
         ThrowIfFailed(device->GetHandle()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
         fence->Signal(lastCompletedFenceValue);
 
@@ -48,7 +45,7 @@ namespace alimer
         fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
         if (fenceEvent == INVALID_HANDLE_VALUE)
         {
-            ALIMER_LOGERROR("CreateEventEx failed");
+            LOG_ERROR("CreateEventEx failed");
         }
 
         switch (type)
@@ -153,5 +150,4 @@ namespace alimer
         return nextFenceValue++;
     }
 }
-#endif // TODO_D3D12
 

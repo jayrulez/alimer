@@ -20,12 +20,11 @@
 // THE SOFTWARE.
 //
 
-#if TODO_D3D12
 #include "D3D12CommandAllocatorPool.h"
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
-namespace alimer
+namespace Alimer
 {
     D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_)
         : device{ device }
@@ -46,7 +45,7 @@ namespace alimer
             allocator->Release();
         }
 
-        allocators.clear();
+        allocators.Clear();
     }
 
     ID3D12CommandAllocator* D3D12CommandAllocatorPool::RequestAllocator(uint64_t fenceValue)
@@ -73,11 +72,11 @@ namespace alimer
             ThrowIfFailed(device->GetHandle()->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 #if defined(_DEBUG)
             wchar_t AllocatorName[32];
-            swprintf(AllocatorName, 32, L"CommandAllocator %zu", allocators.size());
+            swprintf(AllocatorName, 32, L"CommandAllocator %u", allocators.Size());
             commandAllocator->SetName(AllocatorName);
 #endif
 
-            allocators.push_back(commandAllocator);
+            allocators.Push(commandAllocator);
         }
 
         return commandAllocator;
@@ -91,5 +90,4 @@ namespace alimer
         readyAllocators.push(std::make_pair(fenceValue, commandAllocator));
     }
 }
-#endif // TODO_d3D12
 

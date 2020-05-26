@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,28 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Plugin.h"
+#include "graphics/GraphicsPresenter.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    class ALIMER_API D3D12Plugin final : public IPlugin
+    GraphicsPresenter::GraphicsPresenter(GraphicsDevice& device, const PresentationParameters& presentationParameters)
+        :  device{ device }
+        , backBufferWidth(presentationParameters.backBufferWidth)
+        , backBufferHeight(presentationParameters.backBufferHeight)
+        , backBufferFormat(presentationParameters.backBufferFormat)
+        , depthStencilFormat(presentationParameters.depthStencilFormat)
     {
-    public:
-        D3D12Plugin(Engine& engine);
-        void Init() override;
-        const char* GetName() const override;
 
-    private:
-        Engine& engine;
-    };
+    }
+
+    void GraphicsPresenter::Resize(uint32_t width, uint32_t height)
+    {
+        backBufferWidth = width;
+        backBufferHeight = height;
+
+        //ResizeBackBuffer(width, height);
+        //ResizeDepthStencilBuffer(width, height);
+    }
 }
+

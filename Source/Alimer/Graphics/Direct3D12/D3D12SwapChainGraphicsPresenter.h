@@ -22,40 +22,24 @@
 
 #pragma once
 
-#include "graphics/GraphicsProvider.h"
+#include "graphics/GraphicsPresenter.h"
 #include "D3D12Backend.h"
+#include "Core/Vector.h"
+#include <queue>
+#include <mutex>
 
 namespace Alimer
 {
-    class D3D12GraphicsProvider final : public GraphicsProvider
+    class D3D12SwapChainGraphicsPresenter final : public GraphicsPresenter
     {
     public:
-        static bool IsAvailable();
+        D3D12SwapChainGraphicsPresenter(D3D12GraphicsDevice* device, HWND windowHandle, const PresentationParameters& presentationParameters);
+        ~D3D12SwapChainGraphicsPresenter();
 
-        D3D12GraphicsProvider(bool validation_);
-        ~D3D12GraphicsProvider() override;
-
-        Array<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
-        std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) override;
-
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return isTearingSupported; }
-        bool IsValidationEnabled() const { return validation; }
-        D3D_FEATURE_LEVEL GetMinFeatureLevel() const { return minFeatureLevel; }
+        void Destroy();
 
     private:
-        bool validation;
-
-        UINT dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
-        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-    };
-
-    class D3D12GraphicsProviderFactory final : public GraphicsProviderFactory
-    {
-    public:
-        BackendType GetBackendType() const override { return BackendType::Direct3D12; }
-        std::unique_ptr<GraphicsProvider> CreateProvider(bool validation) override;
+        void CreateRenderTargets();
+        IDXGISwapChain3* handle = nullptr;
     };
 }

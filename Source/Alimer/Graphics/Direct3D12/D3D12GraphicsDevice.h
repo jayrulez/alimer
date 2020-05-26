@@ -34,35 +34,29 @@ namespace Alimer
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        D3D12GraphicsDevice(D3D12GraphicsProvider* provider, const std::shared_ptr<GraphicsAdapter>& adapter);
+        static bool IsAvailable();
+
+        D3D12GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer);
         ~D3D12GraphicsDevice() override;
 
-        IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool                IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device*       GetHandle() const { return d3dDevice; }
-        //D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
-
-        template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
-        {
-            IUnknown* base = resource;
-            DeferredRelease_(base, forceDeferred);
-            resource = nullptr;
-        }
+        D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+        ID3D12CommandQueue* GetD3DCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
     private:
-        void InitCapabilities();
+        void GetAdapter(D3D_FEATURE_LEVEL d3dMinFeatureLevel, IDXGIAdapter1** ppAdapter);
+        void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void Shutdown();
-        void ProcessDeferredReleases(uint64_t frameIndex);
-        void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
         void WaitForIdle();
-        //void BeginFrame() override;
-        //void PresentFrame() override;
         void HandleDeviceLost();
+        RefPtr<GraphicsPresenter> CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters) override;
 
-        bool validation;
-        IDXGIFactory4* dxgiFactory;
-        bool isTearingSupported;
+        UINT dxgiFactoryFlags = 0;
+        Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+        bool isTearingSupported = false;
 
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* memoryAllocator = nullptr;
@@ -71,20 +65,8 @@ namespace Alimer
         /// Root signature version
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
-        UINT syncInterval = 1u;
-        UINT presentFlags = 0u;
-        bool shuttingDown = false;
-        bool isLost = false;
-
-        //std::unique_ptr<D3D12CommandQueue> graphicsQueue;
-        //std::unique_ptr<D3D12CommandQueue> computeQueue;
-        //std::unique_ptr<D3D12CommandQueue> copyQueue;
-
-        /* Frame data and defer release data */
-        uint64_t currentCPUFrame = 0;
-        uint64_t currentGPUFrame = 0;
-        uint64_t currentFrameIndex = 0;
-        FenceD3D12 frameFence;
-        //std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
+        D3D12CommandQueue* graphicsCommandQueue;
+        D3D12CommandQueue* computeCommandQueue;
+        D3D12CommandQueue* copyCommandQueue;
     };
 }

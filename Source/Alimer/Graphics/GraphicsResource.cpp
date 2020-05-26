@@ -32,7 +32,7 @@ namespace Alimer
 
     }
 
-    const GraphicsDevice& GraphicsResource::getDevice() const
+    const GraphicsDevice& GraphicsResource::GetDevice() const
     {
         return device;
     }

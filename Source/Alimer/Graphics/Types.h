@@ -54,6 +54,14 @@ namespace Alimer
         Count
     };
 
+    enum class FeatureLevel : uint32_t
+    {
+        Level11_0,
+        Level11_1,
+        Level12_0,
+        Level12_1
+    };
+
     enum class GPUVendorId : uint32_t
     {
         None = 0,
@@ -64,13 +72,6 @@ namespace Alimer
         ImgTec = 0x1010,
         Qualcomm = 0x5143
     };
-
-    enum class GraphicsDeviceFlags : uint32_t {
-        None = 0,
-        Debug = (1 << 0),
-        RenderDoc = (1 << 1)
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(GraphicsDeviceFlags);
 
     enum class GPUAdapterType : uint32_t
     {
@@ -211,5 +212,14 @@ namespace Alimer
 
         const char* label = nullptr;
         const void* externalHandle;
+    };
+
+    struct PresentationParameters
+    {
+        uint32_t backBufferWidth;
+        uint32_t backBufferHeight;
+        PixelFormat backBufferFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen;
     };
 }

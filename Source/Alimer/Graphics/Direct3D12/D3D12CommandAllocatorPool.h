@@ -24,11 +24,11 @@
 
 #include "graphics/Types.h"
 #include "D3D12Backend.h"
-#include "containers/array.h"
+#include "Core/Vector.h"
 #include <queue>
 #include <mutex>
 
-namespace alimer
+namespace Alimer
 {
     class D3D12CommandAllocatorPool final
     {
@@ -45,7 +45,7 @@ namespace alimer
         D3D12GraphicsDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
 
-        std::vector<ID3D12CommandAllocator*> allocators;
+        Vector<ID3D12CommandAllocator*> allocators;
         std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
         std::mutex allocatorMutex;
     };

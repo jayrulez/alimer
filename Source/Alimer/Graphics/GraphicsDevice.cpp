@@ -21,26 +21,35 @@
 //
 
 #include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsAdapter.h"
 #include "Core/Log.h"
 #include "Core/Assert.h"
 
+#include "config.h"
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/Direct3D12/D3D12GraphicsDevice.h"
+#endif
+
 namespace Alimer
 {
-    GraphicsDevice::GraphicsDevice(const std::shared_ptr<GraphicsAdapter>& adapter)
-        : adapter{ adapter }
+    GraphicsDevice::GraphicsDevice()
     {
 
-    }
-
-    GraphicsAdapter* GraphicsDevice::GetAdapter() const
-    {
-        return adapter.get();
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
     {
         return caps;
+    }
+
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(FeatureLevel minFeatureLevel, bool enableDebugLayer)
+    {
+        std::unique_ptr<GraphicsDevice> device;
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+        device.reset(new D3D12GraphicsDevice(minFeatureLevel, enableDebugLayer));
+#endif
+
+        return device;
     }
 
     /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)

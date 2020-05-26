@@ -26,35 +26,29 @@
 #include "graphics/GraphicsResource.h"
 #include "os/os.h"
 #include <memory>
-#include <set>
 
 namespace Alimer
 {
-    class GraphicsAdapter;
-    struct TextureDesc;
-    class Texture;
-
-    /// Desribes a GraphicsDevice
-    struct GraphicsDeviceDesc
-    {
-        const char* applicationName = "";
-        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
-    };
+    class GraphicsPresenter;
 
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
     {
     public:
-        GraphicsDevice(const std::shared_ptr<GraphicsAdapter>& adapter);
+        
         virtual ~GraphicsDevice() = default;
+
+        static std::unique_ptr<GraphicsDevice> Create(FeatureLevel minFeatureLevel = FeatureLevel::Level11_0, bool enableDebugLayer = false);
+
+        virtual RefPtr<GraphicsPresenter> CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters) = 0;
 
         //virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
 
-        GraphicsAdapter* GetAdapter() const;
         const GraphicsDeviceCaps& GetCaps() const;
 
     protected:
-        std::shared_ptr<GraphicsAdapter> adapter;
+        GraphicsDevice();
+
         GraphicsDeviceCaps caps{};
 
     private:

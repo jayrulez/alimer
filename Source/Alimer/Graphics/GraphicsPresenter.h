@@ -20,9 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsAdapter.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "math/size.h"
 
 namespace Alimer
 {
-}
+    class GraphicsPresenter : public RefCounted
+    {
+    protected:
+        /// Constructor.
+        GraphicsPresenter(GraphicsDevice& device, const PresentationParameters& presentationParameters);
 
+        void Resize(uint32_t width, uint32_t height);
+
+    protected:
+        GraphicsDevice& device;
+
+        uint32_t backBufferWidth;
+        uint32_t backBufferHeight;
+        PixelFormat backBufferFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+    };
+}

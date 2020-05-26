@@ -123,4 +123,17 @@ namespace Alimer
     {
         return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_MAXIMIZED) == GLFW_TRUE;
     }
+
+    void* Window::GetHandle() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return glfwGetWin32Window((GLFWwindow*)window);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return glfwGetX11Window((GLFWwindow*)window);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return glfwGetCocoaWindow((GLFWwindow*)window);
+#else
+        return 0;
+#endif
+    }
 }

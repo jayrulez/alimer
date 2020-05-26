@@ -23,6 +23,7 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "graphics/GraphicsDevice.h"
+#include "graphics/GraphicsPresenter.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -32,6 +33,7 @@ namespace Alimer
         : input(new InputManager())
     {
         gameSystems.Push(input);
+        graphicsDevice = GraphicsDevice::Create();
         PlatformConstuct();
     }
 
@@ -59,31 +61,11 @@ namespace Alimer
                 );
             //window_set_centered(main_window);
 
-            /*GPUSwapChainDescriptor swapChainDescriptor = {};
-            swapChainDescriptor.windowHandle = window_handle(main_window);
-            swapChainDescriptor.width = window_width(main_window);
-            swapChainDescriptor.height = window_height(main_window);
+            PresentationParameters presentationParameters = {};
+            presentationParameters.backBufferWidth = mainWindow->GetSize().width;
+            presentationParameters.backBufferHeight = mainWindow->GetSize().height;
 
-            bool debug = false;
-#ifdef _DEBUG
-            debug = true;
-#endif
-            gpuDevice = gpuDeviceCreate(GPUBackendType_Direct3D11, debug, &swapChainDescriptor);
-
-            // Create texture. 
-            gpu_texture_info texture_info = {};
-            texture_info.format = GPU_TEXTURE_FORMAT_RGBA8;
-            texture_info.usage = GPU_TEXTURE_USAGE_RENDER_TARGET;
-            texture_info.width = window_width(main_window);
-            texture_info.height = window_height(main_window);
-            texture_info.depth = 1u;
-            texture_info.mip_levels = 1u;
-            texture_info.array_layers = 1;
-            auto texture = gpu_texture_create(&texture_info);
-            
-            // Create swapchain. 
-            //swapchain = gpu_swapchain_create(&swapchain_info);
-            */
+            mainWindowPresenter = graphicsDevice->CreateSwapChainGraphicsPresenter(mainWindow->GetHandle(), presentationParameters);
         }
 
         Initialize();

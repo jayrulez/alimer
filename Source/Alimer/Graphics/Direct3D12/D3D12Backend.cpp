@@ -26,6 +26,18 @@
 
 namespace Alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+
+    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
+    PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
+    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
+    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
+#endif
+
     /* Fence */
     FenceD3D12::FenceD3D12(D3D12GraphicsDevice* device)
         : device{ device }

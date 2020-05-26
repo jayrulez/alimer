@@ -44,7 +44,7 @@ namespace Alimer
         *
         * return - A pointer to the device that created this resource.
         */
-        const GraphicsDevice& getDevice() const;
+        const GraphicsDevice& GetDevice() const;
 
     protected:
         GraphicsDevice& device;

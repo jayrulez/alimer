@@ -51,10 +51,12 @@ namespace Alimer
 
         void Close();
 
+        const usize& GetSize() const { return size; }
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
+        void* GetHandle() const;
 
     private:
         void Create(WindowFlags flags);
