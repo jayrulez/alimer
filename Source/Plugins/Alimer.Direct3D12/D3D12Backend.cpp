@@ -21,20 +21,11 @@
 //
 
 #include "D3D12Backend.h"
-//#include "D3D12GraphicsDevice.h"
+#include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
-namespace alimer
+namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
-    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
-    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature = nullptr;
-    PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer = nullptr;
-    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature = nullptr;
-    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer = nullptr;
-#endif
-
     /* Fence */
     FenceD3D12::FenceD3D12(D3D12GraphicsDevice* device)
         : device{ device }
@@ -66,7 +57,7 @@ namespace alimer
     void FenceD3D12::Signal(ID3D12CommandQueue* queue, uint64_t fenceValue)
     {
         ALIMER_ASSERT(handle != nullptr);
-        ThrowIfFailed(queue->Signal(handle, fenceValue));
+        VHR(queue->Signal(handle, fenceValue));
     }
 
     void FenceD3D12::Wait(uint64_t fenceValue)
@@ -74,7 +65,7 @@ namespace alimer
         ALIMER_ASSERT(handle != nullptr);
         if (handle->GetCompletedValue() < fenceValue)
         {
-            ThrowIfFailed(handle->SetEventOnCompletion(fenceValue, fenceEvent));
+            VHR(handle->SetEventOnCompletion(fenceValue, fenceEvent));
             WaitForSingleObject(fenceEvent, INFINITE);
         }
     }
@@ -83,7 +74,7 @@ namespace alimer
     {
         ALIMER_ASSERT(queue != nullptr);
         ALIMER_ASSERT(handle != nullptr);
-        ThrowIfFailed(queue->Wait(handle, fenceValue));
+        VHR(queue->Wait(handle, fenceValue));
     }
 
     bool FenceD3D12::IsSignaled(uint64_t fenceValue)
@@ -156,7 +147,7 @@ namespace alimer
         ALIMER_ASSERT(persistentAllocated == 0);
         for (uint32_t i = 0; i < NumHeaps; ++i)
         {
-            SAFE_RELEASE(heaps[i]);
+            SafeRelease(heaps[i]);
         }
     }
 

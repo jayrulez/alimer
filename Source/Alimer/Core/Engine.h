@@ -21,41 +21,28 @@
 //
 
 #pragma once
-
-#include "Core/Object.h"
-#include <memory>
-#include <vector>
+#include "Core/Array.h"
 
 namespace Alimer
 {
-    class PluginManager;
     class GraphicsDevice;
     class GraphicsProvider;
     class GraphicsProviderFactory;
 
-    class ALIMER_API Engine final : public Object
+    struct ALIMER_API Engine
     {
-        ALIMER_OBJECT(Engine, Object);
-
-    public:
-        /// Constructor.
-        Engine();
         /// Destructor.
-        virtual ~Engine();
+        virtual ~Engine() {}
+
+        static Engine* create(IAllocator& allocator);
+        static void destroy(Engine* engine);
 
         /// Initialize engine with all subsystems and load all plugins.
-        bool Initialize();
+        virtual bool Initialize() = 0;
 
-        void RegisterGraphicsProviderFactory(GraphicsProviderFactory* factory);
+        virtual void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) = 0;
 
-        PluginManager& GetPluginManager() { return *pluginManager; }
-        PluginManager& GetPluginManager() const { return *pluginManager; }
-
-    private:
-        bool initialized = false;
-        PluginManager* pluginManager;
-        std::unique_ptr<GraphicsProvider> graphicsProvider;
-        std::shared_ptr<GraphicsDevice> graphicsDevice;
-        std::vector<std::unique_ptr<GraphicsProviderFactory>> graphicsProviderFactories;
+        virtual IAllocator& getAllocator() = 0;
+        virtual struct PluginManager& getPluginManager() = 0;
     };
 }

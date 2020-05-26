@@ -58,13 +58,13 @@ if (WIN32 OR WINDOWS_STORE)
     replace_compile_flags("/EHsc" "")
 
     # Select static/dynamic runtime library
-	if (WIN32)
-        replace_compile_flags("/MDd" "/MTd" Debug)
-        replace_compile_flags("/MD" "/MT" Dev Release)
-	elseif (WINDOWS_STORE)
-        replace_compile_flags("/MTd" "/MDd" Debug)
-        replace_compile_flags("/MT" "/MD" Dev Release)
-	endif()
+	#if (WIN32)
+    #    replace_compile_flags("/MDd" "/MTd" Debug)
+    #    replace_compile_flags("/MD" "/MT" Dev Release)
+	#elseif (WINDOWS_STORE)
+    #    replace_compile_flags("/MTd" "/MDd" Debug)
+    #    replace_compile_flags("/MT" "/MD" Dev Release)
+	#endif()
 
     # Use security checks only in debug
 	if(WINDOWS_STORE)

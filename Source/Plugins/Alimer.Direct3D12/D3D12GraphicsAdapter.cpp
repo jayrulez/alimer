@@ -20,28 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "Editor.h"
+#include "D3D12GraphicsAdapter.h"
 
 namespace Alimer
 {
-    Editor::Editor(const Configuration& config)
-        : Application(config)
-    {
-#ifdef _MSC_VER
-        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
-    }
-
-    Editor::~Editor()
+    D3D12GraphicsAdapter::D3D12GraphicsAdapter(IDXGIAdapter1* adapter_, const std::string& name_, uint32_t vendorId_, uint32_t deviceId_)
+        : GraphicsAdapter(name_, vendorId_, deviceId_)
+        , adapter(adapter_)
     {
     }
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    D3D12GraphicsAdapter::~D3D12GraphicsAdapter()
     {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Alimer Studio";
-        return new Editor(config);
+        SafeRelease(adapter);
     }
 }
+
+

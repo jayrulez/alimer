@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#include "Core/Allocator.h"
 #include "Core/Engine.h"
 #include "Core/Utils.h"
 #include "Core/Plugin.h"
@@ -27,44 +28,73 @@
 
 namespace Alimer
 {
-    Engine::Engine()
-        : pluginManager(new PluginManager(*this))
+    struct EngineImpl final : Engine
     {
+    public:
+        void operator=(const EngineImpl&) = delete;
+        EngineImpl(const EngineImpl&) = delete;
 
-    }
-
-    Engine::~Engine()
-    {
-        graphicsDevice.reset();
-        graphicsProvider.reset();
-        graphicsProviderFactories.clear();
-        SafeDelete(pluginManager);
-    }
-
-    bool Engine::Initialize()
-    {
-        if (initialized)
-            return true;
-
-        pluginManager->Load("Alimer.Direct3D11.dll");
-        pluginManager->InitPlugins();
-
-        if (!graphicsProviderFactories.empty()) {
-            bool validation = false;
-#ifdef _DEBUG
-            validation = true;
-#endif
-            graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
-            auto adapter = graphicsProvider->EnumerateGraphicsAdapters();
-            graphicsDevice = graphicsProvider->CreateDevice(adapter[0]);
+        EngineImpl(IAllocator& allocator_)
+            : allocator(allocator_)
+            , initialized(false)
+        {
+            pluginManager = PluginManager::create(*this);
         }
 
-        initialized = true;
-        return true;
+        ~EngineImpl()
+        {
+            //graphicsDevice.reset();
+            //graphicsProvider.reset();
+            //graphicsProviderFactories.Clear();
+            PluginManager::destroy(pluginManager);
+        }
+
+        bool Initialize() override
+        {
+            if (initialized)
+                return true;
+
+            pluginManager->load("Alimer.Direct3D12");
+            pluginManager->load("Alimer.Direct3D11");
+            pluginManager->initPlugins();
+
+            if (!graphicsProviderFactories.Empty()) {
+                bool validation = false;
+#ifdef _DEBUG
+                validation = true;
+#endif
+                //graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
+                //auto adapter = graphicsProvider->EnumerateGraphicsAdapters();
+                //graphicsDevice = graphicsProvider->CreateDevice(adapter[0]);
+            }
+
+            initialized = true;
+            return true;
+        }
+
+        void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) override
+        {
+            ALIMER_ASSERT(factory);
+            graphicsProviderFactories.Push(factory);
+        }
+
+        IAllocator& getAllocator() override { return allocator; }
+        PluginManager& getPluginManager() override { return *pluginManager; }
+
+    private:
+        IAllocator& allocator;
+        PluginManager* pluginManager;
+        Array<GraphicsProviderFactory*> graphicsProviderFactories;
+        bool initialized;
+    };
+
+    Engine* Engine::create(IAllocator& allocator)
+    {
+        return ALIMER_NEW(allocator, EngineImpl)(allocator);
     }
 
-    void Engine::RegisterGraphicsProviderFactory(GraphicsProviderFactory* factory)
+    void Engine::destroy(Engine* engine)
     {
-        graphicsProviderFactories.emplace_back(factory);
+        ALIMER_DELETE(static_cast<EngineImpl*>(engine)->getAllocator(), engine);
     }
 }

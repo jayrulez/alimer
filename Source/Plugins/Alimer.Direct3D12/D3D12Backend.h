@@ -26,22 +26,39 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
-#include "../d3d/D3DCommon.h"
+
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif 
+
+#if defined(_WIN32)
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 
 #include <d3d12.h>
-#include <wrl.h>
 
-// DXProgrammableCapture.h takes a dependency on other platform header
-// files, so it must be defined after them.
-#include <DXProgrammableCapture.h>
-#include <dxgidebug.h>
+#if defined(NTDDI_WIN10_RS2)
+#include <dxgi1_6.h>
+#else
+#include <dxgi1_5.h>
+#endif
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
-#include <wrl.h>
-#include "containers/array.h"
+#ifdef _DEBUG
+#include <dxgidebug.h>
+#endif
+
+#include "Core/Array.h"
 
 // Forward declare memory allocator classes
 namespace D3D12MA
@@ -52,19 +69,10 @@ namespace D3D12MA
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
+#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
 
-namespace alimer
+namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-    // D3D12 functions.
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
-
     class D3D12GraphicsDevice;
 
     class FenceD3D12

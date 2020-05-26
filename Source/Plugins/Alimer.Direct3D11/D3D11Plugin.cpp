@@ -34,13 +34,12 @@ namespace Alimer
 
     void D3D11Plugin::Init()
     {
-        engine.RegisterGraphicsProviderFactory(new D3D11GraphicsProviderFactory());
+        engine.registerGraphicsProviderFactory(new D3D11GraphicsProviderFactory());
     }
 
     const char* D3D11Plugin::GetName() const
     {
-        static const std::string sPluginName = "Alimer.Direct3D11";
-        return sPluginName.c_str();
+        return "Alimer.Direct3D11";
     }
 }
 

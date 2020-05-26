@@ -23,25 +23,26 @@
 #pragma once
 
 #include "graphics/GraphicsAdapter.h"
+#include "Core/Array.h"
 #include <memory>
-#include <vector>
 
 namespace Alimer
 {
     class GraphicsDevice;
 
     /// Defines the entry point for interacting with graphics subsystem.
-    class GraphicsProvider
+    class ALIMER_API GraphicsProvider
     {
     public:
         GraphicsProvider() = default;
         virtual ~GraphicsProvider() = default;
 
-        virtual std::vector<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
+        virtual Array<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() = 0;
         virtual std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) = 0;
     };
 
-    class GraphicsProviderFactory
+    /// Defines the graphics provider factory.
+    class ALIMER_API GraphicsProviderFactory
     {
     public:
         GraphicsProviderFactory() = default;

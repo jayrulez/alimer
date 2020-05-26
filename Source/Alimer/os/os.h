@@ -101,7 +101,6 @@ extern "C"
 
     /* Dynamic library functions */
     void* library_open(const char* lib_name);
-    bool library_is_valid(void* handle);
     void library_close(void* handle);
     void* library_symbol(void* handle, const char* name);
 

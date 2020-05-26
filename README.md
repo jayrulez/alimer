@@ -25,7 +25,7 @@ Uses the following open-source and third-party libraries:
 - [glfw](https://www.glfw.org)  
 - [volk Metaloader for Vulkan](https://github.com/zeux/volk)
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-- [D3D12MemoryAllocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
+- [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
 - [Dear ImGui](https://github.com/ocornut/imgui)
 
 Additional inspiration, research or code used:

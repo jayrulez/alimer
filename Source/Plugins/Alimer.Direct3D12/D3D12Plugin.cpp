@@ -20,28 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "Editor.h"
+#include "D3D12Plugin.h"
+#include "D3D12GraphicsProvider.h"
+#include "Core/Engine.h"
 
 namespace Alimer
 {
-    Editor::Editor(const Configuration& config)
-        : Application(config)
+    D3D12Plugin::D3D12Plugin(Engine& engine)
+        : engine{ engine }
     {
-#ifdef _MSC_VER
-        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
+
     }
 
-    Editor::~Editor()
+    void D3D12Plugin::Init()
     {
+        engine.registerGraphicsProviderFactory(new D3D12GraphicsProviderFactory());
     }
 
-    Application* ApplicationCreate(const Array<std::string>& args)
+    const char* D3D12Plugin::GetName() const
     {
-        ApplicationDummy();
+        return "Alimer.Direct3D12";
+    }
+}
 
-        Configuration config;
-        config.windowTitle = "Alimer Studio";
-        return new Editor(config);
+extern "C"
+{
+    ALIMER_INTERFACE_EXPORT Alimer::IPlugin* AlimerCreatePlugin(Alimer::Engine& engine)
+    {
+        return new Alimer::D3D12Plugin(engine);
     }
 }

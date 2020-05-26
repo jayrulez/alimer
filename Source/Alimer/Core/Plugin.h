@@ -33,38 +33,26 @@
 #endif
 
 #include <foundation/platform.h>
-#include "Core/Array.h"
-#include <memory>
 
 namespace Alimer
 {
     struct ALIMER_API IPlugin
     {
+        virtual ~IPlugin();
+
         virtual void Init() = 0;
         virtual const char* GetName() const = 0;
     };
 
-    class NativeLibrary;
-    class Engine;
-
-    class ALIMER_API PluginManager
+    struct ALIMER_API PluginManager
     {
-    public:
-        /// Constructor.
-        PluginManager(Engine& engine);
-        /// Destructor.
-        virtual ~PluginManager() = default;
+        virtual ~PluginManager() {}
 
-        void InitPlugins();
-        IPlugin* Load(const char* path);
-        void AddPlugin(IPlugin* plugin);
+        static PluginManager* create(struct Engine& engine);
+        static void destroy(PluginManager* manager);
 
-    private:
-        Engine& engine;
-        Array<std::unique_ptr<NativeLibrary>> libraries;
-        Array<IPlugin*> plugins;
+        virtual void initPlugins() = 0;
+        virtual IPlugin* load(const char* path) = 0;
+        virtual void addPlugin(IPlugin* plugin) = 0;
     };
-
-    
-    typedef IPlugin* (*CreatePluginFn)(Engine& engine);
 }

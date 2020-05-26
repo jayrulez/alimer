@@ -56,7 +56,7 @@ namespace Alimer
         /* Init OS first */
         os_init();
 
-        engine.reset(new Engine());
+        engine = Engine::create(allocator);
 
         gameSystems.Push(input);
 
@@ -74,7 +74,7 @@ namespace Alimer
         window_destroy(main_window);
         //gpuDeviceDestroy(gpuDevice);
         os_shutdown();
-        engine.reset();
+        Engine::destroy(engine);
     }
 
     void Application::InitBeforeRun()

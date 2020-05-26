@@ -25,23 +25,22 @@
 #include "graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
 
-namespace alimer
+namespace Alimer
 {
+    class D3D12GraphicsProvider;
     class D3D12CommandQueue;
     class D3D12SwapChain;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
-        D3D12GraphicsDevice();
+        D3D12GraphicsDevice(D3D12GraphicsProvider* provider, const std::shared_ptr<GraphicsAdapter>& adapter);
         ~D3D12GraphicsDevice() override;
 
-        static IDXGIFactory4* GetDXGIFactory();
-        static bool IsTearingSupported();
-        ID3D12Device* GetHandle() const { return d3dDevice.Get(); }
-        D3D12CommandQueue* GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+        IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory; }
+        bool                IsTearingSupported() const { return isTearingSupported; }
+        ID3D12Device*       GetHandle() const { return d3dDevice; }
+        //D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
         template<typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
         {
@@ -51,18 +50,22 @@ namespace alimer
         }
 
     private:
-        bool Init(window_t* window, const GraphicsDeviceInfo& info) override;
+        void InitCapabilities();
         void Shutdown();
         void ProcessDeferredReleases(uint64_t frameIndex);
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
 
-        void WaitForIdle() override;
-        void BeginFrame() override;
-        void PresentFrame() override;
+        void WaitForIdle();
+        //void BeginFrame() override;
+        //void PresentFrame() override;
         void HandleDeviceLost();
 
-        Microsoft::WRL::ComPtr<ID3D12Device> d3dDevice = nullptr;
-        D3D12MA::Allocator* allocator = nullptr;
+        bool validation;
+        IDXGIFactory4* dxgiFactory;
+        bool isTearingSupported;
+
+        ID3D12Device* d3dDevice = nullptr;
+        D3D12MA::Allocator* memoryAllocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
         /// Root signature version
@@ -73,24 +76,15 @@ namespace alimer
         bool shuttingDown = false;
         bool isLost = false;
 
-        std::unique_ptr<D3D12CommandQueue> graphicsQueue;
-        std::unique_ptr<D3D12CommandQueue> computeQueue;
-        std::unique_ptr<D3D12CommandQueue> copyQueue;
+        //std::unique_ptr<D3D12CommandQueue> graphicsQueue;
+        //std::unique_ptr<D3D12CommandQueue> computeQueue;
+        //std::unique_ptr<D3D12CommandQueue> copyQueue;
 
         /* Frame data and defer release data */
         uint64_t currentCPUFrame = 0;
         uint64_t currentGPUFrame = 0;
         uint64_t currentFrameIndex = 0;
         FenceD3D12 frameFence;
-        std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
-
-        struct SwapChain
-        {
-            Microsoft::WRL::ComPtr<IDXGISwapChain3> handle;
-            uint32_t currentBackBufferIndex;
-        };
-
-        void CreateSwapChain(SwapChain* swapChain, window_t* window, PixelFormat colorFormat);
-        SwapChain swapChain;
+        //std::vector<IUnknown*> deferredReleases[kMaxFrameLatency];
     };
 }

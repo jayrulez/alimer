@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,37 +22,18 @@
 
 #pragma once
 
-#include "graphics/GraphicsProvider.h"
-#include "D3D11Backend.h"
+#include "Core/Plugin.h"
 
 namespace Alimer
 {
-    class D3D11GraphicsProvider final : public GraphicsProvider
+    class ALIMER_API D3D12Plugin final : public IPlugin
     {
     public:
-        static bool IsAvailable();
-
-        D3D11GraphicsProvider(bool validation_);
-        ~D3D11GraphicsProvider() override;
-
-        Array<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
-        std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) override;
-
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return isTearingSupported; }
-        bool IsValidationEnabled() const { return validation; }
+        D3D12Plugin(Engine& engine);
+        void Init() override;
+        const char* GetName() const override;
 
     private:
-        UINT dxgiFactoryFlags = 0;
-        IDXGIFactory2* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
-        bool validation;
-    };
-
-    class D3D11GraphicsProviderFactory final : public GraphicsProviderFactory
-    {
-    public:
-        BackendType GetBackendType() const override { return BackendType::Direct3D11; }
-        std::unique_ptr<GraphicsProvider> CreateProvider(bool validation) override;
+        Engine& engine;
     };
 }

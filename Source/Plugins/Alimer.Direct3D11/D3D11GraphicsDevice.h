@@ -33,13 +33,13 @@ namespace Alimer
     {
     public:
         /// Constructor.
-        D3D11GraphicsDevice(D3D11GraphicsProvider * provider, const std::shared_ptr<GraphicsAdapter> & adapter);
+        D3D11GraphicsDevice(D3D11GraphicsProvider* provider, const std::shared_ptr<GraphicsAdapter>& adapter);
         /// Destructor.
         ~D3D11GraphicsDevice() override;
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory2*      GetDXGIFactory() const { return dxgiFactory; }
         bool                IsTearingSupported() const { return isTearingSupported; }
-        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
+        ID3D11Device1*      GetD3DDevice() const { return d3dDevice; }
         D3D_FEATURE_LEVEL   GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
 
     private:

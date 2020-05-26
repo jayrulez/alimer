@@ -43,18 +43,12 @@ void* library_open(const char* lib_name) {
 #endif
 }
 
-bool library_is_valid(void* handle) {
-    return handle != NULL;
-}
-
 void library_close(void* handle) {
-    if (library_is_valid(handle)) {
 #if defined(_WIN32)
-        FreeLibrary((HMODULE)handle);
+    FreeLibrary((HMODULE)handle);
 #else
-        dlclose(handle);
+    dlclose(handle);
 #endif
-    }
 }
 
 void* library_symbol(void* handle, const char* name) {

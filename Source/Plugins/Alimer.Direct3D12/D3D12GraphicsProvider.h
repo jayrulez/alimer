@@ -23,36 +23,39 @@
 #pragma once
 
 #include "graphics/GraphicsProvider.h"
-#include "D3D11Backend.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    class D3D11GraphicsProvider final : public GraphicsProvider
+    class D3D12GraphicsProvider final : public GraphicsProvider
     {
     public:
         static bool IsAvailable();
 
-        D3D11GraphicsProvider(bool validation_);
-        ~D3D11GraphicsProvider() override;
+        D3D12GraphicsProvider(bool validation_);
+        ~D3D12GraphicsProvider() override;
 
         Array<std::shared_ptr<GraphicsAdapter>> EnumerateGraphicsAdapters() override;
         std::shared_ptr<GraphicsDevice> CreateDevice(const std::shared_ptr<GraphicsAdapter>& adapter) override;
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return isTearingSupported; }
         bool IsValidationEnabled() const { return validation; }
+        D3D_FEATURE_LEVEL GetMinFeatureLevel() const { return minFeatureLevel; }
 
     private:
-        UINT dxgiFactoryFlags = 0;
-        IDXGIFactory2* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
         bool validation;
+
+        UINT dxgiFactoryFlags = 0;
+        IDXGIFactory4* dxgiFactory = nullptr;
+        bool isTearingSupported = false;
+        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
     };
 
-    class D3D11GraphicsProviderFactory final : public GraphicsProviderFactory
+    class D3D12GraphicsProviderFactory final : public GraphicsProviderFactory
     {
     public:
-        BackendType GetBackendType() const override { return BackendType::Direct3D11; }
+        BackendType GetBackendType() const override { return BackendType::Direct3D12; }
         std::unique_ptr<GraphicsProvider> CreateProvider(bool validation) override;
     };
 }

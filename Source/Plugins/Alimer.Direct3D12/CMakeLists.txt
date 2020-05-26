@@ -1,4 +1,4 @@
-set(TARGET_NAME Alimer.Direct3D11)
+set(TARGET_NAME Alimer.Direct3D12)
 
 file (GLOB SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
@@ -6,7 +6,7 @@ file (GLOB SOURCE_FILES
 )
 
 alimer_add_plugin(${TARGET_NAME} "${SOURCE_FILES}")
-target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi dxguid)
+target_link_libraries(${TARGET_NAME} PRIVATE d3d12 dxgi dxguid)
 
 install(TARGETS ${TARGET_NAME}
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}

@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Allocator.h"
 #include "Core/Engine.h"
 #include "Core/Array.h"
 #include "Application/GameTime.h"
@@ -100,7 +101,8 @@ namespace Alimer
         // Rendering loop timer.
         GameTime time;
 
-        std::unique_ptr<Engine> engine;
+        DefaultAllocator allocator;
+        Engine* engine;
 
         window_t* main_window = nullptr;
         Array<GameSystem*> gameSystems;

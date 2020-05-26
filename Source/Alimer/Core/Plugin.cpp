@@ -21,55 +21,94 @@
 //
 
 #include "Core/Plugin.h"
+#include "Core/Engine.h"
 #include "Core/Log.h"
-#include "Core/NativeLibrary.h"
 #include "os/os.h"
 
 namespace Alimer
 {
-    PluginManager::PluginManager(Engine& engine)
-        : engine{ engine }
-    {
+    IPlugin::~IPlugin() = default;
 
-    }
-
-    void PluginManager::InitPlugins()
+    struct PluginManagerImpl final : PluginManager
     {
-        for (uint32_t i = 0, count = plugins.Size(); i < count; ++i)
+    public:
+        PluginManagerImpl(Engine& engine_, IAllocator& allocator_)
+            : engine(engine_)
+            , allocator(allocator_)
+            , libraries(/*allocator*/)
+            , plugins(/*allocator*/)
+        {}
+
+        ~PluginManagerImpl()
         {
-            plugins[i]->Init();
-        }
-    }
-
-    IPlugin* PluginManager::Load(const char* path)
-    {
-        LOG_INFO("Loading plugin '%s'", path);
-
-        std::string error;
-        CreatePluginFn creator;
-        std::unique_ptr<NativeLibrary> lib(new NativeLibrary());
-        if (!lib->Open(path, &error) ||
-            !lib->GetProc(&creator, "AlimerCreatePlugin", &error))
-        {
-            return nullptr;
         }
 
-        IPlugin* plugin = creator(engine);
-        if (!plugin)
+        void initPlugins() override
         {
-            // TODO: Return error?
-            ALIMER_ASSERT_FAIL("Plugin creation failed.");
-            return nullptr;
+            for (uint32_t i = 0, count = plugins.Size(); i < count; ++i)
+            {
+                plugins[i]->Init();
+            }
         }
 
-        AddPlugin(plugin);
-        libraries.Push(std::move(lib));
-        LOG_INFO("Plugin '%s' loaded with success.", plugin->GetName());
-        return plugin;
+        IPlugin* load(const char* path) override
+        {
+            LOG_INFO("Loading plugin '%s'", path);
+
+            std::string pluginPath(path);
+#if WIN32
+            pluginPath += ".dll";
+#else
+            pluginPath += ".so";
+#endif
+
+            void* lib = library_open(pluginPath.c_str());
+            if (!lib) {
+                return nullptr;
+            }
+
+            using PluginCreator = IPlugin * (*)(Engine&);
+            PluginCreator creator = (PluginCreator)library_symbol(lib, "AlimerCreatePlugin");
+            if (creator)
+            {
+                return nullptr;
+            }
+
+            IPlugin* plugin = creator(engine);
+            if (!plugin)
+            {
+                // TODO: Return error?
+                ALIMER_ASSERT_FAIL("Plugin creation failed.");
+                return nullptr;
+            }
+
+            addPlugin(plugin);
+            libraries.Push(std::move(lib));
+            LOG_INFO("Plugin '%s' loaded with success.", plugin->GetName());
+            return plugin;
+        }
+
+        void addPlugin(IPlugin* plugin) override
+        {
+            plugins.Push(plugin);
+        }
+
+        IAllocator& getAllocator() { return allocator; }
+
+    private:
+        Engine& engine;
+        IAllocator& allocator;
+        Array<void*> libraries;
+        Array<IPlugin*> plugins;
+    };
+
+    PluginManager* PluginManager::create(Engine& engine)
+    {
+        return ALIMER_NEW(engine.getAllocator(), PluginManagerImpl)(engine, engine.getAllocator());
     }
 
-    void PluginManager::AddPlugin(IPlugin* plugin)
+    void PluginManager::destroy(PluginManager* manager)
     {
-        plugins.Push(plugin);
+        ALIMER_DELETE(static_cast<PluginManagerImpl*>(manager)->getAllocator(), manager);
     }
 }

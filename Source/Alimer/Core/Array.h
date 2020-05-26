@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Allocator.h"
 #include "Core/ArrayView.h"
 #include <cstdlib>
 #include <initializer_list>
@@ -145,7 +146,7 @@ namespace Alimer
         ~Array()
         {
             DestructElements(data_, size_);
-            free(data_);
+            delete[] data_;
         }
 
         /// Assign from another vector.
@@ -470,14 +471,14 @@ namespace Alimer
 
                 if (capacity_)
                 {
-                    newBuffer = (T*)malloc(capacity_ * sizeof(T));
+                    newBuffer = new T[capacity_];
                     // Move the data into the new buffer
                     ConstructElements(newBuffer, begin(), end(), MoveTag{});
                 }
 
                 // Delete the old buffer
                 DestructElements(data_, size_);
-                free(data_);
+                delete[] data_;
                 data_ = newBuffer;
             }
         }

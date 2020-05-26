@@ -75,12 +75,6 @@ namespace Alimer
 #define DXGIGetDebugInterface1Func DXGIGetDebugInterface1
 #endif
 
-#if defined(_DEBUG)
-    // Declare debug guids to avoid linking with "dxguid.lib"
-    static constexpr GUID g_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
-    static constexpr GUID g_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
-#endif
-
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
     inline std::wstring GetDXErrorString(HRESULT hr)
