@@ -20,55 +20,55 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Allocator.h"
+#include "engine/allocator.h"
 #include <string.h>
 #include <malloc.h>
 
 namespace Alimer
 {
-    void* DefaultAllocator::Allocate(size_t size)
+    void* DefaultAllocator::allocate(size_t size)
     {
         return malloc(size);
     }
 
-    void DefaultAllocator::Deallocate(void* ptr)
+    void DefaultAllocator::deallocate(void* ptr)
     {
         free(ptr);
     }
 
-    void* DefaultAllocator::Reallocate(void* ptr, size_t size)
+    void* DefaultAllocator::reallocate(void* ptr, size_t size)
     {
         return realloc(ptr, size);
     }
 
 #ifdef _WIN32
-    void* DefaultAllocator::AllocateAligned(size_t size, size_t align)
+    void* DefaultAllocator::allocateAligned(size_t size, size_t align)
     {
         return _aligned_malloc(size, align);
     }
 
 
-    void DefaultAllocator::DeallocateAligned(void* ptr)
+    void DefaultAllocator::deallocateAligned(void* ptr)
     {
         _aligned_free(ptr);
     }
 
-    void* DefaultAllocator::ReallocateAligned(void* ptr, size_t size, size_t align)
+    void* DefaultAllocator::reallocateAligned(void* ptr, size_t size, size_t align)
     {
         return _aligned_realloc(ptr, size, align);
     }
 #else
-    void* DefaultAllocator::AllocateAligned(size_t size, size_t align)
+    void* DefaultAllocator::allocateAligned(size_t size, size_t align)
     {
         return aligned_alloc(align, size);
     }
 
-    void DefaultAllocator::DeallocateAligned(void* ptr)
+    void DefaultAllocator::deallocateAligned(void* ptr)
     {
         free(ptr);
     }
 
-    void* DefaultAllocator::ReallocateAligned(void* ptr, size_t size, size_t align)
+    void* DefaultAllocator::reallocateAligned(void* ptr, size_t size, size_t align)
     {
         // POSIX and glibc do not provide a way to realloc with alignment preservation
         if (size == 0) {

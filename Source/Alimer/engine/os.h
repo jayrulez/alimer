@@ -22,11 +22,12 @@
 
 #pragma once
 
-#include <foundation/platform.h>
+#include "engine/Assert.h"
 #include <string>
 
 namespace Alimer
 {
+
     /// Identifiers the running platform type.
     enum class PlatformId : uint32_t
     {
@@ -78,27 +79,47 @@ namespace Alimer
 
     using ProcessId = uint32_t;
 
-    class ALIMER_API Platform
-    {
-    public:
-        /// Return the current platform name.
-        std::string GetName();
+    /// Return the current platform name.
+    ALIMER_API const char* getPlatformName();
 
-        /// Return the current platform ID.
-        PlatformId GetId();
+    /// Return the current platform ID.
+    ALIMER_API PlatformId getPlatformId();
 
-        /// Return the current platform family.
-        PlatformFamily GetFamily();
+    /// Return the current platform family.
+    ALIMER_API PlatformFamily getPlatformFamily();
+
+    /// Returns the current process id (pid)
+    ALIMER_API ProcessId getCurrentProcessId();
 
 #if defined(_WIN32) || defined(_WIN64)
-        /// Return the current windows version.
-        WindowsVersion GetWindowsVersion();
+    /// Return the current windows version.
+    ALIMER_API WindowsVersion getWindowsVersion();
 #endif
 
-        /// Returns the current process id (pid)
-        ProcessId GetCurrentProcessId();
+    namespace os
+    {
+        using WindowHandle = void*;
+        static constexpr WindowHandle kInvalidWindow = nullptr;
 
-        /// Opens console window.
-        static void OpenConsole();
-    };
+        struct Event {
+            enum class Type : uint8_t {
+                Unknown = 0,
+                Quit,
+                Window,
+                KeyDown,
+                KeyUp,
+            };
+        };
+
+        struct ALIMER_API MainLoop
+        {
+            virtual ~MainLoop() {}
+            virtual void onEvent(const Event& event) = 0;
+            virtual void onInit() = 0;
+            virtual void onIdle() = 0;
+        };
+
+        //ALIMER_API WindowHandle createWindow(const InitWindowArgs& args);
+        ALIMER_API void run(MainLoop& loop);
+    }
 }

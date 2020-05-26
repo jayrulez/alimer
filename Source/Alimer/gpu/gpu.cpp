@@ -2,16 +2,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-static const GPUDriver* drivers[] = {
-#if GPU_DRIVER_VULKAN
-    & VulkanDriver,
-#endif
-#if GPU_DRIVER_D3D11
-    & D3D11Driver,
-#endif
-    NULL
-};
-
 static GPULogCallback s_log_function = NULL;
 static void* s_log_userData = NULL;
 
@@ -33,7 +23,7 @@ void gpuLog(GPULogLevel level, const char* format, ...) {
 
 GPUDevice* gpuDeviceCreate(GPUBackendType backendType, bool debug, const GPUSwapChainDescriptor* descriptor)
 {
-    if (backendType == GPUBackendType_Force32)
+    /*if (backendType == GPUBackendType_Force32)
     {
         for (uint32_t i = 0; i < GPU_COUNTOF(drivers); i++) {
             if (drivers[i]->IsSupported()) {
@@ -49,7 +39,7 @@ GPUDevice* gpuDeviceCreate(GPUBackendType backendType, bool debug, const GPUSwap
                 return drivers[i]->CreateDevice(debug, descriptor);
             }
         }
-    }
+    }*/
 
     return NULL;
 }
@@ -99,3 +89,36 @@ bool gpuContextResize(GPUContext* context, uint32_t width, uint32_t height) {
     return context->device->ResizeContext(context->device->driverData, context->backend, width, height);
 }
 
+#include "gpu/gpu_backend.h"
+
+namespace Alimer
+{
+    namespace gpu
+    {
+        static Renderer* s_renderer = nullptr;
+        static LogCallback s_logCallback = nullptr;
+        static void* s_logCallbackUserData = nullptr;
+
+        bool initialize(const Configuration& config, IAllocator& allocator)
+        {
+            if (s_renderer != nullptr) {
+                return true;
+            }
+
+            s_logCallback = config.logCallback;
+            s_logCallbackUserData = config.userData;
+
+            BackendType backendType = config.backendType;
+            if (config.backendType == BackendType::Count)
+            {
+                backendType = BackendType::Vulkan;
+            }
+
+            return true;
+        }
+
+        void shutdown()
+        {
+        }
+    }
+}

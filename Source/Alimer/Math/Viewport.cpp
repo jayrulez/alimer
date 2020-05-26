@@ -21,8 +21,8 @@
 //
 
 #include "math/Viewport.h"
-#include "Core/String.h"
-#include "Core/Assert.h"
+#include "engine/String.h"
+#include "engine/Assert.h"
 
 namespace Alimer
 {

@@ -460,3 +460,48 @@ GPU_API gpu_buffer gpu_buffer_create(const gpu_buffer_info* info);
 GPU_API void gpu_buffer_destroy(gpu_buffer buffer);
 GPU_API uint8_t* gpu_buffer_map(gpu_buffer buffer, uint64_t offset, uint64_t size);
 GPU_API void gpu_buffer_unmap(gpu_buffer buffer);
+
+namespace Alimer
+{
+    struct IAllocator;
+
+    namespace gpu
+    {
+        /* Handles */
+        static constexpr uint32_t kInvalidHandle = 0xFFffFFff;
+
+        struct ContextHandle { uint32_t value; bool isValid() const { return value != kInvalidHandle; } };
+        static constexpr ContextHandle kInvalidContext = { kInvalidHandle };
+
+        /* Enums */
+        enum class LogLevel : uint32_t {
+            Error,
+            Warn,
+            Info,
+            Debug
+        };
+
+        enum BackendType : uint32_t {
+            Null,
+            Direct3D11,
+            Direct3D12,
+            Vulkan,
+            OpenGL,
+            Count
+        };
+
+        typedef void (*LogCallback)(void* userData, const char* message, LogLevel level);
+        typedef void* (*GetProcAddressCallback)(const char* functionName);
+
+        struct Configuration {
+            BackendType backendType = BackendType::Count;
+            bool debug;
+            LogCallback logCallback;
+            GetProcAddressCallback getProcAddress;
+            void* userData;
+        };
+
+        bool initialize(const Configuration& config, IAllocator& allocator);
+        void shutdown();
+    }
+}

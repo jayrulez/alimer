@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/array.h"
 #include "gpu.h"
 
 #include <string.h> /* memset */
@@ -73,24 +74,53 @@ struct GPUDevice {
     GPU_Renderer* driverData;
 };
 
-typedef struct GPUDriver
+namespace Alimer
 {
-    GPUBackendType backendType;
-    bool (*IsSupported)(void);
-    void (*GetDrawableSize)(void* window, uint32_t* width, uint32_t* height);
-    GPUDevice* (*CreateDevice)(bool debug, const GPUSwapChainDescriptor* descriptor);
-} GPUDriver;
+    namespace gpu
+    {
+        template <typename T, uint32_t MAX_COUNT>
+        struct Pool
+        {
+            void init()
+            {
+                values = (T*)mem;
+                for (int i = 0; i < MAX_COUNT; ++i) {
+                    new (NewPlaceholder(), &values[i]) int(i + 1);
+                }
+                new (NewPlaceholder(), &values[MAX_COUNT - 1]) int(-1);
+                first_free = 0;
+            }
 
-#define ASSIGN_DRIVER_FUNC(func, name) device->func = name##_##func;
-#define ASSIGN_DRIVER(name) \
-ASSIGN_DRIVER_FUNC(Destroy, name)\
-ASSIGN_DRIVER_FUNC(BeginFrame, name)\
-ASSIGN_DRIVER_FUNC(EndFrame, name)\
-ASSIGN_DRIVER_FUNC(GetFeatures, name)\
-ASSIGN_DRIVER_FUNC(GetLimits, name)\
-ASSIGN_DRIVER_FUNC(CreateContext, name)\
-ASSIGN_DRIVER_FUNC(DestroyContext, name)\
-ASSIGN_DRIVER_FUNC(ResizeContext, name)
+            int alloc()
+            {
+                if (first_free == -1) return -1;
 
-extern GPUDriver VulkanDriver;
-extern GPUDriver D3D11Driver;
+                const int id = first_free;
+                first_free = *((int*)&values[id]);
+                new (NewPlaceholder(), &values[id]) T;
+                return id;
+            }
+
+            void dealloc(uint32_t idx)
+            {
+                values[idx].~T();
+                new (NewPlaceholder(), &values[idx]) int(first_free);
+                first_free = idx;
+            }
+
+            alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
+            T* values;
+            int first_free;
+
+            T& operator[](int index) { return values[index]; }
+            bool isFull() const { return first_free == -1; }
+        };
+
+
+        struct Renderer
+        {
+            bool (*init)(const Configuration& config, IAllocator& allocator);
+            void (*shutdown)(void);
+        };
+    }
+}

@@ -20,38 +20,57 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Assert.h"
-#include <string>
+#include "engine/Object.h"
 
 namespace Alimer
 {
-    class ALIMER_API NativeLibrary final 
+    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
+        : type(typeName_)
+        , typeName(typeName_)
+        , baseTypeInfo(baseTypeInfo_)
     {
-    public:
-        NativeLibrary() = default;
-        ~NativeLibrary();
-        NativeLibrary(const NativeLibrary&) = delete;
-        NativeLibrary& operator=(const NativeLibrary&) = delete;
-        NativeLibrary(NativeLibrary&& other) noexcept;
-        NativeLibrary& operator=(NativeLibrary&& other) noexcept;
 
-        bool IsValid() const;
-        bool Open(const std::string& filename, std::string* error = nullptr);
-        void Close();
+    }
 
-        void* GetProc(const std::string& procName, std::string* error = nullptr) const;
+    bool TypeInfo::IsTypeOf(StringId32 type) const
+    {
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current->GetType() == type)
+                return true;
 
-        template <typename T>
-        bool GetProc(T** proc, const std::string& procName, std::string* error = nullptr) const {
-            ALIMER_ASSERT(proc != nullptr);
-            static_assert(std::is_function<T>::value, "");
-            *proc = reinterpret_cast<T*>(GetProc(procName, error));
-            return *proc != nullptr;
+            current = current->GetBaseTypeInfo();
         }
 
-    private:
-        void* handle = nullptr;
-    };
+        return false;
+    }
+
+    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
+    {
+        if (typeInfo == nullptr)
+            return false;
+
+        const TypeInfo* current = this;
+        while (current)
+        {
+            if (current == typeInfo || current->GetType() == typeInfo->GetType())
+                return true;
+
+            current = current->GetBaseTypeInfo();
+        }
+
+        return false;
+    }
+
+    /* Object */
+    bool Object::IsInstanceOf(StringId32 type) const
+    {
+        return GetTypeInfo()->IsTypeOf(type);
+    }
+
+    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    {
+        return GetTypeInfo()->IsTypeOf(typeInfo);
+    }
 }

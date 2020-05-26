@@ -21,7 +21,7 @@
 //
 
 #include "math/Quaternion.h"
-#include "Core/String.h"
+#include "engine/String.h"
 
 namespace Alimer
 {

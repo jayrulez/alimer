@@ -34,17 +34,18 @@ set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     foundation
-    Core
+    engine
     Math
     os
+    gpu
+    gpu/opengl
     Graphics
     Input
     Application
 )
 
-if (ALIMER_GRAPHICS_D3D12)
-    #define_engine_source_files(graphics/d3d)
-    #define_engine_source_files(graphics/d3d12)
+if (WIN32)
+    define_engine_source_files(engine/windows)
 endif ()
 
 group_sources()
@@ -70,7 +71,7 @@ target_link_libraries(${TARGET_NAME} PUBLIC
 
 if (ALIMER_GRAPHICS_VULKAN)
     target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
-    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_VULKAN)
+    #target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_VULKAN)
 endif ()
 
 # Link platform specific libraries
@@ -125,7 +126,8 @@ target_compile_options(${TARGET_NAME} PRIVATE
 if (WIN32)
     # Enable unicode strings
     target_compile_definitions(${TARGET_NAME} PRIVATE _UNICODE)
-    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_D3D11)
+    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_OPENGL)
+    #target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_D3D11)
 endif()
 
 # SDK installation

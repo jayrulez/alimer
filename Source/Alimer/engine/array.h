@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Core/Allocator.h"
-#include "Core/ArrayView.h"
+#include "engine/allocator.h"
+#include "engine/array_view.h"
 #include <cstdlib>
 #include <initializer_list>
 #include <algorithm>

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Object.h"
+#include "engine/Object.h"
 #include "Application/GameTime.h"
 
 namespace Alimer

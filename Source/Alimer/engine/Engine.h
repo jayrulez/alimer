@@ -21,18 +21,28 @@
 //
 
 #pragma once
-
-#include "Core/Stopwatch.h"
+#include "engine/array.h"
 
 namespace Alimer
 {
-    /// Defines an OS window.
-    class ALIMER_API Window
-    {
-    public:
-        Window();
-        virtual ~Window() = default;
+    class GraphicsDevice;
+    class GraphicsProvider;
+    class GraphicsProviderFactory;
 
-    protected:
+    struct ALIMER_API Engine
+    {
+        /// Destructor.
+        virtual ~Engine() {}
+
+        static Engine* create(IAllocator& allocator);
+        static void destroy(Engine* engine);
+
+        /// Initialize engine with all subsystems and load all plugins.
+        virtual bool Initialize() = 0;
+
+        virtual void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) = 0;
+
+        virtual IAllocator& getAllocator() = 0;
+        virtual struct PluginManager& getPluginManager() = 0;
     };
 }

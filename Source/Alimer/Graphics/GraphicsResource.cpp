@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Assert.h"
+#include "engine/Assert.h"
 #include "graphics/GraphicsResource.h"
 #include "graphics/GraphicsDevice.h"
 

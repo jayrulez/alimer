@@ -22,9 +22,8 @@
 
 #pragma once
 
-#include "Core/Allocator.h"
-#include "Core/Engine.h"
-#include "Core/Array.h"
+#include "engine/Engine.h"
+#include "engine/array.h"
 #include "Application/GameTime.h"
 #include "os/os.h"
 #include "Application/GameSystem.h"
@@ -106,7 +105,6 @@ namespace Alimer
 
         window_t* main_window = nullptr;
         Array<GameSystem*> gameSystems;
-        GPUDevice* gpuDevice;
 
         InputManager* input;
         bool headless{ false };

@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Assert.h"
+#include "engine/Assert.h"
 #include <cstdio>
 
 #if ALIMER_PLATFORM_WINDOWS
-#include <foundation/windows.h>
+#include "engine/windows/os_windows.h"
 #endif
 
 namespace Alimer

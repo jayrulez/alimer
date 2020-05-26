@@ -23,17 +23,20 @@
 #pragma once
 
 #include "Application/Application.h"
+#include "engine/os.h"
 
 namespace Alimer
 {
-    class Editor final : public Application
+    class Editor final : public os::MainLoop
     {
-        ALIMER_OBJECT(Editor, Application);
     public:
         /// Constructor.
         Editor(const Configuration& config);
 
         /// Destructor.
         ~Editor();
+
+    private:
+        Configuration config;
     };
 }

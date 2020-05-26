@@ -5,7 +5,7 @@
 [![Join the chat at https://gitter.im/alimer/Lobby](https://badges.gitter.im/alimer/Lobby.svg)](https://gitter.im/alimer/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Windows Build Status](https://github.com/amerkoleci/alimer/workflows/Windows/badge.svg)](https://github.com/amerkoleci/alimer/actions)
 
-**Alimer** is a cross-platform 2D and 3D game engine implemented in C++17, inspired by [Urho3D](https://github.com/urho3d/Urho3D)
+**Alimer** is a cross-platform 2D and 3D game engine implemented in C++17, inspired by [Lumix](https://github.com/nem0/LumixEngine) and [Urho3D](https://github.com/urho3d/Urho3D)
 
 ## Features
 
@@ -30,6 +30,7 @@ Uses the following open-source and third-party libraries:
 
 Additional inspiration, research or code used:
 
+- Lumix Engine https://github.com/nem0/LumixEngine)
 - Vulkan examples from Sascha Willems (https://github.com/SaschaWillems/Vulkan)
 - Vulkan Samples (https://github.com/KhronosGroup/Vulkan-Samples)
 - Granite (https://github.com/Themaister/Granite)

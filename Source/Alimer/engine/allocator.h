@@ -27,8 +27,8 @@
 #   include <new>
 #endif
 
-#define ALIMER_NEW(allocator, ...) new (Alimer::NewPlaceholder(), (allocator).AllocateAligned(sizeof(__VA_ARGS__), alignof(__VA_ARGS__))) __VA_ARGS__
-#define ALIMER_DELETE(allocator, var) (allocator).DeleteObject(var);
+#define ALIMER_NEW(allocator, ...) new (Alimer::NewPlaceholder(), (allocator).allocateAligned(sizeof(__VA_ARGS__), alignof(__VA_ARGS__))) __VA_ARGS__
+#define ALIMER_DELETE(allocator, var) (allocator).deleteObject(var);
 
 namespace Alimer { struct NewPlaceholder {}; }
 inline void* operator new(size_t, Alimer::NewPlaceholder, void* where) { return where; }
@@ -40,31 +40,31 @@ namespace Alimer
     {
         virtual ~IAllocator() {}
 
-        virtual void* Allocate(size_t size) = 0;
-        virtual void Deallocate(void* ptr) = 0;
-        virtual void* Reallocate(void* ptr, size_t size) = 0;
+        virtual void* allocate(size_t size) = 0;
+        virtual void deallocate(void* ptr) = 0;
+        virtual void* reallocate(void* ptr, size_t size) = 0;
 
-        virtual void* AllocateAligned(size_t size, size_t align) = 0;
-        virtual void DeallocateAligned(void* ptr) = 0;
-        virtual void* ReallocateAligned(void* ptr, size_t size, size_t align) = 0;
+        virtual void* allocateAligned(size_t size, size_t align) = 0;
+        virtual void deallocateAligned(void* ptr) = 0;
+        virtual void* reallocateAligned(void* ptr, size_t size, size_t align) = 0;
 
-        template <typename T> void DeleteObject(T* ptr) {
+        template <typename T> void deleteObject(T* ptr) {
             if (ptr)
             {
                 ptr->~T();
-                DeallocateAligned(ptr);
+                deallocateAligned(ptr);
             }
         }
     };
 
     struct ALIMER_API DefaultAllocator final : IAllocator
     {
-        void* Allocate(size_t size) override;
-        void Deallocate(void* ptr) override;
-        void* Reallocate(void* ptr, size_t size) override;
+        void* allocate(size_t size) override;
+        void deallocate(void* ptr) override;
+        void* reallocate(void* ptr, size_t size) override;
 
-        void* AllocateAligned(size_t size, size_t align) override;
-        void DeallocateAligned(void* ptr) override;
-        void* ReallocateAligned(void* ptr, size_t size, size_t align) override;
+        void* allocateAligned(size_t size, size_t align) override;
+        void deallocateAligned(void* ptr) override;
+        void* reallocateAligned(void* ptr, size_t size, size_t align) override;
     };
 }

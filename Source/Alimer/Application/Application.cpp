@@ -24,7 +24,7 @@
 #include "Application/Application.h"
 #include "graphics/GraphicsDevice.h"
 #include "Input/InputManager.h"
-#include "Core/Log.h"
+#include "engine/Log.h"
 
 namespace Alimer
 {

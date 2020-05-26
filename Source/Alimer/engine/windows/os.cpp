@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,79 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Platform.h"
-#include "Core/Assert.h"
-
-#if ALIMER_PLATFORM_WINDOWS
-#   include <foundation/windows.h>
-#endif
-
-#if TARGET_OS_MAC || defined(__linux__)
-#include <unistd.h>
-#endif
-
-using namespace std;
+#include "engine/os.h"
+#include "os_windows.h"
 
 namespace Alimer
 {
-    string Platform::GetName()
-    {
+    const char* getPlatformName() {
         return ALIMER_PLATFORM_NAME;
     }
 
-    PlatformId Platform::GetId()
-    {
-#if defined(_XBOX_ONE)
-        return PlatformId::XboxOne;
-#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-        return PlatformId::UWP;
-#elif defined(_WIN64) || defined(_WIN32)
+    PlatformId getPlatformId() {
         return PlatformId::Windows;
-#elif defined(__ANDROID__)
-        return PlatformId::Android;
-#elif defined (__EMSCRIPTEN__)
-        return PlatformId::Web;
-#elif defined(__linux__)
-        return PlatformId::Linux;
-#elif TARGET_OS_IOS 
-        return PlatformId::iOS;
-#elif TARGET_OS_TV
-        return PlatformId::tvOS;
-#elif TARGET_OS_MAC 
-        return PlatformId::macOS;
-#else
-        return PlatformId::Unknown;
-#endif
     }
 
-    PlatformFamily Platform::GetFamily()
-    {
-#if defined(_XBOX_ONE)
-        return PlatformFamily::Console;
-#elif defined(WINAPI_FAMILY) && WINAPI_FAMILY == WINAPI_FAMILY_APP
-        return PlatformFamily::Console;
-#elif defined(_WIN64) || defined(_WIN32)
+    PlatformFamily getPlatformFamily() {
         return PlatformFamily::Desktop;
-#elif defined(__ANDROID__)
-        return PlatformFamily::Mobile;
-#elif defined (__EMSCRIPTEN__)
-        return PlatformFamily::Mobile;
-#elif defined(__linux__)
-        return PlatformFamily::Desktop;
-#elif TARGET_OS_IOS 
-        return PlatformFamily::Mobile;
-#elif TARGET_OS_TV
-        return PlatformFamily::Mobile;
-#elif TARGET_OS_MAC 
-        return PlatformFamily::Desktop;
-#else
-        return PlatformFamily::Unknown;
-#endif
     }
 
-#if defined(_WIN64) || defined(_WIN32) || defined(WINAPI_FAMILY)
-    WindowsVersion Platform::GetWindowsVersion()
-    {
+    ProcessId getCurrentProcessId() {
+        return static_cast<ProcessId>(::GetCurrentProcessId());
+    }
+
+    WindowsVersion getWindowsVersion() {
         WindowsVersion version = WindowsVersion::Unknown;
         auto RtlGetVersion = reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
         ALIMER_VERIFY_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
@@ -126,27 +75,5 @@ namespace Alimer
         }
 
         return version;
-    }
-#endif
-
-    ProcessId Platform::GetCurrentProcessId()
-    {
-#if defined(_WIN64) || defined(_WIN32)
-        return static_cast<ProcessId>(::GetCurrentProcessId());
-#else
-        return getpid();
-#endif
-    }
-
-    void Platform::OpenConsole()
-    {
-#if defined(_WIN32)
-        if (AllocConsole()) {
-            FILE* fp;
-            freopen_s(&fp, "conin$", "r", stdin);
-            freopen_s(&fp, "conout$", "w", stdout);
-            freopen_s(&fp, "conout$", "w", stderr);
-        }
-#endif
     }
 }

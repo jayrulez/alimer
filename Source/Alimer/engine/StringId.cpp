@@ -20,57 +20,48 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Object.h"
+#include "engine/StringId.h"
+#include "engine/String.h"
+#include "engine/Hash.h"
 
 namespace Alimer
 {
-    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
-        : type(typeName_)
-        , typeName(typeName_)
-        , baseTypeInfo(baseTypeInfo_)
-    {
+    const StringId32 StringId32::Zero;
+    const StringId64 StringId64::Zero;
 
+    /* StringId32 */
+    StringId32::StringId32(const char* str) noexcept
+    {
+        value = murmur32(str, (uint32_t)strlen(str), 0);
     }
 
-    bool TypeInfo::IsTypeOf(StringId32 type) const
+    StringId32::StringId32(const std::string& str) noexcept
     {
-        const TypeInfo* current = this;
-        while (current)
-        {
-            if (current->GetType() == type)
-                return true;
-
-            current = current->GetBaseTypeInfo();
-        }
-
-        return false;
+        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
     }
 
-    bool TypeInfo::IsTypeOf(const TypeInfo* typeInfo) const
+    std::string StringId32::ToString() const
     {
-        if (typeInfo == nullptr)
-            return false;
-
-        const TypeInfo* current = this;
-        while (current)
-        {
-            if (current == typeInfo || current->GetType() == typeInfo->GetType())
-                return true;
-
-            current = current->GetBaseTypeInfo();
-        }
-
-        return false;
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%08X", value);
+        return std::string(tempBuffer);
     }
 
-    /* Object */
-    bool Object::IsInstanceOf(StringId32 type) const
+    /* StringId64 */
+    StringId64::StringId64(const char* str) noexcept
     {
-        return GetTypeInfo()->IsTypeOf(type);
+        value = murmur64(str, (uint64_t)strlen(str), 0);
     }
 
-    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
+    StringId64::StringId64(const std::string& str) noexcept
     {
-        return GetTypeInfo()->IsTypeOf(typeInfo);
+        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
+    }
+
+    std::string StringId64::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%16" PRIx64, value);
+        return std::string(tempBuffer);
     }
 }

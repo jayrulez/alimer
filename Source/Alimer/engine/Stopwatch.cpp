@@ -20,10 +20,10 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Stopwatch.h"
+#include "engine/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
-#include <foundation/windows.h>
+#include "engine/windows/os_windows.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #include <mach/mach_time.h>

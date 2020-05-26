@@ -20,11 +20,10 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Allocator.h"
-#include "Core/Engine.h"
-#include "Core/Utils.h"
-#include "Core/Plugin.h"
-#include "graphics/GraphicsProvider.h"
+#include "engine/Engine.h"
+#include "engine/Utils.h"
+#include "engine/Plugin.h"
+#include "gpu/gpu.h"
 
 namespace Alimer
 {
@@ -75,7 +74,7 @@ namespace Alimer
         void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) override
         {
             ALIMER_ASSERT(factory);
-            graphicsProviderFactories.Push(factory);
+            //graphicsProviderFactories.Push(factory);
         }
 
         IAllocator& getAllocator() override { return allocator; }

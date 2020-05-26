@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Core/Array.h"
+#include "engine/log.h"
+#include "engine/array.h"
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -34,7 +34,7 @@
 #elif TARGET_OS_MAC || defined(__linux__)
 #   include <unistd.h>
 #elif ALIMER_PLATFORM_WINDOWS
-#   include <foundation/windows.h>
+#   include "engine/windows/os_windows.h"
 #   include <strsafe.h>
 #elif defined(__EMSCRIPTEN__)
 #   include <emscripten.h>

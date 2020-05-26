@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/GraphicsAdapter.h"
-#include "Core/Array.h"
+#include "engine/array.h"
 #include <memory>
 
 namespace Alimer

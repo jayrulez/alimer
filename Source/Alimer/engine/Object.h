@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Core/Ptr.h"
-#include "Core/StringId.h"
+#include "engine/Ptr.h"
+#include "engine/StringId.h"
 #include <memory>
 
 namespace Alimer

@@ -23,12 +23,11 @@
 #if !defined(ALIMER_EXPORTS)
 
 #include "Application/Application.h"
-#include "Core/Platform.h"
-#include "Core/String.h"
+#include "engine/String.h"
 
 #ifdef _WIN32
-    #include <foundation/windows.h>
-    #include <shellapi.h>
+#include "engine/windows/os_windows.h"
+#include <shellapi.h>
 #endif
 
 namespace Alimer
@@ -57,12 +56,17 @@ int main(int argc, char* argv[])
     // Ignore the first argument containing the application full path
     Alimer::Array<std::string>  args;
 
-    for (int i = 0; i < argc;  i++)
+    for (int i = 0; i < argc; i++)
     {
         args.Push(Alimer::ToUtf8(argv[i]));
     }
 
-    Alimer::Platform::OpenConsole();
+    if (AllocConsole()) {
+        FILE* fp;
+        freopen_s(&fp, "conin$", "r", stdin);
+        freopen_s(&fp, "conout$", "w", stdout);
+        freopen_s(&fp, "conout$", "w", stderr);
+    }
 #endif
 
     auto app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(args));

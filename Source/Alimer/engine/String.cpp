@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "Core/String.h"
-#include "Core/Hash.h"
-#include "Core/Array.h"
+#include "engine/String.h"
+#include "engine/Hash.h"
+#include "engine/array.h"
 
 #if defined(_WIN32)
 #   define WIN32_LEAN_AND_MEAN

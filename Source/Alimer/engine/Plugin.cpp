@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Plugin.h"
-#include "Core/Engine.h"
-#include "Core/Log.h"
+#include "engine/Plugin.h"
+#include "engine/Engine.h"
+#include "engine/log.h"
 #include "os/os.h"
 
 namespace Alimer
