@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "engine/Ptr.h"
+#include "Core/Ptr.h"
 #include "graphics/GraphicsResource.h"
 #include "os/os.h"
 #include <memory>

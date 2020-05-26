@@ -21,14 +21,11 @@
 //
 
 #pragma once
-#include "engine/array.h"
+
+#include "Core/Allocator.h"
 
 namespace Alimer
 {
-    class GraphicsDevice;
-    class GraphicsProvider;
-    class GraphicsProviderFactory;
-
     struct ALIMER_API Engine
     {
         /// Destructor.
@@ -40,7 +37,7 @@ namespace Alimer
         /// Initialize engine with all subsystems and load all plugins.
         virtual bool Initialize() = 0;
 
-        virtual void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) = 0;
+        //virtual void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) = 0;
 
         virtual IAllocator& getAllocator() = 0;
         virtual struct PluginManager& getPluginManager() = 0;

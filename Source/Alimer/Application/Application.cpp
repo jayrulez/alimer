@@ -20,47 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "os/os.h"
 #include "Application/Application.h"
+#include "Application/Window.h"
 #include "graphics/GraphicsDevice.h"
 #include "Input/InputManager.h"
-#include "engine/Log.h"
+#include "Core/Log.h"
 
 namespace Alimer
 {
-    static void GPULogCallback(void* userData, GPULogLevel level, const char* message)
+    Application::Application()
+        : input(new InputManager())
     {
-        switch (level)
-        {
-        case GPULogLevel_Error:
-            Log::GetDefault()->Log(LogLevel::Error, message);
-            break;
-        case GPULogLevel_Warn:
-            Log::GetDefault()->Log(LogLevel::Warning, message);
-            break;
-        case GPULogLevel_Info:
-            Log::GetDefault()->Log(LogLevel::Info, message);
-            break;
-        case GPULogLevel_Debug:
-            Log::GetDefault()->Log(LogLevel::Debug, message);
-            break;
-        default:
-            break;
-        }
-    }
-
-    Application::Application(const Configuration& config_)
-        : config(config_)
-        , input(new InputManager())
-    {
-        /* Init OS first */
-        os_init();
-
-        engine = Engine::create(allocator);
-
         gameSystems.Push(input);
-
-        //gpuSetLogCallback(GPULogCallback, this);
+        PlatformConstuct();
     }
 
     Application::~Application()
@@ -71,26 +43,21 @@ namespace Alimer
         }
 
         gameSystems.Clear();
-        window_destroy(main_window);
-        //gpuDeviceDestroy(gpuDevice);
-        os_shutdown();
-        Engine::destroy(engine);
+        mainWindow.reset();
+        PlatformDestroy();
     }
 
     void Application::InitBeforeRun()
     {
-        if (!engine->Initialize()) {
-            return;
-        }
-
         // Create main window.
         if (!headless)
         {
-            main_window = window_create(
-                config.windowTitle.c_str(),
+            mainWindow.reset(new Window(
+                config.windowTitle,
                 config.windowSize.width, config.windowSize.height,
-                WINDOW_FLAG_RESIZABLE | WINDOW_FLAG_OPENGL);
-            window_set_centered(main_window);
+                WindowFlags::Resizable)
+                );
+            //window_set_centered(main_window);
 
             /*GPUSwapChainDescriptor swapChainDescriptor = {};
             swapChainDescriptor.windowHandle = window_handle(main_window);
@@ -240,44 +207,7 @@ namespace Alimer
             return EXIT_FAILURE;
         }
 
-
-#if !defined(__GNUC__) && _HAS_EXCEPTIONS
-        try
-#endif
-        {
-            Setup();
-
-            if (exitCode)
-                return exitCode;
-
-            running = true;
-
-            InitBeforeRun();
-
-            // Main message loop
-            while (running)
-            {
-                os_event evt;
-                while (event_poll(&evt))
-                {
-                    if (evt.type == OS_EVENT_QUIT)
-                    {
-                        running = false;
-                        break;
-                    }
-                }
-
-                Tick();
-            }
-        }
-#if !defined(__GNUC__) && _HAS_EXCEPTIONS
-        catch (std::bad_alloc&)
-        {
-            //ErrorDialog(GetTypeName(), "An out-of-memory error occurred. The application will now exit.");
-            return EXIT_FAILURE;
-        }
-#endif
-
+        PlatformRun();
         return exitCode;
     }
 
@@ -304,7 +234,7 @@ namespace Alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !window_is_minimized(main_window)
+            && !mainWindow->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

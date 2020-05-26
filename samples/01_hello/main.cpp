@@ -28,19 +28,12 @@ namespace Alimer
     {
         ALIMER_OBJECT(MyGame, Application);
     public:
-        MyGame(const Configuration& config)
-            : Application(config)
+        MyGame()
+            : Application()
         {
 
         }
     };
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Sample 01 - Hello";
-        return new MyGame(config);
-    }
 }
+
+ALIMER_DEFINE_APPLICATION(Alimer::MyGame);

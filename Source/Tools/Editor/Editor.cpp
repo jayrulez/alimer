@@ -24,24 +24,13 @@
 
 namespace Alimer
 {
-    Editor::Editor(const Configuration& config)
-        : config{ config }
+    Editor::Editor()
     {
-#ifdef _MSC_VER
-        _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-#endif
     }
 
     Editor::~Editor()
     {
     }
-
-    Application* ApplicationCreate(const Array<std::string>& args)
-    {
-        ApplicationDummy();
-
-        Configuration config;
-        config.windowTitle = "Alimer Studio";
-        return new Editor(config);
-    }
 }
+
+ALIMER_DEFINE_APPLICATION(Alimer::Editor);

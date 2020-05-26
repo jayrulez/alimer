@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <foundation/platform.h>
+#include "Core/Platform.h"
 #include <string>
 
 #if defined(__GNUC__) && !defined(__MINGW32__)

@@ -23,12 +23,10 @@
 #pragma once
 
 #include "engine/Engine.h"
-#include "engine/array.h"
+#include "Core/Vector.h"
 #include "Application/GameTime.h"
-#include "os/os.h"
 #include "Application/GameSystem.h"
-#include "gpu/gpu.h"
-#include "math/Size.h"
+#include "math/size.h"
 #include <memory>
 
 namespace Alimer
@@ -48,6 +46,7 @@ namespace Alimer
         usize windowSize = { 1280, 720 };
     };
 
+    class Window;
     class InputManager;
 
     class ALIMER_API Application : public Object
@@ -56,7 +55,8 @@ namespace Alimer
 
     public:
         /// Constructor.
-        Application(const Configuration& config_);
+        Application();
+
         /// Destructor.
         virtual ~Application();
 
@@ -67,14 +67,11 @@ namespace Alimer
         void Tick();
 
         /// Get the main (primary window)
-        inline window_t* get_main_window() const { return main_window; }
+        Window* GetMainWindow() const { return mainWindow.get(); }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
     protected:
-        /// Setup before modules initialization. 
-        virtual void Setup() {}
-
         /// Setup after window and graphics setup, by default initializes all GameSystems.
         virtual void Initialize();
 
@@ -88,31 +85,81 @@ namespace Alimer
         virtual void EndDraw();
 
     private:
+        void PlatformConstuct();
+        void PlatformDestroy();
+        void PlatformRun();
+
         /// Called by platform backend.
         void InitBeforeRun();
         
         void Render();
 
     protected:
+        Vector<std::string> args;
+
         int exitCode = 0;
         Configuration config;
         bool running = false;
         // Rendering loop timer.
         GameTime time;
 
-        DefaultAllocator allocator;
-        Engine* engine;
-
-        window_t* main_window = nullptr;
-        Array<GameSystem*> gameSystems;
+        std::unique_ptr<Window> mainWindow;
+        Vector<GameSystem*> gameSystems;
 
         InputManager* input;
         bool headless{ false };
     };
-
-    extern Application* ApplicationCreate(const Array<std::string>& args);
-
-    // Call this to ensure application-main is linked in correctly without having to mess around
-    // with -Wl,--whole-archive.
-    ALIMER_API void ApplicationDummy();
 }
+
+#if defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
+#include "Core/MiniDump.h"
+#include <windows.h>
+#include <crtdbg.h>
+#endif
+
+// MSVC debug mode: use memory leak reporting
+#if defined(_WIN32) && defined(_DEBUG) && !defined(ALIMER_WIN32_CONSOLE)
+#define ALIMER_DEFINE_MAIN(function) \
+int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
+{ \
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); \
+    return function; \
+}
+// MSVC release mode: write minidump on crash
+#elif defined(ALIMER_MINIDUMPS) && !defined(ALIMER_WIN32_CONSOLE)
+#define ALIMER_DEFINE_MAIN(function) \
+int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
+{ \
+    int exitCode; \
+    __try \
+    { \
+        exitCode = function; \
+    } \
+    __except(Alimer::WriteMiniDump("Alimer", GetExceptionInformation())) \
+    { \
+    } \
+    return exitCode; \
+}
+// Other Win32 or minidumps disabled: just execute the function
+#elif defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
+#define ALIMER_DEFINE_MAIN(function) \
+int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
+{ \
+    return function; \
+}
+#else
+#define ALIMER_DEFINE_MAIN(function) \
+int main(int argc, char** argv) \
+{ \
+    Alimer::ParseArguments(argc, argv); \
+    return function; \
+}
+#endif
+
+#define ALIMER_DEFINE_APPLICATION(className) \
+int RunApplication() \
+{ \
+    className application; \
+    return application.Run(); \
+} \
+ALIMER_DEFINE_MAIN(RunApplication())

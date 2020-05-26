@@ -33,19 +33,21 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
-    foundation
+    Core
     engine
     Math
     os
-    gpu
-    gpu/opengl
     Graphics
     Input
     Application
 )
 
+if(NOT (EMSCRIPTEN OR ANDROID))
+    define_engine_source_files(Platform/GLFW)
+endif()
+
 if (WIN32)
-    define_engine_source_files(engine/windows)
+    define_engine_source_files(Platform/Windows)
 endif ()
 
 group_sources()
@@ -79,7 +81,6 @@ if(ANDROID)
     target_link_libraries(${TARGET_NAME} PRIVATE log android native_app_glue)
 else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
-        target_compile_definitions(${TARGET_NAME} PRIVATE GLFW_BACKEND)
         target_link_libraries(${TARGET_NAME} PRIVATE glfw)
     endif()
 endif()
@@ -126,8 +127,6 @@ target_compile_options(${TARGET_NAME} PRIVATE
 if (WIN32)
     # Enable unicode strings
     target_compile_definitions(${TARGET_NAME} PRIVATE _UNICODE)
-    target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_OPENGL)
-    #target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_D3D11)
 endif()
 
 # SDK installation

@@ -22,8 +22,9 @@
 
 #include "engine/Plugin.h"
 #include "engine/Engine.h"
-#include "engine/log.h"
-#include "os/os.h"
+#include "Core/Vector.h"
+#include "Core/Library.h"
+#include "Core/Log.h"
 
 namespace Alimer
 {
@@ -62,13 +63,13 @@ namespace Alimer
             pluginPath += ".so";
 #endif
 
-            void* lib = library_open(pluginPath.c_str());
+            LibHandle lib = LibraryOpen(pluginPath.c_str());
             if (!lib) {
                 return nullptr;
             }
 
             using PluginCreator = IPlugin * (*)(Engine&);
-            PluginCreator creator = (PluginCreator)library_symbol(lib, "AlimerCreatePlugin");
+            PluginCreator creator = (PluginCreator)LibrarySymbol(lib, "AlimerCreatePlugin");
             if (creator)
             {
                 return nullptr;
@@ -98,8 +99,8 @@ namespace Alimer
     private:
         Engine& engine;
         IAllocator& allocator;
-        Array<void*> libraries;
-        Array<IPlugin*> plugins;
+        Vector<void*> libraries;
+        Vector<IPlugin*> plugins;
     };
 
     PluginManager* PluginManager::create(Engine& engine)

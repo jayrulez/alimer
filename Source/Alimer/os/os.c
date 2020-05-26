@@ -34,27 +34,3 @@
 #include <dlfcn.h>
 #endif
 
-void* library_open(const char* lib_name) {
-#if defined(_WIN32)
-    HMODULE handle = LoadLibraryA(lib_name);
-    return (void*)handle;
-#else
-    return dlopen(lib_name, RTLD_NOW);
-#endif
-}
-
-void library_close(void* handle) {
-#if defined(_WIN32)
-    FreeLibrary((HMODULE)handle);
-#else
-    dlclose(handle);
-#endif
-}
-
-void* library_symbol(void* handle, const char* name) {
-#if defined(_WIN32)
-    return GetProcAddress((HMODULE)handle, name);
-#else
-    return dlsym(handle, name);
-#endif
-}

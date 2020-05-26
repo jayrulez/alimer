@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-    <Type Name="Alimer::StaticArray&lt;*,*&gt;">
+    <Type Name="Alimer::Array&lt;*,*&gt;">
         <DisplayString Condition="$T2 == 0">[{$T2}] {{}}</DisplayString>
         <DisplayString Condition="$T2 == 1">[{$T2}] {{ {data_} }}</DisplayString>
         <DisplayString Condition="$T2 == 2">[{$T2}] {{ {data_}, {*(data_+1)} }}</DisplayString>
@@ -30,7 +30,7 @@
         </Expand>
     </Type>
 
-    <Type Name="Alimer::Array&lt;*&gt;">
+    <Type Name="Alimer::Vector&lt;*&gt;">
         <DisplayString Condition="size_ == 0">Empty</DisplayString>
         <DisplayString Condition="size_ == 1">[{size_}] {{ {data_[0]} }}</DisplayString>
         <DisplayString Condition="size_ == 2">[{size_}] {{ {data_[0]}, {data_[1]} }}</DisplayString>

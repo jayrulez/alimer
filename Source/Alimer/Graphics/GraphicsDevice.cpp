@@ -22,8 +22,8 @@
 
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsAdapter.h"
-#include "engine/log.h"
-#include "engine/Assert.h"
+#include "Core/Log.h"
+#include "Core/Assert.h"
 
 namespace Alimer
 {

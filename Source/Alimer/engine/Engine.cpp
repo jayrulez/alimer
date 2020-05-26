@@ -21,7 +21,7 @@
 //
 
 #include "engine/Engine.h"
-#include "engine/Utils.h"
+#include "Core/Utils.h"
 #include "engine/Plugin.h"
 #include "gpu/gpu.h"
 
@@ -57,7 +57,7 @@ namespace Alimer
             pluginManager->load("Alimer.Direct3D11");
             pluginManager->initPlugins();
 
-            if (!graphicsProviderFactories.Empty()) {
+            /*if (!graphicsProviderFactories.Empty()) {
                 bool validation = false;
 #ifdef _DEBUG
                 validation = true;
@@ -65,17 +65,17 @@ namespace Alimer
                 //graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
                 //auto adapter = graphicsProvider->EnumerateGraphicsAdapters();
                 //graphicsDevice = graphicsProvider->CreateDevice(adapter[0]);
-            }
+            }*/
 
             initialized = true;
             return true;
         }
 
-        void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) override
+        /*void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) override
         {
             ALIMER_ASSERT(factory);
             //graphicsProviderFactories.Push(factory);
-        }
+        }*/
 
         IAllocator& getAllocator() override { return allocator; }
         PluginManager& getPluginManager() override { return *pluginManager; }
@@ -83,7 +83,7 @@ namespace Alimer
     private:
         IAllocator& allocator;
         PluginManager* pluginManager;
-        Array<GraphicsProviderFactory*> graphicsProviderFactories;
+        //Vector<GraphicsProviderFactory*> graphicsProviderFactories;
         bool initialized;
     };
 

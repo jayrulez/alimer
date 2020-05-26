@@ -32,7 +32,7 @@
 #   define ALIMER_INTERFACE_EXPORT
 #endif
 
-#include <foundation/platform.h>
+#include "Core/Platform.h"
 
 namespace Alimer
 {

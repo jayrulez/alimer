@@ -99,11 +99,6 @@ extern "C"
     bool event_poll(os_event* event);
     void event_push(os_event event);
 
-    /* Dynamic library functions */
-    void* library_open(const char* lib_name);
-    void library_close(void* handle);
-    void* library_symbol(void* handle, const char* name);
-
     /* Window functions */
     OS_EXPORT window_t* window_create(const char* title, uint32_t width, uint32_t height, uint32_t flags);
     OS_EXPORT void window_destroy(window_t* window);

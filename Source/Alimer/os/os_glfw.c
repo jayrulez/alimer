@@ -48,32 +48,17 @@ static struct {
     window_t* windows;
 } os;
 
-static void on_glfw_error(int code, const char* description) {
-    //ALIMER_THROW(description);
-}
+
 
 bool os_init(void) {
     os.event_head = 0;
     os.events = NULL;
     os.windows = NULL;
 
-    glfwSetErrorCallback(on_glfw_error);
-#ifdef __APPLE__
-    glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
-#endif
-
-    int result = glfwInit();
-    if (result == GLFW_FALSE)
-    {
-        //TODO_ERROR_HANDLER(result);
-        return false;
-    }
-
     return true;
 }
 
 void os_shutdown(void) {
-    glfwTerminate();
     os.event_head = 0;
     arrfree(os.events);
     arrfree(os.windows);
