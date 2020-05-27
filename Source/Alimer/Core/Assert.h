@@ -23,7 +23,7 @@
 
 #include "Core/Platform.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class AssertFailBehavior : uint8_t
     {
@@ -37,24 +37,27 @@ namespace Alimer
     ALIMER_API void SetAssertHandler(AssertHandler newHandler);
 
     ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line, const char* msg, ...);
-}
+} // namespace alimer
+
+/** Assert macro */
+#ifndef ALIMER_ENABLE_ASSERT
+#   if ( defined(_DEBUG) || defined(PROFILE) )
+#       define ALIMER_ENABLE_ASSERT 1
+#   else
+#       define ALIMER_ENABLE_ASSERT 0
+#   endif
+#endif
 
 #if ALIMER_ENABLE_ASSERT
-
-#if defined(_MSC_VER)
-#define ALIMER_BREAKPOINT() __debugbreak();
-#else
-#define ALIMER_BREAKPOINT() __builtin_trap();
-#endif
 
 #   define ALIMER_ASSERT(cond) \
         do \
 		{ \
 			if (!(cond)) \
 			{ \
-				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
-					Alimer::AssertFailBehavior::Halt) \
-					ALIMER_BREAKPOINT(); \
+				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
+					alimer::AssertFailBehavior::Halt) \
+					ALIMER_FORCE_CRASH(); \
 			} \
 		} while(0)
 
@@ -63,27 +66,27 @@ namespace Alimer
 		{ \
 			if (!(cond)) \
 			{ \
-				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-					Alimer::AssertFailBehavior::Halt) \
-					ALIMER_BREAKPOINT(); \
+				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+					alimer::AssertFailBehavior::Halt) \
+					ALIMER_FORCE_CRASH(); \
 			} \
 		} while(0)
 
 #   define ALIMER_ASSERT_FAIL(msg, ...) \
 		do \
 		{ \
-			if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-				Alimer::AssertFailBehavior::Halt) \
-			    ALIMER_BREAKPOINT(); \
+			if (alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+				alimer::AssertFailBehavior::Halt) \
+			    ALIMER_FORCE_CRASH(); \
 		} while(0)
 
 #   define ALIMER_VERIFY(cond) ALIMER_ASSERT(cond)
 #   define ALIMER_VERIFY_MSG(cond, msg, ...) ALIMER_ASSERT_MSG(cond, msg, ##__VA_ARGS__)
 
 #else
-#   define ALIMER_ASSERT(condition) do { ALIMER_UNUSED(condition); } while(0)
-#   define ALIMER_ASSERT_MSG(condition, msg, ...) do { ALIMER_UNUSED(condition); POW2_UNUSED(msg); } while(0)
-#   define ALIMER_ASSERT_FAIL(msg, ...) do { ALIMER_UNUSED(msg); } while(0)
+#   define ALIMER_ASSERT(condition) do {} while (0)
+#   define ALIMER_ASSERT_MSG(condition, msg, ...) do {} while (0)
+#   define ALIMER_ASSERT_FAIL(msg, ...) do {} while (0)
 #   define ALIMER_VERIFY(cond) (void)(cond)
 #   define ALIMER_VERIFY_MSG(cond, msg, ...) do { (void)(cond); ALIMER_UNUSED(msg); } while(0)
 #endif

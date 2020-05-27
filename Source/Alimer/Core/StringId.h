@@ -25,8 +25,7 @@
 #include "Core/Platform.h"
 #include <string>
 
-namespace Alimer
-{
+namespace alimer {
     /// 32-bit hash value for a string.
     class ALIMER_API StringId32
     {
@@ -41,7 +40,7 @@ namespace Alimer
         StringId32(const StringId32& rhs) noexcept = default;
 
         /// Construct with an initial value.
-        explicit StringId32(uint32_t value_) noexcept
+        explicit StringId32(u32 value_) noexcept
             : value(value_)
         {
         }
@@ -85,7 +84,7 @@ namespace Alimer
         explicit operator bool() const { return value != 0; }
 
         /// Return hash value.
-        uint32_t Value() const { return value; }
+        u32 Value() const { return value; }
 
         /// Return as string.
         std::string ToString() const;
@@ -95,7 +94,7 @@ namespace Alimer
 
     private:
         /// Hash value.
-        uint32_t value;
+        u32 value;
     };
 
     /// 64-bit hash value for a string.
@@ -112,7 +111,7 @@ namespace Alimer
         StringId64(const StringId64& rhs) noexcept = default;
 
         /// Construct with an initial value.
-        explicit StringId64(uint64_t value_) noexcept
+        explicit StringId64(u64 value_) noexcept
             : value(value_)
         {
         }
@@ -156,7 +155,7 @@ namespace Alimer
         explicit operator bool() const { return value != 0; }
 
         /// Return hash value.
-        uint64_t Value() const { return value; }
+        u64 Value() const { return value; }
 
         /// Return as string.
         std::string ToString() const;
@@ -166,6 +165,6 @@ namespace Alimer
 
     private:
         /// Hash value.
-        uint64_t value;
+        u64 value;
     };
-}
+} // namespace alimer

@@ -24,7 +24,7 @@
 #include "D3D12GraphicsDevice.h"
 #include <algorithm>
 
-namespace Alimer
+namespace alimer
 {
     D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_)
         : device{ device }

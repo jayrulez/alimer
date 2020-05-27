@@ -24,7 +24,7 @@
 
 #include "Core/Stopwatch.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API GameTime final
     {
@@ -158,4 +158,4 @@ namespace Alimer
         bool isFixedTimeStep = false;
         uint64_t targetElapsedTicks;
     };
-}
+} // namespace alimer

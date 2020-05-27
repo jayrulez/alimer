@@ -29,7 +29,7 @@
 #include "math/size.h"
 #include <memory>
 
-namespace Alimer
+namespace alimer
 {
     struct Configuration
     {
@@ -112,7 +112,7 @@ namespace Alimer
         RefPtr<GraphicsPresenter> mainWindowPresenter;
         bool headless{ false };
     };
-}
+} // namespace alimer
 
 #if defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
 #include "Core/MiniDump.h"

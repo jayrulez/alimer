@@ -22,7 +22,7 @@
 
 #include "Application/Application.h"
 
-namespace Alimer
+namespace alimer
 {
     class MyGame : public Application
     {
@@ -36,4 +36,4 @@ namespace Alimer
     };
 }
 
-ALIMER_DEFINE_APPLICATION(Alimer::MyGame);
+ALIMER_DEFINE_APPLICATION(alimer::MyGame);

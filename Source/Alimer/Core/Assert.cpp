@@ -23,12 +23,7 @@
 #include "Core/Assert.h"
 #include <cstdio>
 
-#if ALIMER_PLATFORM_WINDOWS
-#include "Platform/Windows/Windows.PCH.h"
-#endif
-
-namespace Alimer
-{
+namespace alimer {
     AssertFailBehavior DefaultHandler(const char* condition,
         const char* msg,
         const char* file,
@@ -91,4 +86,4 @@ namespace Alimer
 
         return GetAssertHandlerInstance()(condition, message, file, line);
     }
-}
+} // namespace alimer

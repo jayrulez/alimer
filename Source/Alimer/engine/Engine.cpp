@@ -25,7 +25,7 @@
 #include "engine/Plugin.h"
 #include "gpu/gpu.h"
 
-namespace Alimer
+namespace alimer
 {
     struct EngineImpl final : Engine
     {

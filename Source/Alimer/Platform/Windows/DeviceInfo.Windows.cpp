@@ -20,10 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "Windows.PCH.h"
 #include "Core/DeviceInfo.h"
 
-namespace Alimer
+namespace alimer
 {
     const char* DeviceInfo::GetName()
     {

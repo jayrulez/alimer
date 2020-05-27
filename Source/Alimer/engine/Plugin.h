@@ -34,7 +34,7 @@
 
 #include "Core/Platform.h"
 
-namespace Alimer
+namespace alimer
 {
     struct ALIMER_API IPlugin
     {

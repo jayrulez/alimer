@@ -24,7 +24,7 @@
 #include "D3D12GraphicsDevice.h"
 #include "core/Assert.h"
 
-namespace Alimer
+namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;

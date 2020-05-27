@@ -23,9 +23,9 @@
 #include "Core/StringId.h"
 #include "Core/String.h"
 #include "Core/Hash.h"
+#include <inttypes.h> // PRIx64
 
-namespace Alimer
-{
+namespace alimer {
     const StringId32 StringId32::Zero;
     const StringId64 StringId64::Zero;
 
@@ -64,4 +64,4 @@ namespace Alimer
         sprintf(tempBuffer, "%16" PRIx64, value);
         return std::string(tempBuffer);
     }
-}
+} // namespace alimer

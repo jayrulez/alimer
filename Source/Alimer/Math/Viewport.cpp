@@ -24,7 +24,7 @@
 #include "Core/String.h"
 #include "Core/Assert.h"
 
-namespace Alimer
+namespace alimer
 {
     float Viewport::AspectRatio() const noexcept
     {

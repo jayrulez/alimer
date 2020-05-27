@@ -26,7 +26,7 @@
 #include "Core/Library.h"
 #include "Core/Log.h"
 
-namespace Alimer
+namespace alimer
 {
     IPlugin::~IPlugin() = default;
 

@@ -26,7 +26,7 @@
 #include "math/size.h"
 #include "graphics/PixelFormat.h"
 
-namespace Alimer
+namespace alimer
 {
     static constexpr uint32_t kMaxFrameLatency = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;

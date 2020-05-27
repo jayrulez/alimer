@@ -23,7 +23,7 @@
 #include "graphics/Texture.h"
 #include "graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     Texture::Texture(GraphicsDevice& device)
         : GraphicsResource(device)

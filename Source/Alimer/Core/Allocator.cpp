@@ -24,8 +24,7 @@
 #include <string.h>
 #include <malloc.h>
 
-namespace Alimer
-{
+namespace alimer {
     void* DefaultAllocator::allocate(size_t size)
     {
         return malloc(size);
@@ -84,4 +83,4 @@ namespace Alimer
         return newptr;
     }
 #endif
-}
+} // namespace alimer

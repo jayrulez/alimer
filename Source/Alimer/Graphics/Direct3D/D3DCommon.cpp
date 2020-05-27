@@ -30,7 +30,7 @@
         case hrchk: \
              wcscpy_s( desc, count, L##strOut )
 
-namespace Alimer
+namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2Func = nullptr;
@@ -108,7 +108,7 @@ namespace Alimer
         {PixelFormat::BC7RGBAUNorm,                 DXGI_FORMAT_BC7_UNORM},
         {PixelFormat::BC7RGBAUNormSrgb,             DXGI_FORMAT_BC7_UNORM_SRGB},
     };
-    static_assert((unsigned)PixelFormat::Count == ALIMER_COUNT_OF(kDxgiFormatDesc), "Invalid PixelFormat size");
+    static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kDxgiFormatDesc), "Invalid PixelFormat size");
 
 #if ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count)

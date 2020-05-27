@@ -25,8 +25,7 @@
 #include "Core/Platform.h"
 #include <string>
 
-namespace Alimer
-{
+namespace alimer {
     /// Class specifying a four-dimensional quaternion.
     class ALIMER_API Quaternion
     {
@@ -49,4 +48,4 @@ namespace Alimer
         /// Return as string.
         std::string ToString() const;
     };
-} 
+} // namespace alimer

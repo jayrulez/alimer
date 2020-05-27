@@ -25,7 +25,7 @@
 #include "graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
 
-namespace Alimer
+namespace alimer
 {
     class D3D12GraphicsProvider;
     class D3D12CommandQueue;
@@ -39,7 +39,7 @@ namespace Alimer
         D3D12GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer);
         ~D3D12GraphicsDevice() override;
 
-        IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory; }
         bool                IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device*       GetHandle() const { return d3dDevice; }
         D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
@@ -54,8 +54,9 @@ namespace Alimer
         void HandleDeviceLost();
         RefPtr<GraphicsPresenter> CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters) override;
 
+        static uint32_t deviceCount;
         UINT dxgiFactoryFlags = 0;
-        Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+        IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
 
         ID3D12Device* d3dDevice = nullptr;

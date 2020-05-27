@@ -24,8 +24,7 @@
 
 #include "Core/Assert.h"
 
-namespace Alimer
-{
+namespace alimer {
     template<typename T>
     class ArrayView
     {
@@ -101,4 +100,4 @@ namespace Alimer
         T* begin_ = nullptr;
         T* end_ = nullptr;
     };
-}
+} // namespace alimer

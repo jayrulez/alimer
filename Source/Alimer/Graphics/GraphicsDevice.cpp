@@ -29,7 +29,7 @@
 #include "graphics/Direct3D12/D3D12GraphicsDevice.h"
 #endif
 
-namespace Alimer
+namespace alimer
 {
     GraphicsDevice::GraphicsDevice()
     {

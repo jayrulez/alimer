@@ -23,7 +23,7 @@
 #include "graphics/GraphicsPresenter.h"
 #include "graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     GraphicsPresenter::GraphicsPresenter(GraphicsDevice& device, const PresentationParameters& presentationParameters)
         :  device{ device }

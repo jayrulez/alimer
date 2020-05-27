@@ -25,9 +25,8 @@
 #if defined(_WIN32)
 #include "Core/Platform.h"
 
-namespace Alimer
-{
+namespace alimer {
     /// Write a minidump. Needs to be called from within a structured exception handler.
     ALIMER_API int WriteMiniDump(const char* applicationName, void* exceptionPointers);
-}
+} // namespace alimer
 #endif

@@ -23,7 +23,7 @@
 #include "D3D12SwapChainGraphicsPresenter.h"
 #include "D3D12GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     D3D12SwapChainGraphicsPresenter::D3D12SwapChainGraphicsPresenter(D3D12GraphicsDevice* device, HWND windowHandle, const PresentationParameters& presentationParameters)
         : GraphicsPresenter(*device, presentationParameters)

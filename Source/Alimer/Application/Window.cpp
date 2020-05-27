@@ -23,7 +23,7 @@
 #include "Application/Window.h"
 #include "Core/Log.h"
 
-namespace Alimer
+namespace alimer
 {
     Window::Window(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags)
         : title{ title }
@@ -39,4 +39,4 @@ namespace Alimer
         Close();
         Destroy();
     }
-}
+} // namespace alimer

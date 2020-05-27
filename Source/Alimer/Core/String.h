@@ -25,7 +25,7 @@
 #include "Core/Platform.h"
 #include <string>
 
-namespace Alimer
+namespace alimer
 {
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
 
@@ -37,4 +37,4 @@ namespace Alimer
     std::wstring ToUtf16(const char* str, size_t len);
     std::wstring ToUtf16(const std::string& str);
 #endif
-}
+} // namespace alimer

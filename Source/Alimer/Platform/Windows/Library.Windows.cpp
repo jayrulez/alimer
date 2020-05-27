@@ -20,13 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "Windows.PCH.h"
 #include "Core/Library.h"
 #if defined(_DEBUG)
 #include "Core/Log.h"
 #endif
 
-namespace Alimer
+namespace alimer
 {
     LibHandle LibraryOpen(const char* libName)
     {

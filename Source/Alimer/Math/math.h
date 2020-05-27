@@ -32,8 +32,7 @@
 #pragma warning(disable:4702) // unreachable code
 #endif
 
-namespace Alimer
-{
+namespace alimer {
     static constexpr float M_EPSILON = 0.000001f;
 
     template <typename T> inline T pi() { return T(3.1415926535897932384626433832795028841971); }
@@ -41,9 +40,6 @@ namespace Alimer
     template <typename T> inline T one_over_root_two() { return T(0.7071067811865476); }
 
     // min, max, clamp
-    template <typename T> T min(T a, T b) { return b < a ? b : a; }
-    template <typename T> T max(T a, T b) { return a < b ? b : a; }
-    template <typename T> T clamp(T v, T lo, T hi) { return v < lo ? lo : (v > hi ? hi : v); }
     template <typename T> T sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
     template <typename T> T sin(T v) { return std::sin(v); }
     template <typename T> T cos(T v) { return std::cos(v); }
@@ -71,10 +67,6 @@ namespace Alimer
     /// Inverse linear interpolation between two values.
     template <typename T>
     inline T inverse_lerp(T lhs, T rhs, T x) { return (x - lhs) / (rhs - lhs); }
-
-    /// Return absolute value of a value
-    template <typename T>
-    inline T abs(T v) { return std::abs(v); }
 
     /// Check whether a floating point value is NaN.
     template <typename T> inline bool is_nan(T value) { return isnan(value); }
@@ -339,7 +331,7 @@ namespace Alimer
     using bool2 = tvec2<bool>;
     using bool3 = tvec3<bool>;
     using bool4 = tvec4<bool>;
-} 
+}  // namespace alimer
 
 #ifdef _MSC_VER
 #pragma warning(pop)

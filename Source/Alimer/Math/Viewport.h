@@ -25,7 +25,7 @@
 #include "Core/Platform.h"
 #include "math/rect.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying the dimensions of a viewport.
     class ALIMER_API Viewport

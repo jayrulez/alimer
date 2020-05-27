@@ -29,8 +29,7 @@
 #   include <windows.h>
 #endif
 
-namespace Alimer
-{
+namespace alimer {
     const std::string EMPTY_STRING{};
 
 #ifdef _WIN32
@@ -66,4 +65,4 @@ namespace Alimer
         return ToUtf16(str.data(), str.size());
     }
 #endif
-}
+} // namespace alimer

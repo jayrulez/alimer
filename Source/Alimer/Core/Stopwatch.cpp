@@ -23,7 +23,6 @@
 #include "Core/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
-#include "Platform/Windows/Windows.PCH.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #include <mach/mach_time.h>
@@ -36,15 +35,12 @@
 #include <time.h>
 #endif
 
-namespace Alimer
-{
-    struct TimerGlobalInitializer
-    {
+namespace alimer {
+    struct TimerGlobalInitializer {
         uint64_t frequency;
         bool monotonic = false;
 
-        TimerGlobalInitializer()
-        {
+        TimerGlobalInitializer() {
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
             LARGE_INTEGER f;
             QueryPerformanceFrequency(&f);
@@ -187,4 +183,4 @@ namespace Alimer
         static double s_tickFrequency = (double)TicksPerSecond / s_timeGlobalInitializer.frequency;
         return uint64_t(GetElapsedTicks() * s_tickFrequency) / TicksPerMillisecond;
     }
-}
+} // namespace alimer

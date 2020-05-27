@@ -37,17 +37,9 @@
 #include <dxgi1_5.h>
 #endif
 
-#include <wrl/client.h>
-#include <wrl/event.h>
-
-
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
-
-#ifdef _DEBUG
-#include <dxgidebug.h>
-#endif
 
 #include "Core/Vector.h"
 
@@ -67,7 +59,7 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-namespace Alimer
+namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;

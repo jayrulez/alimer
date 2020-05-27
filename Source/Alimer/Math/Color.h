@@ -31,8 +31,7 @@
 #define ALIMER_SELECT_ANY __declspec(selectany)
 #endif
 
-namespace Alimer
-{
+namespace alimer {
     /// Class specifying a floating-point RGBA color.
     class ALIMER_API Color final
     {
@@ -65,8 +64,7 @@ namespace Alimer
     };
 
     /* Copied from DirectXMath (https://github.com/microsoft/DirectXMath/blob/b412a61c518923e52e2d43d9e4d7084af8352ca2/Inc/DirectXColors.h) */
-    namespace Colors
-    {
+    namespace Colors {
         // Standard colors (Red/Green/Blue/Alpha)
         extern const ALIMER_SELECT_ANY Color AliceBlue = { 0.941176534f, 0.972549081f, 1.0f, 1.0f };
         extern const ALIMER_SELECT_ANY Color AntiqueWhite = { 0.980392218f, 0.921568692f, 0.843137324f, 1.0f };
@@ -211,4 +209,4 @@ namespace Alimer
         extern const ALIMER_SELECT_ANY Color YellowGreen = { 0.603921592f, 0.803921640f, 0.196078449f, 1.0f };
 
     } // namespace Colors
-}
+} // namespace alimer

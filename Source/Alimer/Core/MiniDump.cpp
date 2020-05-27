@@ -30,10 +30,8 @@
 #include <dbghelp.h>
 #include <string>
 
-namespace Alimer
-{
-    int WriteMiniDump(const char* applicationName, void* exceptionPointers)
-    {
+namespace alimer {
+    int WriteMiniDump(const char* applicationName, void* exceptionPointers) {
         static bool miniDumpWritten = false;
 
         // In case of recursive or repeating exceptions, only write the dump once
@@ -74,5 +72,5 @@ namespace Alimer
 
         return EXCEPTION_EXECUTE_HANDLER;
     }
-}
+} // namespace alimer
 #endif

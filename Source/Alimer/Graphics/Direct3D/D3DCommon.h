@@ -52,12 +52,12 @@
 #include <dxgi1_5.h>
 #endif
 
-#if defined(_DEBUG)
-#   include <dxgidebug.h>
+#if ( defined(_DEBUG) || defined(PROFILE) )
+#include <dxgidebug.h>
 
-#   if !defined(_XBOX_ONE) || !defined(_TITLE)
+#if !defined(_XBOX_ONE) || !defined(_TITLE)
 #   pragma comment(lib,"dxguid.lib")
-#   endif
+#endif
 #endif
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -65,7 +65,7 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-namespace Alimer
+namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2Func;
@@ -185,7 +185,7 @@ namespace Alimer
     do                                                                      \
     {                                                                       \
         HRESULT hr_ = x;                                                    \
-        ALIMER_ASSERT_MSG(SUCCEEDED(hr_), Alimer::GetDXErrorStringAnsi(hr_).c_str());      \
+        ALIMER_ASSERT_MSG(SUCCEEDED(hr_), alimer::GetDXErrorStringAnsi(hr_).c_str());      \
     }                                                                       \
     while(0)
 #else

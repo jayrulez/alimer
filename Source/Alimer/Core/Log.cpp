@@ -34,19 +34,15 @@
 #elif TARGET_OS_MAC || defined(__linux__)
 #   include <unistd.h>
 #elif ALIMER_PLATFORM_WINDOWS
-#   include "Platform/Windows/Windows.PCH.h"
 #   include <strsafe.h>
 #elif defined(__EMSCRIPTEN__)
 #   include <emscripten.h>
 #endif
 
-using namespace std;
-
-namespace Alimer
-{
+namespace alimer {
     static Vector<Logger*> _loggers;
 
-    Logger::Logger(const string& name)
+    Logger::Logger(const std::string& name)
         : _name(name)
 #ifdef _DEBUG
         , _level{ LogLevel::Debug }
@@ -186,7 +182,7 @@ namespace Alimer
         }
     }
 
-    void Logger::Log(LogLevel level, const string& message)
+    void Logger::Log(LogLevel level, const std::string& message)
     {
         Log(level, message.c_str());
     }
@@ -216,4 +212,4 @@ namespace Alimer
         static Logger defaultLogger("alimer");
         return &defaultLogger;
     }
-}
+} // namespace alimer

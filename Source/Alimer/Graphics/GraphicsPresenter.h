@@ -25,7 +25,7 @@
 #include "graphics/Texture.h"
 #include "math/size.h"
 
-namespace Alimer
+namespace alimer
 {
     class GraphicsPresenter : public RefCounted
     {

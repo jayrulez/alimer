@@ -26,8 +26,7 @@
 #include "Core/StringId.h"
 #include <memory>
 
-namespace Alimer
-{
+namespace alimer {
     /// Type info.
     class ALIMER_API TypeInfo final
     {
@@ -89,15 +88,15 @@ namespace Alimer
         /// Cast the object to specified most derived class.
         template<typename T> const T* Cast() const { return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr; }
     };
-}
+} // namespace alimer
 
 #define ALIMER_OBJECT(typeName, baseTypeName) \
     public: \
         using ClassName = typeName; \
         using BaseClassName = baseTypeName; \
-        virtual Alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
+        virtual alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
         virtual const std::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
-        virtual const Alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
-        static Alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
+        virtual const alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
+        static alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
         static const std::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
-        static const Alimer::TypeInfo* GetTypeInfoStatic() { static const Alimer::TypeInfo typeInfoStatic(#typeName, BaseClassName::GetTypeInfoStatic()); return &typeInfoStatic; } \
+        static const alimer::TypeInfo* GetTypeInfoStatic() { static const alimer::TypeInfo typeInfoStatic(#typeName, BaseClassName::GetTypeInfoStatic()); return &typeInfoStatic; } \

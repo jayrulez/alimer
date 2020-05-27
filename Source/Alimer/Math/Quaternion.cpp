@@ -23,7 +23,7 @@
 #include "math/Quaternion.h"
 #include "Core/String.h"
 
-namespace Alimer
+namespace alimer
 {
     std::string Quaternion::ToString() const
     {
@@ -31,4 +31,4 @@ namespace Alimer
         sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
         return std::string(tempBuffer);
     }
-}
+} // namespace alimer

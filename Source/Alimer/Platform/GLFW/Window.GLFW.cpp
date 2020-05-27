@@ -33,8 +33,7 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-namespace Alimer
-{
+namespace alimer {
     void Window::Create(WindowFlags flags)
     {
         /*if ((flags & WINDOW_FLAG_OPENGL)) {

@@ -22,6 +22,6 @@
 
 #include "math/Color.h"
 
-namespace Alimer
+namespace alimer
 {
 }

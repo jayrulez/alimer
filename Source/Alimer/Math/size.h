@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <assert.h>
 
-namespace Alimer
+namespace alimer
 {
     template <typename T>
     struct tsize2

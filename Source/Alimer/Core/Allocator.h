@@ -27,15 +27,14 @@
 #   include <new>
 #endif
 
-#define ALIMER_NEW(allocator, ...) new (Alimer::NewPlaceholder(), (allocator).allocateAligned(sizeof(__VA_ARGS__), alignof(__VA_ARGS__))) __VA_ARGS__
+#define ALIMER_NEW(allocator, ...) new (alimer::NewPlaceholder(), (allocator).allocateAligned(sizeof(__VA_ARGS__), alignof(__VA_ARGS__))) __VA_ARGS__
 #define ALIMER_DELETE(allocator, var) (allocator).deleteObject(var);
 
-namespace Alimer { struct NewPlaceholder {}; }
-inline void* operator new(size_t, Alimer::NewPlaceholder, void* where) { return where; }
-inline void operator delete(void*, Alimer::NewPlaceholder, void*) { }
+namespace alimer { struct NewPlaceholder {}; }
+inline void* operator new(size_t, alimer::NewPlaceholder, void* where) { return where; }
+inline void operator delete(void*, alimer::NewPlaceholder, void*) { }
 
-namespace Alimer
-{
+namespace alimer {
     struct ALIMER_API IAllocator
     {
         virtual ~IAllocator() {}
@@ -67,4 +66,4 @@ namespace Alimer
         void deallocateAligned(void* ptr) override;
         void* reallocateAligned(void* ptr, size_t size, size_t align) override;
     };
-}
+} // namespace alimer

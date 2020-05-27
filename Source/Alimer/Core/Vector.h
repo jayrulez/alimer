@@ -30,8 +30,7 @@
 #include <initializer_list>
 #include <algorithm>
 
-namespace Alimer
-{
+namespace alimer {
     template<typename T>
     class Vector
     {
@@ -659,4 +658,4 @@ namespace Alimer
         uint32_t size_ = 0;
         uint32_t capacity_ = 0;
     };
-}
+} // namespace alimer

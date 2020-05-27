@@ -294,8 +294,9 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_CONSTCALL __attribute__(const)
 #   define ALIMER_LIKELY(x) __builtin_expect(!!(x), 1)
 #   define ALIMER_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#   define ALIMER_BREAKPOINT() __builtin_trap();
 #   define ALIMER_UNREACHABLE() __builtin_unreachable()
+#   define ALIMER_DEBUG_BREAK() __builtin_trap()
+#   define ALIMER_FORCE_CRASH() __builtin_trap()
 #elif defined(__GNUC__)
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL __thread
@@ -306,9 +307,11 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_CONSTCALL __attribute__(const)
 #   define ALIMER_LIKELY(x) __builtin_expect(!!(x), 1)
 #   define ALIMER_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#   define ALIMER_BREAKPOINT() __builtin_trap();
 #   define ALIMER_UNREACHABLE() __builtin_unreachable()
+#   define ALIMER_DEBUG_BREAK() __builtin_trap()
+#   define ALIMER_FORCE_CRASH() __builtin_trap()
 #elif defined(_MSC_VER)
+#   include <intrin.h>
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL __declspec(thread)
 #   define ALIMER_DEPRECATED __declspec(deprecated)
@@ -318,11 +321,9 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_CONSTCALL __declspec(noalias)
 #   define ALIMER_LIKELY(x) (x)
 #   define ALIMER_UNLIKELY(x) (x)
-#   define ALIMER_BREAKPOINT() __debugbreak();
 #   define ALIMER_UNREACHABLE() __assume(false)
-#else
-#define ALIMER_RESTRICT
-#define ALIMER_THREADLOCAL
+#   define ALIMER_DEBUG_BREAK() __debugbreak()
+#   define ALIMER_FORCE_CRASH() __ud2()
 #endif
 
 #ifndef ALIMER_ALIGN
@@ -331,45 +332,20 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #       define ALIMER_ALIGN_PREFIX(alignment) __declspec(align(alignment))
 #       define ALIMER_ALIGN_SUFFIX(alignment)
 #       define ALIMER_ALIGNOF(type) __alignof(type)
-#       define ALIMER_OFFSET_OF(X, Y) offsetof(X, Y)
 #   elif (defined(__clang__) || defined(__GNUC__))
 #       define ALIMER_ALIGN(alignment, decl) decl __attribute__((aligned(alignment)))
 #       define ALIMER_ALIGN_PREFIX(alignment)
 #       define ALIMER_ALIGN_SUFFIX(alignment) __attribute__((aligned(alignment)))
 #       define ALIMER_ALIGNOF(type) __alignof__(type)
-#       define ALIMER_OFFSET_OF(X, Y) __builtin_offsetof(X, Y)
 #   endif
 #endif
 
-// Use for getting the amount of members of a standard C array.
-#define ALIMER_COUNT_OF(x) (sizeof(x)/sizeof(x[0]))
-#define ALIMER_UNUSED(x) do { (void)sizeof(x); } while(0)
-
-#ifndef ALIMER_DEBUG
-#   ifdef _DEBUG
-#       define ALIMER_DEBUG 1
-#   else
-#       define ALIMER_DEBUG 0
-#   endif
-#endif
-
-/** Assert macro */
-#ifndef ALIMER_ENABLE_ASSERT
-#   if ALIMER_DEBUG
-#       define ALIMER_ENABLE_ASSERT 1
-#   else
-#       define ALIMER_ENABLE_ASSERT 0
-#   endif
-#endif
-
-/** DLL export macros */
-#ifndef ALIMER_C_EXPORT
-#   if ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_LINUX
-#       define ALIMER_C_EXPORT extern "C"
-#   else
-#       define ALIMER_C_EXPORT
-#   endif
-#endif
+#define ALIMER_MEMBER_OFFSET(type, member) offsetof(type, member)
+#define ALIMER_STATIC_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define ALIMER_UNUSED(x) ((void) x)
+#define ALIMER_CALL_MEMBER(obj, pmf) ((obj).*(pmf))
+#define ALIMER_CALL_MEMBER(obj, pmf) ((obj).*(pmf))
+#define ALIMER_STATIC_ASSERT(x) static_assert(x, #x)
 
 #if ALIMER_PLATFORM_POSIX && __GNUC__ >= 4
 #   define ALIMER_UNIX_EXPORT __attribute__((visibility("default")))
@@ -395,70 +371,74 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_API
 #endif  // defined(ALIMER_SHARED_LIBRARY)
 
-// Base data types
+//---------------------------------------------
+// Global system headers
+//---------------------------------------------
+#if ALIMER_PLATFORM_WINDOWS     // Win32 API
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#undef NOMINMAX
+#endif
+
+//---------------------------------------------
+// Integer/float types and limits
+//---------------------------------------------
 #include <stddef.h>
 #include <stdint.h>
+#include <float.h>
 
-#define FLOAT32_C(x) (x##f)
-#define FLOAT64_C(x) (x)
-
-#ifndef ALIMER_SIZE_REAL
-#   define ALIMER_SIZE_REAL 4
-#endif
-
-#if ALIMER_SIZE_REAL == 8
-typedef double real;
-#define REAL_C(x) FLOAT64_C(x)
+namespace alimer {
+    using s8 = int8_t;
+    using s16 = int16_t;
+    using s32 = int32_t;
+    using s64 = int64_t;
+    using u8 = uint8_t;
+    using u16 = uint16_t;
+    using u32 = uint32_t;
+    using u64 = uint64_t;
+#if PLY_PTR_SIZE == 4
+    using sptr = int32_t;
+    using uptr = uint32_t;
+    using sreg = int32_t;
+    using ureg = uint32_t;
 #else
-typedef float real;
-#define REAL_C(x) FLOAT32_C(x)
+    using sptr = int64_t;
+    using uptr = uint64_t;
+    using sreg = int64_t;
+    using ureg = uint64_t;
 #endif
 
-// Format specifiers for 64bit and pointers
-#if ALIMER_COMPILER_MSVC
-#   define PRId32 "Id"
-#   define PRIi32 "Ii"
-#   define PRIo32 "Io"
-#   define PRIu32 "Iu"
-#   define PRIx32 "Ix"
-#   define PRIX32 "IX"
-#   define PRId64 "I64d"
-#   define PRIi64 "I64i"
-#   define PRIo64 "I64o"
-#   define PRIu64 "I64u"
-#   define PRIx64 "I64x"
-#   define PRIX64 "I64X"
-#   define PRIdPTR "Id"
-#   define PRIiPTR "Ii"
-#   define PRIoPTR "Io"
-#   define PRIuPTR "Iu"
-#   define PRIxPTR "Ix"
-#   define PRIXPTR "IX"
-#   define PRIsize "Iu"
-#else
-#   include <inttypes.h>
-#   define PRIsize "zu"
-#endif
+    //---------------------------------------------
+    // Limits
+    //---------------------------------------------
+    template <typename T> struct Limits;
+#define ALIMER_MAKE_LIMITS(type, lo, hi) \
+    template <> struct Limits<type> { \
+        static constexpr type Min = lo; \
+        static constexpr type Max = hi; \
+    }
+    ALIMER_MAKE_LIMITS(s8, INT8_MIN, INT8_MAX);
+    ALIMER_MAKE_LIMITS(s16, INT16_MIN, INT16_MAX);
+    ALIMER_MAKE_LIMITS(s32, INT32_MIN, INT32_MAX);
+    ALIMER_MAKE_LIMITS(s64, INT64_MIN, INT64_MAX);
+    ALIMER_MAKE_LIMITS(u8, 0, UINT8_MAX);
+    ALIMER_MAKE_LIMITS(u16, 0, UINT16_MAX);
+    ALIMER_MAKE_LIMITS(u32, 0, UINT32_MAX);
+    ALIMER_MAKE_LIMITS(u64, 0, UINT64_MAX);
+    ALIMER_MAKE_LIMITS(float, -FLT_MAX, FLT_MAX);
+    ALIMER_MAKE_LIMITS(double, -DBL_MAX, DBL_MAX);
 
-#define PRItick PRIi64
-#define PRIhash PRIx64
-
-#if ALIMER_SIZE_REAL == 8
-#   define PRIreal "lf"
-#else
-#   define PRIreal "f"
-#endif
-
-#if ALIMER_COMPILER_MSVC
-#   if ALIMER_SIZE_POINTER == 8
-#       define PRIfixPTR "016I64X"
-#   else
-#       define PRIfixPTR "08IX"
-#   endif
-#else
-#   if ALIMER_SIZE_POINTER == 8
-#       define PRIfixPTR "016" PRIXPTR
-#   else
-#       define PRIfixPTR "08" PRIXPTR
-#   endif
-#endif
+    //---------------------------------------------
+    // Basic comparisons
+    //---------------------------------------------
+    template<typename T> inline T abs(T v) { return (v >= 0) ? v : -v; }
+    template<typename T> inline T min(T a, T b) { return (a < b) ? a : b; }
+    template<typename T> inline T max(T a, T b) { return (a < b) ? b : a; }
+    template<typename T> inline T clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
+} // namespace alimer

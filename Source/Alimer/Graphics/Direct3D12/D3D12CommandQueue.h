@@ -24,7 +24,7 @@
 
 #include "D3D12CommandAllocatorPool.h"
 
-namespace Alimer
+namespace alimer
 {
     class D3D12CommandAllocatorPool;
 

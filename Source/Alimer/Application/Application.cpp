@@ -27,7 +27,7 @@
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
-namespace Alimer
+namespace alimer
 {
     Application::Application()
         : input(new InputManager())
@@ -223,4 +223,4 @@ namespace Alimer
             EndDraw();
         }
     }
-}
+} // namespace alimer

@@ -28,7 +28,7 @@
 #include <queue>
 #include <mutex>
 
-namespace Alimer
+namespace alimer
 {
     class D3D12SwapChainGraphicsPresenter final : public GraphicsPresenter
     {

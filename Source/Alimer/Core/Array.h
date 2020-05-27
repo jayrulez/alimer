@@ -26,8 +26,7 @@
 #include "Core/ArrayView.h"
 #include "Core/Assert.h"
 
-namespace Alimer
-{
+namespace alimer {
     /**
     * Fixed size array.
     */
@@ -78,4 +77,4 @@ namespace Alimer
         constexpr Iterator  end() { return data_ + N; }
         constexpr ConstIterator end() const { return data_ + N; }
     };
-}
+} // namespace alimer

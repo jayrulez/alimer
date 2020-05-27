@@ -25,7 +25,7 @@
 #include "Core/Object.h"
 #include "Application/GameTime.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API GameSystem : public Object
     {
@@ -43,4 +43,4 @@ namespace Alimer
         virtual void Draw(const GameTime& gameTime) {}
         virtual void EndDraw() {}
     };
-}
+} // namespace alimer

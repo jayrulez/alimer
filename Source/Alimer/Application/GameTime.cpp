@@ -24,7 +24,7 @@
 #include "Application/Application.h"
 #include <cmath>
 
-namespace Alimer
+namespace alimer
 {
     GameTime::GameTime()
         : targetElapsedTicks(TicksPerSecond / 60)
@@ -45,4 +45,4 @@ namespace Alimer
         framesThisSecond = 0;
         qpcSecondCounter = 0;
     }
-}
+} // namespace alimer

@@ -25,8 +25,7 @@
 #include "Core/Assert.h"
 #include <string>
 
-namespace Alimer
-{
+namespace alimer {
     static constexpr uint32_t kMaxLogMessage = 4096;
 
     enum class LogLevel : uint32_t
@@ -64,7 +63,7 @@ namespace Alimer
     public:
         static Logger* GetDefault();
     };
-}
+} // namespace alimer
 
 // Current function macro.
 #ifdef WIN32
@@ -73,18 +72,17 @@ namespace Alimer
 #define __current__func__ __func__
 #endif
 
-#define LOG_TRACE(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Trace, __VA_ARGS__)
-#define LOG_DEBUG(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Debug, __VA_ARGS__)
-#define LOG_INFO(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Info, __VA_ARGS__)
-#define LOG_WARN(...) Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Warning, __VA_ARGS__)
+#define LOG_TRACE(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Trace, __VA_ARGS__)
+#define LOG_DEBUG(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Debug, __VA_ARGS__)
+#define LOG_INFO(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Info, __VA_ARGS__)
+#define LOG_WARN(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Warning, __VA_ARGS__)
 
 #ifdef ALIMER_ERRORS_AS_WARNINGS
 #define LOG_ERROR LOG_WARN
 #else
 #define LOG_ERROR(...) do \
     { \
-        Alimer::Log::GetDefault()->LogFormat(Alimer::LogLevel::Error, "%s -- %s", __current__func__, __VA_ARGS__); \
-        ALIMER_BREAKPOINT(); \
-        std::exit(-1); \
+        alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Error, "%s -- %s", __current__func__, __VA_ARGS__); \
+        ALIMER_FORCE_CRASH(); \
     } while (0)
 #endif

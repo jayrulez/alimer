@@ -23,7 +23,7 @@
 /*#include "graphics/Framebuffer.h"
 #include "graphics/GraphicsDevice.h"
 
-namespace Alimer
+namespace alimer
 {
     Framebuffer::Framebuffer(GraphicsDevice &device)
         : GraphicsResource(device, Type::Texture)

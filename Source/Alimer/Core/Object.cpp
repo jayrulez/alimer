@@ -22,7 +22,7 @@
 
 #include "Core/Object.h"
 
-namespace Alimer
+namespace alimer
 {
     TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
         : type(typeName_)

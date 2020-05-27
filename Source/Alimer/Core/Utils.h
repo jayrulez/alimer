@@ -25,7 +25,7 @@
 #include "Core/Platform.h"
 #include <type_traits>
 
-namespace Alimer
+namespace alimer
 {
     template <typename T>
     void SafeDelete(T*& resource)
@@ -33,7 +33,7 @@ namespace Alimer
         delete resource;
         resource = nullptr;
     }
-}
+} // namespace alimer
 
 #define ALIMER_DISABLE_COPY(ClassType) \
     ClassType(const ClassType&) = delete; ClassType& operator=(const ClassType&) = delete; \

@@ -27,7 +27,7 @@
 #include "os/os.h"
 #include <memory>
 
-namespace Alimer
+namespace alimer
 {
     class GraphicsPresenter;
 

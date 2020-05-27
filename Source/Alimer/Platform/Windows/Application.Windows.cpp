@@ -23,11 +23,11 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "Core/Log.h"
-#include "Windows.PCH.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <shellapi.h>
 
-namespace Alimer
+namespace alimer
 {
     namespace
     {

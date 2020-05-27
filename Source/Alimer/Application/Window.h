@@ -27,7 +27,7 @@
 #include "Math/size.h"
 #include <string>
 
-namespace Alimer
+namespace alimer
 {
     enum class WindowFlags : uint32_t {
         None = 0,
@@ -69,4 +69,4 @@ namespace Alimer
 
         void* window = nullptr;
     };
-}
+} // namespace alimer

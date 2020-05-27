@@ -24,7 +24,7 @@
 
 #include "graphics/GraphicsResource.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class BufferUsage : uint32_t
     {

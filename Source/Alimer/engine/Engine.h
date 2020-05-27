@@ -24,7 +24,7 @@
 
 #include "Core/Allocator.h"
 
-namespace Alimer
+namespace alimer
 {
     struct ALIMER_API Engine
     {
