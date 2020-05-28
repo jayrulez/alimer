@@ -123,6 +123,11 @@ namespace alimer {
         return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_MAXIMIZED) == GLFW_TRUE;
     }
 
+    void* Window::GetWindow() const
+    {
+        return window;
+    }
+
     void* Window::GetHandle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)

@@ -36,9 +36,9 @@ define_engine_source_files(
     Core
     engine
     Math
-    os
     Graphics
     Input
+    UI
     Application
 )
 

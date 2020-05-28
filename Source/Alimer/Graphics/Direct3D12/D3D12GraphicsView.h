@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,34 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
+#include "graphics/GraphicsView.h"
 #include "D3D12Backend.h"
-#include "core/Assert.h"
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+    class D3D12Texture;
 
-    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
+    class D3D12GraphicsView final : public GraphicsView
+    {
+    public:
+        D3D12GraphicsView(D3D12GraphicsDevice* device, void* window, const GraphicsViewDescriptor* descriptor);
+        ~D3D12GraphicsView() override;
+        void Destroy() override;
+        void Present() override;
+
+    private:
+        void CreateRenderTargets();
+
+        D3D12GraphicsDevice* device;
+
+        DXGI_FORMAT dxgiColorFormat;
+        IDXGISwapChain3* handle = nullptr;
+        u32 syncInterval = 1;
+        u32 presentFlags = 0;
+
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+    };
 }

@@ -28,18 +28,18 @@ namespace alimer
 {
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type)
         : commandListType(type)
+        , nextFenceValue((uint64_t)type << 56 | 1)
+        , lastCompletedFenceValue((uint64_t)type << 56)
         , allocatorPool(device, type)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Type = type;
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-
-        lastCompletedFenceValue = ((uint64_t)queueDesc.Type << 56);
-        nextFenceValue = (uint64_t)queueDesc.Type << 56 | 1;
+        queueDesc.NodeMask = 1;
 
         ThrowIfFailed(device->GetHandle()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
         ThrowIfFailed(device->GetHandle()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-        fence->Signal(lastCompletedFenceValue);
+        fence->Signal((uint64_t)type << 56);
 
         // Create an event handle to use for frame synchronization.
         fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
@@ -83,7 +83,7 @@ namespace alimer
 
     void D3D12CommandQueue::WaitForIdle(void)
     {
-        WaitForFence(IncrementFence());
+        WaitForFenceValue(IncrementFence());
     }
 
     u64 D3D12CommandQueue::IncrementFence(void)
@@ -106,7 +106,7 @@ namespace alimer
         return fenceValue <= lastCompletedFenceValue;
     }
 
-    void D3D12CommandQueue::WaitForFence(uint64_t fenceValue)
+    void D3D12CommandQueue::WaitForFenceValue(uint64_t fenceValue)
     {
         if (IsFenceComplete(fenceValue))
             return;
@@ -130,9 +130,16 @@ namespace alimer
         return allocatorPool.RequestAllocator(completedFenceValue);
     }
 
+    void D3D12CommandQueue::DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator)
+    {
+        allocatorPool.DiscardAllocator(fenceValue, commandAllocator);
+    }
+
     uint64_t D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
     {
         std::lock_guard<std::mutex> LockGuard(fenceMutex);
+
+        VHR(commandList->Close());
 
         // Kickoff the command list
         ID3D12CommandList* commandLists[] = { commandList };

@@ -23,7 +23,8 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/SwapChain.h"
+#include "graphics/GraphicsView.h"
+#include "UI/Gui.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -49,7 +50,10 @@ namespace alimer
         }
 
         gameSystems.Clear();
+        gui.reset();
+        mainView.Reset();
         mainWindow.reset();
+        graphicsDevice.reset();
         PlatformDestroy();
     }
 
@@ -65,11 +69,14 @@ namespace alimer
             );
             //window_set_centered(main_window);
 
-            SwapChainDescriptor swapChainDescriptor = {};
-            swapChainDescriptor.width = mainWindow->GetSize().width;
-            swapChainDescriptor.height = mainWindow->GetSize().height;
-            swapChainDescriptor.colorFormat = PixelFormat::BGRA8UNormSrgb;
-            mainSwapChain = graphicsDevice->CreateSwapChain(mainWindow->GetHandle(), &swapChainDescriptor);
+            GraphicsViewDescriptor viewDescriptor = {};
+            viewDescriptor.width = mainWindow->GetSize().width;
+            viewDescriptor.height = mainWindow->GetSize().height;
+            //contextDescriptor.colorFormat = PixelFormat::BGRA8UNormSrgb;
+            viewDescriptor.colorFormat = PixelFormat::RGBA8UNorm;
+            mainView = graphicsDevice->CreateView(mainWindow->GetHandle(), &viewDescriptor);
+
+            gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
 
         Initialize();
@@ -103,17 +110,19 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!graphicsDevice->BeginFrame()) {
-            return false;
-        }
-
         for (auto gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
         }
 
+        gui->BeginFrame();
+
         return true;
     }
+
+    static bool show_demo_window = true;
+    static bool show_another_window = false;
+    static Color clear_color = Color(0.45f, 0.55f, 0.60f, 1.00f);
 
     void Application::Draw(const GameTime& gameTime)
     {
@@ -121,15 +130,54 @@ namespace alimer
         {
             gameSystem->Draw(time);
         }
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+
+
+        auto& context = graphicsDevice->BeginContext("Frame");
+        RenderPassDescriptor renderPass = {};
+        renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
+        renderPass.colorAttachments[0].clearColor = clear_color;
+        context.BeginRenderPass(&renderPass);
+        context.EndRenderPass();
+        gui->Render(context);
+        context.Flush(true);
     }
-
-#include <DirectXMath.h>
-    using namespace DirectX;
-    using float4x4 = XMFLOAT4X4;
-
-    struct vs_params_t {
-        float4x4 mvp;
-    };
 
     void Application::EndDraw()
     {
@@ -138,44 +186,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-#if defined(TODO_VGPU)
-
-        uint32_t width = window_width(main_window);
-        uint32_t height = window_height(main_window);
-
-        XMMATRIX proj = XMMatrixPerspectiveFovRH(XMConvertToRadians(60.0f), (float)width / (float)height, 0.01f, 10.0f);
-        XMMATRIX view = XMMatrixLookAtRH(XMVectorSet(0.0f, 1.5f, 6.0f, 0.0f), XMVectorZero(), XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-        XMMATRIX view_proj = XMMatrixMultiply(view, proj);
-
-        static float rx = 0.0f;
-        static float ry = 0.0f;
-
-        /* rotated model matrix */
-        rx += 1.0f; ry += 2.0f;
-        XMMATRIX rxm = XMMatrixRotationAxis(XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), XMConvertToRadians(rx));
-        XMMATRIX rym = XMMatrixRotationAxis(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), XMConvertToRadians(ry));
-        XMMATRIX model = XMMatrixMultiply(rxm, rym);
-
-        /* model-view-projection matrix for vertex shader */
-        vs_params_t vs_params;
-        XMMATRIX worldViewProjection = XMMatrixMultiply(model, view_proj);
-        XMStoreFloat4x4(&vs_params.mvp, worldViewProjection);
-        //vgpu_buffer_sub_data(uboBuffer, 0, 0, &vs_params);
-
-        VGPURenderPassDescriptor renderPass;
-        memset(&renderPass, 0, sizeof(VGPURenderPassDescriptor));
-
-        vgpuCmdBeginRenderPass(&renderPass);
-        vgpuSetPipeline(render_pipeline);
-        vgpuCmdSetVertexBuffers(0, vertexBuffer, 0);
-        vgpuCmdSetIndexBuffer(indexBuffer, 0);
-        vgpu_set_uniform_buffer_data(0, 0, &vs_params, sizeof(vs_params));
-        vgpuCmdDrawIndexed(36, 1, 0);
-        vgpuCmdEndRenderPass();
-#endif
-
-        mainSwapChain->Present();
-        graphicsDevice->EndFrame();
+        mainView->Present();
     }
 
     int Application::Run()

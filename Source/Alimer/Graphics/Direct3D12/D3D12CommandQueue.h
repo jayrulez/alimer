@@ -37,12 +37,13 @@ namespace alimer
         void WaitForIdle(void);
         u64 IncrementFence(void);
         bool IsFenceComplete(u64 fenceValue);
-        void WaitForFence(uint64_t fenceValue);
+        void WaitForFenceValue(uint64_t fenceValue);
         ID3D12CommandQueue* GetHandle() { return handle; }
         uint64_t GetNextFenceValue() { return nextFenceValue; }
         uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
 
         ID3D12CommandAllocator* RequestAllocator();
+        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
 
     private:
         void Destroy();

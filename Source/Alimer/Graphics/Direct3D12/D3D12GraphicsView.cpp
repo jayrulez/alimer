@@ -21,13 +21,14 @@
 //
 
 #include "D3D12GraphicsDevice.h"
-#include "D3D12SwapChain.h"
+#include "D3D12GraphicsView.h"
 #include "D3D12Texture.h"
 
 namespace alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* window, const SwapChainDescriptor* descriptor)
-        : SwapChain(*device, descriptor)
+    D3D12GraphicsView::D3D12GraphicsView(D3D12GraphicsDevice* device, void* window, const GraphicsViewDescriptor* descriptor)
+        : GraphicsView(*device, descriptor)
+        , device{ device }
     {
         // Flip mode doesn't support SRGB formats
         dxgiColorFormat = ToDXGIFormat(srgbToLinearFormat(descriptor->colorFormat));
@@ -41,7 +42,7 @@ namespace alimer
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = kMaxFrameLatency;
+        swapChainDesc.BufferCount = maxInflightFrames;
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
@@ -79,47 +80,43 @@ namespace alimer
 
         VHR(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
         tempSwapChain->Release();
-        
         CreateRenderTargets();
     }
 
-    D3D12SwapChain::~D3D12SwapChain()
+    D3D12GraphicsView::~D3D12GraphicsView()
     {
         Destroy();
     }
 
-    void D3D12SwapChain::Destroy()
+    void D3D12GraphicsView::Destroy()
     {
         if (handle == nullptr) {
             return;
         }
 
-        for (uint32_t i = 0; i < kMaxFrameLatency; ++i)
-        {
-            SafeDelete(colorTextures[i]);
-        }
-
+        GraphicsView::Destroy();
         SAFE_RELEASE(handle);
     }
 
-    void D3D12SwapChain::Present()
+    void D3D12GraphicsView::Present()
     {
         HRESULT hr = handle->Present(syncInterval, presentFlags);
         // If the device was reset we must completely reinitialize the renderer.
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
         }
+
+        VHR(hr);
+        backbufferIndex = handle->GetCurrentBackBufferIndex();
     }
 
-    void D3D12SwapChain::CreateRenderTargets()
+    void D3D12GraphicsView::CreateRenderTargets()
     {
-        for (uint32_t index = 0; index < kMaxFrameLatency; ++index)
+        for (uint32_t index = 0; index < kMaxInflightFrames; ++index)
         {
             ID3D12Resource* backbuffer;
             VHR(handle->GetBuffer(index, IID_PPV_ARGS(&backbuffer)));
-            colorTextures[index] = D3D12Texture::CreateFromExternal(device, backbuffer, GraphicsResource::State::Present);
-            //Gfx.Device->CreateRenderTargetView(Gfx.SwapBuffers[Idx]->Raw, nullptr, Handle);
-            //Handle.ptr += Gfx.DescriptorSizeRTV;
+            colorTextures[index] = D3D12Texture::CreateFromExternal(device, backbuffer, colorFormat, D3D12_RESOURCE_STATE_PRESENT);
         }
 
         backbufferIndex = handle->GetCurrentBackBufferIndex();

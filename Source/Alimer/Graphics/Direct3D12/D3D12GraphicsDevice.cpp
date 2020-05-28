@@ -22,7 +22,9 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
-#include "D3D12SwapChain.h"
+#include "D3D12CommandContext.h"
+#include "D3D12Texture.h"
+#include "D3D12GraphicsView.h"
 #include "D3D12MemAlloc.h"
 #include "core/String.h"
 
@@ -191,8 +193,8 @@ namespace alimer
                 D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,
                 D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
                 D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
                 //D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE,
-                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES
             };
             D3D12_INFO_QUEUE_FILTER filter = {};
             filter.DenyList.NumIDs = _countof(hide);
@@ -253,13 +255,6 @@ namespace alimer
             heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
             VHR(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DSVHeap.Heap)));
             DSVHeap.CPUStart = DSVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
-        }
-
-        VHR(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-        if (frameFenceEvent == INVALID_HANDLE_VALUE)
-        {
-            LOG_ERROR("CreateEventEx failed");
         }
 
         deviceCount++;
@@ -462,6 +457,13 @@ namespace alimer
                 caps.features.raytracing = false;
             }
 
+            supportsRenderPass = false;
+            if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
+                static_cast<GPUVendorId>(caps.vendorId) != GPUVendorId::Intel)
+            {
+                supportsRenderPass = true;
+            }
+
             // Limits
             caps.limits.maxVertexAttributes = kMaxVertexAttributes;
             caps.limits.maxVertexBindings = kMaxVertexAttributes;
@@ -519,9 +521,6 @@ namespace alimer
 
     void D3D12GraphicsDevice::Shutdown()
     {
-        CloseHandle(frameFenceEvent);
-        SAFE_RELEASE(frameFence);
-
         SAFE_RELEASE(RTVHeap.Heap);
         SAFE_RELEASE(DSVHeap.Heap);
 
@@ -599,9 +598,32 @@ namespace alimer
 
     void D3D12GraphicsDevice::WaitForIdle()
     {
-        //graphicsCommandQueue->WaitForIdle();
+        graphicsCommandQueue->WaitForIdle();
         computeCommandQueue->WaitForIdle();
         copyCommandQueue->WaitForIdle();
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+    {
+        DescriptorHeap* heap = nullptr;
+        uint32_t descriptorSize = 0;
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+        {
+            descriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            heap = &RTVHeap;
+        }
+        else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+        {
+            descriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            heap = &DSVHeap;
+        }
+
+        ALIMER_ASSERT((heap->Size + count) < heap->Capacity);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
+        CPUHandle.ptr = heap->CPUStart.ptr + (size_t)heap->Size * descriptorSize;
+        heap->Size += count;
+        return CPUHandle;
     }
 
     RefPtr<Texture> D3D12GraphicsDevice::CreateTexture(const TextureDescriptor* descriptor, const void* initialData)
@@ -609,7 +631,7 @@ namespace alimer
         return MakeRefPtr<D3D12Texture>(this, descriptor, initialData);
     }
 
-    RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor)
+    RefPtr<GraphicsView> D3D12GraphicsDevice::CreateView(void* windowHandle, const GraphicsViewDescriptor* descriptor)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = static_cast<HWND>(windowHandle);
@@ -618,39 +640,56 @@ namespace alimer
         }
 #endif
 
-        return MakeRefPtr<D3D12SwapChain>(this, windowHandle, descriptor);
+        return MakeRefPtr<D3D12GraphicsView>(this, windowHandle, descriptor);
     }
 
-    bool D3D12GraphicsDevice::BeginFrame()
+    CommandContext& D3D12GraphicsDevice::BeginContext(const std::string& id)
     {
-        return true;
-    }
-
-    u64 D3D12GraphicsDevice::EndFrame()
-    {
-        if (isLost)
+        D3D12CommandContext* newCommandBuffer = AllocateContext(D3D12_COMMAND_LIST_TYPE_DIRECT, id);
+        if (id.empty())
         {
-#ifdef _DEBUG
-            char buff[64] = {};
-            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n", d3dDevice->GetDeviceRemovedReason());
-            OutputDebugStringA(buff);
-#endif
-
-            HandleDeviceLost();
-            return Limits<u64>::Max;
+            //gpuProfiler->BeginBlock(id, newCommandBuffer);
         }
 
-        graphicsCommandQueue->GetHandle()->Signal(frameFence, ++frameCount);
-        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+        return *newCommandBuffer;
+    }
 
-        if ((frameCount - GPUFrameCount) >= kMaxFrameLatency)
+    D3D12CommandContext* D3D12GraphicsDevice::AllocateContext(D3D12_COMMAND_LIST_TYPE type, const std::string& id)
+    {
+        std::lock_guard<std::mutex> LockGuard(cmdBufferAllocationMutex);
+
+        auto& availableContextsQueue = availableContexts[type];
+
+        D3D12CommandContext* result = nullptr;
+        if (availableContextsQueue.empty())
         {
-            frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
-            WaitForSingleObject(frameFenceEvent, INFINITE);
+            result = new D3D12CommandContext(this, type, id);
+            commandBufferPool[type].emplace_back(result);
+        }
+        else
+        {
+            result = availableContextsQueue.front();
+            availableContextsQueue.pop();
+            result->Reset();
         }
 
-        return frameCount;
+        ALIMER_ASSERT(result != nullptr);
+        return result;
     }
+
+    void D3D12GraphicsDevice::FreeContext(D3D12_COMMAND_LIST_TYPE type, D3D12CommandContext* context)
+    {
+        ALIMER_ASSERT(context != nullptr);
+        std::lock_guard<std::mutex> LockGuard(cmdBufferAllocationMutex);
+        availableContexts[type].push(context);
+    }
+
+    void D3D12GraphicsDevice::WaitForFenceValue(uint64_t fenceValue)
+    {
+        D3D12CommandQueue* producer = GetCommandQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
+        producer->WaitForFenceValue(fenceValue);
+    }
+
 
     void D3D12GraphicsDevice::HandleDeviceLost()
     {

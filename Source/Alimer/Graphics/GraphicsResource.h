@@ -33,21 +33,7 @@ namespace alimer
     class GraphicsResource : public RefCounted
     {
     public:
-        enum class State : uint32_t
-        {
-            Undefined,
-            General,
-            RenderTarget,
-            DepthStencil,
-            DepthStencilReadOnly,
-            ShaderRead,
-            ShaderWrite,
-            CopyDest,
-            CopySource,
-            Present
-        };
-
-        GraphicsResource(GraphicsDevice &device_, HeapType heapType_, State state_ = State::Undefined);
+        GraphicsResource(GraphicsDevice &device, GraphicsResourceUsage resourceUsage);
         virtual ~GraphicsResource() = default;
 
         /// Release the GPU resource.
@@ -62,7 +48,6 @@ namespace alimer
 
     protected:
         GraphicsDevice& device;
-        HeapType heapType;
-        State state;
+        GraphicsResourceUsage resourceUsage;
     };
 }

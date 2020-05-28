@@ -26,10 +26,9 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device_, HeapType heapType_, State state_)
-        : device(device_)
-        , heapType(heapType_)
-        , state(state_)
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, GraphicsResourceUsage resourceUsage)
+        : device{ device }
+        , resourceUsage{ resourceUsage }
     {
 
     }

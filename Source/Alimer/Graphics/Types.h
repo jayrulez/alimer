@@ -23,12 +23,12 @@
 #pragma once
 
 #include "Core/Utils.h"
-#include "math/size.h"
+#include "Math/Color.h"
 #include "graphics/PixelFormat.h"
 
 namespace alimer
 {
-    static constexpr uint32_t kMaxFrameLatency = 3;
+    static constexpr uint32_t kMaxInflightFrames = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -88,11 +88,12 @@ namespace alimer
         Copy
     };
 
-    enum class HeapType : uint32_t
+    enum class GraphicsResourceUsage : uint32_t
     {
         Default,
-        Upload,
-        Readback
+        Immutable,
+        Dynamic,
+        Staging
     };
 
     enum class TextureSampleCount : uint32_t
@@ -121,9 +122,31 @@ namespace alimer
         None = 0,
         Sampled = (1 << 0),
         Storage = (1 << 1),
-        OutputAttachment = (1 << 2)
+        RenderTarget = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+
+    enum class TextureCubemapFace : uint8_t {
+        PositiveX = 0, //!< +x face
+        NegativeX = 1, //!< -x face
+        PositiveY = 2, //!< +y face
+        NegativeY = 3, //!< -y face
+        PositiveZ = 4, //!< +z face
+        NegativeZ = 5, //!< -z face
+    };
+
+    enum class LoadAction : uint32_t {
+        DontCare,
+        Load,
+        Clear
+    };
+
+    enum class StoreAction : uint32_t {
+        Store,
+        Clear,
+    };
+
+    /* Structures */
 
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
@@ -190,5 +213,66 @@ namespace alimer
 
         Features features;
         Limits limits;
+    };
+
+    struct GraphicsViewDescriptor
+    {
+        uint32_t maxInflightFrames;
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen;
+    };
+
+    struct TextureDescriptor
+    {
+        TextureType type = TextureType::Type2D;
+        PixelFormat format = PixelFormat::RGBA8UNorm;
+        TextureUsage usage = TextureUsage::Sampled;
+        u32 width = 1;
+        u32 height = 1;
+        u32 depth = 1;
+        u32 mipLevels = 1;
+        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+
+        const char* label = nullptr;
+    };
+
+    class Texture;
+    struct RenderPassColorAttachmentDescriptor
+    {
+        Texture* texture;
+        uint32_t mipLevel = 0;
+        union {
+            TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction loadAction = LoadAction::Clear;
+        StoreAction storeOp = StoreAction::Store;
+        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+    };
+
+    struct RenderPassDepthStencilAttachmentDescriptor {
+        Texture* texture;
+        uint32_t mipLevel = 0;
+        union {
+            TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction depthLoadAction = LoadAction::Clear;
+        StoreAction depthStoreOp = StoreAction::Store;
+        LoadAction stencilLoadOp = LoadAction::DontCare;
+        StoreAction stencilStoreOp = StoreAction::Clear;
+        float clearDepth = 1.0f;
+        u8 clearStencil;
+    };
+
+    struct RenderPassDescriptor
+    {
+        RenderPassColorAttachmentDescriptor colorAttachments[kMaxColorAttachments];
+        RenderPassDepthStencilAttachmentDescriptor depthStencilAttachment;
     };
 }

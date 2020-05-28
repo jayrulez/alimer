@@ -75,112 +75,88 @@ namespace alimer
 
     class D3D12GraphicsDevice;
 
-    static inline D3D12_HEAP_TYPE GetD3D12HeapType(HeapType type)
+    static inline D3D12_HEAP_TYPE GetD3D12HeapType(GraphicsResourceUsage usage)
     {
-        switch (type)
+        switch (usage)
         {
-        case HeapType::Upload:
+        case GraphicsResourceUsage::Default:
+        case GraphicsResourceUsage::Immutable:
+            return D3D12_HEAP_TYPE_DEFAULT;
+
+        case GraphicsResourceUsage::Dynamic:
             return D3D12_HEAP_TYPE_UPLOAD;
 
-        case HeapType::Readback:
+        case GraphicsResourceUsage::Staging:
             return D3D12_HEAP_TYPE_READBACK;
-
-        case HeapType::Default:
-        default:
-            return D3D12_HEAP_TYPE_DEFAULT;
-        }
-    }
-
-    D3D12_RESOURCE_STATES GetD3D12ResourceState(GraphicsResource::State state)
-    {
-        switch (state)
-        {
-        case GraphicsResource::State::Undefined:
-        case GraphicsResource::State::General:
-            return D3D12_RESOURCE_STATE_COMMON;
-        case GraphicsResource::State::RenderTarget:
-            return D3D12_RESOURCE_STATE_RENDER_TARGET;
-        case GraphicsResource::State::DepthStencil:
-            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-        case GraphicsResource::State::DepthStencilReadOnly:
-            return D3D12_RESOURCE_STATE_DEPTH_READ;
-        case GraphicsResource::State::ShaderRead:
-            return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        case GraphicsResource::State::ShaderWrite:
-            return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        case GraphicsResource::State::CopyDest:
-            return D3D12_RESOURCE_STATE_COPY_DEST;
-        case GraphicsResource::State::CopySource:
-            return D3D12_RESOURCE_STATE_COPY_SOURCE;
-        case GraphicsResource::State::Present:
-            return D3D12_RESOURCE_STATE_PRESENT;
 
         default:
             ALIMER_UNREACHABLE();
-            return D3D12_RESOURCE_STATE_GENERIC_READ;
         }
-    };
+    }
 
-    class FenceD3D12
+    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(GraphicsResourceUsage usage)
+    {
+        switch (usage)
+        {
+        case GraphicsResourceUsage::Default:
+        case GraphicsResourceUsage::Immutable:
+            return D3D12_RESOURCE_STATE_COMMON;
+
+        case GraphicsResourceUsage::Dynamic:
+            return D3D12_RESOURCE_STATE_GENERIC_READ;
+
+        case GraphicsResourceUsage::Staging:
+            return D3D12_RESOURCE_STATE_COPY_DEST;
+
+        default:
+            ALIMER_UNREACHABLE();
+        }
+    }
+
+    class D3D12GpuResource
     {
     public:
-        FenceD3D12(D3D12GraphicsDevice* device);
-        ~FenceD3D12();
+        D3D12GpuResource() noexcept
+            : resource(nullptr)
+            , state(D3D12_RESOURCE_STATE_COMMON)
+            , transitioningState((D3D12_RESOURCE_STATES)-1)
+            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
+        {
+        }
 
-        void Init(uint64_t initialValue = 0);
-        void Shutdown();
-        void Signal(ID3D12CommandQueue* queue, uint64_t fenceValue);
-        void Wait(uint64_t fenceValue);
-        void GPUWait(ID3D12CommandQueue* queue, uint64_t fenceValue);
-        bool IsSignaled(uint64_t fenceValue);
-        void Clear(uint64_t fenceValue);
+        D3D12GpuResource(ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState)
+            : resource(resource_)
+            , state(currentState)
+            , transitioningState((D3D12_RESOURCE_STATES)-1)
+            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
+        {
+        }
 
-    private:
-        D3D12GraphicsDevice* device;
-        ID3D12Fence* handle = nullptr;
-        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
-    };
+        virtual void Destroy()
+        {
+            SAFE_RELEASE(resource);
+            gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
+        }
 
-    struct PersistentDescriptorAlloc
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE handles[kMaxFrameLatency] = {};
-        uint32_t index = uint32_t(-1);
-    };
+        D3D12_RESOURCE_STATES GetState() const { return state; }
+        void SetState(D3D12_RESOURCE_STATES newState) { state = newState; }
 
-    class D3D12DescriptorHeap
-    {
-    public:
-        D3D12DescriptorHeap(D3D12GraphicsDevice* device_, D3D12_DESCRIPTOR_HEAP_TYPE type_, bool shaderVisible_);
-        ~D3D12DescriptorHeap();
+        D3D12_RESOURCE_STATES GetTransitioningState() const { return transitioningState; }
+        void SetTransitioningState(D3D12_RESOURCE_STATES newState) { transitioningState = newState; }
 
-        void Init(uint32_t numPersistent_, uint32_t numTemporary_);
-        void Shutdown();
-        PersistentDescriptorAlloc AllocatePersistent();
-        void FreePersistent(uint32_t& index);
-        void FreePersistent(D3D12_CPU_DESCRIPTOR_HANDLE& handle);
-        void FreePersistent(D3D12_GPU_DESCRIPTOR_HANDLE& handle);
+        ID3D12Resource* operator->() { return resource; }
+        const ID3D12Resource* operator->() const { return resource; }
 
-        uint32_t IndexFromHandle(D3D12_CPU_DESCRIPTOR_HANDLE handle);
-        uint32_t IndexFromHandle(D3D12_GPU_DESCRIPTOR_HANDLE handle);
-        uint32_t TotalNumDescriptors() const { return numPersistent + numTemporary; }
+        ID3D12Resource* GetResource() { return resource; }
+        const ID3D12Resource* GetResource() const { return resource; }
 
-    private:
-        D3D12GraphicsDevice* device;
-        const D3D12_DESCRIPTOR_HEAP_TYPE type;
-        bool shaderVisible;
+        
+        D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
 
-        uint32_t numHeaps = 0;
-        uint32_t descriptorSize = 0;
-        uint32_t numPersistent = 0;
-        uint32_t persistentAllocated = 0;
-        uint32_t numTemporary = 0;
-        Vector<uint32_t> deadList;
-
-        ID3D12DescriptorHeap* heaps[kMaxFrameLatency] = {};
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUStart[kMaxFrameLatency] = {};
-        D3D12_GPU_DESCRIPTOR_HANDLE GPUStart[kMaxFrameLatency] = {};
-
-        SRWLOCK lock = SRWLOCK_INIT;
-        uint32_t heapIndex = 0;
+    protected:
+        ID3D12Resource* resource;
+        D3D12_RESOURCE_STATES state;
+        D3D12_RESOURCE_STATES transitioningState;
+        D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
     };
 }

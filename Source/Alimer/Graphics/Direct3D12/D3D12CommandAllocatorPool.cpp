@@ -63,6 +63,7 @@ namespace alimer
                 commandAllocator = pair.second;
                 ThrowIfFailed(commandAllocator->Reset());
                 readyAllocators.pop();
+                LOG_DEBUG("Direct3D12: Reusing CommandAllocator %u", pair.first);
             }
         }
 
@@ -71,9 +72,10 @@ namespace alimer
         {
             ThrowIfFailed(device->GetHandle()->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 #if defined(_DEBUG)
-            wchar_t AllocatorName[32];
-            swprintf(AllocatorName, 32, L"CommandAllocator %u", allocators.Size());
-            commandAllocator->SetName(AllocatorName);
+            wchar_t allocatorName[32];
+            swprintf(allocatorName, 32, L"CommandAllocator %u", allocators.Size());
+            LOG_DEBUG("Direct3D12: Allocated CommandAllocator %u", allocators.Size());
+            commandAllocator->SetName(allocatorName);
 #endif
 
             allocators.Push(commandAllocator);

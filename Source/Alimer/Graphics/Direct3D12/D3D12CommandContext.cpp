@@ -20,39 +20,70 @@
 // THE SOFTWARE.
 //
 
-#if TODO_D3D12
+#include "D3D12GraphicsDevice.h"
 #include "D3D12CommandContext.h"
 #include "D3D12CommandQueue.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12Texture.h"
 #include <algorithm>
 
 namespace alimer
 {
-    D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsDevice& device_, QueueType type_)
-        : device(device_)
-        , type(type_)
+    namespace
     {
-        const D3D12_COMMAND_LIST_TYPE& commandListType = D3D12GetCommandListType(type);
+        D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE D3D12BeginningAccessType(LoadAction action) {
+            switch (action) {
+            case LoadAction::Clear:
+                return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+            case LoadAction::Load:
+                return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            default:
+                ALIMER_UNREACHABLE();
+            }
+        }
 
-        currentAllocator = device_.GetQueue(type).RequestAllocator();
-        ThrowIfFailed(device_.GetD3DDevice()->CreateCommandList(1, commandListType, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
-    }
+        D3D12_RENDER_PASS_ENDING_ACCESS_TYPE D3D12EndingAccessType(StoreAction action) {
+            switch (action) {
+            case StoreAction::Store:
+                return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            case StoreAction::Clear:
+                return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
 
-    void D3D12GraphicsContext::Destroy()
-    {
-        if (commandList != nullptr)
-        {
-            commandList->Release();
-            commandList = nullptr;
+            default:
+                ALIMER_UNREACHABLE();
+            }
         }
     }
 
-    void D3D12GraphicsContext::Reset()
+    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_, const std::string& id_)
+        : CommandContext(*device)
+        , type(type_)
+        , useRenderPass(device->SupportsRenderPass())
+    {
+        currentAllocator = device->GetCommandQueue(type)->RequestAllocator();
+        ThrowIfFailed(device->GetHandle()->CreateCommandList(1, type, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+        if (FAILED(commandList->QueryInterface(&commandList4))) {
+            useRenderPass = false;
+        }
+        //useRenderPass = true;
+    }
+
+    D3D12CommandContext::~D3D12CommandContext()
+    {
+        Destroy();
+    }
+
+    void D3D12CommandContext::Destroy()
+    {
+        SAFE_RELEASE(commandList4);
+        SAFE_RELEASE(commandList);
+    }
+
+    void D3D12CommandContext::Reset()
     {
         // We only call Reset() on previously freed contexts.
         // The command list persists, but we must request a new allocator.
         ALIMER_ASSERT(commandList != nullptr && currentAllocator == nullptr);
-        currentAllocator = device.GetQueue(type).RequestAllocator();
+        currentAllocator = static_cast<D3D12GraphicsDevice*>(&device)->GetCommandQueue(type)->RequestAllocator();
         commandList->Reset(currentAllocator, nullptr);
 
         /* m_CurGraphicsRootSignature = nullptr;
@@ -63,76 +94,179 @@ namespace alimer
         //BindDescriptorHeaps();
     }
 
-    void D3D12GraphicsContext::BeginMarker(const char* name)
+    void D3D12CommandContext::BeginRenderPass(const RenderPassDescriptor* descriptor)
     {
+        if (useRenderPass)
+        {
+            u32 colorRTVSCount = 0;
+            for (u32 i = 0; i < kMaxColorAttachments; i++)
+            {
+                const RenderPassColorAttachmentDescriptor& attachment = descriptor->colorAttachments[i];
+                if (attachment.texture == nullptr)
+                    continue;
+
+                D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
+                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+                colorRenderPassTargets[colorRTVSCount].cpuDescriptor = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+                colorRenderPassTargets[colorRTVSCount].BeginningAccess.Type = D3D12BeginningAccessType(attachment.loadAction);
+                if (attachment.loadAction == LoadAction::Clear) {
+                    colorRenderPassTargets[colorRTVSCount].BeginningAccess.Clear.ClearValue.Color[0] = attachment.clearColor.r;
+                    colorRenderPassTargets[colorRTVSCount].BeginningAccess.Clear.ClearValue.Color[1] = attachment.clearColor.g;
+                    colorRenderPassTargets[colorRTVSCount].BeginningAccess.Clear.ClearValue.Color[2] = attachment.clearColor.b;
+                    colorRenderPassTargets[colorRTVSCount].BeginningAccess.Clear.ClearValue.Color[3] = attachment.clearColor.a;
+                    colorRenderPassTargets[colorRTVSCount].BeginningAccess.Clear.ClearValue.Format = texture->GetDXGIFormat();
+                }
+
+                colorRenderPassTargets[colorRTVSCount].EndingAccess.Type = D3D12EndingAccessType(attachment.storeOp);
+                colorRTVSCount++;
+            }
+
+            D3D12_RENDER_PASS_FLAGS renderPassFlags = D3D12_RENDER_PASS_FLAG_NONE;
+            commandList4->BeginRenderPass(colorRTVSCount, colorRenderPassTargets, nullptr, renderPassFlags);
+        }
+        else
+        {
+            u32 colorRTVSCount = 0;
+            for (u32 i = 0; i < kMaxColorAttachments; i++)
+            {
+                const RenderPassColorAttachmentDescriptor& attachment = descriptor->colorAttachments[i];
+                if (attachment.texture == nullptr)
+                    continue;
+
+                D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
+                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+                colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+                if (attachment.loadAction == LoadAction::Clear)
+                {
+                    commandList->ClearRenderTargetView(colorRTVS[colorRTVSCount], &attachment.clearColor.r, 0, nullptr);
+                }
+
+                swapchainTexture = texture;
+                colorRTVSCount++;
+            }
+
+            commandList->OMSetRenderTargets(colorRTVSCount, colorRTVS, FALSE, NULL);
+        }
+
+        // Set up default dynamic state
+        {
+            /*uint32_t width = renderPass->width;
+            uint32_t height = renderPass->height;
+            D3D12_VIEWPORT viewport = {
+                0.f, 0.f, static_cast<float>(width), static_cast<float>(height), 0.f, 1.f };
+            D3D12_RECT scissorRect = { 0, 0, static_cast<long>(width), static_cast<long>(height) };
+            commandList->RSSetViewports(1, &viewport);
+            commandList->RSSetScissorRects(1, &scissorRect);*/
+
+            Color defaultBlendColor = { 0, 0, 0, 0 };
+            SetBlendColor(defaultBlendColor);
+        }
     }
 
-    void D3D12GraphicsContext::EndMarker()
+    void D3D12CommandContext::EndRenderPass()
     {
+        if (useRenderPass)
+        {
+            commandList4->EndRenderPass();
+        }
     }
 
-    void D3D12GraphicsContext::Flush(bool wait)
+    void D3D12CommandContext::SetBlendColor(const Color& color)
     {
+        commandList->OMSetBlendFactor(&color.r);
+    }
+
+
+    void D3D12CommandContext::Flush(bool wait)
+    {
+        if (type == D3D12_COMMAND_LIST_TYPE_DIRECT)
+        {
+            if (swapchainTexture != nullptr)
+            {
+                TransitionResource(swapchainTexture, D3D12_RESOURCE_STATE_PRESENT, false);
+            }
+        }
+
         FlushResourceBarriers();
+
+        if (!id.empty())
+        {
+            //gpuProfile->EndBlock(this);
+        }
 
         ALIMER_ASSERT(currentAllocator != nullptr);
 
-        commandList->Close();
-        uint64_t fenceValue = device.GetQueue(type).ExecuteCommandList(commandList);
+        auto d3d12GraphicsDevice = static_cast<D3D12GraphicsDevice*>(&device);
+        auto commandQueue = d3d12GraphicsDevice->GetCommandQueue(type);
+
+        uint64_t fenceValue = commandQueue->ExecuteCommandList(commandList);
+        commandQueue->DiscardAllocator(fenceValue, currentAllocator);
+        currentAllocator = nullptr;
 
         if (wait)
         {
-            device.WaitForFence(fenceValue);
+            d3d12GraphicsDevice->WaitForFenceValue(fenceValue);
         }
 
-        // Reset the command list and restore previous state
-        commandList->Reset(currentAllocator, nullptr);
+        d3d12GraphicsDevice->FreeContext(type, this);
     }
 
-    void D3D12GraphicsContext::TransitionResource(d3d12::Resource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
+    void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
     {
-        D3D12_RESOURCE_STATES oldState = resource.state;
+        D3D12_RESOURCE_STATES currentState = resource->GetState();
 
-        if (type == QueueType::Compute)
+        if (type == D3D12_COMMAND_LIST_TYPE_COMPUTE)
         {
-            ALIMER_ASSERT((oldState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == oldState);
+            ALIMER_ASSERT((currentState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == currentState);
             ALIMER_ASSERT((newState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == newState);
         }
 
-        if (oldState != newState)
+        if (currentState != newState)
         {
             ALIMER_ASSERT_MSG(numBarriersToFlush < kMaxResourceBarriers, "Exceeded arbitrary limit on buffered barriers");
             D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
 
             barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrierDesc.Transition.pResource = resource.handle;
+            barrierDesc.Transition.pResource = resource->GetResource();
             barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrierDesc.Transition.StateBefore = oldState;
+            barrierDesc.Transition.StateBefore = currentState;
             barrierDesc.Transition.StateAfter = newState;
 
             // Check to see if we already started the transition
-            if (newState == resource.transitioning_state)
+            if (newState == resource->GetTransitioningState())
             {
                 barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-                resource.transitioning_state = (D3D12_RESOURCE_STATES)-1;
+                resource->SetTransitioningState((D3D12_RESOURCE_STATES)-1);
             }
             else
+            {
                 barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            }
 
-            resource.state = newState;
+            resource->SetState(newState);
         }
         else if (newState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
         {
-            //InsertUAVBarrier(Resource, FlushImmediate);
+            InsertUAVBarrier(resource, flushImmediate);
         }
 
         if (flushImmediate || numBarriersToFlush == kMaxResourceBarriers)
-        {
             FlushResourceBarriers();
-        }
     }
 
-    void D3D12GraphicsContext::FlushResourceBarriers(void)
+    void D3D12CommandContext::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
+    {
+        ALIMER_ASSERT_MSG(numBarriersToFlush < kMaxResourceBarriers, "Exceeded arbitrary limit on buffered barriers");
+        D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
+        barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrierDesc.UAV.pResource = resource->GetResource();
+
+        if (flushImmediate)
+            FlushResourceBarriers();
+    }
+
+    void D3D12CommandContext::FlushResourceBarriers(void)
     {
         if (numBarriersToFlush > 0)
         {
@@ -140,23 +274,5 @@ namespace alimer
             numBarriersToFlush = 0;
         }
     }
-
-    void D3D12GraphicsContext::BeginRenderPass(GPUTexture texture, const Color& clearColor)
-    {
-        auto d3dTexture = device.GetTexture(texture);
-        TransitionResource(*d3dTexture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-
-        commandList->OMSetRenderTargets(1, &d3dTexture->rtv, FALSE, nullptr);
-        commandList->ClearRenderTargetView(d3dTexture->rtv, clearColor.Data(), 0, nullptr);
-        //commandList->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-        TransitionResource(*d3dTexture, D3D12_RESOURCE_STATE_COMMON, true);
-    }
-
-    void D3D12GraphicsContext::EndRenderPass()
-    {
-
-    }
 }
 
-#endif // TODO_D3D11

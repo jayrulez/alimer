@@ -56,6 +56,7 @@ namespace alimer
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
+        void* GetWindow() const;
         void* GetHandle() const;
 
     private:

@@ -20,33 +20,47 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/SwapChain.h"
-#include "D3D12Backend.h"
+#include "graphics/GraphicsView.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class D3D12Texture;
-
-    class D3D12SwapChain final : public SwapChain
+    GraphicsView::GraphicsView(GraphicsDevice& device, const GraphicsViewDescriptor* descriptor)
+        :  device{ device }
+        , maxInflightFrames(max(descriptor->maxInflightFrames, kMaxInflightFrames))
+        , width(descriptor->width)
+        , height(descriptor->height)
+        , colorFormat(descriptor->colorFormat)
+        , depthStencilFormat(descriptor->depthStencilFormat)
     {
-    public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, void* window, const SwapChainDescriptor* descriptor);
-        ~D3D12SwapChain();
 
-        void Destroy();
-        void Present() override;
+    }
 
-    private:
-        void CreateRenderTargets();
+    GraphicsView::~GraphicsView()
+    {
+        Destroy();
+    }
 
-        DXGI_FORMAT dxgiColorFormat;
-        IDXGISwapChain3* handle = nullptr;
-        u32 syncInterval = 1;
-        u32 presentFlags = 0;
+    void GraphicsView::Destroy()
+    {
+        for (uint32_t i = 0; i < kMaxInflightFrames; ++i)
+        {
+            SafeDelete(colorTextures[i]);
+        }
+    }
 
-        D3D12Texture* colorTextures[kMaxFrameLatency] = {};
-        u32 backbufferIndex = 0;
-    };
+    void GraphicsView::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        width = newWidth;
+        height = newHeight;
+
+        //ResizeBackBuffer(width, height);
+        //ResizeDepthStencilBuffer(width, height);
+    }
+
+    Texture* GraphicsView::GetCurrentColorTexture() const
+    {
+        return colorTextures[backbufferIndex];
+    }
 }
+

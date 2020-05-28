@@ -26,11 +26,12 @@
 
 namespace alimer
 {
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice& device, const TextureDescriptor* descriptor, const void* initialData)
-        : Texture(device, descriptor, State::Undefined)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, const void* initialData)
+        : Texture(*device, descriptor)
+        , dxgiFormat(ToDXGIFormat(descriptor->format))
     {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = GetD3D12HeapType(heapType);
+        allocationDesc.HeapType = GetD3D12HeapType(GraphicsResourceUsage::Default);
 
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -39,7 +40,7 @@ namespace alimer
         resourceDesc.Height = descriptor->height;
         resourceDesc.DepthOrArraySize = descriptor->depth;
         resourceDesc.MipLevels = descriptor->mipLevels;
-        resourceDesc.Format = ToDXGIFormat(descriptor->format);
+        resourceDesc.Format = dxgiFormat;
         resourceDesc.SampleDesc.Count = static_cast<UINT>(descriptor->sampleCount);
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
@@ -52,7 +53,7 @@ namespace alimer
 
         D3D12_CLEAR_VALUE clearValue = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
-        if (any(descriptor->usage & TextureUsage::OutputAttachment))
+        if (any(descriptor->usage & TextureUsage::RenderTarget))
         {
             clearValue.Format = resourceDesc.Format;
             if (IsDepthStencilFormat(descriptor->format))
@@ -63,30 +64,29 @@ namespace alimer
             pClearValue = &clearValue;
         }
 
-        D3D12_RESOURCE_STATES resourceStates = GetD3D12ResourceState(state);
-
-        if (heapType == HeapType::Upload)
+        state = GetD3D12ResourceState(GraphicsResourceUsage::Default);
+        if (any(descriptor->usage & TextureUsage::RenderTarget))
         {
-            resourceStates = D3D12_RESOURCE_STATE_GENERIC_READ;
-        }
-        else if (heapType == HeapType::Readback)
-        {
-            resourceStates = D3D12_RESOURCE_STATE_COPY_DEST;
+            if (IsDepthStencilFormat(descriptor->format))
+            {
+                state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+            }
         }
 
-        HRESULT hr = device.GetMemoryAllocator()->CreateResource(
+        HRESULT hr = device->GetMemoryAllocator()->CreateResource(
             &allocationDesc,
             &resourceDesc,
-            resourceStates,
+            state,
             pClearValue,
             &allocation,
             IID_PPV_ARGS(&resource)
         );
     }
 
-    D3D12Texture::D3D12Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, State state_)
-        : Texture(device, descriptor, state_)
-        , resource(resource_)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState)
+        : Texture(*device, descriptor)
+        , D3D12GpuResource(resource_, currentState)
+        , dxgiFormat(ToDXGIFormat(descriptor->format))
     {
 
     }
@@ -98,11 +98,11 @@ namespace alimer
 
     void D3D12Texture::Destroy()
     {
-        SAFE_RELEASE(resource);
+        D3D12GpuResource::Destroy();
         SAFE_RELEASE(allocation);
     }
 
-    D3D12Texture* D3D12Texture::CreateFromExternal(GraphicsDevice& device, ID3D12Resource* resource, GraphicsResource::State state)
+    D3D12Texture* D3D12Texture::CreateFromExternal(D3D12GraphicsDevice* device, ID3D12Resource* resource, PixelFormat format, D3D12_RESOURCE_STATES currentState)
     {
         const D3D12_RESOURCE_DESC& desc = resource->GetDesc();
 
@@ -110,7 +110,27 @@ namespace alimer
         textureDesc.width = static_cast<u32>(desc.Width);
         textureDesc.height = desc.Height;
         textureDesc.depth = desc.DepthOrArraySize;
-        return new D3D12Texture(device, &textureDesc, resource, state);
+        textureDesc.format = format;
+        return new D3D12Texture(device, &textureDesc, resource, currentState);
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12Texture::GetRenderTargetView(uint32_t mipLevel, uint32_t slice)
+    {
+        RTVInfo view = {};
+        view.level = mipLevel;
+        view.slice = slice;
+
+        auto it = rtvs.find(view);
+        if (it != rtvs.end())
+        {
+            return it->second;
+        }
+
+        D3D12GraphicsDevice* d3d12GraphicsDevice = static_cast<D3D12GraphicsDevice*>(&device);
+        D3D12_CPU_DESCRIPTOR_HANDLE handle = d3d12GraphicsDevice->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+        d3d12GraphicsDevice->GetHandle()->CreateRenderTargetView(resource, nullptr, handle);
+        rtvs[view] = handle;
+        return handle;
     }
 }
 

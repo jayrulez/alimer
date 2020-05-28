@@ -24,20 +24,28 @@
 
 #include "graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
+#include <vector>
+#include <queue>
+#include <mutex>
 
 namespace alimer
 {
     class D3D12GraphicsProvider;
     class D3D12CommandQueue;
-    class D3D12SwapChain;
+    class D3D12CommandContext;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
+        friend class D3D12CommandContext;
+
     public:
         static bool IsAvailable();
 
         D3D12GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer);
         ~D3D12GraphicsDevice() override;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
+        void WaitForFenceValue(uint64_t fenceValue);
 
         IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory; }
         bool                IsTearingSupported() const { return isTearingSupported; }
@@ -46,6 +54,7 @@ namespace alimer
 
         D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
         ID3D12CommandQueue* GetD3DCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+        bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
         void GetAdapter(D3D_FEATURE_LEVEL d3dMinFeatureLevel, IDXGIAdapter1** ppAdapter);
@@ -54,16 +63,18 @@ namespace alimer
 
         void WaitForIdle();
         void HandleDeviceLost();
-        bool BeginFrame() override;
-        u64 EndFrame() override;
 
         RefPtr<Texture> CreateTexture(const TextureDescriptor* descriptor, const void* initialData) override;
-        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor) override;
+        RefPtr<GraphicsView> CreateView(void* windowHandle, const GraphicsViewDescriptor* descriptor) override;
+        CommandContext& BeginContext(const std::string& id) override;
+        D3D12CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE type, const std::string& id);
+        void FreeContext(D3D12_COMMAND_LIST_TYPE type, D3D12CommandContext* commandBuffer);
 
         static uint32_t deviceCount;
         UINT dxgiFactoryFlags = 0;
         IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
+        bool supportsRenderPass = false;
 
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* memoryAllocator = nullptr;
@@ -76,6 +87,10 @@ namespace alimer
         D3D12CommandQueue* computeCommandQueue;
         D3D12CommandQueue* copyCommandQueue;
 
+        std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool[4];
+        std::queue<D3D12CommandContext*> availableContexts[4];
+        std::mutex cmdBufferAllocationMutex;
+
         struct DescriptorHeap
         {
             ID3D12DescriptorHeap* Heap;
@@ -85,13 +100,7 @@ namespace alimer
             uint32_t Capacity;
         };
 
-        DescriptorHeap RTVHeap;
-        DescriptorHeap DSVHeap;
-
-        bool isLost = false;
-
-        ID3D12Fence* frameFence;
-        HANDLE frameFenceEvent;
-        u64 frameCount = 0;
+        DescriptorHeap RTVHeap{};
+        DescriptorHeap DSVHeap{};
     };
 }

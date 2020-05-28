@@ -27,24 +27,10 @@
 
 namespace alimer
 {
-    struct TextureDescriptor
-    {
-        TextureType type = TextureType::Type2D;
-        PixelFormat format = PixelFormat::RGBA8UNorm;
-        TextureUsage usage = TextureUsage::Sampled;
-        u32 width = 1;
-        u32 height = 1;
-        u32 depth = 1;
-        u32 mipLevels = 1;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-
-        const char* label = nullptr;
-    };
-
     class ALIMER_API Texture : public GraphicsResource
     {
     protected:
-        Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, State state_ = State::Undefined);
+        Texture(GraphicsDevice& device, const TextureDescriptor* descriptor);
 
     public:
         virtual ~Texture() = default;
@@ -59,7 +45,7 @@ namespace alimer
         /**
         * Get a mip-level height.
         */
-        uint32_t getHeight(uint32_t mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevelCount) ? max(1u, height >> mipLevel) : 0; }
+        uint32_t GetHeight(uint32_t mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevelCount) ? max(1u, height >> mipLevel) : 0; }
 
         /**
         * Get a mip-level depth.

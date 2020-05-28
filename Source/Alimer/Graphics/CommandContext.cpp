@@ -20,38 +20,17 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Texture.h"
-#include "math/size.h"
+#include "graphics/CommandContext.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    struct SwapChainDescriptor
+    CommandContext::CommandContext(GraphicsDevice& device)
+        :  device{ device }
     {
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool isFullscreen;
-    };
 
-    class SwapChain : public RefCounted
-    {
-    protected:
-        /// Constructor.
-        SwapChain(GraphicsDevice& device, const SwapChainDescriptor* descriptor);
+    }
 
-    public:
-        void Resize(uint32_t newWidth, uint32_t newHeight);
-        virtual void Present() = 0;
-
-    protected:
-        GraphicsDevice& device;
-
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-    };
+    CommandContext::~CommandContext() = default;
 }
+

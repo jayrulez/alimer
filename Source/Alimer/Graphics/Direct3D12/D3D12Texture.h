@@ -24,21 +24,48 @@
 
 #include "graphics/Texture.h"
 #include "D3D12Backend.h"
+#include <unordered_map>
 
 namespace alimer
 {
-    class D3D12Texture final : public Texture
+    class D3D12Texture final : public Texture, public D3D12GpuResource
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice& device, const TextureDescriptor* descriptor, const void* initialData);
-        D3D12Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, State state_);
+        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, const void* initialData);
+        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState);
         ~D3D12Texture() override;
         void Destroy() override;
 
-        static D3D12Texture* CreateFromExternal(GraphicsDevice& device, ID3D12Resource* resource, GraphicsResource::State state);
+        static D3D12Texture* CreateFromExternal(D3D12GraphicsDevice* device, ID3D12Resource* resource, PixelFormat format, D3D12_RESOURCE_STATES currentState);
+        D3D12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView(uint32_t mipLevel, uint32_t slice);
+
+        DXGI_FORMAT GetDXGIFormat() const { return dxgiFormat; }
 
     private:
-        ID3D12Resource* resource = nullptr;
         D3D12MA::Allocation* allocation = nullptr;
+        DXGI_FORMAT dxgiFormat;
+
+        struct RTVInfo
+        {
+            uint32_t level;
+            uint32_t slice;
+
+            bool operator==(const RTVInfo& other) const
+            {
+                return (level == other.level)
+                    && (slice == other.slice)
+                    ;
+            }
+        };
+
+        struct RTVInfoHashFunc
+        {
+            std::size_t operator()(const RTVInfo& value) const
+            {
+                return ((std::hash<uint32_t>()(value.level) ^ (std::hash<uint32_t>()(value.slice) << 1)) >> 1);
+            }
+        };
+
+        std::unordered_map<RTVInfo, D3D12_CPU_DESCRIPTOR_HANDLE, RTVInfoHashFunc> rtvs;
     };
 }

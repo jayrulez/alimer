@@ -25,8 +25,8 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, State state_)
-        : GraphicsResource(device, HeapType::Default, state_)
+    Texture::Texture(GraphicsDevice& device, const TextureDescriptor* descriptor)
+        : GraphicsResource(device, GraphicsResourceUsage::Default)
     {
 
     }

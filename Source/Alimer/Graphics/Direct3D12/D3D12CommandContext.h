@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GraphicsImpl.h"
+#include "graphics/CommandContext.h"
 #include "D3D12Backend.h"
 
 #define VALID_COMPUTE_QUEUE_RESOURCE_STATES \
@@ -33,43 +33,47 @@
 
 namespace alimer
 {
-    namespace d3d12
-    {
-        struct Resource;
-    }
+    class D3D12Texture;
 
-    class D3D12GraphicsContext final : public GpuCommandBuffer
+    class D3D12CommandContext final : public CommandContext
     {
     public:
-        D3D12GraphicsContext(D3D12GraphicsDevice& device_, QueueType type_);
+        D3D12CommandContext(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_, const std::string& id_);
+        ~D3D12CommandContext();
         void Destroy();
 
         void Reset();
-        void BeginMarker(const char* name) override;
-        void EndMarker() override;
-        void Flush(bool wait) override;
-        void TransitionResource(d3d12::Resource& resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
+
+        void BeginRenderPass(const RenderPassDescriptor* descriptor) override;
+        void EndRenderPass() override;
+        void SetBlendColor(const Color& color) override;
+        void Flush(bool wait = false) override;
+
+        /* Barriers */
+        void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
+        void InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate = false);
         void FlushResourceBarriers(void);
 
-        void BeginRenderPass(GPUTexture texture, const Color& clearColor) override;
-        void EndRenderPass() override;
-
-        ID3D12GraphicsCommandList* GetCommandList() const
-        {
-            return commandList;
-        }
+        ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }
+        ID3D12GraphicsCommandList4* GetCommandList4() const { return commandList4; }
 
     private:
-        D3D12GraphicsDevice& device;
-        const QueueType type;
+        const D3D12_COMMAND_LIST_TYPE type;
 
         ID3D12CommandAllocator* currentAllocator;
         ID3D12GraphicsCommandList* commandList;
+        ID3D12GraphicsCommandList4* commandList4 = nullptr;
+        bool useRenderPass;
         bool isProfiling = false;
 
-        static constexpr uint32_t kMaxResourceBarriers = 16;
-
+        /* Barriers */
+        static constexpr u32 kMaxResourceBarriers = 16;
+        u32 numBarriersToFlush = 0;
         D3D12_RESOURCE_BARRIER resourceBarriers[kMaxResourceBarriers];
-        UINT numBarriersToFlush = 0;
+
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+
+        D3D12Texture* swapchainTexture = nullptr;
+        D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
     };
 }

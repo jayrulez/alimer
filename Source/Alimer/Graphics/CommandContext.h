@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "os.h"
+#pragma once
 
-#if defined(_WIN32)
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif
-#ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-#endif
-#   include <Windows.h>
-#else
-#include <dlfcn.h>
-#endif
+#include "graphics/GraphicsResource.h"
+#include "Math/Color.h"
 
+namespace alimer
+{
+    class GraphicsDevice;
+
+    class CommandContext
+    {
+    protected:
+        /// Constructor.
+        CommandContext(GraphicsDevice& device);
+
+    public:
+        virtual ~CommandContext();
+
+        virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
+        virtual void EndRenderPass() = 0;
+        virtual void SetBlendColor(const Color& color) = 0;
+
+        virtual void Flush(bool wait = false) = 0;
+
+    protected:
+        GraphicsDevice& device;
+        std::string id;
+    };
+}

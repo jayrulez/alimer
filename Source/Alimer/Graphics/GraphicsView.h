@@ -20,28 +20,43 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/SwapChain.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "Math/Color.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain(GraphicsDevice& device, const SwapChainDescriptor* descriptor)
-        :  device{ device }
-        , width(descriptor->width)
-        , height(descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+    class CommandContext;
+
+    class GraphicsView : public RefCounted
     {
+    protected:
+        /// Constructor.
+        GraphicsView(GraphicsDevice& device, const GraphicsViewDescriptor* descriptor);
 
-    }
+    public:
+        virtual ~GraphicsView();
 
-    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        width = newWidth;
-        height = newHeight;
+        void Resize(uint32_t newWidth, uint32_t newHeight);
 
-        //ResizeBackBuffer(width, height);
-        //ResizeDepthStencilBuffer(width, height);
-    }
+        /// Present on screen.
+        virtual void Present() = 0;
+
+        Texture* GetCurrentColorTexture() const;
+
+    protected:
+        /// Release the GPU resources.
+        virtual void Destroy();
+
+        GraphicsDevice& device;
+
+        uint32_t maxInflightFrames;
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        u32 backbufferIndex = 0;
+        Texture* colorTextures[kMaxInflightFrames] = {};
+    };
 }
-
