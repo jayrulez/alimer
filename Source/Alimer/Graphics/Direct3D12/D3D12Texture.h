@@ -20,28 +20,25 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsPresenter.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsPresenter::GraphicsPresenter(GraphicsDevice& device, const PresentationParameters& presentationParameters)
-        :  device{ device }
-        , backBufferWidth(presentationParameters.backBufferWidth)
-        , backBufferHeight(presentationParameters.backBufferHeight)
-        , backBufferFormat(presentationParameters.backBufferFormat)
-        , depthStencilFormat(presentationParameters.depthStencilFormat)
+    class D3D12Texture final : public Texture
     {
+    public:
+        D3D12Texture(D3D12GraphicsDevice& device, const TextureDescriptor* descriptor, const void* initialData);
+        D3D12Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, State state_);
+        ~D3D12Texture() override;
+        void Destroy() override;
 
-    }
+        static D3D12Texture* CreateFromExternal(GraphicsDevice& device, ID3D12Resource* resource, GraphicsResource::State state);
 
-    void GraphicsPresenter::Resize(uint32_t width, uint32_t height)
-    {
-        backBufferWidth = width;
-        backBufferHeight = height;
-
-        //ResizeBackBuffer(width, height);
-        //ResizeDepthStencilBuffer(width, height);
-    }
+    private:
+        ID3D12Resource* resource = nullptr;
+        D3D12MA::Allocation* allocation = nullptr;
+    };
 }
-

@@ -65,6 +65,8 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
+#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
+
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -107,29 +109,6 @@ namespace alimer
     };
 
     extern const DxgiFormatDesc kDxgiFormatDesc[];
-
-    static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format) {
-        switch (format)
-        {
-        case PixelFormat::BGRA8UNorm:
-        case PixelFormat::BGRA8UNormSrgb:
-            return DXGI_FORMAT_B8G8R8A8_UNORM;
-
-        case PixelFormat::RGBA8UNorm:
-        case PixelFormat::RGBA8UNormSrgb:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-
-        case PixelFormat::RGBA16Float:
-            return DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-        case PixelFormat::RGB10A2UNorm:
-            return DXGI_FORMAT_R10G10B10A2_UNORM;
-
-        default:
-            LOG_ERROR("PixelFormat (%u) is not supported for creating swapchain buffer", (uint32_t)format);
-            return DXGI_FORMAT_UNKNOWN;
-        }
-    }
 
     static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
     {

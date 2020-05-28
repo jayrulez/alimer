@@ -22,24 +22,31 @@
 
 #pragma once
 
-#include "graphics/GraphicsPresenter.h"
+#include "graphics/SwapChain.h"
 #include "D3D12Backend.h"
-#include "Core/Vector.h"
-#include <queue>
-#include <mutex>
 
 namespace alimer
 {
-    class D3D12SwapChainGraphicsPresenter final : public GraphicsPresenter
+    class D3D12Texture;
+
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChainGraphicsPresenter(D3D12GraphicsDevice* device, HWND windowHandle, const PresentationParameters& presentationParameters);
-        ~D3D12SwapChainGraphicsPresenter();
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* window, const SwapChainDescriptor* descriptor);
+        ~D3D12SwapChain();
 
         void Destroy();
+        void Present() override;
 
     private:
         void CreateRenderTargets();
+
+        DXGI_FORMAT dxgiColorFormat;
         IDXGISwapChain3* handle = nullptr;
+        u32 syncInterval = 1;
+        u32 presentFlags = 0;
+
+        D3D12Texture* colorTextures[kMaxFrameLatency] = {};
+        u32 backbufferIndex = 0;
     };
 }

@@ -20,23 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Assert.h"
-#include "graphics/GraphicsResource.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "math/size.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device_, HeapType heapType_, State state_)
-        : device(device_)
-        , heapType(heapType_)
-        , state(state_)
+    struct SwapChainDescriptor
     {
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen;
+    };
 
-    }
-
-    const GraphicsDevice& GraphicsResource::GetDevice() const
+    class SwapChain : public RefCounted
     {
-        return device;
-    }
+    protected:
+        /// Constructor.
+        SwapChain(GraphicsDevice& device, const SwapChainDescriptor* descriptor);
+
+    public:
+        void Resize(uint32_t newWidth, uint32_t newHeight);
+        virtual void Present() = 0;
+
+    protected:
+        GraphicsDevice& device;
+
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+    };
 }
-

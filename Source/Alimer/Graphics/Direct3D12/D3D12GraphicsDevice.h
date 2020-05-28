@@ -42,6 +42,8 @@ namespace alimer
         IDXGIFactory4*      GetDXGIFactory() const { return dxgiFactory; }
         bool                IsTearingSupported() const { return isTearingSupported; }
         ID3D12Device*       GetHandle() const { return d3dDevice; }
+        D3D12MA::Allocator* GetMemoryAllocator() const { return memoryAllocator; }
+
         D3D12CommandQueue*  GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
         ID3D12CommandQueue* GetD3DCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
 
@@ -52,7 +54,11 @@ namespace alimer
 
         void WaitForIdle();
         void HandleDeviceLost();
-        RefPtr<GraphicsPresenter> CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters) override;
+        bool BeginFrame() override;
+        u64 EndFrame() override;
+
+        RefPtr<Texture> CreateTexture(const TextureDescriptor* descriptor, const void* initialData) override;
+        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor) override;
 
         static uint32_t deviceCount;
         UINT dxgiFactoryFlags = 0;
@@ -69,5 +75,23 @@ namespace alimer
         D3D12CommandQueue* graphicsCommandQueue;
         D3D12CommandQueue* computeCommandQueue;
         D3D12CommandQueue* copyCommandQueue;
+
+        struct DescriptorHeap
+        {
+            ID3D12DescriptorHeap* Heap;
+            D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
+            D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
+            uint32_t Size;
+            uint32_t Capacity;
+        };
+
+        DescriptorHeap RTVHeap;
+        DescriptorHeap DSVHeap;
+
+        bool isLost = false;
+
+        ID3D12Fence* frameFence;
+        HANDLE frameFenceEvent;
+        u64 frameCount = 0;
     };
 }

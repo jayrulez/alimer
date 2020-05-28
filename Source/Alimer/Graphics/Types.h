@@ -88,6 +88,13 @@ namespace alimer
         Copy
     };
 
+    enum class HeapType : uint32_t
+    {
+        Default,
+        Upload,
+        Readback
+    };
+
     enum class TextureSampleCount : uint32_t
     {
         Count1 = 1,
@@ -106,20 +113,6 @@ namespace alimer
         Type3D,
         /// Cube texture
         TypeCube
-    };
-
-    enum class TextureState : uint32_t
-    {
-        Undefined,
-        General,
-        RenderTarget,
-        DepthStencil,
-        DepthStencilReadOnly,
-        ShaderRead,
-        ShaderWrite,
-        CopyDest,
-        CopySource,
-        Present
     };
 
     /// Defines the usage of Texture.
@@ -197,29 +190,5 @@ namespace alimer
 
         Features features;
         Limits limits;
-    };
-
-    struct TextureDescriptor
-    {
-        TextureType type = TextureType::Type2D;
-        PixelFormat format = PixelFormat::RGBA8UNorm;
-        TextureUsage usage = TextureUsage::Sampled;
-        uint32_t width = 1;
-        uint32_t height = 1;
-        uint32_t depth = 1;
-        uint32_t mipLevels = 1;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
-
-        const char* label = nullptr;
-        const void* externalHandle;
-    };
-
-    struct PresentationParameters
-    {
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
-        PixelFormat backBufferFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool isFullscreen;
     };
 }

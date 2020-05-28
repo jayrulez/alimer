@@ -20,27 +20,28 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Texture.h"
-#include "math/size.h"
+#include "graphics/SwapChain.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class GraphicsPresenter : public RefCounted
+    SwapChain::SwapChain(GraphicsDevice& device, const SwapChainDescriptor* descriptor)
+        :  device{ device }
+        , width(descriptor->width)
+        , height(descriptor->height)
+        , colorFormat(descriptor->colorFormat)
+        , depthStencilFormat(descriptor->depthStencilFormat)
     {
-    protected:
-        /// Constructor.
-        GraphicsPresenter(GraphicsDevice& device, const PresentationParameters& presentationParameters);
 
-        void Resize(uint32_t width, uint32_t height);
+    }
 
-    protected:
-        GraphicsDevice& device;
+    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        width = newWidth;
+        height = newHeight;
 
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
-        PixelFormat backBufferFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-    };
+        //ResizeBackBuffer(width, height);
+        //ResizeDepthStencilBuffer(width, height);
+    }
 }
+

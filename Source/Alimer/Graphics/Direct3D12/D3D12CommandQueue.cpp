@@ -77,26 +77,23 @@ namespace alimer
 
         allocatorPool.Destroy();
         CloseHandle(fenceEvent);
-        fence->Release();
-        fence = nullptr;
-
-        handle->Release();
-        handle = nullptr;
+        SAFE_RELEASE(fence);
+        SAFE_RELEASE(handle);
     }
 
-    void D3D12CommandQueue::WaitForIdle()
+    void D3D12CommandQueue::WaitForIdle(void)
     {
         WaitForFence(IncrementFence());
     }
 
-    uint64_t D3D12CommandQueue::IncrementFence(void)
+    u64 D3D12CommandQueue::IncrementFence(void)
     {
         std::lock_guard<std::mutex> lockGuard(fenceMutex);
         handle->Signal(fence, nextFenceValue);
         return nextFenceValue++;
     }
 
-    bool D3D12CommandQueue::IsFenceComplete(uint64_t fenceValue)
+    bool D3D12CommandQueue::IsFenceComplete(u64 fenceValue)
     {
         // Avoid querying the fence value by testing against the last one seen.
         // The max() is to protect against an unlikely race condition that could cause the last
@@ -112,9 +109,7 @@ namespace alimer
     void D3D12CommandQueue::WaitForFence(uint64_t fenceValue)
     {
         if (IsFenceComplete(fenceValue))
-        {
             return;
-        }
 
         // TODO:  Think about how this might affect a multi-threaded situation.  Suppose thread A
         // wants to wait for fence 100, then thread B comes along and wants to wait for 99.  If

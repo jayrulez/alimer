@@ -23,7 +23,7 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsPresenter.h"
+#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -33,7 +33,11 @@ namespace alimer
         : input(new InputManager())
     {
         gameSystems.Push(input);
-        graphicsDevice = GraphicsDevice::Create();
+        bool enableDebugLayer = false;
+#ifdef _DEBUG
+        enableDebugLayer = true;
+#endif
+        graphicsDevice = GraphicsDevice::Create(FeatureLevel::Level11_0, enableDebugLayer);
         PlatformConstuct();
     }
 
@@ -58,14 +62,14 @@ namespace alimer
                 config.windowTitle,
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable)
-                );
+            );
             //window_set_centered(main_window);
 
-            PresentationParameters presentationParameters = {};
-            presentationParameters.backBufferWidth = mainWindow->GetSize().width;
-            presentationParameters.backBufferHeight = mainWindow->GetSize().height;
-
-            mainWindowPresenter = graphicsDevice->CreateSwapChainGraphicsPresenter(mainWindow->GetHandle(), presentationParameters);
+            SwapChainDescriptor swapChainDescriptor = {};
+            swapChainDescriptor.width = mainWindow->GetSize().width;
+            swapChainDescriptor.height = mainWindow->GetSize().height;
+            swapChainDescriptor.colorFormat = PixelFormat::BGRA8UNormSrgb;
+            mainSwapChain = graphicsDevice->CreateSwapChain(mainWindow->GetHandle(), &swapChainDescriptor);
         }
 
         Initialize();
@@ -99,10 +103,9 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //gpuBeginFrame(gpuDevice);
-        /*if (!graphics::BeginFrame(mainContext)) {
+        if (!graphicsDevice->BeginFrame()) {
             return false;
-        }*/
+        }
 
         for (auto gameSystem : gameSystems)
         {
@@ -118,13 +121,6 @@ namespace alimer
         {
             gameSystem->Draw(time);
         }
-
-        /*auto texture = swapChain->GetNextTexture();
-
-        ICommandBuffer& commandBuffer = graphicsDevice->GetGraphicsQueue()->RequestCommandBuffer();
-        //context->BeginRenderPass(mainSwapChain.get(), Colors::CornflowerBlue);
-        commandBuffer.Present(swapChain);
-        graphicsDevice->GetGraphicsQueue()->Submit(commandBuffer);*/
     }
 
 #include <DirectXMath.h>
@@ -178,8 +174,8 @@ namespace alimer
         vgpuCmdEndRenderPass();
 #endif
 
-        //gpuEndFrame(gpuDevice);
-        //graphics::EndFrame(mainContext);
+        mainSwapChain->Present();
+        graphicsDevice->EndFrame();
     }
 
     int Application::Run()

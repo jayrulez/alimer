@@ -22,7 +22,7 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12CommandQueue.h"
-#include "D3D12SwapChainGraphicsPresenter.h"
+#include "D3D12SwapChain.h"
 #include "D3D12MemAlloc.h"
 #include "core/String.h"
 
@@ -231,6 +231,36 @@ namespace alimer
         graphicsCommandQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT);
         computeCommandQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
         copyCommandQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY);
+
+        // Render target descriptor heap (RTV).
+        {
+            RTVHeap.Capacity = 1024;
+
+            D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+            heapDesc.NumDescriptors = RTVHeap.Capacity;
+            heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+            heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+            VHR(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&RTVHeap.Heap)));
+            RTVHeap.CPUStart = RTVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
+        }
+        // Depth-stencil descriptor heap (DSV).
+        {
+            DSVHeap.Capacity = 256;
+
+            D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+            heapDesc.NumDescriptors = DSVHeap.Capacity;
+            heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+            heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+            VHR(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DSVHeap.Heap)));
+            DSVHeap.CPUStart = DSVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
+        }
+
+        VHR(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        if (frameFenceEvent == INVALID_HANDLE_VALUE)
+        {
+            LOG_ERROR("CreateEventEx failed");
+        }
 
         deviceCount++;
     }
@@ -489,6 +519,12 @@ namespace alimer
 
     void D3D12GraphicsDevice::Shutdown()
     {
+        CloseHandle(frameFenceEvent);
+        SAFE_RELEASE(frameFence);
+
+        SAFE_RELEASE(RTVHeap.Heap);
+        SAFE_RELEASE(DSVHeap.Heap);
+
         SafeDelete(copyCommandQueue);
         SafeDelete(computeCommandQueue);
         SafeDelete(graphicsCommandQueue);
@@ -516,7 +552,7 @@ namespace alimer
                 debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
                 debugDevice->Release();
             }
-        }
+    }
 #else
         (void)refCount; // avoid warning
 #endif
@@ -533,7 +569,7 @@ namespace alimer
             }
         }
 #endif
-    }
+}
 
     D3D12CommandQueue* D3D12GraphicsDevice::GetCommandQueue(D3D12_COMMAND_LIST_TYPE type) const
     {
@@ -563,153 +599,61 @@ namespace alimer
 
     void D3D12GraphicsDevice::WaitForIdle()
     {
-        //graphicsQueue->WaitForIdle();
-        //computeQueue->WaitForIdle();
-        //copyQueue->WaitForIdle();
+        //graphicsCommandQueue->WaitForIdle();
+        computeCommandQueue->WaitForIdle();
+        copyCommandQueue->WaitForIdle();
     }
 
-    RefPtr<GraphicsPresenter> D3D12GraphicsDevice::CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters)
+    RefPtr<Texture> D3D12GraphicsDevice::CreateTexture(const TextureDescriptor* descriptor, const void* initialData)
+    {
+        return MakeRefPtr<D3D12Texture>(this, descriptor, initialData);
+    }
+
+    RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = static_cast<HWND>(windowHandle);
         if (!IsWindow(window)) {
             return nullptr;
         }
-
-        return MakeRefPtr<D3D12SwapChainGraphicsPresenter>(this, window, presentationParameters);
-#else
-        IUnknown* window;
 #endif
+
+        return MakeRefPtr<D3D12SwapChain>(this, windowHandle, descriptor);
     }
 
-#if TODO_D3D12
-    void D3D12GraphicsDevice::BeginFrame()
+    bool D3D12GraphicsDevice::BeginFrame()
     {
+        return true;
     }
 
-    void D3D12GraphicsDevice::PresentFrame()
+    u64 D3D12GraphicsDevice::EndFrame()
     {
-        HRESULT hr = S_OK;
-
-        /*for (size_t i = 0, count = swapChains.size(); i < count; i++)
-        {
-            hr = swapChains[i]->GetHandle()->Present(syncInterval, presentFlags);
-            isLost = d3dIsLost(hr);
-
-            if (isLost)
-            {
-                break;
-            }
-        }*/
-
-        if (!isLost)
-        {
-            if (SUCCEEDED(hr)
-                && swapChain.handle != nullptr)
-            {
-                hr = swapChain.handle->Present(syncInterval, presentFlags);
-                swapChain.currentBackBufferIndex = swapChain.handle->GetCurrentBackBufferIndex();
-            }
-        }
-
-        isLost = d3dIsLost(hr);
         if (isLost)
         {
 #ifdef _DEBUG
             char buff[64] = {};
-            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
-                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n", d3dDevice->GetDeviceRemovedReason());
             OutputDebugStringA(buff);
 #endif
 
             HandleDeviceLost();
-            return;
+            return Limits<u64>::Max;
         }
 
-        ThrowIfFailed(hr);
+        graphicsCommandQueue->GetHandle()->Signal(frameFence, ++frameCount);
+        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
-        ++currentCPUFrame;
-
-        // Signal the fence with the current frame number, so that we can check back on it
-        frameFence.Signal(graphicsQueue->GetHandle(), currentCPUFrame);
-
-        // Wait for the GPU to catch up before we stomp an executing command buffer
-        const uint64_t gpuLag = currentCPUFrame - currentGPUFrame;
-        ALIMER_ASSERT(gpuLag <= kMaxFrameLatency);
-        if (gpuLag >= kMaxFrameLatency)
+        if ((frameCount - GPUFrameCount) >= kMaxFrameLatency)
         {
-            // Make sure that the previous frame is finished
-            frameFence.Wait(currentGPUFrame + 1);
-            ++currentGPUFrame;
+            frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
+            WaitForSingleObject(frameFenceEvent, INFINITE);
         }
 
-        currentFrameIndex = currentCPUFrame % kMaxFrameLatency;
-
-        // Process any deferred releases
-        ProcessDeferredReleases(currentFrameIndex);
+        return frameCount;
     }
 
     void D3D12GraphicsDevice::HandleDeviceLost()
     {
 
     }
-
-    void D3D12GraphicsDevice::CreateSwapChain(SwapChain* swapChain, window_t* window, PixelFormat colorFormat)
-    {
-        UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-        if (syncInterval
-            && d3d12.isTearingSupported)
-        {
-            //presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
-
-        // Create a descriptor for the swap chain.
-        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = window_width(window);
-        swapChainDesc.Height = window_height(window);
-        swapChainDesc.Format = ToDXGISwapChainFormat(colorFormat);
-        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT/* | DXGI_USAGE_SHADER_INPUT*/;
-        swapChainDesc.BufferCount = kMaxFrameLatency;
-        swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.SampleDesc.Quality = 0;
-        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        swapChainDesc.Flags = swapChainFlags;
-
-        ComPtr<IDXGISwapChain1> tempSwapChain;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND hwnd = reinterpret_cast<HWND>(window_handle(window));
-
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = TRUE;
-
-        // Create a swap chain for the window.
-        ThrowIfFailed(d3d12.dxgiFactory->CreateSwapChainForHwnd(
-            graphicsQueue->GetHandle(),
-            hwnd,
-            &swapChainDesc,
-            &fsSwapChainDesc,
-            nullptr,
-            tempSwapChain.GetAddressOf()
-        ));
-
-        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(d3d12.dxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
-#else
-        IUnknown* window = reinterpret_cast<IUnknown*>(info.handle);
-        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-            d3dCommandQueue,
-            window,
-            &swapChainDesc,
-            nullptr,
-            &tempSwapChain
-        ));
-#endif
-        ThrowIfFailed(tempSwapChain.As(&swapChain->handle));
-        swapChain->currentBackBufferIndex = swapChain->handle->GetCurrentBackBufferIndex();
-    }
-#endif // TODO_D3D12
-
 }

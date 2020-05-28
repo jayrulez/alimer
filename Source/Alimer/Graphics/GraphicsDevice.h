@@ -29,7 +29,11 @@
 
 namespace alimer
 {
-    class GraphicsPresenter;
+    struct TextureDescriptor;
+    struct SwapChainDescriptor;
+    class Texture;
+    class SwapChain;
+    
 
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
@@ -40,9 +44,11 @@ namespace alimer
 
         static std::unique_ptr<GraphicsDevice> Create(FeatureLevel minFeatureLevel = FeatureLevel::Level11_0, bool enableDebugLayer = false);
 
-        virtual RefPtr<GraphicsPresenter> CreateSwapChainGraphicsPresenter(void* windowHandle, const PresentationParameters& presentationParameters) = 0;
+        virtual bool BeginFrame() = 0;
+        virtual u64 EndFrame() = 0;
 
-        //virtual RefPtr<Texture> CreateTexture(const TextureDesc* pDesc, const void* initialData) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDescriptor* descriptor, const void* initialData) = 0;
+        virtual RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDescriptor* descriptor) = 0;
 
         const GraphicsDeviceCaps& GetCaps() const;
 

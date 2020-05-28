@@ -25,10 +25,24 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device)
-        : GraphicsResource(device)
+    Texture::Texture(GraphicsDevice& device, const TextureDescriptor* descriptor, State state_)
+        : GraphicsResource(device, HeapType::Default, state_)
     {
 
+    }
+
+    RefPtr<Texture> Texture::Create2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format)
+    {
+        TextureDescriptor descriptor = {};
+        descriptor.type = TextureType::Type2D;
+        descriptor.format = format;
+        descriptor.usage = TextureUsage::Sampled;
+        descriptor.width = width;
+        descriptor.height = height;
+        descriptor.depth = 1;
+        descriptor.mipLevels = 1;
+        descriptor.sampleCount = TextureSampleCount::Count1;
+        return device.CreateTexture(&descriptor, nullptr);
     }
 }
 

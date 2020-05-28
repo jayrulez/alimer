@@ -75,6 +75,52 @@ namespace alimer
 
     class D3D12GraphicsDevice;
 
+    static inline D3D12_HEAP_TYPE GetD3D12HeapType(HeapType type)
+    {
+        switch (type)
+        {
+        case HeapType::Upload:
+            return D3D12_HEAP_TYPE_UPLOAD;
+
+        case HeapType::Readback:
+            return D3D12_HEAP_TYPE_READBACK;
+
+        case HeapType::Default:
+        default:
+            return D3D12_HEAP_TYPE_DEFAULT;
+        }
+    }
+
+    D3D12_RESOURCE_STATES GetD3D12ResourceState(GraphicsResource::State state)
+    {
+        switch (state)
+        {
+        case GraphicsResource::State::Undefined:
+        case GraphicsResource::State::General:
+            return D3D12_RESOURCE_STATE_COMMON;
+        case GraphicsResource::State::RenderTarget:
+            return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case GraphicsResource::State::DepthStencil:
+            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        case GraphicsResource::State::DepthStencilReadOnly:
+            return D3D12_RESOURCE_STATE_DEPTH_READ;
+        case GraphicsResource::State::ShaderRead:
+            return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        case GraphicsResource::State::ShaderWrite:
+            return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        case GraphicsResource::State::CopyDest:
+            return D3D12_RESOURCE_STATE_COPY_DEST;
+        case GraphicsResource::State::CopySource:
+            return D3D12_RESOURCE_STATE_COPY_SOURCE;
+        case GraphicsResource::State::Present:
+            return D3D12_RESOURCE_STATE_PRESENT;
+
+        default:
+            ALIMER_UNREACHABLE();
+            return D3D12_RESOURCE_STATE_GENERIC_READ;
+        }
+    };
+
     class FenceD3D12
     {
     public:

@@ -33,10 +33,10 @@ namespace alimer
     public:
         D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type);
         ~D3D12CommandQueue();
-        void WaitForIdle();
-       
-        uint64_t IncrementFence(void);
-        bool IsFenceComplete(uint64_t fenceValue);
+
+        void WaitForIdle(void);
+        u64 IncrementFence(void);
+        bool IsFenceComplete(u64 fenceValue);
         void WaitForFence(uint64_t fenceValue);
         ID3D12CommandQueue* GetHandle() { return handle; }
         uint64_t GetNextFenceValue() { return nextFenceValue; }
@@ -52,8 +52,8 @@ namespace alimer
 
         // Lifetime of these objects is managed by the descriptor cache
         ID3D12Fence* fence;
-        uint64_t nextFenceValue;
-        uint64_t lastCompletedFenceValue;
+        u64 nextFenceValue;
+        u64 lastCompletedFenceValue;
         HANDLE fenceEvent;
 
         D3D12CommandAllocatorPool allocatorPool;
