@@ -1,3 +1,8 @@
+# vgpu
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(vgpu)
+set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
+
 # stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
@@ -30,8 +35,6 @@ set(IMGUI_FILES
 add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
-
-
 
 if (ALIMER_GRAPHICS_VULKAN)
     # Vulkan headers

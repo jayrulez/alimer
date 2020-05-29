@@ -26,7 +26,8 @@
 #include "Core/Vector.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "math/size.h"
+#include "Math/size.h"
+#include <vgpu.h>
 #include <memory>
 
 namespace alimer
@@ -49,7 +50,6 @@ namespace alimer
     class Window;
     class InputManager;
     class GraphicsDevice;
-    class GraphicsView;
     class Gui;
 
     class ALIMER_API Application : public Object
@@ -109,8 +109,11 @@ namespace alimer
         std::unique_ptr<Window> mainWindow;
         Vector<GameSystem*> gameSystems;
         InputManager* input;
+
+        vgpu_device gpu_device;
+        vgpu_context main_context;
+
         std::unique_ptr<GraphicsDevice> graphicsDevice;
-        RefPtr<GraphicsView> mainView;
         bool headless{ false };
         std::unique_ptr<Gui> gui;
     };

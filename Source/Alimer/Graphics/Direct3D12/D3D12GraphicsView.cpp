@@ -94,8 +94,8 @@ namespace alimer
             return;
         }
 
-        GraphicsView::Destroy();
-        SAFE_RELEASE(handle);
+        //GraphicsView::Destroy();
+        //SAFE_RELEASE(handle);
     }
 
     void D3D12GraphicsView::Present()

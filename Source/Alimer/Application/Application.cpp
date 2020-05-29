@@ -23,7 +23,6 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsView.h"
 #include "UI/Gui.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
@@ -38,7 +37,9 @@ namespace alimer
 #ifdef _DEBUG
         enableDebugLayer = true;
 #endif
-        graphicsDevice = GraphicsDevice::Create(FeatureLevel::Level11_0, enableDebugLayer);
+        gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_COUNT, enableDebugLayer);
+
+        //graphicsDevice = GraphicsDevice::Create(FeatureLevel::Level11_0, enableDebugLayer);
         PlatformConstuct();
     }
 
@@ -51,9 +52,9 @@ namespace alimer
 
         gameSystems.Clear();
         gui.reset();
-        mainView.Reset();
         mainWindow.reset();
-        graphicsDevice.reset();
+        vgpu_destroy_context(gpu_device, main_context);
+        vgpu_destroy_device(gpu_device);
         PlatformDestroy();
     }
 
@@ -68,15 +69,22 @@ namespace alimer
                 WindowFlags::Resizable)
             );
             //window_set_centered(main_window);
+            vgpu_context_info context_info = {};
+            context_info.max_inflight_frames = 2u;
+            context_info.width = mainWindow->GetSize().width;
+            context_info.height = mainWindow->GetSize().height;
+            context_info.swapchain_info.handle = mainWindow->GetHandle();
 
-            GraphicsViewDescriptor viewDescriptor = {};
+            main_context = vgpu_create_context(gpu_device, &context_info);
+
+            /*GraphicsViewDescriptor viewDescriptor = {};
             viewDescriptor.width = mainWindow->GetSize().width;
             viewDescriptor.height = mainWindow->GetSize().height;
             //contextDescriptor.colorFormat = PixelFormat::BGRA8UNormSrgb;
             viewDescriptor.colorFormat = PixelFormat::RGBA8UNorm;
             mainView = graphicsDevice->CreateView(mainWindow->GetHandle(), &viewDescriptor);
 
-            gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
+            gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));*/
         }
 
         Initialize();
@@ -110,12 +118,14 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
+        vgpu_begin_frame(gpu_device, main_context);
+
         for (auto gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
         }
 
-        gui->BeginFrame();
+        //gui->BeginFrame();
 
         return true;
     }
@@ -131,6 +141,7 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
+#if TODO_IMGUI
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
@@ -177,6 +188,8 @@ namespace alimer
         context.EndRenderPass();
         gui->Render(context);
         context.Flush(true);
+#endif // TODO_IMGUI
+
     }
 
     void Application::EndDraw()
@@ -186,7 +199,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        mainView->Present();
+        vgpu_end_frame(gpu_device, main_context);
     }
 
     int Application::Run()
