@@ -22,6 +22,10 @@
 
 #include "D3D11Backend.h"
 
-namespace Alimer
+namespace alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2Func = nullptr;
+    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1Func = nullptr;
+#endif
 }

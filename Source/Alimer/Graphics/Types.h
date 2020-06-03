@@ -54,14 +54,6 @@ namespace alimer
         Count
     };
 
-    enum class FeatureLevel : uint32_t
-    {
-        Level11_0,
-        Level11_1,
-        Level12_0,
-        Level12_1
-    };
-
     enum class GPUVendorId : uint32_t
     {
         None = 0,
@@ -151,6 +143,7 @@ namespace alimer
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
     {
+        BackendType backendType;
         uint32_t vendorId;
         uint32_t deviceId;
         GPUAdapterType adapterType = GPUAdapterType::Unknown;
@@ -215,9 +208,9 @@ namespace alimer
         Limits limits;
     };
 
-    struct GraphicsViewDescriptor
+    struct GraphicsContextDescription
     {
-        uint32_t maxInflightFrames;
+        uintptr_t handle; /* Null for headless mode. */
         uint32_t width;
         uint32_t height;
         PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
@@ -225,7 +218,7 @@ namespace alimer
         bool isFullscreen;
     };
 
-    struct TextureDescriptor
+    struct TextureDescription
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
@@ -233,7 +226,7 @@ namespace alimer
         u32 width = 1;
         u32 height = 1;
         u32 depth = 1;
-        u32 mipLevels = 1;
+        u32 mipLevelCount = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
 
         const char* label = nullptr;

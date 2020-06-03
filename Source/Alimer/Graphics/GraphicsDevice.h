@@ -28,33 +28,45 @@
 
 namespace alimer
 {
-    struct TextureDescriptor;
-    struct GraphicsViewDescriptor;
+    struct DeviceApiData;
     class Texture;
-    class GraphicsView;
+    class GraphicsContext;
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public std::enable_shared_from_this<GraphicsDevice>
+    class ALIMER_API GraphicsDevice
     {
     public:
+        struct Desc
+        {
+            BackendType backendType = BackendType::Count;
+            std::string applicationName;
+            bool enableDebugLayer = false;
+            bool headless = false;
+        };
+
         virtual ~GraphicsDevice() = default;
 
-        static std::unique_ptr<GraphicsDevice> Create(FeatureLevel minFeatureLevel = FeatureLevel::Level11_0, bool enableDebugLayer = false);
+        static std::unique_ptr<GraphicsDevice> Create(const Desc& desc);
 
-        virtual RefPtr<Texture> CreateTexture(const TextureDescriptor* descriptor, const void* initialData) = 0;
-        virtual RefPtr<GraphicsView> CreateView(void* windowHandle, const GraphicsViewDescriptor* descriptor) = 0;
-
-        /// Begin CommandBuffer for recording commands.
-        virtual CommandContext& BeginContext(const std::string& id = "") = 0;
+        /// Create new context.
+        virtual GraphicsContext* CreateContext(const GraphicsContextDescription& desc) = 0;
+        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
 
         const GraphicsDeviceCaps& GetCaps() const;
 
     protected:
-        GraphicsDevice();
+        GraphicsDevice() = default;
 
         GraphicsDeviceCaps caps{};
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+    };
+
+    class ALIMER_API GraphicsDeviceFactory
+    {
+    public:
+        virtual BackendType GetBackendType() const = 0;
+        virtual GraphicsDevice* CreateDevice(bool validation) = 0;
     };
 }

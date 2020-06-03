@@ -25,24 +25,33 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, const TextureDescriptor* descriptor)
+    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
         : GraphicsResource(device, GraphicsResourceUsage::Default)
+        , type(desc.type)
+        , format(desc.format)
+        , usage(desc.usage)
+        , width(desc.width)
+        , height(desc.height)
+        , depth(desc.depth)
+        , mipLevelCount(desc.mipLevelCount)
+        , sampleCount(desc.sampleCount)
     {
 
     }
 
     RefPtr<Texture> Texture::Create2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format)
     {
-        TextureDescriptor descriptor = {};
-        descriptor.type = TextureType::Type2D;
-        descriptor.format = format;
-        descriptor.usage = TextureUsage::Sampled;
-        descriptor.width = width;
-        descriptor.height = height;
-        descriptor.depth = 1;
-        descriptor.mipLevels = 1;
-        descriptor.sampleCount = TextureSampleCount::Count1;
-        return device.CreateTexture(&descriptor, nullptr);
+        TextureDescription desc = {};
+        desc.type = TextureType::Type2D;
+        desc.format = format;
+        desc.usage = TextureUsage::Sampled;
+        desc.width = width;
+        desc.height = height;
+        desc.depth = 1;
+        desc.mipLevelCount = 1;
+        desc.sampleCount = TextureSampleCount::Count1;
+        return nullptr;
+        //return device.CreateTexture(desc, nullptr);
     }
 }
 

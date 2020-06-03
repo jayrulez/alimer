@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "engine/Plugin.h"
-#include "engine/Engine.h"
+#include "Core/Plugin.h"
+#include "Core/Engine.h"
 #include "Core/Vector.h"
 #include "Core/Library.h"
 #include "Core/Log.h"
@@ -44,7 +44,7 @@ namespace alimer
         {
         }
 
-        void initPlugins() override
+        void InitPlugins() override
         {
             for (uint32_t i = 0, count = plugins.Size(); i < count; ++i)
             {
@@ -52,7 +52,7 @@ namespace alimer
             }
         }
 
-        IPlugin* load(const char* path) override
+        IPlugin* Load(const char* path) override
         {
             LOG_INFO("Loading plugin '%s'", path);
 
@@ -70,7 +70,7 @@ namespace alimer
 
             using PluginCreator = IPlugin * (*)(Engine&);
             PluginCreator creator = (PluginCreator)LibrarySymbol(lib, "AlimerCreatePlugin");
-            if (creator)
+            if (!creator)
             {
                 return nullptr;
             }
@@ -83,18 +83,18 @@ namespace alimer
                 return nullptr;
             }
 
-            addPlugin(plugin);
-            libraries.Push(std::move(lib));
+            AddPlugin(plugin);
+            libraries.Push(lib);
             LOG_INFO("Plugin '%s' loaded with success.", plugin->GetName());
             return plugin;
         }
 
-        void addPlugin(IPlugin* plugin) override
+        void AddPlugin(IPlugin* plugin) override
         {
             plugins.Push(plugin);
         }
 
-        IAllocator& getAllocator() { return allocator; }
+        IAllocator& GetAllocator() { return allocator; }
 
     private:
         Engine& engine;
@@ -103,13 +103,13 @@ namespace alimer
         Vector<IPlugin*> plugins;
     };
 
-    PluginManager* PluginManager::create(Engine& engine)
+    PluginManager* PluginManager::Create(Engine& engine)
     {
-        return ALIMER_NEW(engine.getAllocator(), PluginManagerImpl)(engine, engine.getAllocator());
+        return ALIMER_NEW(engine.GetAllocator(), PluginManagerImpl)(engine, engine.GetAllocator());
     }
 
-    void PluginManager::destroy(PluginManager* manager)
+    void PluginManager::Destroy(PluginManager* manager)
     {
-        ALIMER_DELETE(static_cast<PluginManagerImpl*>(manager)->getAllocator(), manager);
+        ALIMER_DELETE(static_cast<PluginManagerImpl*>(manager)->GetAllocator(), manager);
     }
 }

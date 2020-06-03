@@ -20,23 +20,28 @@
 // THE SOFTWARE.
 //
 
+#include "config.h"
 #include "UI/Gui.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Application/Window.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
 
+#include "imgui_impl_glfw.h"
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#else defined(ALIMER_GRAPHICS_VULKAN)
 #include "Graphics/Direct3D12/D3D12GraphicsDevice.h"
 #include "Graphics/Direct3D12/D3D12CommandContext.h"
-#include "imgui_impl_glfw.h"
 #include "imgui_impl_dx12.h"
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3d12.lib")
+//#pragma comment(lib, "dxgi.lib")
+//#pragma comment(lib, "d3d12.lib")
+#endif
+
 
 namespace alimer
 {
     static int const                    NUM_FRAMES_IN_FLIGHT = 3;
-    static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
+    //static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
 
     Gui::Gui(GraphicsDevice* device, Window* window)
         : device{ device }
@@ -85,7 +90,7 @@ namespace alimer
         style.WindowBorderSize = 0.0f;
 
 
-        ID3D12Device* d3dDevice = static_cast<D3D12GraphicsDevice*>(device)->GetHandle();
+        /*ID3D12Device* d3dDevice = static_cast<D3D12GraphicsDevice*>(device)->GetHandle();
 
         {
             D3D12_DESCRIPTOR_HEAP_DESC desc = {};
@@ -100,12 +105,12 @@ namespace alimer
         ImGui_ImplDX12_Init(d3dDevice, NUM_FRAMES_IN_FLIGHT,
             DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
             g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
-            g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+            g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());*/
     }
 
     Gui::~Gui()
     {
-        ImGui_ImplDX12_Shutdown();
+        //ImGui_ImplDX12_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
@@ -113,7 +118,7 @@ namespace alimer
     void Gui::BeginFrame()
     {
         // Start the Dear ImGui frame
-        ImGui_ImplDX12_NewFrame();
+        //ImGui_ImplDX12_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
     }
@@ -121,11 +126,11 @@ namespace alimer
     void Gui::Render(CommandContext& context)
     {
         ImGuiIO& io = ImGui::GetIO();
-        auto d3dContext = static_cast<D3D12CommandContext*>(&context);
-        d3dContext->GetCommandList()->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
+        //auto d3dContext = static_cast<D3D12CommandContext*>(&context);
+        //d3dContext->GetCommandList()->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
 
         ImGui::Render();
-        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), d3dContext->GetCommandList());
+        //ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), d3dContext->GetCommandList());
 
          // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

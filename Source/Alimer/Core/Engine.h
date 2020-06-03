@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,41 +22,35 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "Math/Color.h"
+#include "Core/Vector.h"
 
 namespace alimer
 {
-    class CommandContext;
+    class GraphicsDevice;
+    class GraphicsDeviceFactory;
 
-    class GraphicsView : public RefCounted
+    struct ALIMER_API Engine
     {
-    protected:
-        /// Constructor.
-        GraphicsView(GraphicsDevice& device, const GraphicsViewDescriptor* descriptor);
-
     public:
-        virtual ~GraphicsView();
+        struct Configuration {
+            const char* workingDir = nullptr;
+            Vector<const char*> plugins;
+        };
 
-        void Resize(uint32_t newWidth, uint32_t newHeight);
+        /// Destructor.
+        virtual ~Engine() {}
 
-        /// Present on screen.
-        virtual void Present() = 0;
+        static Engine* Create(const Configuration& config, IAllocator& allocator);
+        static void Destroy(Engine* engine);
 
-        Texture* GetCurrentColorTexture() const;
+        /// Initialize engine with all subsystems and load all plugins.
+        virtual bool Initialize() = 0;
 
-    protected:
-        /// Release the GPU resources.
-        virtual void Destroy();
+        /// 
+        virtual void RegisterGraphicsDeviceFactory(GraphicsDeviceFactory* factory) = 0;
 
-        GraphicsDevice& device;
-
-        uint32_t maxInflightFrames;
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        u32 backbufferIndex = 0;
-        Texture* colorTextures[kMaxInflightFrames] = {};
+        virtual IAllocator& GetAllocator() = 0;
+        virtual struct PluginManager& GetPluginManager() = 0;
+        virtual GraphicsDevice& GetGraphicsDevice() = 0;
     };
 }

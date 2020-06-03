@@ -22,7 +22,9 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
+#include "Core/Engine.h"
 #include "graphics/GraphicsDevice.h"
+#include "graphics/GraphicsContext.h"
 #include "UI/Gui.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
@@ -32,14 +34,20 @@ namespace alimer
     Application::Application()
         : input(new InputManager())
     {
-        gameSystems.Push(input);
-        bool enableDebugLayer = false;
-#ifdef _DEBUG
-        enableDebugLayer = true;
-#endif
-        gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_COUNT, enableDebugLayer);
+        Engine::Configuration config;
+        config.plugins.Push("Alimer.Direct3D11");
+        config.plugins.Push("Alimer.Direct3D12");
+        config.plugins.Push("Alimer.Vulkan");
+        engine = Engine::Create(config, allocator);
 
-        //graphicsDevice = GraphicsDevice::Create(FeatureLevel::Level11_0, enableDebugLayer);
+        gameSystems.Push(input);
+        GraphicsDevice::Desc graphicsDesc;
+        graphicsDesc.backendType = BackendType::Direct3D12;
+        graphicsDesc.applicationName = "Alimer";
+#ifdef _DEBUG
+        graphicsDesc.enableDebugLayer = true;
+#endif
+        graphicsDevice = GraphicsDevice::Create(graphicsDesc);
         PlatformConstuct();
     }
 
@@ -53,13 +61,18 @@ namespace alimer
         gameSystems.Clear();
         gui.reset();
         mainWindow.reset();
-        vgpu_destroy_context(gpu_device, main_context);
-        vgpu_destroy_device(gpu_device);
+        mainGraphicsContext.Reset();
+        graphicsDevice.reset();
+        Engine::Destroy(engine);
         PlatformDestroy();
     }
 
     void Application::InitBeforeRun()
     {
+        if (!engine->Initialize()) {
+            return;
+        }
+
         // Create main window.
         if (!headless)
         {
@@ -68,14 +81,14 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable)
             );
-            //window_set_centered(main_window);
-            vgpu_context_info context_info = {};
-            context_info.max_inflight_frames = 2u;
-            context_info.width = mainWindow->GetSize().width;
-            context_info.height = mainWindow->GetSize().height;
-            context_info.swapchain_info.handle = mainWindow->GetHandle();
 
-            main_context = vgpu_create_context(gpu_device, &context_info);
+            //window_set_centered(main_window);
+            GraphicsContextDescription contextDesc = {};
+            contextDesc.handle = mainWindow->GetHandle();
+            contextDesc.width = mainWindow->GetSize().width;
+            contextDesc.height = mainWindow->GetSize().height;
+
+            //mainGraphicsContext = graphicsDevice->CreateContext(contextDesc);
 
             /*GraphicsViewDescriptor viewDescriptor = {};
             viewDescriptor.width = mainWindow->GetSize().width;
@@ -118,7 +131,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu_begin_frame(gpu_device, main_context);
+        //mainGraphicsContext->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -199,7 +212,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_end_frame(gpu_device, main_context);
+        //mainGraphicsContext->Present();
     }
 
     int Application::Run()

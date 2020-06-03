@@ -22,21 +22,33 @@
 
 #pragma once
 
-#include "core/Ptr.h"
-#include "graphics/GraphicsAdapter.h"
-#include "D3D11Backend.h"
+#include "graphics/GraphicsContext.h"
+#include "D3D12Backend.h"
 
-namespace Alimer
+namespace alimer
 {
-    class D3D11GraphicsAdapter final : public GraphicsAdapter
+    class D3D12Texture;
+
+    class D3D12GraphicsContext final : public GraphicsContext
     {
     public:
-        D3D11GraphicsAdapter(IDXGIAdapter1* adapter_, const std::string& name_, uint32_t vendorId_, uint32_t deviceId_);
-        ~D3D11GraphicsAdapter() override;
-
-        IDXGIAdapter1* GetDXGIAdapter() const { return adapter; }
+        D3D12GraphicsContext(D3D12GraphicsDevice* device, const GraphicsContextDescription& desc);
+        ~D3D12GraphicsContext() override;
+        void Destroy() override;
+        void Present() override;
 
     private:
-        IDXGIAdapter1* adapter;
+        void CreateRenderTargets();
+
+        D3D12GraphicsDevice* device;
+
+        uint32_t maxInflightFrames;
+        DXGI_FORMAT dxgiColorFormat;
+        IDXGISwapChain3* handle = nullptr;
+        u32 syncInterval = 1;
+        u32 presentFlags = 0;
+
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
     };
 }

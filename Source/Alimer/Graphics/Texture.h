@@ -30,7 +30,7 @@ namespace alimer
     class ALIMER_API Texture : public GraphicsResource
     {
     protected:
-        Texture(GraphicsDevice& device, const TextureDescriptor* descriptor);
+        Texture(GraphicsDevice& device, const TextureDescription& desc);
 
     public:
         virtual ~Texture() = default;
@@ -54,11 +54,11 @@ namespace alimer
 
     protected:
         TextureType type = TextureType::Type2D;
+        PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
         u32 width = 1u;
         u32 height = 1u;
         u32 depth = 1u;
-        PixelFormat format = PixelFormat::RGBA8UNorm;
         u32 mipLevelCount = 1u;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
     };

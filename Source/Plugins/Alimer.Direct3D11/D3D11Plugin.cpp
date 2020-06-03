@@ -21,10 +21,10 @@
 //
 
 #include "D3D11Plugin.h"
-#include "D3D11GraphicsProvider.h"
+#include "D3D11GraphicsDevice.h"
 #include "Core/Engine.h"
 
-namespace Alimer
+namespace alimer
 {
     D3D11Plugin::D3D11Plugin(Engine& engine)
         : engine{ engine }
@@ -34,7 +34,7 @@ namespace Alimer
 
     void D3D11Plugin::Init()
     {
-        engine.registerGraphicsProviderFactory(new D3D11GraphicsProviderFactory());
+        engine.RegisterGraphicsDeviceFactory(new D3D11GraphicsDeviceFactory);
     }
 
     const char* D3D11Plugin::GetName() const
@@ -45,8 +45,8 @@ namespace Alimer
 
 extern "C"
 {
-    ALIMER_INTERFACE_EXPORT Alimer::IPlugin* AlimerCreatePlugin(Alimer::Engine& engine)
+    ALIMER_INTERFACE_EXPORT alimer::IPlugin* AlimerCreatePlugin(alimer::Engine& engine)
     {
-        return new Alimer::D3D11Plugin(engine);
+        return new alimer::D3D11Plugin(engine);
     }
 }

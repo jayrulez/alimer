@@ -22,12 +22,10 @@
 
 #pragma once
 
-#include "engine/Engine.h"
 #include "Core/Vector.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Math/size.h"
-#include <vgpu.h>
 #include <memory>
 
 namespace alimer
@@ -47,8 +45,10 @@ namespace alimer
         usize windowSize = { 1280, 720 };
     };
 
+    struct Engine;
     class Window;
     class InputManager;
+    class GraphicsContext;
     class GraphicsDevice;
     class Gui;
 
@@ -100,9 +100,13 @@ namespace alimer
     protected:
         Vector<std::string> args;
 
+        DefaultAllocator allocator;
+        Engine* engine = nullptr;
+
         int exitCode = 0;
         Configuration config;
         bool running = false;
+
         // Rendering loop timer.
         GameTime time;
 
@@ -110,10 +114,9 @@ namespace alimer
         Vector<GameSystem*> gameSystems;
         InputManager* input;
 
-        vgpu_device gpu_device;
-        vgpu_context main_context;
-
         std::unique_ptr<GraphicsDevice> graphicsDevice;
+        RefPtr<GraphicsContext> mainGraphicsContext;
+
         bool headless{ false };
         std::unique_ptr<Gui> gui;
     };

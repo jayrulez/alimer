@@ -31,8 +31,8 @@ namespace alimer
     class D3D12Texture final : public Texture, public D3D12GpuResource
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, const void* initialData);
-        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState);
+        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
+        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState);
         ~D3D12Texture() override;
         void Destroy() override;
 

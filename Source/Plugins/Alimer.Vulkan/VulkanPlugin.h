@@ -20,21 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11GraphicsAdapter.h"
+#pragma once
 
+#include "Core/Plugin.h"
 
-namespace Alimer
+namespace alimer
 {
-    D3D11GraphicsAdapter::D3D11GraphicsAdapter(IDXGIAdapter1* adapter_, const std::string& name_, uint32_t vendorId_, uint32_t deviceId_)
-        : GraphicsAdapter(name_, vendorId_, deviceId_)
-        , adapter(adapter_)
+    class ALIMER_API VulkanPlugin final : public IPlugin
     {
-    }
+    public:
+        VulkanPlugin(Engine& engine);
+        void Init() override;
+        const char* GetName() const override;
 
-    D3D11GraphicsAdapter::~D3D11GraphicsAdapter()
-    {
-        SafeRelease(adapter);
-    }
+    private:
+        Engine& engine;
+    };
 }
-
-

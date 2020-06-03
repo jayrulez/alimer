@@ -24,7 +24,7 @@
 
 #include "Core/Plugin.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API D3D11Plugin final : public IPlugin
     {

@@ -34,7 +34,6 @@ set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     Core
-    engine
     Math
     Graphics
     Input
@@ -48,6 +47,10 @@ endif()
 
 if (WIN32)
     define_engine_source_files(Platform/Windows)
+endif ()
+
+if (ALIMER_GRAPHICS_VULKAN)
+    #define_engine_source_files(Graphics/Vulkan)
 endif ()
 
 if (ALIMER_GRAPHICS_D3D12)
@@ -72,14 +75,15 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    vgpu
     stb
     imgui
 )
 
 if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(${TARGET_NAME} PRIVATE vulkan)
-    #target_compile_definitions(${TARGET_NAME} PRIVATE GPU_DRIVER_VULKAN)
+    target_link_libraries(${TARGET_NAME} PRIVATE
+        volk
+        vma
+    )
 endif ()
 
 # Link platform specific libraries

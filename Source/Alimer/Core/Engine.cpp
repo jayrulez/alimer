@@ -20,10 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "engine/Engine.h"
+#include "Core/Engine.h"
 #include "Core/Utils.h"
-#include "engine/Plugin.h"
-#include "gpu/gpu.h"
+#include "Core/Plugin.h"
+#include "Core/Log.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
@@ -33,19 +34,28 @@ namespace alimer
         void operator=(const EngineImpl&) = delete;
         EngineImpl(const EngineImpl&) = delete;
 
-        EngineImpl(IAllocator& allocator_)
+        EngineImpl(const Configuration& config, IAllocator& allocator_)
             : allocator(allocator_)
             , initialized(false)
         {
-            pluginManager = PluginManager::create(*this);
+            pluginManager = PluginManager::Create(*this);
+
+            for (auto* pluginName : config.plugins) {
+                if (pluginName[0] && !pluginManager->Load(pluginName)) {
+                    LOG_INFO("%s plugin has not been loaded", pluginName);
+                }
+            }
         }
 
         ~EngineImpl()
         {
-            //graphicsDevice.reset();
-            //graphicsProvider.reset();
-            //graphicsProviderFactories.Clear();
-            PluginManager::destroy(pluginManager);
+            SafeDelete(graphicsDevice);
+
+            for (u32 i = 0, count = graphicsDeviceFactories.Size(); i < count; i++) {
+                SafeDelete(graphicsDeviceFactories[i]);
+            }
+            graphicsDeviceFactories.Clear();
+            PluginManager::Destroy(pluginManager);
         }
 
         bool Initialize() override
@@ -53,47 +63,44 @@ namespace alimer
             if (initialized)
                 return true;
 
-            pluginManager->load("Alimer.Direct3D12");
-            pluginManager->load("Alimer.Direct3D11");
-            pluginManager->initPlugins();
+            pluginManager->InitPlugins();
 
-            /*if (!graphicsProviderFactories.Empty()) {
+            if (!graphicsDeviceFactories.Empty()) {
                 bool validation = false;
 #ifdef _DEBUG
                 validation = true;
 #endif
-                //graphicsProvider = graphicsProviderFactories[0]->CreateProvider(validation);
-                //auto adapter = graphicsProvider->EnumerateGraphicsAdapters();
-                //graphicsDevice = graphicsProvider->CreateDevice(adapter[0]);
-            }*/
+                graphicsDevice = graphicsDeviceFactories[0]->CreateDevice(validation);
+            }
 
             initialized = true;
             return true;
         }
 
-        /*void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) override
+        void RegisterGraphicsDeviceFactory(GraphicsDeviceFactory* factory) override
         {
             ALIMER_ASSERT(factory);
-            //graphicsProviderFactories.Push(factory);
-        }*/
+            graphicsDeviceFactories.Push(factory);
+        }
 
-        IAllocator& getAllocator() override { return allocator; }
-        PluginManager& getPluginManager() override { return *pluginManager; }
-
+        IAllocator& GetAllocator() override { return allocator; }
+        PluginManager& GetPluginManager() override { return *pluginManager; }
+        GraphicsDevice& GetGraphicsDevice() override { return *graphicsDevice; }
     private:
         IAllocator& allocator;
         PluginManager* pluginManager;
-        //Vector<GraphicsProviderFactory*> graphicsProviderFactories;
+        Vector<GraphicsDeviceFactory*> graphicsDeviceFactories;
+        GraphicsDevice* graphicsDevice = nullptr;
         bool initialized;
     };
 
-    Engine* Engine::create(IAllocator& allocator)
+    Engine* Engine::Create(const Configuration& config, IAllocator& allocator)
     {
-        return ALIMER_NEW(allocator, EngineImpl)(allocator);
+        return ALIMER_NEW(allocator, EngineImpl)(config, allocator);
     }
 
-    void Engine::destroy(Engine* engine)
+    void Engine::Destroy(Engine* engine)
     {
-        ALIMER_DELETE(static_cast<EngineImpl*>(engine)->getAllocator(), engine);
+        ALIMER_DELETE(static_cast<EngineImpl*>(engine)->GetAllocator(), engine);
     }
 }

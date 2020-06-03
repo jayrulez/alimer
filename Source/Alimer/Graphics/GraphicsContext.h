@@ -20,47 +20,42 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsView.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Texture.h"
+#include "Math/Color.h"
 
 namespace alimer
 {
-    GraphicsView::GraphicsView(GraphicsDevice& device, const GraphicsViewDescriptor* descriptor)
-        :  device{ device }
-        , maxInflightFrames(max(descriptor->maxInflightFrames, kMaxInflightFrames))
-        , width(descriptor->width)
-        , height(descriptor->height)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+    class CommandContext;
+
+    class GraphicsContext : public RefCounted
     {
+    protected:
+        /// Constructor.
+        GraphicsContext(GraphicsDevice& device, const GraphicsContextDescription& desc);
 
-    }
+    public:
+        virtual ~GraphicsContext();
 
-    GraphicsView::~GraphicsView()
-    {
-        Destroy();
-    }
+        void Resize(uint32_t newWidth, uint32_t newHeight);
 
-    void GraphicsView::Destroy()
-    {
-        for (uint32_t i = 0; i < kMaxInflightFrames; ++i)
-        {
-            SafeDelete(colorTextures[i]);
-        }
-    }
+        /// Present on screen.
+        virtual void Present() = 0;
 
-    void GraphicsView::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        width = newWidth;
-        height = newHeight;
+        Texture* GetCurrentColorTexture() const;
 
-        //ResizeBackBuffer(width, height);
-        //ResizeDepthStencilBuffer(width, height);
-    }
+    protected:
+        /// Release the GPU resources.
+        virtual void Destroy();
 
-    Texture* GraphicsView::GetCurrentColorTexture() const
-    {
-        return colorTextures[backbufferIndex];
-    }
+        GraphicsDevice& device;
+
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        u32 backbufferIndex = 0;
+        Texture* colorTextures[kMaxInflightFrames] = {};
+    };
 }
-

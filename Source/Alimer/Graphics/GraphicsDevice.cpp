@@ -20,36 +20,54 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsDevice.h"
+#include "config.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 #include "Core/Assert.h"
 
-#include "config.h"
 #if defined(ALIMER_GRAPHICS_D3D12)
-#include "graphics/Direct3D12/D3D12GraphicsDevice.h"
+#include "Graphics/Direct3D12/D3D12GraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice()
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const Desc& desc)
     {
+        BackendType backendType = desc.backendType;
 
+        switch (backendType)
+        {
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+        case BackendType::Direct3D12:
+        {
+            auto device = std::make_unique<D3D12GraphicsDevice>();
+            if (!device->Init(desc)) {
+                return nullptr;
+            }
+
+            return device;
+        }
+#endif
+
+        case alimer::BackendType::Direct3D11:
+            break;
+        case alimer::BackendType::Metal:
+            break;
+        case alimer::BackendType::OpenGL:
+            break;
+
+        case BackendType::Null:
+        default:
+            break;
+        }
+
+        return nullptr;
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
     {
         return caps;
-    }
-
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(FeatureLevel minFeatureLevel, bool enableDebugLayer)
-    {
-        std::unique_ptr<GraphicsDevice> device;
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-        device.reset(new D3D12GraphicsDevice(minFeatureLevel, enableDebugLayer));
-#endif
-
-        return device;
     }
 
     /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
@@ -78,5 +96,4 @@ namespace alimer
             _gpuResources.clear();
         }
     }*/
-
 }

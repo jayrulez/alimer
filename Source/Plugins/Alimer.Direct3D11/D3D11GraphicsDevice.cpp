@@ -21,19 +21,25 @@
 //
 
 #include "D3D11GraphicsDevice.h"
-#include "D3D11GraphicsProvider.h"
-#include "D3D11GraphicsAdapter.h"
 //#include "D3D11SwapChain.h"
 #include "core/String.h"
 
-namespace Alimer
+namespace alimer
 {
-    D3D11GraphicsDevice::D3D11GraphicsDevice(D3D11GraphicsProvider* provider, const std::shared_ptr<GraphicsAdapter>& adapter)
-        : GraphicsDevice(adapter)
-        , validation(provider->IsValidationEnabled())
-        , dxgiFactory(provider->GetDXGIFactory())
-        , isTearingSupported(provider->IsTearingSupported())
+    D3D11GraphicsDevice::D3D11GraphicsDevice(bool validation)
+        : GraphicsDevice()
+        , validation{ validation }
     {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        static HMODULE s_dxgiHandle = LoadLibraryW(L"dxgi.dll");
+        if (s_dxgiHandle == nullptr)
+            return;
+
+        CreateDXGIFactory2Func = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(s_dxgiHandle, "CreateDXGIFactory2");
+        DXGIGetDebugInterface1Func = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(s_dxgiHandle, "DXGIGetDebugInterface1");
+#endif
+
+        CreateFactory();
         CreateDeviceResources();
     }
 
@@ -67,6 +73,72 @@ namespace Alimer
 #endif
     }
 
+    void D3D11GraphicsDevice::CreateFactory()
+    {
+        SAFE_RELEASE(dxgiFactory);
+
+#if defined(_DEBUG)
+        bool debugDXGI = false;
+        if (validation)
+        {
+            IDXGIInfoQueue* dxgiInfoQueue;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            if (DXGIGetDebugInterface1Func != nullptr &&
+                SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+#else
+            if (SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+#endif
+            {
+                debugDXGI = true;
+
+                VHR(CreateDXGIFactory2Func(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
+
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+
+                DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+                {
+                    80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+                };
+                DXGI_INFO_QUEUE_FILTER filter = {};
+                filter.DenyList.NumIDs = _countof(hide);
+                filter.DenyList.pIDList = hide;
+                dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->Release();
+            }
+        }
+
+        validation = debugDXGI;
+
+        if (!debugDXGI)
+#endif
+        {
+            VHR(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
+        }
+
+        BOOL allowTearing = FALSE;
+        IDXGIFactory5* dxgiFactory5 = nullptr;
+        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory5);
+        if (SUCCEEDED(hr))
+        {
+            hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+        }
+
+        if (FAILED(hr) || !allowTearing)
+        {
+            isTearingSupported = false;
+#ifdef _DEBUG
+            OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
+#endif
+        }
+        else
+        {
+            isTearingSupported = true;
+        }
+
+        SafeRelease(dxgiFactory5);
+    }
+
     void D3D11GraphicsDevice::CreateDeviceResources()
     {
         UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -97,8 +169,7 @@ namespace Alimer
         // Create the Direct3D 11 API device object and a corresponding context.
         ID3D11Device* tempD3D11Device;
         ID3D11DeviceContext* tempD3D11Context;
-
-        IDXGIAdapter1* dxgiAdapter = std::static_pointer_cast<D3D11GraphicsAdapter>(adapter)->GetDXGIAdapter();
+        IDXGIAdapter1* dxgiAdapter = nullptr;
 
         HRESULT hr = D3D11CreateDevice(dxgiAdapter,
             D3D_DRIVER_TYPE_UNKNOWN,
@@ -108,12 +179,12 @@ namespace Alimer
             _countof(s_featureLevels),
             D3D11_SDK_VERSION,
             &tempD3D11Device,
-            &d3dFeatureLevel, 
+            &d3dFeatureLevel,
             &tempD3D11Context
         );
 
 
-        ThrowIfFailed(hr);
+        VHR(hr);
 
 #ifndef NDEBUG
         if (validation)
@@ -146,9 +217,9 @@ namespace Alimer
         }
 #endif
 
-        ThrowIfFailed(tempD3D11Device->QueryInterface(&d3dDevice));
-        ThrowIfFailed(tempD3D11Context->QueryInterface(&d3dContext));
-        ///ThrowIfFailed(context.As(&d3dAnnotation));
+        VHR(tempD3D11Device->QueryInterface(&d3dDevice));
+        VHR(tempD3D11Context->QueryInterface(&d3dContext));
+        ///VHR(context.As(&d3dAnnotation));
         SafeRelease(tempD3D11Device);
         SafeRelease(tempD3D11Context);
 
@@ -227,32 +298,19 @@ namespace Alimer
         }*/
     }
 
-    /*SwapChain* D3D11GPUDevice::CreateSwapChainCore(const SwapChainDescriptor* descriptor)
+    GraphicsContext* D3D11GraphicsDevice::CreateContext(const GraphicsContextDescription& desc)
     {
-        return new D3D11SwapChain(this, descriptor);
+        return nullptr;
     }
 
-    void D3D11GraphicsDevice::Present(const std::vector<Swapchain*>& swapchains)
+    Texture* D3D11GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
     {
-        // Present swap chains.
-        HRESULT hr = S_OK;
-        for (size_t i = 0, count = swapchains.size(); i < count; i++)
-        {
-            D3D11Swapchain* swapchain = static_cast<D3D11Swapchain*>(swapchains[i]);
-            hr = swapchain->Present();
+        return nullptr;
+    }
 
-            if (hr == DXGI_ERROR_DEVICE_REMOVED
-                || hr == DXGI_ERROR_DEVICE_HUNG
-                || hr == DXGI_ERROR_DEVICE_RESET
-                || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
-                || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
-            {
-                isLost = true;
-                return;
-            }
-
-            ThrowIfFailed(hr);
-        }
-    }*/
+    GraphicsDevice* D3D11GraphicsDeviceFactory::CreateDevice(bool validation)
+    {
+        return new D3D11GraphicsDevice(validation);
+    }
 }
 

@@ -208,7 +208,7 @@ namespace alimer
             d3d12GraphicsDevice->WaitForFenceValue(fenceValue);
         }
 
-        d3d12GraphicsDevice->FreeContext(type, this);
+        //d3d12GraphicsDevice->FreeContext(type, this);
     }
 
     void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)

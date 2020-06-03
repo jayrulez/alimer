@@ -32,17 +32,16 @@ namespace alimer
 {
     class D3D12GraphicsProvider;
     class D3D12CommandQueue;
-    class D3D12CommandContext;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
-        friend class D3D12CommandContext;
-
     public:
         static bool IsAvailable();
 
-        D3D12GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer);
+        D3D12GraphicsDevice() = default;
         ~D3D12GraphicsDevice() override;
+
+        bool Init(const Desc& desc);
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void WaitForFenceValue(uint64_t fenceValue);
@@ -64,13 +63,13 @@ namespace alimer
         void WaitForIdle();
         void HandleDeviceLost();
 
-        RefPtr<Texture> CreateTexture(const TextureDescriptor* descriptor, const void* initialData) override;
-        RefPtr<GraphicsView> CreateView(void* windowHandle, const GraphicsViewDescriptor* descriptor) override;
-        CommandContext& BeginContext(const std::string& id) override;
-        D3D12CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE type, const std::string& id);
-        void FreeContext(D3D12_COMMAND_LIST_TYPE type, D3D12CommandContext* commandBuffer);
+        GraphicsContext* CreateContext(const GraphicsContextDescription& desc) override;
+        Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         static uint32_t deviceCount;
+
+        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+
         UINT dxgiFactoryFlags = 0;
         IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
@@ -86,10 +85,6 @@ namespace alimer
         D3D12CommandQueue* graphicsCommandQueue;
         D3D12CommandQueue* computeCommandQueue;
         D3D12CommandQueue* copyCommandQueue;
-
-        std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool[4];
-        std::queue<D3D12CommandContext*> availableContexts[4];
-        std::mutex cmdBufferAllocationMutex;
 
         struct DescriptorHeap
         {

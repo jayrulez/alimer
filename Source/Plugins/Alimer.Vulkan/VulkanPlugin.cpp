@@ -20,26 +20,33 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Allocator.h"
+#include "VulkanPlugin.h"
+#include "VulkanGraphicsDevice.h"
+#include "Core/Engine.h"
 
 namespace alimer
 {
-    struct ALIMER_API Engine
+    VulkanPlugin::VulkanPlugin(Engine& engine)
+        : engine{ engine }
     {
-        /// Destructor.
-        virtual ~Engine() {}
 
-        static Engine* create(IAllocator& allocator);
-        static void destroy(Engine* engine);
+    }
 
-        /// Initialize engine with all subsystems and load all plugins.
-        virtual bool Initialize() = 0;
+    void VulkanPlugin::Init()
+    {
+        engine.RegisterGraphicsDeviceFactory(new VulkanGraphicsDeviceFactory());
+    }
 
-        //virtual void registerGraphicsProviderFactory(GraphicsProviderFactory* factory) = 0;
+    const char* VulkanPlugin::GetName() const
+    {
+        return "Alimer.Vulkan";
+    }
+}
 
-        virtual IAllocator& getAllocator() = 0;
-        virtual struct PluginManager& getPluginManager() = 0;
-    };
+extern "C"
+{
+    ALIMER_INTERFACE_EXPORT alimer::IPlugin* AlimerCreatePlugin(alimer::Engine& engine)
+    {
+        return new alimer::VulkanPlugin(engine);
+    }
 }

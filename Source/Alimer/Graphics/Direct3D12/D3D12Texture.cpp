@@ -26,9 +26,9 @@
 
 namespace alimer
 {
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, const void* initialData)
-        : Texture(*device, descriptor)
-        , dxgiFormat(ToDXGIFormat(descriptor->format))
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
+        : Texture(*device, desc)
+        , dxgiFormat(ToDXGIFormat(desc.format))
     {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = GetD3D12HeapType(GraphicsResourceUsage::Default);
@@ -36,27 +36,27 @@ namespace alimer
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = descriptor->width;
-        resourceDesc.Height = descriptor->height;
-        resourceDesc.DepthOrArraySize = descriptor->depth;
-        resourceDesc.MipLevels = descriptor->mipLevels;
+        resourceDesc.Width = desc.width;
+        resourceDesc.Height = desc.height;
+        resourceDesc.DepthOrArraySize = desc.depth;
+        resourceDesc.MipLevels = desc.mipLevelCount;
         resourceDesc.Format = dxgiFormat;
-        resourceDesc.SampleDesc.Count = static_cast<UINT>(descriptor->sampleCount);
+        resourceDesc.SampleDesc.Count = static_cast<UINT>(desc.sampleCount);
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        if (any(descriptor->usage & TextureUsage::Storage))
+        if (any(desc.usage & TextureUsage::Storage))
         {
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
         D3D12_CLEAR_VALUE clearValue = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
-        if (any(descriptor->usage & TextureUsage::RenderTarget))
+        if (any(desc.usage & TextureUsage::RenderTarget))
         {
             clearValue.Format = resourceDesc.Format;
-            if (IsDepthStencilFormat(descriptor->format))
+            if (IsDepthStencilFormat(desc.format))
             {
                 clearValue.DepthStencil.Depth = 1.0f;
             }
@@ -65,9 +65,9 @@ namespace alimer
         }
 
         state = GetD3D12ResourceState(GraphicsResourceUsage::Default);
-        if (any(descriptor->usage & TextureUsage::RenderTarget))
+        if (any(desc.usage & TextureUsage::RenderTarget))
         {
-            if (IsDepthStencilFormat(descriptor->format))
+            if (IsDepthStencilFormat(desc.format))
             {
                 state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
             }
@@ -83,10 +83,10 @@ namespace alimer
         );
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescriptor* descriptor, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState)
-        : Texture(*device, descriptor)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, ID3D12Resource* resource_, D3D12_RESOURCE_STATES currentState)
+        : Texture(*device, desc)
         , D3D12GpuResource(resource_, currentState)
-        , dxgiFormat(ToDXGIFormat(descriptor->format))
+        , dxgiFormat(ToDXGIFormat(desc.format))
     {
 
     }
@@ -106,12 +106,12 @@ namespace alimer
     {
         const D3D12_RESOURCE_DESC& desc = resource->GetDesc();
 
-        TextureDescriptor textureDesc = {};
+        TextureDescription textureDesc = {};
         textureDesc.width = static_cast<u32>(desc.Width);
         textureDesc.height = desc.Height;
         textureDesc.depth = desc.DepthOrArraySize;
         textureDesc.format = format;
-        return new D3D12Texture(device, &textureDesc, resource, currentState);
+        return new D3D12Texture(device, textureDesc, resource, currentState);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12Texture::GetRenderTargetView(uint32_t mipLevel, uint32_t slice)

@@ -23,45 +23,51 @@
 #pragma once
 
 #include "graphics/GraphicsDevice.h"
-#include "D3D11Backend.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class D3D11GraphicsDevice final : public GraphicsDevice
+    class VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
         /// Constructor.
-        D3D11GraphicsDevice(bool validation);
+        VulkanGraphicsDevice(bool validation);
         /// Destructor.
-        ~D3D11GraphicsDevice() override;
+        ~VulkanGraphicsDevice() override;
 
-        IDXGIFactory2*      GetDXGIFactory() const { return dxgiFactory; }
-        bool                IsTearingSupported() const { return isTearingSupported; }
-        ID3D11Device1*      GetD3DDevice() const { return d3dDevice; }
-        D3D_FEATURE_LEVEL   GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
+        VkInstance GetInstance() const { return instance; }
 
     private:
-        void CreateFactory();
-        void CreateDeviceResources();
-        void Shutdown();
         void InitCapabilities();
 
         GraphicsContext* CreateContext(const GraphicsContextDescription& desc) override;
         Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
-        bool validation;
-        IDXGIFactory2* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
-        ID3D11Device1* d3dDevice = nullptr;
-        ID3D11DeviceContext1* d3dContext = nullptr;
-        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-        bool isLost = false;
+        struct {
+            /// VK_KHR_get_physical_device_properties2
+            bool physicalDeviceProperties2 = false;
+            /// VK_KHR_external_memory_capabilities
+            bool externalMemoryCapabilities = false;
+            /// VK_KHR_external_semaphore_capabilities
+            bool externalSemaphoreCapabilities = false;
+            /// VK_EXT_debug_utils
+            bool debugUtils = false;
+            /// VK_EXT_headless_surface
+            bool headless = false;
+            /// VK_KHR_surface
+            bool surface = false;
+            /// VK_KHR_get_surface_capabilities2
+            bool surfaceCapabilities2 = false;
+        } features;
+
+        VkInstance instance{ VK_NULL_HANDLE };
+        VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
     };
 
-    class D3D11GraphicsDeviceFactory final : public GraphicsDeviceFactory
+    class VulkanGraphicsDeviceFactory final : public GraphicsDeviceFactory
     {
     public:
-        BackendType GetBackendType() const override { return BackendType::Direct3D11; }
+        BackendType GetBackendType() const override { return BackendType::Vulkan; }
         GraphicsDevice* CreateDevice(bool validation) override;
     };
 }
