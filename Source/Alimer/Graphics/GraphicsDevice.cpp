@@ -25,46 +25,8 @@
 #include "Core/Log.h"
 #include "Core/Assert.h"
 
-#if defined(ALIMER_GRAPHICS_D3D12)
-#include "Graphics/Direct3D12/D3D12GraphicsDevice.h"
-#endif
-
 namespace alimer
 {
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const Desc& desc)
-    {
-        BackendType backendType = desc.backendType;
-
-        switch (backendType)
-        {
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-        case BackendType::Direct3D12:
-        {
-            auto device = std::make_unique<D3D12GraphicsDevice>();
-            if (!device->Init(desc)) {
-                return nullptr;
-            }
-
-            return device;
-        }
-#endif
-
-        case alimer::BackendType::Direct3D11:
-            break;
-        case alimer::BackendType::Metal:
-            break;
-        case alimer::BackendType::OpenGL:
-            break;
-
-        case BackendType::Null:
-        default:
-            break;
-        }
-
-        return nullptr;
-    }
-
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
     {
         return caps;

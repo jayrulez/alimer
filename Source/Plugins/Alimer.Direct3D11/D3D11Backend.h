@@ -44,8 +44,9 @@
 #include <Windows.h>
 #endif
 
-#include <d3dcommon.h>
-#include <dxgiformat.h>
+#include <wrl/client.h>
+
+#include <d3d11_1.h>
 
 #if defined(NTDDI_WIN10_RS2)
 #include <dxgi1_6.h>
@@ -55,12 +56,7 @@
 
 #if ( defined(_DEBUG) || defined(PROFILE) )
 #include <dxgidebug.h>
-
-#if !defined(_XBOX_ONE) || !defined(_TITLE)
-#   pragma comment(lib,"dxguid.lib")
 #endif
-#endif
-#include <d3d11_1.h>
 
 #define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT(false); }
 #define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
@@ -80,27 +76,23 @@ namespace alimer
 #define DXGIGetDebugInterface1Func DXGIGetDebugInterface1
 #endif
 
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-#if defined(_DEBUG)
-    // Check for SDK Layer support.
-    static inline bool SdkLayersAvailable()
+    struct DxgiFormatDesc
     {
-        HRESULT hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
-            nullptr,
-            D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
-            nullptr,                    // Any feature level will do.
-            0,
-            D3D11_SDK_VERSION,
-            nullptr,                    // No need to keep the D3D device reference.
-            nullptr,                    // No need to know the feature level.
-            nullptr                     // No need to keep the D3D device context reference.
-        );
+        PixelFormat format;
+        DXGI_FORMAT dxgiFormat;
+    };
 
-        return SUCCEEDED(hr);
+    extern const DxgiFormatDesc kDxgiFormatDesc[];
+
+    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
+    {
+        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
+        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
     }
-#endif
+
 
     static inline UINT ToD3D11BindFlags(TextureUsage usage, bool depthStencilFormat)
     {

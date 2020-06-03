@@ -135,66 +135,115 @@ namespace alimer {
     template <class T> class RefPtr
     {
     public:
+        using InterfaceType = T;
+
+    protected:
+        InterfaceType* ptr_;
+        template<class U> friend class RefPtr;
+
+
+        void InternalAddRef()
+        {
+            if (ptr_ != nullptr) {
+                ptr_->AddRef();
+            }
+        }
+
+        /// Release the object reference and delete it if necessary.
+        void InternalRelease()
+        {
+            if (ptr_)
+            {
+                ptr_->Release();
+                ptr_ = nullptr;
+            }
+        }
+
+    public:
         /// Construct a null pointer.
-        constexpr RefPtr() : ptr_(nullptr) {}
+        RefPtr() noexcept : ptr_(nullptr) {}
 
         /// Construct a null shared pointer.
-        constexpr RefPtr(std::nullptr_t) : ptr_(nullptr) {}
+        RefPtr(std::nullptr_t) noexcept : ptr_(nullptr) {}
 
-        RefPtr(const RefPtr<T>& rhs) : ptr_(SafeAddReference(rhs.Get()))
+        template<class U>
+        RefPtr(_In_opt_ U* other) noexcept : ptr_(other)
         {
+            InternalAddRef();
         }
 
-        template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-        RefPtr(const RefPtr<U>& rhs) : ptr_(SafeAddReference(rhs.Get()))
+        /// Copy-construct from another shared pointer.
+        RefPtr(const RefPtr& other) : ptr_(other.ptr_)
         {
+            InternalAddRef();
         }
 
-        RefPtr(RefPtr<T>&& rhs) : ptr_(rhs.Release())
+        /// Move-construct from another shared pointer.
+        RefPtr(RefPtr<T>&& rhs) noexcept : ptr_(rhs.ptr_)
         {
+            rhs.ptr_ = nullptr;
         }
 
-        template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-        RefPtr(RefPtr<U>&& rhs) : ptr_(rhs.Release())
+        /// Copy-construct from another shared pointer allowing implicit upcasting.
+        template <class U> RefPtr(const RefPtr<U>& rhs) noexcept : ptr_(rhs.ptr_)
         {
+            InternalAddRef();
         }
 
-        explicit RefPtr(T* obj) : ptr_(obj) {}
+        /// Construct from a raw pointer.
+        explicit RefPtr(T* ptr) noexcept : ptr_(ptr)
+        {
+            InternalAddRef();
+        }
 
         /// Destruct. Release the object reference.
         ~RefPtr() noexcept
         {
-            SafeRelease(ptr_);
+            InternalRelease();
         }
 
-        RefPtr<T>& operator=(std::nullptr_t) { this->Reset(); return *this; }
+        /// Assign from another shared pointer.
+        RefPtr<T>& operator =(const RefPtr<T>& rhs)
+        {
+            if (ptr_ == rhs.ptr_)
+                return *this;
+
+            RefPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Move-assign from another shared pointer.
+        RefPtr<T>& operator =(RefPtr<T>&& rhs)
+        {
+            RefPtr<T> copy(std::move(rhs));
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Assign from another shared pointer allowing implicit upcasting.
+        template <class U> RefPtr<T>& operator =(const RefPtr<U>& rhs)
+        {
+            if (ptr_ == rhs.ptr_)
+                return *this;
+
+            RefPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
 
         /// Assign from a raw pointer.
-        RefPtr<T>& operator=(const RefPtr<T>& rhs)
+        RefPtr<T>& operator =(T* ptr)
         {
-            if (this != &rhs) {
-                this->Reset(SafeAddReference(rhs.Get()));
-            }
-            return *this;
-        }
+            if (ptr_ == ptr)
+                return *this;
 
-        template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-        RefPtr<T>& operator=(const RefPtr<U>& rhs)
-        {
-            this->Reset(SafeAddReference(rhs.Get()));
-            return *this;
-        }
+            RefPtr<T> copy(ptr);
+            Swap(copy);
 
-        RefPtr<T>& operator=(RefPtr<T>&& rhs)
-        {
-            this->Reset(rhs.Release());
-            return *this;
-        }
-
-        template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-        RefPtr<T>& operator=(RefPtr<U>&& rhs)
-        {
-            this->Reset(rhs.release());
             return *this;
         }
 
@@ -211,7 +260,7 @@ namespace alimer {
             ALIMER_ASSERT(this->Get() != nullptr);
             return *this->Get();
         }
-        
+
         /// Convert to a raw pointer.
         operator T* () const { return ptr_; }
 
@@ -221,6 +270,7 @@ namespace alimer {
             return ptr;
         }
 
+        /// Swap with another RefPtr.
         void Swap(RefPtr<T>& rhs)
         {
             std::swap(ptr_, rhs.ptr_);
@@ -229,9 +279,8 @@ namespace alimer {
         /// Reset with another pointer.
         void Reset(T* ptr = nullptr)
         {
-            T* oldPtr = ptr_;
-            ptr_ = ptr;
-            SafeRelease(oldPtr);
+            RefPtr<T> copy(ptr);
+            Swap(copy);
         }
 
         /// Check if the pointer is null.
@@ -247,10 +296,6 @@ namespace alimer {
 
         /// Return hash value for HashSet & HashMap.
         size_t ToHash() const { return ((size_t)ptr_ / sizeof(T)); }
-
-    private:
-        /// Object pointer.
-        T* ptr_;
     };
 
     template <typename T> inline void Swap(RefPtr<T>& a, RefPtr<T>& b)
@@ -302,4 +347,4 @@ namespace alimer {
     {
         return RefPtr<T>(const_cast<T*>(SafeAddReference(obj)));
     }
-} // namespace alimer
+}

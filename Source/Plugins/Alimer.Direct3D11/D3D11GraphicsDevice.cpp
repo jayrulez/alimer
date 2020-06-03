@@ -26,6 +26,30 @@
 
 namespace alimer
 {
+    namespace
+    {
+#if defined(_DEBUG)
+        // Check for SDK Layer support.
+        inline bool SdkLayersAvailable() noexcept
+        {
+            HRESULT hr = D3D11CreateDevice(
+                nullptr,
+                D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+                nullptr,
+                D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
+                nullptr,                    // Any feature level will do.
+                0,
+                D3D11_SDK_VERSION,
+                nullptr,                    // No need to keep the D3D device reference.
+                nullptr,                    // No need to know the feature level.
+                nullptr                     // No need to keep the D3D device context reference.
+            );
+
+            return SUCCEEDED(hr);
+        }
+#endif
+    }
+
     D3D11GraphicsDevice::D3D11GraphicsDevice(bool validation)
         : GraphicsDevice()
         , validation{ validation }
@@ -50,12 +74,12 @@ namespace alimer
 
     void D3D11GraphicsDevice::Shutdown()
     {
-        SafeRelease(d3dContext);
+        d3dContext.Reset();
         //d3dAnnotation.Reset();
 
         //ReleaseTrackedResources();
 
-        ULONG refCount = d3dDevice->Release();
+        ULONG refCount = d3dDevice.Reset();
 #ifdef _DEBUG
         if (refCount > 0)
         {
@@ -81,17 +105,17 @@ namespace alimer
         bool debugDXGI = false;
         if (validation)
         {
-            IDXGIInfoQueue* dxgiInfoQueue;
+            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             if (DXGIGetDebugInterface1Func != nullptr &&
-                SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+                SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 #else
-            if (SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+            if (SUCCEEDED(DXGIGetDebugInterface1Func(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
 #endif
             {
                 debugDXGI = true;
 
-                VHR(CreateDXGIFactory2Func(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
+                VHR(CreateDXGIFactory2Func(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
                 dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -104,7 +128,6 @@ namespace alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
-                dxgiInfoQueue->Release();
             }
         }
 
@@ -113,12 +136,25 @@ namespace alimer
         if (!debugDXGI)
 #endif
         {
-            VHR(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
+            VHR(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        {
+            ComPtr<IDXGIFactory4> dxgiFactory4;
+            if (FAILED(dxgiFactory.As(&dxgiFactory4)))
+            {
+                flipPresentSupported = false;
+#ifdef _DEBUG
+                OutputDebugStringA("INFO: Flip swap effects not supported");
+#endif
+            }
+        }
+#endif
+
         BOOL allowTearing = FALSE;
-        IDXGIFactory5* dxgiFactory5 = nullptr;
-        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory5);
+        ComPtr<IDXGIFactory5> dxgiFactory5;
+        HRESULT hr = dxgiFactory.As(&dxgiFactory5);
         if (SUCCEEDED(hr))
         {
             hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -135,8 +171,73 @@ namespace alimer
         {
             isTearingSupported = true;
         }
+    }
 
-        SafeRelease(dxgiFactory5);
+    void D3D11GraphicsDevice::GetHardwareAdapter(IDXGIAdapter1** ppAdapter)
+    {
+        *ppAdapter = nullptr;
+
+        ComPtr<IDXGIAdapter1> adapter;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        ComPtr<IDXGIFactory6> dxgiFactory6;
+        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
+        if (SUCCEEDED(hr))
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
+                    adapterIndex,
+                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+#ifdef _DEBUG
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
+#endif
+
+                break;
+            }
+        }
+#endif
+        if (!adapter)
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory->EnumAdapters1(
+                    adapterIndex,
+                    adapter.ReleaseAndGetAddressOf()));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+#ifdef _DEBUG
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
+#endif
+
+                break;
+            }
+        }
+
+        *ppAdapter = adapter.Detach();
     }
 
     void D3D11GraphicsDevice::CreateDeviceResources()
@@ -166,34 +267,70 @@ namespace alimer
             D3D_FEATURE_LEVEL_11_0
         };
 
+        ComPtr<IDXGIAdapter1> adapter;
+        GetHardwareAdapter(adapter.GetAddressOf());
+
         // Create the Direct3D 11 API device object and a corresponding context.
-        ID3D11Device* tempD3D11Device;
-        ID3D11DeviceContext* tempD3D11Context;
-        IDXGIAdapter1* dxgiAdapter = nullptr;
+        ComPtr<ID3D11Device> tempDevice;
+        ComPtr<ID3D11DeviceContext> tempContext;
 
-        HRESULT hr = D3D11CreateDevice(dxgiAdapter,
-            D3D_DRIVER_TYPE_UNKNOWN,
-            nullptr,
-            creationFlags,
-            s_featureLevels,
-            _countof(s_featureLevels),
-            D3D11_SDK_VERSION,
-            &tempD3D11Device,
-            &d3dFeatureLevel,
-            &tempD3D11Context
-        );
+        HRESULT hr = E_FAIL;
+        if (adapter)
+        {
+            hr = D3D11CreateDevice(
+                adapter.Get(),
+                D3D_DRIVER_TYPE_UNKNOWN,
+                nullptr,
+                creationFlags,
+                s_featureLevels,
+                _countof(s_featureLevels),
+                D3D11_SDK_VERSION,
+                tempDevice.GetAddressOf(), 
+                &d3dFeatureLevel,     
+                tempContext.GetAddressOf()
+            );
+        }
+#if defined(NDEBUG)
+        else
+        {
+            LOG_ERROR("No Direct3D hardware device found");
+        }
+#else
+        if (FAILED(hr))
+        {
+            // If the initialization fails, fall back to the WARP device.
+            // For more information on WARP, see:
+            // http://go.microsoft.com/fwlink/?LinkId=286690
+            hr = D3D11CreateDevice(
+                nullptr,
+                D3D_DRIVER_TYPE_WARP, // Create a WARP device instead of a hardware device.
+                nullptr,
+                creationFlags,
+                s_featureLevels,
+                _countof(s_featureLevels),
+                D3D11_SDK_VERSION,
+                tempDevice.GetAddressOf(),
+                &d3dFeatureLevel,
+                tempContext.GetAddressOf()
+            );
 
+            if (SUCCEEDED(hr))
+            {
+                OutputDebugStringA("Direct3D Adapter - WARP\n");
+            }
+        }
+#endif
 
         VHR(hr);
 
 #ifndef NDEBUG
         if (validation)
         {
-            ID3D11Debug* d3dDebug;
-            if (SUCCEEDED(tempD3D11Device->QueryInterface(&d3dDebug)))
+            ComPtr<ID3D11Debug> d3dDebug;
+            if (SUCCEEDED(tempDevice.As(&d3dDebug)))
             {
-                ID3D11InfoQueue* d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug->QueryInterface(&d3dInfoQueue)))
+                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -209,26 +346,39 @@ namespace alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
-                    d3dInfoQueue->Release();
                 }
-
-                d3dDebug->Release();
             }
         }
 #endif
 
-        VHR(tempD3D11Device->QueryInterface(&d3dDevice));
-        VHR(tempD3D11Context->QueryInterface(&d3dContext));
-        ///VHR(context.As(&d3dAnnotation));
-        SafeRelease(tempD3D11Device);
-        SafeRelease(tempD3D11Context);
+        VHR(tempDevice.As(&d3dDevice));
+        VHR(tempContext.As(&d3dContext));
 
         // Init caps and features.
-        InitCapabilities();
+        InitCapabilities(adapter.Get());
     }
 
-    void D3D11GraphicsDevice::InitCapabilities()
+    void D3D11GraphicsDevice::InitCapabilities(IDXGIAdapter1* adapter)
     {
+        DXGI_ADAPTER_DESC1 desc;
+        VHR(adapter->GetDesc1(&desc));
+
+        caps.backendType = BackendType::Direct3D11;
+        caps.vendorId = desc.VendorId;
+        caps.deviceId = desc.DeviceId;
+
+        std::wstring deviceName(desc.Description);
+        caps.adapterName = alimer::ToUtf8(deviceName);
+
+        // Detect adapter type.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            caps.adapterType = GPUAdapterType::CPU;
+        }
+        else {
+            caps.adapterType = GPUAdapterType::DiscreteGPU;
+        }
+
         caps.features.independentBlend = true;
         caps.features.computeShader = true;
         caps.features.geometryShader = true;

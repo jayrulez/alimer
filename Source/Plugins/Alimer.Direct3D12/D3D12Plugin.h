@@ -22,41 +22,18 @@
 
 #pragma once
 
-#include "graphics/SwapChain.h"
-#include "D3D11Backend.h"
+#include "Core/Plugin.h"
 
 namespace alimer
 {
-    class D3D11SwapChain final : public SwapChain
+    class D3D12Plugin final : public IPlugin
     {
     public:
-        /// Constructor.
-        D3D11SwapChain(D3D11GPUDevice* device, const SwapChainDescriptor* descriptor);
-
-        // Destructor
-        ~D3D11SwapChain() override;
-
-        void Destroy();
-        HRESULT Present();
+        D3D12Plugin(Engine& engine);
+        void Init() override;
+        const char* GetName() const override;
 
     private:
-        ResizeResult ResizeImpl(uint32_t width, uint32_t height) override;
-        void AfterReset();
-
-        D3D11GPUDevice* _device;
-        IDXGIFactory2* factory;
-        IUnknown* deviceOrCommandQueue;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window;
-#else
-        IUnknown* window;
-#endif
-        uint32_t syncInterval;
-        uint32_t presentFlags = 0;
-        uint32_t swapChainFlags;
-
-        uint32_t backBufferCount;
-        DXGI_FORMAT dxgiColorFormat;
-        ComPtr<IDXGISwapChain1> handle;
+        Engine& engine;
     };
 }

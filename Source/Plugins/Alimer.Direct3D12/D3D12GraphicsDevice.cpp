@@ -32,164 +32,13 @@ namespace alimer
 {
     uint32_t D3D12GraphicsDevice::deviceCount = 0;
 
-    bool D3D12GraphicsDevice::IsAvailable()
+    D3D12GraphicsDevice::D3D12GraphicsDevice(bool validation)
     {
-        static bool availableCheck = false;
-        static bool available = false;
-        if (availableCheck) {
-            return available;
-        }
-
-        availableCheck = true;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        static HMODULE dxgiDLL = LoadLibraryW(L"dxgi.dll");
-        if (dxgiDLL == nullptr)
-            return false;
-
-        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiDLL, "CreateDXGIFactory2");
-        if (CreateDXGIFactory2 == nullptr)
-            return false;
-
-        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1");
-
-        static HMODULE d3d12DLL = LoadLibraryW(L"d3d12.dll");
-        if (d3d12DLL == nullptr)
-            return false;
-
-        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12DLL, "D3D12CreateDevice");
-        if (D3D12CreateDevice == nullptr)
-            return false;
-
-        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12DLL, "D3D12GetDebugInterface");
-        D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeRootSignature");
-        D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(d3d12DLL, "D3D12CreateRootSignatureDeserializer");
-        D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeVersionedRootSignature");
-        D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
-#endif
-
-        available = true;
-        return available;
-    }
-
-    D3D12GraphicsDevice::~D3D12GraphicsDevice()
-    {
-        WaitForIdle();
-
-        //ReleaseTrackedResources();
-        //ExecuteDeferredReleases();
-
-        Shutdown();
-    }
-
-    void D3D12GraphicsDevice::GetAdapter(D3D_FEATURE_LEVEL d3dMinFeatureLevel, IDXGIAdapter1** ppAdapter)
-    {
-        *ppAdapter = nullptr;
-
-        IDXGIAdapter1* adapter;
-
-#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        IDXGIFactory6* dxgiFactory6;
-        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
-        if (SUCCEEDED(hr))
-        {
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
-                    adapterIndex,
-                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-                    IID_PPV_ARGS(&adapter)));
-                adapterIndex++)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    adapter->Release();
-
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter, d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
-
-            dxgiFactory6->Release();
-        }
-#endif
-        if (!adapter)
-        {
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, &adapter));
-                ++adapterIndex)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    adapter->Release();
-
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter, d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
-        }
-
-#if !defined(NDEBUG)
-        if (!adapter)
-        {
-            // Try WARP12 instead
-            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter))))
-            {
-                LOG_ERROR("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-                ALIMER_FORCE_CRASH();
-            }
-
-            OutputDebugStringA("Direct3D Adapter - WARP12\n");
-        }
-#endif
-
-        if (!adapter)
-        {
-            LOG_ERROR("No Direct3D 12 device found");
-            ALIMER_FORCE_CRASH();
-        }
-
-        *ppAdapter = adapter;
-    }
-
-    bool D3D12GraphicsDevice::Init(const Desc& desc)
-    {
-        if (!IsAvailable()) {
-            return false;
-        }
-
 #if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (desc.enableDebugLayer)
+        if (validation)
         {
             ID3D12Debug* debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
@@ -346,7 +195,113 @@ namespace alimer
         }
 
         deviceCount++;
-        return true;
+    }
+
+    D3D12GraphicsDevice::~D3D12GraphicsDevice()
+    {
+        WaitForIdle();
+
+        //ReleaseTrackedResources();
+        //ExecuteDeferredReleases();
+
+        Shutdown();
+    }
+
+    void D3D12GraphicsDevice::GetAdapter(D3D_FEATURE_LEVEL d3dMinFeatureLevel, IDXGIAdapter1** ppAdapter)
+    {
+        *ppAdapter = nullptr;
+
+        IDXGIAdapter1* adapter;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        IDXGIFactory6* dxgiFactory6;
+        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
+        if (SUCCEEDED(hr))
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
+                    adapterIndex,
+                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+                    IID_PPV_ARGS(&adapter)));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    adapter->Release();
+
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter, d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+
+            dxgiFactory6->Release();
+        }
+#endif
+        if (!adapter)
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, &adapter));
+                ++adapterIndex)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    adapter->Release();
+
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter, d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+        }
+
+#if !defined(NDEBUG)
+        if (!adapter)
+        {
+            // Try WARP12 instead
+            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter))))
+            {
+                LOG_ERROR("WARP12 not available. Enable the 'Graphics Tools' optional feature");
+                ALIMER_FORCE_CRASH();
+            }
+
+            OutputDebugStringA("Direct3D Adapter - WARP12\n");
+        }
+#endif
+
+        if (!adapter)
+        {
+            LOG_ERROR("No Direct3D 12 device found");
+            ALIMER_FORCE_CRASH();
+        }
+
+        *ppAdapter = adapter;
     }
 
     void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
@@ -659,5 +614,10 @@ namespace alimer
     void D3D12GraphicsDevice::HandleDeviceLost()
     {
 
+    }
+
+    GraphicsDevice* D3D12GraphicsDeviceFactory::CreateDevice(bool validation)
+    {
+        return new D3D12GraphicsDevice(validation);
     }
 }

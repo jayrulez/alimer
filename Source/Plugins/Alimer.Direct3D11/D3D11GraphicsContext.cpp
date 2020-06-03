@@ -20,59 +20,98 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D11SwapChain.h"
-#include "D3D11GPUDevice.h"
-#include "D3D11Texture.h"
+#include "D3D11GraphicsContext.h"
+#include "D3D11GraphicsDevice.h"
+//#include "D3D11Texture.h"
 #include "core/Log.h"
 #include "core/Assert.h"
 
 namespace alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GPUDevice* device, const SwapChainDescriptor* descriptor)
-        : SwapChain(descriptor)
-        , _device(device)
+    D3D11GraphicsContext::D3D11GraphicsContext(D3D11GraphicsDevice* device_, const GraphicsContextDescription& desc)
+        : GraphicsContext(*device, desc)
+        , device(device_)
         , factory(device->GetDXGIFactory())
         , deviceOrCommandQueue(device->GetD3DDevice())
-        , dxgiColorFormat(ToDXGISwapChainFormat(descriptor->colorFormat))
         , backBufferCount(2u)
-        , syncInterval(GetSyncInterval(descriptor->presentationInterval))
     {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        window = reinterpret_cast<HWND>(descriptor->platformData.windowHandle);
-        ALIMER_ASSERT(IsWindow(window));
-#else
-        window = reinterpret_cast<IUnknown*>(descriptor->platformData.windowHandle);
-#endif
-
-        swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-        if (!syncInterval
-            && device->IsTearingSupported())
+        if (desc.handle)
         {
-            presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
+            // Flip mode doesn't support SRGB formats
+            //dxgiColorFormat = ToDXGIFormat(srgbToLinearFormat(desc.colorFormat));
 
-        ResizeImpl(descriptor->extent.width, descriptor->extent.height);
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+            swapChainDesc.Width = desc.width;
+            swapChainDesc.Height = desc.height;
+            swapChainDesc.Format = dxgiColorFormat;
+            swapChainDesc.Stereo = FALSE;
+            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = backBufferCount;
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            if (device->IsTearingSupported())
+            {
+                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+            }
+
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            fsSwapChainDesc.Windowed = !desc.isFullscreen;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            HWND hwnd = (HWND)desc.handle;
+            if (!IsWindow(hwnd)) {
+                LOG_ERROR("Invalid HWND handle");
+                return;
+            }
+
+
+            VHR(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+                device->GetD3DDevice(),
+                hwnd,
+                &swapChainDesc,
+                &fsSwapChainDesc,
+                NULL,
+                swapChain.ReleaseAndGetAddressOf()
+            ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            VHR(device->GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+#else
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+                device->GetD3DCommandQueue(),
+                (IUnknown*)window,
+                &swapChainDesc,
+                nullptr,
+                swapChain.ReleaseAndGetAddressOf()
+            ));
+#endif
+        }
+        else
+        {
+            dxgiColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        }
     }
 
-    D3D11SwapChain::~D3D11SwapChain()
+    D3D11GraphicsContext::~D3D11GraphicsContext()
     {
         Destroy();
     }
 
-    void D3D11SwapChain::Destroy()
+    void D3D11GraphicsContext::Destroy()
     {
-        if (handle)
+        if (swapChain)
         {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            handle->SetFullscreenState(FALSE, nullptr);
+            swapChain->SetFullscreenState(FALSE, nullptr);
 #endif
 
-            handle.Reset();
         }
     }
 
+#if TODO
     SwapChain::ResizeResult D3D11SwapChain::ResizeImpl(uint32_t width, uint32_t height)
     {
         HRESULT hr = S_OK;
@@ -142,12 +181,17 @@ namespace alimer
         textureDesc.externalHandle = (void*)renderTarget.Get();
         textures.push_back(MakeRefPtr<D3D11Texture>(_device, &textureDesc));
     }
+#endif // TODO
 
-    HRESULT D3D11SwapChain::Present()
+
+    void D3D11GraphicsContext::Present()
     {
-        return handle->Present(syncInterval, presentFlags);
+        HRESULT hr = swapChain->Present(syncInterval, presentFlags);
+        // If the device was reset we must completely reinitialize the renderer.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+        }
+
+        VHR(hr);
     }
 }
-
-
-#endif // TODO

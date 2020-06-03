@@ -27,7 +27,22 @@
 #include "core/Log.h"
 #include "graphics/Types.h"
 
-#include "graphics/Direct3D/D3DCommon.h"
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif 
+
+#if defined(_WIN32)
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
+#include <wrl/client.h>
 
 #include <d3d12.h>
 
@@ -37,11 +52,13 @@
 #include <dxgi1_5.h>
 #endif
 
+#if ( defined(_DEBUG) || defined(PROFILE) )
+#include <dxgidebug.h>
+#endif
+
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
-
-#include "Core/Vector.h"
 
 // Forward declare memory allocator classes
 namespace D3D12MA
@@ -53,27 +70,28 @@ namespace D3D12MA
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 #define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
-#endif
+#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
-
     class D3D12GraphicsDevice;
+
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+    struct DxgiFormatDesc
+    {
+        PixelFormat format;
+        DXGI_FORMAT dxgiFormat;
+    };
+
+    extern const DxgiFormatDesc kDxgiFormatDesc[];
+
+    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
+    {
+        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
+        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
+    }
 
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(GraphicsResourceUsage usage)
     {

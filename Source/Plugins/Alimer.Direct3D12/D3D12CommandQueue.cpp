@@ -37,8 +37,8 @@ namespace alimer
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         queueDesc.NodeMask = 1;
 
-        ThrowIfFailed(device->GetHandle()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
-        ThrowIfFailed(device->GetHandle()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+        VHR(device->GetHandle()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
+        VHR(device->GetHandle()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
         fence->Signal((uint64_t)type << 56);
 
         // Create an event handle to use for frame synchronization.

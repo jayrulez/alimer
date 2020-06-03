@@ -61,7 +61,7 @@ namespace alimer
             if (pair.first <= fenceValue)
             {
                 commandAllocator = pair.second;
-                ThrowIfFailed(commandAllocator->Reset());
+                VHR(commandAllocator->Reset());
                 readyAllocators.pop();
                 LOG_DEBUG("Direct3D12: Reusing CommandAllocator %u", pair.first);
             }
@@ -70,7 +70,7 @@ namespace alimer
         // If no allocator's were ready to be reused, create a new one
         if (commandAllocator == nullptr)
         {
-            ThrowIfFailed(device->GetHandle()->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+            VHR(device->GetHandle()->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 #if defined(_DEBUG)
             wchar_t allocatorName[32];
             swprintf(allocatorName, 32, L"CommandAllocator %u", allocators.Size());

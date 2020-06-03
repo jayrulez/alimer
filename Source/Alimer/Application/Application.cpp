@@ -41,13 +41,6 @@ namespace alimer
         engine = Engine::Create(config, allocator);
 
         gameSystems.Push(input);
-        GraphicsDevice::Desc graphicsDesc;
-        graphicsDesc.backendType = BackendType::Direct3D12;
-        graphicsDesc.applicationName = "Alimer";
-#ifdef _DEBUG
-        graphicsDesc.enableDebugLayer = true;
-#endif
-        graphicsDevice = GraphicsDevice::Create(graphicsDesc);
         PlatformConstuct();
     }
 
@@ -62,7 +55,6 @@ namespace alimer
         gui.reset();
         mainWindow.reset();
         mainGraphicsContext.Reset();
-        graphicsDevice.reset();
         Engine::Destroy(engine);
         PlatformDestroy();
     }
@@ -88,7 +80,7 @@ namespace alimer
             contextDesc.width = mainWindow->GetSize().width;
             contextDesc.height = mainWindow->GetSize().height;
 
-            //mainGraphicsContext = graphicsDevice->CreateContext(contextDesc);
+            mainGraphicsContext = engine->GetGraphicsDevice().CreateContext(contextDesc);
 
             /*GraphicsViewDescriptor viewDescriptor = {};
             viewDescriptor.width = mainWindow->GetSize().width;

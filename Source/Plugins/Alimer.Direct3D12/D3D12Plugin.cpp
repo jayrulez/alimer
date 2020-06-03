@@ -20,51 +20,33 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/CommandContext.h"
-#include "graphics/GraphicsResource.h"
-#include <memory>
+#include "D3D12Plugin.h"
+#include "D3D12GraphicsDevice.h"
+#include "Core/Engine.h"
 
 namespace alimer
 {
-    struct DeviceApiData;
-    class Texture;
-    class GraphicsContext;
-
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    D3D12Plugin::D3D12Plugin(Engine& engine)
+        : engine{ engine }
     {
-    public:
-        struct Desc
-        {
-            BackendType backendType = BackendType::Count;
-            std::string applicationName;
-            bool enableDebugLayer = false;
-            bool headless = false;
-        };
 
-        virtual ~GraphicsDevice() = default;
+    }
 
-        /// Create new context.
-        virtual GraphicsContext* CreateContext(const GraphicsContextDescription& desc) = 0;
-        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
-
-        const GraphicsDeviceCaps& GetCaps() const;
-
-    protected:
-        GraphicsDevice() = default;
-
-        GraphicsDeviceCaps caps{};
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
-    };
-
-    class ALIMER_API GraphicsDeviceFactory
+    void D3D12Plugin::Init()
     {
-    public:
-        virtual BackendType GetBackendType() const = 0;
-        virtual GraphicsDevice* CreateDevice(bool validation) = 0;
-    };
+        engine.RegisterGraphicsDeviceFactory(new D3D12GraphicsDeviceFactory);
+    }
+
+    const char* D3D12Plugin::GetName() const
+    {
+        return "Alimer.Direct3D12";
+    }
+}
+
+extern "C"
+{
+    ALIMER_INTERFACE_EXPORT alimer::IPlugin* AlimerCreatePlugin(alimer::Engine& engine)
+    {
+        return new alimer::D3D12Plugin(engine);
+    }
 }

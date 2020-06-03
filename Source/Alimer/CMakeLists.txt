@@ -49,15 +49,6 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-if (ALIMER_GRAPHICS_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
-endif ()
-
-if (ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(Graphics/Direct3D)
-    define_engine_source_files(Graphics/Direct3D12)
-endif ()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)

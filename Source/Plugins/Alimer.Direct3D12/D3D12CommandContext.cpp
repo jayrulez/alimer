@@ -60,7 +60,7 @@ namespace alimer
         , useRenderPass(device->SupportsRenderPass())
     {
         currentAllocator = device->GetCommandQueue(type)->RequestAllocator();
-        ThrowIfFailed(device->GetHandle()->CreateCommandList(1, type, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+        VHR(device->GetHandle()->CreateCommandList(1, type, currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
         if (FAILED(commandList->QueryInterface(&commandList4))) {
             useRenderPass = false;
         }

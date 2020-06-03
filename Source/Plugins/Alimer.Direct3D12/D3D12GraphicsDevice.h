@@ -36,12 +36,8 @@ namespace alimer
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
-        D3D12GraphicsDevice() = default;
+        D3D12GraphicsDevice(bool validation);
         ~D3D12GraphicsDevice() override;
-
-        bool Init(const Desc& desc);
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void WaitForFenceValue(uint64_t fenceValue);
@@ -97,5 +93,12 @@ namespace alimer
 
         DescriptorHeap RTVHeap{};
         DescriptorHeap DSVHeap{};
+    };
+
+    class D3D12GraphicsDeviceFactory final : public GraphicsDeviceFactory
+    {
+    public:
+        BackendType GetBackendType() const override { return BackendType::Direct3D12; }
+        GraphicsDevice* CreateDevice(bool validation) override;
     };
 }

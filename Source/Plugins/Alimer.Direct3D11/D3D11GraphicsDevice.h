@@ -35,25 +35,27 @@ namespace alimer
         /// Destructor.
         ~D3D11GraphicsDevice() override;
 
-        IDXGIFactory2*      GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory2*      GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool                IsTearingSupported() const { return isTearingSupported; }
-        ID3D11Device1*      GetD3DDevice() const { return d3dDevice; }
+        ID3D11Device1*      GetD3DDevice() const { return d3dDevice.Get(); }
         D3D_FEATURE_LEVEL   GetDeviceFeatureLevel() const { return d3dFeatureLevel; }
 
     private:
         void CreateFactory();
+        void GetHardwareAdapter(IDXGIAdapter1** ppAdapter);
         void CreateDeviceResources();
         void Shutdown();
-        void InitCapabilities();
+        void InitCapabilities(IDXGIAdapter1* adapter);
 
         GraphicsContext* CreateContext(const GraphicsContextDescription& desc) override;
         Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         bool validation;
-        IDXGIFactory2* dxgiFactory = nullptr;
+        ComPtr<IDXGIFactory2> dxgiFactory;
+        bool flipPresentSupported = true;
         bool isTearingSupported = false;
-        ID3D11Device1* d3dDevice = nullptr;
-        ID3D11DeviceContext1* d3dContext = nullptr;
+        ComPtr<ID3D11Device1> d3dDevice;
+        ComPtr<ID3D11DeviceContext1> d3dContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
     };
