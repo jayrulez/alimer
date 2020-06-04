@@ -20,17 +20,31 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/CommandContext.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/GraphicsProvider.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    CommandContext::CommandContext(GraphicsDevice& device)
-        :  device{ device }
+    class D3D12GraphicsProvider final : public GraphicsProvider
     {
+    public:
+        D3D12GraphicsProvider(bool validation);
+        ~D3D12GraphicsProvider() override;
 
-    }
+        const D3D12PlatformFunctions* GetFunctions() const { return functions; }
+        GraphicsDevice* CreateDevice(const GraphicsDeviceDescriptor* descriptor) override;
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
+        bool IsTearingSupported() const { return isTearingSupported; }
+        D3D_FEATURE_LEVEL GetMinFeatureLevel() const { return minFeatureLevel; }
 
-    CommandContext::~CommandContext() = default;
+    private:
+        D3D12PlatformFunctions* functions;
+        DWORD dxgiFactoryFlags;
+
+        IDXGIFactory4* dxgiFactory = nullptr;
+        bool isTearingSupported = false;
+        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+    };
 }
-

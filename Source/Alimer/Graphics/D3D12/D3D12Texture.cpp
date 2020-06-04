@@ -128,7 +128,7 @@ namespace alimer
 
         D3D12GraphicsDevice* d3d12GraphicsDevice = static_cast<D3D12GraphicsDevice*>(&device);
         D3D12_CPU_DESCRIPTOR_HANDLE handle = d3d12GraphicsDevice->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
-        d3d12GraphicsDevice->GetHandle()->CreateRenderTargetView(resource, nullptr, handle);
+        d3d12GraphicsDevice->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, handle);
         rtvs[view] = handle;
         return handle;
     }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,20 +20,34 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "config.h"
+#include "graphics/GraphicsProvider.h"
+#include "Core/Assert.h"
 
-#include "Core/Plugin.h"
+#if defined(ALIMER_GRAPHICS_VULKAN)
+#endif
+
+#if defined(ALIMER_GRAPHICS_D3D12)
+#include "graphics/D3D12/D3D12GraphicsProvider.h"
+#endif
 
 namespace alimer
 {
-    class D3D12Plugin final : public IPlugin
+    GraphicsProvider::GraphicsProvider(BackendType backendType, bool validation)
+        : backendType(backendType), validation(validation)
     {
-    public:
-        D3D12Plugin(Engine& engine);
-        void Init() override;
-        const char* GetName() const override;
 
-    private:
-        Engine& engine;
-    };
+    }
+
+    GraphicsProvider* GraphicsProvider::Create(BackendType preferBackendType, bool validation)
+    {
+        if (preferBackendType == BackendType::Count) {
+
+        }
+
+        GraphicsProvider* provider = nullptr;
+        provider = new D3D12GraphicsProvider(validation);
+        return provider;
+    }
 }
+

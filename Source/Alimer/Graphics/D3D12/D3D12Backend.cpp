@@ -20,33 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Plugin.h"
-#include "D3D12GraphicsDevice.h"
-#include "Core/Engine.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    D3D12Plugin::D3D12Plugin(Engine& engine)
-        : engine{ engine }
+    D3D12PlatformFunctions::D3D12PlatformFunctions()
     {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        dxgiLib = LoadLibraryA("dxgi.dll");
+        dxgiGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
+        createDxgiFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
 
+        d3d12Lib = LoadLibraryA("d3d12.dll");
+        d3d12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12Lib, "D3D12CreateDevice");
+        d3d12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12Lib, "D3D12GetDebugInterface");
+#else
+        dxgiGetDebugInterface1 = DXGIGetDebugInterface1;
+        createDxgiFactory2 = CreateDXGIFactory2;
+        d3d12CreateDevice = D3D12CreateDevice;
+        d3d12GetDebugInterface = D3D12GetDebugInterface;
+#endif
     }
 
-    void D3D12Plugin::Init()
+    D3D12PlatformFunctions::~D3D12PlatformFunctions()
     {
-        engine.RegisterGraphicsDeviceFactory(new D3D12GraphicsDeviceFactory);
-    }
 
-    const char* D3D12Plugin::GetName() const
-    {
-        return "Alimer.Direct3D12";
-    }
-}
-
-extern "C"
-{
-    ALIMER_INTERFACE_EXPORT alimer::IPlugin* AlimerCreatePlugin(alimer::Engine& engine)
-    {
-        return new alimer::D3D12Plugin(engine);
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        FreeLibrary(dxgiLib);
+        FreeLibrary(d3d12Lib);
+#endif
     }
 }

@@ -99,9 +99,9 @@ namespace alimer
             desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
             if (d3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dSrvDescHeap)) != S_OK)
                 return;
-        }
+        }*/
 
-        //ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window->GetWindow(), true);
+        /*ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window->GetWindow(), true);
         ImGui_ImplDX12_Init(d3dDevice, NUM_FRAMES_IN_FLIGHT,
             DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
             g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),

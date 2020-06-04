@@ -26,9 +26,6 @@
 
 namespace alimer
 {
-    class GraphicsDevice;
-    class GraphicsDeviceFactory;
-
     struct ALIMER_API Engine
     {
     public:
@@ -46,11 +43,7 @@ namespace alimer
         /// Initialize engine with all subsystems and load all plugins.
         virtual bool Initialize() = 0;
 
-        /// 
-        virtual void RegisterGraphicsDeviceFactory(GraphicsDeviceFactory* factory) = 0;
-
         virtual IAllocator& GetAllocator() = 0;
         virtual struct PluginManager& GetPluginManager() = 0;
-        virtual GraphicsDevice& GetGraphicsDevice() = 0;
     };
 }

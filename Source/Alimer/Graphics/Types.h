@@ -28,7 +28,6 @@
 
 namespace alimer
 {
-    static constexpr uint32_t kMaxInflightFrames = 3;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -71,6 +70,13 @@ namespace alimer
         IntegratedGPU,
         CPU,
         Unknown
+    };
+
+    enum class GPUPowerPreference : uint32_t
+    {
+        Default,
+        LowPower,
+        HighPerformance,
     };
 
     enum class CommandQueueType : uint8_t
@@ -139,6 +145,9 @@ namespace alimer
     };
 
     /* Structures */
+    struct GraphicsDeviceDescriptor {
+        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+    };
 
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
@@ -216,6 +225,8 @@ namespace alimer
         PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         bool isFullscreen;
+
+        const char* label = nullptr;
     };
 
     struct TextureDescription

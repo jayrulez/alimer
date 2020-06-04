@@ -19,33 +19,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-
 #pragma once
 
-#include "graphics/GraphicsResource.h"
-#include "Math/Color.h"
+#include "Core/Platform.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
+    ALIMER_API i32 AtomicIncrement(volatile i32* value);
+    ALIMER_API i64 AtomicIncrement(volatile i64* value);
+    ALIMER_API i32 AtomicDecrement(volatile i32* value);
+    ALIMER_API i64 AtomicDecrement(volatile i64* value);
 
-    class CommandContext
-    {
-    protected:
-        /// Constructor.
-        CommandContext(GraphicsDevice& device);
+    ALIMER_API i32 AtomicAdd(i32 volatile* addend, i32 value);
+    ALIMER_API i64 AtomicAdd(i64 volatile* addend, i64 value);
+    ALIMER_API i32 AtomicSubtract(i32 volatile* addend, i32 value);
+    ALIMER_API i64 AtomicSubtract(i64 volatile* addend, i64 value);
 
-    public:
-        virtual ~CommandContext();
-
-        virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
-        virtual void EndRenderPass() = 0;
-        virtual void SetBlendColor(const Color& color) = 0;
-
-        virtual void Flush(bool wait = false) = 0;
-
-    protected:
-        GraphicsDevice& device;
-        std::string id;
-    };
+    ALIMER_API bool CompareAndExchange(i32 volatile* dest, i32 exchange, i32 comperand);
+    ALIMER_API bool CompareAndExchange64(i64 volatile* dest, i64 exchange, i64 comperand);
 }

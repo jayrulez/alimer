@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Backend.h"
-#include "core/Assert.h"
+#include "D3DHelpers.h"
 
 namespace alimer
 {

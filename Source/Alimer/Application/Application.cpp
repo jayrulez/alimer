@@ -23,6 +23,7 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "Core/Engine.h"
+#include "graphics/GraphicsProvider.h"
 #include "graphics/GraphicsDevice.h"
 #include "graphics/GraphicsContext.h"
 #include "UI/Gui.h"
@@ -34,12 +35,6 @@ namespace alimer
     Application::Application()
         : input(new InputManager())
     {
-        Engine::Configuration config;
-        config.plugins.Push("Alimer.Direct3D11");
-        config.plugins.Push("Alimer.Direct3D12");
-        config.plugins.Push("Alimer.Vulkan");
-        engine = Engine::Create(config, allocator);
-
         gameSystems.Push(input);
         PlatformConstuct();
     }
@@ -52,27 +47,32 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        gui.reset();
-        mainWindow.reset();
+        SafeDelete(gui);
         mainGraphicsContext.Reset();
-        Engine::Destroy(engine);
+        SafeDelete(graphicsDevice);
+        SafeDelete(graphicsProvider);
+        SafeDelete(mainWindow);
         PlatformDestroy();
     }
 
     void Application::InitBeforeRun()
     {
-        if (!engine->Initialize()) {
-            return;
-        }
+        bool validation = false;
+#ifdef _DEBUG
+        validation = true;
+#endif
+        graphicsProvider = GraphicsProvider::Create(BackendType::Direct3D12, validation);
+
+        GraphicsDeviceDescriptor descriptor = {};
+        graphicsDevice = graphicsProvider->CreateDevice(&descriptor);
 
         // Create main window.
         if (!headless)
         {
-            mainWindow.reset(new Window(
+            mainWindow = new Window(
                 config.windowTitle,
                 config.windowSize.width, config.windowSize.height,
-                WindowFlags::Resizable)
-            );
+                WindowFlags::Resizable);
 
             //window_set_centered(main_window);
             GraphicsContextDescription contextDesc = {};
@@ -80,16 +80,9 @@ namespace alimer
             contextDesc.width = mainWindow->GetSize().width;
             contextDesc.height = mainWindow->GetSize().height;
 
-            mainGraphicsContext = engine->GetGraphicsDevice().CreateContext(contextDesc);
+            mainGraphicsContext = graphicsDevice->CreateContext(contextDesc);
 
-            /*GraphicsViewDescriptor viewDescriptor = {};
-            viewDescriptor.width = mainWindow->GetSize().width;
-            viewDescriptor.height = mainWindow->GetSize().height;
-            //contextDescriptor.colorFormat = PixelFormat::BGRA8UNormSrgb;
-            viewDescriptor.colorFormat = PixelFormat::RGBA8UNorm;
-            mainView = graphicsDevice->CreateView(mainWindow->GetHandle(), &viewDescriptor);
-
-            gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));*/
+            //gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
 
         Initialize();
@@ -123,7 +116,9 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //mainGraphicsContext->BeginFrame();
+        /*if (!mainGraphicsContext->BeginFrame()) {
+            return false;
+        }*/
 
         for (auto gameSystem : gameSystems)
         {
@@ -141,12 +136,11 @@ namespace alimer
 
     void Application::Draw(const GameTime& gameTime)
     {
-        for (auto gameSystem : gameSystems)
+        /*for (auto gameSystem : gameSystems)
         {
             gameSystem->Draw(time);
         }
 
-#if TODO_IMGUI
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
@@ -183,18 +177,16 @@ namespace alimer
                 show_another_window = false;
             ImGui::End();
         }
+        */
 
-
-        auto& context = graphicsDevice->BeginContext("Frame");
+        /*auto& context = graphicsDevice->BeginContext("Frame");
         RenderPassDescriptor renderPass = {};
         renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
         renderPass.colorAttachments[0].clearColor = clear_color;
         context.BeginRenderPass(&renderPass);
         context.EndRenderPass();
         gui->Render(context);
-        context.Flush(true);
-#endif // TODO_IMGUI
-
+        context.Flush(true);*/
     }
 
     void Application::EndDraw()
@@ -204,7 +196,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //mainGraphicsContext->Present();
+        mainGraphicsContext->Flush();
     }
 
     int Application::Run()

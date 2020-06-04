@@ -26,34 +26,12 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
+#include "graphics/D3D/D3DHelpers.h"
 
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif 
-
-#if defined(_WIN32)
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif
-
-#include <wrl/client.h>
-
-#include <d3d12.h>
-
-#if defined(NTDDI_WIN10_RS2)
-#include <dxgi1_6.h>
+#if defined(_XBOX_ONE) && defined(_TITLE)
+#   include <d3d12_x.h>
 #else
-#include <dxgi1_5.h>
-#endif
-
-#if ( defined(_DEBUG) || defined(PROFILE) )
-#include <dxgidebug.h>
+#   include <d3d12.h>
 #endif
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
@@ -69,29 +47,34 @@ namespace D3D12MA
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
-#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
-#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
 
 namespace alimer
 {
     class D3D12GraphicsDevice;
 
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
-    struct DxgiFormatDesc
+    class D3D12PlatformFunctions
     {
-        PixelFormat format;
-        DXGI_FORMAT dxgiFormat;
+    public:
+        D3D12PlatformFunctions();
+        ~D3D12PlatformFunctions();
+
+        // Functions from dxgi.dll
+        using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
+        using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
+
+        PFN_DXGI_GET_DEBUG_INTERFACE1 dxgiGetDebugInterface1 = nullptr;
+        PFN_CREATE_DXGI_FACTORY2 createDxgiFactory2 = nullptr;
+
+        // Functions from d3d12.dll
+        PFN_D3D12_CREATE_DEVICE d3d12CreateDevice = nullptr;
+        PFN_D3D12_GET_DEBUG_INTERFACE d3d12GetDebugInterface = nullptr;
+
+    private:
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HMODULE dxgiLib = nullptr;
+        HMODULE d3d12Lib = nullptr;
+#endif
     };
-
-    extern const DxgiFormatDesc kDxgiFormatDesc[];
-
-    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
-    {
-        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
-        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
-    }
 
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(GraphicsResourceUsage usage)
     {

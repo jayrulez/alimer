@@ -20,28 +20,57 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsContext.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "core/Assert.h"
+#include "core/Log.h"
+#include "graphics/Types.h"
+
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif 
+
+#if defined(_WIN32)
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
+
+#if defined(NTDDI_WIN10_RS2)
+#   include <dxgi1_6.h>
+#else
+#   include <dxgi1_5.h>
+#endif
+
+#if ( defined(_DEBUG) || defined(PROFILE) )
+#   include <dxgidebug.h>
+
+#   if !defined(_XBOX_ONE) || !defined(_TITLE)
+#       pragma comment(lib,"dxguid.lib")
+#   endif
+#endif
+
+#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
+#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
 
 namespace alimer
 {
-    GraphicsContext::GraphicsContext(GraphicsDevice& device, const GraphicsContextDescription& desc)
-        :  device{ device }
-        , width(desc.width)
-        , height(desc.height)
-        , colorFormat(desc.colorFormat)
-        , depthStencilFormat(desc.depthStencilFormat)
+    struct DxgiFormatDesc
     {
+        PixelFormat format;
+        DXGI_FORMAT dxgiFormat;
+    };
 
-    }
+    extern const DxgiFormatDesc kDxgiFormatDesc[];
 
-    void GraphicsContext::Resize(uint32_t newWidth, uint32_t newHeight)
+    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
     {
-        width = newWidth;
-        height = newHeight;
-
-        //ResizeBackBuffer(width, height);
-        //ResizeDepthStencilBuffer(width, height);
+        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
+        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
     }
 }
-

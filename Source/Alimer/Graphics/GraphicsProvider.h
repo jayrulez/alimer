@@ -23,30 +23,27 @@
 #pragma once
 
 #include "graphics/Types.h"
-#include "D3D12Backend.h"
-#include "Core/Vector.h"
-#include <queue>
-#include <mutex>
 
 namespace alimer
 {
-    class D3D12CommandAllocatorPool final
+    class GraphicsDevice;
+
+    class GraphicsProvider
     {
+    protected:
+        /// Constructor.
+        GraphicsProvider(BackendType backendType, bool validation);
+
     public:
-        D3D12CommandAllocatorPool(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type_);
-        ~D3D12CommandAllocatorPool();
+        virtual ~GraphicsProvider() = default;
 
-        void Destroy();
+        /// Create new GraphicsProvider
+        static GraphicsProvider* Create(BackendType preferBackendType = BackendType::Count, bool validation = false);
 
-        ID3D12CommandAllocator* RequestAllocator(uint64_t fenceValue);
-        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
+        virtual GraphicsDevice* CreateDevice(const GraphicsDeviceDescriptor* descriptor) = 0;
 
-    private:
-        D3D12GraphicsDevice* device;
-        const D3D12_COMMAND_LIST_TYPE type;
-
-        Vector<ID3D12CommandAllocator*> allocators;
-        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
-        std::mutex allocatorMutex;
+    protected:
+        BackendType backendType;
+        bool validation;
     };
 }

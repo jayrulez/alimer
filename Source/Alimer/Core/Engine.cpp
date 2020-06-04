@@ -24,7 +24,6 @@
 #include "Core/Utils.h"
 #include "Core/Plugin.h"
 #include "Core/Log.h"
-#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
@@ -49,12 +48,6 @@ namespace alimer
 
         ~EngineImpl()
         {
-            SafeDelete(graphicsDevice);
-
-            for (u32 i = 0, count = graphicsDeviceFactories.Size(); i < count; i++) {
-                SafeDelete(graphicsDeviceFactories[i]);
-            }
-            graphicsDeviceFactories.Clear();
             PluginManager::Destroy(pluginManager);
         }
 
@@ -65,32 +58,15 @@ namespace alimer
 
             pluginManager->InitPlugins();
 
-            if (!graphicsDeviceFactories.Empty()) {
-                bool validation = false;
-#ifdef _DEBUG
-                validation = true;
-#endif
-                graphicsDevice = graphicsDeviceFactories[0]->CreateDevice(validation);
-            }
-
             initialized = true;
             return true;
         }
 
-        void RegisterGraphicsDeviceFactory(GraphicsDeviceFactory* factory) override
-        {
-            ALIMER_ASSERT(factory);
-            graphicsDeviceFactories.Push(factory);
-        }
-
         IAllocator& GetAllocator() override { return allocator; }
         PluginManager& GetPluginManager() override { return *pluginManager; }
-        GraphicsDevice& GetGraphicsDevice() override { return *graphicsDevice; }
     private:
         IAllocator& allocator;
         PluginManager* pluginManager;
-        Vector<GraphicsDeviceFactory*> graphicsDeviceFactories;
-        GraphicsDevice* graphicsDevice = nullptr;
         bool initialized;
     };
 

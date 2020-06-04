@@ -386,6 +386,13 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #undef NOMINMAX
 #endif
 
+#ifndef _WIN32
+#define _In_
+#define _In_z_
+#define _In_opt_
+#define _Inout_
+#endif
+
 //---------------------------------------------
 // Integer/float types and limits
 //---------------------------------------------
@@ -394,24 +401,24 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #include <float.h>
 
 namespace alimer {
-    using s8 = int8_t;
-    using s16 = int16_t;
-    using s32 = int32_t;
-    using s64 = int64_t;
+    using i8 = int8_t;
+    using i16 = int16_t;
+    using i32 = int32_t;
+    using i64 = int64_t;
     using u8 = uint8_t;
     using u16 = uint16_t;
     using u32 = uint32_t;
     using u64 = uint64_t;
-#if PLY_PTR_SIZE == 4
-    using sptr = int32_t;
-    using uptr = uint32_t;
-    using sreg = int32_t;
-    using ureg = uint32_t;
-#else
-    using sptr = int64_t;
+#if ALIMER_ARCH_64BIT
+    using iptr = int64_t;
     using uptr = uint64_t;
-    using sreg = int64_t;
+    using ireg = int64_t;
     using ureg = uint64_t;
+#else
+    using iptr = int32_t;
+    using uptr = uint32_t;
+    using ireg = int32_t;
+    using ureg = uint32_t;
 #endif
 
     //---------------------------------------------
@@ -423,10 +430,10 @@ namespace alimer {
         static constexpr type Min = lo; \
         static constexpr type Max = hi; \
     }
-    ALIMER_MAKE_LIMITS(s8, INT8_MIN, INT8_MAX);
-    ALIMER_MAKE_LIMITS(s16, INT16_MIN, INT16_MAX);
-    ALIMER_MAKE_LIMITS(s32, INT32_MIN, INT32_MAX);
-    ALIMER_MAKE_LIMITS(s64, INT64_MIN, INT64_MAX);
+    ALIMER_MAKE_LIMITS(i8, INT8_MIN, INT8_MAX);
+    ALIMER_MAKE_LIMITS(i16, INT16_MIN, INT16_MAX);
+    ALIMER_MAKE_LIMITS(i32, INT32_MIN, INT32_MAX);
+    ALIMER_MAKE_LIMITS(i64, INT64_MIN, INT64_MAX);
     ALIMER_MAKE_LIMITS(u8, 0, UINT8_MAX);
     ALIMER_MAKE_LIMITS(u16, 0, UINT16_MAX);
     ALIMER_MAKE_LIMITS(u32, 0, UINT32_MAX);

@@ -36,18 +36,29 @@ namespace alimer
         GraphicsContext(GraphicsDevice& device, const GraphicsContextDescription& desc);
 
     public:
-        virtual ~GraphicsContext();
+        virtual ~GraphicsContext() = default;
 
         void Resize(uint32_t newWidth, uint32_t newHeight);
 
-        /// Present on screen.
-        virtual void Present() = 0;
+        /// Begin command recording.
+        virtual void Begin(const char* name, bool profile) = 0;
 
-        Texture* GetCurrentColorTexture() const;
+        /// End command recording.
+        virtual void End() = 0;
+
+        /// End active frame and present on screen (if required).
+        virtual void Flush(bool wait = false) = 0;
+
+        /// Get the current SwapChain or offscreen texture.
+        virtual Texture* GetCurrentColorTexture() const = 0;
+
+        virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
+        virtual void EndRenderPass() = 0;
+        virtual void SetBlendColor(const Color& color) = 0;
 
     protected:
         /// Release the GPU resources.
-        virtual void Destroy();
+        virtual void Destroy() = 0;
 
         GraphicsDevice& device;
 
@@ -55,7 +66,5 @@ namespace alimer
         uint32_t height;
         PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        u32 backbufferIndex = 0;
-        Texture* colorTextures[kMaxInflightFrames] = {};
     };
 }

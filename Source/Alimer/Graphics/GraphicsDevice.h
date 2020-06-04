@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "graphics/CommandContext.h"
 #include "graphics/GraphicsResource.h"
 #include <memory>
 
@@ -59,12 +58,5 @@ namespace alimer
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
-    };
-
-    class ALIMER_API GraphicsDeviceFactory
-    {
-    public:
-        virtual BackendType GetBackendType() const = 0;
-        virtual GraphicsDevice* CreateDevice(bool validation) = 0;
     };
 }

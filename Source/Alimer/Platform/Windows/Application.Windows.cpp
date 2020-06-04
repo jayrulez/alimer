@@ -90,8 +90,6 @@ namespace alimer
 
     void Application::PlatformRun()
     {
-
-
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         try
 #endif

@@ -49,6 +49,11 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
+if (ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D12)
+endif ()
+
 group_sources()
 
 if (ALIMER_BUILD_SHARED)

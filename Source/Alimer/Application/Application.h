@@ -26,7 +26,6 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Math/size.h"
-#include <memory>
 
 namespace alimer
 {
@@ -48,6 +47,8 @@ namespace alimer
     struct Engine;
     class Window;
     class InputManager;
+    class GraphicsProvider;
+    class GraphicsDevice;
     class GraphicsContext;
     class Gui;
 
@@ -69,7 +70,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        Window* GetMainWindow() const { return mainWindow.get(); }
+        Window* GetMainWindow() const { return mainWindow; }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -100,7 +101,6 @@ namespace alimer
         Vector<std::string> args;
 
         DefaultAllocator allocator;
-        Engine* engine = nullptr;
 
         int exitCode = 0;
         Configuration config;
@@ -109,14 +109,16 @@ namespace alimer
         // Rendering loop timer.
         GameTime time;
 
-        std::unique_ptr<Window> mainWindow;
+        Window* mainWindow = nullptr;
         Vector<GameSystem*> gameSystems;
         InputManager* input;
 
+        GraphicsProvider* graphicsProvider = nullptr;
+        GraphicsDevice* graphicsDevice = nullptr;
         RefPtr<GraphicsContext> mainGraphicsContext;
 
         bool headless{ false };
-        std::unique_ptr<Gui> gui;
+        Gui* gui = nullptr;
     };
 } // namespace alimer
 
