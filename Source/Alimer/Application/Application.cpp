@@ -25,7 +25,9 @@
 #include "Core/Engine.h"
 #include "graphics/GraphicsProvider.h"
 #include "graphics/GraphicsDevice.h"
-#include "graphics/GraphicsContext.h"
+#include "graphics/CommandQueue.h"
+#include "graphics/CommandBuffer.h"
+#include "graphics/SwapChain.h"
 #include "UI/Gui.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
@@ -48,7 +50,7 @@ namespace alimer
 
         gameSystems.Clear();
         SafeDelete(gui);
-        mainGraphicsContext.Reset();
+        mainSwapChain.Reset();
         SafeDelete(graphicsDevice);
         SafeDelete(graphicsProvider);
         SafeDelete(mainWindow);
@@ -65,6 +67,7 @@ namespace alimer
 
         GraphicsDeviceDescriptor descriptor = {};
         graphicsDevice = graphicsProvider->CreateDevice(&descriptor);
+        commandQueue = graphicsDevice->CreateCommandQueue(CommandQueueType::Graphics);
 
         // Create main window.
         if (!headless)
@@ -75,12 +78,12 @@ namespace alimer
                 WindowFlags::Resizable);
 
             //window_set_centered(main_window);
-            GraphicsContextDescription contextDesc = {};
-            contextDesc.handle = mainWindow->GetHandle();
-            contextDesc.width = mainWindow->GetSize().width;
-            contextDesc.height = mainWindow->GetSize().height;
+            SwapChainDescriptor swapChainDesc = {};
+            swapChainDesc.handle = mainWindow->GetHandle();
+            swapChainDesc.width = mainWindow->GetSize().width;
+            swapChainDesc.height = mainWindow->GetSize().height;
 
-            mainGraphicsContext = graphicsDevice->CreateContext(contextDesc);
+            mainSwapChain = graphicsDevice->CreateSwapChain(commandQueue.Get(), &swapChainDesc);
 
             //gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
@@ -179,6 +182,8 @@ namespace alimer
         }
         */
 
+        auto commandBuffer = commandQueue->GetCommandBuffer();
+
         /*auto& context = graphicsDevice->BeginContext("Frame");
         RenderPassDescriptor renderPass = {};
         renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
@@ -196,7 +201,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        mainGraphicsContext->Flush();
+        mainSwapChain->Present();
     }
 
     int Application::Run()

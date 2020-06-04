@@ -217,7 +217,7 @@ namespace alimer
         Limits limits;
     };
 
-    struct GraphicsContextDescription
+    struct SwapChainDescriptor
     {
         uintptr_t handle; /* Null for headless mode. */
         uint32_t width;

@@ -20,20 +20,39 @@
 // THE SOFTWARE.
 //
 
-/*#include "graphics/Framebuffer.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    Framebuffer::Framebuffer(GraphicsDevice &device)
-        : GraphicsResource(device, Type::Texture)
+    class D3D12Texture;
+
+    class D3D12SwapChain final : public SwapChain
     {
+    public:
+        D3D12SwapChain(D3D12GraphicsDevice* device, CommandQueue* commandQueue, const SwapChainDescriptor* descriptor);
+        ~D3D12SwapChain() override;
+        void Destroy() override;
 
-    }
+        void Present() override;
+        Texture* GetCurrentColorTexture() const override;
 
-    const usize& Framebuffer::getExtent() const
-    {
-        return extent;
-    }
-}*/
+    private:
+        void CreateRenderTargets();
 
+        static constexpr u32 kNumBackBuffers = 2;
+
+        D3D12GraphicsDevice* device;
+        
+        DXGI_FORMAT dxgiColorFormat;
+
+        /* SwapChain data */
+        IDXGISwapChain3* swapChain = nullptr;
+        u32 syncInterval = 1;
+        u32 presentFlags = 0;
+        u32 backbufferIndex = 0;
+        D3D12Texture* colorTextures[kNumBackBuffers] = {};
+    };
+}

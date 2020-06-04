@@ -20,28 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsContext.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "graphics/Types.h"
+#include "Core/Ptr.h"
 
 namespace alimer
 {
-    GraphicsContext::GraphicsContext(GraphicsDevice& device, const GraphicsContextDescription& desc)
-        :  device{ device }
-        , width(desc.width)
-        , height(desc.height)
-        , colorFormat(desc.colorFormat)
-        , depthStencilFormat(desc.depthStencilFormat)
+    class CommandBuffer;
+    class GraphicsDevice;
+
+    /// Defines a queue that organizes command buffers to be executed by a GPU.
+    class CommandQueue : public RefCounted
     {
+    public:
+        CommandQueue(GraphicsDevice* device, CommandQueueType queueType);
+        virtual ~CommandQueue() = default;
 
-    }
+        virtual void WaitIdle() = 0;
 
-    void GraphicsContext::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        width = newWidth;
-        height = newHeight;
+        // Get an available command buffer from the command queue.
+        virtual RefPtr<CommandBuffer> GetCommandBuffer() = 0;
 
-        //ResizeBackBuffer(width, height);
-        //ResizeDepthStencilBuffer(width, height);
-    }
+        /// Returns the device from which this command queue was created.
+        GraphicsDevice* GetDevice() const;
+        CommandQueueType GetQueueType() const { return queueType; }
+
+    protected:
+        GraphicsDevice* device;
+        CommandQueueType queueType;
+    };
 }
-

@@ -22,26 +22,19 @@
 
 #pragma once
 
-#include "graphics/GraphicsContext.h"
+#include "graphics/CommandBuffer.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12Texture;
+    class D3D12CommandQueue;
 
-    class D3D12GraphicsContext final : public GraphicsContext
+    class D3D12CommandBuffer final : public CommandBuffer
     {
     public:
-        D3D12GraphicsContext(D3D12GraphicsDevice* device, const GraphicsContextDescription& desc);
-        ~D3D12GraphicsContext() override;
-        void Destroy() override;
+        D3D12CommandBuffer(D3D12CommandQueue* commandQueue);
+        ~D3D12CommandBuffer() override;
 
-        void WaitForGPU();
-        void Begin(const char* name, bool profile) override;
-        void End() override;
-
-        void Flush(bool wait) override;
-        Texture* GetCurrentColorTexture() const override;
         void BeginRenderPass(const RenderPassDescriptor* descriptor) override;
         void EndRenderPass() override;
         void SetBlendColor(const Color& color) override;
@@ -52,34 +45,10 @@ namespace alimer
         void FlushResourceBarriers(void);
 
     private:
-        void CreateRenderTargets();
-
-        static const u64 kRenderLatency = 2;
-        static constexpr u32 kNumBackBuffers = 2;
-
-        D3D12GraphicsDevice* device;
         bool useRenderPass;
-        DXGI_FORMAT dxgiColorFormat;
-
-        /* Frame data */
-        ID3D12CommandQueue* commandQueue = nullptr;
-        ID3D12CommandAllocator* commandAllocators[kRenderLatency] = { };
+        ID3D12CommandAllocator* commandAllocator;
         ID3D12GraphicsCommandList* commandList;
         ID3D12GraphicsCommandList4* commandList4 = nullptr;
-        ID3D12Fence* fence;
-        HANDLE fenceEvent;
-
-        /// Whether a frame is active or not
-        bool frameActive{ false };
-        u64 currentCPUFrame{ 0 };
-        u64 frameIndex{ 0 };
-
-        /* SwapChain data */
-        IDXGISwapChain3* swapChain = nullptr;
-        u32 syncInterval = 1;
-        u32 presentFlags = 0;
-        u32 backbufferIndex = 0;
-        D3D12Texture* colorTextures[kNumBackBuffers] = {};
 
         /* Barriers */
         static constexpr u32 kMaxResourceBarriers = 16;

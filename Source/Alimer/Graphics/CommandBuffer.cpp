@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,44 +20,27 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GraphicsResource.h"
-#include <memory>
+#include "Core/Assert.h"
+#include "graphics/CommandBuffer.h"
+#include "graphics/CommandQueue.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class CommandQueue;
-    class Texture;
-    class SwapChain;
-
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    CommandBuffer::CommandBuffer(CommandQueue& commandQueue)
+        : commandQueue(commandQueue)
     {
-    public:
-        struct Desc
-        {
-            BackendType backendType = BackendType::Count;
-            std::string applicationName;
-            bool enableDebugLayer = false;
-            bool headless = false;
-        };
 
-        virtual ~GraphicsDevice() = default;
+    }
 
-        virtual RefPtr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const char* name = nullptr) = 0;
-        virtual RefPtr<SwapChain> CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor) = 0;
+    GraphicsDevice* CommandBuffer::GetDevice() const
+    {
+        return commandQueue.GetDevice();
+    }
 
-        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
-
-        const GraphicsDeviceCaps& GetCaps() const;
-
-    protected:
-        GraphicsDevice() = default;
-
-        GraphicsDeviceCaps caps{};
-
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
-    };
+    const CommandQueue& CommandBuffer::GetCommandQueue() const
+    {
+        return commandQueue;
+    }
 }
+

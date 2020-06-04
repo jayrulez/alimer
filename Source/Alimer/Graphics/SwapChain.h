@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,42 +22,40 @@
 
 #pragma once
 
-#include "graphics/GraphicsResource.h"
-#include <memory>
+#include "graphics/Texture.h"
+#include "Math/Color.h"
 
 namespace alimer
 {
     class CommandQueue;
-    class Texture;
-    class SwapChain;
 
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class SwapChain : public RefCounted
     {
+    protected:
+        /// Constructor.
+        SwapChain(GraphicsDevice& device, CommandQueue* commandQueue, const SwapChainDescriptor* descriptor);
+
     public:
-        struct Desc
-        {
-            BackendType backendType = BackendType::Count;
-            std::string applicationName;
-            bool enableDebugLayer = false;
-            bool headless = false;
-        };
+        virtual ~SwapChain() = default;
 
-        virtual ~GraphicsDevice() = default;
+        void Resize(uint32_t newWidth, uint32_t newHeight);
 
-        virtual RefPtr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const char* name = nullptr) = 0;
-        virtual RefPtr<SwapChain> CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor) = 0;
+        /// Present on screen.
+        virtual void Present() = 0;
 
-        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
-
-        const GraphicsDeviceCaps& GetCaps() const;
+        /// Get the current SwapChain or offscreen texture.
+        virtual Texture* GetCurrentColorTexture() const = 0;
 
     protected:
-        GraphicsDevice() = default;
+        /// Release the GPU resources.
+        virtual void Destroy() = 0;
 
-        GraphicsDeviceCaps caps{};
+        GraphicsDevice& device;
+        CommandQueue* commandQueue;
 
-    private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
     };
 }

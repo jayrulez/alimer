@@ -49,7 +49,8 @@ namespace alimer
     class InputManager;
     class GraphicsProvider;
     class GraphicsDevice;
-    class GraphicsContext;
+    class CommandQueue;
+    class SwapChain;
     class Gui;
 
     class ALIMER_API Application : public Object
@@ -115,12 +116,13 @@ namespace alimer
 
         GraphicsProvider* graphicsProvider = nullptr;
         GraphicsDevice* graphicsDevice = nullptr;
-        RefPtr<GraphicsContext> mainGraphicsContext;
+        RefPtr<CommandQueue> commandQueue;
+        RefPtr<SwapChain> mainSwapChain;
 
         bool headless{ false };
         Gui* gui = nullptr;
     };
-} // namespace alimer
+} 
 
 #if defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
 #include "Core/MiniDump.h"

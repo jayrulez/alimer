@@ -52,7 +52,8 @@ namespace alimer
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void Shutdown();
 
-        GraphicsContext* CreateContext(const GraphicsContextDescription& desc) override;
+        RefPtr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const char* name) override;
+        RefPtr<SwapChain> CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor) override;
         Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
         
         bool supportsRenderPass = false;

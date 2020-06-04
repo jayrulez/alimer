@@ -20,32 +20,22 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Texture.h"
-#include "math/size.h"
+#include "Core/Assert.h"
+#include "graphics/CommandQueue.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    /*enum class FramebufferResizeResult
+    CommandQueue::CommandQueue(GraphicsDevice* device, CommandQueueType queueType)
+        : device(device)
+        , queueType(queueType)
     {
-        Success,
-        NoSurface,
-        Error
-    };
 
-    class Framebuffer : public GraphicsResource
+    }
+
+    GraphicsDevice* CommandQueue::GetDevice() const
     {
-        ALIMER_OBJECT(Framebuffer, GraphicsResource);
+        return device;
+    }
+}
 
-    protected:
-        /// Constructor.
-        Framebuffer(GraphicsDevice &device);
-
-    public:
-        const usize& getExtent() const;
-
-    protected:
-        usize extent{};
-    };*/
-} 

@@ -22,49 +22,32 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
-#include "Math/Color.h"
+#include "graphics/Types.h"
+#include "Core/Ptr.h"
 
 namespace alimer
 {
-    class CommandContext;
+    class GraphicsDevice;
+    class CommandQueue;
 
-    class GraphicsContext : public RefCounted
+    /// Defines a container that stores encoded commands for the GPU to execute.
+    class CommandBuffer : public RefCounted
     {
-    protected:
-        /// Constructor.
-        GraphicsContext(GraphicsDevice& device, const GraphicsContextDescription& desc);
-
     public:
-        virtual ~GraphicsContext() = default;
-
-        void Resize(uint32_t newWidth, uint32_t newHeight);
-
-        /// Begin command recording.
-        virtual void Begin(const char* name, bool profile) = 0;
-
-        /// End command recording.
-        virtual void End() = 0;
-
-        /// End active frame and present on screen (if required).
-        virtual void Flush(bool wait = false) = 0;
-
-        /// Get the current SwapChain or offscreen texture.
-        virtual Texture* GetCurrentColorTexture() const = 0;
+        CommandBuffer(CommandQueue& commandQueue);
+        virtual ~CommandBuffer() = default;
 
         virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
         virtual void EndRenderPass() = 0;
         virtual void SetBlendColor(const Color& color) = 0;
 
+        /// Returns the device from which this command buffer was created.
+        GraphicsDevice* GetDevice() const;
+
+        /// Returns the command queue that created the command buffer.
+        const CommandQueue& GetCommandQueue() const;
+
     protected:
-        /// Release the GPU resources.
-        virtual void Destroy() = 0;
-
-        GraphicsDevice& device;
-
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        CommandQueue& commandQueue;
     };
 }

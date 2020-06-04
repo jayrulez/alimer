@@ -22,8 +22,9 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "D3D12GraphicsProvider.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12Texture.h"
-#include "D3D12GraphicsContext.h"
+#include "D3D12SwapChain.h"
 #include "D3D12MemAlloc.h"
 #include "core/String.h"
 
@@ -321,9 +322,14 @@ namespace alimer
         return CPUHandle;
     }
 
-    GraphicsContext* D3D12GraphicsDevice::CreateContext(const GraphicsContextDescription& desc)
+    RefPtr<CommandQueue> D3D12GraphicsDevice::CreateCommandQueue(CommandQueueType queueType, const char* name)
     {
-        return new D3D12GraphicsContext(this, desc);
+        return new D3D12CommandQueue(this, queueType, name);
+    }
+
+    RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor)
+    {
+        return new D3D12SwapChain(this, commandQueue, descriptor);
     }
 
     Texture* D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
