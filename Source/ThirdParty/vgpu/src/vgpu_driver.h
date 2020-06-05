@@ -88,6 +88,7 @@ typedef struct vgpu_driver {
 } vgpu_driver;
 
 extern vgpu_driver d3d11_driver;
+extern vgpu_driver d3d12_driver;
 extern vgpu_driver vulkan_driver;
 extern vgpu_driver gl_driver;
 

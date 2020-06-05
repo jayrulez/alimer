@@ -34,6 +34,7 @@ add_library(vgpu
 	src/vgpu.c
     src/vgpu_d3d_common.h
     src/vgpu_driver_d3d11.c
+    src/vgpu_driver_d3d12.c
     src/vgpu_driver_opengl.c
     src/vgpu_driver_vulkan.c
 )

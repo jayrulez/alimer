@@ -27,6 +27,9 @@ static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D11)
     &d3d11_driver,
 #endif
+#if defined(VGPU_DRIVER_D3D12)
+    &d3d12_driver,
+#endif
 #if defined(VGPU_DRIVER_VULKAN)
     &vulkan_driver,
 #endif

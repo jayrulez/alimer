@@ -37,7 +37,6 @@ static const IID D3D11_IID_ID3D11Texture2D = { 0x6f15aaf2,0xd208,0x4e89, {0x9a,0
 static struct {
     bool available_initialized;
     bool available;
-    uint32_t device_count;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     struct
@@ -214,8 +213,6 @@ static void d3d11_destroy(vgpu_device device)
         IDXGISwapChain1_Release(renderer->swapchain);
     }
 
-    d3d11.device_count--;
-
     ULONG ref_count = ID3D11Device1_Release(renderer->device);
 #if !defined(NDEBUG)
     if (ref_count > 0)
@@ -225,7 +222,7 @@ static void d3d11_destroy(vgpu_device device)
         ID3D11Debug* d3d_debug = NULL;
         if (SUCCEEDED(ID3D11Device1_QueryInterface(renderer->device, &D3D11_IID_ID3D11Debug, (void**)&d3d_debug)))
         {
-            ID3D11Debug_ReportLiveDeviceObjects(d3d_debug, D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
+            ID3D11Debug_ReportLiveDeviceObjects(d3d_debug, D3D11_RLDO_DETAIL);
             ID3D11Debug_Release(d3d_debug);
         }
     }
@@ -233,24 +230,7 @@ static void d3d11_destroy(vgpu_device device)
     (void)ref_count; // avoid warning
 #endif
 
-#ifdef _DEBUG
-    if (d3d11.device_count == 0)
-    {
-        IDXGIFactory2_Release(renderer->factory);
-
-        IDXGIDebug1* dxgiDebug;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (d3d11.dxgi.DXGIGetDebugInterface1 &&
-            SUCCEEDED(vgpuDXGIGetDebugInterface1(0, &D3D_IID_IDXGIDebug1, (void**)&dxgiDebug)))
-#else
-        if (SUCCEEDED(vgpuDXGIGetDebugInterface1(0, &D3D_IID_IDXGIDebug1, (void**)&dxgiDebug)))
-#endif
-        {
-            IDXGIDebug1_ReportLiveObjects(dxgiDebug, D3D_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-            IDXGIDebug1_Release(dxgiDebug);
-        }
-    }
-#endif
+    IDXGIFactory2_Release(renderer->factory);
 
     VGPU_FREE(renderer);
     VGPU_FREE(device);
@@ -541,8 +521,6 @@ static vgpu_device d3d11_create_device(const vgpu_device_desc* desc) {
             3u /* triple buffering */
         );
     }
-
-    d3d11.device_count++;
 
     /* Create and return the gpu_device */
     result = VGPU_ALLOC(vgpu_device_t);
