@@ -128,3 +128,30 @@ void vgpu_begin_frame(vgpu_device device) {
 void vgpu_present_frame(vgpu_device device) {
     device->present_frame(device->renderer);
 }
+
+static vgpu_texture_desc _vgpu_texture_desc_defaults(const vgpu_texture_desc* desc) {
+    vgpu_texture_desc def = *desc;
+    def.type = _vgpu_def(desc->type, VGPU_TEXTURE_TYPE_2D);
+    def.format = _vgpu_def(desc->format, VGPU_TEXTURE_FORMAT_RGBA8_UNORM);
+    def.width = _vgpu_def(desc->width, 1u);
+    def.height = _vgpu_def(desc->height, 1u);
+    def.depth_or_layers = _vgpu_def(desc->depth_or_layers, 1u);
+    def.mip_levels = _vgpu_def(desc->mip_levels, 1u);
+    def.sample_count = _vgpu_def(desc->sample_count, VGPU_SAMPLE_COUNT_1);
+    return def;
+}
+
+vgpu_texture vgpu_create_texture(vgpu_device device, const vgpu_texture_desc* desc) {
+    VGPU_ASSERT(device);
+    VGPU_ASSERT(desc);
+
+    vgpu_texture_desc desc_def = _vgpu_texture_desc_defaults(desc);
+    return device->create_texture(device->renderer, &desc_def);
+}
+
+void vgpu_destroy_texture(vgpu_device device, vgpu_texture texture) {
+    VGPU_ASSERT(device);
+    VGPU_ASSERT(texture);
+
+    device->destroy_texture(device->renderer, texture);
+}

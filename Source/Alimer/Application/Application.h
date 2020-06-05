@@ -26,6 +26,7 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Math/size.h"
+#include <vgpu.hpp>
 
 namespace alimer
 {
@@ -47,10 +48,6 @@ namespace alimer
     struct Engine;
     class Window;
     class InputManager;
-    class GraphicsProvider;
-    class GraphicsDevice;
-    class CommandQueue;
-    class SwapChain;
     class Gui;
 
     class ALIMER_API Application : public Object
@@ -114,10 +111,7 @@ namespace alimer
         Vector<GameSystem*> gameSystems;
         InputManager* input;
 
-        GraphicsProvider* graphicsProvider = nullptr;
-        GraphicsDevice* graphicsDevice = nullptr;
-        RefPtr<CommandQueue> commandQueue;
-        RefPtr<SwapChain> mainSwapChain;
+        vgpu_device gpu_device = nullptr;
 
         bool headless{ false };
         Gui* gui = nullptr;

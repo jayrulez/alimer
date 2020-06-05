@@ -46,6 +46,7 @@ extern "C" {
 #endif /* __cplusplus */
 
     typedef struct vgpu_device_t* vgpu_device;
+    typedef struct vgpu_texture_t* vgpu_texture;
 
     typedef enum vgpu_log_level {
         VGPU_LOG_LEVEL_ERROR,
@@ -123,6 +124,14 @@ extern "C" {
         _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_format;
 
+    typedef enum vgpu_texture_type {
+        VGPU_TEXTURE_TYPE_2D,
+        VGPU_TEXTURE_TYPE_3D,
+        VGPU_TEXTURE_TYPE_CUBE,
+        VGPU_TEXTURE_TYPE_ARRAY,
+        _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_texture_type;
+
     typedef enum vgpu_sample_count {
         VGPU_SAMPLE_COUNT_1 = 1,
         VGPU_SAMPLE_COUNT_2 = 2,
@@ -132,7 +141,6 @@ extern "C" {
         VGPU_SAMPLE_COUNT_32 = 32,
         _VGPU_SAMPLE_COUNT_FORCE_U32 = 0x7FFFFFFF
     } vgpu_sample_count;
-
 
     typedef enum vgpu_present_interval {
         VGPU_PRESENT_INTERVAL_DEFAULT,
@@ -149,6 +157,18 @@ extern "C" {
         void* (*allocate_memory)(void* user_data, size_t size);
         void (*free_memory)(void* user_data, void* ptr);
     } vgpu_allocation_callbacks;
+
+    typedef struct vgpu_texture_desc {
+        vgpu_texture_type type;
+        vgpu_texture_format format;
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth_or_layers;
+        uint32_t mip_levels;
+        vgpu_sample_count sample_count;
+        const void* external_handle;
+        const char* label;
+    } vgpu_texture_desc;
 
     typedef struct vgpu_swapchain_desc {
         uintptr_t window_handle;
@@ -176,6 +196,10 @@ extern "C" {
     VGPU_API void vgpu_destroy_device(vgpu_device device);
     VGPU_API void vgpu_begin_frame(vgpu_device device);
     VGPU_API void vgpu_present_frame(vgpu_device device);
+
+    /* Texture */
+    VGPU_API vgpu_texture vgpu_create_texture(vgpu_device device, const vgpu_texture_desc* desc);
+    VGPU_API void vgpu_destroy_texture(vgpu_device device, vgpu_texture texture);
 
 #ifdef __cplusplus
 }

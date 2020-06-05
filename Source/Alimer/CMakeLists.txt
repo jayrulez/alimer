@@ -71,16 +71,10 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
+    vgpu
     stb
     imgui
 )
-
-if (ALIMER_GRAPHICS_VULKAN)
-    target_link_libraries(${TARGET_NAME} PRIVATE
-        volk
-        vma
-    )
-endif ()
 
 # Link platform specific libraries
 if(ANDROID)

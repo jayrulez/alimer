@@ -71,6 +71,9 @@ typedef struct vgpu_device_t {
     void(*begin_frame)(vgpu_renderer driver_data);
     void(*present_frame)(vgpu_renderer driver_data);
 
+    vgpu_texture (*create_texture)(vgpu_renderer driver_data, const vgpu_texture_desc* desc);
+    void(*destroy_texture)(vgpu_renderer driver_data, vgpu_texture handle);
+
     /* Opaque pointer for the implementation */
     vgpu_renderer renderer;
 } vgpu_device_t;
@@ -79,7 +82,9 @@ typedef struct vgpu_device_t {
 #define ASSIGN_DRIVER(name) \
 	ASSIGN_DRIVER_FUNC(destroy, name)\
     ASSIGN_DRIVER_FUNC(begin_frame, name)\
-    ASSIGN_DRIVER_FUNC(present_frame, name)
+    ASSIGN_DRIVER_FUNC(present_frame, name)\
+    ASSIGN_DRIVER_FUNC(create_texture, name)\
+    ASSIGN_DRIVER_FUNC(destroy_texture, name)
 
 typedef struct vgpu_driver {
     vgpu_backend_type backend_type;

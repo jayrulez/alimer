@@ -88,11 +88,11 @@ static bool d3d11_sdk_layers_available() {
     return SUCCEEDED(hr);
 }
 
-
-typedef struct d3d11_renderer
-{
+typedef struct d3d11_renderer {
     IDXGIFactory2* factory;
     uint32_t factory_caps;
+
+    uint32_t backbuffer_count;
 
     ID3D11Device1* device;
     ID3D11DeviceContext1* context;
@@ -102,7 +102,12 @@ typedef struct d3d11_renderer
     UINT sync_interval;
     UINT present_flags;
     IDXGISwapChain1* swapchain;
+    vgpu_texture backbuffer;
 } d3d11_renderer;
+
+typedef struct d3d11_texture {
+    ID3D11Resource* handle;
+} d3d11_texture;
 
 /* Device functions */
 static bool d3d11_create_factory(d3d11_renderer* renderer, bool validation)
@@ -210,6 +215,7 @@ static void d3d11_destroy(vgpu_device device)
     ID3DUserDefinedAnnotation_Release(renderer->d3d_annotation);
 
     if (renderer->swapchain) {
+        vgpu_destroy_texture(device, renderer->backbuffer);
         IDXGISwapChain1_Release(renderer->swapchain);
     }
 
@@ -234,7 +240,7 @@ static void d3d11_destroy(vgpu_device device)
 
     VGPU_FREE(renderer);
     VGPU_FREE(device);
-}
+    }
 
 static void d3d11_begin_frame(vgpu_renderer driver_data) {
 }
@@ -244,6 +250,74 @@ static void d3d11_present_frame(vgpu_renderer driver_data) {
     if (renderer->swapchain) {
         IDXGISwapChain1_Present(renderer->swapchain, renderer->sync_interval, renderer->present_flags);
     }
+}
+
+/* Texture */
+static vgpu_texture d3d11_create_texture(vgpu_renderer driver_data, const vgpu_texture_desc* desc) {
+    d3d11_renderer* renderer = (d3d11_renderer*)driver_data;
+    d3d11_texture* result = VGPU_ALLOC(d3d11_texture);
+    memset(result, '\0', sizeof(d3d11_texture));
+
+    HRESULT hr = S_OK;
+    if (desc->external_handle) {
+        result->handle = (ID3D11Resource*)desc->external_handle;
+    }
+    else {
+        if (desc->type == VGPU_TEXTURE_TYPE_2D || desc->type == VGPU_TEXTURE_TYPE_ARRAY) {
+            const D3D11_TEXTURE2D_DESC d3d11_desc = {
+                .Width = desc->width,
+                .Height = desc->height,
+                .MipLevels = desc->mip_levels,
+                .ArraySize = desc->depth_or_layers,
+                .Format = vgpu_d3d_texture_format(desc->format),
+                .SampleDesc = {
+                    .Count = 1,
+                    .Quality = 0
+                },
+                .Usage = D3D11_USAGE_DEFAULT,
+                .BindFlags = 0,
+                .CPUAccessFlags = 0,
+                .MiscFlags = 0
+            };
+
+            hr = ID3D11Device_CreateTexture2D(
+                renderer->device,
+                &d3d11_desc,
+                NULL,
+                (ID3D11Texture2D**)&result->handle
+            );
+        }
+    }
+
+    return (vgpu_texture)result;
+}
+
+static void d3d11_destroy_texture(vgpu_renderer driver_data, vgpu_texture handle) {
+    d3d11_renderer* renderer = (d3d11_renderer*)driver_data;
+    d3d11_texture* texture = (d3d11_texture*)handle;
+    ID3D11Resource_Release(texture->handle);
+    VGPU_FREE(handle);
+}
+
+static void d3d11_UpdateSwapChain(vgpu_renderer driver_data, vgpu_texture_format format) {
+    d3d11_renderer* renderer = (d3d11_renderer*)driver_data;
+    ID3D11Texture2D* backbuffer;
+    VHR(IDXGISwapChain1_GetBuffer(renderer->swapchain, 0, &D3D11_IID_ID3D11Texture2D, (void**)&backbuffer));
+
+    D3D11_TEXTURE2D_DESC d3d_desc;
+    ID3D11Texture2D_GetDesc(backbuffer, &d3d_desc);
+
+    const vgpu_texture_desc texture_desc = {
+        .type = VGPU_TEXTURE_TYPE_2D,
+        .format = format,
+        .width = d3d_desc.Width,
+        .height = d3d_desc.Height,
+        .depth_or_layers = d3d_desc.ArraySize,
+        .mip_levels = d3d_desc.MipLevels,
+        .sample_count = (vgpu_sample_count)d3d_desc.SampleDesc.Count,
+        .external_handle = backbuffer
+    };
+    renderer->backbuffer = d3d11_create_texture(driver_data, &texture_desc);
 }
 
 /* Driver functions */
@@ -378,6 +452,7 @@ static vgpu_device d3d11_create_device(const vgpu_device_desc* desc) {
     /* Allocate and zero out the renderer */
     renderer = VGPU_ALLOC(d3d11_renderer);
     memset(renderer, 0, sizeof(d3d11_renderer));
+    renderer->backbuffer_count = 2u;
 
     if (!d3d11_create_factory(renderer, desc->debug)) {
         return NULL;
@@ -518,8 +593,11 @@ static vgpu_device d3d11_create_device(const vgpu_device_desc* desc) {
             renderer->factory_caps,
             desc->swapchain.window_handle,
             desc->swapchain.width, desc->swapchain.height,
-            3u /* triple buffering */
+            desc->swapchain.color_format,
+            renderer->backbuffer_count /* 3 for triple buffering */
         );
+
+        d3d11_UpdateSwapChain((vgpu_renderer)renderer, desc->swapchain.color_format);
     }
 
     /* Create and return the gpu_device */

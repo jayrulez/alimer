@@ -27,12 +27,14 @@
 #include "vgpu_d3d_common.h"
 
 /* D3D12 guids */
+static const IID D3D12_IID_ID3D12Resource = { 0x696442be, 0xa72e, 0x4059, {0xbc, 0x79, 0x5b, 0x5c, 0x98, 0x04, 0x0f, 0xad } };
 static const IID D3D12_IID_ID3D12Device = { 0x189819f1,0x1db6,0x4b57, {0xbe,0x54,0x18,0x21,0x33,0x9b,0x85,0xf7 } };
 static const IID D3D12_IID_ID3D12Fence = { 0x0a753dcf, 0xc4d8, 0x4b91, {0xad, 0xf6, 0xbe, 0x5a, 0x60, 0xd9, 0x5a, 0x76 } };
 static const IID D3D12_IID_ID3D12CommandQueue = { 0x0ec870a6, 0x5d7e, 0x4c22, {0x8c, 0xfc, 0x5b, 0xaa, 0xe0, 0x76, 0x16, 0xed} };
 static const IID D3D12_IID_ID3D12CommandAllocator = { 0x6102dee4, 0xaf59, 0x4b09, {0xb9, 0x99, 0xb4, 0x4d, 0x73, 0xf0, 0x9b, 0x24} };
 static const IID D3D12_IID_ID3D12GraphicsCommandList = { 0x5b160d0f, 0xac1b, 0x4185, {0x8b, 0xa8, 0xb3, 0xae, 0x42, 0xa5, 0xa4, 0x55} };
 static const IID D3D12_IID_ID3D12GraphicsCommandList4 = { 0x8754318e, 0xd3a9, 0x4541, {0x98, 0xcf, 0x64, 0x5b, 0x50, 0xdc, 0x48, 0x74} };
+static const IID D3D12_IID_ID3D12DescriptorHeap = { 0x8efb471d, 0x616c, 0x4f49, {0x90, 0xf7, 0x12, 0x7b, 0xb7, 0x63, 0xfa, 0x51 } };
 
 #if !defined( D3D12_IGNORE_SDK_LAYERS )
 static const IID D3D12_IID_ID3D12Debug = { 0x344488b7, 0x6846, 0x474b, {0xb9, 0x89, 0xf0, 0x27, 0x44, 0x82, 0x45, 0xe0} };
@@ -72,18 +74,24 @@ static struct {
 #   define vgpuD3D12GetDebugInterface D3D12GetDebugInterface
 #endif
 
-#ifdef _DEBUG
-static const IID D3D11_IID_ID3D11Debug = { 0x79cf2233, 0x7536, 0x4948, {0x9d, 0x36, 0x1e, 0x46, 0x92, 0xdc, 0x57, 0x60} };
-static const IID D3D11_IID_ID3D11InfoQueue = { 0x6543dbb6, 0x1b48, 0x42f5, {0xab,0x82,0xe9,0x7e,0xc7,0x43,0x26,0xf6} };
-#endif
+typedef struct d3d12_descriptor_heap {
+    ID3D12DescriptorHeap* handle;
+    D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
+    D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
+    uint32_t size;
+    uint32_t capacity;
+    uint32_t descriptor_size;
+} d3d12_descriptor_heap;
 
 typedef struct d3d12_gpu_frame {
     ID3D12CommandAllocator* allocator;
+    d3d12_descriptor_heap GPUHeap;
 } d3d12_gpu_frame;
 
 typedef struct d3d12_renderer {
     D3D_FEATURE_LEVEL min_feature_level;
     uint32_t max_inflight_frames;
+    uint32_t backbuffer_count;
     DWORD factoryFlags;
     IDXGIFactory4* factory;
     uint32_t factory_caps;
@@ -94,6 +102,10 @@ typedef struct d3d12_renderer {
     /* Queues */
     ID3D12CommandQueue* direct_command_queue;
     ID3D12CommandQueue* compute_command_queue;
+
+    /* Descriptor heaps */
+    d3d12_descriptor_heap RTVHeap;
+    d3d12_descriptor_heap DSVHeap;
 
     /* Frame data. */
     uint64_t frame_index;
@@ -110,6 +122,10 @@ typedef struct d3d12_renderer {
     IDXGISwapChain3* swapchain;
     uint32_t backbuffer_index;
 } d3d12_renderer;
+
+typedef struct d3d12_texture {
+    ID3D12Resource* handle;
+} d3d12_texture;
 
 /* Device functions */
 static bool d3d12_create_factory(d3d12_renderer* renderer, bool debug)
@@ -213,7 +229,7 @@ static void d3d12_waitForGPU(vgpu_renderer driver_data) {
     VHR(ID3D12Fence_SetEventOnCompletion(renderer->frame_fence, renderer->frame_count, renderer->frame_fence_event));
     WaitForSingleObject(renderer->frame_fence_event, INFINITE);
 
-    //GPUDescriptorHeaps[renderer->frame_index].size = 0;
+    renderer->frames[renderer->frame_index].GPUHeap.size = 0;
     //GPUUploadMemoryHeaps[renderer->frame_index].size = 0;
 }
 
@@ -228,6 +244,7 @@ static void d3d12_destroy(vgpu_device device)
     for (uint32_t i = 0; i < renderer->max_inflight_frames; ++i)
     {
         ID3D12CommandAllocator_Release(renderer->frames[i].allocator);
+        ID3D12DescriptorHeap_Release(renderer->frames[i].GPUHeap.handle);
     }
 
     if (renderer->command_list4) {
@@ -241,8 +258,18 @@ static void d3d12_destroy(vgpu_device device)
     ID3D12CommandQueue_Release(renderer->compute_command_queue);
     ID3D12CommandQueue_Release(renderer->direct_command_queue);
 
+    /* Destroy descriptor heaps */
+    ID3D12DescriptorHeap_Release(renderer->RTVHeap.handle);
+    ID3D12DescriptorHeap_Release(renderer->DSVHeap.handle);
+
     if (renderer->swapchain) {
-        IDXGISwapChain1_Release(renderer->swapchain);
+        for (uint32_t i = 0; i < renderer->backbuffer_count; i++) {
+            //ID3D12Resource_Release();
+            //ID3D12Resource* backbuffer;
+            //VHR(IDXGISwapChain3_GetBuffer(renderer->swapchain, i, &D3D12_IID_ID3D12Resource, (void**)&backbuffer));
+        }
+
+        IDXGISwapChain3_Release(renderer->swapchain);
     }
 
     ULONG ref_count = ID3D12Device_Release(renderer->device);
@@ -262,6 +289,17 @@ static void d3d12_destroy(vgpu_device device)
     (void)ref_count; // avoid warning
 #endif
 
+    IDXGIFactory4_Release(renderer->factory);
+
+#ifdef _DEBUG
+    IDXGIDebug1* dxgiDebug;
+    if (SUCCEEDED(vgpuDXGIGetDebugInterface1(0, &D3D_IID_IDXGIDebug1, (void**)&dxgiDebug)))
+    {
+        IDXGIDebug1_ReportLiveObjects(dxgiDebug, D3D_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+        IDXGIDebug1_Release(dxgiDebug);
+    }
+#endif
+
     VGPU_FREE(renderer);
     VGPU_FREE(device);
 }
@@ -269,7 +307,7 @@ static void d3d12_destroy(vgpu_device device)
 static void d3d12_init_command_list(d3d12_renderer* renderer) {
     VHR(ID3D12CommandAllocator_Reset(renderer->frames[renderer->frame_index].allocator));
     VHR(ID3D12GraphicsCommandList_Reset(renderer->command_list, renderer->frames[renderer->frame_index].allocator, NULL));
-    //ID3D12GraphicsCommandList_SetDescriptorHeaps(renderer->command_list, 1, &Gfx->GPUDescriptorHeaps[Gfx->FrameIndex].Heap);
+    ID3D12GraphicsCommandList_SetDescriptorHeaps(renderer->command_list, 1, &renderer->frames[renderer->frame_index].GPUHeap.handle);
 }
 
 static void d3d12_begin_frame(vgpu_renderer driver_data) {
@@ -309,9 +347,103 @@ static void d3d12_present_frame(vgpu_renderer driver_data) {
     }
 
     renderer->frame_index = renderer->frame_count % renderer->max_inflight_frames;
+    renderer->frames[renderer->frame_index].GPUHeap.size = 0;
 
     // Prepare the command buffers to be used for the next frame
     d3d12_init_command_list(renderer);
+}
+
+/* Texture */
+static vgpu_texture d3d12_create_texture(vgpu_renderer driver_data, const vgpu_texture_desc* desc) {
+    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
+    d3d12_texture* result = VGPU_ALLOC(d3d12_texture);
+    memset(result, '\0', sizeof(d3d12_texture));
+
+    return (vgpu_texture)result;
+}
+
+static void d3d12_destroy_texture(vgpu_renderer driver_data, vgpu_texture handle) {
+    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
+    d3d12_texture* texture = (d3d12_texture*)handle;
+
+    VGPU_FREE(handle);
+}
+
+static void d3d12_GetCPUDescriptorHandleForHeapStart(ID3D12DescriptorHeap* heap, D3D12_CPU_DESCRIPTOR_HANDLE* pOut)
+{
+    ((void(STDMETHODCALLTYPE*)(ID3D12DescriptorHeap*, D3D12_CPU_DESCRIPTOR_HANDLE*)) heap->lpVtbl->GetCPUDescriptorHandleForHeapStart)(heap, pOut);
+}
+
+static void d3d12_GetGPUDescriptorHandleForHeapStart(ID3D12DescriptorHeap* heap, D3D12_GPU_DESCRIPTOR_HANDLE* pOut)
+{
+    ((void(STDMETHODCALLTYPE*)(ID3D12DescriptorHeap*, D3D12_GPU_DESCRIPTOR_HANDLE*)) heap->lpVtbl->GetGPUDescriptorHandleForHeapStart)(heap, pOut);
+}
+
+static void d3d12_CreateDescriptorHeap(ID3D12Device* device, d3d12_descriptor_heap* descriptor_heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shader_visible) {
+
+    descriptor_heap->size = 0;
+    descriptor_heap->capacity = capacity;
+    descriptor_heap->descriptor_size = ID3D12Device_GetDescriptorHandleIncrementSize(device, type);
+
+    const D3D12_DESCRIPTOR_HEAP_DESC heap_desc = {
+        .Type = type,
+        .NumDescriptors = capacity,
+        .Flags = shader_visible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+        .NodeMask = 0x0
+    };
+    VHR(ID3D12Device_CreateDescriptorHeap(device, &heap_desc, &D3D12_IID_ID3D12DescriptorHeap, (void**)&descriptor_heap->handle));
+    d3d12_GetCPUDescriptorHandleForHeapStart(descriptor_heap->handle, &descriptor_heap->CPUStart);
+    if (shader_visible) {
+        d3d12_GetGPUDescriptorHandleForHeapStart(descriptor_heap->handle, &descriptor_heap->GPUStart);
+    }
+    else {
+        descriptor_heap->GPUStart.ptr = 0;
+    }
+}
+
+static d3d12_descriptor_heap* d3d12_GetDescriptorHeap(d3d12_renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shader_visible)
+{
+    if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+    {
+        return &renderer->RTVHeap;
+    }
+    else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+    {
+        return &renderer->DSVHeap;
+    }
+    else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+    {
+        if (shader_visible) {
+            return &renderer->frames[renderer->frame_index].GPUHeap;
+        }
+
+        /* TODO: Should we support non shader visible CPU heap? */
+        //return &renderer->CPUHeap;
+    }
+
+    VGPU_UNREACHABLE();
+    return NULL;
+}
+
+static D3D12_CPU_DESCRIPTOR_HANDLE d3d12_AllocateDescriptors(d3d12_renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+{
+    d3d12_descriptor_heap* heap = d3d12_GetDescriptorHeap(renderer, type, false);
+    VGPU_ASSERT((heap->size + count) < heap->capacity);
+
+    D3D12_CPU_DESCRIPTOR_HANDLE handle;
+    handle.ptr = heap->CPUStart.ptr + (size_t)heap->size * heap->descriptor_size;
+    heap->size += count;
+
+    return handle;
+}
+
+static void d3d12_UpdateSwapChain(d3d12_renderer* renderer) {
+    renderer->backbuffer_index = IDXGISwapChain3_GetCurrentBackBufferIndex(renderer->swapchain);
+
+    for (uint32_t i = 0; i < renderer->backbuffer_count; i++) {
+        ID3D12Resource* backbuffer;
+        VHR(IDXGISwapChain3_GetBuffer(renderer->swapchain, i, &D3D12_IID_ID3D12Resource, &backbuffer));
+    }
 }
 
 /* Driver functions */
@@ -448,6 +580,7 @@ static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
 
     renderer->min_feature_level = D3D_FEATURE_LEVEL_11_0;
     renderer->max_inflight_frames = 2u;
+    renderer->backbuffer_count = 2u;
 
     if (!d3d12_create_factory(renderer, desc->debug)) {
         return NULL;
@@ -537,6 +670,12 @@ static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
     VHR(ID3D12CommandQueue_SetName(renderer->direct_command_queue, L"Direct Command Queue"));
     VHR(ID3D12CommandQueue_SetName(renderer->compute_command_queue, L"Compute  Command Queue"));
 
+    /* Create descriptor headers */
+    {
+        d3d12_CreateDescriptorHeap(renderer->device, &renderer->RTVHeap, 1024, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+        d3d12_CreateDescriptorHeap(renderer->device, &renderer->DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
+    }
+
     /* Create frame data. */
     renderer->frame_index = 0;
     renderer->frame_count = 0;
@@ -548,6 +687,8 @@ static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
             &D3D12_IID_ID3D12CommandAllocator,
             (void**)&renderer->frames[i].allocator
         ));
+
+        d3d12_CreateDescriptorHeap(renderer->device, &renderer->frames[i].GPUHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
     }
 
     VHR(ID3D12Device_CreateCommandList(
@@ -579,14 +720,16 @@ static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
             (IUnknown*)renderer->direct_command_queue,
             renderer->factory_caps,
             desc->swapchain.window_handle,
-            desc->swapchain.width, desc->swapchain.height,
-            renderer->max_inflight_frames /* 3 for triple buffering */
+            desc->swapchain.width,
+            desc->swapchain.height,
+            desc->swapchain.color_format,
+            renderer->backbuffer_count /* 3 for triple buffering */
         );
 
         VHR(IDXGISwapChain1_QueryInterface(temp_swap_chain, &D3D_IID_IDXGISwapChain3, (void**)&renderer->swapchain));
         IDXGISwapChain1_Release(temp_swap_chain);
 
-        renderer->backbuffer_index = IDXGISwapChain3_GetCurrentBackBufferIndex(renderer->swapchain);
+        d3d12_UpdateSwapChain(renderer);
     }
 
     d3d12_init_command_list(renderer);

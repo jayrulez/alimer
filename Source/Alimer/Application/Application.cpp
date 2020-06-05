@@ -50,25 +50,13 @@ namespace alimer
 
         gameSystems.Clear();
         SafeDelete(gui);
-        mainSwapChain.Reset();
-        SafeDelete(graphicsDevice);
-        SafeDelete(graphicsProvider);
+        vgpu_destroy_device(gpu_device);
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
 
     void Application::InitBeforeRun()
     {
-        bool validation = false;
-#ifdef _DEBUG
-        validation = true;
-#endif
-        graphicsProvider = GraphicsProvider::Create(BackendType::Direct3D12, validation);
-
-        GraphicsDeviceDescriptor descriptor = {};
-        graphicsDevice = graphicsProvider->CreateDevice(&descriptor);
-        commandQueue = graphicsDevice->CreateCommandQueue(CommandQueueType::Graphics);
-
         // Create main window.
         if (!headless)
         {
@@ -77,13 +65,16 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
-            //window_set_centered(main_window);
-            SwapChainDescriptor swapChainDesc = {};
-            swapChainDesc.handle = mainWindow->GetHandle();
-            swapChainDesc.width = mainWindow->GetSize().width;
-            swapChainDesc.height = mainWindow->GetSize().height;
+            vgpu_device_desc device_desc = {};
+#ifdef _DEBUG
+            device_desc.debug = true;
+#endif
+            device_desc.swapchain.window_handle = mainWindow->GetHandle();
+            device_desc.swapchain.width = mainWindow->GetSize().width;
+            device_desc.swapchain.height = mainWindow->GetSize().height;
 
-            mainSwapChain = graphicsDevice->CreateSwapChain(commandQueue.Get(), &swapChainDesc);
+            gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_D3D11, &device_desc);
+            //gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_D3D12, &device_desc);
 
             //gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
@@ -119,9 +110,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        /*if (!mainGraphicsContext->BeginFrame()) {
-            return false;
-        }*/
+        vgpu_begin_frame(gpu_device);
 
         for (auto gameSystem : gameSystems)
         {
@@ -182,8 +171,6 @@ namespace alimer
         }
         */
 
-        auto commandBuffer = commandQueue->GetCommandBuffer();
-
         /*auto& context = graphicsDevice->BeginContext("Frame");
         RenderPassDescriptor renderPass = {};
         renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
@@ -201,7 +188,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        mainSwapChain->Present();
+        vgpu_present_frame(gpu_device);
     }
 
     int Application::Run()

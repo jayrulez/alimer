@@ -65,6 +65,118 @@ typedef enum {
     DXGIFACTORY_CAPS_TEARING = (1 << 1),
 } dxgi_factory_caps;
 
+static inline DXGI_FORMAT vgpu_d3d_texture_format(vgpu_texture_format format) {
+    switch (format) {
+    case VGPU_TEXTURE_FORMAT_R8_UNORM:
+        return DXGI_FORMAT_R8_UNORM;
+    case VGPU_TEXTURE_FORMAT_R8_SNORM:
+        return DXGI_FORMAT_R8_SNORM;
+    case VGPU_TEXTURE_FORMAT_R8_UINT:
+        return DXGI_FORMAT_R8_UINT;
+    case VGPU_TEXTURE_FORMAT_R8_SINT:
+        return DXGI_FORMAT_R8_SINT;
+    case VGPU_TEXTURE_FORMAT_R16_UINT:
+        return DXGI_FORMAT_R16_UINT;
+    case VGPU_TEXTURE_FORMAT_R16_SINT:
+        return DXGI_FORMAT_R16_SINT;
+    case VGPU_TEXTURE_FORMAT_R16_FLOAT:
+        return DXGI_FORMAT_R16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG8_UNORM:
+        return DXGI_FORMAT_R8G8_UNORM;
+    case VGPU_TEXTURE_FORMAT_RG8_SNORM:
+        return DXGI_FORMAT_R8G8_SNORM;
+    case VGPU_TEXTURE_FORMAT_RG8_UINT:
+        return DXGI_FORMAT_R8G8_UINT;
+    case VGPU_TEXTURE_FORMAT_RG8_SINT:
+        return DXGI_FORMAT_R8G8_SINT;
+    case VGPU_TEXTURE_FORMAT_R32_FLOAT:
+        return DXGI_FORMAT_R32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_R32_UINT:
+        return DXGI_FORMAT_R32_UINT;
+    case VGPU_TEXTURE_FORMAT_R32_SINT:
+        return DXGI_FORMAT_R32_SINT;
+    case VGPU_TEXTURE_FORMAT_RG16_UINT:
+        return DXGI_FORMAT_R16G16_UINT;
+    case VGPU_TEXTURE_FORMAT_RG16_SINT:
+        return DXGI_FORMAT_R16G16_SINT;
+    case VGPU_TEXTURE_FORMAT_RG16_FLOAT:
+        return DXGI_FORMAT_R16G16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA8_UNORM:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:
+        return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_RGBA8_SNORM:
+        return DXGI_FORMAT_R8G8B8A8_SNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA8_UINT:
+        return DXGI_FORMAT_R8G8B8A8_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA8_SINT:
+        return DXGI_FORMAT_R8G8B8A8_SINT;
+    case VGPU_TEXTURE_FORMAT_BGRA8_UNORM:
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+    case VGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_RGB10A2_UNORM:
+        return DXGI_FORMAT_R10G10B10A2_UNORM;
+    case VGPU_TEXTURE_FORMAT_RG11B10_FLOAT:
+        return DXGI_FORMAT_R11G11B10_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG32_FLOAT:
+        return DXGI_FORMAT_R32G32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG32_UINT:
+        return DXGI_FORMAT_R32G32_UINT;
+    case VGPU_TEXTURE_FORMAT_RG32_SINT:
+        return DXGI_FORMAT_R32G32_SINT;
+    case VGPU_TEXTURE_FORMAT_RGBA16_UINT:
+        return DXGI_FORMAT_R16G16B16A16_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA16_SINT:
+        return DXGI_FORMAT_R16G16B16A16_SINT;
+    case VGPU_TEXTURE_FORMAT_RGBA16_FLOAT:
+        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA32_FLOAT:
+        return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA32_UINT:
+        return DXGI_FORMAT_R32G32B32A32_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA32_SINT:
+        return DXGI_FORMAT_R32G32B32A32_SINT;
+    case VGPU_TEXTURE_FORMAT_DEPTH32_FLOAT:
+        return DXGI_FORMAT_D32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_DEPTH24_PLUS:
+        return DXGI_FORMAT_D32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_DEPTH24_PLUS_STENCIL8:
+        return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+    case VGPU_TEXTURE_FORMAT_BC1RGBA_UNORM:
+        return DXGI_FORMAT_BC1_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC1RGBA_UNORM_SRGB:
+        return DXGI_FORMAT_BC1_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_BC2RGBA_UNORM:
+        return DXGI_FORMAT_BC2_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC2RGBA_UNORM_SRGB:
+        return DXGI_FORMAT_BC2_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_BC3RGBA_UNORM:
+        return DXGI_FORMAT_BC3_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC3RGBA_UNORM_SRGB:
+        return DXGI_FORMAT_BC3_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_BC4R_UNORM:
+        return DXGI_FORMAT_BC4_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC4R_SNORM:
+        return DXGI_FORMAT_BC4_SNORM;
+    case VGPU_TEXTURE_FORMAT_BC5RG_UNORM:
+        return DXGI_FORMAT_BC5_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC5RG_SNORM:
+        return DXGI_FORMAT_BC5_SNORM;
+    case VGPU_TEXTURE_FORMAT_BC6HRGB_UFLOAT:
+        return DXGI_FORMAT_BC6H_UF16;
+    case VGPU_TEXTURE_FORMAT_BC6HRGB_SFLOAT:
+        return DXGI_FORMAT_BC6H_SF16;
+    case VGPU_TEXTURE_FORMAT_BC7RGBA_UNORM:
+        return DXGI_FORMAT_BC7_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC7RGBA_UNORM_SRGB:
+        return DXGI_FORMAT_BC7_UNORM_SRGB;
+    default:
+        VGPU_UNREACHABLE();
+    }
+}
+
+
 static inline UINT vgpu_d3d_get_sync_interval(vgpu_present_interval present_interval)
 {
     switch (present_interval)
@@ -82,11 +194,37 @@ static inline UINT vgpu_d3d_get_sync_interval(vgpu_present_interval present_inte
     }
 }
 
+static inline DXGI_FORMAT vgpu_d3d_swapchain_format(vgpu_texture_format format)
+{
+    switch (format)
+    {
+    case VGPU_TEXTURE_FORMAT_RGBA16_FLOAT:
+        return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+    case VGPU_TEXTURE_FORMAT_BGRA8_UNORM:
+    case VGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+    case VGPU_TEXTURE_FORMAT_RGBA8_UNORM:
+    case VGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    case VGPU_TEXTURE_FORMAT_RGB10A2_UNORM:
+        return DXGI_FORMAT_R10G10B10A2_UNORM;
+    }
+
+    return DXGI_FORMAT_B8G8R8A8_UNORM;
+}
+
 static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     IDXGIFactory2* dxgiFactory,
     IUnknown* deviceOrCommandQueue,
     uint32_t caps,
-    uintptr_t handle, uint32_t width, uint32_t height, uint32_t image_count)
+    uintptr_t handle,
+    uint32_t width,
+    uint32_t height,
+    vgpu_texture_format format,
+    uint32_t image_count)
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     HWND window = (HWND)handle;
@@ -105,7 +243,6 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
-    const DXGI_FORMAT dxgiFormat = DXGI_FORMAT_B8G8R8A8_UNORM; // d3d_GetSwapChainFormat(info->colorFormat);
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
     DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -122,7 +259,7 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
         .Width = width,
         .Height = height,
-        .Format = dxgiFormat,
+        .Format = vgpu_d3d_swapchain_format(format),
         .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
         .BufferCount = image_count,
         .SampleDesc = {
