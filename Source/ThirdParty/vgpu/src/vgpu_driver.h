@@ -27,15 +27,9 @@
 #include <string.h> /* memset */
 #include <float.h> /* FLT_MAX */
 
-#ifndef vgpu_assert
+#ifndef VGPU_ASSERT
 #   include <assert.h>
-#   define vgpu_assert(c) assert(c)
-#endif
-
-#ifndef vgpu_malloc
-#   include <stdlib.h>
-#   define vgpu_malloc(s) malloc(s)
-#   define vgpu_free(p) free(p)
+#   define VGPU_ASSERT(c) assert(c)
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -54,6 +48,8 @@ extern void __cdecl __debugbreak(void);
 #   error "Unsupported compiler"
 #endif
 
+#define VGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
+
 #define _vgpu_def(val, def) (((val) == 0) ? (def) : (val))
 #define _vgpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
 #define _vgpu_min(a,b) ((a<b)?a:b)
@@ -61,16 +57,19 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 
+extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
+extern void* vgpu_allocation_user_data;
+
+#define VGPU_ALLOC(type)     ((type*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(type)))
+#define VGPU_ALLOCN(type, n) ((type*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(type) * n))
+#define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
+
 typedef struct vgpu_renderer_t* vgpu_renderer;
 
 typedef struct vgpu_device_t {
     void (*destroy)(vgpu_device device);
-
-    /* Context */
-    vgpu_context(*create_context)(vgpu_renderer driver_data, const vgpu_context_info* info);
-    void(*destroy_context)(vgpu_renderer driver_data, vgpu_context context);
-    void(*begin_frame)(vgpu_renderer driver_data, vgpu_context context);
-    void(*end_frame)(vgpu_renderer driver_data, vgpu_context context);
+    void(*begin_frame)(vgpu_renderer driver_data);
+    void(*present_frame)(vgpu_renderer driver_data);
 
     /* Opaque pointer for the implementation */
     vgpu_renderer renderer;
@@ -79,15 +78,13 @@ typedef struct vgpu_device_t {
 #define ASSIGN_DRIVER_FUNC(func, name) result->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 	ASSIGN_DRIVER_FUNC(destroy, name)\
-    ASSIGN_DRIVER_FUNC(create_context, name)\
-    ASSIGN_DRIVER_FUNC(destroy_context, name)\
     ASSIGN_DRIVER_FUNC(begin_frame, name)\
-    ASSIGN_DRIVER_FUNC(end_frame, name)
+    ASSIGN_DRIVER_FUNC(present_frame, name)
 
 typedef struct vgpu_driver {
     vgpu_backend_type backend_type;
     bool(*is_supported)(void);
-    vgpu_device(*create_device)(bool validation);
+    vgpu_device(*create_device)(const vgpu_device_desc* desc);
 } vgpu_driver;
 
 extern vgpu_driver d3d11_driver;

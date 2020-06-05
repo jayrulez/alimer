@@ -21,6 +21,7 @@
 //
 
 #include "vgpu_driver.h"
+#include <stdlib.h>
 
 static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D11)
@@ -35,19 +36,72 @@ static const vgpu_driver* drivers[] = {
     NULL
 };
 
+static void vgpu_log_default_callback(void* user_data, vgpu_log_level level, const char* message) {
 
-vgpu_device vgpu_create_device(vgpu_backend_type backend_type, bool debug) {
+}
+
+void* vgpu_default_allocate_memory(void* user_data, size_t size) {
+    VGPU_UNUSED(user_data);
+    return malloc(size);
+}
+
+void vgpu_default_free_memory(void* user_data, void* ptr) {
+    VGPU_UNUSED(user_data);
+    free(ptr);
+}
+
+
+const vgpu_allocation_callbacks vgpu_default_alloc_cb = {
+    NULL,
+    vgpu_default_allocate_memory,
+    vgpu_default_free_memory
+};
+
+static vgpu_PFN_log vgpu_log_callback = vgpu_log_default_callback;
+static void* vgpu_log_user_data = NULL;
+const vgpu_allocation_callbacks* vgpu_alloc_cb = &vgpu_default_alloc_cb;
+void* vgpu_allocation_user_data = NULL;
+
+void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data) {
+    vgpu_log_callback = callback;
+    vgpu_log_user_data = user_data;
+}
+
+void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
+    if (callbacks == NULL) {
+        vgpu_alloc_cb = &vgpu_default_alloc_cb;
+    }
+    else {
+        vgpu_alloc_cb = callbacks;
+    }
+}
+
+static vgpu_device_desc _vgpu_device_desc_defaults(const vgpu_device_desc* desc) {
+    vgpu_device_desc def = *desc;
+    def.swapchain.width = _vgpu_def(desc->swapchain.width, 1u);
+    def.swapchain.height = _vgpu_def(desc->swapchain.height, 1u);
+    def.swapchain.color_format = _vgpu_def(desc->swapchain.color_format, VGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    def.swapchain.depth_stencil_format = _vgpu_def(desc->swapchain.depth_stencil_format, VGPU_TEXTURE_FORMAT_UNDEFINED);
+    def.swapchain.sample_count = _vgpu_def(desc->swapchain.sample_count, VGPU_SAMPLE_COUNT_1);
+    def.swapchain.fullscreen = _vgpu_def(desc->swapchain.fullscreen, false);
+    def.swapchain.present_interval = _vgpu_def(desc->swapchain.present_interval, VGPU_PRESENT_INTERVAL_DEFAULT);
+    return def;
+}
+
+vgpu_device vgpu_create_device(vgpu_backend_type backend_type, const vgpu_device_desc* desc) {
+    VGPU_ASSERT(desc);
+    vgpu_device_desc desc_def = _vgpu_device_desc_defaults(desc);
     if (backend_type == VGPU_BACKEND_TYPE_COUNT) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->is_supported()) {
-                return drivers[i]->create_device(debug);
+                return drivers[i]->create_device(&desc_def);
             }
         }
     }
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->backend_type == backend_type && drivers[i]->is_supported()) {
-                return drivers[i]->create_device(debug);
+                return drivers[i]->create_device(&desc_def);
             }
         }
     }
@@ -64,22 +118,10 @@ void vgpu_destroy_device(vgpu_device device) {
     device->destroy(device);
 }
 
-vgpu_context vgpu_create_context(vgpu_device device, const vgpu_context_info* info) {
-    vgpu_assert(device);
-    vgpu_assert(info);
-    return device->create_context(device->renderer, info);
+void vgpu_begin_frame(vgpu_device device) {
+    device->begin_frame(device->renderer);
 }
 
-void vgpu_destroy_context(vgpu_device device, vgpu_context context) {
-    vgpu_assert(device);
-    vgpu_assert(context);
-    device->destroy_context(device->renderer, context);
-}
-
-void vgpu_begin_frame(vgpu_device device, vgpu_context context) {
-    device->begin_frame(device->renderer, context);
-}
-
-void vgpu_end_frame(vgpu_device device, vgpu_context context) {
-    device->end_frame(device->renderer, context);
+void vgpu_present_frame(vgpu_device device) {
+    device->present_frame(device->renderer);
 }

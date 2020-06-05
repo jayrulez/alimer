@@ -58,13 +58,29 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-#define VHR(hr) if (FAILED(hr)) { vgpu_assert(0); }
-#define SAFE_RELEASE(obj) if ((obj)) { obj->lpVtbl->Release(obj); (obj) = NULL; }
+#define VHR(hr) if (FAILED(hr)) { VGPU_ASSERT(0); }
 
 typedef enum {
     DXGIFACTORY_CAPS_FLIP_PRESENT = (1 << 0),
     DXGIFACTORY_CAPS_TEARING = (1 << 1),
 } dxgi_factory_caps;
+
+static inline UINT vgpu_d3d_get_sync_interval(vgpu_present_interval present_interval)
+{
+    switch (present_interval)
+    {
+    case VGPU_PRESENT_INTERVAL_TWO:
+        return 2;
+
+    case VGPU_PRESENT_INTERVAL_IMMEDIATE:
+        return 0;
+
+    case VGPU_PRESENT_INTERVAL_DEFAULT:
+    case VGPU_PRESENT_INTERVAL_ONE:
+    default:
+        return 1;
+    }
+}
 
 static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     IDXGIFactory2* dxgiFactory,

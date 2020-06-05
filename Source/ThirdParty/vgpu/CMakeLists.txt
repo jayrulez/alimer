@@ -27,6 +27,7 @@ endif()
 add_library(vgpu
 	# Public Headers
 	include/vgpu.h
+    include/vgpu.hpp
     # Internal Headers
 	src/vgpu_driver.h
     # Source Files

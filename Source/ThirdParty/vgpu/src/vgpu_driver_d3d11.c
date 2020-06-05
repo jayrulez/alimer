@@ -67,10 +67,10 @@ static struct {
 #endif
 
 #ifdef _DEBUG
-
 static const IID D3D11_WKPDID_D3DDebugObjectName = { 0x429b8c22, 0x9188, 0x4b0c, { 0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00 } };
 static const IID D3D11_IID_ID3D11Debug = { 0x79cf2233, 0x7536, 0x4948, {0x9d, 0x36, 0x1e, 0x46, 0x92, 0xdc, 0x57, 0x60} };
 static const IID D3D11_IID_ID3D11InfoQueue = { 0x6543dbb6, 0x1b48, 0x42f5, {0xab,0x82,0xe9,0x7e,0xc7,0x43,0x26,0xf6} };
+#endif
 
 static bool d3d11_sdk_layers_available() {
     HRESULT hr = vgpuD3D11CreateDevice(
@@ -88,7 +88,7 @@ static bool d3d11_sdk_layers_available() {
 
     return SUCCEEDED(hr);
 }
-#endif
+
 
 typedef struct d3d11_renderer
 {
@@ -97,18 +97,21 @@ typedef struct d3d11_renderer
 
     ID3D11Device1* device;
     ID3D11DeviceContext1* context;
-    //ID3DUserDefinedAnnotation* d3d_annotation;
+    ID3DUserDefinedAnnotation* d3d_annotation;
     D3D_FEATURE_LEVEL feature_level;
-} d3d11_renderer;
 
-typedef struct vgpu_context_d3d11 {
+    UINT sync_interval;
+    UINT present_flags;
     IDXGISwapChain1* swapchain;
-} vgpu_context_d3d11;
+} d3d11_renderer;
 
 /* Device functions */
 static bool d3d11_create_factory(d3d11_renderer* renderer, bool validation)
 {
-    SAFE_RELEASE(renderer->factory);
+    if (renderer->factory) {
+        IDXGIFactory2_Release(renderer->factory);
+        renderer->factory = NULL;
+    }
 
     HRESULT hr = S_OK;
 
@@ -204,8 +207,12 @@ static void d3d11_destroy(vgpu_device device)
 {
     d3d11_renderer* renderer = (d3d11_renderer*)device->renderer;
 
-    SAFE_RELEASE(renderer->context);
-    //SAFE_RELEASE(renderer->d3d_annotation);
+    ID3D11DeviceContext1_Release(renderer->context);
+    ID3DUserDefinedAnnotation_Release(renderer->d3d_annotation);
+
+    if (renderer->swapchain) {
+        IDXGISwapChain1_Release(renderer->swapchain);
+    }
 
     d3d11.device_count--;
 
@@ -229,7 +236,7 @@ static void d3d11_destroy(vgpu_device device)
 #ifdef _DEBUG
     if (d3d11.device_count == 0)
     {
-        SAFE_RELEASE(renderer->factory);
+        IDXGIFactory2_Release(renderer->factory);
 
         IDXGIDebug1* dxgiDebug;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -245,44 +252,17 @@ static void d3d11_destroy(vgpu_device device)
     }
 #endif
 
-    vgpu_free(renderer);
-    vgpu_free(device);
+    VGPU_FREE(renderer);
+    VGPU_FREE(device);
 }
 
-static vgpu_context d3d11_create_context(vgpu_renderer driver_data, const vgpu_context_info* info) {
+static void d3d11_begin_frame(vgpu_renderer driver_data) {
+}
+
+static void d3d11_present_frame(vgpu_renderer driver_data) {
     d3d11_renderer* renderer = (d3d11_renderer*)driver_data;
-    vgpu_context_d3d11* result = (vgpu_context_d3d11*)vgpu_malloc(sizeof(vgpu_context_d3d11));
-    if (info->swapchain_info.handle) {
-        result->swapchain = vgpu_d3d_create_swapchain(
-            renderer->factory,
-            (IUnknown*)renderer->device,
-            renderer->factory_caps,
-            info->swapchain_info.handle,
-            info->width, info->height,
-            info->max_inflight_frames
-        );
-    }
-
-    return (vgpu_context)result;
-}
-
-static void d3d11_destroy_context(vgpu_renderer driver_data, vgpu_context context) {
-    d3d11_renderer* renderer = (d3d11_renderer*)driver_data;
-    vgpu_context_d3d11* d3d_context = (vgpu_context_d3d11*)context;
-    if (d3d_context->swapchain) {
-        IDXGISwapChain1_Release(d3d_context->swapchain);
-    }
-
-    vgpu_free(context);
-}
-
-static void d3d11_begin_frame(vgpu_renderer driver_data, vgpu_context context) {
-}
-
-static void d3d11_end_frame(vgpu_renderer driver_data, vgpu_context context) {
-    vgpu_context_d3d11* d3d_context = (vgpu_context_d3d11*)context;
-    if (d3d_context->swapchain) {
-        IDXGISwapChain1_Present(d3d_context->swapchain, 1, 0);
+    if (renderer->swapchain) {
+        IDXGISwapChain1_Present(renderer->swapchain, renderer->sync_interval, renderer->present_flags);
     }
 }
 
@@ -411,15 +391,15 @@ static IDXGIAdapter1* d3d11_get_adapter(IDXGIFactory2* factory, bool lowPower)
     return adapter;
 }
 
-static vgpu_device d3d11_create_device(bool validation) {
+static vgpu_device d3d11_create_device(const vgpu_device_desc* desc) {
     vgpu_device_t* result;
     d3d11_renderer* renderer;
 
     /* Allocate and zero out the renderer */
-    renderer = (d3d11_renderer*)vgpu_malloc(sizeof(d3d11_renderer));
+    renderer = VGPU_ALLOC(d3d11_renderer);
     memset(renderer, 0, sizeof(d3d11_renderer));
 
-    if (!d3d11_create_factory(renderer, validation)) {
+    if (!d3d11_create_factory(renderer, desc->debug)) {
         return NULL;
     }
 
@@ -429,12 +409,12 @@ static vgpu_device d3d11_create_device(bool validation) {
     {
         UINT creation_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-#if defined(_DEBUG)
-        if (validation && d3d11_sdk_layers_available())
+        if (desc->debug && d3d11_sdk_layers_available())
         {
             // If the project is in a debug build, enable debugging via SDK Layers with this flag.
             creation_flags |= D3D11_CREATE_DEVICE_DEBUG;
         }
+#if defined(_DEBUG)
         else
         {
             OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
@@ -526,26 +506,46 @@ static vgpu_device d3d11_create_device(bool validation) {
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 ID3D11InfoQueue_AddStorageFilterEntries(d3d_info_queue, &filter);
+                ID3D11InfoQueue_Release(d3d_info_queue);
             }
 
-            SAFE_RELEASE(d3d_info_queue);
-            SAFE_RELEASE(d3d_debug);
+            ID3D11Debug_Release(d3d_debug);
         }
 #endif
 
         VHR(ID3D11Device_QueryInterface(temp_d3d_device, &D3D11_IID_ID3D11Device1, (void**)&renderer->device));
         VHR(ID3D11DeviceContext_QueryInterface(temp_d3d_context, &D3D11_IID_ID3D11DeviceContext1, (void**)&renderer->context));
-        //VHR(ID3D11DeviceContext_QueryInterface(temp_d3d_context, &D3D11_IID_ID3DUserDefinedAnnotation, (void**)&renderer->d3d_annotation));
-        SAFE_RELEASE(temp_d3d_context);
-        SAFE_RELEASE(temp_d3d_device);
+        VHR(ID3D11DeviceContext_QueryInterface(temp_d3d_context, &D3D11_IID_ID3DUserDefinedAnnotation, (void**)&renderer->d3d_annotation));
+        ID3D11DeviceContext_Release(temp_d3d_context);
+        ID3D11Device_Release(temp_d3d_device);
     }
 
     IDXGIAdapter1_Release(adapter);
 
+    /* Create swap chain if required. */
+    if (desc->swapchain.window_handle) {
+        renderer->sync_interval = vgpu_d3d_get_sync_interval(desc->swapchain.present_interval);
+        renderer->present_flags = 0;
+
+        if (desc->swapchain.present_interval == VGPU_PRESENT_INTERVAL_IMMEDIATE
+            && renderer->factory_caps & DXGIFACTORY_CAPS_TEARING) {
+            renderer->present_flags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+
+        renderer->swapchain = vgpu_d3d_create_swapchain(
+            renderer->factory,
+            (IUnknown*)renderer->device,
+            renderer->factory_caps,
+            desc->swapchain.window_handle,
+            desc->swapchain.width, desc->swapchain.height,
+            3u /* triple buffering */
+        );
+    }
+
     d3d11.device_count++;
 
     /* Create and return the gpu_device */
-    result = (vgpu_device_t*)vgpu_malloc(sizeof(vgpu_device_t));
+    result = VGPU_ALLOC(vgpu_device_t);
     result->renderer = (vgpu_renderer)renderer;
     ASSIGN_DRIVER(d3d11);
     return result;

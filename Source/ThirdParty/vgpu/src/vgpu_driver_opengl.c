@@ -28,7 +28,7 @@ static bool gl_is_supported(void) {
     return true;
 }
 
-static vgpu_device gl_create_device(bool validation) {
+static vgpu_device gl_create_device(const vgpu_device_desc* desc) {
     return NULL;
 }
 
