@@ -88,7 +88,7 @@ typedef struct d3d12_gpu_frame {
     d3d12_descriptor_heap GPUHeap;
 } d3d12_gpu_frame;
 
-typedef struct d3d12_renderer {
+typedef struct D3D12Renderer {
     D3D_FEATURE_LEVEL min_feature_level;
     uint32_t max_inflight_frames;
     uint32_t backbuffer_count;
@@ -106,29 +106,30 @@ typedef struct d3d12_renderer {
     /* Descriptor heaps */
     d3d12_descriptor_heap RTVHeap;
     d3d12_descriptor_heap DSVHeap;
+} D3D12Renderer;
+
+typedef struct D3D12BackendContext {
+    uint32_t syncInterval;
+    uint32_t presentFlags;
+    IDXGISwapChain3* swapchain;
+    uint32_t backbufferIndex;
 
     /* Frame data. */
-    uint64_t frame_index;
-    uint64_t frame_count;
-
-    ID3D12GraphicsCommandList* command_list;
-    ID3D12GraphicsCommandList4* command_list4;
-    ID3D12Fence* frame_fence;
-    HANDLE frame_fence_event;
+    uint64_t frameIndex;
+    uint64_t frameCount;
+    ID3D12GraphicsCommandList* commandList;
+    ID3D12GraphicsCommandList4* commandList4;
+    ID3D12Fence* fence;
+    HANDLE fenceEvent;
     d3d12_gpu_frame frames[3];
+} D3D12BackendContext;
 
-    uint32_t sync_interval;
-    uint32_t present_flags;
-    IDXGISwapChain3* swapchain;
-    uint32_t backbuffer_index;
-} d3d12_renderer;
-
-typedef struct d3d12_texture {
+typedef struct D3D12Texture {
     ID3D12Resource* handle;
-} d3d12_texture;
+} D3D12Texture;
 
 /* Device functions */
-static bool d3d12_create_factory(d3d12_renderer* renderer, bool debug)
+static bool d3d12_create_factory(D3D12Renderer* renderer, bool debug)
 {
     if (renderer->factory) {
         IDXGIFactory4_Release(renderer->factory);
@@ -223,152 +224,6 @@ static bool d3d12_create_factory(d3d12_renderer* renderer, bool debug)
     return true;
 }
 
-static void d3d12_waitForGPU(vgpu_renderer driver_data) {
-    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
-    VHR(ID3D12CommandQueue_Signal(renderer->direct_command_queue, renderer->frame_fence, ++renderer->frame_count));
-    VHR(ID3D12Fence_SetEventOnCompletion(renderer->frame_fence, renderer->frame_count, renderer->frame_fence_event));
-    WaitForSingleObject(renderer->frame_fence_event, INFINITE);
-
-    renderer->frames[renderer->frame_index].GPUHeap.size = 0;
-    //GPUUploadMemoryHeaps[renderer->frame_index].size = 0;
-}
-
-static void d3d12_destroy(vgpu_device device)
-{
-    d3d12_waitForGPU(device->renderer);
-    d3d12_renderer* renderer = (d3d12_renderer*)device->renderer;
-
-    /* Destroy frame data */
-    renderer->frame_index = 0;
-    renderer->frame_count = 0;
-    for (uint32_t i = 0; i < renderer->max_inflight_frames; ++i)
-    {
-        ID3D12CommandAllocator_Release(renderer->frames[i].allocator);
-        ID3D12DescriptorHeap_Release(renderer->frames[i].GPUHeap.handle);
-    }
-
-    if (renderer->command_list4) {
-        ID3D12GraphicsCommandList4_Release(renderer->command_list4);
-    }
-    ID3D12GraphicsCommandList_Release(renderer->command_list);
-    CloseHandle(renderer->frame_fence_event);
-    ID3D12Fence_Release(renderer->frame_fence);
-
-    /* Destroy command queues */
-    ID3D12CommandQueue_Release(renderer->compute_command_queue);
-    ID3D12CommandQueue_Release(renderer->direct_command_queue);
-
-    /* Destroy descriptor heaps */
-    ID3D12DescriptorHeap_Release(renderer->RTVHeap.handle);
-    ID3D12DescriptorHeap_Release(renderer->DSVHeap.handle);
-
-    if (renderer->swapchain) {
-        for (uint32_t i = 0; i < renderer->backbuffer_count; i++) {
-            //ID3D12Resource_Release();
-            //ID3D12Resource* backbuffer;
-            //VHR(IDXGISwapChain3_GetBuffer(renderer->swapchain, i, &D3D12_IID_ID3D12Resource, (void**)&backbuffer));
-        }
-
-        IDXGISwapChain3_Release(renderer->swapchain);
-    }
-
-    ULONG ref_count = ID3D12Device_Release(renderer->device);
-#if !defined(NDEBUG)
-    if (ref_count > 0)
-    {
-        //gpuLog(GPULogLevel_Error, "Direct3D12: There are %d unreleased references left on the device", ref_count);
-
-        ID3D12DebugDevice* d3d_debug = NULL;
-        if (SUCCEEDED(ID3D12Device_QueryInterface(renderer->device, &D3D12_IID_ID3D12DebugDevice, (void**)&d3d_debug)))
-        {
-            ID3D12DebugDevice_ReportLiveDeviceObjects(d3d_debug, D3D12_RLDO_DETAIL);
-            ID3D12DebugDevice_Release(d3d_debug);
-        }
-    }
-#else
-    (void)ref_count; // avoid warning
-#endif
-
-    IDXGIFactory4_Release(renderer->factory);
-
-#ifdef _DEBUG
-    IDXGIDebug1* dxgiDebug;
-    if (SUCCEEDED(vgpuDXGIGetDebugInterface1(0, &D3D_IID_IDXGIDebug1, (void**)&dxgiDebug)))
-    {
-        IDXGIDebug1_ReportLiveObjects(dxgiDebug, D3D_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-        IDXGIDebug1_Release(dxgiDebug);
-    }
-#endif
-
-    VGPU_FREE(renderer);
-    VGPU_FREE(device);
-}
-
-static void d3d12_init_command_list(d3d12_renderer* renderer) {
-    VHR(ID3D12CommandAllocator_Reset(renderer->frames[renderer->frame_index].allocator));
-    VHR(ID3D12GraphicsCommandList_Reset(renderer->command_list, renderer->frames[renderer->frame_index].allocator, NULL));
-    ID3D12GraphicsCommandList_SetDescriptorHeaps(renderer->command_list, 1, &renderer->frames[renderer->frame_index].GPUHeap.handle);
-}
-
-static void d3d12_begin_frame(vgpu_renderer driver_data) {
-}
-
-static void d3d12_present_frame(vgpu_renderer driver_data) {
-    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
-
-    VHR(ID3D12GraphicsCommandList_Close(renderer->command_list));
-
-    /* TODO: Handle upload + compute logic here */
-    //TODO_Upload();
-
-    ID3D12CommandList* command_lists[] = { (ID3D12CommandList*)renderer->command_list };
-    ID3D12CommandQueue_ExecuteCommandLists(renderer->direct_command_queue, _countof(command_lists), command_lists);
-
-    HRESULT hr = S_OK;
-    if (renderer->swapchain) {
-        hr = IDXGISwapChain3_Present(renderer->swapchain, renderer->sync_interval, renderer->present_flags);
-        renderer->backbuffer_index = IDXGISwapChain3_GetCurrentBackBufferIndex(renderer->swapchain);
-    }
-
-    // If the device was reset we must completely reinitialize the renderer.
-    if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-    {
-        /* TODO: Handle device lost. */
-        return;
-    }
-
-    VHR(ID3D12CommandQueue_Signal(renderer->direct_command_queue, renderer->frame_fence, ++renderer->frame_count));
-
-    uint64_t GPUFrameCount = ID3D12Fence_GetCompletedValue(renderer->frame_fence);
-    if ((renderer->frame_count - GPUFrameCount) >= renderer->max_inflight_frames)
-    {
-        VHR(ID3D12Fence_SetEventOnCompletion(renderer->frame_fence, GPUFrameCount + 1, renderer->frame_fence_event));
-        WaitForSingleObject(renderer->frame_fence_event, INFINITE);
-    }
-
-    renderer->frame_index = renderer->frame_count % renderer->max_inflight_frames;
-    renderer->frames[renderer->frame_index].GPUHeap.size = 0;
-
-    // Prepare the command buffers to be used for the next frame
-    d3d12_init_command_list(renderer);
-}
-
-/* Texture */
-static vgpu_texture d3d12_create_texture(vgpu_renderer driver_data, const vgpu_texture_desc* desc) {
-    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
-    d3d12_texture* result = VGPU_ALLOC(d3d12_texture);
-    memset(result, '\0', sizeof(d3d12_texture));
-
-    return (vgpu_texture)result;
-}
-
-static void d3d12_destroy_texture(vgpu_renderer driver_data, vgpu_texture handle) {
-    d3d12_renderer* renderer = (d3d12_renderer*)driver_data;
-    d3d12_texture* texture = (d3d12_texture*)handle;
-
-    VGPU_FREE(handle);
-}
-
 static void d3d12_GetCPUDescriptorHandleForHeapStart(ID3D12DescriptorHeap* heap, D3D12_CPU_DESCRIPTOR_HANDLE* pOut)
 {
     ((void(STDMETHODCALLTYPE*)(ID3D12DescriptorHeap*, D3D12_CPU_DESCRIPTOR_HANDLE*)) heap->lpVtbl->GetCPUDescriptorHandleForHeapStart)(heap, pOut);
@@ -401,7 +256,7 @@ static void d3d12_CreateDescriptorHeap(ID3D12Device* device, d3d12_descriptor_he
     }
 }
 
-static d3d12_descriptor_heap* d3d12_GetDescriptorHeap(d3d12_renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shader_visible)
+static d3d12_descriptor_heap* d3d12_GetDescriptorHeap(D3D12Renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shader_visible)
 {
     if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
     {
@@ -413,9 +268,9 @@ static d3d12_descriptor_heap* d3d12_GetDescriptorHeap(d3d12_renderer* renderer, 
     }
     else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
     {
-        if (shader_visible) {
-            return &renderer->frames[renderer->frame_index].GPUHeap;
-        }
+        //if (shader_visible) {
+        //    return &renderer->frames[renderer->frame_index].GPUHeap;
+        //}
 
         /* TODO: Should we support non shader visible CPU heap? */
         //return &renderer->CPUHeap;
@@ -425,7 +280,7 @@ static d3d12_descriptor_heap* d3d12_GetDescriptorHeap(d3d12_renderer* renderer, 
     return NULL;
 }
 
-static D3D12_CPU_DESCRIPTOR_HANDLE d3d12_AllocateDescriptors(d3d12_renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+static D3D12_CPU_DESCRIPTOR_HANDLE d3d12_AllocateDescriptors(D3D12Renderer* renderer, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
 {
     d3d12_descriptor_heap* heap = d3d12_GetDescriptorHeap(renderer, type, false);
     VGPU_ASSERT((heap->size + count) < heap->capacity);
@@ -437,13 +292,236 @@ static D3D12_CPU_DESCRIPTOR_HANDLE d3d12_AllocateDescriptors(d3d12_renderer* ren
     return handle;
 }
 
-static void d3d12_UpdateSwapChain(d3d12_renderer* renderer) {
-    renderer->backbuffer_index = IDXGISwapChain3_GetCurrentBackBufferIndex(renderer->swapchain);
+static void d3d12_destroy(vgpu_device device)
+{
+    D3D12Renderer* renderer = (D3D12Renderer*)device->renderer;
+
+    /* Destroy command queues */
+    ID3D12CommandQueue_Release(renderer->compute_command_queue);
+    ID3D12CommandQueue_Release(renderer->direct_command_queue);
+
+    /* Destroy descriptor heaps */
+    ID3D12DescriptorHeap_Release(renderer->RTVHeap.handle);
+    ID3D12DescriptorHeap_Release(renderer->DSVHeap.handle);
+
+    ULONG refCount = ID3D12Device_Release(renderer->device);
+#if !defined(NDEBUG)
+    if (refCount > 0)
+    {
+        //gpuLog(GPULogLevel_Error, "Direct3D12: There are %d unreleased references left on the device", ref_count);
+
+        ID3D12DebugDevice* d3d_debug = NULL;
+        if (SUCCEEDED(ID3D12Device_QueryInterface(renderer->device, &D3D12_IID_ID3D12DebugDevice, (void**)&d3d_debug)))
+        {
+            ID3D12DebugDevice_ReportLiveDeviceObjects(d3d_debug, D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+            ID3D12DebugDevice_Release(d3d_debug);
+        }
+    }
+#else
+    (void)refCount; // avoid warning
+#endif
+
+    IDXGIFactory4_Release(renderer->factory);
+
+#ifdef _DEBUG
+    IDXGIDebug1* dxgiDebug;
+    if (SUCCEEDED(vgpuDXGIGetDebugInterface1(0, &D3D_IID_IDXGIDebug1, (void**)&dxgiDebug)))
+    {
+        IDXGIDebug1_ReportLiveObjects(dxgiDebug, D3D_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+        IDXGIDebug1_Release(dxgiDebug);
+    }
+#endif
+
+    VGPU_FREE(renderer);
+    VGPU_FREE(device);
+}
+
+/* Texture */
+static VGPUTexture d3d12_create_texture(vgpu_renderer driverData, const VGPUTextureDescription* desc) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driverData;
+    D3D12Texture* result = VGPU_ALLOC_HANDLE(D3D12Texture);
+
+    return (VGPUTexture)result;
+}
+
+static void d3d12_destroy_texture(vgpu_renderer driverData, VGPUTexture handle) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driverData;
+    D3D12Texture* texture = (D3D12Texture*)handle;
+
+    VGPU_FREE(handle);
+}
+
+/* Context */
+static void d3d12_BeginFrame(vgpu_renderer driverData, VGPUBackendContext* contextData);
+static void d3d12_EndFrame(vgpu_renderer driverData, VGPUBackendContext* contextData);
+
+static void d3d12_UpdateSwapChain(vgpu_renderer driverData, D3D12BackendContext* context, VGPUPixelFormat format) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driverData;
+    context->backbufferIndex = IDXGISwapChain3_GetCurrentBackBufferIndex(context->swapchain);
 
     for (uint32_t i = 0; i < renderer->backbuffer_count; i++) {
         ID3D12Resource* backbuffer;
-        VHR(IDXGISwapChain3_GetBuffer(renderer->swapchain, i, &D3D12_IID_ID3D12Resource, &backbuffer));
+        VHR(IDXGISwapChain3_GetBuffer(context->swapchain, i, &D3D12_IID_ID3D12Resource, &backbuffer));
     }
+}
+
+static VGPUContext d3d12_createContext(vgpu_renderer driverData, const VGPUContextDescription* desc) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driverData;
+    D3D12BackendContext* context = VGPU_ALLOC_HANDLE(D3D12BackendContext);
+
+    /* Create frame data. */
+    context->frameIndex = 0;
+    context->frameCount = 0;
+    for (uint32_t i = 0; i < renderer->max_inflight_frames; ++i)
+    {
+        VHR(ID3D12Device_CreateCommandAllocator(
+            renderer->device,
+            D3D12_COMMAND_LIST_TYPE_DIRECT,
+            &D3D12_IID_ID3D12CommandAllocator,
+            (void**)&context->frames[i].allocator
+        ));
+
+        d3d12_CreateDescriptorHeap(renderer->device, &context->frames[i].GPUHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+    }
+
+    VHR(ID3D12Device_CreateCommandList(
+        renderer->device,
+        0,
+        D3D12_COMMAND_LIST_TYPE_DIRECT,
+        context->frames[0].allocator,
+        NULL,
+        &D3D12_IID_ID3D12GraphicsCommandList,
+        (void**)&context->commandList)
+    );
+    VHR(ID3D12GraphicsCommandList_Close(context->commandList));
+
+    VHR(ID3D12Device_CreateFence(renderer->device, 0, D3D12_FENCE_FLAG_NONE, &D3D12_IID_ID3D12Fence, (void**)&context->fence));
+    context->fenceEvent = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
+
+    /* Create swap chain if required. */
+    if (desc->swapchain.windowHandle) {
+        context->syncInterval = _vgpuGetSyncInterval(desc->swapchain.presentMode);
+        context->presentFlags = 0;
+
+        if (desc->swapchain.presentMode == VGPUPresentMode_Immediate
+            && renderer->factory_caps & DXGIFACTORY_CAPS_TEARING) {
+            context->presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+        }
+
+        IDXGISwapChain1* temp_swap_chain = vgpu_d3d_create_swapchain(
+            (IDXGIFactory2*)renderer->factory,
+            (IUnknown*)renderer->direct_command_queue,
+            renderer->factory_caps,
+            desc->swapchain.windowHandle,
+            desc->width, desc->height,
+            desc->colorFormat,
+            renderer->backbuffer_count /* 3 for triple buffering */
+        );
+
+        VHR(IDXGISwapChain1_QueryInterface(temp_swap_chain, &D3D_IID_IDXGISwapChain3, (void**)&context->swapchain));
+        IDXGISwapChain1_Release(temp_swap_chain);
+
+        d3d12_UpdateSwapChain(driverData, context, desc->colorFormat);
+    }
+
+    /* Create and return the context */
+    VGPUContext result = VGPU_ALLOC(VGPUContext_T);
+    result->BeginFrame = d3d12_BeginFrame;
+    result->EndFrame = d3d12_EndFrame;
+    result->renderer = driverData;
+    result->backend = (VGPUBackendContext*)context;
+    return result;
+}
+
+static void d3d12_waitForGPU(D3D12Renderer* renderer, D3D12BackendContext* context) {
+    VHR(ID3D12CommandQueue_Signal(renderer->direct_command_queue, context->fence, ++context->frameCount));
+    VHR(ID3D12Fence_SetEventOnCompletion(context->fence, context->frameCount, context->fenceEvent));
+    WaitForSingleObject(context->fenceEvent, INFINITE);
+
+    context->frames[context->frameIndex].GPUHeap.size = 0;
+    //GPUUploadMemoryHeaps[renderer->frame_index].size = 0;
+}
+
+static void d3d12_destroyContext(vgpu_renderer driver_data, VGPUContext handle) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driver_data;
+    D3D12BackendContext* context = (D3D12BackendContext*)handle->backend;
+
+    // Wait for pending operations to complete.
+    d3d12_waitForGPU(renderer, context);
+
+    if (context->swapchain) {
+        for (uint32_t i = 0; i < renderer->backbuffer_count; i++) {
+            //ID3D12Resource_Release();
+            //ID3D12Resource* backbuffer;
+            //VHR(IDXGISwapChain3_GetBuffer(renderer->swapchain, i, &D3D12_IID_ID3D12Resource, (void**)&backbuffer));
+        }
+
+        IDXGISwapChain3_Release(context->swapchain);
+    }
+
+    /* Destroy frame data */
+    context->frameIndex = 0;
+    context->frameCount = 0;
+    for (uint32_t i = 0; i < renderer->max_inflight_frames; ++i)
+    {
+        ID3D12CommandAllocator_Release(context->frames[i].allocator);
+        ID3D12DescriptorHeap_Release(context->frames[i].GPUHeap.handle);
+    }
+
+    if (context->commandList4) {
+        ID3D12GraphicsCommandList4_Release(context->commandList4);
+    }
+    ID3D12GraphicsCommandList_Release(context->commandList);
+    CloseHandle(context->fenceEvent);
+    ID3D12Fence_Release(context->fence);
+
+    VGPU_FREE(handle);
+}
+
+static void d3d12_BeginFrame(vgpu_renderer driverData, VGPUBackendContext* contextData) {
+    D3D12BackendContext* context = (D3D12BackendContext*)contextData;
+
+    VHR(ID3D12CommandAllocator_Reset(context->frames[context->frameIndex].allocator));
+    VHR(ID3D12GraphicsCommandList_Reset(context->commandList, context->frames[context->frameIndex].allocator, NULL));
+    ID3D12GraphicsCommandList_SetDescriptorHeaps(context->commandList, 1, &context->frames[context->frameIndex].GPUHeap.handle);
+}
+
+static void d3d12_EndFrame(vgpu_renderer driverData, VGPUBackendContext* contextData) {
+    D3D12Renderer* renderer = (D3D12Renderer*)driverData;
+    D3D12BackendContext* context = (D3D12BackendContext*)contextData;
+
+    VHR(ID3D12GraphicsCommandList_Close(context->commandList));
+
+    /* TODO: Handle upload + compute logic here */
+    //TODO_Upload();
+
+    ID3D12CommandList* command_lists[] = { (ID3D12CommandList*)context->commandList };
+    ID3D12CommandQueue_ExecuteCommandLists(renderer->direct_command_queue, _countof(command_lists), command_lists);
+
+    if (context->swapchain) {
+        HRESULT hr = IDXGISwapChain3_Present(context->swapchain, context->syncInterval, context->presentFlags);
+
+        // If the device was reset we must completely reinitialize the renderer.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+            /* TODO: Handle device lost. */
+            return;
+        }
+
+        context->backbufferIndex = IDXGISwapChain3_GetCurrentBackBufferIndex(context->swapchain);
+    }
+
+    VHR(ID3D12CommandQueue_Signal(renderer->direct_command_queue, context->fence, ++context->frameCount));
+
+    uint64_t GPUFrameCount = ID3D12Fence_GetCompletedValue(context->fence);
+    if ((context->frameCount - GPUFrameCount) >= renderer->max_inflight_frames)
+    {
+        VHR(ID3D12Fence_SetEventOnCompletion(context->fence, GPUFrameCount + 1, context->fenceEvent));
+        WaitForSingleObject(context->fenceEvent, INFINITE);
+    }
+
+    context->frameIndex = context->frameCount % renderer->max_inflight_frames;
+    context->frames[context->frameIndex].GPUHeap.size = 0;
 }
 
 /* Driver functions */
@@ -571,13 +649,8 @@ static IDXGIAdapter1* d3d12_get_adapter(IDXGIFactory4* factory, D3D_FEATURE_LEVE
 }
 
 static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
-    vgpu_device_t* result;
-    d3d12_renderer* renderer;
-
     /* Allocate and zero out the renderer */
-    renderer = VGPU_ALLOC(d3d12_renderer);
-    memset(renderer, 0, sizeof(d3d12_renderer));
-
+    D3D12Renderer * renderer = VGPU_ALLOC_HANDLE(D3D12Renderer);
     renderer->min_feature_level = D3D_FEATURE_LEVEL_11_0;
     renderer->max_inflight_frames = 2u;
     renderer->backbuffer_count = 2u;
@@ -676,73 +749,15 @@ static vgpu_device d3d12_create_device(const vgpu_device_desc* desc) {
         d3d12_CreateDescriptorHeap(renderer->device, &renderer->DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
     }
 
-    /* Create frame data. */
-    renderer->frame_index = 0;
-    renderer->frame_count = 0;
-    for (uint32_t i = 0; i < renderer->max_inflight_frames; ++i)
-    {
-        VHR(ID3D12Device_CreateCommandAllocator(
-            renderer->device,
-            D3D12_COMMAND_LIST_TYPE_DIRECT,
-            &D3D12_IID_ID3D12CommandAllocator,
-            (void**)&renderer->frames[i].allocator
-        ));
-
-        d3d12_CreateDescriptorHeap(renderer->device, &renderer->frames[i].GPUHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-    }
-
-    VHR(ID3D12Device_CreateCommandList(
-        renderer->device,
-        0,
-        D3D12_COMMAND_LIST_TYPE_DIRECT,
-        renderer->frames[0].allocator,
-        NULL,
-        &D3D12_IID_ID3D12GraphicsCommandList,
-        (void**)&renderer->command_list)
-    );
-    VHR(ID3D12GraphicsCommandList_Close(renderer->command_list));
-
-    VHR(ID3D12Device_CreateFence(renderer->device, 0, D3D12_FENCE_FLAG_NONE, &D3D12_IID_ID3D12Fence, (void**)&renderer->frame_fence));
-    renderer->frame_fence_event = CreateEventEx(NULL, NULL, 0, EVENT_ALL_ACCESS);
-
-    /* Create swap chain if required. */
-    if (desc->swapchain.window_handle) {
-        renderer->sync_interval = vgpu_d3d_get_sync_interval(desc->swapchain.present_interval);
-        renderer->present_flags = 0;
-
-        if (desc->swapchain.present_interval == VGPU_PRESENT_INTERVAL_IMMEDIATE
-            && renderer->factory_caps & DXGIFACTORY_CAPS_TEARING) {
-            renderer->present_flags |= DXGI_PRESENT_ALLOW_TEARING;
-        }
-
-        IDXGISwapChain1* temp_swap_chain = vgpu_d3d_create_swapchain(
-            (IDXGIFactory2*)renderer->factory,
-            (IUnknown*)renderer->direct_command_queue,
-            renderer->factory_caps,
-            desc->swapchain.window_handle,
-            desc->swapchain.width,
-            desc->swapchain.height,
-            desc->swapchain.color_format,
-            renderer->backbuffer_count /* 3 for triple buffering */
-        );
-
-        VHR(IDXGISwapChain1_QueryInterface(temp_swap_chain, &D3D_IID_IDXGISwapChain3, (void**)&renderer->swapchain));
-        IDXGISwapChain1_Release(temp_swap_chain);
-
-        d3d12_UpdateSwapChain(renderer);
-    }
-
-    d3d12_init_command_list(renderer);
-
     /* Create and return the gpu_device */
-    result = VGPU_ALLOC(vgpu_device_t);
+    vgpu_device_t* result = VGPU_ALLOC(vgpu_device_t);
     result->renderer = (vgpu_renderer)renderer;
     ASSIGN_DRIVER(d3d12);
     return result;
 }
 
 vgpu_driver d3d12_driver = {
-    VGPU_BACKEND_TYPE_D3D12,
+    VGPUBackendType_D3D12,
     d3d12_is_supported,
     d3d12_create_device
 };

@@ -112,6 +112,7 @@ namespace alimer
         InputManager* input;
 
         vgpu_device gpu_device = nullptr;
+        VGPUContext mainContext = nullptr;
 
         bool headless{ false };
         Gui* gui = nullptr;

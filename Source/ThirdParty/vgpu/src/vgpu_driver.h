@@ -60,34 +60,47 @@ extern void __cdecl __debugbreak(void);
 extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
 extern void* vgpu_allocation_user_data;
 
-#define VGPU_ALLOC(type)     ((type*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(type)))
-#define VGPU_ALLOCN(type, n) ((type*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(type) * n))
+#define VGPU_ALLOC(T)     ((T*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(T)))
 #define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
+#define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared_memory(vgpu_allocation_user_data, sizeof(T)))
 
 typedef struct vgpu_renderer_t* vgpu_renderer;
+typedef struct VGPUBackendContext VGPUBackendContext;
 
 typedef struct vgpu_device_t {
     void (*destroy)(vgpu_device device);
-    void(*begin_frame)(vgpu_renderer driver_data);
-    void(*present_frame)(vgpu_renderer driver_data);
 
-    vgpu_texture (*create_texture)(vgpu_renderer driver_data, const vgpu_texture_desc* desc);
-    void(*destroy_texture)(vgpu_renderer driver_data, vgpu_texture handle);
+    /* Texture */
+    VGPUTexture(*create_texture)(vgpu_renderer driver_data, const VGPUTextureDescription* desc);
+    void(*destroy_texture)(vgpu_renderer driver_data, VGPUTexture handle);
+
+    /* Context */
+    VGPUContext(*createContext)(vgpu_renderer driver_data, const VGPUContextDescription* desc);
+    void(*destroyContext)(vgpu_renderer driver_data, VGPUContext handle);
 
     /* Opaque pointer for the implementation */
     vgpu_renderer renderer;
 } vgpu_device_t;
 
+typedef struct VGPUContext_T {
+    void(*BeginFrame)(vgpu_renderer driverData, VGPUBackendContext* contextData);
+    void(*EndFrame)(vgpu_renderer driverData, VGPUBackendContext* contextData);
+
+    /* Opaque pointer for the implementation */
+    vgpu_renderer renderer;
+    VGPUBackendContext* backend;
+} VGPUContext_T;
+
 #define ASSIGN_DRIVER_FUNC(func, name) result->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
 	ASSIGN_DRIVER_FUNC(destroy, name)\
-    ASSIGN_DRIVER_FUNC(begin_frame, name)\
-    ASSIGN_DRIVER_FUNC(present_frame, name)\
     ASSIGN_DRIVER_FUNC(create_texture, name)\
-    ASSIGN_DRIVER_FUNC(destroy_texture, name)
+    ASSIGN_DRIVER_FUNC(destroy_texture, name)\
+    ASSIGN_DRIVER_FUNC(createContext, name)\
+    ASSIGN_DRIVER_FUNC(destroyContext, name)
 
 typedef struct vgpu_driver {
-    vgpu_backend_type backend_type;
+    VGPUBackendType backendType;
     bool(*is_supported)(void);
     vgpu_device(*create_device)(const vgpu_device_desc* desc);
 } vgpu_driver;

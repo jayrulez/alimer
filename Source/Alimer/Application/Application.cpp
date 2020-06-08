@@ -50,7 +50,8 @@ namespace alimer
 
         gameSystems.Clear();
         SafeDelete(gui);
-        vgpu_destroy_device(gpu_device);
+        vgpuDestroyContext(gpu_device, mainContext);
+        vgpuDestroyDevice(gpu_device);
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
@@ -69,12 +70,15 @@ namespace alimer
 #ifdef _DEBUG
             device_desc.debug = true;
 #endif
-            device_desc.swapchain.window_handle = mainWindow->GetHandle();
-            device_desc.swapchain.width = mainWindow->GetSize().width;
-            device_desc.swapchain.height = mainWindow->GetSize().height;
 
-            gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_D3D11, &device_desc);
-            //gpu_device = vgpu_create_device(VGPU_BACKEND_TYPE_D3D12, &device_desc);
+            //gpu_device = vgpu_create_device(VGPUBackendType_D3D11, &device_desc);
+            gpu_device = vgpu_create_device(VGPUBackendType_D3D12, &device_desc);
+
+            VGPUContextDescription contextDesc = {};
+            contextDesc.width = mainWindow->GetSize().width;
+            contextDesc.height = mainWindow->GetSize().height;
+            contextDesc.swapchain.windowHandle = mainWindow->GetHandle();
+            mainContext = vgpuCreateContext(gpu_device, &contextDesc);
 
             //gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
@@ -110,7 +114,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu_begin_frame(gpu_device);
+        vgpuBeginFrame(mainContext);
 
         for (auto gameSystem : gameSystems)
         {
@@ -188,7 +192,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_present_frame(gpu_device);
+        vgpuEndFrame(mainContext);
     }
 
     int Application::Run()

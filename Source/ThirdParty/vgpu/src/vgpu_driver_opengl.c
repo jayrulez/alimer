@@ -33,7 +33,7 @@ static vgpu_device gl_create_device(const vgpu_device_desc* desc) {
 }
 
 vgpu_driver gl_driver = {
-    VGPU_BACKEND_TYPE_OPENGL,
+    VGPUBackendType_OpenGL,
     gl_is_supported,
     gl_create_device
 };

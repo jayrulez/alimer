@@ -34,7 +34,7 @@ static vgpu_device vulkan_create_device(const vgpu_device_desc* desc) {
 }
 
 vgpu_driver vulkan_driver = {
-    VGPU_BACKEND_TYPE_VULKAN,
+    VGPUBackendType_Vulkan,
     vulkan_is_supported,
     vulkan_create_device
 };
