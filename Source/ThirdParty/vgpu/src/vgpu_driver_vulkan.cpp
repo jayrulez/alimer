@@ -30,7 +30,9 @@ static bool vulkan_isSupported(void) {
 }
 
 static VGPUGraphicsContext* vulkan_createContext(void) {
-    return NULL;
+    static VGPUGraphicsContext graphicsContext = { nullptr };
+    //ASSIGN_DRIVER(vk);
+    return &graphicsContext;
 }
 
 vgpu_driver vulkan_driver = {

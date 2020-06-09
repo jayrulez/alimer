@@ -72,7 +72,7 @@ namespace alimer
             deviceDesc.swapchain.windowHandle = mainWindow->GetHandle();
             deviceDesc.swapchain.width = mainWindow->GetSize().width;
             deviceDesc.swapchain.height = mainWindow->GetSize().height;
-            if (!vgpu::Init(vgpu::BackendType::D3D12, deviceDesc)) {
+            if (!vgpu::Init(vgpu::BackendType::D3D11, deviceDesc)) {
                 headless = true;
             }
 
@@ -172,6 +172,14 @@ namespace alimer
             ImGui::End();
         }
         */
+
+        VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
+
+        VGPURenderPassBeginDescription beginInfo = {};
+        beginInfo.framebuffer = vgpu_framebuffer_get_default();
+        beginInfo.colorAttachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
+        vgpuBeginRenderPass(commandBuffer, &beginInfo);
+        vgpuEndRenderPass(commandBuffer);
 
         /*auto& context = graphicsDevice->BeginContext("Frame");
         RenderPassDescriptor renderPass = {};

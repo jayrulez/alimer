@@ -27,7 +27,7 @@ static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D11)
     &d3d11_driver,
 #endif
-#if defined(VGPU_DRIVER_D3D12)
+#if defined(VGPU_DRIVER_D3D12) && defined(TODO_D3D12)
     &d3d12_driver,
 #endif
 #if defined(VGPU_DRIVER_VULKAN)
@@ -43,60 +43,34 @@ static void vgpu_log_default_callback(void* user_data, VGPULogLevel level, const
 
 }
 
-void* vgpu_default_allocate_memory(void* user_data, size_t size) {
-    VGPU_UNUSED(user_data);
-    return malloc(size);
-}
-
-void* vgpu_default_allocate_cleard_memory(void* user_data, size_t size) {
-    VGPU_UNUSED(user_data);
-    void* mem = malloc(size);
-    memset(mem, 0, size);
-    return mem;
-}
-
-void vgpu_default_free_memory(void* user_data, void* ptr) {
-    VGPU_UNUSED(user_data);
-    free(ptr);
-}
-
-
-const vgpu_allocation_callbacks vgpu_default_alloc_cb = {
-    NULL,
-    vgpu_default_allocate_memory,
-    vgpu_default_allocate_cleard_memory,
-    vgpu_default_free_memory
-};
-
 static vgpu_PFN_log vgpu_log_callback = vgpu_log_default_callback;
-static void* vgpu_log_user_data = NULL;
-const vgpu_allocation_callbacks* vgpu_alloc_cb = &vgpu_default_alloc_cb;
-void* vgpu_allocation_user_data = NULL;
+static void* vgpu_log_user_data = nullptr;
 
 void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data) {
     vgpu_log_callback = callback;
     vgpu_log_user_data = user_data;
 }
 
-void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
-    if (callbacks == NULL) {
-        vgpu_alloc_cb = &vgpu_default_alloc_cb;
-    }
-    else {
-        vgpu_alloc_cb = callbacks;
-    }
-}
-
-static VGPUGraphicsContext* s_graphicsContext = nullptr;
+static VGPUGraphicsContext* s_gpu_context = nullptr;
 
 /* Context */
+static vgpu_swapchain_info vgpu_swapchain_info_def(const vgpu_swapchain_info* info) {
+    vgpu_swapchain_info def = *info;
+    def.width = _vgpu_def(info->width, 1u);
+    def.height = _vgpu_def(info->height, 1u);
+    def.colorFormat = _vgpu_def(info->colorFormat, VGPUTextureFormat_BGRA8UNorm);
+    def.depthStencilFormat = _vgpu_def(info->depthStencilFormat, VGPUTextureFormat_Undefined);
+    //def.sample_count = _vgpu_def(info->sample_count, 1u);
+    return def;
+}
+
 static VGPUDeviceDescription VGPUDeviceDescriptionDef(const VGPUDeviceDescription* desc) {
     VGPUDeviceDescription def = *desc;
     def.swapchain.width = _vgpu_def(desc->swapchain.width, 1u);
     def.swapchain.height = _vgpu_def(desc->swapchain.height, 1u);
     def.swapchain.colorFormat = _vgpu_def(desc->swapchain.colorFormat, VGPUTextureFormat_BGRA8UNorm);
     def.swapchain.depthStencilFormat = _vgpu_def(desc->swapchain.depthStencilFormat, VGPUTextureFormat_Undefined);
-    def.swapchain.sampleCount = _vgpu_def(desc->swapchain.sampleCount, VGPUTextureSampleCount1);
+    //def.swapchain.sample_count = _vgpu_def(desc->swapchain.sample_count, 1u);
     return def;
 }
 
@@ -104,14 +78,14 @@ bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
 {
     VGPU_ASSERT(desc);
 
-    if (s_graphicsContext != nullptr) {
+    if (s_gpu_context != nullptr) {
         return true;
     }
 
     if (backendType == VGPUBackendType_Count) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->isSupported()) {
-                s_graphicsContext = drivers[i]->createContext();
+                s_gpu_context = drivers[i]->createContext();
                 break;
             }
         }
@@ -119,19 +93,19 @@ bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->backendType == backendType && drivers[i]->isSupported()) {
-                s_graphicsContext = drivers[i]->createContext();
+                s_gpu_context = drivers[i]->createContext();
                 break;
             }
         }
     }
 
-    if (s_graphicsContext == nullptr) {
+    if (s_gpu_context == nullptr) {
         return false;
     }
 
     VGPUDeviceDescription descDef = VGPUDeviceDescriptionDef(desc);
-    if (!s_graphicsContext->init(&descDef)) {
-        s_graphicsContext = nullptr;
+    if (!s_gpu_context->init(&descDef)) {
+        s_gpu_context = nullptr;
         return false;
     }
 
@@ -139,65 +113,160 @@ bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
 }
 
 void vgpuShutdown(void) {
-    if (s_graphicsContext == nullptr) {
+    if (s_gpu_context == nullptr) {
         return;
     }
 
-    s_graphicsContext->shutdown();
-    s_graphicsContext = nullptr;
+    s_gpu_context->shutdown();
+    s_gpu_context = nullptr;
 }
 
 bool vgpuBeginFrame(void) {
-    return s_graphicsContext->beginFrame();
+    return s_gpu_context->beginFrame();
 }
 
 void vgpuEndFrame(void) {
-    s_graphicsContext->endFrame();
-}
-
-void vgpuBeginRenderPass(void) {
-
-}
-
-void vgpuEndRenderPass(void) {
-
+    s_gpu_context->endFrame();
 }
 
 /* Texture */
-static VGPUTextureDescription _VGPUTextureDescriptionDefaults(const VGPUTextureDescription* desc) {
-    VGPUTextureDescription def = *desc;
-    def.type = _vgpu_def(desc->type, VGPUTextureType_2D);
-    def.format = _vgpu_def(desc->format, VGPUTextureFormat_RGBA8UNorm);
-    def.width = _vgpu_def(desc->width, 1u);
-    def.height = _vgpu_def(desc->height, 1u);
-    def.depth = _vgpu_def(desc->depth, 1u);
-    def.mipLevels = _vgpu_def(desc->mipLevels, 1u);
-    def.arrayLayers = _vgpu_def(desc->arrayLayers, 1u);
-    def.sampleCount = _vgpu_def(desc->sampleCount, VGPUTextureSampleCount1);
+static vgpu_texture_info vgpu_texture_info_def(const vgpu_texture_info* info) {
+    vgpu_texture_info def = *info;
+    def.type = _vgpu_def(info->type, VGPU_TEXTURE_TYPE_2D);
+    def.format = _vgpu_def(info->format, VGPUTextureFormat_RGBA8UNorm);
+    def.width = _vgpu_def(info->width, 1u);
+    def.height = _vgpu_def(info->height, 1u);
+    def.depth = _vgpu_def(info->depth, 1u);
+    def.mip_levels = _vgpu_def(info->mip_levels, 1u);
+    def.sample_count = _vgpu_def(info->sample_count, 1u);
     return def;
 }
 
-VGPUTexture vgpuCreateTexture(const VGPUTextureDescription* desc) {
-    VGPU_ASSERT(s_graphicsContext);
-    VGPU_ASSERT(desc);
+vgpu_texture vgpu_texture_create(const vgpu_texture_info* info) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(info);
 
-    VGPUTextureDescription desc_def = _VGPUTextureDescriptionDefaults(desc);
-
-    /* Alloc and init texture. */
-    VGPUTexture texture = s_graphicsContext->allocTexture();
-    if (!s_graphicsContext->initTexture(texture, &desc_def)) {
-        vgpuDestroyTexture(texture);
-        return { VGPU_INVALID_ID };
-    }
-
-    return texture;
+    vgpu_texture_info info_def = vgpu_texture_info_def(info);
+    return s_gpu_context->texture_create(&info_def);
 }
 
-void vgpuDestroyTexture(VGPUTexture texture) {
-    VGPU_ASSERT(s_graphicsContext);
+void vgpu_texture_destroy(vgpu_texture texture) {
+    VGPU_ASSERT(s_gpu_context);
     if (texture.id != VGPU_INVALID_ID) {
-        s_graphicsContext->destroyTexture(texture);
+        s_gpu_context->texture_destroy(texture);
     }
+}
+
+uint32_t vgpu_texture_get_width(vgpu_texture texture, uint32_t mipLevel) {
+    return s_gpu_context->texture_get_width(texture, mipLevel);
+}
+
+uint32_t vgpu_texture_get_height(vgpu_texture texture, uint32_t mipLevel) {
+    return s_gpu_context->texture_get_height(texture, mipLevel);
+}
+
+/* Buffer */
+vgpu_buffer vgpu_buffer_create(const vgpu_buffer_info* info) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(info);
+
+    return s_gpu_context->buffer_create(info);
+}
+
+void vgpu_buffer_destroy(vgpu_buffer handle) {
+    VGPU_ASSERT(s_gpu_context);
+    if (handle.id != VGPU_INVALID_ID) {
+        s_gpu_context->buffer_destroy(handle);
+    }
+}
+
+/* Framebuffer */
+static VGPUFramebufferDescription _VGPUFramebufferDescriptionDefaults(const VGPUFramebufferDescription* desc) {
+    VGPUFramebufferDescription def = *desc;
+    uint32_t width = desc->width;
+    uint32_t height = desc->height;
+
+    if (width == 0 || height == 0) {
+        width = UINT32_MAX;
+        height = UINT32_MAX;
+
+        for (uint32_t i = 0; i < VGPU_MAX_COLOR_ATTACHMENTS; i++)
+        {
+            if (desc->colorAttachments[i].texture.id == VGPU_INVALID_ID)
+                continue;
+
+            uint32_t mipLevel = desc->colorAttachments[i].mipLevel;
+            width = _vgpu_min(width, vgpu_texture_get_width(desc->colorAttachments[i].texture, mipLevel));
+            height = _vgpu_min(height, vgpu_texture_get_height(desc->colorAttachments[i].texture, mipLevel));
+        }
+
+        /*if (info.depth_stencil)
+        {
+            unsigned lod = info.depth_stencil->get_create_info().base_level;
+            width = min(width, info.depth_stencil->get_image().get_width(lod));
+            height = min(height, info.depth_stencil->get_image().get_height(lod));
+        }*/
+    }
+
+    def.width = width;
+    def.height = height;
+    def.layers = _vgpu_def(desc->layers, 1u);
+    return def;
+}
+
+vgpu_framebuffer vgpu_framebuffer_create(const VGPUFramebufferDescription* desc) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(desc);
+
+    VGPUFramebufferDescription desc_def = _VGPUFramebufferDescriptionDefaults(desc);
+    return s_gpu_context->framebuffer_create(&desc_def);
+}
+
+vgpu_framebuffer vgpu_framebuffer_create_from_window(const vgpu_swapchain_info* info) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(info);
+
+    vgpu_swapchain_info info_def = vgpu_swapchain_info_def(info);
+    return s_gpu_context->framebuffer_create_from_window(&info_def);
+}
+
+void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer) {
+    VGPU_ASSERT(s_gpu_context);
+    if (framebuffer.id != VGPU_INVALID_ID) {
+        s_gpu_context->framebuffer_destroy(framebuffer);
+    }
+}
+
+vgpu_framebuffer vgpu_framebuffer_get_default(void) {
+    return s_gpu_context->getDefaultFramebuffer();
+}
+
+/* CommandBuffer */
+VGPUCommandBuffer vgpuBeginCommandBuffer(const char* name, bool profile) {
+    VGPU_ASSERT(name);
+    return s_gpu_context->beginCommandBuffer(name, profile);
+}
+
+void vgpuInsertDebugMarker(VGPUCommandBuffer commandBuffer, const char* name) {
+    VGPU_ASSERT(name);
+    s_gpu_context->insertDebugMarker(commandBuffer, name);
+}
+
+void vgpuPushDebugGroup(VGPUCommandBuffer commandBuffer, const char* name) {
+    VGPU_ASSERT(name);
+    s_gpu_context->pushDebugGroup(commandBuffer, name);
+}
+
+void vgpuPopDebugGroup(VGPUCommandBuffer commandBuffer) {
+    s_gpu_context->popDebugGroup(commandBuffer);
+}
+
+void vgpuBeginRenderPass(VGPUCommandBuffer commandBuffer, const VGPURenderPassBeginDescription* beginDesc) {
+    s_gpu_context->beginRenderPass(commandBuffer, beginDesc);
+}
+
+void vgpuEndRenderPass(VGPUCommandBuffer commandBuffer) {
+    s_gpu_context->endRenderPass(commandBuffer);
 }
 
 /* PixelFormat */

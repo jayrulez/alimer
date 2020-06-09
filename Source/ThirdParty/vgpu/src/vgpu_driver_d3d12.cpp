@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_D3D12)
+#if defined(VGPU_DRIVER_D3D12) && defined(TODO_D3D12)
 #include <d3d12.h>
 #include "vgpu_d3d_common.h"
 
@@ -485,17 +485,22 @@ static void d3d12_endFrame(void)
 }
 
 /* Texture */
-VGPUTexture d3d12_allocTexture(void) {
-    return { VGPU_INVALID_ID };
-};
-
-static bool d3d12_initTexture(VGPUTexture handle, const VGPUTextureDescription* desc)
+static VGPUTexture d3d12_createTexture(const VGPUTextureDescription* desc)
 {
-    return true;
+    return { VGPU_INVALID_ID };
 }
 
 static void d3d12_destroyTexture(VGPUTexture handle)
 {
+}
+
+/* Pass */
+static VGPUPass d3d12_createPass(const VGPUPassDescription* desc)
+{
+    return { VGPU_INVALID_ID };
+}
+
+static void d3d12_destroyPass(VGPUPass handle) {
 }
 
 /* Driver functions */

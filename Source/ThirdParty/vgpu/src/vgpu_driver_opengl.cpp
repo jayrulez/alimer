@@ -24,12 +24,15 @@
 
 #include "vgpu_driver.h"
 
+/* Driver functions */
 static bool gl_isSupported(void) {
     return true;
 }
 
 static VGPUGraphicsContext* gl_createContext(void) {
-    return NULL;
+    static VGPUGraphicsContext graphicsContext = { nullptr };
+    //ASSIGN_DRIVER(gl);
+    return &graphicsContext;
 }
 
 vgpu_driver gl_driver = {
