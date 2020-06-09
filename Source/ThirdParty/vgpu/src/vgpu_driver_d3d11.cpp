@@ -423,7 +423,7 @@ static void d3d11_shutdown(void)
         ID3D11Debug* d3dDebug = NULL;
         if (SUCCEEDED(d3d11.d3dDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug)))
         {
-            d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+            d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
             d3dDebug->Release();
         }
     }

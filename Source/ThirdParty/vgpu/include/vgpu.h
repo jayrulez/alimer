@@ -237,7 +237,7 @@ extern "C" {
     /* Device */
     VGPU_API bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc);
     VGPU_API void vgpuShutdown(void);
-    VGPU_API void vgpuBeginFrame(void);
+    VGPU_API bool vgpuBeginFrame(void);
     VGPU_API void vgpuEndFrame(void);
     VGPU_API void vgpuBeginRenderPass(void);
     VGPU_API void vgpuEndRenderPass(void);
@@ -279,9 +279,20 @@ namespace vgpu
         Debug = VGPULogLevel_Debug,
     };
 
-    static inline bool IsCompressedFormat(VGPUPixelFormat format) {
-        return vgpuIsCompressedFormat(format);
-    }
+    enum class BackendType : uint32_t {
+        Null = VGPUBackendType_Null,
+        D3D11 = VGPUBackendType_D3D11,
+        D3D12 = VGPUBackendType_D3D12,
+        Metal = VGPUBackendType_Metal,
+        Vulkan = VGPUBackendType_Vulkan,
+        OpenGL = VGPUBackendType_OpenGL,
+        Count = VGPUBackendType_Count,
+    };
+
+    VGPU_API bool Init(BackendType backendType, const VGPUDeviceDescription& desc);
+    VGPU_API void Shutdown(void);
+    VGPU_API bool BeginFrame(void);
+    VGPU_API void EndFrame(void);
 }
 #endif /* __cplusplus */
 

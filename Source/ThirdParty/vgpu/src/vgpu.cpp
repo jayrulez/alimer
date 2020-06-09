@@ -27,7 +27,7 @@ static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D11)
     &d3d11_driver,
 #endif
-#if defined(VGPU_DRIVER_D3D12) && TODO
+#if defined(VGPU_DRIVER_D3D12)
     &d3d12_driver,
 #endif
 #if defined(VGPU_DRIVER_VULKAN)
@@ -107,7 +107,7 @@ bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
     if (s_graphicsContext != nullptr) {
         return true;
     }
-    
+
     if (backendType == VGPUBackendType_Count) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->isSupported()) {
@@ -147,8 +147,8 @@ void vgpuShutdown(void) {
     s_graphicsContext = nullptr;
 }
 
-void vgpuBeginFrame(void) {
-    s_graphicsContext->beginFrame();
+bool vgpuBeginFrame(void) {
+    return s_graphicsContext->beginFrame();
 }
 
 void vgpuEndFrame(void) {
@@ -326,4 +326,33 @@ bool vgpuIsDepthOrStencilFormat(VGPUPixelFormat format) {
 bool vgpuIsCompressedFormat(VGPUPixelFormat format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].compressed;
+}
+
+namespace vgpu
+{
+    static_assert(sizeof(BackendType) == sizeof(VGPUBackendType), "sizeof mismatch for BackendType");
+    static_assert(alignof(BackendType) == alignof(VGPUBackendType), "alignof mismatch for BackendType");
+    static_assert(static_cast<uint32_t>(BackendType::Null) == VGPUBackendType_Null, "value mismatch for BackendType::Null");
+    static_assert(static_cast<uint32_t>(BackendType::D3D11) == VGPUBackendType_D3D11, "value mismatch for BackendType::D3D11");
+    static_assert(static_cast<uint32_t>(BackendType::D3D12) == VGPUBackendType_D3D12, "value mismatch for BackendType::D3D12");
+    static_assert(static_cast<uint32_t>(BackendType::Metal) == VGPUBackendType_Metal, "value mismatch for BackendType::Metal");
+    static_assert(static_cast<uint32_t>(BackendType::Vulkan) == VGPUBackendType_Vulkan, "value mismatch for BackendType::Vulkan");
+    static_assert(static_cast<uint32_t>(BackendType::OpenGL) == VGPUBackendType_OpenGL, "value mismatch for BackendType::OpenGL");
+
+
+    bool Init(BackendType backendType, const VGPUDeviceDescription& desc) {
+        return vgpuInit(static_cast<VGPUBackendType>(backendType), &desc);
+    }
+
+    void Shutdown(void) {
+        vgpuShutdown();
+    }
+
+    bool BeginFrame(void) {
+        return vgpuBeginFrame();
+    }
+
+    void EndFrame(void) {
+        vgpuEndFrame();
+    }
 }

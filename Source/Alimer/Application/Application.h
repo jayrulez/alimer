@@ -26,7 +26,7 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Math/size.h"
-#include <vgpu.hpp>
+#include <vgpu.h>
 
 namespace alimer
 {
@@ -110,9 +110,6 @@ namespace alimer
         Window* mainWindow = nullptr;
         Vector<GameSystem*> gameSystems;
         InputManager* input;
-
-        vgpu_device gpu_device = nullptr;
-        VGPUContext mainContext = nullptr;
 
         bool headless{ false };
         Gui* gui = nullptr;
