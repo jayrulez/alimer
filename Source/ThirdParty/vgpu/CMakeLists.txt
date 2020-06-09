@@ -27,16 +27,15 @@ endif()
 add_library(vgpu
 	# Public Headers
 	include/vgpu.h
-    include/vgpu.hpp
     # Internal Headers
 	src/vgpu_driver.h
     # Source Files
-	src/vgpu.c
+	src/vgpu.cpp
     src/vgpu_d3d_common.h
-    src/vgpu_driver_d3d11.c
+    src/vgpu_driver_d3d11.cpp
     src/vgpu_driver_d3d12.c
-    src/vgpu_driver_opengl.c
-    src/vgpu_driver_vulkan.c
+    src/vgpu_driver_opengl.cpp
+    src/vgpu_driver_vulkan.cpp
 )
 
 target_include_directories(vgpu PUBLIC

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_D3D12)
+#if defined(VGPU_DRIVER_D3D12) && TODO
 #define CINTERFACE
 #define COBJMACROS
 #include <d3d12.h>

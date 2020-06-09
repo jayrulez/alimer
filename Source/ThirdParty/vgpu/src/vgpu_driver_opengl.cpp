@@ -24,18 +24,18 @@
 
 #include "vgpu_driver.h"
 
-static bool gl_is_supported(void) {
+static bool gl_isSupported(void) {
     return true;
 }
 
-static vgpu_device gl_create_device(const vgpu_device_desc* desc) {
+static VGPUGraphicsContext* gl_createContext(void) {
     return NULL;
 }
 
 vgpu_driver gl_driver = {
     VGPUBackendType_OpenGL,
-    gl_is_supported,
-    gl_create_device
+    gl_isSupported,
+    gl_createContext
 };
 
 #endif /* defined(VGPU_DRIVER_VULKAN) */

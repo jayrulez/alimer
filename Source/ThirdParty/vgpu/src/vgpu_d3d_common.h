@@ -59,6 +59,7 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 #endif
 
 #define VHR(hr) if (FAILED(hr)) { VGPU_ASSERT(0); }
+#define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 typedef enum {
     DXGIFACTORY_CAPS_FLIP_PRESENT = (1 << 0),
@@ -180,8 +181,8 @@ static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(VGPUPixelFormat 
 {
     switch (format)
     {
-    //case VGPUPixelFormat_D16Unorm:
-    //    return DXGI_FORMAT_R16_TYPELESS;
+        //case VGPUPixelFormat_D16Unorm:
+        //    return DXGI_FORMAT_R16_TYPELESS;
     case VGPUTextureFormat_Depth24Plus:
     case VGPUTextureFormat_Depth24PlusStencil8:
         return DXGI_FORMAT_R24G8_TYPELESS;
@@ -240,7 +241,8 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     uint32_t width,
     uint32_t height,
     VGPUPixelFormat format,
-    uint32_t image_count)
+    uint32_t image_count,
+    bool fullscreen)
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     HWND window = (HWND)handle;
@@ -272,30 +274,26 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 #endif
 
-    const DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {
-        .Width = width,
-        .Height = height,
-        .Format = vgpu_d3d_swapchain_format(format),
-        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        .BufferCount = image_count,
-        .SampleDesc = {
-            .Count = 1,
-            .Quality = 0
-        },
-        .AlphaMode = scaling,
-        .SwapEffect = swapEffect,
-        .Flags = flags
-    };
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.Width = width;
+    swapChainDesc.Height = height;
+    swapChainDesc.Format = vgpu_d3d_swapchain_format(format);
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.BufferCount = image_count;
+    swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+    swapChainDesc.Scaling = scaling;
+    swapChainDesc.SwapEffect = swapEffect;
+    swapChainDesc.Flags = flags;
 
     IDXGISwapChain1* result = NULL;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    const DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {
-       .Windowed = TRUE
-    };
+    DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+    fsSwapChainDesc.Windowed = !fullscreen;
 
     // Create a SwapChain from a Win32 window.
-    VHR(IDXGIFactory2_CreateSwapChainForHwnd(
-        dxgiFactory,
+    VHR(dxgiFactory->CreateSwapChainForHwnd(
         deviceOrCommandQueue,
         window,
         &swapChainDesc,
@@ -305,10 +303,9 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     ));
 
     // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-    VHR(IDXGIFactory2_MakeWindowAssociation(dxgiFactory, window, DXGI_MWA_NO_ALT_ENTER));
+    VHR(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
-    VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
-        dxgiFactory,
+    VHR(dxgiFactory->CreateSwapChainForCoreWindow(
         deviceOrCommandQueue,
         window,
         &swapChainDesc,

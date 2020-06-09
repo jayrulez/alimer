@@ -20,25 +20,23 @@
 // THE SOFTWARE.
 //
 
-#ifndef VGPU_CPP_H
-#define VGPU_CPP_H
+#if defined(VGPU_DRIVER_VULKAN)
 
-#include <vgpu.h>
+#include "vgpu_driver.h"
 
-namespace vgpu
-{
-    template<typename Derived, typename CType>
-    class ObjectBase {
-    public:
-        ObjectBase() = default;
-        ObjectBase(CType handle) : mHandle(handle) {
-            if (mHandle) Derived::WGPUReference(mHandle);
-        }
-    };
+/* Driver functions */
+static bool vulkan_isSupported(void) {
+    return true;
+}
 
-    class Device : public ObjectBase<Device, vgpu_device> {
-    public:
-    };
-} // namespace vgpu
+static VGPUGraphicsContext* vulkan_createContext(void) {
+    return NULL;
+}
 
-#endif /* VGPU_CPP_H */
+vgpu_driver vulkan_driver = {
+    VGPUBackendType_Vulkan,
+    vulkan_isSupported,
+    vulkan_createContext
+};
+
+#endif /* defined(VGPU_DRIVER_VULKAN) */

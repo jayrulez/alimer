@@ -27,7 +27,7 @@ static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D11)
     &d3d11_driver,
 #endif
-#if defined(VGPU_DRIVER_D3D12)
+#if defined(VGPU_DRIVER_D3D12) && TODO
     &d3d12_driver,
 #endif
 #if defined(VGPU_DRIVER_VULKAN)
@@ -87,33 +87,80 @@ void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
     }
 }
 
-vgpu_device vgpu_create_device(VGPUBackendType backendType, const vgpu_device_desc* desc) {
+static VGPUGraphicsContext* s_graphicsContext = nullptr;
+
+/* Context */
+static VGPUDeviceDescription VGPUDeviceDescriptionDef(const VGPUDeviceDescription* desc) {
+    VGPUDeviceDescription def = *desc;
+    def.swapchain.width = _vgpu_def(desc->swapchain.width, 1u);
+    def.swapchain.height = _vgpu_def(desc->swapchain.height, 1u);
+    def.swapchain.colorFormat = _vgpu_def(desc->swapchain.colorFormat, VGPUTextureFormat_BGRA8UNorm);
+    def.swapchain.depthStencilFormat = _vgpu_def(desc->swapchain.depthStencilFormat, VGPUTextureFormat_Undefined);
+    def.swapchain.sampleCount = _vgpu_def(desc->swapchain.sampleCount, VGPUTextureSampleCount1);
+    return def;
+}
+
+bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
+{
     VGPU_ASSERT(desc);
+
+    if (s_graphicsContext != nullptr) {
+        return true;
+    }
+    
     if (backendType == VGPUBackendType_Count) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->is_supported()) {
-                return drivers[i]->create_device(desc);
+            if (drivers[i]->isSupported()) {
+                s_graphicsContext = drivers[i]->createContext();
+                break;
             }
         }
     }
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->backendType == backendType && drivers[i]->is_supported()) {
-                return drivers[i]->create_device(desc);
+            if (drivers[i]->backendType == backendType && drivers[i]->isSupported()) {
+                s_graphicsContext = drivers[i]->createContext();
+                break;
             }
         }
     }
 
-    return NULL;
+    if (s_graphicsContext == nullptr) {
+        return false;
+    }
+
+    VGPUDeviceDescription descDef = VGPUDeviceDescriptionDef(desc);
+    if (!s_graphicsContext->init(&descDef)) {
+        s_graphicsContext = nullptr;
+        return false;
+    }
+
+    return true;
 }
 
-void vgpuDestroyDevice(vgpu_device device) {
-    if (device == NULL)
-    {
+void vgpuShutdown(void) {
+    if (s_graphicsContext == nullptr) {
         return;
     }
 
-    device->destroy(device);
+    s_graphicsContext->shutdown();
+    s_graphicsContext = nullptr;
+}
+
+void vgpuBeginFrame(void) {
+    s_graphicsContext->beginFrame();
+}
+
+void vgpuEndFrame(void) {
+    s_graphicsContext->endFrame();
+}
+
+void vgpuBeginRenderPass(void) {
+
+}
+
+void vgpuEndRenderPass(void) {
+
 }
 
 /* Texture */
@@ -130,62 +177,27 @@ static VGPUTextureDescription _VGPUTextureDescriptionDefaults(const VGPUTextureD
     return def;
 }
 
-VGPUTexture vgpuCreateTexture(vgpu_device device, const VGPUTextureDescription* desc) {
-    VGPU_ASSERT(device);
+VGPUTexture vgpuCreateTexture(const VGPUTextureDescription* desc) {
+    VGPU_ASSERT(s_graphicsContext);
     VGPU_ASSERT(desc);
 
     VGPUTextureDescription desc_def = _VGPUTextureDescriptionDefaults(desc);
-    return device->create_texture(device->renderer, &desc_def);
+
+    /* Alloc and init texture. */
+    VGPUTexture texture = s_graphicsContext->allocTexture();
+    if (!s_graphicsContext->initTexture(texture, &desc_def)) {
+        vgpuDestroyTexture(texture);
+        return { VGPU_INVALID_ID };
+    }
+
+    return texture;
 }
 
-void vgpuDestroyTexture(vgpu_device device, VGPUTexture texture) {
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(texture);
-
-    device->destroy_texture(device->renderer, texture);
-}
-
-/* Context */
-static VGPUContextDescription VGPUSwapChainDescriptorDef(const VGPUContextDescription* desc) {
-    VGPUContextDescription def = *desc;
-    def.width = _vgpu_def(desc->width, 1u);
-    def.height = _vgpu_def(desc->height, 1u);
-    def.colorFormat = _vgpu_def(desc->colorFormat, VGPUTextureFormat_BGRA8UNorm);
-    def.depthStencilFormat = _vgpu_def(desc->depthStencilFormat, VGPUTextureFormat_Undefined);
-    def.sampleCount = _vgpu_def(desc->sampleCount, VGPUTextureSampleCount1);
-    return def;
-}
-
-VGPUContext vgpuCreateContext(vgpu_device device, const VGPUContextDescription* desc) {
-
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(desc);
-
-    VGPUContextDescription descDef = VGPUSwapChainDescriptorDef(desc);
-    return device->createContext(device->renderer, &descDef);
-}
-
-void vgpuDestroyContext(vgpu_device device, VGPUContext context) {
-    VGPU_ASSERT(device);
-    VGPU_ASSERT(context);
-
-    device->destroyContext(device->renderer, context);
-}
-
-void vgpuBeginFrame(VGPUContext context) {
-    context->BeginFrame(context->renderer, context->backend);
-}
-
-void vgpuEndFrame(VGPUContext context) {
-    context->EndFrame(context->renderer, context->backend);
-}
-
-void vgpuBeginRenderPass(VGPUContext context) {
-
-}
-
-void vgpuEndRenderPass(VGPUContext context) {
-
+void vgpuDestroyTexture(VGPUTexture texture) {
+    VGPU_ASSERT(s_graphicsContext);
+    if (texture.id != VGPU_INVALID_ID) {
+        s_graphicsContext->destroyTexture(texture);
+    }
 }
 
 /* PixelFormat */
@@ -267,8 +279,8 @@ const VGPUPixelFormatDescription FormatDesc[] =
     // Depth only formats
     VGPU_DEFINE_DEPTH_FORMAT(Depth32Float, 4, VGPUPixelFormatType_Float),
     // Packed depth/depth-stencil formats
-    VGPU_DEFINE_DEPTH_FORMAT(Depth24Plus, VGPUPixelFormatAspect_Depth, 4),
-    VGPU_DEFINE_DEPTH_FORMAT(Depth24PlusStencil8, VGPUPixelFormatAspect_DepthStencil, 4),
+    VGPU_DEFINE_DEPTH_FORMAT(Depth24Plus, 4, VGPUPixelFormatType_Float),
+    VGPU_DEFINE_DEPTH_FORMAT(Depth24PlusStencil8, 4, VGPUPixelFormatType_Float),
 
     VGPU_DEFINE_COMPRESSED_FORMAT(BC1RGBAUNorm, VGPUPixelFormatType_UNorm, 8, 4, 4),
     VGPU_DEFINE_COMPRESSED_FORMAT(BC1RGBAUNormSrgb, VGPUPixelFormatType_UNormSrgb, 8, 4, 4),

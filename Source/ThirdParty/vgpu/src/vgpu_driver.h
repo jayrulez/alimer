@@ -25,7 +25,7 @@
 
 #include "vgpu.h"
 #include <string.h> /* memset */
-#include <float.h> /* FLT_MAX */
+#include <new>
 
 #ifndef VGPU_ASSERT
 #   include <assert.h>
@@ -57,6 +57,44 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 
+template <typename T, uint32_t MAX_COUNT>
+struct VGPUPool
+{
+    void init()
+    {
+        values = (T*)mem;
+        for (int i = 0; i < MAX_COUNT + 1; ++i) {
+            new (&values[i]) int(i + 1);
+        }
+        new (&values[MAX_COUNT]) int(-1);
+        first_free = 1;
+    }
+
+    int alloc()
+    {
+        if (first_free == -1) return -1;
+
+        const int id = first_free;
+        first_free = *((int*)&values[id]);
+        new (&values[id]) T;
+        return id;
+    }
+
+    void dealloc(uint32_t index)
+    {
+        values[index].~T();
+        new (&values[index]) int(first_free);
+        first_free = index;
+    }
+
+    alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)];
+    T* values;
+    int first_free;
+
+    T& operator[](int index) { return values[index]; }
+    bool isFull() const { return first_free == -1; }
+};
+
 extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
 extern void* vgpu_allocation_user_data;
 
@@ -64,45 +102,32 @@ extern void* vgpu_allocation_user_data;
 #define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
 #define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared_memory(vgpu_allocation_user_data, sizeof(T)))
 
-typedef struct vgpu_renderer_t* vgpu_renderer;
-typedef struct VGPUBackendContext VGPUBackendContext;
-
-typedef struct vgpu_device_t {
-    void (*destroy)(vgpu_device device);
+typedef struct VGPUGraphicsContext {
+    bool (*init)(const VGPUDeviceDescription* desc);
+    void (*shutdown)(void);
+    bool (*beginFrame)(void);
+    void (*endFrame)(void);
 
     /* Texture */
-    VGPUTexture(*create_texture)(vgpu_renderer driver_data, const VGPUTextureDescription* desc);
-    void(*destroy_texture)(vgpu_renderer driver_data, VGPUTexture handle);
+    VGPUTexture(*allocTexture)(void);
+    bool(*initTexture)(VGPUTexture handle, const VGPUTextureDescription* desc);
+    void(*destroyTexture)(VGPUTexture handle);
+} VGPUGraphicsContext;
 
-    /* Context */
-    VGPUContext(*createContext)(vgpu_renderer driver_data, const VGPUContextDescription* desc);
-    void(*destroyContext)(vgpu_renderer driver_data, VGPUContext handle);
-
-    /* Opaque pointer for the implementation */
-    vgpu_renderer renderer;
-} vgpu_device_t;
-
-typedef struct VGPUContext_T {
-    void(*BeginFrame)(vgpu_renderer driverData, VGPUBackendContext* contextData);
-    void(*EndFrame)(vgpu_renderer driverData, VGPUBackendContext* contextData);
-
-    /* Opaque pointer for the implementation */
-    vgpu_renderer renderer;
-    VGPUBackendContext* backend;
-} VGPUContext_T;
-
-#define ASSIGN_DRIVER_FUNC(func, name) result->func = name##_##func;
+#define ASSIGN_DRIVER_FUNC(func, name) graphicsContext.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-	ASSIGN_DRIVER_FUNC(destroy, name)\
-    ASSIGN_DRIVER_FUNC(create_texture, name)\
-    ASSIGN_DRIVER_FUNC(destroy_texture, name)\
-    ASSIGN_DRIVER_FUNC(createContext, name)\
-    ASSIGN_DRIVER_FUNC(destroyContext, name)
+    ASSIGN_DRIVER_FUNC(init, name)\
+	ASSIGN_DRIVER_FUNC(shutdown, name)\
+    ASSIGN_DRIVER_FUNC(beginFrame, name)\
+    ASSIGN_DRIVER_FUNC(endFrame, name)\
+    ASSIGN_DRIVER_FUNC(allocTexture, name)\
+    ASSIGN_DRIVER_FUNC(initTexture, name)\
+    ASSIGN_DRIVER_FUNC(destroyTexture, name)
 
 typedef struct vgpu_driver {
     VGPUBackendType backendType;
-    bool(*is_supported)(void);
-    vgpu_device(*create_device)(const vgpu_device_desc* desc);
+    bool(*isSupported)(void);
+    VGPUGraphicsContext* (*createContext)(void);
 } vgpu_driver;
 
 extern vgpu_driver d3d11_driver;
