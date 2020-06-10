@@ -176,7 +176,7 @@ static inline DXGI_FORMAT _vgpuGetDXGIFormat(VGPUPixelFormat format) {
     }
 }
 
-static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(VGPUPixelFormat format)
+static inline DXGI_FORMAT _vgpu_d3d_typeless_from_depth_format(VGPUPixelFormat format)
 {
     switch (format)
     {
@@ -191,6 +191,18 @@ static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(VGPUPixelFormat 
         VGPU_ASSERT(vgpuIsDepthFormat(format) == false);
         return _vgpuGetDXGIFormat(format);
     }
+}
+
+static inline DXGI_FORMAT _vgpu_d3d_format(VGPUPixelFormat format, vgpu_texture_usage_flags usage) {
+    // If depth and either ua or sr, set to typeless
+    if (vgpuIsDepthOrStencilFormat(format)
+        && ((usage & (VGPU_TEXTURE_USAGE_SAMPLED | VGPU_TEXTURE_USAGE_STORAGE)) != 0))
+    {
+        return _vgpu_d3d_typeless_from_depth_format(format);
+    }
+
+
+    return _vgpuGetDXGIFormat(format);
 }
 
 

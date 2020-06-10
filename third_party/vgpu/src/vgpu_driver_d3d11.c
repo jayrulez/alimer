@@ -449,9 +449,9 @@ static void d3d11_shutdown(void) {
     ID3D11DeviceContext1_Release(d3d11.context);
     ID3DUserDefinedAnnotation_Release(d3d11.d3d_annotation);
 
-    ULONG refCount = ID3D11Device1_Release(d3d11.device);
+    ULONG ref_count = ID3D11Device1_Release(d3d11.device);
 #if !defined(NDEBUG)
-    if (refCount > 0)
+    if (ref_count > 0)
     {
         //gpuLog(GPULogLevel_Error, "Direct3D11: There are %d unreleased references left on the device", refCount);
 
@@ -463,7 +463,7 @@ static void d3d11_shutdown(void) {
         }
     }
 #else
-    (void)refCount; // avoid warning
+    (void)ref_count; // avoid warning
 #endif
 
     IDXGIFactory2_Release(d3d11.factory);
@@ -530,15 +530,7 @@ static vgpu_texture d3d11_texture_create(const vgpu_texture_info* info) {
     texture->type = info->type;
     texture->sample_count = info->sample_count;
 
-    // If depth and either ua or sr, set to typeless
-    if (vgpuIsDepthOrStencilFormat(info->format)
-        && ((info->usage & (VGPU_TEXTURE_USAGE_SAMPLED | VGPU_TEXTURE_USAGE_STORAGE)) != 0))
-    {
-        texture->dxgi_format = _vgpuGetTypelessFormatFromDepthFormat(info->format);
-    }
-    else {
-        texture->dxgi_format = _vgpuGetDXGIFormat(info->format);
-    }
+    texture->dxgi_format = _vgpu_d3d_format(info->format, info->usage);
 
     HRESULT hr = S_OK;
     if (info->external_handle) {
