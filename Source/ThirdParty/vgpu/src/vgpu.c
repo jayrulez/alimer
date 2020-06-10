@@ -23,8 +23,58 @@
 #include "vgpu_driver.h"
 #include <stdlib.h>
 
+/* Allocation */
+void* vgpu_default_allocate_memory(void* user_data, size_t size) {
+    VGPU_UNUSED(user_data);
+    return malloc(size);
+}
+
+void* vgpu_default_allocate_cleard_memory(void* user_data, size_t size) {
+    VGPU_UNUSED(user_data);
+    void* mem = malloc(size);
+    memset(mem, 0, size);
+    return mem;
+}
+
+void vgpu_default_free_memory(void* user_data, void* ptr) {
+    VGPU_UNUSED(user_data);
+    free(ptr);
+}
+
+const vgpu_allocation_callbacks vgpu_default_alloc_cb = {
+    NULL,
+    vgpu_default_allocate_memory,
+    vgpu_default_allocate_cleard_memory,
+    vgpu_default_free_memory
+};
+
+const vgpu_allocation_callbacks* vgpu_alloc_cb = &vgpu_default_alloc_cb;
+void* vgpu_allocation_user_data = NULL;
+
+void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
+    if (callbacks == NULL) {
+        vgpu_alloc_cb = &vgpu_default_alloc_cb;
+    }
+    else {
+        vgpu_alloc_cb = callbacks;
+    }
+}
+
+/* Log */
+static void vgpu_log_default_callback(void* user_data, vgpu_log_level level, const char* message) {
+
+}
+
+static vgpu_PFN_log vgpu_log_callback = vgpu_log_default_callback;
+static void* vgpu_log_user_data = NULL;
+
+void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data) {
+    vgpu_log_callback = callback;
+    vgpu_log_user_data = user_data;
+}
+
 static const vgpu_driver* drivers[] = {
-#if defined(VGPU_DRIVER_D3D11)
+#if defined(VGPU_DRIVER_D3D11) && defined(TODO_D3D11)
     &d3d11_driver,
 #endif
 #if defined(VGPU_DRIVER_D3D12) && defined(TODO_D3D12)
@@ -39,21 +89,8 @@ static const vgpu_driver* drivers[] = {
     NULL
 };
 
-static void vgpu_log_default_callback(void* user_data, VGPULogLevel level, const char* message) {
+static vgpu_context* s_gpu_context = NULL;
 
-}
-
-static vgpu_PFN_log vgpu_log_callback = vgpu_log_default_callback;
-static void* vgpu_log_user_data = nullptr;
-
-void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data) {
-    vgpu_log_callback = callback;
-    vgpu_log_user_data = user_data;
-}
-
-static VGPUGraphicsContext* s_gpu_context = nullptr;
-
-/* Context */
 static vgpu_swapchain_info vgpu_swapchain_info_def(const vgpu_swapchain_info* info) {
     vgpu_swapchain_info def = *info;
     def.width = _vgpu_def(info->width, 1u);
@@ -64,69 +101,58 @@ static vgpu_swapchain_info vgpu_swapchain_info_def(const vgpu_swapchain_info* in
     return def;
 }
 
-static VGPUDeviceDescription VGPUDeviceDescriptionDef(const VGPUDeviceDescription* desc) {
-    VGPUDeviceDescription def = *desc;
-    def.swapchain.width = _vgpu_def(desc->swapchain.width, 1u);
-    def.swapchain.height = _vgpu_def(desc->swapchain.height, 1u);
-    def.swapchain.colorFormat = _vgpu_def(desc->swapchain.colorFormat, VGPUTextureFormat_BGRA8UNorm);
-    def.swapchain.depthStencilFormat = _vgpu_def(desc->swapchain.depthStencilFormat, VGPUTextureFormat_Undefined);
-    //def.swapchain.sample_count = _vgpu_def(desc->swapchain.sample_count, 1u);
-    return def;
-}
-
-bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc)
+bool vgpu_init(const vgpu_config* config)
 {
-    VGPU_ASSERT(desc);
+    VGPU_ASSERT(config);
 
-    if (s_gpu_context != nullptr) {
+    if (s_gpu_context) {
         return true;
     }
 
-    if (backendType == VGPUBackendType_Count) {
+    if (config->backend_type == VGPU_BACKEND_TYPE_DEFAULT || config->backend_type == VGPU_BACKEND_TYPE_COUNT) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->isSupported()) {
-                s_gpu_context = drivers[i]->createContext();
+            if (drivers[i]->is_supported()) {
+                s_gpu_context = drivers[i]->create_context();
                 break;
             }
         }
     }
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->backendType == backendType && drivers[i]->isSupported()) {
-                s_gpu_context = drivers[i]->createContext();
+            if (drivers[i]->backendType == config->backend_type && drivers[i]->is_supported()) {
+                s_gpu_context = drivers[i]->create_context();
                 break;
             }
         }
     }
 
-    if (s_gpu_context == nullptr) {
+    if (s_gpu_context == NULL) {
         return false;
     }
 
-    VGPUDeviceDescription descDef = VGPUDeviceDescriptionDef(desc);
-    if (!s_gpu_context->init(&descDef)) {
-        s_gpu_context = nullptr;
+    if (!s_gpu_context->init(config)) {
+        s_gpu_context = NULL;
         return false;
     }
 
     return true;
 }
 
-void vgpuShutdown(void) {
-    if (s_gpu_context == nullptr) {
+void vgpu_shutdown(void) {
+    if (!s_gpu_context) {
         return;
     }
 
     s_gpu_context->shutdown();
-    s_gpu_context = nullptr;
+    s_gpu_context = NULL;
 }
 
-bool vgpuBeginFrame(void) {
-    return s_gpu_context->beginFrame();
+bool vgpu_frame_begin(void) {
+    return s_gpu_context->frame_begin();
 }
 
-void vgpuEndFrame(void) {
-    s_gpu_context->endFrame();
+void vgpu_frame_finish(void) {
+    s_gpu_context->frame_end();
 }
 
 /* Texture */
@@ -395,33 +421,4 @@ bool vgpuIsDepthOrStencilFormat(VGPUPixelFormat format) {
 bool vgpuIsCompressedFormat(VGPUPixelFormat format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].compressed;
-}
-
-namespace vgpu
-{
-    static_assert(sizeof(BackendType) == sizeof(VGPUBackendType), "sizeof mismatch for BackendType");
-    static_assert(alignof(BackendType) == alignof(VGPUBackendType), "alignof mismatch for BackendType");
-    static_assert(static_cast<uint32_t>(BackendType::Null) == VGPUBackendType_Null, "value mismatch for BackendType::Null");
-    static_assert(static_cast<uint32_t>(BackendType::D3D11) == VGPUBackendType_D3D11, "value mismatch for BackendType::D3D11");
-    static_assert(static_cast<uint32_t>(BackendType::D3D12) == VGPUBackendType_D3D12, "value mismatch for BackendType::D3D12");
-    static_assert(static_cast<uint32_t>(BackendType::Metal) == VGPUBackendType_Metal, "value mismatch for BackendType::Metal");
-    static_assert(static_cast<uint32_t>(BackendType::Vulkan) == VGPUBackendType_Vulkan, "value mismatch for BackendType::Vulkan");
-    static_assert(static_cast<uint32_t>(BackendType::OpenGL) == VGPUBackendType_OpenGL, "value mismatch for BackendType::OpenGL");
-
-
-    bool Init(BackendType backendType, const VGPUDeviceDescription& desc) {
-        return vgpuInit(static_cast<VGPUBackendType>(backendType), &desc);
-    }
-
-    void Shutdown(void) {
-        vgpuShutdown();
-    }
-
-    bool BeginFrame(void) {
-        return vgpuBeginFrame();
-    }
-
-    void EndFrame(void) {
-        vgpuEndFrame();
-    }
 }

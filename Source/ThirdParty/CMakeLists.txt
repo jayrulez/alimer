@@ -35,37 +35,3 @@ set(IMGUI_FILES
 add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
-
-if (ALIMER_GRAPHICS_VULKAN)
-    # Vulkan headers
-    add_library(vulkan INTERFACE)
-    set (VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
-    target_sources (vulkan INTERFACE 
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vk_sdk_platform.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h
-        ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_core.h
-    )
-
-    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
-    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
-    target_compile_definitions(vulkan INTERFACE VK_ENABLE_BETA_EXTENSIONS)
-
-    if(ANDROID)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
-    elseif(WIN32)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
-    elseif(APPLE)
-        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
-    elseif(UNIX)
-        # See whether X11 is available. If not, fall back to direct-to-display mode.
-        find_package(X11 QUIET)
-        if (X11_FOUND)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
-        else()
-            set(DIRECT_TO_DISPLAY TRUE)
-            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
-            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
-        endif()
-    endif()
-endif ()

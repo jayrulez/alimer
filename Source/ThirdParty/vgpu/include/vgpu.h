@@ -57,25 +57,6 @@ typedef struct vgpu_buffer { uint32_t id; } vgpu_buffer;
 typedef struct vgpu_framebuffer { uint32_t id; } vgpu_framebuffer;
 typedef uint32_t VGPUCommandBuffer;
 
-typedef enum VGPULogLevel {
-    VGPULogLevel_Error,
-    VGPULogLevel_Warn,
-    VGPULogLevel_Info,
-    VGPULogLevel_Debug,
-    VGPULogLevel_Force32 = 0x7FFFFFFF
-} VGPULogLevel;
-
-typedef enum VGPUBackendType {
-    VGPUBackendType_Null,
-    VGPUBackendType_D3D11,
-    VGPUBackendType_D3D12,
-    VGPUBackendType_Metal,
-    VGPUBackendType_Vulkan,
-    VGPUBackendType_OpenGL,
-    VGPUBackendType_Count,
-    VGPUBackendType_Force32 = 0x7FFFFFFF
-} VGPUBackendType;
-
 typedef enum VGPUPixelFormat {
     VGPUTextureFormat_Undefined = 0,
     VGPUTextureFormat_R8UNorm,
@@ -174,9 +155,14 @@ typedef enum VGPUPresentMode {
     VGPUPresentMode_Force32 = 0x7FFFFFFF
 } VGPUPresentMode;
 
-typedef void (*vgpu_PFN_log)(void* userData, VGPULogLevel level, const char* message);
-
 /* Structures */
+typedef struct vgpu_allocation_callbacks {
+    void* user_data;
+    void* (*allocate_memory)(void* user_data, size_t size);
+    void* (*allocate_cleared_memory)(void* user_data, size_t size);
+    void (*free_memory)(void* user_data, void* ptr);
+} vgpu_allocation_callbacks;
+
 typedef struct vgpu_color {
     float r;
     float g;
@@ -232,34 +218,34 @@ typedef struct vgpu_swapchain_info {
     const char* label;
 } vgpu_swapchain_info;
 
-typedef struct VGPUDeviceDescription {
-    bool debug;
-    vgpu_swapchain_info swapchain;
-    void* (*getProcAddress)(const char* funcName);
-} VGPUDeviceDescription;
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-    /* Logging/Allocation functions */
+    /* Log */
+    typedef enum vgpu_log_level {
+        VGPU_LOG_LEVE_ERROR,
+        VGPU_LOG_LEVE_WARN,
+        VGPU_LOG_LEVE_INFO,
+        VGPU_LOG_LEVE_DEBUG,
+        _VGPU_LOG_LEVE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_log_level;
+    typedef void (*vgpu_PFN_log)(void* userData, vgpu_log_level level, const char* message);
+
     VGPU_API void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data);
 
-    /* Device */
-    VGPU_API bool vgpuInit(VGPUBackendType backendType, const VGPUDeviceDescription* desc);
-    VGPU_API void vgpuShutdown(void);
-    VGPU_API bool vgpuBeginFrame(void);
-    VGPU_API void vgpuEndFrame(void);
+    /* Logging/Allocation functions */
+    VGPU_API void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks);
 
     /* Texture */
-    typedef enum VGPUTextureType {
+    typedef enum vgpu_texture_type {
         VGPU_TEXTURE_TYPE_2D,
         VGPU_TEXTURE_TYPE_3D,
         VGPU_TEXTURE_TYPE_CUBE,
         _VGPU_TEXTURE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_type;
 
-    typedef enum {
+    typedef enum vgpu_texture_usage {
         VGPUTextureUsage_None = 0,
         VGPUTextureUsage_Sampled = 1 << 0,
         VGPUTextureUsage_Storage = 1 << 1,
@@ -323,6 +309,32 @@ extern "C" {
     VGPU_API void vgpuBeginRenderPass(VGPUCommandBuffer commandBuffer, const VGPURenderPassBeginDescription* beginDesc);
     VGPU_API void vgpuEndRenderPass(VGPUCommandBuffer commandBuffer);
 
+
+    /* Device/Context */
+    typedef enum vgpu_backend_type {
+        VGPU_BACKEND_TYPE_DEFAULT,
+        VGPU_BACKEND_TYPE_NULL,
+        VGPU_BACKEND_TYPE_D3D11,
+        VGPU_BACKEND_TYPE_D3D12,
+        VGPU_BACKEND_TYPE_METAL,
+        VGPU_BACKEND_TYPE_VULKAN,
+        VGPU_BACKEND_TYPE_OPENGL,
+        VGPU_BACKEND_TYPE_COUNT,
+        _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_backend_type;
+
+    typedef struct vgpu_config {
+        vgpu_backend_type backend_type;
+        bool debug;
+        vgpu_swapchain_info swapchain;
+        void* (*getProcAddress)(const char* funcName);
+    } vgpu_config;
+
+    VGPU_API bool vgpu_init(const vgpu_config* config);
+    VGPU_API void vgpu_shutdown(void);
+    VGPU_API bool vgpu_frame_begin(void);
+    VGPU_API void vgpu_frame_finish(void);
+
     /* Helper methods */
     /// Check if the format is color format.
     VGPU_API bool vgpuIsColorFormat(VGPUPixelFormat format);
@@ -336,42 +348,6 @@ extern "C" {
     VGPU_API bool vgpuIsCompressedFormat(VGPUPixelFormat format);
 
 #ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
-#ifdef __cplusplus
-namespace vgpu
-{
-    static constexpr uint32_t kInvalidId = { VGPU_INVALID_ID };
-    struct Texture { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-    struct Buffer { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-    struct Framebuffer { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-
-    static constexpr Texture kInvalidTexture = { kInvalidId };
-    static constexpr Buffer kInvalidBuffer = { kInvalidId };
-    static constexpr Framebuffer kInvalidFramebuffer = { kInvalidId };
-
-    enum class LogLevel : uint32_t {
-        Error = VGPULogLevel_Error,
-        Warn = VGPULogLevel_Warn,
-        Info = VGPULogLevel_Info,
-        Debug = VGPULogLevel_Debug,
-    };
-
-    enum class BackendType : uint32_t {
-        Null = VGPUBackendType_Null,
-        D3D11 = VGPUBackendType_D3D11,
-        D3D12 = VGPUBackendType_D3D12,
-        Metal = VGPUBackendType_Metal,
-        Vulkan = VGPUBackendType_Vulkan,
-        OpenGL = VGPUBackendType_OpenGL,
-        Count = VGPUBackendType_Count,
-    };
-
-    VGPU_API bool Init(BackendType backendType, const VGPUDeviceDescription& desc);
-    VGPU_API void Shutdown(void);
-    VGPU_API bool BeginFrame(void);
-    VGPU_API void EndFrame(void);
 }
 #endif /* __cplusplus */
 

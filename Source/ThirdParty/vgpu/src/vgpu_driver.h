@@ -25,8 +25,13 @@
 
 #include "vgpu.h"
 #include <string.h> /* memset */
-#include <new>
-#include <atomic>
+
+extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
+extern void* vgpu_allocation_user_data;
+
+#define VGPU_ALLOC(T)     ((T*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(T)))
+#define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
+#define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared_memory(vgpu_allocation_user_data, sizeof(T)))
 
 #ifndef VGPU_ASSERT
 #   include <assert.h>
@@ -58,116 +63,11 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 
-template <typename T, uint32_t MAX_COUNT>
-struct VGPUPool
-{
-    void init()
-    {
-        values = (T*)mem;
-        for (int i = 0; i < MAX_COUNT + 1; ++i) {
-            new (&values[i]) int(i + 1);
-        }
-        new (&values[MAX_COUNT]) int(-1);
-        first_free = 1;
-    }
-
-    int alloc()
-    {
-        if (first_free == -1) return -1;
-
-        const int id = first_free;
-        first_free = *((int*)&values[id]);
-        new (&values[id]) T;
-        return id;
-    }
-
-    void dealloc(uint32_t index)
-    {
-        values[index].~T();
-        new (&values[index]) int(first_free);
-        first_free = index;
-    }
-
-    alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)];
-    T* values;
-    int first_free;
-
-    T& operator[](int index) { return values[index]; }
-    bool isFull() const { return first_free == -1; }
-};
-
-class VGPUSpinLock
-{
-private:
-    std::atomic_flag flag = ATOMIC_FLAG_INIT;
-public:
-    void lock()
-    {
-        while (!try_lock()) {}
-    }
-    bool try_lock()
-    {
-        return !flag.test_and_set(std::memory_order_acquire);
-    }
-
-    void unlock()
-    {
-        flag.clear(std::memory_order_release);
-    }
-};
-
-// Fixed size very simple thread safe ring buffer
-template <typename T, size_t capacity>
-class VGPUThreadSafeRingBuffer
-{
-public:
-    // Push an item to the end if there is free space
-    //	Returns true if succesful
-    //	Returns false if there is not enough space
-    inline bool push_back(const T& item)
-    {
-        bool result = false;
-        lock.lock();
-        size_t next = (head + 1) % capacity;
-        if (next != tail)
-        {
-            data[head] = item;
-            head = next;
-            result = true;
-        }
-        lock.unlock();
-        return result;
-    }
-
-    // Get an item if there are any
-    //	Returns true if succesful
-    //	Returns false if there are no items
-    inline bool pop_front(T& item)
-    {
-        bool result = false;
-        lock.lock();
-        if (tail != head)
-        {
-            item = data[tail];
-            tail = (tail + 1) % capacity;
-            result = true;
-        }
-        lock.unlock();
-        return result;
-    }
-
-private:
-    T data[capacity];
-    size_t head = 0;
-    size_t tail = 0;
-    VGPUSpinLock lock;
-};
-
-typedef struct VGPUGraphicsContext {
-    bool (*init)(const VGPUDeviceDescription* desc);
+typedef struct vgpu_context {
+    bool (*init)(const vgpu_config* config);
     void (*shutdown)(void);
-    bool (*beginFrame)(void);
-    void (*endFrame)(void);
+    bool (*frame_begin)(void);
+    void (*frame_end)(void);
 
     /* Texture */
     vgpu_texture(*texture_create)(const vgpu_texture_info* desc);
@@ -193,35 +93,19 @@ typedef struct VGPUGraphicsContext {
     void(*beginRenderPass)(VGPUCommandBuffer commandBuffer, const VGPURenderPassBeginDescription* beginDesc);
     void(*endRenderPass)(VGPUCommandBuffer commandBuffer);
 
-} VGPUGraphicsContext;
+} vgpu_context;
 
-#define ASSIGN_DRIVER_FUNC(func, name) graphicsContext.func = name##_##func;
+#define ASSIGN_DRIVER_FUNC(func, name) context.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
     ASSIGN_DRIVER_FUNC(init, name)\
 	ASSIGN_DRIVER_FUNC(shutdown, name)\
-    ASSIGN_DRIVER_FUNC(beginFrame, name)\
-    ASSIGN_DRIVER_FUNC(endFrame, name)\
-    ASSIGN_DRIVER_FUNC(texture_create, name)\
-    ASSIGN_DRIVER_FUNC(texture_destroy, name)\
-    ASSIGN_DRIVER_FUNC(texture_get_width, name)\
-    ASSIGN_DRIVER_FUNC(texture_get_height, name)\
-    ASSIGN_DRIVER_FUNC(buffer_create, name)\
-    ASSIGN_DRIVER_FUNC(buffer_destroy, name)\
-    ASSIGN_DRIVER_FUNC(framebuffer_create, name)\
-    ASSIGN_DRIVER_FUNC(framebuffer_create_from_window, name)\
-    ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)\
-    ASSIGN_DRIVER_FUNC(getDefaultFramebuffer, name)\
-    ASSIGN_DRIVER_FUNC(beginCommandBuffer, name)\
-    ASSIGN_DRIVER_FUNC(insertDebugMarker, name)\
-    ASSIGN_DRIVER_FUNC(pushDebugGroup, name)\
-    ASSIGN_DRIVER_FUNC(popDebugGroup, name)\
-    ASSIGN_DRIVER_FUNC(beginRenderPass, name)\
-    ASSIGN_DRIVER_FUNC(endRenderPass, name)
+    ASSIGN_DRIVER_FUNC(frame_begin, name)\
+    ASSIGN_DRIVER_FUNC(frame_end, name)
 
 typedef struct vgpu_driver {
-    VGPUBackendType backendType;
-    bool(*isSupported)(void);
-    VGPUGraphicsContext* (*createContext)(void);
+    vgpu_backend_type backendType;
+    bool(*is_supported)(void);
+    vgpu_context* (*create_context)(void);
 } vgpu_driver;
 
 extern vgpu_driver d3d11_driver;

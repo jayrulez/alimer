@@ -20,25 +20,40 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_OPENGL)
+#if defined(VGPU_DRIVER_VULKAN)
 
 #include "vgpu_driver.h"
 
-/* Driver functions */
-static bool gl_isSupported(void) {
+static bool vk_init(const vgpu_config* config) {
     return true;
 }
 
-static VGPUGraphicsContext* gl_createContext(void) {
-    static VGPUGraphicsContext graphicsContext = { nullptr };
-    //ASSIGN_DRIVER(gl);
-    return &graphicsContext;
+static void vk_shutdown(void) {
 }
 
-vgpu_driver gl_driver = {
-    VGPUBackendType_OpenGL,
-    gl_isSupported,
-    gl_createContext
+static bool vk_frame_begin(void) {
+    return true;
+}
+
+static void vk_frame_end(void) {
+
+}
+
+/* Driver functions */
+static bool vulkan_is_supported(void) {
+    return true;
+}
+
+static vgpu_context* vulkan_create_context(void) {
+    static vgpu_context context = { 0 };
+    ASSIGN_DRIVER(vk);
+    return &context;
+}
+
+vgpu_driver vulkan_driver = {
+    VGPU_BACKEND_TYPE_VULKAN,
+    vulkan_is_supported,
+    vulkan_create_context
 };
 
 #endif /* defined(VGPU_DRIVER_VULKAN) */

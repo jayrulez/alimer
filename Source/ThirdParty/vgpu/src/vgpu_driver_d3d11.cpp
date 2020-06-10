@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_D3D11)
+#if defined(VGPU_DRIVER_D3D11) && defined(TODO_D3D11)
 #define D3D11_NO_HELPERS
 #include <d3d11_1.h>
 #include "vgpu_d3d_common.h"
@@ -35,7 +35,7 @@ struct D3D11Texture {
     uint32_t height;
     uint32_t depth_or_layers;
     uint32_t mipLevels;
-    VGPUTextureType type;
+    vgpu_texture_type type;
     uint32_t sample_count;
 };
 

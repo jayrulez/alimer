@@ -50,7 +50,7 @@ namespace alimer
 
         gameSystems.Clear();
         SafeDelete(gui);
-        vgpu::Shutdown();
+        vgpu_shutdown();
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
@@ -65,14 +65,14 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
-            VGPUDeviceDescription deviceDesc = {};
+            vgpu_config gpu_config = {};
 #ifdef _DEBUG
-            deviceDesc.debug = true;
+            gpu_config.debug = true;
 #endif
-            deviceDesc.swapchain.windowHandle = mainWindow->GetHandle();
-            deviceDesc.swapchain.width = mainWindow->GetSize().width;
-            deviceDesc.swapchain.height = mainWindow->GetSize().height;
-            if (!vgpu::Init(vgpu::BackendType::D3D11, deviceDesc)) {
+            gpu_config.swapchain.windowHandle = mainWindow->GetHandle();
+            gpu_config.swapchain.width = mainWindow->GetSize().width;
+            gpu_config.swapchain.height = mainWindow->GetSize().height;
+            if (!vgpu_init(&gpu_config)) {
                 headless = true;
             }
 
@@ -110,7 +110,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!vgpu::BeginFrame()) {
+        if (!vgpu_frame_begin()) {
             return false;
         }
 
@@ -173,13 +173,13 @@ namespace alimer
         }
         */
 
-        VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
+        /*VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
 
         VGPURenderPassBeginDescription beginInfo = {};
         beginInfo.framebuffer = vgpu_framebuffer_get_default();
         beginInfo.colorAttachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
         vgpuBeginRenderPass(commandBuffer, &beginInfo);
-        vgpuEndRenderPass(commandBuffer);
+        vgpuEndRenderPass(commandBuffer);*/
 
         /*auto& context = graphicsDevice->BeginContext("Frame");
         RenderPassDescriptor renderPass = {};
@@ -198,7 +198,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu::EndFrame();
+        vgpu_frame_finish();
     }
 
     int Application::Run()
