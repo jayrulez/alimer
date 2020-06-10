@@ -36,9 +36,9 @@ endif ()
 
 # Vulkan headers
 if (WIN32 OR ANDROID OR LINUX)
-    add_library(alimer_vulkan_headers INTERFACE)
+    add_library(vulkan INTERFACE)
     set (VULKAN_INCLUDE_DIR ${VGPU_THIRD_PARTY_DIR}/khronos/vulkan/include)
-    target_sources (alimer_vulkan_headers INTERFACE
+    target_sources (vulkan INTERFACE
         ${VULKAN_INCLUDE_DIR}/vulkan/vk_icd.h
         ${VULKAN_INCLUDE_DIR}/vulkan/vk_layer.h
         ${VULKAN_INCLUDE_DIR}/vulkan/vk_platform.h
@@ -47,27 +47,36 @@ if (WIN32 OR ANDROID OR LINUX)
         ${VULKAN_INCLUDE_DIR}/vulkan/vulkan_core.h
     )
 
-    target_include_directories(alimer_vulkan_headers INTERFACE ${VULKAN_INCLUDE_DIR})
-    target_compile_definitions(alimer_vulkan_headers INTERFACE VK_NO_PROTOTYPES)
-    target_compile_definitions(alimer_vulkan_headers INTERFACE VK_ENABLE_BETA_EXTENSIONS)
+    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
+    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
+    target_compile_definitions(vulkan INTERFACE VK_ENABLE_BETA_EXTENSIONS)
 
     if(ANDROID)
-        target_compile_definitions(alimer_vulkan_headers INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
     elseif(WIN32)
-        target_compile_definitions(alimer_vulkan_headers INTERFACE VK_USE_PLATFORM_WIN32_KHR)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
     elseif(APPLE)
-        target_compile_definitions(alimer_vulkan_headers INTERFACE VK_USE_PLATFORM_MACOS_MVK)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
     elseif(UNIX)
         # See whether X11 is available. If not, fall back to direct-to-display mode.
         find_package(X11 QUIET)
         if (X11_FOUND)
-            target_compile_definitions(alimer_vulkan_headers INTERFACE VK_USE_PLATFORM_XCB_KHR)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
         else()
             set(DIRECT_TO_DISPLAY TRUE)
             set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
-            target_compile_definitions(alimer_vulkan_headers INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
         endif()
     endif()
+
+    add_library(vma STATIC
+        ${VGPU_THIRD_PARTY_DIR}/vma/vk_mem_alloc.cpp
+        ${VGPU_THIRD_PARTY_DIR}/vma/vk_mem_alloc.h
+    )
+
+    target_include_directories(vma PUBLIC ${VGPU_THIRD_PARTY_DIR}/vma)
+    target_link_libraries(vma PUBLIC vulkan)
+    set_property(TARGET vma PROPERTY FOLDER "ThirdParty")
 endif ()
 
 add_library(vgpu
@@ -78,7 +87,7 @@ add_library(vgpu
     # Source Files
 	src/vgpu.c
     src/vgpu_d3d_common.h
-    src/vgpu_driver_d3d11.cpp
+    src/vgpu_driver_d3d11.c
     src/vgpu_driver_d3d12.cpp
     src/vgpu_driver_opengl.c
     src/vgpu_driver_vulkan.c
@@ -96,7 +105,7 @@ endif ()
 
 if (WIN32 OR ANDROID OR LINUX)
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_VULKAN)
-    target_link_libraries(vgpu PRIVATE alimer_vulkan_headers)
+    target_link_libraries(vgpu PRIVATE vma)
 endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)

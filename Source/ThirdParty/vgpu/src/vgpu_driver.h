@@ -75,15 +75,15 @@ typedef struct vgpu_context {
     uint32_t(*texture_get_width)(vgpu_texture handle, uint32_t mipLevel);
     uint32_t(*texture_get_height)(vgpu_texture handle, uint32_t mipLevel);
 
+    /* Framebuffer */
+    vgpu_framebuffer(*framebuffer_create)(const VGPUFramebufferDescription* desc);
+    vgpu_framebuffer(*framebuffer_create_from_window)(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format);
+    void(*framebuffer_destroy)(vgpu_framebuffer handle);
+    vgpu_framebuffer(*getDefaultFramebuffer)(void);
+
     /* Buffer */
     vgpu_buffer(*buffer_create)(const vgpu_buffer_info* info);
     void(*buffer_destroy)(vgpu_buffer handle);
-
-    /* Framebuffer */
-    vgpu_framebuffer(*framebuffer_create)(const VGPUFramebufferDescription* desc);
-    vgpu_framebuffer(*framebuffer_create_from_window)(const vgpu_swapchain_info* info);
-    void(*framebuffer_destroy)(vgpu_framebuffer handle);
-    vgpu_framebuffer(*getDefaultFramebuffer)(void);
 
     /* CommandBuffer */
     VGPUCommandBuffer(*beginCommandBuffer)(const char* name, bool profile);
@@ -97,10 +97,17 @@ typedef struct vgpu_context {
 
 #define ASSIGN_DRIVER_FUNC(func, name) context.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-    ASSIGN_DRIVER_FUNC(init, name)\
-	ASSIGN_DRIVER_FUNC(shutdown, name)\
-    ASSIGN_DRIVER_FUNC(frame_begin, name)\
-    ASSIGN_DRIVER_FUNC(frame_end, name)
+ASSIGN_DRIVER_FUNC(init, name)\
+ASSIGN_DRIVER_FUNC(shutdown, name)\
+ASSIGN_DRIVER_FUNC(frame_begin, name)\
+ASSIGN_DRIVER_FUNC(frame_end, name)\
+ASSIGN_DRIVER_FUNC(texture_create, name)\
+ASSIGN_DRIVER_FUNC(texture_destroy, name)\
+ASSIGN_DRIVER_FUNC(texture_get_width, name)\
+ASSIGN_DRIVER_FUNC(texture_get_height, name)\
+ASSIGN_DRIVER_FUNC(framebuffer_create, name)\
+ASSIGN_DRIVER_FUNC(framebuffer_create_from_window, name)\
+ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)
 
 typedef struct vgpu_driver {
     vgpu_backend_type backendType;

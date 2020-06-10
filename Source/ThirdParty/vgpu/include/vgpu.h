@@ -52,9 +52,9 @@ enum {
 };
 
 /* Handles */
-typedef struct vgpu_texture { uint32_t id; } vgpu_texture;
-typedef struct vgpu_buffer { uint32_t id; } vgpu_buffer;
-typedef struct vgpu_framebuffer { uint32_t id; } vgpu_framebuffer;
+typedef struct vgpu_texture_t* vgpu_texture;
+typedef struct vgpu_buffer_t* vgpu_buffer;
+typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
 typedef uint32_t VGPUCommandBuffer;
 
 typedef enum VGPUPixelFormat {
@@ -148,13 +148,6 @@ typedef enum VGPULoadAction {
     VGPULoadAction_Force32 = 0x7FFFFFFF
 } VGPULoadAction;
 
-typedef enum VGPUPresentMode {
-    VGPUPresentMode_Fifo,
-    VGPUPresentMode_Immediate,
-    VGPUPresentMode_Mailbox,
-    VGPUPresentMode_Force32 = 0x7FFFFFFF
-} VGPUPresentMode;
-
 /* Structures */
 typedef struct vgpu_allocation_callbacks {
     void* user_data;
@@ -207,17 +200,6 @@ typedef struct VGPURenderPassBeginDescription {
     VGPUDepthStencilAttachmentAction depthStencilAttachment;
 } VGPURenderPassBeginDescription;
 
-typedef struct vgpu_swapchain_info {
-    uintptr_t windowHandle;
-    uint32_t width;
-    uint32_t height;
-    VGPUPixelFormat colorFormat;
-    VGPUPixelFormat depthStencilFormat;
-    VGPUPresentMode presentMode;
-    bool fullscreen;
-    const char* label;
-} vgpu_swapchain_info;
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -242,16 +224,14 @@ extern "C" {
         VGPU_TEXTURE_TYPE_2D,
         VGPU_TEXTURE_TYPE_3D,
         VGPU_TEXTURE_TYPE_CUBE,
-        _VGPU_TEXTURE_FORCE_U32 = 0x7FFFFFFF
+        _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_type;
 
     typedef enum vgpu_texture_usage {
-        VGPUTextureUsage_None = 0,
-        VGPUTextureUsage_Sampled = 1 << 0,
-        VGPUTextureUsage_Storage = 1 << 1,
-        VGPUTextureUsage_RenderTarget = 1 << 2,
-        VGPUTextureUsage_Cubemap = 1 << 3,
-        VGPUTextureUsage_Force32 = 0x7FFFFFFF
+        VGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
+        VGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
+        VGPU_TEXTURE_USAGE_RENDER_TARGET = (1 << 2),
+        _VGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_usage;
     typedef uint32_t vgpu_texture_usage_flags;
 
@@ -267,7 +247,7 @@ extern "C" {
         vgpu_texture_type type;
         vgpu_texture_usage_flags usage;
         uint32_t sample_count;
-        const void* external_handle;
+        const uintptr_t external_handle;
         const char* label;
     } vgpu_texture_info;
 
@@ -275,6 +255,12 @@ extern "C" {
     VGPU_API void vgpu_texture_destroy(vgpu_texture texture);
     VGPU_API uint32_t vgpu_texture_get_width(vgpu_texture texture, uint32_t mipLevel);
     VGPU_API uint32_t vgpu_texture_get_height(vgpu_texture texture, uint32_t mipLevel);
+
+    /* Framebuffer */
+    VGPU_API vgpu_framebuffer vgpu_framebuffer_create(const VGPUFramebufferDescription* desc);
+    VGPU_API vgpu_framebuffer vgpu_framebuffer_create_from_window(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format);
+    VGPU_API void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer);
+    VGPU_API vgpu_framebuffer vgpu_framebuffer_get_default(void);
 
     /* Buffer */
     typedef enum {
@@ -293,13 +279,7 @@ extern "C" {
     } vgpu_buffer_info;
 
     VGPU_API vgpu_buffer vgpu_buffer_create(const vgpu_buffer_info* info);
-    VGPU_API void vgpu_buffer_destroy(vgpu_buffer handle);
-
-    /* Framebuffer */
-    VGPU_API vgpu_framebuffer vgpu_framebuffer_create(const VGPUFramebufferDescription* desc);
-    VGPU_API vgpu_framebuffer vgpu_framebuffer_create_from_window(const vgpu_swapchain_info* info);
-    VGPU_API void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer);
-    VGPU_API vgpu_framebuffer vgpu_framebuffer_get_default(void);
+    VGPU_API void vgpu_buffer_destroy(vgpu_buffer buffer);
 
     /* CommandBuffer */
     VGPU_API VGPUCommandBuffer vgpuBeginCommandBuffer(const char* name, bool profile);
@@ -323,10 +303,30 @@ extern "C" {
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_backend_type;
 
+    typedef enum vgpu_device_preference {
+        VGPU_DEVICE_PREFERENCE_HIGH_PERFORMANCE = 0,
+        VGPU_DEVICE_PREFERENCE_LOW_POWER = 1,
+        VGPU_DEVICE_PREFERENCE_DONT_CARE = 2,
+        _VGPU_DEVICE_PREFERENCE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_device_preference;
+
+    typedef enum vgpu_present_mode {
+        VGPU_PRESENT_MODE_FIFO,
+        VGPU_PRESENT_MODE_IMMEDIATE,
+        VGPU_PRESENT_MODE_MAILBOX,
+        _VGPU_PRESENT_MODE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_present_mode;
+
     typedef struct vgpu_config {
         vgpu_backend_type backend_type;
         bool debug;
-        vgpu_swapchain_info swapchain;
+        bool profile;
+        vgpu_device_preference device_preference;
+        vgpu_present_mode present_mode;
+        uintptr_t display_handle;   /**< Display, wl_display. */
+        uintptr_t window_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
+        VGPUPixelFormat color_format;
+        VGPUPixelFormat depth_stencil_format;
         void* (*getProcAddress)(const char* funcName);
     } vgpu_config;
 

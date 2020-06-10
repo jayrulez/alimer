@@ -68,6 +68,25 @@
 #   endif
 #endif
 
+typedef struct gl_texture {
+    GLuint id;
+    uint32_t width;
+    uint32_t height;
+} gl_texture;
+
+typedef struct gl_framebuffer {
+    GLuint id;
+    uint32_t width;
+    uint32_t height;
+    uint32_t layers;
+} gl_framebuffer;
+
+/* Global data */
+static struct {
+    bool available_initialized;
+    bool available;
+} gl;
+
 static bool gl_init(const vgpu_config* config) {
     return true;
 }
@@ -83,8 +102,53 @@ static void gl_frame_end(void) {
 
 }
 
+/* Texture */
+static vgpu_texture gl_texture_create(const vgpu_texture_info* info) {
+    gl_texture* texture = VGPU_ALLOC_HANDLE(gl_texture);
+    return (vgpu_texture)texture;
+}
+
+static void gl_texture_destroy(vgpu_texture handle) {
+    gl_texture* texture = (gl_texture*)handle;
+    //GL_CHECK(glDeleteTextures(1, &texture->id));
+    VGPU_FREE(texture);
+}
+
+static uint32_t gl_texture_get_width(vgpu_texture handle, uint32_t mipLevel) {
+    gl_texture* texture = (gl_texture*)handle;
+    return _vgpu_max(1, texture->width >> mipLevel);
+}
+
+static uint32_t gl_texture_get_height(vgpu_texture handle, uint32_t mipLevel) {
+    gl_texture* texture = (gl_texture*)handle;
+    return _vgpu_max(1, texture->height >> mipLevel);
+}
+
+/* Framebuffer */
+static vgpu_framebuffer gl_framebuffer_create(const VGPUFramebufferDescription* desc) {
+    gl_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(gl_framebuffer);
+    return (vgpu_framebuffer)framebuffer;
+}
+
+static vgpu_framebuffer gl_framebuffer_create_from_window(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format) {
+    gl_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(gl_framebuffer);
+    return (vgpu_framebuffer)framebuffer;
+}
+
+static void gl_framebuffer_destroy(vgpu_framebuffer handle) {
+    gl_framebuffer* framebuffer = (gl_framebuffer*)handle;
+    VGPU_FREE(framebuffer);
+}
+
 /* Driver functions */
 static bool gl_is_supported(void) {
+
+    if (gl.available_initialized) {
+        return gl.available;
+    }
+
+    gl.available_initialized = true;
+    gl.available = true;
     return true;
 }
 

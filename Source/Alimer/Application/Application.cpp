@@ -69,9 +69,7 @@ namespace alimer
 #ifdef _DEBUG
             gpu_config.debug = true;
 #endif
-            gpu_config.swapchain.windowHandle = mainWindow->GetHandle();
-            gpu_config.swapchain.width = mainWindow->GetSize().width;
-            gpu_config.swapchain.height = mainWindow->GetSize().height;
+            gpu_config.window_handle = mainWindow->GetHandle();
             if (!vgpu_init(&gpu_config)) {
                 headless = true;
             }
