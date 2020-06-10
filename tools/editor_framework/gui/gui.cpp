@@ -21,13 +21,13 @@
 //
 
 #include "config.h"
-#include "UI/Gui.h"
+#include "gui.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Application/Window.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
 
-#include "imgui_impl_glfw.h"
+//#include "imgui_impl_glfw.h"
 #if defined(ALIMER_GRAPHICS_VULKAN)
 #else defined(ALIMER_GRAPHICS_VULKAN)
 #include "Graphics/Direct3D12/D3D12GraphicsDevice.h"
@@ -43,8 +43,7 @@ namespace alimer
     static int const                    NUM_FRAMES_IN_FLIGHT = 3;
     //static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
 
-    Gui::Gui(GraphicsDevice* device, Window* window)
-        : device{ device }
+    Gui::Gui(Window* window)
     {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -111,7 +110,7 @@ namespace alimer
     Gui::~Gui()
     {
         //ImGui_ImplDX12_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
+        //ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
 
@@ -119,7 +118,7 @@ namespace alimer
     {
         // Start the Dear ImGui frame
         //ImGui_ImplDX12_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
+        //ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
     }
 

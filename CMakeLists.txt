@@ -20,15 +20,6 @@ option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
 # Options
-if (WIN32)
-    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend" ON)
-    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend" ON)
-elseif (WINDOWS_STORE)
-    set(ALIMER_GRAPHICS_D3D12 ON CACHE BOOL "Use Direct3D12 backend")
-else ()
-    set(ALIMER_GRAPHICS_VULKAN ON CACHE BOOL "Use Vulkan backend")
-endif ()
-
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
     set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable C# editor" FORCE)
@@ -67,8 +58,12 @@ include(alimer)
 # Third Party 
 add_subdirectory(third_party)
 
-# Source
-add_subdirectory(Source)
+# Engine
+add_subdirectory(engine)
+
+if (ALIMER_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if (ALIMER_BUILD_SAMPLES)
     add_subdirectory(samples)
@@ -76,7 +71,7 @@ endif ()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
-    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Editor")
+    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "editor")
 endif()
 
 # Print current build configuration
@@ -86,12 +81,6 @@ if (ALIMER_BUILD_SHARED)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
-if (ALIMER_GRAPHICS_D3D12)
-    message (STATUS "  Renderer:       Direct3D12")
-endif()
-if (ALIMER_GRAPHICS_VULKAN)
-    message (STATUS "  Renderer:       Vulkan")
-endif()
 
 # Install files
 if (NOT ALIMER_SKIP_INSTALL)

@@ -29,14 +29,13 @@
 namespace alimer
 {
     class Window;
-    class GraphicsDevice;
     class CommandContext;
 
-    class ALIMER_API Gui final
+    class Gui final
     {
     public:
         /// Constructor.
-        Gui(GraphicsDevice* device, Window* window);
+        Gui(Window* window);
 
         /// Destructor.
         ~Gui();
@@ -45,7 +44,6 @@ namespace alimer
         void Render(CommandContext& context);
 
     private:
-        GraphicsDevice* device;
     };
 
 } 

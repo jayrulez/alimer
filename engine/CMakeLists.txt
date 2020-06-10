@@ -37,7 +37,6 @@ define_engine_source_files(
     Math
     Graphics
     Input
-    UI
     Application
 )
 
@@ -73,7 +72,6 @@ target_include_directories(${TARGET_NAME} PUBLIC
 target_link_libraries(${TARGET_NAME} PUBLIC
     vgpu
     stb
-    imgui
 )
 
 # Link platform specific libraries

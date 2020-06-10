@@ -1,0 +1,26 @@
+if (NOT ALIMER_BUILD_EDITOR)
+    return()
+endif ()
+
+set(TARGET_NAME editor)
+file (GLOB_RECURSE SOURCE_FILES *.cpp *.h *.hpp)
+
+if (WIN32)
+    add_executable(${TARGET_NAME} WIN32 ${SOURCE_FILES})
+else ()
+    add_executable(${TARGET_NAME} ${SOURCE_FILES})
+endif ()
+target_link_libraries(${TARGET_NAME} editor_framework)
+
+install(TARGETS ${TARGET_NAME}
+    LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
+    RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
+    ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}
+    BUNDLE  DESTINATION ${DEST_BIN_DIR_CONFIG}
+)
+
+if (MSVC)
+    set_property(TARGET ${TARGET_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+endif ()
+
+set_property(TARGET ${TARGET_NAME} PROPERTY FOLDER "Editor")
