@@ -145,11 +145,33 @@ void vgpu_frame_finish(void) {
     s_gpu_context->frame_end();
 }
 
+void vgpuInsertDebugMarker(const char* name) {
+    VGPU_ASSERT(name);
+    s_gpu_context->insertDebugMarker(name);
+}
+
+void vgpuPushDebugGroup(const char* name) {
+    VGPU_ASSERT(name);
+    s_gpu_context->pushDebugGroup(name);
+}
+
+void vgpuPopDebugGroup(void) {
+    s_gpu_context->popDebugGroup();
+}
+
+void vgpu_render_begin(vgpu_framebuffer framebuffer) {
+    s_gpu_context->beginRenderPass(framebuffer);
+}
+
+void vgpu_render_finish(void) {
+    s_gpu_context->render_finish();
+}
+
 /* Texture */
 static vgpu_texture_info vgpu_texture_info_def(const vgpu_texture_info* info) {
     vgpu_texture_info def = *info;
     def.type = _vgpu_def(info->type, VGPU_TEXTURE_TYPE_2D);
-    def.format = _vgpu_def(info->format, VGPUTextureFormat_RGBA8UNorm);
+    def.format = _vgpu_def(info->format, VGPU_TEXTURE_FORMAT_RGBA8);
     def.width = _vgpu_def(info->width, 1u);
     def.height = _vgpu_def(info->height, 1u);
     def.depth = _vgpu_def(info->depth, 1u);
@@ -173,12 +195,65 @@ void vgpu_texture_destroy(vgpu_texture texture) {
     s_gpu_context->texture_destroy(texture);
 }
 
-uint32_t vgpu_texture_get_width(vgpu_texture texture, uint32_t mipLevel) {
-    return s_gpu_context->texture_get_width(texture, mipLevel);
+uint32_t vgpu_texture_get_width(vgpu_texture texture, uint32_t mip_level) {
+    return s_gpu_context->texture_get_width(texture, mip_level);
 }
 
-uint32_t vgpu_texture_get_height(vgpu_texture texture, uint32_t mipLevel) {
-    return s_gpu_context->texture_get_height(texture, mipLevel);
+uint32_t vgpu_texture_get_height(vgpu_texture texture, uint32_t mip_level) {
+    return s_gpu_context->texture_get_height(texture, mip_level);
+}
+
+/* Framebuffer */
+static vgpu_framebuffer_info vgpu_framebuffer_info_def(const vgpu_framebuffer_info* info) {
+    vgpu_framebuffer_info def = *info;
+    uint32_t width = info->width;
+    uint32_t height = info->height;
+
+    if (width == 0 || height == 0) {
+        width = UINT32_MAX;
+        height = UINT32_MAX;
+
+        for (uint32_t i = 0; i < VGPU_MAX_COLOR_ATTACHMENTS; i++)
+        {
+            if (!info->color_attachments[i].texture)
+                continue;
+
+            uint32_t mip_level = info->color_attachments[i].level;
+            width = _vgpu_min(width, vgpu_texture_get_width(info->color_attachments[i].texture, mip_level));
+            height = _vgpu_min(height, vgpu_texture_get_height(info->color_attachments[i].texture, mip_level));
+        }
+
+        if (info->depth_stencil_attachment.texture)
+        {
+            uint32_t mip_level = info->depth_stencil_attachment.level;
+            width = _vgpu_min(width, vgpu_texture_get_width(info->depth_stencil_attachment.texture, mip_level));
+            height = _vgpu_min(height, vgpu_texture_get_height(info->depth_stencil_attachment.texture, mip_level));
+        }
+    }
+
+    def.width = width;
+    def.height = height;
+    def.layers = _vgpu_def(info->layers, 1u);
+    return def;
+}
+
+vgpu_framebuffer vgpu_framebuffer_create(const vgpu_framebuffer_info* info) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(info);
+
+    vgpu_framebuffer_info info_def = vgpu_framebuffer_info_def(info);
+    return s_gpu_context->framebuffer_create(&info_def);
+}
+
+void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(framebuffer);
+
+    s_gpu_context->framebuffer_destroy(framebuffer);
+}
+
+vgpu_framebuffer vgpu_framebuffer_get_default(void) {
+    return s_gpu_context->getDefaultFramebuffer();
 }
 
 /* Buffer */
@@ -196,97 +271,35 @@ void vgpu_buffer_destroy(vgpu_buffer buffer) {
     s_gpu_context->buffer_destroy(buffer);
 }
 
-/* Framebuffer */
-static VGPUFramebufferDescription _VGPUFramebufferDescriptionDefaults(const VGPUFramebufferDescription* desc) {
-    VGPUFramebufferDescription def = *desc;
-    uint32_t width = desc->width;
-    uint32_t height = desc->height;
-
-    if (width == 0 || height == 0) {
-        width = UINT32_MAX;
-        height = UINT32_MAX;
-
-        for (uint32_t i = 0; i < VGPU_MAX_COLOR_ATTACHMENTS; i++)
-        {
-            if (!desc->colorAttachments[i].texture)
-                continue;
-
-            uint32_t mipLevel = desc->colorAttachments[i].mipLevel;
-            width = _vgpu_min(width, vgpu_texture_get_width(desc->colorAttachments[i].texture, mipLevel));
-            height = _vgpu_min(height, vgpu_texture_get_height(desc->colorAttachments[i].texture, mipLevel));
-        }
-
-        /*if (info.depth_stencil)
-        {
-            unsigned lod = info.depth_stencil->get_create_info().base_level;
-            width = min(width, info.depth_stencil->get_image().get_width(lod));
-            height = min(height, info.depth_stencil->get_image().get_height(lod));
-        }*/
-    }
-
-    def.width = width;
-    def.height = height;
-    def.layers = _vgpu_def(desc->layers, 1u);
-    return def;
-}
-
-vgpu_framebuffer vgpu_framebuffer_create(const VGPUFramebufferDescription* desc) {
-    VGPU_ASSERT(s_gpu_context);
-    VGPU_ASSERT(desc);
-
-    VGPUFramebufferDescription desc_def = _VGPUFramebufferDescriptionDefaults(desc);
-    return s_gpu_context->framebuffer_create(&desc_def);
-}
-
-vgpu_framebuffer vgpu_framebuffer_create_from_window(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format) {
+vgpu_swapchain vgpu_swapchain_create(uintptr_t window_handle, vgpu_texture_format color_format, vgpu_texture_format depth_stencil_format) {
     VGPU_ASSERT(s_gpu_context);
     VGPU_ASSERT(window_handle);
 
-    return s_gpu_context->framebuffer_create_from_window(window_handle, color_format, depth_stencil_format);
+    return s_gpu_context->swapchain_create(window_handle, color_format, depth_stencil_format);
 }
 
-void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer) {
+void vgpu_swapchain_destroy(vgpu_swapchain swapchain) {
     VGPU_ASSERT(s_gpu_context);
-    VGPU_ASSERT(framebuffer);
+    VGPU_ASSERT(swapchain);
 
-    s_gpu_context->framebuffer_destroy(framebuffer);
+    s_gpu_context->swapchain_destroy(swapchain);
 }
 
-vgpu_framebuffer vgpu_framebuffer_get_default(void) {
-    return s_gpu_context->getDefaultFramebuffer();
+void vgpu_swapchain_resize(vgpu_swapchain swapchain, uint32_t width, uint32_t height) {
+    VGPU_ASSERT(s_gpu_context);
+    VGPU_ASSERT(swapchain);
+
+    s_gpu_context->swapchain_resize(swapchain, width, height);
 }
 
-/* CommandBuffer */
-VGPUCommandBuffer vgpuBeginCommandBuffer(const char* name, bool profile) {
-    VGPU_ASSERT(name);
-    return s_gpu_context->beginCommandBuffer(name, profile);
+void vgpu_swapchain_present(vgpu_swapchain swapchain) {
+    s_gpu_context->swapchain_present(swapchain);
 }
 
-void vgpuInsertDebugMarker(VGPUCommandBuffer commandBuffer, const char* name) {
-    VGPU_ASSERT(name);
-    s_gpu_context->insertDebugMarker(commandBuffer, name);
-}
-
-void vgpuPushDebugGroup(VGPUCommandBuffer commandBuffer, const char* name) {
-    VGPU_ASSERT(name);
-    s_gpu_context->pushDebugGroup(commandBuffer, name);
-}
-
-void vgpuPopDebugGroup(VGPUCommandBuffer commandBuffer) {
-    s_gpu_context->popDebugGroup(commandBuffer);
-}
-
-void vgpuBeginRenderPass(VGPUCommandBuffer commandBuffer, const VGPURenderPassBeginDescription* beginDesc) {
-    s_gpu_context->beginRenderPass(commandBuffer, beginDesc);
-}
-
-void vgpuEndRenderPass(VGPUCommandBuffer commandBuffer) {
-    s_gpu_context->endRenderPass(commandBuffer);
-}
 
 /* PixelFormat */
 typedef struct VGPUPixelFormatDescription {
-    VGPUPixelFormat format;
+    vgpu_texture_format format;
     const char* name;
     bool renderable;
     bool compressed;
@@ -304,18 +317,21 @@ typedef struct VGPUPixelFormatDescription {
 #define VGPU_DEFINE_COLOR_FORMAT(format, renderable, supportsStorageUsage, byteSize, type) \
      { VGPUTextureFormat_##format##, #format, renderable, false, true, supportsStorageUsage, VGPUPixelFormatAspect_Color, type, byteSize, 1, 1 }
 
+#define VGPU_DEFINE_COLOR_FORMAT_NEW(format, renderable, supportsStorageUsage, byteSize, type) \
+     { VGPU_TEXTURE_FORMAT_##format##, #format, renderable, false, true, supportsStorageUsage, VGPUPixelFormatAspect_Color, type, byteSize, 1, 1 }
+
 #define VGPU_DEFINE_DEPTH_FORMAT(format, byteSize, type) \
-     { VGPUTextureFormat_##format##, #format, true, false, true, false, VGPUPixelFormatAspect_Depth, type, byteSize, 1, 1 }
+     { VGPU_TEXTURE_FORMAT_##format##, #format, true, false, true, false, VGPUPixelFormatAspect_Depth, type, byteSize, 1, 1 }
 
 #define VGPU_DEFINE_DEPTH_STENCIL_FORMAT(format, aspect, byteSize) \
      { VGPUTextureFormat_##format##, #format, true, false, true, false, aspect, VGPUPixelFormatType_Unknown, byteSize, 1, 1 }
 
 #define VGPU_DEFINE_COMPRESSED_FORMAT(format, type, byteSize, width, height) \
-     { VGPUTextureFormat_##format##, #format, false, true, true, false, VGPUPixelFormatAspect_Color, type, byteSize, width, height }
+     { VGPU_TEXTURE_FORMAT_##format##, #format, false, true, true, false, VGPUPixelFormatAspect_Color, type, byteSize, width, height }
 
 const VGPUPixelFormatDescription FormatDesc[] =
 {
-    { VGPUTextureFormat_Undefined,  "Undefined", false, false, false, false, VGPUPixelFormatAspect_Color, VGPUPixelFormatType_Unknown, 0, 0, 0},
+    { VGPU_TEXTURE_FORMAT_UNDEFINED,  "Undefined", false, false, false, false, VGPUPixelFormatAspect_Color, VGPUPixelFormatType_Unknown, 0, 0, 0},
     // 1 byte color formats
 
     VGPU_DEFINE_COLOR_FORMAT(R8UNorm, true, false, 1, VGPUPixelFormatType_UNorm),
@@ -338,15 +354,15 @@ const VGPUPixelFormatDescription FormatDesc[] =
     VGPU_DEFINE_COLOR_FORMAT(RG16UInt, true, false, 4, VGPUPixelFormatType_UInt),
     VGPU_DEFINE_COLOR_FORMAT(RG16SInt, true, false, 4, VGPUPixelFormatType_SInt),
     VGPU_DEFINE_COLOR_FORMAT(RG16Float, true, false, 4, VGPUPixelFormatType_Float),
-    VGPU_DEFINE_COLOR_FORMAT(RGBA8UNorm, true, true, 4, VGPUPixelFormatType_UNorm),
-    VGPU_DEFINE_COLOR_FORMAT(RGBA8UNormSrgb, true, false, 4, VGPUPixelFormatType_UNormSrgb),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(RGBA8, true, true, 4, VGPUPixelFormatType_UNorm),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(RGBA8_SRGB, true, false, 4, VGPUPixelFormatType_UNormSrgb),
     VGPU_DEFINE_COLOR_FORMAT(RGBA8SNorm, false, true, 4, VGPUPixelFormatType_SNorm),
     VGPU_DEFINE_COLOR_FORMAT(RGBA8UInt, true, true, 4, VGPUPixelFormatType_UInt),
     VGPU_DEFINE_COLOR_FORMAT(RGBA8SInt, true, true, 4, VGPUPixelFormatType_SInt),
-    VGPU_DEFINE_COLOR_FORMAT(BGRA8UNorm, true, false, 4, VGPUPixelFormatType_UNorm),
-    VGPU_DEFINE_COLOR_FORMAT(BGRA8UNormSrgb, true, false, 4, VGPUPixelFormatType_UNormSrgb),
-    VGPU_DEFINE_COLOR_FORMAT(RGB10A2UNorm, true, false, 4, VGPUPixelFormatType_UNorm),
-    VGPU_DEFINE_COLOR_FORMAT(RG11B10Float, false, false, 4, VGPUPixelFormatType_Float),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(BGRA8, true, false, 4, VGPUPixelFormatType_UNorm),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(BGRA8_SRGB, true, false, 4, VGPUPixelFormatType_UNormSrgb),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(RGB10A2, true, false, 4, VGPUPixelFormatType_UNorm),
+    VGPU_DEFINE_COLOR_FORMAT_NEW(RG11B10F, false, false, 4, VGPUPixelFormatType_Float),
 
     // 8 bytes color formats
     VGPU_DEFINE_COLOR_FORMAT(RG32UInt, true, true, 8, VGPUPixelFormatType_UInt),
@@ -361,25 +377,25 @@ const VGPUPixelFormatDescription FormatDesc[] =
     VGPU_DEFINE_COLOR_FORMAT(RGBA32Float, true, true, 16, VGPUPixelFormatType_Float),
 
     // Depth only formats
-    VGPU_DEFINE_DEPTH_FORMAT(Depth32Float, 4, VGPUPixelFormatType_Float),
+    VGPU_DEFINE_DEPTH_FORMAT(D32F, 4, VGPUPixelFormatType_Float),
     // Packed depth/depth-stencil formats
-    VGPU_DEFINE_DEPTH_FORMAT(Depth24Plus, 4, VGPUPixelFormatType_Float),
-    VGPU_DEFINE_DEPTH_FORMAT(Depth24PlusStencil8, 4, VGPUPixelFormatType_Float),
+    VGPU_DEFINE_DEPTH_FORMAT(D24_PLUS, 4, VGPUPixelFormatType_Float),
+    VGPU_DEFINE_DEPTH_FORMAT(D24S8, 4, VGPUPixelFormatType_Float),
 
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC1RGBAUNorm, VGPUPixelFormatType_UNorm, 8, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC1RGBAUNormSrgb, VGPUPixelFormatType_UNormSrgb, 8, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC2RGBAUNorm, VGPUPixelFormatType_UNorm, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC2RGBAUNormSrgb, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC3RGBAUNorm, VGPUPixelFormatType_UNorm, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC3RGBAUNormSrgb, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC4RUNorm, VGPUPixelFormatType_UNorm, 8, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC4RSNorm, VGPUPixelFormatType_SNorm, 8, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC5RGUNorm, VGPUPixelFormatType_UNorm, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC5RGSNorm, VGPUPixelFormatType_SNorm, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC6HRGBSFloat, VGPUPixelFormatType_Float, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC6HRGBUFloat, VGPUPixelFormatType_Float, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC7RGBAUNorm, VGPUPixelFormatType_UNorm, 16, 4, 4),
-    VGPU_DEFINE_COMPRESSED_FORMAT(BC7RGBAUNormSrgb, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC1, VGPUPixelFormatType_UNorm, 8, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC1_SRGB, VGPUPixelFormatType_UNormSrgb, 8, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC2, VGPUPixelFormatType_UNorm, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC2_SRGB, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC3, VGPUPixelFormatType_UNorm, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC3_SRGB, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC4, VGPUPixelFormatType_UNorm, 8, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC4S, VGPUPixelFormatType_SNorm, 8, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC5, VGPUPixelFormatType_UNorm, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC5S, VGPUPixelFormatType_SNorm, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC6H_UFLOAT, VGPUPixelFormatType_Float, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC6H_SFLOAT, VGPUPixelFormatType_Float, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC7, VGPUPixelFormatType_UNorm, 16, 4, 4),
+    VGPU_DEFINE_COMPRESSED_FORMAT(BC7_SRGB, VGPUPixelFormatType_UNormSrgb, 16, 4, 4),
 };
 
 #undef VGPU_DEFINE_COLOR_FORMAT
@@ -387,27 +403,27 @@ const VGPUPixelFormatDescription FormatDesc[] =
 #undef VGPU_DEFINE_DEPTH_STENCIL_FORMAT
 #undef VGPU_DEFINE_COMPRESSED_FORMAT
 
-bool vgpuIsColorFormat(VGPUPixelFormat format) {
+bool vgpu_is_color_format(vgpu_texture_format format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].aspect == VGPUPixelFormatAspect_Color;
 }
 
-bool vgpuIsDepthFormat(VGPUPixelFormat format) {
+bool vgpu_is_depth_format(vgpu_texture_format format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].aspect == VGPUPixelFormatAspect_Depth || FormatDesc[format].aspect == VGPUPixelFormatAspect_DepthStencil;
 }
 
-bool vgpuIsStencilFormat(VGPUPixelFormat format) {
+bool vgpu_is_stencil_format(vgpu_texture_format format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].aspect == VGPUPixelFormatAspect_Stencil || FormatDesc[format].aspect == VGPUPixelFormatAspect_DepthStencil;
 }
 
-bool vgpuIsDepthOrStencilFormat(VGPUPixelFormat format) {
+bool vgpu_is_depth_stencil_format(vgpu_texture_format format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].aspect != VGPUPixelFormatAspect_Color;
 }
 
-bool vgpuIsCompressedFormat(VGPUPixelFormat format) {
+bool vgpu_is_compressed_format(vgpu_texture_format format) {
     VGPU_ASSERT(FormatDesc[format].format == format);
     return FormatDesc[format].compressed;
 }

@@ -27,31 +27,20 @@
 #include "Math/Color.h"
 #include "Core/Log.h"
 
-//#include "imgui_impl_glfw.h"
-#if defined(ALIMER_GRAPHICS_VULKAN)
-#else defined(ALIMER_GRAPHICS_VULKAN)
-#include "Graphics/Direct3D12/D3D12GraphicsDevice.h"
-#include "Graphics/Direct3D12/D3D12CommandContext.h"
-#include "imgui_impl_dx12.h"
-//#pragma comment(lib, "dxgi.lib")
-//#pragma comment(lib, "d3d12.lib")
-#endif
-
 
 namespace alimer
 {
     static int const                    NUM_FRAMES_IN_FLIGHT = 3;
-    //static ID3D12DescriptorHeap* g_pd3dSrvDescHeap = nullptr;
 
-    Gui::Gui(Window* window)
+    Gui::Gui()
     {
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
-        io.BackendRendererName = "Direct3D12";
+        io.BackendRendererName = "alimer";
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-        io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional) // FIXME-VIEWPORT: Actually unfinished..
+        //io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional) // FIXME-VIEWPORT: Actually unfinished..
 
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
         //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -64,7 +53,8 @@ namespace alimer
         ImGui::StyleColorsDark();
         //ImGui::StyleColorsClassic();
 
-        io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
+        io.Fonts->AddFontDefault();
+        //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
 
         // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
         ImGuiStyle& style = ImGui::GetStyle();
@@ -114,15 +104,21 @@ namespace alimer
         ImGui::DestroyContext();
     }
 
-    void Gui::BeginFrame()
+    void Gui::NewFrame(uint32_t width, uint32_t height, double delta_time)
     {
+        ImGuiIO& io = ImGui::GetIO();
+        //IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+
+        io.DisplaySize.x = (float)width / dpi_scale;
+        io.DisplaySize.y = (float)height / dpi_scale;
+        io.DeltaTime = (float)delta_time;
         // Start the Dear ImGui frame
         //ImGui_ImplDX12_NewFrame();
         //ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
     }
 
-    void Gui::Render(CommandContext& context)
+    void Gui::Render()
     {
         ImGuiIO& io = ImGui::GetIO();
         //auto d3dContext = static_cast<D3D12CommandContext*>(&context);

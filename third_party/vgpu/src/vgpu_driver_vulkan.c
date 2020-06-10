@@ -64,6 +64,13 @@ typedef struct vk_framebuffer {
     uint32_t layers;
 } vk_framebuffer;
 
+typedef struct vk_swapchain {
+    VkSurfaceKHR surface;
+    VkSwapchainKHR handle;
+    uint32_t width;
+    uint32_t height;
+} vk_swapchain;
+
 /* Global data */
 static struct {
     bool available_initialized;
@@ -152,6 +159,25 @@ static void vk_frame_end(void) {
 
 }
 
+static void vk_insertDebugMarker(const char* name)
+{
+}
+
+static void vk_pushDebugGroup(const char* name)
+{
+}
+
+static void vk_popDebugGroup(void)
+{
+}
+
+static void vk_beginRenderPass(vgpu_framebuffer framebuffer) {
+}
+
+static void vk_render_finish(void) {
+
+}
+
 /* Texture */
 static vgpu_texture vk_texture_create(const vgpu_texture_info* info) {
     vk_texture* texture = VGPU_ALLOC_HANDLE(vk_texture);
@@ -174,12 +200,7 @@ static uint32_t vk_texture_get_height(vgpu_texture handle, uint32_t mipLevel) {
 }
 
 /* Framebuffer */
-static vgpu_framebuffer vk_framebuffer_create(const VGPUFramebufferDescription* desc) {
-    vk_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(vk_framebuffer);
-    return (vgpu_framebuffer)framebuffer;
-}
-
-static vgpu_framebuffer vk_framebuffer_create_from_window(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format) {
+static vgpu_framebuffer vk_framebuffer_create(const vgpu_framebuffer_info* info) {
     vk_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(vk_framebuffer);
     return (vgpu_framebuffer)framebuffer;
 }
@@ -187,6 +208,25 @@ static vgpu_framebuffer vk_framebuffer_create_from_window(uintptr_t window_handl
 static void vk_framebuffer_destroy(vgpu_framebuffer handle) {
     vk_framebuffer* framebuffer = (vk_framebuffer*)handle;
     VGPU_FREE(framebuffer);
+}
+
+/* Swapchain */
+static vgpu_swapchain vk_swapchain_create(uintptr_t window_handle, vgpu_texture_format color_format, vgpu_texture_format depth_stencil_format) {
+    vk_swapchain* swapchain = VGPU_ALLOC_HANDLE(vk_swapchain);
+    return (vgpu_swapchain)swapchain;
+}
+
+static void vk_swapchain_destroy(vgpu_swapchain handle) {
+    vk_swapchain* swapchain = (vk_swapchain*)handle;
+    VGPU_FREE(swapchain);
+}
+
+static void vk_swapchain_resize(vgpu_swapchain handle, uint32_t width, uint32_t height) {
+    vk_swapchain* swapchain = (vk_swapchain*)handle;
+}
+
+static void vk_swapchain_present(vgpu_swapchain handle) {
+    vk_swapchain* swapchain = (vk_swapchain*)handle;
 }
 
 /* Driver functions */

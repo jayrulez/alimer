@@ -26,6 +26,8 @@
 
 namespace alimer
 {
+    class Gui;
+
     class Editor final : public Application
     {
         ALIMER_OBJECT(Editor, Application);
@@ -36,5 +38,12 @@ namespace alimer
 
         /// Destructor.
         ~Editor();
+
+    private:
+        void Initialize() override;
+        bool BeginDraw() override;
+        void Draw(const GameTime& gameTime) override;
+
+        Gui* gui = nullptr;
     };
 }

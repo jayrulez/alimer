@@ -21,6 +21,10 @@
 //
 
 #include "Editor.h"
+#include "Application/Window.h"
+#include "gui/gui.h"
+#include "core/Utils.h"
+#include "Math/Color.h"
 
 namespace alimer
 {
@@ -30,6 +34,91 @@ namespace alimer
 
     Editor::~Editor()
     {
+        SafeDelete(gui);
+    }
+
+    static bool show_demo_window = true;
+    static bool show_another_window = false;
+    static Color clear_color = Color(0.45f, 0.55f, 0.60f, 1.00f);
+
+    void Editor::Initialize()
+    {
+        Application::Initialize();
+        gui = new Gui();
+    }
+
+    bool Editor::BeginDraw()
+    {
+        if (!Application::BeginDraw()) {
+            return false;
+        }
+
+        //gui->NewFrame(mainWindow->GetSize().width, mainWindow->GetSize().height, 1.0f / 60.0f);
+
+        return true;
+    }
+
+    void Editor::Draw(const GameTime& gameTime)
+    {
+        Application::Draw(gameTime);
+
+        /*VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
+
+        VGPURenderPassBeginDescription beginInfo = {};
+        beginInfo.framebuffer = vgpu_framebuffer_get_default();
+        beginInfo.colorAttachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
+        vgpuBeginRenderPass(commandBuffer, &beginInfo);
+        vgpuEndRenderPass(commandBuffer);*/
+
+        /*auto& context = graphicsDevice->BeginContext("Frame");
+        RenderPassDescriptor renderPass = {};
+        renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
+        renderPass.colorAttachments[0].clearColor = clear_color;
+        context.BeginRenderPass(&renderPass);
+        context.EndRenderPass();
+        gui->Render(context);
+        context.Flush(true);*/
+
+        /* TODO:GUI
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+        gui->Render();
+        */
     }
 }
 

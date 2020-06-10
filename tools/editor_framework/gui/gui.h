@@ -28,22 +28,20 @@
 
 namespace alimer
 {
-    class Window;
-    class CommandContext;
-
     class Gui final
     {
     public:
         /// Constructor.
-        Gui(Window* window);
+        Gui();
 
         /// Destructor.
         ~Gui();
 
-        void BeginFrame();
-        void Render(CommandContext& context);
+        void NewFrame(uint32_t width, uint32_t height, double delta_time);
+        void Render();
 
     private:
+        float dpi_scale = 1.0f;
     };
 
 } 

@@ -24,13 +24,6 @@
 #include "graphics/GraphicsProvider.h"
 #include "Core/Assert.h"
 
-#if defined(ALIMER_GRAPHICS_VULKAN)
-#endif
-
-#if defined(ALIMER_GRAPHICS_D3D12)
-#include "graphics/D3D12/D3D12GraphicsProvider.h"
-#endif
-
 namespace alimer
 {
     GraphicsProvider::GraphicsProvider(BackendType backendType, bool validation)
@@ -45,9 +38,7 @@ namespace alimer
 
         }
 
-        GraphicsProvider* provider = nullptr;
-        provider = new D3D12GraphicsProvider(validation);
-        return provider;
+        return nullptr;
     }
 }
 

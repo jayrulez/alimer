@@ -28,7 +28,6 @@
 #include "graphics/CommandQueue.h"
 #include "graphics/CommandBuffer.h"
 #include "graphics/SwapChain.h"
-#include "UI/Gui.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -49,7 +48,6 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        SafeDelete(gui);
         vgpu_shutdown();
         SafeDelete(mainWindow);
         PlatformDestroy();
@@ -70,11 +68,11 @@ namespace alimer
             gpu_config.debug = true;
 #endif
             gpu_config.window_handle = mainWindow->GetHandle();
+            gpu_config.color_format = VGPU_TEXTURE_FORMAT_BGRA8;
+            gpu_config.depth_stencil_format = VGPU_TEXTURE_FORMAT_D32F;
             if (!vgpu_init(&gpu_config)) {
                 headless = true;
             }
-
-            //gui.reset(new Gui(graphicsDevice.get(), mainWindow.get()));
         }
 
         Initialize();
@@ -117,76 +115,15 @@ namespace alimer
             gameSystem->BeginDraw();
         }
 
-        //gui->BeginFrame();
-
         return true;
     }
 
-    static bool show_demo_window = true;
-    static bool show_another_window = false;
-    static Color clear_color = Color(0.45f, 0.55f, 0.60f, 1.00f);
-
     void Application::Draw(const GameTime& gameTime)
     {
-        /*for (auto gameSystem : gameSystems)
+        for (auto gameSystem : gameSystems)
         {
             gameSystem->Draw(time);
         }
-
-        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }
-
-        // 3. Show another simple window.
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }
-        */
-
-        /*VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
-
-        VGPURenderPassBeginDescription beginInfo = {};
-        beginInfo.framebuffer = vgpu_framebuffer_get_default();
-        beginInfo.colorAttachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
-        vgpuBeginRenderPass(commandBuffer, &beginInfo);
-        vgpuEndRenderPass(commandBuffer);*/
-
-        /*auto& context = graphicsDevice->BeginContext("Frame");
-        RenderPassDescriptor renderPass = {};
-        renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
-        renderPass.colorAttachments[0].clearColor = clear_color;
-        context.BeginRenderPass(&renderPass);
-        context.EndRenderPass();
-        gui->Render(context);
-        context.Flush(true);*/
     }
 
     void Application::EndDraw()

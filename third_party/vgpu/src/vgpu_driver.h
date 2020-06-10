@@ -76,8 +76,7 @@ typedef struct vgpu_context {
     uint32_t(*texture_get_height)(vgpu_texture handle, uint32_t mipLevel);
 
     /* Framebuffer */
-    vgpu_framebuffer(*framebuffer_create)(const VGPUFramebufferDescription* desc);
-    vgpu_framebuffer(*framebuffer_create_from_window)(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format);
+    vgpu_framebuffer(*framebuffer_create)(const vgpu_framebuffer_info* info);
     void(*framebuffer_destroy)(vgpu_framebuffer handle);
     vgpu_framebuffer(*getDefaultFramebuffer)(void);
 
@@ -85,13 +84,18 @@ typedef struct vgpu_context {
     vgpu_buffer(*buffer_create)(const vgpu_buffer_info* info);
     void(*buffer_destroy)(vgpu_buffer handle);
 
+    /* Swapchain */
+    vgpu_swapchain(*swapchain_create)(uintptr_t window_handle, vgpu_texture_format color_format, vgpu_texture_format depth_stencil_format);
+    void(*swapchain_destroy)(vgpu_swapchain handle);
+    void(*swapchain_resize)(vgpu_swapchain handle, uint32_t width, uint32_t height);
+    void(*swapchain_present)(vgpu_swapchain handle);
+
     /* CommandBuffer */
-    VGPUCommandBuffer(*beginCommandBuffer)(const char* name, bool profile);
-    void (*insertDebugMarker)(VGPUCommandBuffer commandBuffer, const char* name);
-    void (*pushDebugGroup)(VGPUCommandBuffer commandBuffer, const char* name);
-    void (*popDebugGroup)(VGPUCommandBuffer commandBuffer);
-    void(*beginRenderPass)(VGPUCommandBuffer commandBuffer, const VGPURenderPassBeginDescription* beginDesc);
-    void(*endRenderPass)(VGPUCommandBuffer commandBuffer);
+    void (*insertDebugMarker)(const char* name);
+    void (*pushDebugGroup)(const char* name);
+    void (*popDebugGroup)(void);
+    void(*beginRenderPass)(vgpu_framebuffer framebuffer);
+    void(*render_finish)(void);
 
 } vgpu_context;
 
@@ -106,8 +110,16 @@ ASSIGN_DRIVER_FUNC(texture_destroy, name)\
 ASSIGN_DRIVER_FUNC(texture_get_width, name)\
 ASSIGN_DRIVER_FUNC(texture_get_height, name)\
 ASSIGN_DRIVER_FUNC(framebuffer_create, name)\
-ASSIGN_DRIVER_FUNC(framebuffer_create_from_window, name)\
-ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)
+ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)\
+ASSIGN_DRIVER_FUNC(swapchain_create, name)\
+ASSIGN_DRIVER_FUNC(swapchain_destroy, name)\
+ASSIGN_DRIVER_FUNC(swapchain_resize, name)\
+ASSIGN_DRIVER_FUNC(swapchain_present, name)\
+ASSIGN_DRIVER_FUNC(insertDebugMarker, name)\
+ASSIGN_DRIVER_FUNC(pushDebugGroup, name)\
+ASSIGN_DRIVER_FUNC(popDebugGroup, name)\
+ASSIGN_DRIVER_FUNC(beginRenderPass, name)\
+ASSIGN_DRIVER_FUNC(render_finish, name)
 
 typedef struct vgpu_driver {
     vgpu_backend_type backendType;

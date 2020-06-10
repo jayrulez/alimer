@@ -81,6 +81,10 @@ typedef struct gl_framebuffer {
     uint32_t layers;
 } gl_framebuffer;
 
+typedef struct gl_swapchain {
+    GLuint id;
+} gl_swapchain;
+
 /* Global data */
 static struct {
     bool available_initialized;
@@ -99,6 +103,25 @@ static bool gl_frame_begin(void) {
 }
 
 static void gl_frame_end(void) {
+
+}
+
+static void gl_insertDebugMarker(const char* name)
+{
+}
+
+static void gl_pushDebugGroup(const char* name)
+{
+}
+
+static void gl_popDebugGroup(void)
+{
+}
+
+static void gl_beginRenderPass(vgpu_framebuffer framebuffer) {
+}
+
+static void gl_render_finish(void) {
 
 }
 
@@ -125,12 +148,7 @@ static uint32_t gl_texture_get_height(vgpu_texture handle, uint32_t mipLevel) {
 }
 
 /* Framebuffer */
-static vgpu_framebuffer gl_framebuffer_create(const VGPUFramebufferDescription* desc) {
-    gl_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(gl_framebuffer);
-    return (vgpu_framebuffer)framebuffer;
-}
-
-static vgpu_framebuffer gl_framebuffer_create_from_window(uintptr_t window_handle, VGPUPixelFormat color_format, VGPUPixelFormat depth_stencil_format) {
+static vgpu_framebuffer gl_framebuffer_create(const vgpu_framebuffer_info* info) {
     gl_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(gl_framebuffer);
     return (vgpu_framebuffer)framebuffer;
 }
@@ -138,6 +156,25 @@ static vgpu_framebuffer gl_framebuffer_create_from_window(uintptr_t window_handl
 static void gl_framebuffer_destroy(vgpu_framebuffer handle) {
     gl_framebuffer* framebuffer = (gl_framebuffer*)handle;
     VGPU_FREE(framebuffer);
+}
+
+/* Swapchain */
+static vgpu_swapchain gl_swapchain_create(uintptr_t window_handle, vgpu_texture_format color_format, vgpu_texture_format depth_stencil_format) {
+    gl_swapchain* swapchain = VGPU_ALLOC_HANDLE(gl_swapchain);
+    return (vgpu_swapchain)swapchain;
+}
+
+static void gl_swapchain_destroy(vgpu_swapchain handle) {
+    gl_swapchain* swapchain = (gl_swapchain*)handle;
+    VGPU_FREE(swapchain);
+}
+
+static void gl_swapchain_resize(vgpu_swapchain handle, uint32_t width, uint32_t height) {
+    gl_swapchain* swapchain = (gl_swapchain*)handle;
+}
+
+static void gl_swapchain_present(vgpu_swapchain handle) {
+    gl_swapchain* swapchain = (gl_swapchain*)handle;
 }
 
 /* Driver functions */

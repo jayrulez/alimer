@@ -48,7 +48,6 @@ namespace alimer
     struct Engine;
     class Window;
     class InputManager;
-    class Gui;
 
     class ALIMER_API Application : public Object
     {
@@ -112,7 +111,6 @@ namespace alimer
         InputManager* input;
 
         bool headless{ false };
-        Gui* gui = nullptr;
     };
 } 
 
