@@ -92,6 +92,8 @@ static struct {
     PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
 
+    vgpu_caps caps;
+
     bool validation;
     IDXGIFactory2* factory;
     uint32_t factory_caps;
@@ -497,6 +499,10 @@ static void d3d11_shutdown(void) {
     memset(&d3d11, 0, sizeof(d3d11));
 }
 
+static void d3d11_get_caps(vgpu_caps* caps) {
+    *caps = d3d11.caps;
+}
+
 static bool d3d11_frame_begin(void) {
     return true;
 }
@@ -555,7 +561,7 @@ static void d3d11_popDebugGroup(void)
     ID3DUserDefinedAnnotation_EndEvent(d3d11.d3d_annotation);
 }
 
-static void d3d11_beginRenderPass(vgpu_framebuffer framebuffer) {
+static void d3d11_render_begin(vgpu_framebuffer framebuffer) {
 #if TODO
     D3D11Framebuffer& framebuffer = d3d11.framebuffers[beginDesc->framebuffer.id];
 

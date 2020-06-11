@@ -33,6 +33,15 @@ extern void* vgpu_allocation_user_data;
 #define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
 #define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared_memory(vgpu_allocation_user_data, sizeof(T)))
 
+#ifndef VGPU_ALLOCA
+#   include <malloc.h>
+#   if defined(_MSC_VER) || defined(__MINGW32__)
+#       define VGPU_ALLOCA(type, count) ((type*)(_malloca(sizeof(type) * (count))))
+#   else
+#       define VGPU_ALLOCA(type, count) ((type*)(alloca(sizeof(type) * (count))))
+#   endif
+#endif
+
 #ifndef VGPU_ASSERT
 #   include <assert.h>
 #   define VGPU_ASSERT(c) assert(c)
@@ -66,6 +75,7 @@ extern void __cdecl __debugbreak(void);
 typedef struct vgpu_context {
     bool (*init)(const vgpu_config* config);
     void (*shutdown)(void);
+    void(*get_caps)(vgpu_caps* caps);
     bool (*frame_begin)(void);
     void (*frame_end)(void);
 
@@ -94,7 +104,7 @@ typedef struct vgpu_context {
     void (*insertDebugMarker)(const char* name);
     void (*pushDebugGroup)(const char* name);
     void (*popDebugGroup)(void);
-    void(*beginRenderPass)(vgpu_framebuffer framebuffer);
+    void(*render_begin)(vgpu_framebuffer framebuffer);
     void(*render_finish)(void);
 
 } vgpu_context;
@@ -103,6 +113,7 @@ typedef struct vgpu_context {
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
 ASSIGN_DRIVER_FUNC(shutdown, name)\
+ASSIGN_DRIVER_FUNC(get_caps, name)\
 ASSIGN_DRIVER_FUNC(frame_begin, name)\
 ASSIGN_DRIVER_FUNC(frame_end, name)\
 ASSIGN_DRIVER_FUNC(texture_create, name)\
@@ -118,7 +129,7 @@ ASSIGN_DRIVER_FUNC(swapchain_present, name)\
 ASSIGN_DRIVER_FUNC(insertDebugMarker, name)\
 ASSIGN_DRIVER_FUNC(pushDebugGroup, name)\
 ASSIGN_DRIVER_FUNC(popDebugGroup, name)\
-ASSIGN_DRIVER_FUNC(beginRenderPass, name)\
+ASSIGN_DRIVER_FUNC(render_begin, name)\
 ASSIGN_DRIVER_FUNC(render_finish, name)
 
 typedef struct vgpu_driver {

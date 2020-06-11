@@ -156,17 +156,19 @@ typedef struct vgpu_color {
 
 /* Log */
 typedef enum vgpu_log_level {
-    VGPU_LOG_LEVE_ERROR,
-    VGPU_LOG_LEVE_WARN,
-    VGPU_LOG_LEVE_INFO,
-    VGPU_LOG_LEVE_DEBUG,
+    VGPU_LOG_LEVEL_ERROR,
+    VGPU_LOG_LEVEL_WARN,
+    VGPU_LOG_LEVEL_INFO,
+    VGPU_LOG_LEVEL_DEBUG,
     _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
 } vgpu_log_level;
 typedef void (*vgpu_PFN_log)(void* userData, vgpu_log_level level, const char* message);
 
 VGPU_API void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data);
+VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
+VGPU_API void vgpu_log_error(const char* format, ...);
 
-/* Logging/Allocation functions */
+/* Allocation functions */
 VGPU_API void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks);
 
 /* Texture */
@@ -312,8 +314,65 @@ typedef struct vgpu_config {
     void* (*getProcAddress)(const char* funcName);
 } vgpu_config;
 
+typedef struct vgpu_features {
+    bool independent_blend;
+    bool compute_shader;
+    bool geometry_shader;
+    bool tessellation_shader;
+    bool multi_viewport;
+    bool index_type_uint32;
+    bool multi_draw_indirect;
+    bool fill_mode_non_solid;
+    bool sampler_anisotropy;
+    bool texture_compression_ETC2;
+    bool texture_compression_ASTC_LDR;
+    bool texture_compression_BC;
+    bool texture_cube_array;
+    bool raytracing;
+} vgpu_features;
+
+typedef struct vgpu_limits {
+    uint32_t        max_vertex_attributes;
+    uint32_t        max_vertex_bindings;
+    uint32_t        max_vertex_attribute_offset;
+    uint32_t        max_vertex_binding_stride;
+    uint32_t        max_texture_size_2d;
+    uint32_t        max_texture_size_3d;
+    uint32_t        max_texture_size_cube;
+    uint32_t        max_texture_array_layers;
+    uint32_t        max_color_attachments;
+    uint32_t        max_uniform_buffer_size;
+    uint64_t        min_uniform_buffer_offset_alignment;
+    uint32_t        max_storage_buffer_size;
+    uint64_t        min_storage_buffer_offset_alignment;
+    float           max_sampler_anisotropy;
+    uint32_t        max_viewports;
+    uint32_t        max_viewport_width;
+    uint32_t        max_viewport_height;
+    uint32_t        max_tessellation_patch_size;
+    float           point_size_range_min;
+    float           point_size_range_max;
+    float           line_width_range_min;
+    float           line_width_range_max;
+    uint32_t        max_compute_shared_memory_size;
+    uint32_t        max_compute_work_group_count_x;
+    uint32_t        max_compute_work_group_count_y;
+    uint32_t        max_compute_work_group_count_z;
+    uint32_t        max_compute_work_group_invocations;
+    uint32_t        max_compute_work_group_size_x;
+    uint32_t        max_compute_work_group_size_y;
+    uint32_t        max_compute_work_group_size_z;
+} vgpu_limits;
+
+typedef struct vgpu_caps {
+    vgpu_backend_type backend_type;
+    vgpu_features features;
+    vgpu_limits limits;
+} vgpu_caps;
+
 VGPU_API bool vgpu_init(const vgpu_config* config);
 VGPU_API void vgpu_shutdown(void);
+VGPU_API void vgpu_get_caps(vgpu_caps* caps);
 VGPU_API bool vgpu_frame_begin(void);
 VGPU_API void vgpu_frame_finish(void);
 

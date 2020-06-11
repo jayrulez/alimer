@@ -33,10 +33,35 @@
 
 namespace alimer
 {
+    static void vgpu_log_callback(void* user_data, vgpu_log_level level, const char* message) {
+        switch (level)
+        {
+        case VGPU_LOG_LEVEL_ERROR:
+            LOG_ERROR(message);
+            break;
+
+        case VGPU_LOG_LEVEL_WARN:
+            LOG_WARN(message);
+            break;
+
+        case VGPU_LOG_LEVEL_INFO:
+            LOG_INFO(message);
+            break;
+        case VGPU_LOG_LEVEL_DEBUG:
+            LOG_DEBUG(message);
+            break;
+        default:
+            break;
+        }
+    }
+
     Application::Application()
         : input(new InputManager())
     {
         gameSystems.Push(input);
+
+        vgpu_log_set_log_callback(vgpu_log_callback, this);
+
         PlatformConstuct();
     }
 
@@ -64,6 +89,7 @@ namespace alimer
                 WindowFlags::Resizable);
 
             vgpu_config gpu_config = {};
+            gpu_config.backend_type = VGPU_BACKEND_TYPE_VULKAN;
 #ifdef _DEBUG
             gpu_config.debug = true;
 #endif

@@ -89,6 +89,8 @@ typedef struct gl_swapchain {
 static struct {
     bool available_initialized;
     bool available;
+
+    vgpu_caps caps;
 } gl;
 
 static bool gl_init(const vgpu_config* config) {
@@ -96,6 +98,10 @@ static bool gl_init(const vgpu_config* config) {
 }
 
 static void gl_shutdown(void) {
+}
+
+static void gl_get_caps(vgpu_caps* caps) {
+    *caps = gl.caps;
 }
 
 static bool gl_frame_begin(void) {
@@ -118,7 +124,7 @@ static void gl_popDebugGroup(void)
 {
 }
 
-static void gl_beginRenderPass(vgpu_framebuffer framebuffer) {
+static void gl_render_begin(vgpu_framebuffer framebuffer) {
 }
 
 static void gl_render_finish(void) {

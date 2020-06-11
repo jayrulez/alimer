@@ -22,6 +22,8 @@
 
 #include "vgpu_driver.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 /* Allocation */
 void* vgpu_default_allocate_memory(void* user_data, size_t size) {
@@ -61,6 +63,8 @@ void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
 }
 
 /* Log */
+#define VGPU_MAX_LOG_MESSAGE (4096)
+
 static void vgpu_log_default_callback(void* user_data, vgpu_log_level level, const char* message) {
 
 }
@@ -71,6 +75,28 @@ static void* vgpu_log_user_data = NULL;
 void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data) {
     vgpu_log_callback = callback;
     vgpu_log_user_data = user_data;
+}
+
+void vgpu_log(vgpu_log_level level, const char* format, ...) {
+    if (vgpu_log_callback) {
+        char msg[VGPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        vgpu_log_callback(vgpu_log_user_data, level, msg);
+        va_end(args);
+    }
+}
+
+void vgpu_log_error(const char* format, ...) {
+    if (vgpu_log_callback) {
+        char msg[VGPU_MAX_LOG_MESSAGE];
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg, sizeof(msg), format, args);
+        vgpu_log_callback(vgpu_log_user_data, VGPU_LOG_LEVEL_ERROR, msg);
+        va_end(args);
+    }
 }
 
 static const vgpu_driver* drivers[] = {
@@ -145,6 +171,10 @@ void vgpu_frame_finish(void) {
     s_gpu_context->frame_end();
 }
 
+void vgpu_get_caps(vgpu_caps* caps) {
+    s_gpu_context->get_caps(caps);
+}
+
 void vgpuInsertDebugMarker(const char* name) {
     VGPU_ASSERT(name);
     s_gpu_context->insertDebugMarker(name);
@@ -160,7 +190,7 @@ void vgpuPopDebugGroup(void) {
 }
 
 void vgpu_render_begin(vgpu_framebuffer framebuffer) {
-    s_gpu_context->beginRenderPass(framebuffer);
+    s_gpu_context->render_begin(framebuffer);
 }
 
 void vgpu_render_finish(void) {
