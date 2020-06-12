@@ -1,8 +1,3 @@
-# vgpu
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
-
 # stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
@@ -35,3 +30,24 @@ set(IMGUI_FILES
 add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
+
+# OpenGL headers
+if (WIN32 OR ANDROID OR EMSCRIPTEN)
+    add_library(opengl INTERFACE)
+    target_sources(opengl INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos/KHR/khrplatform.h")
+    target_include_directories(opengl INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos")
+endif ()
+
+if (ALIMER_GRAPHICS_D3D12)
+    set(D3D12MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator/src")
+    set(D3D12MA_FILES
+        "${D3D12MA_DIR}/D3D12MemAlloc.cpp"
+        "${D3D12MA_DIR}/D3D12MemAlloc.h"
+        "${D3D12MA_DIR}/D3D12MemAlloc.natvis"
+    )
+
+    add_library(D3D12MemoryAllocator STATIC ${D3D12MA_FILES})
+    target_include_directories(D3D12MemoryAllocator PUBLIC ${D3D12MA_DIR})
+    set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
+elseif (ALIMER_GRAPHICS_VULKAN)
+endif ()

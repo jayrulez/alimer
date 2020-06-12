@@ -22,28 +22,46 @@
 
 #pragma once
 
-#include "graphics/Types.h"
+#include "graphics/PixelFormat.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
-
-    class GraphicsProvider
+    namespace graphics
     {
-    protected:
-        /// Constructor.
-        GraphicsProvider(BackendType backendType, bool validation);
+#ifdef _DEBUG
+#define DEFAULT_ENABLE_VALIDATION true
+#else
+#define DEFAULT_ENABLE_VALIDATION false
+#endif
 
-    public:
-        virtual ~GraphicsProvider() = default;
+        typedef struct DeviceImpl* Device;
 
-        /// Create new GraphicsProvider
-        static GraphicsProvider* Create(BackendType preferBackendType = BackendType::Count, bool validation = false);
+        static constexpr uint32_t kInvalidHandle = 0u;
+        struct BufferHandle { uint32_t value; bool isValid() const { return value != kInvalidHandle; } };
+        const BufferHandle kInvalidBuffer = { kInvalidHandle };
 
-        virtual GraphicsDevice* CreateDevice(const GraphicsDeviceDescriptor* descriptor) = 0;
+        enum class BackendType : uint32_t {
+            Null,
+            D3D11,
+            OpenGL
+        };
 
-    protected:
-        BackendType backendType;
-        bool validation;
-    };
+        // Parameters structure for CreateDevice
+        struct DeviceParams
+        {
+            bool validation = DEFAULT_ENABLE_VALIDATION;
+            uint32_t width;
+            uint32_t height;
+            bool fullscreen;
+            bool verticalSync;
+            PixelFormat colorFormat = PixelFormat::BGRA8UNorm;
+            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+            void* windowHandle = nullptr;
+        };
+
+        Device CreateDevice(const DeviceParams& params);
+        void DestroyDevice(Device device);
+        void BeginFrame(Device device);
+        void PresentFrame(Device device);
+    }
 }

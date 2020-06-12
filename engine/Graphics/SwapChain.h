@@ -33,7 +33,7 @@ namespace alimer
     {
     protected:
         /// Constructor.
-        SwapChain(GraphicsDevice& device, CommandQueue* commandQueue, const SwapChainDescriptor* descriptor);
+        SwapChain(GraphicsDevice& device, CommandQueue* commandQueue, const PresentationParameters* descriptor);
 
     public:
         virtual ~SwapChain() = default;

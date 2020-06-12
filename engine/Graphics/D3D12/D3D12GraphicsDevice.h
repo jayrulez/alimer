@@ -37,7 +37,7 @@ namespace alimer
     {
     public:
         D3D12GraphicsDevice(D3D12GraphicsProvider* provider, IDXGIAdapter1* adapter);
-        ~D3D12GraphicsDevice() override;
+        ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void HandleDeviceLost();
@@ -51,10 +51,6 @@ namespace alimer
     private:
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void Shutdown();
-
-        RefPtr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const char* name) override;
-        RefPtr<SwapChain> CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor) override;
-        Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
         
         bool supportsRenderPass = false;
 

@@ -31,33 +31,30 @@ namespace alimer
     class Texture;
     class SwapChain;
 
+    struct DeviceApiData;
+
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice
     {
     public:
-        struct Desc
-        {
-            BackendType backendType = BackendType::Count;
-            std::string applicationName;
-            bool enableDebugLayer = false;
-            bool headless = false;
-        };
+        GraphicsDevice(bool enableDebugLayer, const PresentationParameters& presentationParameters);
+        ~GraphicsDevice();
 
-        virtual ~GraphicsDevice() = default;
+        bool BeginFrame();
+        void Present();
 
-        virtual RefPtr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const char* name = nullptr) = 0;
-        virtual RefPtr<SwapChain> CreateSwapChain(CommandQueue* commandQueue, const SwapChainDescriptor* descriptor) = 0;
+        //virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
 
-        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
-
-        const GraphicsDeviceCaps& GetCaps() const;
+        const GraphicsDeviceCaps& GetCaps() const {
+            return caps;
+        }
 
     protected:
-        GraphicsDevice() = default;
-
+        DeviceApiData* apiData;
+        bool enableDebugLayer;
+        PresentationParameters presentationParameters;
         GraphicsDeviceCaps caps{};
 
-    private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

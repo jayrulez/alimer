@@ -20,31 +20,27 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/GraphicsProvider.h"
-#include "D3D12Backend.h"
+#include "graphics.h"
+#include "graphics_driver.h"
 
 namespace alimer
 {
-    class D3D12GraphicsProvider final : public GraphicsProvider
+    namespace graphics
     {
-    public:
-        D3D12GraphicsProvider(bool validation);
-        ~D3D12GraphicsProvider() override;
+        Device CreateDevice(const DeviceParams& params) {
+            return gl_driver.CreateDevice(params);
+        }
 
-        const D3D12PlatformFunctions* GetFunctions() const { return functions; }
-        GraphicsDevice* CreateDevice(const GraphicsDeviceDescriptor* descriptor) override;
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return isTearingSupported; }
-        D3D_FEATURE_LEVEL GetMinFeatureLevel() const { return minFeatureLevel; }
+        void DestroyDevice(Device device) {
+            device->Destroy(device);
+        }
 
-    private:
-        D3D12PlatformFunctions* functions;
-        DWORD dxgiFactoryFlags;
+        void BeginFrame(Device device) {
+            device->BeginFrame(device->backend);
+        }
 
-        IDXGIFactory4* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
-        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-    };
+        void PresentFrame(Device device) {
+            device->PresentFrame(device->backend);
+        }
+    }
 }

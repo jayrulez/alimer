@@ -23,8 +23,6 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "Core/Engine.h"
-#include "graphics/GraphicsProvider.h"
-#include "graphics/GraphicsDevice.h"
 #include "graphics/CommandQueue.h"
 #include "graphics/CommandBuffer.h"
 #include "graphics/SwapChain.h"
@@ -33,35 +31,10 @@
 
 namespace alimer
 {
-    static void vgpu_log_callback(void* user_data, vgpu_log_level level, const char* message) {
-        switch (level)
-        {
-        case VGPU_LOG_LEVEL_ERROR:
-            LOG_ERROR(message);
-            break;
-
-        case VGPU_LOG_LEVEL_WARN:
-            LOG_WARN(message);
-            break;
-
-        case VGPU_LOG_LEVEL_INFO:
-            LOG_INFO(message);
-            break;
-        case VGPU_LOG_LEVEL_DEBUG:
-            LOG_DEBUG(message);
-            break;
-        default:
-            break;
-        }
-    }
-
     Application::Application()
         : input(new InputManager())
     {
         gameSystems.Push(input);
-
-        vgpu_log_set_log_callback(vgpu_log_callback, this);
-
         PlatformConstuct();
     }
 
@@ -73,7 +46,7 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        vgpu_shutdown();
+        graphics::DestroyDevice(graphicsDevice);
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
@@ -88,17 +61,16 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
-            vgpu_config gpu_config = {};
-            gpu_config.backend_type = VGPU_BACKEND_TYPE_VULKAN;
+            bool enableDebugLayer = false;
 #ifdef _DEBUG
-            gpu_config.debug = true;
+            enableDebugLayer = true;
 #endif
-            gpu_config.window_handle = mainWindow->GetHandle();
-            gpu_config.color_format = VGPU_TEXTURE_FORMAT_BGRA8;
-            gpu_config.depth_stencil_format = VGPU_TEXTURE_FORMAT_D32F;
-            if (!vgpu_init(&gpu_config)) {
-                headless = true;
-            }
+
+            graphics::DeviceParams deviceParams = {};
+            deviceParams.width = mainWindow->GetSize().width;
+            deviceParams.height = mainWindow->GetSize().height;
+            deviceParams.windowHandle = mainWindow->GetHandle();
+            graphicsDevice = graphics::CreateDevice(deviceParams);
         }
 
         Initialize();
@@ -132,9 +104,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!vgpu_frame_begin()) {
-            return false;
-        }
+        graphics::BeginFrame(graphicsDevice);
 
         for (auto gameSystem : gameSystems)
         {
@@ -159,7 +129,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_frame_finish();
+        graphics::PresentFrame(graphicsDevice);
     }
 
     int Application::Run()

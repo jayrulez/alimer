@@ -17,9 +17,24 @@ project (
 # Options
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
-option(ALIMER_SKIP_INSTALL "Skips installation targets." OFF)
 
-# Options
+# Module options
+option(ALIMER_ENABLE_GRAPHICS "Enable the graphics module" ON)
+
+# Graphics module backend
+if (ALIMER_ENABLE_GRAPHICS)
+    if (WIN32)
+        set(ALIMER_GRAPHICS_API D3D12 CACHE STRING  "Select Graphics API [D3D12 | Vulkan]") 
+	    set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 Vulkan)
+    elseif (WINDOWS_STORE)
+        set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use Direct3D12 Graphics API" FORCE)
+    else ()
+        set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Use Vulkan Graphics API" FORCE)
+    endif ()
+    string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
+    set (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER} ON)
+endif ()
+
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
     set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable C# editor" FORCE)
@@ -82,15 +97,17 @@ else ()
     message(STATUS "  Library         STATIC")
 endif ()
 
-# Install files
-if (NOT ALIMER_SKIP_INSTALL)
-    # README.md and license
-    install (FILES
-        ${ALIMER_ROOT_DIR}/README.md
-        ${ALIMER_ROOT_DIR}/LICENSE
-        DESTINATION .
-    )
-
-    # CMake modules
-    install (DIRECTORY ${CMAKE_SOURCE_DIR}/cmake/ DESTINATION cmake/cmake/)
+if (ALIMER_ENABLE_GRAPHICS)
+    message (STATUS "  Graphics API:   ${ALIMER_GRAPHICS_API} (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER})")
 endif ()
+
+# Install files
+# README.md and license
+install (FILES
+    ${ALIMER_ROOT_DIR}/README.md
+    ${ALIMER_ROOT_DIR}/LICENSE
+    DESTINATION .
+)
+
+# CMake modules
+install (DIRECTORY ${CMAKE_SOURCE_DIR}/cmake/ DESTINATION cmake/cmake/)

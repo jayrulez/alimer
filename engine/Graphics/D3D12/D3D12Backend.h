@@ -26,17 +26,21 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
-#include "graphics/D3D/D3DHelpers.h"
+#include "graphics/BackendTypes.h"
 
-#if defined(_XBOX_ONE) && defined(_TITLE)
-#   include <d3d12_x.h>
-#else
-#   include <d3d12.h>
-#endif
+#include "d3dx12.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
+
+#ifdef _DEBUG
+#   include <dxgidebug.h>
+#   pragma comment(lib,"dxguid.lib")
+#endif
+
+#include <wrl/client.h>
+#include <stdexcept>
 
 // Forward declare memory allocator classes
 namespace D3D12MA
@@ -48,9 +52,50 @@ namespace D3D12MA
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
+#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
+#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
+
 namespace alimer
 {
-    class D3D12GraphicsDevice;
+    // Helper class for COM exceptions
+    class com_exception : public std::exception
+    {
+    public:
+        com_exception(HRESULT hr) noexcept : result(hr) {}
+
+        const char* what() const noexcept override
+        {
+            static char s_str[64] = {};
+            sprintf_s(s_str, "Failure with HRESULT of %08X", static_cast<unsigned int>(result));
+            return s_str;
+        }
+
+    private:
+        HRESULT result;
+    };
+
+    // Helper utility converts D3D API failures into exceptions.
+    inline void ThrowIfFailed(HRESULT hr)
+    {
+        if (FAILED(hr))
+        {
+            throw com_exception(hr);
+        }
+    }
+
+    struct DxgiFormatDesc
+    {
+        PixelFormat format;
+        DXGI_FORMAT dxgiFormat;
+    };
+
+    extern const DxgiFormatDesc kDxgiFormatDesc[];
+
+    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
+    {
+        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
+        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
+    }
 
     class D3D12PlatformFunctions
     {

@@ -27,11 +27,6 @@
 
 namespace alimer
 {
-    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
-    {
-        return caps;
-    }
-
     /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(_gpuResourceMutex);

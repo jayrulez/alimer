@@ -27,13 +27,6 @@ endif()
 # third_party
 set(VGPU_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
-# OpenGL headers
-if (WIN32 OR ANDROID OR EMSCRIPTEN)
-    add_library(alimer_opengl_headers INTERFACE)
-    target_sources(alimer_opengl_headers INTERFACE "${VGPU_THIRD_PARTY_DIR}/khronos/KHR/khrplatform.h")
-    target_include_directories(alimer_opengl_headers INTERFACE "${VGPU_THIRD_PARTY_DIR}/khronos")
-endif ()
-
 # Vulkan headers
 if (WIN32 OR ANDROID OR LINUX)
     add_library(vulkan INTERFACE)

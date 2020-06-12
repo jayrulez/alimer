@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12MemAlloc.h"
@@ -134,3 +135,5 @@ namespace alimer
     }
 }
 
+
+#endif // TODO

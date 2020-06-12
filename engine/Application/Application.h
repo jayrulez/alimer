@@ -25,8 +25,9 @@
 #include "Core/Vector.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
+#include "graphics/graphics.h"
 #include "Math/size.h"
-#include <vgpu.h>
+#include <memory>
 
 namespace alimer
 {
@@ -108,6 +109,7 @@ namespace alimer
 
         Window* mainWindow = nullptr;
         Vector<GameSystem*> gameSystems;
+        graphics::Device graphicsDevice;
         InputManager* input;
 
         bool headless{ false };

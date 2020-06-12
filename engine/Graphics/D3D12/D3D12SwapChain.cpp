@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12GraphicsDevice.h"
-#include "D3D12GraphicsProvider.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
@@ -147,4 +147,6 @@ namespace alimer
         backbufferIndex = swapChain->GetCurrentBackBufferIndex();
     }
 }
+
+#endif // TODO
 

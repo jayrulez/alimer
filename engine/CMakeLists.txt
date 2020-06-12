@@ -48,10 +48,7 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-if (ALIMER_GRAPHICS_D3D12)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D12)
-endif ()
+define_engine_source_files(graphics/opengl)
 
 group_sources()
 
@@ -61,7 +58,6 @@ if (ALIMER_BUILD_SHARED)
 else ()
     add_library(${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
-
 target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_COMPILE)
 
 target_include_directories(${TARGET_NAME} PUBLIC
@@ -70,12 +66,19 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    vgpu
     stb
 )
 
+# OpenGL headers
+if (WIN32 OR ANDROID OR EMSCRIPTEN)
+    target_link_libraries(${TARGET_NAME} PRIVATE opengl)
+endif ()
+
 # Link platform specific libraries
-if(ANDROID)
+if (WIN32)
+    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32 opengl32)
+    target_link_libraries(${TARGET_NAME} PRIVATE glfw)
+elseif(ANDROID)
     target_link_libraries(${TARGET_NAME} PRIVATE log android native_app_glue)
 else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))

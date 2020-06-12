@@ -56,7 +56,7 @@ namespace alimer
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
-        uintptr_t GetHandle() const;
+        void* GetHandle() const;
 
     private:
         void Create(WindowFlags flags);
