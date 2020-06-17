@@ -27,13 +27,11 @@
 
 namespace alimer
 {
-    class CommandQueue;
-
     class SwapChain : public RefCounted
     {
     protected:
         /// Constructor.
-        SwapChain(GraphicsDevice& device, CommandQueue* commandQueue, const PresentationParameters* descriptor);
+        SwapChain(GraphicsDevice& device, const SwapChainDescription& desc);
 
     public:
         virtual ~SwapChain() = default;
@@ -51,7 +49,6 @@ namespace alimer
         virtual void Destroy() = 0;
 
         GraphicsDevice& device;
-        CommandQueue* commandQueue;
 
         uint32_t width;
         uint32_t height;

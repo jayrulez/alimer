@@ -34,7 +34,7 @@ namespace alimer
     {
     public:
         GraphicsResource(GraphicsDevice &device, GraphicsResourceUsage resourceUsage);
-        virtual ~GraphicsResource() = default;
+        virtual ~GraphicsResource();
 
         /// Release the GPU resource.
         virtual void Destroy() {}

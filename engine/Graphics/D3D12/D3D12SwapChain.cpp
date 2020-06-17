@@ -20,20 +20,18 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12GraphicsDevice.h"
-#include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
 
 namespace alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, CommandQueue* commandQueue, const SwapChainDescriptor* descriptor)
-        : SwapChain(*device, commandQueue, descriptor)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
+        : SwapChain(*device, desc)
         , device(device)
     {
         // Flip mode doesn't support SRGB formats
-        dxgiColorFormat = ToDXGIFormat(srgbToLinearFormat(descriptor->colorFormat));
+        dxgiColorFormat = ToDXGIFormat(srgbToLinearFormat(desc.colorFormat));
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
         swapChainDesc.Width = width;
@@ -47,26 +45,24 @@ namespace alimer
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        if (device->GetProvider()->IsTearingSupported())
+        if (device->IsTearingSupported())
         {
             swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !descriptor->isFullscreen;
-
-        auto d3d12CommandQueue = static_cast<D3D12CommandQueue*>(commandQueue);
+        fsSwapChainDesc.Windowed = !desc.isFullscreen;
 
         IDXGISwapChain1* tempSwapChain;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND hwnd = (HWND)descriptor->handle;
+        HWND hwnd = (HWND)desc.windowHandle;
         if (!IsWindow(hwnd)) {
             LOG_ERROR("Invalid HWND handle");
             return;
         }
 
-        VHR(device->GetProvider()->GetDXGIFactory()->CreateSwapChainForHwnd(
-            d3d12CommandQueue->GetHandle(),
+        VHR(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+            device->GetDirectCommandQueue(),
             hwnd,
             &swapChainDesc,
             &fsSwapChainDesc,
@@ -75,10 +71,10 @@ namespace alimer
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        VHR(device->GetProvider()->GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+        VHR(device->GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 #else
-        VHR(device->GetProvider()->GetDXGIFactory()->CreateSwapChainForCoreWindow(
-            d3d12CommandQueue->GetHandle(),
+        VHR(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+            device->GetDirectCommandQueue(),
             (IUnknown*)descriptor->handle,
             &swapChainDesc,
             nullptr,
@@ -103,7 +99,7 @@ namespace alimer
             return;
         }
 
-        commandQueue->WaitIdle();
+        //commandQueue->WaitIdle();
 
         for (uint32_t i = 0; i < kNumBackBuffers; ++i)
         {
@@ -125,8 +121,6 @@ namespace alimer
 
         VHR(hr);
 
-        auto d3d12CommandQueue = static_cast<D3D12CommandQueue*>(commandQueue);
-        d3d12CommandQueue->Signal();
         backbufferIndex = swapChain->GetCurrentBackBufferIndex();
     }
 
@@ -147,6 +141,4 @@ namespace alimer
         backbufferIndex = swapChain->GetCurrentBackBufferIndex();
     }
 }
-
-#endif // TODO
 

@@ -28,13 +28,12 @@
 namespace alimer
 {
     class GraphicsDevice;
-    class CommandQueue;
 
     /// Defines a container that stores encoded commands for the GPU to execute.
     class CommandBuffer : public RefCounted
     {
     public:
-        CommandBuffer(CommandQueue& commandQueue);
+        CommandBuffer(GraphicsDevice& device);
         virtual ~CommandBuffer() = default;
 
         virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
@@ -42,12 +41,9 @@ namespace alimer
         virtual void SetBlendColor(const Color& color) = 0;
 
         /// Returns the device from which this command buffer was created.
-        GraphicsDevice* GetDevice() const;
-
-        /// Returns the command queue that created the command buffer.
-        const CommandQueue& GetCommandQueue() const;
+        const GraphicsDevice& GetDevice() const;
 
     protected:
-        CommandQueue& commandQueue;
+        GraphicsDevice& device;
     };
 }

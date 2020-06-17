@@ -67,30 +67,30 @@ namespace alimer
         return nullptr;
     }
 
-    /*void GraphicsDevice::AddGPUResource(GraphicsResource* resource)
+    void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
-        std::lock_guard<std::mutex> lock(_gpuResourceMutex);
-        _gpuResources.push_back(resource);
+        std::lock_guard<std::mutex> lock(trackedResourcesMutex);
+        trackedResources.Push(resource);
     }
 
-    void GraphicsDevice::RemoveGPUResource(GraphicsResource* resource)
+    void GraphicsDevice::UntrackResource(GraphicsResource* resource)
     {
-        std::lock_guard<std::mutex> lock(_gpuResourceMutex);
-        _gpuResources.erase(std::remove(_gpuResources.begin(), _gpuResources.end(), resource), _gpuResources.end());
+        std::lock_guard<std::mutex> lock(trackedResourcesMutex);
+        trackedResources.Remove(resource);
     }
 
     void GraphicsDevice::ReleaseTrackedResources()
     {
         {
-            std::lock_guard<std::mutex> lock(_gpuResourceMutex);
+            std::lock_guard<std::mutex> lock(trackedResourcesMutex);
 
             // Release all GPU objects that still exist
-            for (auto i = _gpuResources.begin(); i != _gpuResources.end(); ++i)
+            for (auto i = trackedResources.begin(); i != trackedResources.end(); ++i)
             {
                 (*i)->Release();
             }
 
-            _gpuResources.clear();
+            trackedResources.Clear();
         }
-    }*/
+    }
 }

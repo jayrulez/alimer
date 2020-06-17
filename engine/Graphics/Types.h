@@ -213,14 +213,14 @@ namespace alimer
         Limits limits;
     };
 
-    struct PresentationParameters
+    struct SwapChainDescription
     {
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
+        void* windowHandle;
+        uint32_t width;
+        uint32_t height;
         PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         bool isFullscreen;
-        uintptr_t deviceWindowHandle; /* Null for headless mode. */
     };
 
     struct TextureDescription

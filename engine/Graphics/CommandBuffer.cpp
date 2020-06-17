@@ -22,25 +22,19 @@
 
 #include "Core/Assert.h"
 #include "graphics/CommandBuffer.h"
-#include "graphics/CommandQueue.h"
 #include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    CommandBuffer::CommandBuffer(CommandQueue& commandQueue)
-        : commandQueue(commandQueue)
+    CommandBuffer::CommandBuffer(GraphicsDevice& device)
+        : device{ device }
     {
 
     }
 
-    GraphicsDevice* CommandBuffer::GetDevice() const
+    const GraphicsDevice& CommandBuffer::GetDevice() const
     {
-        return commandQueue.GetDevice();
-    }
-
-    const CommandQueue& CommandBuffer::GetCommandQueue() const
-    {
-        return commandQueue;
+        return device;
     }
 }
 

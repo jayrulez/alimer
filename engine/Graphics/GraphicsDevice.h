@@ -24,6 +24,8 @@
 
 #include "Application/Window.h"
 #include "graphics/GraphicsResource.h"
+#include "Core/Vector.h"
+#include <mutex>
 #include <memory>
 
 namespace alimer
@@ -40,6 +42,8 @@ namespace alimer
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice
     {
+        friend class GraphicsResource;
+
     public:
         /**
         * Device description
@@ -66,12 +70,19 @@ namespace alimer
             return caps;
         }
 
+    private:
+        void TrackResource(GraphicsResource* resource);
+        void UntrackResource(GraphicsResource* resource);
+
     protected:
         GraphicsDevice(Window* window, const Desc& desc);
+        void ReleaseTrackedResources();
 
         Window* window;
         Desc desc;
         GraphicsDeviceCaps caps{};
+        std::mutex trackedResourcesMutex;
+        Vector<GraphicsResource*> trackedResources;
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };

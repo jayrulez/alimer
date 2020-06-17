@@ -30,7 +30,7 @@
 
 namespace alimer
 {
-    class D3D12CommandQueue;
+    class D3D12SwapChain;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
@@ -43,8 +43,12 @@ namespace alimer
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void HandleDeviceLost();
 
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
+        bool IsTearingSupported() const { return tearingSupported; }
+
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return memoryAllocator; }
+        ID3D12CommandQueue* GetDirectCommandQueue() const { return directCommandQueue; }
 
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
@@ -57,18 +61,22 @@ namespace alimer
 
         bool supportsRenderPass = false;
 
-        Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+        IDXGIFactory4* dxgiFactory = nullptr;
         DWORD dxgiFactoryFlags = 0;
         bool tearingSupported = false;
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
-        ID3D12Device* d3dDevice;
+        ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* memoryAllocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
         /// Root signature version
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
+        /* Command queues */
+        ID3D12CommandQueue* directCommandQueue = nullptr;
+
+        /* Descriptor heaps */
         struct DescriptorHeap
         {
             ID3D12DescriptorHeap* Heap;
@@ -80,5 +88,8 @@ namespace alimer
 
         DescriptorHeap RTVHeap{};
         DescriptorHeap DSVHeap{};
+
+        /* Main swap chain */
+        D3D12SwapChain* mainSwapChain = nullptr;
     };
 }

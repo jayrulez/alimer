@@ -30,7 +30,12 @@ namespace alimer
         : device{ device }
         , resourceUsage{ resourceUsage }
     {
+        device.TrackResource(this);
+    }
 
+    GraphicsResource::~GraphicsResource()
+    {
+        device.UntrackResource(this);
     }
 
     const GraphicsDevice& GraphicsResource::GetDevice() const

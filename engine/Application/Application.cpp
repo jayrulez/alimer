@@ -22,8 +22,6 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
-#include "Core/Engine.h"
-#include "graphics/CommandQueue.h"
 #include "graphics/CommandBuffer.h"
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"

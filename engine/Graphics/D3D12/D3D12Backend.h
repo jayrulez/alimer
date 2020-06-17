@@ -28,25 +28,12 @@
 #include "graphics/Types.h"
 #include "graphics/D3D/D3DHelpers.h"
 #include "d3d12.h"
+#define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
+#include "D3D12MemAlloc.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
-
-#ifdef _DEBUG
-#   include <dxgidebug.h>
-#   pragma comment(lib,"dxguid.lib")
-#endif
-
-#include <wrl/client.h>
-#include <stdexcept>
-
-// Forward declare memory allocator classes
-namespace D3D12MA
-{
-    class Allocator;
-    class Allocation;
-};
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)

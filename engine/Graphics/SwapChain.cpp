@@ -25,13 +25,12 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(GraphicsDevice& device, CommandQueue* commandQueue, const PresentationParameters* descriptor)
+    SwapChain::SwapChain(GraphicsDevice& device, const SwapChainDescription& desc)
         : device(device)
-        , commandQueue(commandQueue)
-        , width(descriptor->backBufferWidth)
-        , height(descriptor->backBufferHeight)
-        , colorFormat(descriptor->colorFormat)
-        , depthStencilFormat(descriptor->depthStencilFormat)
+        , width(desc.width)
+        , height(desc.height)
+        , colorFormat(desc.colorFormat)
+        , depthStencilFormat(desc.depthStencilFormat)
     {
 
     }
