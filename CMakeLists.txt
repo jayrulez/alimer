@@ -18,21 +18,14 @@ project (
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
-# Module options
-option(ALIMER_ENABLE_GRAPHICS "Enable the graphics module" ON)
-
 # Graphics module backend
-if (ALIMER_ENABLE_GRAPHICS)
-    if (WIN32)
-        set(ALIMER_GRAPHICS_API D3D12 CACHE STRING  "Select Graphics API [D3D12 | Vulkan]") 
-	    set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 Vulkan)
-    elseif (WINDOWS_STORE)
-        set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use Direct3D12 Graphics API" FORCE)
-    else ()
-        set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Use Vulkan Graphics API" FORCE)
-    endif ()
-    string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
-    set (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER} ON)
+if (WIN32)
+    option(ALIMER_GRAPHICS_D3D12 "Include Direct3D12 backend" ON)
+    option(ALIMER_GRAPHICS_VULKAN "Include Vulkan backend" ON)
+elseif (WINDOWS_STORE)
+    set(ALIMER_GRAPHICS_D3D12 ON CACHE BOOL "Use Direct3D12 backend")
+else ()
+    set(ALIMER_GRAPHICS_VULKAN ON CACHE BOOL "Use Vulkan backend")
 endif ()
 
 if (ANDROID OR IOS OR EMSCRIPTEN)
@@ -86,7 +79,7 @@ endif ()
 
 # Set VS Startup project.
 if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
-    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "editor")
+    set_property (DIRECTORY PROPERTY VS_STARTUP_PROJECT "Editor")
 endif()
 
 # Print current build configuration
@@ -96,10 +89,12 @@ if (ALIMER_BUILD_SHARED)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
-
-if (ALIMER_ENABLE_GRAPHICS)
-    message (STATUS "  Graphics API:   ${ALIMER_GRAPHICS_API} (ALIMER_GRAPHICS_${ALIMER_GRAPHICS_API_UPPER})")
-endif ()
+if (ALIMER_GRAPHICS_D3D12)
+    message (STATUS "  Renderer:       Direct3D12")
+endif()
+if (ALIMER_GRAPHICS_VULKAN)
+    message (STATUS "  Renderer:       Vulkan")
+endif()
 
 # Install files
 # README.md and license

@@ -2,7 +2,7 @@ if (NOT ALIMER_BUILD_EDITOR)
     return()
 endif ()
 
-set(TARGET_NAME editor)
+set(TARGET_NAME Editor)
 file (GLOB_RECURSE SOURCE_FILES *.cpp *.h *.hpp)
 
 if (WIN32)
@@ -10,7 +10,7 @@ if (WIN32)
 else ()
     add_executable(${TARGET_NAME} ${SOURCE_FILES})
 endif ()
-target_link_libraries(${TARGET_NAME} editor_framework)
+target_link_libraries(${TARGET_NAME} EditorFramework)
 
 install(TARGETS ${TARGET_NAME}
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}

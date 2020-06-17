@@ -46,7 +46,7 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        graphics::DestroyDevice(graphicsDevice);
+        graphicsDevice.reset();
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
@@ -61,16 +61,11 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
-            bool enableDebugLayer = false;
+            GraphicsDevice::Desc deviceDesc = {};
 #ifdef _DEBUG
-            enableDebugLayer = true;
+            deviceDesc.enableDebugLayer = true;
 #endif
-
-            graphics::DeviceParams deviceParams = {};
-            deviceParams.width = mainWindow->GetSize().width;
-            deviceParams.height = mainWindow->GetSize().height;
-            deviceParams.windowHandle = mainWindow->GetHandle();
-            graphicsDevice = graphics::CreateDevice(deviceParams);
+            graphicsDevice = GraphicsDevice::Create(mainWindow, deviceDesc);
         }
 
         Initialize();
@@ -104,7 +99,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        graphics::BeginFrame(graphicsDevice);
+        graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -129,7 +124,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphics::PresentFrame(graphicsDevice);
+        graphicsDevice->Present();
     }
 
     int Application::Run()
@@ -145,10 +140,9 @@ namespace alimer
 
     void Application::Tick()
     {
-        time.Tick([&]()
-            {
-                Update(time);
-            });
+        time.Tick([&]() {
+            Update(time);
+        });
 
         Render();
     }

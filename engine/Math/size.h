@@ -60,12 +60,12 @@ namespace alimer
 
         inline constexpr T const& operator[](size_t i) const noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
 
         inline constexpr T& operator[](size_t i) noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
     };
 
@@ -104,12 +104,12 @@ namespace alimer
 
         inline constexpr T const& operator[](size_t i) const noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
 
         inline constexpr T& operator[](size_t i) noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
     };
 

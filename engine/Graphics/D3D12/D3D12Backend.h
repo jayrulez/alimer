@@ -26,9 +26,8 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
-#include "graphics/BackendTypes.h"
-
-#include "d3dx12.h"
+#include "graphics/D3D/D3DHelpers.h"
+#include "d3d12.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
@@ -57,69 +56,10 @@ namespace D3D12MA
 
 namespace alimer
 {
-    // Helper class for COM exceptions
-    class com_exception : public std::exception
-    {
-    public:
-        com_exception(HRESULT hr) noexcept : result(hr) {}
-
-        const char* what() const noexcept override
-        {
-            static char s_str[64] = {};
-            sprintf_s(s_str, "Failure with HRESULT of %08X", static_cast<unsigned int>(result));
-            return s_str;
-        }
-
-    private:
-        HRESULT result;
-    };
-
-    // Helper utility converts D3D API failures into exceptions.
-    inline void ThrowIfFailed(HRESULT hr)
-    {
-        if (FAILED(hr))
-        {
-            throw com_exception(hr);
-        }
-    }
-
-    struct DxgiFormatDesc
-    {
-        PixelFormat format;
-        DXGI_FORMAT dxgiFormat;
-    };
-
-    extern const DxgiFormatDesc kDxgiFormatDesc[];
-
-    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
-    {
-        ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
-        return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
-    }
-
-    class D3D12PlatformFunctions
-    {
-    public:
-        D3D12PlatformFunctions();
-        ~D3D12PlatformFunctions();
-
-        // Functions from dxgi.dll
-        using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
-        using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
-
-        PFN_DXGI_GET_DEBUG_INTERFACE1 dxgiGetDebugInterface1 = nullptr;
-        PFN_CREATE_DXGI_FACTORY2 createDxgiFactory2 = nullptr;
-
-        // Functions from d3d12.dll
-        PFN_D3D12_CREATE_DEVICE d3d12CreateDevice = nullptr;
-        PFN_D3D12_GET_DEBUG_INTERFACE d3d12GetDebugInterface = nullptr;
-
-    private:
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HMODULE dxgiLib = nullptr;
-        HMODULE d3d12Lib = nullptr;
+    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
 #endif
-    };
 
     static inline D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
     {

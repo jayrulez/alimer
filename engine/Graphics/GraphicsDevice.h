@@ -22,26 +22,43 @@
 
 #pragma once
 
+#include "Application/Window.h"
 #include "graphics/GraphicsResource.h"
 #include <memory>
 
 namespace alimer
 {
-    class CommandQueue;
+#ifdef _DEBUG
+#define DEFAULT_ENABLE_DEBUG_LAYER true
+#else
+#define DEFAULT_ENABLE_DEBUG_LAYER false
+#endif
+
     class Texture;
     class SwapChain;
-
-    struct DeviceApiData;
 
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice
     {
     public:
-        GraphicsDevice(bool enableDebugLayer, const PresentationParameters& presentationParameters);
-        ~GraphicsDevice();
+        /**
+        * Device description
+        */
+        struct Desc 
+        {
+            BackendType preferredBackendType = BackendType::Count;
+            bool enableDebugLayer = DEFAULT_ENABLE_DEBUG_LAYER;
+            GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+            PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        };
 
-        bool BeginFrame();
-        void Present();
+        virtual ~GraphicsDevice() = default;
+
+        virtual bool BeginFrame() = 0;
+        virtual void Present() = 0;
+
+        static std::unique_ptr<GraphicsDevice> Create(Window* window, const Desc& desc);
 
         //virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
 
@@ -50,9 +67,10 @@ namespace alimer
         }
 
     protected:
-        DeviceApiData* apiData;
-        bool enableDebugLayer;
-        PresentationParameters presentationParameters;
+        GraphicsDevice(Window* window, const Desc& desc);
+
+        Window* window;
+        Desc desc;
         GraphicsDeviceCaps caps{};
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

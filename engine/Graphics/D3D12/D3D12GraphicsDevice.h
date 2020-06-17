@@ -30,32 +30,38 @@
 
 namespace alimer
 {
-    class D3D12GraphicsProvider;
     class D3D12CommandQueue;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        D3D12GraphicsDevice(D3D12GraphicsProvider* provider, IDXGIAdapter1* adapter);
+        static bool IsAvailable();
+
+        D3D12GraphicsDevice(Window* window, const Desc& desc);
         ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void HandleDeviceLost();
 
-        D3D12GraphicsProvider* GetProvider() const { return provider; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetMemoryAllocator() const { return memoryAllocator; }
 
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
+        void GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void Shutdown();
-        
+        bool BeginFrame() override;
+        void Present() override;
+
         bool supportsRenderPass = false;
 
-        D3D12GraphicsProvider* provider;
-        IDXGIAdapter1* adapter;
+        Microsoft::WRL::ComPtr<IDXGIFactory4> dxgiFactory;
+        DWORD dxgiFactoryFlags = 0;
+        bool tearingSupported = false;
+        D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
+
         ID3D12Device* d3dDevice;
         D3D12MA::Allocator* memoryAllocator = nullptr;
         /// Current supported feature level.

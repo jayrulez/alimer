@@ -30,7 +30,9 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-if (NOT MSVC)
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 

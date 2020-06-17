@@ -47,7 +47,7 @@ namespace alimer {
     template <typename T> T asin(T v) { return std::asin(v); }
     template <typename T> T acos(T v) { return std::acos(v); }
     template <typename T> T atan(T v) { return std::atan(v); }
-    template <typename T> T log2(T v) { retuhrn std::log2(v); }
+    template <typename T> T log2(T v) { return std::log2(v); }
     template <typename T> T log10(T v) { return std::log10(v); }
     template <typename T> T log(T v) { return std::log(v); }
     template <typename T> T exp2(T v) { return std::exp2(v); }
@@ -113,12 +113,12 @@ namespace alimer {
 
         inline constexpr T const& operator[](size_t i) const noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
 
         inline constexpr T& operator[](size_t i) noexcept {
             assert(i < SIZE);
-            return v[i];
+            return data[i];
         }
 
         inline constexpr tvec2 xx() const { return tvec2(x, x); }

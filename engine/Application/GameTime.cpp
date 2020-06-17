@@ -22,7 +22,6 @@
 
 #include "Application/GameTime.h"
 #include "Application/Application.h"
-#include <cmath>
 
 namespace alimer
 {

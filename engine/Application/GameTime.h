@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Stopwatch.h"
+#include <cmath>
 
 namespace alimer
 {

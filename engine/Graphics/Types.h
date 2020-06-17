@@ -145,10 +145,6 @@ namespace alimer
     };
 
     /* Structures */
-    struct GraphicsDeviceDescriptor {
-        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-    };
-
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCaps
     {

@@ -32,117 +32,44 @@ using Microsoft::WRL::ComPtr;
 
 namespace alimer
 {
-    struct DeviceApiData {
-        ComPtr<IDXGIFactory4> dxgiFactory;
-        DWORD dxgiFactoryFlags;
-        bool tearingSupported;
-        D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-        DeviceHandle handle;
-        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
-        ComPtr<ID3D12CommandQueue> directCommandQueue;
-    };
 
-    static void GetAdapter(DeviceApiData* apiData, IDXGIAdapter1** ppAdapter)
+    bool D3D12GraphicsDevice::IsAvailable()
     {
-        *ppAdapter = nullptr;
-
-        ComPtr<IDXGIAdapter1> adapter;
-
-#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> factory6;
-        HRESULT hr = apiData->dxgiFactory.As(&factory6);
-        if (SUCCEEDED(hr))
-        {
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(factory6->EnumAdapterByGpuPreference(
-                    adapterIndex,
-                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
-                adapterIndex++)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), apiData->minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
-        }
-#endif
-        if (!adapter)
-        {
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(apiData->dxgiFactory->EnumAdapters1(
-                    adapterIndex,
-                    adapter.ReleaseAndGetAddressOf()));
-                ++adapterIndex)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), apiData->minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
+        static bool available_initialized = false;
+        static bool available = false;
+        if (available_initialized) {
+            return available;
         }
 
-#if !defined(NDEBUG)
-        if (!adapter)
-        {
-            // Try WARP12 instead
-            if (FAILED(apiData->dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf()))))
-            {
-                throw std::exception("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-            }
+        available_initialized = true;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        static HMODULE dxgiLib = LoadLibraryA("dxgi.dll");
+        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
+        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
+        if (CreateDXGIFactory2 == nullptr) {
+            return false;
+        }
 
-            OutputDebugStringA("Direct3D Adapter - WARP12\n");
+        static HMODULE d3d12Lib = LoadLibraryA("d3d12.dll");
+        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12Lib, "D3D12CreateDevice");
+        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12Lib, "D3D12GetDebugInterface");
+        if (D3D12CreateDevice == nullptr) {
+            return false;
         }
 #endif
 
-        if (!adapter)
-        {
-            throw std::exception("No Direct3D 12 device found");
-        }
-
-        *ppAdapter = adapter.Detach();
+        available = true;
+        return true;
     }
 
-    GraphicsDevice::GraphicsDevice(bool enableDebugLayer, const PresentationParameters& presentationParameters)
-        : enableDebugLayer{ enableDebugLayer }
-        , presentationParameters{ presentationParameters }
-        , apiData(new DeviceApiData())
+    D3D12GraphicsDevice::D3D12GraphicsDevice(Window* window, const Desc& desc)
+        : GraphicsDevice(window, desc)
     {
-#if defined(_DEBUG)
+
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (enableDebugLayer)
+        if (desc.enableDebugLayer)
         {
             ComPtr<ID3D12Debug> debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
@@ -161,10 +88,11 @@ namespace alimer
                 OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
             }
 
+#if defined(_DEBUG)
             ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
-                apiData->dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+                dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
                 dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -178,18 +106,18 @@ namespace alimer
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
             }
-        }
 #endif
+        }
 
-        VHR(CreateDXGIFactory2(apiData->dxgiFactoryFlags, IID_PPV_ARGS(apiData->dxgiFactory.ReleaseAndGetAddressOf())));
+        VHR(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
         // Determines whether tearing support is available for fullscreen borderless windows.
         {
-            apiData->tearingSupported = true;
+            tearingSupported = true;
             BOOL allowTearing = FALSE;
 
             ComPtr<IDXGIFactory5> factory5;
-            HRESULT hr = apiData->dxgiFactory.As(&factory5);
+            HRESULT hr = dxgiFactory.As(&factory5);
             if (SUCCEEDED(hr))
             {
                 hr = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -197,7 +125,7 @@ namespace alimer
 
             if (FAILED(hr) || !allowTearing)
             {
-                apiData->tearingSupported = false;
+                tearingSupported = false;
 #ifdef _DEBUG
                 OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
 #endif
@@ -205,111 +133,50 @@ namespace alimer
         }
 
         ComPtr<IDXGIAdapter1> adapter;
-        GetAdapter(apiData, adapter.GetAddressOf());
+        GetAdapter(adapter.GetAddressOf());
 
         // Create the DX12 API device object.
-        ThrowIfFailed(D3D12CreateDevice(
+        VHR(D3D12CreateDevice(
             adapter.Get(),
-            apiData->minFeatureLevel,
-            IID_PPV_ARGS(&apiData->handle)
+            minFeatureLevel,
+            IID_PPV_ARGS(&d3dDevice)
         ));
 
-        apiData->handle->SetName(L"Alimer Device");
+        d3dDevice->SetName(L"Alimer Device");
 
-#ifndef NDEBUG
         // Configure debug device (if active).
-        ID3D12InfoQueue* d3dInfoQueue;
-        if (SUCCEEDED(apiData->handle->QueryInterface(&d3dInfoQueue)))
+        if (desc.enableDebugLayer)
         {
-#ifdef _DEBUG
-            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-#endif
-            D3D12_MESSAGE_ID hide[] =
+            ID3D12InfoQueue* d3dInfoQueue;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
             {
-                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-                D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
-            };
-            D3D12_INFO_QUEUE_FILTER filter = {};
-            filter.DenyList.NumIDs = _countof(hide);
-            filter.DenyList.pIDList = hide;
-            d3dInfoQueue->AddStorageFilterEntries(&filter);
-            d3dInfoQueue->Release();
-        }
+#ifdef _DEBUG
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
 #endif
-
-        // Determine maximum supported feature level for this device
-        static const D3D_FEATURE_LEVEL s_featureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_12_1,
-            D3D_FEATURE_LEVEL_12_0,
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-        };
-
-        D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
-        {
-            _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
-        };
-
-        HRESULT hr = apiData->handle->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels));
-        if (SUCCEEDED(hr))
-        {
-            apiData->featureLevel = featLevels.MaxSupportedFeatureLevel;
+                D3D12_MESSAGE_ID hide[] =
+                {
+                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
+                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+                };
+                D3D12_INFO_QUEUE_FILTER filter = {};
+                filter.DenyList.NumIDs = _countof(hide);
+                filter.DenyList.pIDList = hide;
+                d3dInfoQueue->AddStorageFilterEntries(&filter);
+                d3dInfoQueue->Release();
+            }
         }
-        else
-        {
-            apiData->featureLevel = apiData->minFeatureLevel;
-        }
-
-        // Create command queue's
-        {
-            // Create the command queue.
-            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-            ThrowIfFailed(apiData->handle->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(apiData->directCommandQueue.ReleaseAndGetAddressOf())));
-            apiData->directCommandQueue->SetName(L"Direct Command Queue");
-        }
-    }
-
-    GraphicsDevice::~GraphicsDevice()
-    {
-        SafeDelete(apiData);
-    }
-
-    bool GraphicsDevice::BeginFrame()
-    {
-        return true;
-    }
-
-    void GraphicsDevice::Present()
-    {
-    }
-
-    DeviceHandle GraphicsDevice::GetApiHandle() const
-    {
-        return apiData->handle;
-    }
-
-    D3D12GraphicsDevice::D3D12GraphicsDevice(D3D12GraphicsProvider* provider, IDXGIAdapter1* adapter)
-        : provider(provider)
-        , adapter(adapter)
-        , GraphicsDevice(false, {})
-    {
-#if TODO
-        // Create the DX12 API device object.
-        VHR(provider->GetFunctions()->d3d12CreateDevice(adapter, provider->GetMinFeatureLevel(), IID_PPV_ARGS(&d3dDevice)));
-
 
         // Create memory allocator
         {
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
             desc.pDevice = d3dDevice;
-            desc.pAdapter = adapter;
+            desc.pAdapter = adapter.Get();
 
             VHR(D3D12MA::CreateAllocator(&desc, &memoryAllocator));
             switch (memoryAllocator->GetD3D12Options().ResourceHeapTier)
@@ -325,38 +192,148 @@ namespace alimer
             }
         }
 
-        // Init caps and features.
-        InitCapabilities(adapter);
+        InitCapabilities(adapter.Get());
 
-        // Render target descriptor heap (RTV).
-        {
-            RTVHeap.Capacity = 1024;
+        // Create command queue's
+        /*{
+            // Create the command queue.
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-            D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-            heapDesc.NumDescriptors = RTVHeap.Capacity;
-            heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-            heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-            VHR(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&RTVHeap.Heap)));
-            RTVHeap.CPUStart = RTVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
-        }
-        // Depth-stencil descriptor heap (DSV).
-        {
-            DSVHeap.Capacity = 256;
-
-            D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-            heapDesc.NumDescriptors = DSVHeap.Capacity;
-            heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-            heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-            VHR(d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DSVHeap.Heap)));
-            DSVHeap.CPUStart = DSVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
-        }
-#endif // TODO
-
+            ThrowIfFailed(apiData->handle->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(apiData->directCommandQueue.ReleaseAndGetAddressOf())));
+            apiData->directCommandQueue->SetName(L"Direct Command Queue");
+        }*/
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         Shutdown();
+    }
+
+    void D3D12GraphicsDevice::Shutdown()
+    {
+        SAFE_RELEASE(RTVHeap.Heap);
+        SAFE_RELEASE(DSVHeap.Heap);
+
+        // Allocator
+        D3D12MA::Stats stats;
+        memoryAllocator->CalculateStats(&stats);
+
+        if (stats.Total.UsedBytes > 0) {
+            LOG_ERROR("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
+        }
+
+        memoryAllocator->Release();
+        memoryAllocator = nullptr;
+
+        ULONG refCount = d3dDevice->Release();
+#if !defined(NDEBUG)
+        if (refCount > 0)
+        {
+            LOG_DEBUG("Direct3D12: There are %d unreleased references left on the device", refCount);
+
+            ID3D12DebugDevice* debugDevice;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
+            {
+                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
+                debugDevice->Release();
+            }
+        }
+#else
+        (void)refCount; // avoid warning
+#endif
+    }
+
+    void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
+    {
+        *ppAdapter = nullptr;
+
+        ComPtr<IDXGIAdapter1> adapter;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        ComPtr<IDXGIFactory6> factory6;
+        HRESULT hr = dxgiFactory.As(&factory6);
+        if (SUCCEEDED(hr))
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(factory6->EnumAdapterByGpuPreference(
+                    adapterIndex,
+                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+        }
+#endif
+        if (!adapter)
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory->EnumAdapters1(
+                    adapterIndex,
+                    adapter.ReleaseAndGetAddressOf()));
+                ++adapterIndex)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                VHR(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+        }
+
+#if !defined(NDEBUG)
+        if (!adapter)
+        {
+            // Try WARP12 instead
+            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf()))))
+            {
+                throw std::exception("WARP12 not available. Enable the 'Graphics Tools' optional feature");
+            }
+
+            OutputDebugStringA("Direct3D Adapter - WARP12\n");
+        }
+#endif
+
+        if (!adapter)
+        {
+            throw std::exception("No Direct3D 12 device found");
+        }
+
+        *ppAdapter = adapter.Detach();
     }
 
     void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
@@ -506,39 +483,13 @@ namespace alimer
         }
     }
 
-    void D3D12GraphicsDevice::Shutdown()
+    bool D3D12GraphicsDevice::BeginFrame()
     {
-        SAFE_RELEASE(RTVHeap.Heap);
-        SAFE_RELEASE(DSVHeap.Heap);
-        SAFE_RELEASE(adapter);
+        return true;
+    }
 
-        // Allocator
-        D3D12MA::Stats stats;
-        memoryAllocator->CalculateStats(&stats);
-
-        if (stats.Total.UsedBytes > 0) {
-            LOG_ERROR("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
-        }
-
-        memoryAllocator->Release();
-        memoryAllocator = nullptr;
-
-        ULONG refCount = d3dDevice->Release();
-#if !defined(NDEBUG)
-        if (refCount > 0)
-        {
-            LOG_DEBUG("Direct3D12: There are %d unreleased references left on the device", refCount);
-
-            ID3D12DebugDevice* debugDevice;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
-            {
-                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
-                debugDevice->Release();
-            }
-        }
-#else
-        (void)refCount; // avoid warning
-#endif
+    void D3D12GraphicsDevice::Present()
+    {
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)

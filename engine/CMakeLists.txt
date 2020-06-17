@@ -48,7 +48,14 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-define_engine_source_files(graphics/opengl)
+if (ALIMER_GRAPHICS_D3D12)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D12)
+endif ()
+
+if (ALIMER_GRAPHICS_VULKAN)
+    define_engine_source_files(Graphics/Vulkan)
+endif ()
 
 group_sources()
 
@@ -69,14 +76,14 @@ target_link_libraries(${TARGET_NAME} PUBLIC
     stb
 )
 
-# OpenGL headers
-if (WIN32 OR ANDROID OR EMSCRIPTEN)
-    target_link_libraries(${TARGET_NAME} PRIVATE opengl)
+if (ALIMER_GRAPHICS_D3D12)
+    target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D12_BACKEND)
+    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemoryAllocator)
 endif ()
 
 # Link platform specific libraries
 if (WIN32)
-    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32 opengl32)
+    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
     target_link_libraries(${TARGET_NAME} PRIVATE glfw)
 elseif(ANDROID)
     target_link_libraries(${TARGET_NAME} PRIVATE log android native_app_glue)

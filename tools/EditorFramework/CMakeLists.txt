@@ -2,7 +2,7 @@ if (NOT ALIMER_BUILD_EDITOR)
     return()
 endif ()
 
-set(TARGET_NAME editor_framework)
+set(TARGET_NAME EditorFramework)
 file (GLOB_RECURSE SOURCE_FILES *.cpp *.h *.hpp)
 
 add_library(${TARGET_NAME} ${SOURCE_FILES})

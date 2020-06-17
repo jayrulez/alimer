@@ -198,14 +198,14 @@ namespace alimer {
         T& At(IndexType index)
         {
             ALIMER_ASSERT(index < size_);
-            return Buffer()[index];
+            return data_[index];
         }
 
         /// Return const element at index.
         const T& At(IndexType index) const
         {
-            assert(index < size_);
-            return Buffer()[index];
+            ALIMER_ASSERT(index < size_);
+            return data_[index];
         }
 
 
@@ -402,7 +402,7 @@ namespace alimer {
         /// Resize the vector and fill new elements with default value.
         void Resize(IndexType newSize, const T& value)
         {
-            IndexType oldSize = size();
+            IndexType oldSize = Size();
             DoResize(newSize);
             for (unsigned i = oldSize; i < newSize; ++i)
                 At(i) = value;
