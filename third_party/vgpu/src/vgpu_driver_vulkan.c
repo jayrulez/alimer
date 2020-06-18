@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_VULKAN)
+#if defined(VGPU_DRIVER_VULKAN) && defined(TODO)
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>

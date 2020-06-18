@@ -27,6 +27,13 @@ endif()
 # third_party
 set(VGPU_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 
+# OpenGL headers
+if (WIN32 OR ANDROID OR EMSCRIPTEN)
+    add_library(opengl INTERFACE)
+    target_sources(opengl INTERFACE "${VGPU_THIRD_PARTY_DIR}/khronos/KHR/khrplatform.h")
+    target_include_directories(opengl INTERFACE "${VGPU_THIRD_PARTY_DIR}/khronos")
+endif ()
+
 # Vulkan headers
 if (WIN32 OR ANDROID OR LINUX)
     add_library(vulkan INTERFACE)
@@ -78,9 +85,9 @@ add_library(vgpu
     # Internal Headers
 	src/vgpu_driver.h
     # Source Files
-	src/vgpu.c
+	src/vgpu.cpp
     src/vgpu_d3d_common.h
-    src/vgpu_driver_d3d11.c
+    src/vgpu_driver_d3d11.cpp
     src/vgpu_driver_d3d12.cpp
     src/vgpu_driver_opengl.c
     src/vgpu_driver_vulkan.c
@@ -103,7 +110,7 @@ endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_OPENGL)
-    target_link_libraries(vgpu PRIVATE alimer_opengl_headers)
+    target_link_libraries(vgpu PRIVATE opengl)
 endif ()
 
 if (MSVC)

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_OPENGL)
+#if defined(VGPU_DRIVER_OPENGL)&& defined(TODO)
 #include "vgpu_driver.h"
 
 #if defined(_WIN32) // Windows

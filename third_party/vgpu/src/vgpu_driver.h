@@ -25,6 +25,7 @@
 
 #include "vgpu.h"
 #include <string.h> /* memset */
+#include <new>
 
 extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
 extern void* vgpu_allocation_user_data;
@@ -72,10 +73,55 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 
+namespace vgpu {
+    template <typename T, uint32_t MAX_COUNT>
+    class Pool
+    {
+    public:
+        Pool()
+            : mem{}
+        {
+            values = (T*)mem;
+            for (int i = 0; i < MAX_COUNT + 1; ++i) {
+                new (&values[i]) int(i + 1);
+            }
+            new (&values[MAX_COUNT]) int(-1);
+            first_free = 1;
+        }
+
+        int alloc()
+        {
+            if (first_free == -1) return -1;
+
+            const int id = first_free;
+            first_free = *((int*)&values[id]);
+            new (&values[id]) T;
+            return id;
+        }
+
+        void dealloc(uint32_t idx)
+        {
+            values[idx].~T();
+            new (&values[idx]) int(first_free);
+            first_free = idx;
+        }
+
+        alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)];
+        T* values;
+        int first_free;
+
+        T& operator[](int index) { return values[index]; }
+        bool isFull() const { return first_free == -1; }
+    };
+}
+
+
+using namespace vgpu;
+
 typedef struct vgpu_context {
-    bool (*init)(const vgpu_config* config);
+    bool (*init)(void* windowHandle, InitFlags flags);
     void (*shutdown)(void);
-    void(*get_caps)(vgpu_caps* caps);
+    const Caps* (*getCaps)(void);
     bool (*frame_begin)(void);
     void (*frame_end)(void);
 
@@ -94,12 +140,6 @@ typedef struct vgpu_context {
     vgpu_buffer(*buffer_create)(const vgpu_buffer_info* info);
     void(*buffer_destroy)(vgpu_buffer handle);
 
-    /* Swapchain */
-    vgpu_swapchain(*swapchain_create)(uintptr_t window_handle, vgpu_texture_format color_format, vgpu_texture_format depth_stencil_format);
-    void(*swapchain_destroy)(vgpu_swapchain handle);
-    void(*swapchain_resize)(vgpu_swapchain handle, uint32_t width, uint32_t height);
-    void(*swapchain_present)(vgpu_swapchain handle);
-
     /* CommandBuffer */
     void (*insertDebugMarker)(const char* name);
     void (*pushDebugGroup)(const char* name);
@@ -113,7 +153,7 @@ typedef struct vgpu_context {
 #define ASSIGN_DRIVER(name) \
 ASSIGN_DRIVER_FUNC(init, name)\
 ASSIGN_DRIVER_FUNC(shutdown, name)\
-ASSIGN_DRIVER_FUNC(get_caps, name)\
+ASSIGN_DRIVER_FUNC(getCaps, name)\
 ASSIGN_DRIVER_FUNC(frame_begin, name)\
 ASSIGN_DRIVER_FUNC(frame_end, name)\
 ASSIGN_DRIVER_FUNC(texture_create, name)\
@@ -122,21 +162,17 @@ ASSIGN_DRIVER_FUNC(texture_get_width, name)\
 ASSIGN_DRIVER_FUNC(texture_get_height, name)\
 ASSIGN_DRIVER_FUNC(framebuffer_create, name)\
 ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)\
-ASSIGN_DRIVER_FUNC(swapchain_create, name)\
-ASSIGN_DRIVER_FUNC(swapchain_destroy, name)\
-ASSIGN_DRIVER_FUNC(swapchain_resize, name)\
-ASSIGN_DRIVER_FUNC(swapchain_present, name)\
 ASSIGN_DRIVER_FUNC(insertDebugMarker, name)\
 ASSIGN_DRIVER_FUNC(pushDebugGroup, name)\
 ASSIGN_DRIVER_FUNC(popDebugGroup, name)\
 ASSIGN_DRIVER_FUNC(render_begin, name)\
 ASSIGN_DRIVER_FUNC(render_finish, name)
 
-typedef struct vgpu_driver {
-    vgpu_backend_type backendType;
-    bool(*is_supported)(void);
+struct vgpu_driver {
+    BackendType backendType;
+    bool(*isSupported)(void);
     vgpu_context* (*create_context)(void);
-} vgpu_driver;
+};
 
 extern vgpu_driver d3d11_driver;
 extern vgpu_driver d3d12_driver;

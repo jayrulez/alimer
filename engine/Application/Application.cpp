@@ -26,6 +26,7 @@
 #include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
+#include <vgpu.h>
 
 namespace alimer
 {
@@ -44,7 +45,7 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        graphicsDevice.reset();
+        vgpu::shutdown();
         SafeDelete(mainWindow);
         PlatformDestroy();
     }
@@ -59,11 +60,13 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
-            GraphicsDevice::Desc deviceDesc = {};
+            vgpu::InitFlags initFlags = vgpu::InitFlags::None;
 #ifdef _DEBUG
-            deviceDesc.enableDebugLayer = true;
+            initFlags |= vgpu::InitFlags::DebugOutput;
 #endif
-            graphicsDevice = GraphicsDevice::Create(mainWindow, deviceDesc);
+            if (!vgpu::init(mainWindow->GetHandle(), initFlags)) {
+
+            }
         }
 
         Initialize();
@@ -97,7 +100,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        graphicsDevice->BeginFrame();
+        vgpu_frame_begin();
 
         for (auto gameSystem : gameSystems)
         {
@@ -122,7 +125,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->Present();
+        vgpu_frame_finish();
     }
 
     int Application::Run()
