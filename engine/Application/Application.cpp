@@ -100,7 +100,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu_frame_begin();
+        vgpu::beginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -125,7 +125,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_frame_finish();
+        vgpu::endFrame();
     }
 
     int Application::Run()

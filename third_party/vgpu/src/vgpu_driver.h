@@ -99,11 +99,11 @@ namespace vgpu {
             return id;
         }
 
-        void dealloc(uint32_t idx)
+        void dealloc(uint32_t index)
         {
-            values[idx].~T();
-            new (&values[idx]) int(first_free);
-            first_free = idx;
+            values[index].~T();
+            new (&values[index]) int(first_free);
+            first_free = index;
         }
 
         alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)];
@@ -126,10 +126,10 @@ typedef struct vgpu_context {
     void (*frame_end)(void);
 
     /* Texture */
-    vgpu_texture(*texture_create)(const vgpu_texture_info* desc);
-    void(*texture_destroy)(vgpu_texture handle);
-    uint32_t(*texture_get_width)(vgpu_texture handle, uint32_t mipLevel);
-    uint32_t(*texture_get_height)(vgpu_texture handle, uint32_t mipLevel);
+    Texture(*texture_create)(const TextureDesc& desc);
+    void(*texture_destroy)(Texture handle);
+    uint32_t(*texture_get_width)(Texture handle, uint32_t mipLevel);
+    uint32_t(*texture_get_height)(Texture handle, uint32_t mipLevel);
 
     /* Framebuffer */
     vgpu_framebuffer(*framebuffer_create)(const vgpu_framebuffer_info* info);
@@ -137,36 +137,17 @@ typedef struct vgpu_context {
     vgpu_framebuffer(*getDefaultFramebuffer)(void);
 
     /* Buffer */
-    vgpu_buffer(*buffer_create)(const vgpu_buffer_info* info);
-    void(*buffer_destroy)(vgpu_buffer handle);
+    Buffer(*createBuffer)(const BufferDesc* desc);
+    void(*destroyBuffer)(Buffer handle);
 
     /* CommandBuffer */
     void (*insertDebugMarker)(const char* name);
     void (*pushDebugGroup)(const char* name);
     void (*popDebugGroup)(void);
-    void(*render_begin)(vgpu_framebuffer framebuffer);
-    void(*render_finish)(void);
+    void(*beginRenderPass)(const RenderPassDesc* desc);
+    void(*endRenderPass)(void);
 
 } vgpu_context;
-
-#define ASSIGN_DRIVER_FUNC(func, name) context.func = name##_##func;
-#define ASSIGN_DRIVER(name) \
-ASSIGN_DRIVER_FUNC(init, name)\
-ASSIGN_DRIVER_FUNC(shutdown, name)\
-ASSIGN_DRIVER_FUNC(getCaps, name)\
-ASSIGN_DRIVER_FUNC(frame_begin, name)\
-ASSIGN_DRIVER_FUNC(frame_end, name)\
-ASSIGN_DRIVER_FUNC(texture_create, name)\
-ASSIGN_DRIVER_FUNC(texture_destroy, name)\
-ASSIGN_DRIVER_FUNC(texture_get_width, name)\
-ASSIGN_DRIVER_FUNC(texture_get_height, name)\
-ASSIGN_DRIVER_FUNC(framebuffer_create, name)\
-ASSIGN_DRIVER_FUNC(framebuffer_destroy, name)\
-ASSIGN_DRIVER_FUNC(insertDebugMarker, name)\
-ASSIGN_DRIVER_FUNC(pushDebugGroup, name)\
-ASSIGN_DRIVER_FUNC(popDebugGroup, name)\
-ASSIGN_DRIVER_FUNC(render_begin, name)\
-ASSIGN_DRIVER_FUNC(render_finish, name)
 
 struct vgpu_driver {
     BackendType backendType;

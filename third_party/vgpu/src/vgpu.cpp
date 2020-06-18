@@ -117,72 +117,6 @@ static const vgpu_driver* drivers[] = {
 
 static vgpu_context* s_gpu_context = NULL;
 
-bool vgpu_frame_begin(void) {
-    return s_gpu_context->frame_begin();
-}
-
-void vgpu_frame_finish(void) {
-    s_gpu_context->frame_end();
-}
-
-void vgpuInsertDebugMarker(const char* name) {
-    VGPU_ASSERT(name);
-    s_gpu_context->insertDebugMarker(name);
-}
-
-void vgpuPushDebugGroup(const char* name) {
-    VGPU_ASSERT(name);
-    s_gpu_context->pushDebugGroup(name);
-}
-
-void vgpuPopDebugGroup(void) {
-    s_gpu_context->popDebugGroup();
-}
-
-void vgpu_render_begin(vgpu_framebuffer framebuffer) {
-    s_gpu_context->render_begin(framebuffer);
-}
-
-void vgpu_render_finish(void) {
-    s_gpu_context->render_finish();
-}
-
-/* Texture */
-static vgpu_texture_info vgpu_texture_info_def(const vgpu_texture_info* info) {
-    vgpu_texture_info def = *info;
-    def.type = _vgpu_def(info->type, VGPU_TEXTURE_TYPE_2D);
-    //def.format = _vgpu_def(info->format, VGPU_TEXTURE_FORMAT_RGBA8);
-    def.width = _vgpu_def(info->width, 1u);
-    def.height = _vgpu_def(info->height, 1u);
-    def.depth = _vgpu_def(info->depth, 1u);
-    def.mip_levels = _vgpu_def(info->mip_levels, 1u);
-    def.sample_count = _vgpu_def(info->sample_count, 1u);
-    return def;
-}
-
-vgpu_texture vgpu_texture_create(const vgpu_texture_info* info) {
-    VGPU_ASSERT(s_gpu_context);
-    VGPU_ASSERT(info);
-
-    vgpu_texture_info info_def = vgpu_texture_info_def(info);
-    return s_gpu_context->texture_create(&info_def);
-}
-
-void vgpu_texture_destroy(vgpu_texture texture) {
-    VGPU_ASSERT(s_gpu_context);
-    if (texture.id != VGPU_INVALID_ID) {
-        s_gpu_context->texture_destroy(texture);
-    }
-}
-
-uint32_t vgpu_texture_get_width(vgpu_texture texture, uint32_t mip_level) {
-    return s_gpu_context->texture_get_width(texture, mip_level);
-}
-
-uint32_t vgpu_texture_get_height(vgpu_texture texture, uint32_t mip_level) {
-    return s_gpu_context->texture_get_height(texture, mip_level);
-}
-
 /* Framebuffer */
 static vgpu_framebuffer_info vgpu_framebuffer_info_def(const vgpu_framebuffer_info* info) {
     vgpu_framebuffer_info def = *info;
@@ -195,20 +129,20 @@ static vgpu_framebuffer_info vgpu_framebuffer_info_def(const vgpu_framebuffer_in
 
         for (uint32_t i = 0; i < VGPU_MAX_COLOR_ATTACHMENTS; i++)
         {
-            if (info->color_attachments[i].texture.id == VGPU_INVALID_ID)
-                continue;
+            //if (info->color_attachments[i].texture.id == VGPU_INVALID_ID)
+            //    continue;
 
-            uint32_t mip_level = info->color_attachments[i].level;
-            width = _vgpu_min(width, vgpu_texture_get_width(info->color_attachments[i].texture, mip_level));
-            height = _vgpu_min(height, vgpu_texture_get_height(info->color_attachments[i].texture, mip_level));
+            //uint32_t mip_level = info->color_attachments[i].level;
+            //width = _vgpu_min(width, vgpu::textureGetWidth(info->color_attachments[i].texture, mip_level));
+            //height = _vgpu_min(height, vgpu_texture_get_height(info->color_attachments[i].texture, mip_level));
         }
 
-        if (info->depth_stencil_attachment.texture.id != VGPU_INVALID_ID)
+        /*if (info->depth_stencil_attachment.texture.id != VGPU_INVALID_ID)
         {
             uint32_t mip_level = info->depth_stencil_attachment.level;
-            width = _vgpu_min(width, vgpu_texture_get_width(info->depth_stencil_attachment.texture, mip_level));
-            height = _vgpu_min(height, vgpu_texture_get_height(info->depth_stencil_attachment.texture, mip_level));
-        }
+            //width = _vgpu_min(width, vgpu_texture_get_width(info->depth_stencil_attachment.texture, mip_level));
+            //height = _vgpu_min(height, vgpu_texture_get_height(info->depth_stencil_attachment.texture, mip_level));
+        }*/
     }
 
     def.width = width;
@@ -234,21 +168,6 @@ void vgpu_framebuffer_destroy(vgpu_framebuffer framebuffer) {
 
 vgpu_framebuffer vgpu_framebuffer_get_default(void) {
     return s_gpu_context->getDefaultFramebuffer();
-}
-
-/* Buffer */
-vgpu_buffer vgpu_buffer_create(const vgpu_buffer_info* info) {
-    VGPU_ASSERT(s_gpu_context);
-    VGPU_ASSERT(info);
-
-    return s_gpu_context->buffer_create(info);
-}
-
-void vgpu_buffer_destroy(vgpu_buffer buffer) {
-    VGPU_ASSERT(s_gpu_context);
-    VGPU_ASSERT(buffer);
-
-    s_gpu_context->buffer_destroy(buffer);
 }
 
 namespace vgpu
@@ -307,6 +226,74 @@ namespace vgpu
 
     const Caps* getCaps() {
         return s_gpu_context->getCaps();
+    }
+
+    bool beginFrame(void) {
+        return s_gpu_context->frame_begin();
+    }
+
+    void endFrame(void) {
+        s_gpu_context->frame_end();
+    }
+
+    /* Texture methods */
+    Texture createTexture(const TextureDesc& desc) {
+        VGPU_ASSERT(s_gpu_context);
+
+        return s_gpu_context->texture_create(desc);
+    }
+
+    void destroyTexture(Texture texture) {
+        VGPU_ASSERT(s_gpu_context);
+        if (texture.isValid()) {
+            s_gpu_context->texture_destroy(texture);
+        }
+    }
+
+    uint32_t textureGetWidth(Texture texture, uint32_t mip_level) {
+        return s_gpu_context->texture_get_width(texture, mip_level);
+    }
+
+    uint32_t textureGetHeight(Texture texture, uint32_t mip_level) {
+        return s_gpu_context->texture_get_height(texture, mip_level);
+    }
+
+    /* Buffer methods */
+    Buffer createBuffer(const BufferDesc* desc) {
+        VGPU_ASSERT(s_gpu_context);
+        VGPU_ASSERT(desc);
+
+        return s_gpu_context->createBuffer(desc);
+    }
+
+    void destroyBuffer(Buffer buffer) {
+        VGPU_ASSERT(s_gpu_context);
+        if (buffer.isValid()) {
+            s_gpu_context->destroyBuffer(buffer);
+        }
+    }
+
+    /* CommandBuffer */
+    void insertDebugMarker(const char* name) {
+        VGPU_ASSERT(name);
+        s_gpu_context->insertDebugMarker(name);
+    }
+
+    void pushDebugGroup(const char* name) {
+        VGPU_ASSERT(name);
+        s_gpu_context->pushDebugGroup(name);
+    }
+
+    void popDebugGroup(void) {
+        s_gpu_context->popDebugGroup();
+    }
+
+    void beginRenderPass(const RenderPassDesc* desc) {
+        s_gpu_context->beginRenderPass(desc);
+    }
+
+    void endRenderPass(void) {
+        s_gpu_context->endRenderPass();
     }
 
     /* Helper methods */

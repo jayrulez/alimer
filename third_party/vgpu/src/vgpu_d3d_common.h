@@ -53,7 +53,10 @@ typedef enum {
     DXGIFACTORY_CAPS_TEARING = (1 << 1),
 } dxgi_factory_caps;
 
-namespace vgpu {
+namespace vgpu
+{
+    static inline uint64_t RountUp64(uint64_t value, uint64_t multiple) { return ((value + multiple - 1) / multiple) * multiple; }
+
     static inline bool d3dIsLost(HRESULT hr) {
         if (hr == DXGI_ERROR_DEVICE_REMOVED
             || hr == DXGI_ERROR_DEVICE_HUNG
@@ -67,7 +70,7 @@ namespace vgpu {
         return false;
     }
 
-    static inline DXGI_FORMAT _vgpu_d3d_format(PixelFormat format) {
+    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format) {
         switch (format) {
         case PixelFormat::R8Unorm:
             return DXGI_FORMAT_R8_UNORM;
@@ -178,7 +181,7 @@ namespace vgpu {
         }
     }
 
-    static inline DXGI_FORMAT _vgpu_d3d_typeless_from_depth_format(PixelFormat format)
+    static inline DXGI_FORMAT GetTypelessFormatFromDepthFormat(PixelFormat format)
     {
         switch (format)
         {
@@ -191,19 +194,19 @@ namespace vgpu {
             return DXGI_FORMAT_R32_TYPELESS;
         default:
             VGPU_ASSERT(vgpu::isDepthFormat(format) == false);
-            return _vgpu_d3d_format(format);
+            return ToDXGIFormat(format);
         }
     }
 
-    static inline DXGI_FORMAT _vgpu_d3d_format_with_usage(PixelFormat format, vgpu_texture_usage_flags usage) {
+    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, TextureUsage usage) {
         // If depth and either ua or sr, set to typeless
         if (vgpu::isDepthStencilFormat(format)
-            && ((usage & (VGPU_TEXTURE_USAGE_SAMPLED | VGPU_TEXTURE_USAGE_STORAGE)) != 0))
+            && ((usage & (TextureUsage::Sampled | TextureUsage::Storage)) != TextureUsage::None))
         {
-            return _vgpu_d3d_typeless_from_depth_format(format);
+            return GetTypelessFormatFromDepthFormat(format);
         }
 
-        return _vgpu_d3d_format(format);
+        return ToDXGIFormat(format);
     }
 
     static inline DXGI_FORMAT vgpu_d3d_swapchain_format(PixelFormat format)
