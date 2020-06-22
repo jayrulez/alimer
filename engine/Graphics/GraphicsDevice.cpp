@@ -25,46 +25,55 @@
 #include "Core/Log.h"
 #include "Core/Assert.h"
 
+#if defined(ALIMER_D3D11_BACKEND)
+#include "Graphics/D3D11/GraphicsDevice_D3D11.h"
+#endif
+
 #if defined(ALIMER_D3D12_BACKEND)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(Window* window, const Desc& desc)
-        : window{ window }
-        , desc{ desc }
+    GraphicsDevice::GraphicsDevice(const Desc& desc)
+        : desc{ desc }
     {
 
     }
 
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(Window* window, const Desc& desc)
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const Desc& desc, const PresentationParameters& presentationParameters)
     {
         BackendType backendType = desc.preferredBackendType;
         if (backendType == BackendType::Count) {
-#if defined(ALIMER_D3D12_BACKEND)
-            if (D3D12GraphicsDevice::IsAvailable()) {
-                backendType = BackendType::Direct3D12;
+#if defined(ALIMER_D3D11_BACKEND)
+            if (GraphicsDevice_D3D11::IsAvailable()) {
+                backendType = BackendType::Direct3D11;
             }
 #endif
         }
 
+        std::unique_ptr<GraphicsDevice> device = nullptr;
         switch (backendType)
         {
-#if defined(ALIMER_D3D12_BACKEND)
-        case BackendType::Direct3D12:
-            if (D3D12GraphicsDevice::IsAvailable()) {
-                return std::make_unique<D3D12GraphicsDevice>(window, desc);
+#if defined(ALIMER_D3D11_BACKEND)
+        case BackendType::Direct3D11:
+            if (GraphicsDevice_D3D11::IsAvailable()) {
+                device = std::make_unique<GraphicsDevice_D3D11>(desc);
             }
-
-            return nullptr;
+            else {
+                return nullptr;
+            }
+            break;
 #endif
 
         default:
             return nullptr;
         }
 
-        return nullptr;
+        if (device == nullptr || !device->Initialize(presentationParameters))
+            return nullptr;
+
+        return device;
     }
 
     void GraphicsDevice::TrackResource(GraphicsResource* resource)

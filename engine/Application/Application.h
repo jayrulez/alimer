@@ -23,8 +23,10 @@
 #pragma once
 
 #include "Core/Vector.h"
+#include "Application/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Math/size.h"
 #include <memory>
 
@@ -46,7 +48,6 @@ namespace alimer
     };
 
     struct Engine;
-    class Window;
     class InputManager;
 
     class ALIMER_API Application : public Object
@@ -67,7 +68,8 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        Window* GetMainWindow() const { return mainWindow; }
+        Window& GetWindow() { return window; }
+        const Window& GetWindow() const { return window; }
 
         inline InputManager* GetInput() const noexcept { return input; }
 
@@ -97,7 +99,7 @@ namespace alimer
     protected:
         Vector<std::string> args;
 
-        DefaultAllocator allocator;
+        std::unique_ptr<GraphicsDevice> graphicsDevice;
 
         int exitCode = 0;
         Configuration config;
@@ -106,7 +108,7 @@ namespace alimer
         // Rendering loop timer.
         GameTime time;
 
-        Window* mainWindow = nullptr;
+        Window window;
         Vector<GameSystem*> gameSystems;
         InputManager* input;
 

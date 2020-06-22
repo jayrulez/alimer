@@ -60,8 +60,8 @@ namespace alimer
         RGBA8SNorm,
         RGBA8UInt,
         RGBA8SInt,
-        BGRA8UNorm,
-        BGRA8UNormSrgb,
+        BGRA8Unorm,
+        BGRA8UnormSrgb,
         // Packed 32-Bit Pixel formats
         RGB10A2UNorm,
         RG11B10Float,
@@ -238,8 +238,8 @@ namespace alimer
             return PixelFormat::BC2RGBAUNorm;
         case PixelFormat::BC3RGBAUNormSrgb:
             return PixelFormat::BC3RGBAUNorm;
-        case PixelFormat::BGRA8UNormSrgb:
-            return PixelFormat::BGRA8UNorm;
+        case PixelFormat::BGRA8UnormSrgb:
+            return PixelFormat::BGRA8Unorm;
         case PixelFormat::RGBA8UNormSrgb:
             return PixelFormat::RGBA8UNorm;
         case PixelFormat::BC7RGBAUNormSrgb:
@@ -263,8 +263,8 @@ namespace alimer
             return PixelFormat::BC2RGBAUNormSrgb;
         case PixelFormat::BC3RGBAUNorm:
             return PixelFormat::BC3RGBAUNormSrgb;
-        case PixelFormat::BGRA8UNorm:
-            return PixelFormat::BGRA8UNormSrgb;
+        case PixelFormat::BGRA8Unorm:
+            return PixelFormat::BGRA8UnormSrgb;
         case PixelFormat::RGBA8UNorm:
             return PixelFormat::RGBA8UNormSrgb;
         case PixelFormat::BC7RGBAUNorm:

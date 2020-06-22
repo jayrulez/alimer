@@ -33,9 +33,16 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-namespace alimer {
-    void Window::Create(WindowFlags flags)
+namespace alimer
+{
+    bool Window::Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags)
     {
+        this->title = title;
+        size.width = width;
+        size.height = height;
+        fullscreen = any(flags & WindowFlags::Fullscreen);
+        exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
+
         /*if ((flags & WINDOW_FLAG_OPENGL)) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -79,7 +86,7 @@ namespace alimer {
         if (!handle)
         {
             LOG_ERROR("GLFW: Failed to create window.");
-            return;
+            return false;
         }
 
         /*if ((flags & WINDOW_FLAG_OPENGL)) {
@@ -91,16 +98,12 @@ namespace alimer {
         glfwSetWindowUserPointer(handle, this);
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
+        return true;
     }
 
     void Window::Close()
     {
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
-    }
-
-    void Window::Destroy()
-    {
-        glfwDestroyWindow((GLFWwindow*)window);
     }
 
     bool Window::ShouldClose() const
@@ -123,6 +126,11 @@ namespace alimer {
         return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_MAXIMIZED) == GLFW_TRUE;
     }
 
+    bool Window::IsFullscreen() const
+    {
+        return fullscreen || exclusiveFullscreen;
+    }
+
     void* Window::GetHandle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
@@ -134,5 +142,5 @@ namespace alimer {
 #else
         return 0;
 #endif
-    }
+}
 }

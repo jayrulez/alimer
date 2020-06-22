@@ -25,18 +25,4 @@
 
 namespace alimer
 {
-    Window::Window(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags)
-        : title{ title }
-        , size(width, height)
-        , fullscreen(any(flags & WindowFlags::Fullscreen))
-        , exclusiveFullscreen(any(flags & WindowFlags::ExclusiveFullscreen))
-    {
-        Create(flags);
-    }
-
-    Window::~Window()
-    {
-        Close();
-        Destroy();
-    }
-} // namespace alimer
+}

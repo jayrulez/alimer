@@ -48,9 +48,13 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-if (ALIMER_GRAPHICS_D3D12)
+if(WIN32 OR WINDOWS_STORE)
     define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D12)
+    define_engine_source_files(Graphics/D3D11)
+endif ()
+
+if (ALIMER_GRAPHICS_D3D12)
+    #define_engine_source_files(Graphics/D3D12)
 endif ()
 
 if (ALIMER_GRAPHICS_VULKAN)
@@ -73,13 +77,16 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    vgpu
     stb
 )
 
+if(WIN32 OR WINDOWS_STORE)
+    target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D11_BACKEND)
+endif ()
+
 if (ALIMER_GRAPHICS_D3D12)
-    target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D12_BACKEND)
-    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemoryAllocator)
+    #target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D12_BACKEND)
+    #target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemoryAllocator)
 endif ()
 
 # Link platform specific libraries

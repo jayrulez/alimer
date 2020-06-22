@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Application/Window.h"
 #include "graphics/GraphicsResource.h"
 #include "Core/Vector.h"
 #include <mutex>
@@ -37,7 +36,17 @@ namespace alimer
 #endif
 
     class Texture;
-    class SwapChain;
+    using CommandList = uint8_t;
+
+    class ALIMER_API GraphicsDeviceEvents
+    {
+    public:
+        virtual void OnDeviceLost() = 0;
+        virtual void OnDeviceRestored() = 0;
+
+    protected:
+        ~GraphicsDeviceEvents() = default;
+    };
 
     /// Defines the logical graphics device class.
     class ALIMER_API GraphicsDevice
@@ -52,17 +61,19 @@ namespace alimer
         {
             BackendType preferredBackendType = BackendType::Count;
             bool enableDebugLayer = DEFAULT_ENABLE_DEBUG_LAYER;
-            GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-            PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         };
 
         virtual ~GraphicsDevice() = default;
 
-        virtual bool BeginFrame() = 0;
-        virtual void Present() = 0;
+        GraphicsDevice(const GraphicsDevice&) = delete;
+        GraphicsDevice(GraphicsDevice&&) = delete;
+        GraphicsDevice& operator=(const GraphicsDevice&) = delete;
+        GraphicsDevice& operator=(GraphicsDevice&&) = delete;
 
-        static std::unique_ptr<GraphicsDevice> Create(Window* window, const Desc& desc);
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+
+        static std::unique_ptr<GraphicsDevice> Create(const Desc& desc, const PresentationParameters& presentationParameters);
 
         //virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
 
@@ -70,20 +81,63 @@ namespace alimer
             return caps;
         }
 
+        virtual TextureHandle CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps) = 0;
+        virtual void DestroyTexture(TextureHandle handle) = 0;
+
     private:
+        virtual bool Initialize(const PresentationParameters& presentationParameters) = 0;
+        virtual void Shutdown() = 0;
+
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice(Window* window, const Desc& desc);
+        GraphicsDevice(const Desc& desc);
         void ReleaseTrackedResources();
 
-        Window* window;
         Desc desc;
         GraphicsDeviceCaps caps{};
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
+        GraphicsDeviceEvents* events = nullptr;
 
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        template <typename T, uint32_t MAX_COUNT>
+        class Pool
+        {
+        public:
+            Pool()
+            {
+                values = (T*)mem;
+                for (int i = 0; i < MAX_COUNT + 1; ++i) {
+                    new (&values[i]) int(i + 1);
+                }
+                new (&values[MAX_COUNT]) int(-1);
+                first_free = 1;
+            }
+
+            int alloc()
+            {
+                if (first_free == -1) return -1;
+
+                const int id = first_free;
+                first_free = *((int*)&values[id]);
+                new (&values[id]) T;
+                return id;
+            }
+
+            void dealloc(uint32_t index)
+            {
+                values[index].~T();
+                new (&values[index]) int(first_free);
+                first_free = index;
+            }
+
+            alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)] = {};
+            T* values;
+            int first_free;
+
+            T& operator[](int index) { return values[index]; }
+            bool isFull() const { return first_free == -1; }
+        };
     };
 }

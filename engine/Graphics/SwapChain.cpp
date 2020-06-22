@@ -25,7 +25,7 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(GraphicsDevice& device, const SwapChainDescription& desc)
+    SwapChain::SwapChain(GraphicsDevice& device, const PresentationParameters& desc)
         : device(device)
         , width(desc.width)
         , height(desc.height)

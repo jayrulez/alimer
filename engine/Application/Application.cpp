@@ -23,10 +23,8 @@
 #include "Application/Application.h"
 #include "Application/Window.h"
 #include "graphics/CommandBuffer.h"
-#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
-#include <vgpu.h>
 
 namespace alimer
 {
@@ -45,8 +43,8 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        vgpu::shutdown();
-        SafeDelete(mainWindow);
+        graphicsDevice.reset();
+        window.Close();
         PlatformDestroy();
     }
 
@@ -55,21 +53,23 @@ namespace alimer
         // Create main window.
         if (!headless)
         {
-            mainWindow = new Window(
+            window.Create(
                 config.windowTitle,
                 config.windowSize.width, config.windowSize.height,
-                WindowFlags::Resizable);
+                WindowFlags::Resizable
+            );
 
-            vgpu::PresentationParameters presParams = {};
-            presParams.width = mainWindow->GetSize().width;
-            presParams.width = mainWindow->GetSize().height;
-            presParams.windowHandle = mainWindow->GetHandle();
-            vgpu::InitFlags initFlags = vgpu::InitFlags::None;
-#ifdef _DEBUG
-            initFlags |= vgpu::InitFlags::DebugOutput;
-#endif
-            if (!vgpu::init(presParams, initFlags)) {
+            GraphicsDevice::Desc graphicsDesc = {};
 
+            PresentationParameters presentationParameters = {};
+            presentationParameters.windowHandle = window.GetHandle();
+            presentationParameters.width = window.GetSize().width;
+            presentationParameters.width = window.GetSize().height;
+            presentationParameters.isFullscreen = window.IsFullscreen();
+
+            graphicsDevice = GraphicsDevice::Create(graphicsDesc, presentationParameters);
+            if (!graphicsDevice) {
+                headless = true;
             }
         }
 
@@ -104,7 +104,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu::BeginFrame();
+        graphicsDevice->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -121,8 +121,8 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
-        vgpu::PushDebugGroup("Frame");
-        vgpu::PopDebugGroup();
+        //vgpu::PushDebugGroup("Frame");
+        //vgpu::PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -132,7 +132,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu::EndFrame();
+        graphicsDevice->EndFrame();
     }
 
     int Application::Run()
@@ -168,7 +168,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !mainWindow->IsMinimized()
+            && !window.IsMinimized()
             && BeginDraw())
         {
             Draw(time);

@@ -46,9 +46,9 @@ namespace alimer
     class ALIMER_API Window final
     {
     public:
-        Window(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags);
-        ~Window();
+        Window() = default;
 
+        bool Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags);
         void Close();
 
         const usize& GetSize() const { return size; }
@@ -56,12 +56,10 @@ namespace alimer
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
+        bool IsFullscreen() const;
         void* GetHandle() const;
 
     private:
-        void Create(WindowFlags flags);
-        void Destroy();
-
         std::string title;
         usize size;
         bool fullscreen = false;
@@ -69,4 +67,4 @@ namespace alimer
 
         void* window = nullptr;
     };
-} // namespace alimer
+} 

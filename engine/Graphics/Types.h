@@ -28,11 +28,18 @@
 
 namespace alimer
 {
+    static constexpr uint32_t kInvalidHandle = 0;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+    static constexpr uint32_t kMaxPossibleMipLevels = -1;
+    static constexpr uint32_t kMaxCommandLists = 16u;
+
+    /* Handles */
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    const TextureHandle kInvalidTextureHandle = { kInvalidHandle };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -62,21 +69,6 @@ namespace alimer
         ARM = 0x13B5,
         ImgTec = 0x1010,
         Qualcomm = 0x5143
-    };
-
-    enum class GPUAdapterType : uint32_t
-    {
-        DiscreteGPU,
-        IntegratedGPU,
-        CPU,
-        Unknown
-    };
-
-    enum class GPUPowerPreference : uint32_t
-    {
-        Default,
-        LowPower,
-        HighPerformance,
     };
 
     enum class CommandQueueType : uint8_t
@@ -144,14 +136,14 @@ namespace alimer
         Clear,
     };
 
-    /* Structures */
-    /// Describes GraphicsDevice capabilities.
+    /**
+    * Describes GraphicsDevice capabilities.
+    */
     struct GraphicsDeviceCaps
     {
         BackendType backendType;
-        uint32_t vendorId;
+        GPUVendorId vendorId;
         uint32_t deviceId;
-        GPUAdapterType adapterType = GPUAdapterType::Unknown;
         std::string adapterName;
 
         struct Features
@@ -213,25 +205,16 @@ namespace alimer
         Limits limits;
     };
 
-    struct SwapChainDescription
-    {
-        void* windowHandle;
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool isFullscreen;
-    };
-
-    struct TextureDescription
+    struct TextureDesc
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
-        u32 width = 1;
-        u32 height = 1;
-        u32 depth = 1;
-        u32 mipLevelCount = 1;
+        uint32_t width = 1;
+        uint32_t height = 1;
+        uint32_t depth = 1;
+        uint32_t mipLevels = 1;
+        uint32_t arrayLayers = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
 
         const char* label = nullptr;
@@ -265,12 +248,23 @@ namespace alimer
         LoadAction stencilLoadOp = LoadAction::DontCare;
         StoreAction stencilStoreOp = StoreAction::Clear;
         float clearDepth = 1.0f;
-        u8 clearStencil;
+        uint8_t clearStencil;
     };
 
     struct RenderPassDescriptor
     {
         RenderPassColorAttachmentDescriptor colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachmentDescriptor depthStencilAttachment;
+    };
+
+    struct PresentationParameters
+    {
+        void* windowHandle = nullptr;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen;
+        bool vsync = true;
     };
 }

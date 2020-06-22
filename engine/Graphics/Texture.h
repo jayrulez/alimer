@@ -27,38 +27,37 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GraphicsResource
+    class ALIMER_API Texture final : public GraphicsResource
     {
     public:
-        Texture(GraphicsDevice& device, const TextureDescription& desc);
+        Texture(GraphicsDevice& device);
+        Texture(const Texture&) = delete;
+        Texture(Texture&& other) noexcept;
+        Texture& operator=(const Texture&) = delete;
+        Texture& operator=(Texture&&) = delete;
+        ~Texture();
 
-        virtual ~Texture() = default;
+        void Destroy() override;
 
-        static RefPtr<Texture> Create2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format);
+        bool Define2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arrayLayers = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
 
         /**
         * Get a mip-level width.
         */
-        uint32_t GetWidth(uint32_t mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevelCount) ? max(1u, width >> mipLevel) : 0; }
+        uint32_t GetWidth(uint32_t mipLevel = 0) const;
 
         /**
         * Get a mip-level height.
         */
-        uint32_t GetHeight(uint32_t mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevelCount) ? max(1u, height >> mipLevel) : 0; }
+        uint32_t GetHeight(uint32_t mipLevel = 0) const;
 
         /**
         * Get a mip-level depth.
         */
-        uint32_t GetDepth(uint32_t mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevelCount) ? max(1U, depth >> mipLevel) : 0; }
+        uint32_t GetDepth(uint32_t mipLevel = 0) const;
 
-    protected:
-        TextureType type = TextureType::Type2D;
-        PixelFormat format = PixelFormat::RGBA8UNorm;
-        TextureUsage usage = TextureUsage::Sampled;
-        u32 width = 1u;
-        u32 height = 1u;
-        u32 depth = 1u;
-        u32 mipLevelCount = 1u;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+    private:
+        TextureDesc textureDesc{};
+        TextureHandle handle{ kInvalidHandle };
     };
 }

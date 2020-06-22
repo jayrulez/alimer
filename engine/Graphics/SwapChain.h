@@ -31,7 +31,7 @@ namespace alimer
     {
     protected:
         /// Constructor.
-        SwapChain(GraphicsDevice& device, const SwapChainDescription& desc);
+        SwapChain(GraphicsDevice& device, const PresentationParameters& desc);
 
     public:
         virtual ~SwapChain() = default;
@@ -52,7 +52,7 @@ namespace alimer
 
         uint32_t width;
         uint32_t height;
-        PixelFormat colorFormat = PixelFormat::BGRA8UNormSrgb;
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
     };
 }
