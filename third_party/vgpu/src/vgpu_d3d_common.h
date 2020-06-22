@@ -55,6 +55,7 @@ typedef enum {
 
 namespace vgpu
 {
+    static inline uint32_t RountUp(uint32_t value, uint32_t multiple) { return ((value + multiple - 1) / multiple) * multiple; }
     static inline uint64_t RountUp64(uint64_t value, uint64_t multiple) { return ((value + multiple - 1) / multiple) * multiple; }
 
     static inline bool d3dIsLost(HRESULT hr) {
@@ -229,6 +230,16 @@ namespace vgpu
         }
 
         return DXGI_FORMAT_B8G8R8A8_UNORM;
+    }
+
+    static inline int StringConvert(const char* from, wchar_t* to) {
+        int num = MultiByteToWideChar(CP_UTF8, 0, from, -1, NULL, 0);
+        if (num > 0)
+        {
+            MultiByteToWideChar(CP_UTF8, 0, from, -1, &to[0], num);
+        }
+
+        return num;
     }
 
     static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(

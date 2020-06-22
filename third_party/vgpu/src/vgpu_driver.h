@@ -27,13 +27,6 @@
 #include <string.h> /* memset */
 #include <new>
 
-extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
-extern void* vgpu_allocation_user_data;
-
-#define VGPU_ALLOC(T)     ((T*) vgpu_alloc_cb->allocate_memory(vgpu_allocation_user_data, sizeof(T)))
-#define VGPU_FREE(ptr)       (vgpu_alloc_cb->free_memory(vgpu_allocation_user_data, (void*)(ptr)))
-#define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared_memory(vgpu_allocation_user_data, sizeof(T)))
-
 #ifndef VGPU_ALLOCA
 #   include <malloc.h>
 #   if defined(_MSC_VER) || defined(__MINGW32__)
@@ -119,17 +112,17 @@ namespace vgpu {
 using namespace vgpu;
 
 typedef struct vgpu_context {
-    bool (*init)(void* windowHandle, InitFlags flags);
+    bool (*init)(const PresentationParameters& presentationParameters, InitFlags flags);
     void (*shutdown)(void);
     const Caps* (*getCaps)(void);
     bool (*frame_begin)(void);
     void (*frame_end)(void);
 
     /* Texture */
-    Texture(*texture_create)(const TextureDesc& desc);
-    void(*texture_destroy)(Texture handle);
-    uint32_t(*texture_get_width)(Texture handle, uint32_t mipLevel);
-    uint32_t(*texture_get_height)(Texture handle, uint32_t mipLevel);
+    TextureHandle(*createTexture)(const TextureDesc& desc);
+    void(*destroyTexture)(TextureHandle handle);
+    uint32_t(*texture_get_width)(TextureHandle handle, uint32_t mipLevel);
+    uint32_t(*texture_get_height)(TextureHandle handle, uint32_t mipLevel);
 
     /* Framebuffer */
     vgpu_framebuffer(*framebuffer_create)(const vgpu_framebuffer_info* info);
@@ -137,15 +130,15 @@ typedef struct vgpu_context {
     vgpu_framebuffer(*getDefaultFramebuffer)(void);
 
     /* Buffer */
-    Buffer(*createBuffer)(const BufferDesc* desc);
-    void(*destroyBuffer)(Buffer handle);
+    BufferHandle (*createBuffer)(const BufferDesc& desc, const void* pInitData);
+    void(*destroyBuffer)(BufferHandle handle);
 
     /* CommandBuffer */
-    void (*insertDebugMarker)(const char* name);
-    void (*pushDebugGroup)(const char* name);
-    void (*popDebugGroup)(void);
-    void(*beginRenderPass)(const RenderPassDesc* desc);
-    void(*endRenderPass)(void);
+    void (*insertDebugMarker)(const char* name, CommandList commandList);
+    void (*pushDebugGroup)(const char* name, CommandList commandList);
+    void (*popDebugGroup)(CommandList commandList);
+    void(*beginRenderPass)(const RenderPassDesc* desc, CommandList commandList);
+    void(*endRenderPass)(CommandList commandList);
 
 } vgpu_context;
 

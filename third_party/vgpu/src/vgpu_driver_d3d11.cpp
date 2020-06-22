@@ -30,11 +30,11 @@
 static const IID D3D11_WKPDID_D3DDebugObjectName = { 0x429b8c22, 0x9188, 0x4b0c, { 0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00 } };
 #endif
 
-struct d3d11_texture {
-    enum { MAX_COUNT = 8192 };
+struct D3D11Texture {
+    enum { MAX_COUNT = 4096 };
 
     ID3D11Resource* handle;
-    DXGI_FORMAT dxgi_format;
+    DXGI_FORMAT dxgiFormat;
 
     TextureType type;
     uint32_t width;
@@ -55,7 +55,7 @@ struct d3d11_framebuffer {
 };
 
 struct D3D11Buffer {
-    enum { MAX_COUNT = 8192 };
+    enum { MAX_COUNT = 4096 };
 
     ID3D11Buffer* handle;
 };
@@ -65,8 +65,8 @@ struct D3D11Swapchain {
     uint32_t height;
     PixelFormat depthStencilFormat;
     IDXGISwapChain1* handle;
-    Texture backbuffer;
-    Texture depthStencilTexture;
+    TextureHandle backbuffer;
+    TextureHandle depthStencilTexture;
     vgpu_framebuffer framebuffer;
 };
 
@@ -94,18 +94,16 @@ static struct {
     uint32_t factory_caps;
 
     ID3D11Device1* device;
-    ID3D11DeviceContext1* context;
-    ID3DUserDefinedAnnotation* d3d_annotation;
+    ID3D11DeviceContext1* deviceContexts[kMaxCommandLists + 1] = { nullptr };
+    ID3DUserDefinedAnnotation* userDefinedAnnotations[kMaxCommandLists + 1] = { nullptr };
     D3D_FEATURE_LEVEL feature_level;
 
-    uint8_t num_backbuffers = 2u;
-
-    Pool<d3d11_texture, d3d11_texture::MAX_COUNT> textures;
+    Pool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
     Pool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
     bool isLost;
 
-    D3D11Swapchain* mainSwapchain;    // Guaranteed to be == swapchains[0]
-    D3D11Swapchain  swapchains[32];   // Main swapchain, followed by all secondary swapchains.
+    uint32_t backbufferCount = 3;
+    D3D11Swapchain swapchain;
 } d3d11;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -286,10 +284,9 @@ static IDXGIAdapter1* d3d11GetAdapter(bool lowPower)
     return adapter;
 }
 
-static bool d3d11_swapchain_init(D3D11Swapchain* swapchain, void* windowHandle, PixelFormat colorFormat, PixelFormat depthStencilFormat);
 static void d3d11_swapchain_destroy(D3D11Swapchain* swapchain);
 
-static bool d3d11_init(void* windowHandle, InitFlags flags) {
+static bool d3d11_init(const PresentationParameters& presentationParameters, InitFlags flags) {
     const bool validation =
         (flags & InitFlags::DebugOutput) != InitFlags::None
         || (flags & InitFlags::GPUBasedValidation) != InitFlags::None;
@@ -329,8 +326,8 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
         };
 
         // Create the Direct3D 11 API device object and a corresponding context.
-        ID3D11Device* temp_d3d_device;
-        ID3D11DeviceContext* temp_d3d_context;
+        ID3D11Device* device;
+        ID3D11DeviceContext* context;
 
         HRESULT hr = E_FAIL;
         if (dxgiAdapter)
@@ -343,9 +340,9 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
                 s_featureLevels,
                 _countof(s_featureLevels),
                 D3D11_SDK_VERSION,
-                &temp_d3d_device,
+                &device,
                 &d3d11.feature_level,
-                &temp_d3d_context
+                &context
             );
         }
 #if defined(NDEBUG)
@@ -368,9 +365,9 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
                 s_featureLevels,
                 _countof(s_featureLevels),
                 D3D11_SDK_VERSION,
-                &temp_d3d_device,
+                &device,
                 &d3d11.feature_level,
-                &temp_d3d_context
+                &context
             );
 
             if (SUCCEEDED(hr))
@@ -385,15 +382,15 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
             return false;
         }
 
-        ID3D11Debug* d3d_debug;
-        if (SUCCEEDED(temp_d3d_device->QueryInterface(IID_PPV_ARGS(&d3d_debug))))
+        ID3D11Debug* d3dDebug;
+        if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&d3dDebug))))
         {
-            ID3D11InfoQueue* d3d_info_queue;
-            if (SUCCEEDED(d3d_debug->QueryInterface(IID_PPV_ARGS(&d3d_info_queue))))
+            ID3D11InfoQueue* d3dInfoQueue;
+            if (SUCCEEDED(d3dDebug->QueryInterface(IID_PPV_ARGS(&d3dInfoQueue))))
             {
 #ifdef _DEBUG
-                d3d_info_queue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
-                d3d_info_queue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+                d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+                d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
 #endif
                 D3D11_MESSAGE_ID hide[] =
                 {
@@ -403,26 +400,41 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
                 D3D11_INFO_QUEUE_FILTER filter = {};
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
-                d3d_info_queue->AddStorageFilterEntries(&filter);
-                d3d_info_queue->Release();
+                d3dInfoQueue->AddStorageFilterEntries(&filter);
+                d3dInfoQueue->Release();
             }
 
-            d3d_debug->Release();
+            d3dDebug->Release();
         }
 
-        VHR(temp_d3d_device->QueryInterface(IID_PPV_ARGS(&d3d11.device)));
-        VHR(temp_d3d_context->QueryInterface(IID_PPV_ARGS(&d3d11.context)));
-        VHR(temp_d3d_context->QueryInterface(IID_PPV_ARGS(&d3d11.d3d_annotation)));
-        temp_d3d_context->Release();
-        temp_d3d_device->Release();
+        VHR(device->QueryInterface(IID_PPV_ARGS(&d3d11.device)));
+        VHR(context->QueryInterface(IID_PPV_ARGS(&d3d11.deviceContexts[0])));
+        VHR(context->QueryInterface(IID_PPV_ARGS(&d3d11.userDefinedAnnotations[0])));
+        context->Release();
+        device->Release();
     }
 
-    if (windowHandle) {
-        if (!d3d11_swapchain_init(&d3d11.swapchains[0], windowHandle, PixelFormat::BGRA8Unorm, PixelFormat::Depth32Float)) {
+    if (presentationParameters.windowHandle) {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = static_cast<HWND>(presentationParameters.windowHandle);
+        if (!IsWindow(window)) {
+            vgpu_log_error("Invalid HWND handle");
             return false;
         }
+#endif
 
-        d3d11.mainSwapchain = &d3d11.swapchains[0];
+        d3d11.swapchain.width = presentationParameters.width;
+        d3d11.swapchain.height = presentationParameters.height;
+
+        d3d11.swapchain.handle = vgpu_d3d_create_swapchain(
+            d3d11.factory, d3d11.factory_caps,
+            d3d11.device,
+            window,
+            d3d11.swapchain.width, d3d11.swapchain.height,
+            presentationParameters.colorFormat,
+            d3d11.backbufferCount,  /* 3 for triple buffering */
+            true
+        );
     }
 
     /* Init caps first. */
@@ -511,25 +523,20 @@ static bool d3d11_init(void* windowHandle, InitFlags flags) {
     return true;
 }
 
-static void d3d11_shutdown(void) {
-    for (uint32_t i = 1; i < _countof(d3d11.swapchains); i++)
+static void d3d11_shutdown(void)
+{
+    if (d3d11.swapchain.handle) {
+        d3d11_swapchain_destroy(&d3d11.swapchain);
+    }
+
+    for (uint32_t i = 0; i < _countof(d3d11.deviceContexts); i++)
     {
-        if (!d3d11.swapchains[i].handle)
+        if (!d3d11.deviceContexts[i])
             continue;
 
-        d3d11_swapchain_destroy(&d3d11.swapchains[i]);
+        SAFE_RELEASE(d3d11.deviceContexts[i]);
+        SAFE_RELEASE(d3d11.userDefinedAnnotations[i]);
     }
-
-    if (d3d11.mainSwapchain) {
-        d3d11_swapchain_destroy(d3d11.mainSwapchain);
-    }
-
-    /*if (d3d11.main_swapchain) {
-        vgpu_swapchain_destroy(d3d11.main_swapchain);
-    }*/
-
-    SAFE_RELEASE(d3d11.context);
-    SAFE_RELEASE(d3d11.d3d_annotation);
 
     ULONG refCount = d3d11.device->Release();
 #if !defined(NDEBUG)
@@ -537,11 +544,11 @@ static void d3d11_shutdown(void) {
     {
         vgpu_log_error("Direct3D11: There are %d unreleased references left on the device", refCount);
 
-        ID3D11Debug* d3d11_debug = NULL;
-        if (SUCCEEDED(d3d11.device->QueryInterface(IID_PPV_ARGS(&d3d11_debug))))
+        ID3D11Debug* d3dDebug = NULL;
+        if (SUCCEEDED(d3d11.device->QueryInterface(IID_PPV_ARGS(&d3dDebug))))
         {
-            d3d11_debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
-            d3d11_debug->Release();
+            d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+            d3dDebug->Release();
         }
     }
 #else
@@ -585,7 +592,7 @@ static void d3d11_frame_end(void) {
         noVSyncPrefentFlags |= DXGI_PRESENT_ALLOW_TEARING;
     }
 
-    for (uint32_t i = 1; i < _countof(d3d11.swapchains); i++)
+    /*for (uint32_t i = 1; i < _countof(d3d11.swapchains); i++)
     {
         if (!d3d11.swapchains[i].handle)
             continue;
@@ -594,11 +601,11 @@ static void d3d11_frame_end(void) {
         hr = d3d11.swapchains[i].handle->Present(0, noVSyncPrefentFlags);
 
         d3d11.isLost = d3dIsLost(hr);
-    }
+    }*/
 
-    if (d3d11.mainSwapchain) {
+    if (d3d11.swapchain.handle) {
         // Main swap chain: Present with vsync
-        hr = d3d11.mainSwapchain->handle->Present(1, 0);
+        hr = d3d11.swapchain.handle->Present(1, 0);
 
         d3d11.isLost = d3dIsLost(hr);
     }
@@ -645,7 +652,7 @@ static inline D3D11_CPU_ACCESS_FLAG d3d11CpuAccessFromMemoryUsage(ResourceMemory
 }
 
 /* Texture */
-static Texture d3d11_texture_create(const TextureDesc& desc) {
+static TextureHandle d3d11_createTexture(const TextureDesc& desc) {
     if (d3d11.textures.isFull()) {
         vgpu_log_error("Not enough free texture slots.");
         return kInvalidTexture;
@@ -653,7 +660,7 @@ static Texture d3d11_texture_create(const TextureDesc& desc) {
     const int id = d3d11.textures.alloc();
     VGPU_ASSERT(id >= 0);
 
-    d3d11_texture& texture = d3d11.textures[id];
+    D3D11Texture& texture = d3d11.textures[id];
     texture.type = desc.textureType;
     texture.width = desc.width;
     texture.height = desc.height;
@@ -661,7 +668,7 @@ static Texture d3d11_texture_create(const TextureDesc& desc) {
     texture.mipLevels = desc.mipLevels;
     texture.sample_count = desc.sampleCount;
 
-    texture.dxgi_format = ToDXGIFormatWitUsage(desc.format, desc.usage);
+    texture.dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
 
     HRESULT hr = S_OK;
     if (desc.externalHandle) {
@@ -705,7 +712,7 @@ static Texture d3d11_texture_create(const TextureDesc& desc) {
             d3d11_desc.Height = desc.height;
             d3d11_desc.MipLevels = desc.mipLevels;
             d3d11_desc.ArraySize = desc.arrayLayers;
-            d3d11_desc.Format = texture.dxgi_format;
+            d3d11_desc.Format = texture.dxgiFormat;
             d3d11_desc.SampleDesc.Count = 1;
             d3d11_desc.SampleDesc.Quality = 0;
             d3d11_desc.Usage = usage;
@@ -725,7 +732,7 @@ static Texture d3d11_texture_create(const TextureDesc& desc) {
             d3d11_desc.Height = desc.height;
             d3d11_desc.Depth = desc.depth;
             d3d11_desc.MipLevels = desc.mipLevels;
-            d3d11_desc.Format = texture.dxgi_format;
+            d3d11_desc.Format = texture.dxgiFormat;
             d3d11_desc.Usage = usage;
             d3d11_desc.BindFlags = bindFlags;
             d3d11_desc.CPUAccessFlags = CPUAccessFlags;
@@ -742,25 +749,25 @@ static Texture d3d11_texture_create(const TextureDesc& desc) {
     return { (uint32_t)id };
 }
 
-static void d3d11_texture_destroy(Texture handle) {
-    d3d11_texture& texture = d3d11.textures[handle.id];
+static void d3d11_destroyTexture(TextureHandle handle) {
+    D3D11Texture& texture = d3d11.textures[handle.id];
     SAFE_RELEASE(texture.handle);
     d3d11.textures.dealloc(handle.id);
 }
 
-static uint32_t d3d11_texture_get_width(Texture handle, uint32_t mipLevel) {
-    d3d11_texture& texture = d3d11.textures[handle.id];
+static uint32_t d3d11_texture_get_width(TextureHandle handle, uint32_t mipLevel) {
+    D3D11Texture& texture = d3d11.textures[handle.id];
     return _vgpu_max(1, texture.width >> mipLevel);
 }
 
-static uint32_t d3d11_texture_get_height(Texture handle, uint32_t mipLevel) {
-    d3d11_texture& texture = d3d11.textures[handle.id];
+static uint32_t d3d11_texture_get_height(TextureHandle handle, uint32_t mipLevel) {
+    D3D11Texture& texture = d3d11.textures[handle.id];
     return _vgpu_max(1, texture.height >> mipLevel);
 }
 
 /* Framebuffer */
 static vgpu_framebuffer d3d11_framebuffer_create(const vgpu_framebuffer_info* info) {
-    d3d11_framebuffer* framebuffer = VGPU_ALLOC_HANDLE(d3d11_framebuffer);
+    d3d11_framebuffer* framebuffer = new d3d11_framebuffer();
 
 #if TODO
     for (uint32_t i = 0; i < _vgpu_count_of(info->color_attachments) && info->color_attachments[i].texture.id; i++, framebuffer->num_rtvs++) {
@@ -906,8 +913,6 @@ static void d3d11_framebuffer_destroy(vgpu_framebuffer handle) {
     if (framebuffer->dsv) {
         SAFE_RELEASE(framebuffer->dsv);
     }
-
-    VGPU_FREE(framebuffer);
 }
 
 /* Buffer */
@@ -934,7 +939,7 @@ D3D11_BIND_FLAG d3d11BindFlagsFromBufferUsage(BufferUsage usage)
     return (D3D11_BIND_FLAG)result;
 }
 
-static Buffer d3d11_createBuffer(const BufferDesc* desc) {
+static BufferHandle d3d11_createBuffer(const BufferDesc& desc, const void* pInitData) {
     if (d3d11.buffers.isFull()) {
         vgpu_log_error("Not enough free buffer slots.");
         return kInvalidBuffer;
@@ -944,33 +949,39 @@ static Buffer d3d11_createBuffer(const BufferDesc* desc) {
 
     D3D11Buffer& buffer = d3d11.buffers[id];
 
-    uint64_t allocationSize = desc->size;
+    uint32_t allocationSize = desc.size;
     // Align the buffer size to multiples of 256
-    if ((desc->usage & BufferUsage::Uniform) != BufferUsage::None)
+    if ((desc.usage & BufferUsage::Uniform) != BufferUsage::None)
     {
-        allocationSize = RountUp64(allocationSize, d3d11.caps.limits.minUniformBufferOffsetAlignment);
+        allocationSize = RountUp(allocationSize, d3d11.caps.limits.minUniformBufferOffsetAlignment);
     }
 
     D3D11_BUFFER_DESC d3d11Desc = {};
-    d3d11Desc.ByteWidth = (UINT)allocationSize;
-    d3d11Desc.Usage = d3d11UsageFromMemoryUsage(desc->memoryUsage);
-    d3d11Desc.BindFlags = d3d11BindFlagsFromBufferUsage(desc->usage);
-    d3d11Desc.CPUAccessFlags = d3d11CpuAccessFromMemoryUsage(desc->memoryUsage);
+    d3d11Desc.ByteWidth = allocationSize;
+    d3d11Desc.Usage = d3d11UsageFromMemoryUsage(desc.memoryUsage);
+    d3d11Desc.BindFlags = d3d11BindFlagsFromBufferUsage(desc.usage);
+    d3d11Desc.CPUAccessFlags = d3d11CpuAccessFromMemoryUsage(desc.memoryUsage);
 
-    if ((desc->usage & BufferUsage::Indirect) != BufferUsage::None)
+    if ((desc.usage & BufferUsage::Indirect) != BufferUsage::None)
+    {
         d3d11Desc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
-
-    d3d11Desc.StructureByteStride = 0;
-
-    D3D11_SUBRESOURCE_DATA subresourceData = {};
-    if (desc->content != nullptr) {
-        subresourceData.pSysMem = desc->content;
     }
 
-    HRESULT hr = d3d11.device->CreateBuffer(
-        &d3d11Desc,
-        desc->content == nullptr ? nullptr : &subresourceData,
-        &buffer.handle);
+    d3d11Desc.StructureByteStride = desc.stride;
+
+    HRESULT hr;
+    if (pInitData)
+    {
+        D3D11_SUBRESOURCE_DATA initData = {};
+        initData.pSysMem = pInitData;
+        hr = d3d11.device->CreateBuffer(&d3d11Desc, &initData, &buffer.handle);
+    }
+    else
+    {
+        hr = d3d11.device->CreateBuffer(&d3d11Desc, nullptr, &buffer.handle);
+    }
+
+
     if (FAILED(hr)) {
         d3d11.buffers.dealloc(id);
         return kInvalidBuffer;
@@ -979,48 +990,19 @@ static Buffer d3d11_createBuffer(const BufferDesc* desc) {
     return { (uint32_t)id };
 }
 
-static void d3d11_destroyBuffer(Buffer handle) {
+static void d3d11_destroyBuffer(BufferHandle handle) {
     D3D11Buffer& buffer = d3d11.buffers[handle.id];
     SAFE_RELEASE(buffer.handle);
     d3d11.buffers.dealloc(handle.id);
 }
 
 /* Swapchain */
-static bool d3d11_swapchain_init(D3D11Swapchain* swapchain, void* windowHandle, PixelFormat colorFormat, PixelFormat depthStencilFormat) {
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HWND window = static_cast<HWND>(windowHandle);
-    if (!IsWindow(window)) {
-        vgpu_log_error("Invalid HWND handle");
-        return false;
-    }
-
-    RECT rc;
-    GetClientRect(window, &rc);
-    swapchain->width = uint32_t(rc.right - rc.left);
-    swapchain->height = uint32_t(rc.bottom - rc.top);
-#else
-    IUnknown* window = static_cast<IUnknown*>(handle);
-#endif
-
-    swapchain->handle = vgpu_d3d_create_swapchain(
-        d3d11.factory,
-        d3d11.factory_caps,
-        d3d11.device,
-        windowHandle,
-        swapchain->width, swapchain->height,
-        colorFormat,
-        d3d11.num_backbuffers,  /* 3 for triple buffering */
-        true
-    );
-
-    return true;
-}
+static void d3d11_swapchain_resize(D3D11Swapchain* swapchain, uint32_t width, uint32_t height);
 
 static void d3d11_swapchain_destroy(D3D11Swapchain* swapchain) {
     //vgpu_framebuffer_destroy(swapchain->framebuffer);
-    destroyTexture(swapchain->backbuffer);
-    destroyTexture(swapchain->depthStencilTexture);
+    DestroyTexture(swapchain->backbuffer);
+    DestroyTexture(swapchain->depthStencilTexture);
     SAFE_RELEASE(swapchain->handle);
 }
 
@@ -1034,7 +1016,7 @@ static void d3d11_swapchain_resize(D3D11Swapchain* swapchain, uint32_t width, ui
         }
 
         HRESULT hr = swapchain->handle->ResizeBuffers(
-            d3d11.num_backbuffers,
+            d3d11.backbufferCount,
             width,
             height,
             DXGI_FORMAT_UNKNOWN,
@@ -1066,7 +1048,7 @@ static void d3d11_swapchain_resize(D3D11Swapchain* swapchain, uint32_t width, ui
     backbufferTextureDesc.usage = TextureUsage::RenderTarget;
     backbufferTextureDesc.externalHandle = backbuffer;
 
-    swapchain->backbuffer = createTexture(backbufferTextureDesc);
+    swapchain->backbuffer = CreateTexture(backbufferTextureDesc);
 
     /*if (swapchain->depthStencilFormat != PixelFormat::Undefined) {
         const vgpu_texture_info depth_texture_info = {
@@ -1083,7 +1065,7 @@ static void d3d11_swapchain_resize(D3D11Swapchain* swapchain, uint32_t width, ui
         swapchain->depth_stencil_texture = vgpu_texture_create(&depth_texture_info);
     }
 
-    // Create framebuffer 
+    // Create framebuffer
     vgpu_framebuffer_info fbo_info;
     memset(&fbo_info, 0, sizeof(fbo_info));
     fbo_info.color_attachments[0].texture = swapchain->backbuffer;
@@ -1096,40 +1078,28 @@ static void d3d11_swapchain_resize(D3D11Swapchain* swapchain, uint32_t width, ui
 }
 
 /* Commands */
-static void d3d11_insertDebugMarker(const char* name)
+static void d3d11_insertDebugMarker(const char* name, CommandList commandList)
 {
     wchar_t wideName[128];
-    int num = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
-    if (num > 0)
-    {
-        MultiByteToWideChar(CP_UTF8, 0, name, -1, &wideName[0], num);
-    }
-
-    if (num > 0) {
-        d3d11.d3d_annotation->SetMarker(wideName);
+    if (StringConvert(name, wideName) > 0) {
+        d3d11.userDefinedAnnotations[commandList]->SetMarker(wideName);
     }
 }
 
-static void d3d11_pushDebugGroup(const char* name)
+static void d3d11_pushDebugGroup(const char* name, CommandList commandList)
 {
     wchar_t wideName[128];
-    int num = MultiByteToWideChar(CP_UTF8, 0, name, -1, NULL, 0);
-    if (num > 0)
-    {
-        MultiByteToWideChar(CP_UTF8, 0, name, -1, &wideName[0], num);
-    }
-
-    if (num > 0) {
-        d3d11.d3d_annotation->BeginEvent(wideName);
+    if (StringConvert(name, wideName) > 0) {
+        d3d11.userDefinedAnnotations[commandList]->BeginEvent(wideName);
     }
 }
 
-static void d3d11_popDebugGroup(void)
+static void d3d11_popDebugGroup(CommandList commandList)
 {
-    d3d11.d3d_annotation->EndEvent();
+    d3d11.userDefinedAnnotations[commandList]->EndEvent();
 }
 
-static void d3d11_beginRenderPass(const RenderPassDesc* desc) {
+static void d3d11_beginRenderPass(const RenderPassDesc* desc, CommandList commandList) {
 #if TODO
     D3D11Framebuffer& framebuffer = d3d11.framebuffers[beginDesc->framebuffer.id];
 
@@ -1189,7 +1159,7 @@ static void d3d11_beginRenderPass(const RenderPassDesc* desc) {
 #endif // TODO
 }
 
-static void d3d11_endRenderPass(void) {
+static void d3d11_endRenderPass(CommandList commandList) {
 
 }
 
@@ -1269,8 +1239,9 @@ static vgpu_context* d3d11_create_context(void) {
     context.getCaps = d3d11_getCaps;
     context.frame_begin = d3d11_frame_begin;
     context.frame_end = d3d11_frame_end;
-    context.texture_create = d3d11_texture_create;
-    context.texture_destroy = d3d11_texture_destroy;
+
+    context.createTexture = d3d11_createTexture;
+    context.destroyTexture = d3d11_destroyTexture;
     context.texture_get_width = d3d11_texture_get_width;
     context.texture_get_height = d3d11_texture_get_height;
     context.createBuffer = d3d11_createBuffer;

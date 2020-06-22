@@ -25,43 +25,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-/* Allocation */
-void* vgpu_default_allocate_memory(void* user_data, size_t size) {
-    VGPU_UNUSED(user_data);
-    return malloc(size);
-}
-
-void* vgpu_default_allocate_cleard_memory(void* user_data, size_t size) {
-    VGPU_UNUSED(user_data);
-    void* mem = malloc(size);
-    memset(mem, 0, size);
-    return mem;
-}
-
-void vgpu_default_free_memory(void* user_data, void* ptr) {
-    VGPU_UNUSED(user_data);
-    free(ptr);
-}
-
-const vgpu_allocation_callbacks vgpu_default_alloc_cb = {
-    NULL,
-    vgpu_default_allocate_memory,
-    vgpu_default_allocate_cleard_memory,
-    vgpu_default_free_memory
-};
-
-const vgpu_allocation_callbacks* vgpu_alloc_cb = &vgpu_default_alloc_cb;
-void* vgpu_allocation_user_data = NULL;
-
-void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
-    if (callbacks == NULL) {
-        vgpu_alloc_cb = &vgpu_default_alloc_cb;
-    }
-    else {
-        vgpu_alloc_cb = callbacks;
-    }
-}
-
 /* Log */
 #define VGPU_MAX_LOG_MESSAGE (4096)
 
@@ -181,7 +144,7 @@ namespace vgpu
         s_BackendType = backendType;
     }
 
-    bool init(void* windowHandle, InitFlags flags) {
+    bool init(const PresentationParameters& presentationParameters, InitFlags flags) {
         if (s_gpu_context) {
             return true;
         }
@@ -207,7 +170,7 @@ namespace vgpu
             return false;
         }
 
-        if (!s_gpu_context->init(windowHandle, flags)) {
+        if (!s_gpu_context->init(presentationParameters, flags)) {
             s_gpu_context = NULL;
             return false;
         }
@@ -228,45 +191,44 @@ namespace vgpu
         return s_gpu_context->getCaps();
     }
 
-    bool beginFrame(void) {
+    bool BeginFrame(void) {
         return s_gpu_context->frame_begin();
     }
 
-    void endFrame(void) {
+    void EndFrame(void) {
         s_gpu_context->frame_end();
     }
 
     /* Texture methods */
-    Texture createTexture(const TextureDesc& desc) {
+    TextureHandle CreateTexture(const TextureDesc& desc) {
         VGPU_ASSERT(s_gpu_context);
 
-        return s_gpu_context->texture_create(desc);
+        return s_gpu_context->createTexture(desc);
     }
 
-    void destroyTexture(Texture texture) {
+    void DestroyTexture(TextureHandle texture) {
         VGPU_ASSERT(s_gpu_context);
         if (texture.isValid()) {
-            s_gpu_context->texture_destroy(texture);
+            s_gpu_context->destroyTexture(texture);
         }
     }
 
-    uint32_t textureGetWidth(Texture texture, uint32_t mip_level) {
-        return s_gpu_context->texture_get_width(texture, mip_level);
+    uint32_t textureGetWidth(TextureHandle texture, uint32_t mipLevel) {
+        return s_gpu_context->texture_get_width(texture, mipLevel);
     }
 
-    uint32_t textureGetHeight(Texture texture, uint32_t mip_level) {
-        return s_gpu_context->texture_get_height(texture, mip_level);
+    uint32_t textureGetHeight(TextureHandle texture, uint32_t mipLevel) {
+        return s_gpu_context->texture_get_height(texture, mipLevel);
     }
 
     /* Buffer methods */
-    Buffer createBuffer(const BufferDesc* desc) {
+    BufferHandle CreateBuffer(const BufferDesc& desc, const void* pInitData) {
         VGPU_ASSERT(s_gpu_context);
-        VGPU_ASSERT(desc);
 
-        return s_gpu_context->createBuffer(desc);
+        return s_gpu_context->createBuffer(desc, pInitData);
     }
 
-    void destroyBuffer(Buffer buffer) {
+    void DestroyBuffer(BufferHandle buffer) {
         VGPU_ASSERT(s_gpu_context);
         if (buffer.isValid()) {
             s_gpu_context->destroyBuffer(buffer);
@@ -274,26 +236,26 @@ namespace vgpu
     }
 
     /* CommandBuffer */
-    void insertDebugMarker(const char* name) {
+    void InsertDebugMarker(const char* name, CommandList commandList) {
         VGPU_ASSERT(name);
-        s_gpu_context->insertDebugMarker(name);
+        s_gpu_context->insertDebugMarker(name, commandList);
     }
 
-    void pushDebugGroup(const char* name) {
+    void PushDebugGroup(const char* name, CommandList commandList) {
         VGPU_ASSERT(name);
-        s_gpu_context->pushDebugGroup(name);
+        s_gpu_context->pushDebugGroup(name, commandList);
     }
 
-    void popDebugGroup(void) {
-        s_gpu_context->popDebugGroup();
+    void PopDebugGroup(CommandList commandList) {
+        s_gpu_context->popDebugGroup(commandList);
     }
 
-    void beginRenderPass(const RenderPassDesc* desc) {
-        s_gpu_context->beginRenderPass(desc);
+    void BeginRenderPass(const RenderPassDesc* desc, CommandList commandList) {
+        s_gpu_context->beginRenderPass(desc, commandList);
     }
 
-    void endRenderPass(void) {
-        s_gpu_context->endRenderPass();
+    void EndRenderPass(CommandList commandList) {
+        s_gpu_context->endRenderPass(commandList);
     }
 
     /* Helper methods */

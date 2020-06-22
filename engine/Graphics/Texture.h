@@ -29,10 +29,9 @@ namespace alimer
 {
     class ALIMER_API Texture : public GraphicsResource
     {
-    protected:
+    public:
         Texture(GraphicsDevice& device, const TextureDescription& desc);
 
-    public:
         virtual ~Texture() = default;
 
         static RefPtr<Texture> Create2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format);

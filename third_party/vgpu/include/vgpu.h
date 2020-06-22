@@ -61,14 +61,6 @@ enum {
 /* Handles */
 typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
 
-/* Structures */
-typedef struct vgpu_allocation_callbacks {
-    void* user_data;
-    void* (*allocate_memory)(void* user_data, size_t size);
-    void* (*allocate_cleared_memory)(void* user_data, size_t size);
-    void (*free_memory)(void* user_data, void* ptr);
-} vgpu_allocation_callbacks;
-
 /* Log */
 typedef enum vgpu_log_level {
     VGPU_LOG_LEVEL_ERROR,
@@ -82,10 +74,6 @@ typedef void (*vgpu_PFN_log)(void* userData, vgpu_log_level level, const char* m
 VGPU_API void vgpu_log_set_log_callback(vgpu_PFN_log callback, void* user_data);
 VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
 VGPU_API void vgpu_log_error(const char* format, ...);
-
-/* Allocation functions */
-VGPU_API void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks);
-
 
 /* Framebuffer */
 typedef struct vgpu_framebuffer_info {
@@ -122,15 +110,18 @@ namespace vgpu
     static constexpr uint32_t kMaxVertexAttributes = 16u;
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+    static constexpr uint8_t kMaxCommandLists = 16u;
+
+    using CommandList = uint8_t;
 
     /* Handles */
-    struct Context { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    struct Texture { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    struct Buffer { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct ContextHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
+    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
 
-    const Context kInvalidContext = { kInvalidHandle };
-    const Texture kInvalidTexture = { kInvalidHandle };
-    const Buffer kInvalidBuffer = { kInvalidHandle };
+    const ContextHandle kInvalidContext = { kInvalidHandle };
+    const TextureHandle kInvalidTexture = { kInvalidHandle };
+    const BufferHandle kInvalidBuffer = { kInvalidHandle };
 
     /* Enums */
     enum class BackendType : uint32_t {
@@ -314,9 +305,9 @@ namespace vgpu
             uint32_t        maxTextureArrayLayers;
             uint32_t        maxColorAttachments;
             uint32_t        maxUniformBufferSize;
-            uint64_t        minUniformBufferOffsetAlignment;
+            uint32_t        minUniformBufferOffsetAlignment;
             uint32_t        maxStorageBufferSize;
-            uint64_t        minStorageBufferOffsetAlignment;
+            uint32_t        minStorageBufferOffsetAlignment;
             float           maxSamplerAnisotropy;
             uint32_t        maxViewports;
             uint32_t        maxViewportWidth;
@@ -352,15 +343,15 @@ namespace vgpu
     };
 
     struct BufferDesc {
-        uint64_t size;
+        uint32_t size;
         ResourceMemoryUsage memoryUsage;
         BufferUsage usage;
-        const void* content;
+        uint32_t stride;
         const char* label;
     };
 
     struct RenderPassColorAttachmentDesc {
-        Texture    texture;
+        TextureHandle texture;
         uint32_t level;
         uint32_t slice;
         LoadOp loadOp;
@@ -373,30 +364,40 @@ namespace vgpu
         //WGPURenderPassDepthStencilAttachmentDescriptor const* depthStencilAttachment;
     };
 
+    struct PresentationParameters {
+        uint32_t width = 0;
+        uint32_t height = 0;
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        void* windowHandle = nullptr;
+        bool vsync = true;
+        bool HDR = false;
+    };
+
     /* API calls */
     _VGPU_API_DECL void setPreferredBackend(BackendType backendType);
-    _VGPU_API_DECL bool init(void* windowHandle, InitFlags flags = InitFlags::None);
+    _VGPU_API_DECL bool init(const PresentationParameters& presentationParameters, InitFlags flags = InitFlags::None);
     _VGPU_API_DECL void shutdown(void);
     _VGPU_API_DECL const Caps* getCaps();
-    _VGPU_API_DECL bool beginFrame(void);
-    _VGPU_API_DECL void endFrame(void);
+    _VGPU_API_DECL bool BeginFrame(void);
+    _VGPU_API_DECL void EndFrame(void);
 
     /* Texture methods */
-    _VGPU_API_DECL Texture createTexture(const TextureDesc& desc);
-    _VGPU_API_DECL void destroyTexture(Texture texture);
-    _VGPU_API_DECL uint32_t textureGetWidth(Texture texture, uint32_t mip_level);
-    _VGPU_API_DECL uint32_t textureGetHeight(Texture texture, uint32_t mip_level);
+    _VGPU_API_DECL TextureHandle CreateTexture(const TextureDesc& desc);
+    _VGPU_API_DECL void DestroyTexture(TextureHandle texture);
+    _VGPU_API_DECL uint32_t textureGetWidth(TextureHandle texture, uint32_t mipLevel);
+    _VGPU_API_DECL uint32_t textureGetHeight(TextureHandle texture, uint32_t mipLevel);
 
     /* Buffer methods */
-    _VGPU_API_DECL Buffer createBuffer(const BufferDesc* desc);
-    _VGPU_API_DECL void destroyBuffer(Buffer buffer);
+    _VGPU_API_DECL BufferHandle CreateBuffer(const BufferDesc& desc, const void* pInitData = nullptr);
+    _VGPU_API_DECL void DestroyBuffer(BufferHandle buffer);
 
     /* CommandBuffer methods */
-    _VGPU_API_DECL void insertDebugMarker(const char* name);
-    _VGPU_API_DECL void pushDebugGroup(const char* name);
-    _VGPU_API_DECL void popDebugGroup(void);
-    _VGPU_API_DECL void beginRenderPass(const RenderPassDesc* desc);
-    _VGPU_API_DECL void endRenderPass(void);
+    _VGPU_API_DECL void InsertDebugMarker(const char* name, CommandList commandList = 0);
+    _VGPU_API_DECL void PushDebugGroup(const char* name, CommandList commandList = 0);
+    _VGPU_API_DECL void PopDebugGroup(CommandList commandList = 0);
+    _VGPU_API_DECL void BeginRenderPass(const RenderPassDesc* desc, CommandList commandList = 0);
+    _VGPU_API_DECL void EndRenderPass(CommandList commandList = 0);
 
     /* Helper methods */
 

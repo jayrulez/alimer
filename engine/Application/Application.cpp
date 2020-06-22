@@ -60,11 +60,15 @@ namespace alimer
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable);
 
+            vgpu::PresentationParameters presParams = {};
+            presParams.width = mainWindow->GetSize().width;
+            presParams.width = mainWindow->GetSize().height;
+            presParams.windowHandle = mainWindow->GetHandle();
             vgpu::InitFlags initFlags = vgpu::InitFlags::None;
 #ifdef _DEBUG
             initFlags |= vgpu::InitFlags::DebugOutput;
 #endif
-            if (!vgpu::init(mainWindow->GetHandle(), initFlags)) {
+            if (!vgpu::init(presParams, initFlags)) {
 
             }
         }
@@ -100,7 +104,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu::beginFrame();
+        vgpu::BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -116,6 +120,9 @@ namespace alimer
         {
             gameSystem->Draw(time);
         }
+
+        vgpu::PushDebugGroup("Frame");
+        vgpu::PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -125,7 +132,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu::endFrame();
+        vgpu::EndFrame();
     }
 
     int Application::Run()
