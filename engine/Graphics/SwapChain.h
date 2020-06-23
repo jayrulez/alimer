@@ -23,36 +23,39 @@
 #pragma once
 
 #include "graphics/Texture.h"
-#include "Math/Color.h"
+#include "Core/Vector.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
-    class SwapChain : public RefCounted
+    class SwapChain final : public RefCounted
     {
-    protected:
-        /// Constructor.
-        SwapChain(GraphicsDevice& device, const PresentationParameters& desc);
-
     public:
-        virtual ~SwapChain() = default;
+        /// Constructor.
+        SwapChain(GraphicsDevice& device, const SwapChainDesc& desc);
+        /// Destructor.
+        ~SwapChain();
 
-        void Resize(uint32_t newWidth, uint32_t newHeight);
+        void Resize(uint32_t width, uint32_t height);
 
         /// Present on screen.
-        virtual void Present() = 0;
+        void Present();
 
-        /// Get the current SwapChain or offscreen texture.
-        virtual Texture* GetCurrentColorTexture() const = 0;
+        /// Get the current backbuffer texture.
+        Texture* GetBackbufferTexture() const;
 
-    protected:
-        /// Release the GPU resources.
-        virtual void Destroy() = 0;
+        /// Get the depth stencil texture.
+        Texture* GetDepthStencilTexture() const;
 
+    private:
         GraphicsDevice& device;
 
-        uint32_t width;
-        uint32_t height;
+        SwapChainHandle handle{ kInvalidHandle };
+        SizeU size;
         PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        uint32_t backbufferIndex{ 0 };
+        Vector<RefPtr<Texture>> backbufferTextures;
+        RefPtr<Texture> depthStencilTexture;
     };
 }

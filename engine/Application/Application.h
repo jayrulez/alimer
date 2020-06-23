@@ -27,7 +27,7 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Math/size.h"
+#include "Math/Size.h"
 #include <memory>
 
 namespace alimer
@@ -44,7 +44,7 @@ namespace alimer
         std::string windowTitle = "Alimer";
 
         /// Main window size.
-        usize windowSize = { 1280, 720 };
+        SizeU windowSize = { 1280, 720 };
     };
 
     struct Engine;

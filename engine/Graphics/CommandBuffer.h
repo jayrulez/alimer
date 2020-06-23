@@ -36,9 +36,6 @@ namespace alimer
         CommandBuffer(GraphicsDevice& device);
         virtual ~CommandBuffer() = default;
 
-        virtual void BeginRenderPass(const RenderPassDescriptor* descriptor) = 0;
-        virtual void EndRenderPass() = 0;
-        virtual void SetBlendColor(const Color& color) = 0;
 
         /// Returns the device from which this command buffer was created.
         const GraphicsDevice& GetDevice() const;

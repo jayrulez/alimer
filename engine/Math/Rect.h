@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "math/math.h"
-#include "math/size.h"
+#include "Math/MathHelper.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
     /// Class specifying a two-dimensional rectangle.
     template <typename T>
-    class trect final
+    class TRect final
     {
     public:
         static constexpr size_t SIZE = 4;
@@ -43,11 +43,11 @@ namespace alimer
             };
         };
 
-        constexpr trect() = default;
-        constexpr trect(const trect&) = default;
+        constexpr TRect() = default;
+        constexpr TRect(const TRect&) = default;
 
         template <typename U>
-        explicit constexpr trect(const trect<U>& u)
+        explicit constexpr TRect(const TRect<U>& u)
         {
             x = T(u.x);
             y = T(u.y);
@@ -55,7 +55,7 @@ namespace alimer
             height = T(u.height);
         }
 
-        constexpr trect(T x_, T y_, T width_, T height_)
+        constexpr TRect(T x_, T y_, T width_, T height_)
         {
             x = x_;
             y = y_;
@@ -63,7 +63,7 @@ namespace alimer
             height = height_;
         }
 
-        constexpr trect(T width_, T height_)
+        constexpr TRect(T width_, T height_)
         {
             x = T(0);
             y = T(0);
@@ -71,7 +71,7 @@ namespace alimer
             height = height_;
         }
 
-        constexpr trect(const tsize2<T>& size)
+        constexpr TRect(const TSize2<T>& size)
         {
             x = T(0);
             y = T(0);
@@ -91,6 +91,6 @@ namespace alimer
         }
     };
 
-    using rect = trect<int32_t>;
-    using urect = trect<uint32_t>;
+    using Rect = TRect<int32_t>;
+    using RectU = TRect<uint32_t>;
 } 

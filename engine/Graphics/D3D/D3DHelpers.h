@@ -55,7 +55,6 @@
 #   endif
 #endif
 
-#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
 #define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -72,6 +71,46 @@ namespace alimer
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
 
+#ifdef ALIMER_ENABLE_ASSERT
+    void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
+
+    inline std::wstring GetDXErrorString(HRESULT hr)
+    {
+        const uint32_t errStringSize = 1024;
+        wchar_t errorString[errStringSize];
+        DXGetErrorDescriptionW(hr, errorString, errStringSize);
+
+        std::wstring message = L"DirectX Error: ";
+        message += errorString;
+        return message;
+    }
+
+    inline std::string GetDXErrorStringAnsi(HRESULT hr)
+    {
+        std::wstring errorString = GetDXErrorString(hr);
+
+        std::string message;
+        for (size_t i = 0; i < errorString.length(); ++i)
+        {
+            message.append(1, static_cast<char>(errorString[i]));
+        }
+
+        return message;
+    }
+#endif
+
+#ifndef ALIMER_ENABLE_ASSERT
+#define ThrowIfFailed(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
+#else
+#define ThrowIfFailed(x)                                                           \
+    do                                                                      \
+    {                                                                       \
+        HRESULT hr_ = x;                                                    \
+        ALIMER_ASSERT_MSG(SUCCEEDED(hr_), GetDXErrorStringAnsi(hr_).c_str());      \
+    }                                                                       \
+    while(0)
+#endif
+
     struct DxgiFormatDesc
     {
         PixelFormat format;
@@ -84,5 +123,39 @@ namespace alimer
     {
         ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
         return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;
+    }
+
+    static inline DXGI_FORMAT GetTypelessFormatFromDepthFormat(PixelFormat format)
+    {
+        switch (format)
+        {
+            //case VGPUPixelFormat_D16Unorm:
+            //    return DXGI_FORMAT_R16_TYPELESS;
+        //case PixelFormat::Depth24Plus:
+        case PixelFormat::Depth24UnormStencil8:
+            return DXGI_FORMAT_R24G8_TYPELESS;
+        case PixelFormat::Depth32Float:
+            return DXGI_FORMAT_R32_TYPELESS;
+        default:
+            ALIMER_ASSERT(IsDepthFormat(format) == false);
+            return ToDXGIFormat(format);
+        }
+    }
+
+    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, TextureUsage usage)
+    {
+        // If depth and either ua or sr, set to typeless
+        if (IsDepthStencilFormat(format)
+            && ((usage & (TextureUsage::Sampled | TextureUsage::Storage)) != TextureUsage::None))
+        {
+            return GetTypelessFormatFromDepthFormat(format);
+        }
+
+        return ToDXGIFormat(format);
+    }
+
+    static inline uint32_t CalcSubresource(uint32_t mipSlice, uint32_t arraySlice, uint32_t mipLevels)
+    {
+        return mipSlice + arraySlice * mipLevels;
     }
 }

@@ -38,8 +38,11 @@ namespace alimer
     static constexpr uint32_t kMaxCommandLists = 16u;
 
     /* Handles */
+    struct SwapChainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
     struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    const TextureHandle kInvalidTextureHandle = { kInvalidHandle };
+
+    static constexpr SwapChainHandle kInvalidSwapChain = { kInvalidHandle };
+    static constexpr TextureHandle kInvalidTexture = { kInvalidHandle };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -71,19 +74,11 @@ namespace alimer
         Qualcomm = 0x5143
     };
 
-    enum class CommandQueueType : uint8_t
-    {
-        Graphics,
-        Compute,
-        Copy
-    };
-
-    enum class GraphicsResourceUsage : uint32_t
+    enum class HeapType : uint32_t
     {
         Default,
-        Immutable,
-        Dynamic,
-        Staging
+        Upload,
+        Readback
     };
 
     enum class TextureSampleCount : uint32_t
@@ -126,14 +121,15 @@ namespace alimer
     };
 
     enum class LoadAction : uint32_t {
-        DontCare,
+        Clear,
         Load,
-        Clear
+        Discard
     };
 
-    enum class StoreAction : uint32_t {
-        Store,
-        Clear,
+    enum class PresentMode : uint32_t {
+        Immediate = 0,
+        Mailbox = 1,
+        Fifo = 2
     };
 
     /**
@@ -148,57 +144,57 @@ namespace alimer
 
         struct Features
         {
-            bool    independentBlend = false;
-            bool    computeShader = false;
-            bool    geometryShader = false;
-            bool    tessellationShader = false;
-            bool    logicOp = false;
-            bool    multiViewport = false;
-            bool    fullDrawIndexUint32 = false;
-            bool    multiDrawIndirect = false;
-            bool    fillModeNonSolid = false;
-            bool    samplerAnisotropy = false;
-            bool    textureCompressionETC2 = false;
-            bool    textureCompressionASTC_LDR = false;
-            bool    textureCompressionBC = false;
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
             /// Specifies whether cube array textures are supported.
-            bool    textureCubeArray = false;
+            bool textureCubeArray = false;
             /// Specifies whether raytracing is supported.
-            bool    raytracing = false;
+            bool raytracing = false;
         };
 
         struct Limits
         {
-            uint32_t        maxVertexAttributes;
-            uint32_t        maxVertexBindings;
-            uint32_t        maxVertexAttributeOffset;
-            uint32_t        maxVertexBindingStride;
-            uint32_t        maxTextureDimension2D;
-            uint32_t        maxTextureDimension3D;
-            uint32_t        maxTextureDimensionCube;
-            uint32_t        maxTextureArrayLayers;
-            uint32_t        maxColorAttachments;
-            uint32_t        maxUniformBufferSize;
-            uint64_t        minUniformBufferOffsetAlignment;
-            uint32_t        maxStorageBufferSize;
-            uint64_t        minStorageBufferOffsetAlignment;
-            uint32_t        maxSamplerAnisotropy;
-            uint32_t        maxViewports;
-            uint32_t        maxViewportWidth;
-            uint32_t        maxViewportHeight;
-            uint32_t        maxTessellationPatchSize;
-            float           pointSizeRangeMin;
-            float           pointSizeRangeMax;
-            float           lineWidthRangeMin;
-            float           lineWidthRangeMax;
-            uint32_t        maxComputeSharedMemorySize;
-            uint32_t        maxComputeWorkGroupCountX;
-            uint32_t        maxComputeWorkGroupCountY;
-            uint32_t        maxComputeWorkGroupCountZ;
-            uint32_t        maxComputeWorkGroupInvocations;
-            uint32_t        maxComputeWorkGroupSizeX;
-            uint32_t        maxComputeWorkGroupSizeY;
-            uint32_t        maxComputeWorkGroupSizeZ;
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint64_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint64_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
         };
 
         Features features;
@@ -220,10 +216,9 @@ namespace alimer
         const char* label = nullptr;
     };
 
-    class Texture;
-    struct RenderPassColorAttachmentDescriptor
+    struct RenderPassColorAttachment
     {
-        Texture* texture;
+        TextureHandle texture;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -231,12 +226,11 @@ namespace alimer
             uint32_t slice;
         };
         LoadAction loadAction = LoadAction::Clear;
-        StoreAction storeOp = StoreAction::Store;
         Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
-    struct RenderPassDepthStencilAttachmentDescriptor {
-        Texture* texture;
+    struct RenderPassDepthStencilAttachment {
+        TextureHandle texture;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -244,27 +238,25 @@ namespace alimer
             uint32_t slice;
         };
         LoadAction depthLoadAction = LoadAction::Clear;
-        StoreAction depthStoreOp = StoreAction::Store;
-        LoadAction stencilLoadOp = LoadAction::DontCare;
-        StoreAction stencilStoreOp = StoreAction::Clear;
+        LoadAction stencilLoadOp = LoadAction::Discard;
         float clearDepth = 1.0f;
-        uint8_t clearStencil;
+        uint8_t clearStencil = 0;
     };
 
-    struct RenderPassDescriptor
+    struct RenderPassDesc
     {
-        RenderPassColorAttachmentDescriptor colorAttachments[kMaxColorAttachments];
-        RenderPassDepthStencilAttachmentDescriptor depthStencilAttachment;
+        RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
+        RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
-    struct PresentationParameters
+    struct SwapChainDesc
     {
         void* windowHandle = nullptr;
         uint32_t width = 0;
         uint32_t height = 0;
         PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool isFullscreen;
-        bool vsync = true;
+        PresentMode presentMode;
+        bool isFullscreen = false;
     };
 }

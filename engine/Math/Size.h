@@ -28,7 +28,7 @@
 namespace alimer
 {
     template <typename T>
-    struct tsize2
+    struct TSize2
     {
     public:
         static constexpr size_t SIZE = 2;
@@ -42,17 +42,17 @@ namespace alimer
             };
         };
 
-        constexpr tsize2() = default;
-        constexpr tsize2(const tsize2&) = default;
+        constexpr TSize2() = default;
+        constexpr TSize2(const TSize2&) = default;
 
         template <typename U>
-        explicit constexpr tsize2(const tsize2<U> & u)
+        explicit constexpr TSize2(const TSize2<U> & u)
         {
             width = T(u.width);
             height = T(u.height);
         }
 
-        constexpr tsize2(T width_, T height_)
+        constexpr TSize2(T width_, T height_)
         {
             width = width_;
             height = height_;
@@ -70,7 +70,7 @@ namespace alimer
     };
 
     template <typename T>
-    struct tsize3
+    struct TSize3
     {
     public:
         static constexpr size_t SIZE = 3;
@@ -84,18 +84,18 @@ namespace alimer
             };
         };
 
-        constexpr tsize3() = default;
-        constexpr tsize3(const tsize3&) = default;
+        constexpr TSize3() = default;
+        constexpr TSize3(const TSize3&) = default;
 
         template <typename U>
-        explicit constexpr tsize3(const tsize3<U>& u)
+        explicit constexpr TSize3(const TSize3<U>& u)
         {
             width = T(u.width);
             height = T(u.height);
             depth = T(u.depth);
         }
 
-        constexpr tsize3(T width_, T height_, T depth_)
+        constexpr TSize3(T width_, T height_, T depth_)
         {
             width = width_;
             height = height_;
@@ -113,9 +113,11 @@ namespace alimer
         }
     };
 
-    using size = tsize2<int32_t>;
-    using usize = tsize2<uint32_t>;
+    using Size = TSize2<int32_t>;
+    using SizeU = TSize2<uint32_t>;
+    using SizeF = TSize2<float>;
 
-    using size3 = tsize3<int32_t>;
-    using usize3 = tsize3<uint32_t>;
+    using Size3 = TSize3<int32_t>;
+    using Size3U = TSize3<uint32_t>;
+    using Size3F = TSize3<float>;
 } 

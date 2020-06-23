@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "math/Viewport.h"
+#include "Math/Viewport.h"
 #include "Core/String.h"
 #include "Core/Assert.h"
 

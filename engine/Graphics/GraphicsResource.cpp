@@ -26,9 +26,9 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, GraphicsResourceUsage resourceUsage)
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, HeapType heapType)
         : device{ device }
-        , resourceUsage{ resourceUsage }
+        , heapType{ heapType }
     {
         device.TrackResource(this);
     }

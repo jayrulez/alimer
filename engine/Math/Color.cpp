@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "math/Color.h"
+#include "Math/Color.h"
 
 namespace alimer
 {

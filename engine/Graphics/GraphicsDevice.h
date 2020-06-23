@@ -22,10 +22,9 @@
 
 #pragma once
 
-#include "graphics/GraphicsResource.h"
-#include "Core/Vector.h"
+#include "graphics/SwapChain.h"
+#include "Math/Color.h"
 #include <mutex>
-#include <memory>
 
 namespace alimer
 {
@@ -73,19 +72,31 @@ namespace alimer
         virtual void BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        static std::unique_ptr<GraphicsDevice> Create(const Desc& desc, const PresentationParameters& presentationParameters);
+        static GraphicsDevice* Create(const Desc& desc, const SwapChainDesc& swapchainDesc);
 
-        //virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
+        const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        SwapChain* GetMainSwapChain() const { return mainSwapChain.Get(); }
 
-        const GraphicsDeviceCaps& GetCaps() const {
-            return caps;
-        }
+        virtual SwapChainHandle CreateSwapChain(const SwapChainDesc& desc) = 0;
+        virtual void DestroySwapChain(SwapChainHandle handle) = 0;
+        virtual uint32_t GetBackbufferCount(SwapChainHandle handle) = 0;
+        virtual TextureHandle GetBackbufferTexture(SwapChainHandle handle, uint32_t index) = 0;
+        virtual uint32_t Present(SwapChainHandle handle) = 0;
 
         virtual TextureHandle CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps) = 0;
+        virtual TextureHandle CreateTexture(const TextureDesc& desc, uint64_t nativeHandle) = 0;
         virtual void DestroyTexture(TextureHandle handle) = 0;
 
+        virtual void InsertDebugMarker(const char* name, CommandList commandList = 0) = 0;
+        virtual void PushDebugGroup(const char* name, CommandList commandList = 0) = 0;
+        virtual void PopDebugGroup(CommandList commandList = 0) = 0;
+        //virtual void BeginRenderPass(const RenderPassDesc* desc, CommandList commandList = 0);
+        virtual void BeginDefaultRenderPass(const Color& clearColor, float clearDepth = 1.0f, uint8_t clearStencil = 0, CommandList commandList = 0);
+        virtual void BeginRenderPass(const RenderPassDesc& desc, CommandList commandList = 0) = 0;
+        virtual void EndRenderPass(CommandList commandList = 0) = 0;
+        virtual void SetBlendColor(const Color& color, CommandList commandList = 0) = 0;
+
     private:
-        virtual bool Initialize(const PresentationParameters& presentationParameters) = 0;
         virtual void Shutdown() = 0;
 
         void TrackResource(GraphicsResource* resource);
@@ -100,6 +111,7 @@ namespace alimer
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
+        RefPtr<SwapChain> mainSwapChain;
 
         template <typename T, uint32_t MAX_COUNT>
         class Pool

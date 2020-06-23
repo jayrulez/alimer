@@ -26,17 +26,17 @@
 namespace alimer
 {
     Texture::Texture(GraphicsDevice& device)
-        : GraphicsResource(device, GraphicsResourceUsage::Default)
+        : GraphicsResource(device, HeapType::Default)
     {
 
     }
 
     Texture::Texture(Texture&& other) noexcept
-        : GraphicsResource(other.device, other.resourceUsage)
+        : GraphicsResource(other.device, other.heapType)
         , textureDesc{ other.textureDesc }
     {
         handle = other.handle;
-        other.handle = kInvalidTextureHandle;
+        other.handle = kInvalidTexture;
     }
 
     Texture::~Texture()
@@ -62,9 +62,21 @@ namespace alimer
         return levels;
     }
 
-
-    bool Texture::Define2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arrayLayers, TextureUsage usage, const void* pInitData)
+    bool Texture::DefineExternal(TextureHandle newHandle, const TextureDesc& desc)
     {
+        ALIMER_ASSERT(newHandle.isValid());
+
+        Destroy();
+
+        textureDesc = desc;
+        handle = newHandle;
+        return handle.isValid();
+    }
+
+    bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arrayLayers, TextureUsage usage, const void* pInitData)
+    {
+        Destroy();
+
         const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
         const bool hasInitData = pInitData != nullptr;
         if (autoGenerateMipmaps && hasInitData)
@@ -77,8 +89,8 @@ namespace alimer
         textureDesc.usage = usage;
         textureDesc.width = width;
         textureDesc.height = height;
-        textureDesc.depth = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
-        textureDesc.mipLevels = 1;
+        textureDesc.depth = 1;
+        textureDesc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
         textureDesc.arrayLayers = arrayLayers;
         textureDesc.sampleCount = TextureSampleCount::Count1;
 

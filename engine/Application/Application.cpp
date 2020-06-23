@@ -22,7 +22,7 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
-#include "graphics/CommandBuffer.h"
+#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -61,13 +61,15 @@ namespace alimer
 
             GraphicsDevice::Desc graphicsDesc = {};
 
-            PresentationParameters presentationParameters = {};
-            presentationParameters.windowHandle = window.GetHandle();
-            presentationParameters.width = window.GetSize().width;
-            presentationParameters.width = window.GetSize().height;
-            presentationParameters.isFullscreen = window.IsFullscreen();
+            SwapChainDesc swapChainDesc = {};
+            swapChainDesc.windowHandle = window.GetHandle();
+            swapChainDesc.width = window.GetSize().width;
+            swapChainDesc.height = window.GetSize().height;
+            swapChainDesc.isFullscreen = window.IsFullscreen();
+            swapChainDesc.colorFormat = PixelFormat::BGRA8Unorm;
+            //swapChainDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;
 
-            graphicsDevice = GraphicsDevice::Create(graphicsDesc, presentationParameters);
+            graphicsDevice.reset(GraphicsDevice::Create(graphicsDesc, swapChainDesc));
             if (!graphicsDevice) {
                 headless = true;
             }
@@ -121,8 +123,9 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
-        //vgpu::PushDebugGroup("Frame");
-        //vgpu::PopDebugGroup();
+        graphicsDevice->PushDebugGroup("Clear");
+        graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
+        graphicsDevice->PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -132,6 +135,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
+        graphicsDevice->GetMainSwapChain()->Present();
         graphicsDevice->EndFrame();
     }
 

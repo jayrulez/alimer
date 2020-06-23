@@ -33,7 +33,7 @@ namespace alimer
     class GraphicsResource : public RefCounted
     {
     public:
-        GraphicsResource(GraphicsDevice &device, GraphicsResourceUsage resourceUsage);
+        GraphicsResource(GraphicsDevice &device, HeapType heapType);
         virtual ~GraphicsResource();
 
         /// Release the GPU resource.
@@ -48,6 +48,6 @@ namespace alimer
 
     protected:
         GraphicsDevice& device;
-        GraphicsResourceUsage resourceUsage;
+        HeapType heapType;
     };
 }

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "math/Quaternion.h"
+#include "Math/Quaternion.h"
 #include "Core/String.h"
 
 namespace alimer

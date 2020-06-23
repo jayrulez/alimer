@@ -80,8 +80,8 @@ namespace alimer
         RGBA32Float,
         // Depth-stencil formats
         Depth32Float,
-        Depth16UNorm,
-        Depth24PlusStencil8,
+        //Depth16UNorm,
+        Depth24UnormStencil8,
         // Compressed BC formats
         BC1RGBAUNorm,
         BC1RGBAUNormSrgb,

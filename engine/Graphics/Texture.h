@@ -23,7 +23,7 @@
 #pragma once
 
 #include "graphics/GraphicsResource.h"
-#include "math/size.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
@@ -39,7 +39,8 @@ namespace alimer
 
         void Destroy() override;
 
-        bool Define2D(GraphicsDevice& device, uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arrayLayers = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
+        bool DefineExternal(TextureHandle newHandle, const TextureDesc& desc);
+        bool Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arrayLayers = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
 
         /**
         * Get a mip-level width.
@@ -55,6 +56,16 @@ namespace alimer
         * Get a mip-level depth.
         */
         uint32_t GetDepth(uint32_t mipLevel = 0) const;
+
+        const TextureDesc& GetDesc() const
+        {
+            return textureDesc;
+        }
+
+        TextureHandle GetHandle() const
+        {
+            return handle;
+        }
 
     private:
         TextureDesc textureDesc{};

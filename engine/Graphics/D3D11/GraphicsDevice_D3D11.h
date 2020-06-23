@@ -25,9 +25,11 @@
 #include "graphics/GraphicsDevice.h"
 #include "graphics/Types.h"
 #include "graphics/D3D/D3DHelpers.h"
-#include "Math/size.h"
+#include "Math/Size.h"
+#ifndef D3D11_NO_HELPERS
+#   define D3D11_NO_HELPERS
+#endif
 #include <d3d11_1.h>
-#include <wrl/client.h>
 
 namespace alimer
 {
@@ -43,72 +45,93 @@ namespace alimer
         GraphicsDevice_D3D11(const Desc& desc);
         ~GraphicsDevice_D3D11();
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return tearingSupported; }
 
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
-        ID3D11DeviceContext1* GetD3DDeviceContext() const { return deviceContexts[0].Get(); }
+        ID3D11DeviceContext1* GetD3DDeviceContext() const { return deviceContexts[0]; }
 
     private:
-        bool Initialize(const PresentationParameters& presentationParameters) override;
         void Shutdown() override;
 
         void CreateFactory();
-        void GetHardwareAdapter(IDXGIAdapter1** ppAdapter);
         void CreateDeviceResources();
         void CreateWindowSizeDependentResources();
+        void AfterReset(SwapChainHandle handle);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void BeginFrame() override;
         void EndFrame() override;
         void HandleDeviceLost();
 
+        SwapChainHandle CreateSwapChain(const SwapChainDesc& desc) override;
+        void DestroySwapChain(SwapChainHandle handle) override;
+        uint32_t GetBackbufferCount(SwapChainHandle handle) override;
+        TextureHandle GetBackbufferTexture(SwapChainHandle handle, uint32_t index) override;
+        uint32_t Present(SwapChainHandle handle) override;
+
+        TextureHandle AllocTextureHandle();
         TextureHandle CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps) override;
+        TextureHandle CreateTexture(const TextureDesc& desc, uint64_t nativeHandle) override;
         void DestroyTexture(TextureHandle handle) override;
 
-        Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
+        void ClearState(CommandList commandList);
+        void InsertDebugMarker(const char* name, CommandList commandList) override;
+        void PushDebugGroup(const char* name, CommandList commandList) override;
+        void PopDebugGroup(CommandList commandList) override;
+        void BeginRenderPass(const RenderPassDesc& desc, CommandList commandList) override;
+        void EndRenderPass(CommandList commandList) override;
+        void SetBlendColor(const Color& color, CommandList commandList) override;
+
+        IDXGIFactory2* dxgiFactory = nullptr;
         bool flipPresentSupported = true;
         bool tearingSupported = false;
 
         ID3D11Device1* d3dDevice = nullptr;
         D3D_FEATURE_LEVEL d3dFeatureLevel;
-
-        uint32_t syncInterval = 1u;
-        uint32_t presentFlags = 0u;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = nullptr;
-        bool isFullscreen = false;
-        IDXGISwapChain1* swapChain = nullptr;
-#else
-        IUnknown* window = nullptr;
-        Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
-#endif
-        usize windowSize;
-        uint32_t backBufferCount = 2u;
-        DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
-        
+        bool isLost = false;
 
         static constexpr uint32_t kTotalCommandContexts = kMaxCommandLists + 1;
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> deviceContexts[kTotalCommandContexts] = {};
-        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[kTotalCommandContexts] = {};
-
-        /* the following arrays are used for unbinding resources, they will always contain zeroes */
-        ID3D11RenderTargetView* zeroRTVS[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        ID3D11DeviceContext1* deviceContexts[kTotalCommandContexts] = {};
+        ID3DUserDefinedAnnotation* userDefinedAnnotations[kTotalCommandContexts] = {};
+        Color blendColors[kTotalCommandContexts] = {};
 
         /* Types and handles */
-        struct Texture {
+        struct SwapChainD3D11 {
+            enum { MAX_COUNT = 13 };
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            IDXGISwapChain1* handle;
+#else
+            IDXGISwapChain3* handle;
+#endif
+            uint32_t backbufferCount;
+            uint32_t syncInterval;
+            uint32_t presentFlags;
+            PixelFormat colorFormat;
+            PixelFormat depthStencilFormat;
+            TextureHandle backbufferTexture; 
+
+            // HDR Support
+            DXGI_COLOR_SPACE_TYPE colorSpace;
+        };
+
+        struct TextureD3D11 {
             enum { MAX_COUNT = 4096 };
 
             ID3D11Resource* handle;
             DXGI_FORMAT dxgiFormat;
+            uint32_t mipLevels;
+            Vector<ID3D11RenderTargetView*> RTVs;
         };
 
-        struct Buffer {
+        struct BufferD3D11 {
             enum { MAX_COUNT = 4096 };
 
             ID3D11Buffer* handle;
         };
 
-        Pool<Texture, Texture::MAX_COUNT> textures;
-        Pool<Buffer, Buffer::MAX_COUNT> buffers;
+        Pool<SwapChainD3D11, SwapChainD3D11::MAX_COUNT> swapChains;
+        Pool<TextureD3D11, TextureD3D11::MAX_COUNT> textures;
+        Pool<BufferD3D11, BufferD3D11::MAX_COUNT> buffers;
     };
 }

@@ -21,9 +21,10 @@
 //
 
 #include "config.h"
-#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 #include "Core/Assert.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Texture.h"
 
 #if defined(ALIMER_D3D11_BACKEND)
 #include "Graphics/D3D11/GraphicsDevice_D3D11.h"
@@ -41,7 +42,7 @@ namespace alimer
 
     }
 
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(const Desc& desc, const PresentationParameters& presentationParameters)
+    GraphicsDevice* GraphicsDevice::Create(const Desc& desc, const SwapChainDesc& swapchainDesc)
     {
         BackendType backendType = desc.preferredBackendType;
         if (backendType == BackendType::Count) {
@@ -52,13 +53,13 @@ namespace alimer
 #endif
         }
 
-        std::unique_ptr<GraphicsDevice> device = nullptr;
+        GraphicsDevice* device = nullptr;
         switch (backendType)
         {
 #if defined(ALIMER_D3D11_BACKEND)
         case BackendType::Direct3D11:
             if (GraphicsDevice_D3D11::IsAvailable()) {
-                device = std::make_unique<GraphicsDevice_D3D11>(desc);
+                device = new GraphicsDevice_D3D11(desc);
             }
             else {
                 return nullptr;
@@ -70,9 +71,11 @@ namespace alimer
             return nullptr;
         }
 
-        if (device == nullptr || !device->Initialize(presentationParameters))
+        if (device == nullptr) {
             return nullptr;
+        }
 
+        device->mainSwapChain = new SwapChain(*device, swapchainDesc);
         return device;
     }
 
@@ -101,5 +104,26 @@ namespace alimer
 
             trackedResources.Clear();
         }
+    }
+
+    void GraphicsDevice::BeginDefaultRenderPass(const Color& clearColor, float clearDepth, uint8_t clearStencil, CommandList commandList)
+    {
+        RenderPassDesc passDesc = {};
+        passDesc.colorAttachments[0].texture = mainSwapChain->GetBackbufferTexture()->GetHandle();
+        passDesc.colorAttachments[0].clearColor = clearColor;
+        passDesc.colorAttachments[0].loadAction = LoadAction::Clear;
+
+        Texture* depthStencilTexture = mainSwapChain->GetDepthStencilTexture();
+        if (depthStencilTexture != nullptr)
+        {
+            passDesc.depthStencilAttachment.texture = depthStencilTexture->GetHandle();
+            passDesc.depthStencilAttachment.depthLoadAction = LoadAction::Clear;
+            passDesc.depthStencilAttachment.clearDepth = clearDepth;
+            //
+            //passDesc.depthStencilAttachment.clearStencil = clearStencil;
+            //passDesc.depthStencilAttachment.stencilLoadOp = LoadAction::Clear;
+        }
+
+        BeginRenderPass(passDesc, commandList);
     }
 }

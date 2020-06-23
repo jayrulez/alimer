@@ -42,9 +42,9 @@ namespace alimer
         }
 
         /// Reference count. If below zero, the object has been destroyed.
-        i32 refs = 0;
+        int32_t refs = 0;
         /// Weak reference count.
-        i32 weakRefs = 0;
+        int32_t weakRefs = 0;
     };
 
     /// Base class for intrusively reference counted objects that can be pointed to with RefPtr. These are noncopyable and non-assignable.
@@ -79,17 +79,17 @@ namespace alimer
         }
 
         /// Add a strong reference.
-        i32 AddRef()
+        int32_t AddRef()
         {
-            i32 refs = AtomicIncrement(&refCount->refs);
+            int32_t refs = AtomicIncrement(&refCount->refs);
             ALIMER_ASSERT(refs > 0);
             return refs;
         }
 
         /// Release a strong reference.
-        i32 Release()
+        int32_t Release()
         {
-            i32 refs = AtomicDecrement(&refCount->refs);
+            int32_t refs = AtomicDecrement(&refCount->refs);
             ALIMER_ASSERT(refs >= 0);
 
             if (refs == 0)
@@ -101,13 +101,13 @@ namespace alimer
         }
 
         /// Return the reference count.
-        uint32_t Refs() const
+        int32_t Refs() const
         {
             return refCount->refs;
         }
 
         /// Return the weak reference count.
-        uint32_t WeakRefs() const
+        int32_t WeakRefs() const
         {
             // Subtract one to not return the internally held reference
             return refCount->weakRefs - 1;
@@ -144,9 +144,9 @@ namespace alimer
             }
         }
 
-        i32 InternalRelease() noexcept
+        int32_t InternalRelease() noexcept
         {
-            i32 ref = 0;
+            int32_t ref = 0;
             T* temp = ptr_;
 
             if (temp != nullptr)
@@ -308,7 +308,7 @@ namespace alimer
             return ptr;
         }
 
-        i64 Reset()
+        int32_t Reset()
         {
             return InternalRelease();
         }

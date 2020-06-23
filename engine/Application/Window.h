@@ -24,7 +24,7 @@
 
 #include "Core/Platform.h"
 #include "Core/Utils.h"
-#include "Math/size.h"
+#include "Math/Size.h"
 #include <string>
 
 namespace alimer
@@ -51,7 +51,7 @@ namespace alimer
         bool Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags);
         void Close();
 
-        const usize& GetSize() const { return size; }
+        const SizeU& GetSize() const { return size; }
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
@@ -61,7 +61,7 @@ namespace alimer
 
     private:
         std::string title;
-        usize size;
+        SizeU size;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
 

@@ -84,8 +84,8 @@ namespace alimer
 
         // Depth-stencil
         { PixelFormat::Depth32Float,            "Depth32Float",             PixelFormatType::Float,         32,         {1, 1, 4, 1, 1},        {32, 0, 0, 0, 0, 0}},
-        { PixelFormat::Depth16UNorm,            "Depth16UNorm",             PixelFormatType::UNorm,         16,         {1, 1, 2, 1, 1},        {16, 0, 0, 0, 0, 0}},
-        { PixelFormat::Depth24PlusStencil8,     "Depth24PlusStencil8",      PixelFormatType::UNorm,         32,         {1, 1, 4, 1, 1},        {24, 8, 0, 0, 0, 0}},
+        //{ PixelFormat::Depth16UNorm,            "Depth16UNorm",             PixelFormatType::UNorm,         16,         {1, 1, 2, 1, 1},        {16, 0, 0, 0, 0, 0}},
+        { PixelFormat::Depth24UnormStencil8,     "Depth24UnormStencil8",      PixelFormatType::UNorm,         32,         {1, 1, 4, 1, 1},        {24, 8, 0, 0, 0, 0}},
 
         // Compressed formats
         { PixelFormat::BC1RGBAUNorm,            "BC1RGBAUNorm",             PixelFormatType::UNorm,         4,          {4, 4, 8, 1, 1},        {0, 0, 0, 0, 0, 0}},
