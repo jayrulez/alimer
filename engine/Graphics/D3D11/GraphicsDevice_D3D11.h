@@ -66,12 +66,11 @@ namespace alimer
         SwapChainHandle CreateSwapChain(const SwapChainDesc& desc) override;
         void DestroySwapChain(SwapChainHandle handle) override;
         uint32_t GetBackbufferCount(SwapChainHandle handle) override;
-        TextureHandle GetBackbufferTexture(SwapChainHandle handle, uint32_t index) override;
+        uint64_t GetBackbufferTexture(SwapChainHandle handle, uint32_t index) override;
         uint32_t Present(SwapChainHandle handle) override;
 
         TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps) override;
-        TextureHandle CreateTexture(const TextureDesc& desc, uint64_t nativeHandle) override;
+        TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* pData, bool autoGenerateMipmaps) override;
         void DestroyTexture(TextureHandle handle) override;
 
         void ClearState(CommandList commandList);
@@ -109,7 +108,6 @@ namespace alimer
             uint32_t presentFlags;
             PixelFormat colorFormat;
             PixelFormat depthStencilFormat;
-            TextureHandle backbufferTexture; 
 
             // HDR Support
             DXGI_COLOR_SPACE_TYPE colorSpace;
@@ -120,8 +118,11 @@ namespace alimer
 
             ID3D11Resource* handle;
             DXGI_FORMAT dxgiFormat;
+            uint32_t width;
+            uint32_t height;
             uint32_t mipLevels;
             Vector<ID3D11RenderTargetView*> RTVs;
+            Vector<ID3D11DepthStencilView*> DSVs;
         };
 
         struct BufferD3D11 {

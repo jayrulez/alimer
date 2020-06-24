@@ -24,6 +24,7 @@
 
 #include "Core/Utils.h"
 #include "Math/Color.h"
+#include "Math/Rect.h"
 #include "graphics/PixelFormat.h"
 
 namespace alimer
@@ -201,7 +202,7 @@ namespace alimer
         Limits limits;
     };
 
-    struct TextureDesc
+    struct TextureDescription
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
@@ -210,7 +211,7 @@ namespace alimer
         uint32_t height = 1;
         uint32_t depth = 1;
         uint32_t mipLevels = 1;
-        uint32_t arrayLayers = 1;
+        uint32_t arraySize = 1;
         TextureSampleCount sampleCount = TextureSampleCount::Count1;
 
         const char* label = nullptr;
@@ -245,6 +246,9 @@ namespace alimer
 
     struct RenderPassDesc
     {
+        // Render area will be clipped to the actual framebuffer.
+        RectU renderArea = { UINT32_MAX, UINT32_MAX };
+
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };

@@ -33,7 +33,7 @@ namespace alimer
 
     Texture::Texture(Texture&& other) noexcept
         : GraphicsResource(other.device, other.heapType)
-        , textureDesc{ other.textureDesc }
+        , desc{ other.desc }
     {
         handle = other.handle;
         other.handle = kInvalidTexture;
@@ -62,18 +62,18 @@ namespace alimer
         return levels;
     }
 
-    bool Texture::DefineExternal(TextureHandle newHandle, const TextureDesc& desc)
+    bool Texture::DefineExternal(uint64_t externalHandle, const TextureDescription& desc)
     {
-        ALIMER_ASSERT(newHandle.isValid());
+        ALIMER_ASSERT(externalHandle != 0);
 
         Destroy();
 
-        textureDesc = desc;
-        handle = newHandle;
+        this->desc = desc;
+        handle = device.CreateTexture(desc, externalHandle, nullptr, false);
         return handle.isValid();
     }
 
-    bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arrayLayers, TextureUsage usage, const void* pInitData)
+    bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
     {
         Destroy();
 
@@ -84,33 +84,58 @@ namespace alimer
             usage |= TextureUsage::RenderTarget;
         }
 
-        textureDesc.type = TextureType::Type2D;
-        textureDesc.format = format;
-        textureDesc.usage = usage;
-        textureDesc.width = width;
-        textureDesc.height = height;
-        textureDesc.depth = 1;
-        textureDesc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
-        textureDesc.arrayLayers = arrayLayers;
-        textureDesc.sampleCount = TextureSampleCount::Count1;
+        desc.type = TextureType::Type2D;
+        desc.format = format;
+        desc.usage = usage;
+        desc.width = width;
+        desc.height = height;
+        desc.depth = 1;
+        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
+        desc.arraySize = arraySize;
+        desc.sampleCount = TextureSampleCount::Count1;
 
-        handle = device.CreateTexture(textureDesc, pInitData, autoGenerateMipmaps);
+        handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
+        return handle.isValid();
+    }
+
+    bool Texture::DefineCube(uint32_t size, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
+    {
+        Destroy();
+
+        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
+        const bool hasInitData = pInitData != nullptr;
+        if (autoGenerateMipmaps && hasInitData)
+        {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        desc.type = TextureType::TypeCube;
+        desc.format = format;
+        desc.usage = usage;
+        desc.width = size;
+        desc.height = size;
+        desc.depth = 1;
+        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(size) : mipLevels;
+        desc.arraySize = arraySize;
+        desc.sampleCount = TextureSampleCount::Count1;
+
+        handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
         return handle.isValid();
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < textureDesc.mipLevels) ? max(1u, textureDesc.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1u, desc.width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < textureDesc.mipLevels) ? max(1u, textureDesc.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1u, desc.height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < textureDesc.mipLevels) ? max(1U, textureDesc.depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1U, desc.depth >> mipLevel) : 0;
     }
 }
 

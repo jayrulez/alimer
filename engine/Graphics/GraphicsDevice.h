@@ -80,11 +80,10 @@ namespace alimer
         virtual SwapChainHandle CreateSwapChain(const SwapChainDesc& desc) = 0;
         virtual void DestroySwapChain(SwapChainHandle handle) = 0;
         virtual uint32_t GetBackbufferCount(SwapChainHandle handle) = 0;
-        virtual TextureHandle GetBackbufferTexture(SwapChainHandle handle, uint32_t index) = 0;
+        virtual uint64_t GetBackbufferTexture(SwapChainHandle handle, uint32_t index) = 0;
         virtual uint32_t Present(SwapChainHandle handle) = 0;
 
-        virtual TextureHandle CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps) = 0;
-        virtual TextureHandle CreateTexture(const TextureDesc& desc, uint64_t nativeHandle) = 0;
+        virtual TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* pData, bool autoGenerateMipmaps) = 0;
         virtual void DestroyTexture(TextureHandle handle) = 0;
 
         virtual void InsertDebugMarker(const char* name, CommandList commandList = 0) = 0;

@@ -348,26 +348,7 @@ namespace alimer
     {
         SwapChainD3D11& swapChain = swapChains[handle.id];
 
-        ID3D11Texture2D* backbuffer;
-        ThrowIfFailed(swapChain.handle->GetBuffer(0, IID_PPV_ARGS(&backbuffer)));
 
-        // Alloc and init backbuffer texture.
-        swapChain.backbufferTexture = AllocTextureHandle();
-        TextureD3D11& backbufferTexture = textures[handle.id];
-        backbufferTexture.handle = backbuffer;
-        backbufferTexture.mipLevels = 1u;
-
-        D3D11_RENDER_TARGET_VIEW_DESC renderTargetViewDesc = {};
-        renderTargetViewDesc.Format = ToDXGIFormat(swapChain.colorFormat);
-        renderTargetViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-        renderTargetViewDesc.Texture2D.MipSlice = 0;
-        ID3D11RenderTargetView* rtv;
-        ThrowIfFailed(d3dDevice->CreateRenderTargetView(
-            backbuffer,
-            &renderTargetViewDesc,
-            &rtv
-        ));
-        backbufferTexture.RTVs.Push(rtv);
 
         bool isDisplayHDR10 = false;
 
@@ -813,10 +794,13 @@ namespace alimer
         return 1;
     }
 
-    TextureHandle GraphicsDevice_D3D11::GetBackbufferTexture(SwapChainHandle handle, uint32_t index)
+    uint64_t GraphicsDevice_D3D11::GetBackbufferTexture(SwapChainHandle handle, uint32_t index)
     {
         ALIMER_ASSERT(index == 0);
-        return swapChains[handle.id].backbufferTexture;;
+        ID3D11Texture2D* backbuffer;
+        ThrowIfFailed(swapChains[handle.id].handle->GetBuffer(0, IID_PPV_ARGS(&backbuffer)));
+
+        return (uint64_t)backbuffer;
     }
 
     uint32_t GraphicsDevice_D3D11::Present(SwapChainHandle handle)
@@ -861,92 +845,100 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    TextureHandle GraphicsDevice_D3D11::CreateTexture(const TextureDesc& desc, const void* pData, bool autoGenerateMipmaps)
+    TextureHandle GraphicsDevice_D3D11::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* pData, bool autoGenerateMipmaps)
     {
         TextureHandle handle = AllocTextureHandle();
         TextureD3D11& texture = textures[handle.id];
         texture.dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
+        texture.width = desc.width;
+        texture.height = desc.height;
         texture.mipLevels = desc.mipLevels;
 
-        D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
-        UINT bindFlags = 0;
-        UINT CPUAccessFlags = 0;
-        UINT miscFlags = 0;
-        if (desc.type == TextureType::TypeCube) {
-            miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
-        }
-
-        if ((desc.usage & TextureUsage::Sampled) != TextureUsage::None) {
-            bindFlags |= D3D11_BIND_SHADER_RESOURCE;
-        }
-        if ((desc.usage & TextureUsage::Storage) != TextureUsage::None) {
-            bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
-        }
-
-        if ((desc.usage & TextureUsage::RenderTarget) != TextureUsage::None) {
-            if (IsDepthStencilFormat(desc.format)) {
-                bindFlags |= D3D11_BIND_DEPTH_STENCIL;
-            }
-            else {
-                bindFlags |= D3D11_BIND_RENDER_TARGET;
-            }
-        }
-
-        if (autoGenerateMipmaps)
-        {
-            UINT formatSupport = 0;
-            if (FAILED(d3dDevice->CheckFormatSupport(texture.dxgiFormat, &formatSupport))) {
-                textures.dealloc(handle.id);
-                return kInvalidTexture;
-            }
-
-            if ((formatSupport & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN) == 0) {
-
-            }
-
-            bindFlags |= D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-            miscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-        }
-
         HRESULT hr = S_OK;
-
-        if (desc.type == TextureType::Type2D || desc.type == TextureType::TypeCube) {
-            D3D11_TEXTURE2D_DESC d3d11_desc = {};
-            d3d11_desc.Width = desc.width;
-            d3d11_desc.Height = desc.height;
-            d3d11_desc.MipLevels = desc.mipLevels;
-            d3d11_desc.ArraySize = desc.arrayLayers;
-            d3d11_desc.Format = texture.dxgiFormat;
-            d3d11_desc.SampleDesc.Count = 1;
-            d3d11_desc.SampleDesc.Quality = 0;
-            d3d11_desc.Usage = usage;
-            d3d11_desc.BindFlags = bindFlags;
-            d3d11_desc.CPUAccessFlags = CPUAccessFlags;
-            d3d11_desc.MiscFlags = miscFlags;
-
-            hr = d3dDevice->CreateTexture2D(
-                &d3d11_desc,
-                NULL,
-                (ID3D11Texture2D**)&texture.handle
-            );
+        if (nativeHandle)
+        {
+            texture.handle = (ID3D11Texture2D*)nativeHandle;
         }
-        else if (desc.type == TextureType::Type3D) {
-            D3D11_TEXTURE3D_DESC d3d11_desc = {};
-            d3d11_desc.Width = desc.width;
-            d3d11_desc.Height = desc.height;
-            d3d11_desc.Depth = desc.depth;
-            d3d11_desc.MipLevels = desc.mipLevels;
-            d3d11_desc.Format = texture.dxgiFormat;
-            d3d11_desc.Usage = usage;
-            d3d11_desc.BindFlags = bindFlags;
-            d3d11_desc.CPUAccessFlags = CPUAccessFlags;
-            d3d11_desc.MiscFlags = miscFlags;
+        else
+        {
+            D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
+            UINT bindFlags = 0;
+            UINT CPUAccessFlags = 0;
+            UINT miscFlags = 0;
+            if (desc.type == TextureType::TypeCube) {
+                miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+            }
 
-            hr = d3dDevice->CreateTexture3D(
-                &d3d11_desc,
-                NULL,
-                (ID3D11Texture3D**)&texture.handle
-            );
+            if ((desc.usage & TextureUsage::Sampled) != TextureUsage::None) {
+                bindFlags |= D3D11_BIND_SHADER_RESOURCE;
+            }
+            if ((desc.usage & TextureUsage::Storage) != TextureUsage::None) {
+                bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+            }
+
+            if ((desc.usage & TextureUsage::RenderTarget) != TextureUsage::None) {
+                if (IsDepthStencilFormat(desc.format)) {
+                    bindFlags |= D3D11_BIND_DEPTH_STENCIL;
+                }
+                else {
+                    bindFlags |= D3D11_BIND_RENDER_TARGET;
+                }
+            }
+
+            if (autoGenerateMipmaps)
+            {
+                UINT formatSupport = 0;
+                if (FAILED(d3dDevice->CheckFormatSupport(texture.dxgiFormat, &formatSupport))) {
+                    textures.dealloc(handle.id);
+                    return kInvalidTexture;
+                }
+
+                if ((formatSupport & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN) == 0) {
+
+                }
+
+                bindFlags |= D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+                miscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+            }
+
+            if (desc.type == TextureType::Type2D || desc.type == TextureType::TypeCube) {
+                D3D11_TEXTURE2D_DESC d3d11_desc = {};
+                d3d11_desc.Width = desc.width;
+                d3d11_desc.Height = desc.height;
+                d3d11_desc.MipLevels = desc.mipLevels;
+                d3d11_desc.ArraySize = desc.arraySize;
+                d3d11_desc.Format = texture.dxgiFormat;
+                d3d11_desc.SampleDesc.Count = 1;
+                d3d11_desc.SampleDesc.Quality = 0;
+                d3d11_desc.Usage = usage;
+                d3d11_desc.BindFlags = bindFlags;
+                d3d11_desc.CPUAccessFlags = CPUAccessFlags;
+                d3d11_desc.MiscFlags = miscFlags;
+
+                hr = d3dDevice->CreateTexture2D(
+                    &d3d11_desc,
+                    NULL,
+                    (ID3D11Texture2D**)&texture.handle
+                );
+            }
+            else if (desc.type == TextureType::Type3D) {
+                D3D11_TEXTURE3D_DESC d3d11_desc = {};
+                d3d11_desc.Width = desc.width;
+                d3d11_desc.Height = desc.height;
+                d3d11_desc.Depth = desc.depth;
+                d3d11_desc.MipLevels = desc.mipLevels;
+                d3d11_desc.Format = texture.dxgiFormat;
+                d3d11_desc.Usage = usage;
+                d3d11_desc.BindFlags = bindFlags;
+                d3d11_desc.CPUAccessFlags = CPUAccessFlags;
+                d3d11_desc.MiscFlags = miscFlags;
+
+                hr = d3dDevice->CreateTexture3D(
+                    &d3d11_desc,
+                    NULL,
+                    (ID3D11Texture3D**)&texture.handle
+                );
+            }
         }
 
         if (FAILED(hr)) {
@@ -954,16 +946,75 @@ namespace alimer
             return kInvalidTexture;
         }
 
-        return handle;
-    }
+        if ((desc.usage & TextureUsage::RenderTarget) != TextureUsage::None)
+        {
+            if (IsDepthStencilFormat(desc.format)) {
+                ID3D11DepthStencilView* dsv;
+                ThrowIfFailed(d3dDevice->CreateDepthStencilView(texture.handle, nullptr, &dsv));
+                texture.DSVs.Push(dsv);
+            }
+            else
+            {
+                D3D11_RENDER_TARGET_VIEW_DESC rtViewDesc = {};
+                rtViewDesc.Format = texture.dxgiFormat;
 
-    TextureHandle GraphicsDevice_D3D11::CreateTexture(const TextureDesc& desc, uint64_t nativeHandle)
-    {
-        TextureHandle handle = AllocTextureHandle();
-        TextureD3D11& texture = textures[handle.id];
-        texture.handle = (ID3D11Texture2D*)nativeHandle;
-        texture.dxgiFormat = ToDXGIFormat(desc.format);
-        texture.mipLevels = desc.mipLevels;
+                switch (desc.type)
+                {
+                case TextureType::Type2D:
+
+                    if (desc.sampleCount <= TextureSampleCount::Count1)
+                    {
+                        if (desc.arraySize > 1)
+                        {
+                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+                            rtViewDesc.Texture2DArray.MipSlice = 0;
+                            //rtViewDesc.Texture2DArray.FirstArraySlice = slice;
+                            rtViewDesc.Texture2DArray.ArraySize = desc.arraySize;
+                        }
+                        else
+                        {
+                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+                            rtViewDesc.Texture2D.MipSlice = 0;
+                        }
+                    }
+                    else
+                    {
+                        if (desc.arraySize > 1)
+                        {
+                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
+                            //rtViewDesc.Texture2DMSArray.FirstArraySlice = slice;
+                            rtViewDesc.Texture2DMSArray.ArraySize = desc.arraySize;
+                        }
+                        else
+                        {
+                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
+                        }
+                    }
+
+                    break;
+                case TextureType::Type3D:
+                    rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+                    rtViewDesc.Texture3D.MipSlice = 0;
+                    rtViewDesc.Texture3D.FirstWSlice = 0;
+                    rtViewDesc.Texture3D.WSize = (UINT)-1;
+                    break;
+                case TextureType::TypeCube:
+                    rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+                    rtViewDesc.Texture2DArray.MipSlice = 0;
+                    rtViewDesc.Texture2DArray.FirstArraySlice = 0;
+                    rtViewDesc.Texture2DArray.ArraySize = desc.arraySize;
+                    break;
+
+                default:
+                    break;
+                }
+
+                ID3D11RenderTargetView* rtv;
+                ThrowIfFailed(d3dDevice->CreateRenderTargetView(texture.handle, &rtViewDesc, &rtv));
+                texture.RTVs.Push(rtv);
+            }
+        }
+
         return handle;
     }
 
@@ -976,8 +1027,12 @@ namespace alimer
         for (uint32_t i = 0; i < texture.RTVs.Size(); i++) {
             texture.RTVs[i]->Release();
         }
+        for (uint32_t i = 0; i < texture.DSVs.Size(); i++) {
+            texture.DSVs[i]->Release();
+        }
 
         texture.RTVs.Clear();
+        texture.DSVs.Clear();
         SAFE_RELEASE(texture.handle);
         textures.dealloc(handle.id);
     }
@@ -1006,28 +1061,43 @@ namespace alimer
 
     void GraphicsDevice_D3D11::BeginRenderPass(const RenderPassDesc& desc, CommandList commandList)
     {
+        uint32_t width = UINT32_MAX;
+        uint32_t height = UINT32_MAX;
+
+        uint32_t rtvsCount = 0;
+        ID3D11RenderTargetView* rtvs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        ID3D11DepthStencilView* depthStencilView = nullptr;
+
         for (uint32_t i = 0; i < kMaxColorAttachments; i++)
         {
             const RenderPassColorAttachment* attachment = &desc.colorAttachments[i];
             if (!attachment->texture.isValid())
                 break;
 
+            TextureD3D11& texture = textures[attachment->texture.id];
+
+            width = min(width, Texture::CalculateMipSize(attachment->mipLevel, texture.width));
+            height = min(height, Texture::CalculateMipSize(attachment->mipLevel, texture.height));
+
+            uint32_t viewIndex = CalcSubresource(attachment->mipLevel, attachment->slice, texture.mipLevels);
+            ID3D11RenderTargetView* rtv = texture.RTVs[viewIndex];
+
             if (attachment->loadAction == LoadAction::Clear)
             {
-                TextureD3D11& texture = textures[attachment->texture.id];
-
-                uint32_t rtvIndex = CalcSubresource(attachment->mipLevel, attachment->slice, texture.mipLevels);
                 deviceContexts[commandList]->ClearRenderTargetView(
-                    texture.RTVs[rtvIndex],
+                    rtv,
                     &desc.colorAttachments[i].clearColor.r
                 );
             }
+            rtvs[rtvsCount++] = rtv;
         }
 
         if (desc.depthStencilAttachment.texture.isValid())
         {
             const RenderPassDepthStencilAttachment* attachment = &desc.depthStencilAttachment;
             TextureD3D11& texture = textures[attachment->texture.id];
+            width = min(width, Texture::CalculateMipSize(attachment->mipLevel, texture.width));
+            height = min(height, Texture::CalculateMipSize(attachment->mipLevel, texture.height));
 
             UINT clearFlags = 0;
             if (attachment->depthLoadAction == LoadAction::Clear)
@@ -1040,36 +1110,41 @@ namespace alimer
                 clearFlags |= D3D11_CLEAR_STENCIL;
             }
 
-            /*deviceContexts[commandList]->ClearDepthStencilView(
-                texture->,
+            uint32_t viewIndex = CalcSubresource(attachment->mipLevel, attachment->slice, texture.mipLevels);
+            depthStencilView = texture.DSVs[viewIndex];
+            deviceContexts[commandList]->ClearDepthStencilView(
+                depthStencilView,
                 clearFlags,
-                beginDesc->depthStencilAttachment.clearDepth, beginDesc->depthStencilAttachment.clearStencil
-            );*/
+                attachment->clearDepth,
+                attachment->clearStencil
+            );
         }
 
-        /*d3d11.commandBuffers[commandBuffer].context->OMSetRenderTargets(
-            framebuffer.colorAttachmentCount,
-            framebuffer.colorAttachments,
-            framebuffer.depthStencilAttachment
-        );
+        deviceContexts[commandList]->OMSetRenderTargets(rtvsCount, rtvs, depthStencilView);
 
-        // set viewport and scissor rect to cover render target size 
-        /* D3D11_VIEWPORT viewport;
-         viewport.TopLeftX = 0.0f;
-         viewport.TopLeftY = 0.0f;
-         viewport.Width = (FLOAT)framebuffer.width;
-         viewport.Height = (FLOAT)framebuffer.height;
-         viewport.MinDepth = 0.0f;
-         viewport.MaxDepth = 1.0f;
+        // set viewport and scissor rect to cover render target size
+        RectU rect = desc.renderArea;
+        rect.x = min(width, rect.x);
+        rect.y = min(height, rect.y);
+        rect.width = min(width - rect.x, rect.width);
+        rect.height = min(height - rect.y, rect.height);
 
-         D3D11_RECT scissorRect;
-         scissorRect.left = 0;
-         scissorRect.top = 0;
-         scissorRect.right = (LONG)framebuffer.width;
-         scissorRect.bottom = (LONG)framebuffer.height;
+        D3D11_VIEWPORT viewport;
+        viewport.TopLeftX = float(rect.x);
+        viewport.TopLeftY = float(rect.y);
+        viewport.Width = float(rect.width);
+        viewport.Height = float(rect.height);
+        viewport.MinDepth = 0.0f;
+        viewport.MaxDepth = 1.0f;
 
-         d3d11.commandBuffers[commandBuffer].context->RSSetViewports(1, &viewport);
-         d3d11.commandBuffers[commandBuffer].context->RSSetScissorRects(1, &scissorRect);*/
+        D3D11_RECT scissorRect;
+        scissorRect.left = long(rect.x);
+        scissorRect.top = long(rect.y);
+        scissorRect.right = long(rect.width);
+        scissorRect.bottom = long(rect.height);
+
+        deviceContexts[commandList]->RSSetViewports(1, &viewport);
+        deviceContexts[commandList]->RSSetScissorRects(1, &scissorRect);
 
         blendColors[commandList] = { 1.0f, 1.0f, 1.0f, 1.0f };
         deviceContexts[commandList]->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);

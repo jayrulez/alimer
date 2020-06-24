@@ -34,7 +34,7 @@ namespace alimer
         handle = device.CreateSwapChain(desc);
         ALIMER_ASSERT(handle.isValid());
 
-        TextureDesc backbufferDesc = {};
+        TextureDescription backbufferDesc = {};
         backbufferDesc.format = desc.colorFormat;
         backbufferDesc.usage = TextureUsage::RenderTarget;
         backbufferDesc.width = desc.width;

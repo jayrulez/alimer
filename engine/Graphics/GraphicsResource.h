@@ -46,6 +46,11 @@ namespace alimer
         */
         const GraphicsDevice& GetDevice() const;
 
+        /**
+        * Get the heap type.
+        */
+        HeapType GetHeapType() const { return heapType; }
+
     protected:
         GraphicsDevice& device;
         HeapType heapType;
