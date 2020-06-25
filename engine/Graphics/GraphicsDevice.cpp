@@ -26,57 +26,39 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
-#if defined(ALIMER_D3D11_BACKEND)
-#include "Graphics/D3D11/GraphicsDevice_D3D11.h"
-#endif
-
-#if defined(ALIMER_D3D12_BACKEND)
+#if defined(ALIMER_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
+#elif defined(ALIMER_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(const Desc& desc)
-        : desc{ desc }
+    GraphicsDevice::GraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference)
+        : impl(new GraphicsImpl(enableValidationLayer, powerPreference))
     {
 
     }
 
-    GraphicsDevice* GraphicsDevice::Create(const Desc& desc, const SwapChainDesc& swapchainDesc)
+    GraphicsDevice::~GraphicsDevice()
     {
-        BackendType backendType = desc.preferredBackendType;
-        if (backendType == BackendType::Count) {
-#if defined(ALIMER_D3D11_BACKEND)
-            if (GraphicsDevice_D3D11::IsAvailable()) {
-                backendType = BackendType::Direct3D11;
-            }
-#endif
-        }
+        Shutdown();
+        SafeDelete(impl);
+    }
 
-        GraphicsDevice* device = nullptr;
-        switch (backendType)
-        {
-#if defined(ALIMER_D3D11_BACKEND)
-        case BackendType::Direct3D11:
-            if (GraphicsDevice_D3D11::IsAvailable()) {
-                device = new GraphicsDevice_D3D11(desc);
-            }
-            else {
-                return nullptr;
-            }
-            break;
-#endif
+    void GraphicsDevice::Shutdown()
+    {
+        
+    }
 
-        default:
-            return nullptr;
-        }
+    void GraphicsDevice::BeginFrame()
+    {
 
-        if (device == nullptr) {
-            return nullptr;
-        }
+    }
 
-        device->mainSwapChain = new SwapChain(*device, swapchainDesc);
-        return device;
+    void GraphicsDevice::EndFrame()
+    {
+
     }
 
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
@@ -104,26 +86,5 @@ namespace alimer
 
             trackedResources.Clear();
         }
-    }
-
-    void GraphicsDevice::BeginDefaultRenderPass(const Color& clearColor, float clearDepth, uint8_t clearStencil, CommandList commandList)
-    {
-        RenderPassDesc passDesc = {};
-        passDesc.colorAttachments[0].texture = mainSwapChain->GetBackbufferTexture()->GetHandle();
-        passDesc.colorAttachments[0].clearColor = clearColor;
-        passDesc.colorAttachments[0].loadAction = LoadAction::Clear;
-
-        Texture* depthStencilTexture = mainSwapChain->GetDepthStencilTexture();
-        if (depthStencilTexture != nullptr)
-        {
-            passDesc.depthStencilAttachment.texture = depthStencilTexture->GetHandle();
-            passDesc.depthStencilAttachment.depthLoadAction = LoadAction::Clear;
-            passDesc.depthStencilAttachment.clearDepth = clearDepth;
-            //
-            //passDesc.depthStencilAttachment.clearStencil = clearStencil;
-            //passDesc.depthStencilAttachment.stencilLoadOp = LoadAction::Clear;
-        }
-
-        BeginRenderPass(passDesc, commandList);
     }
 }

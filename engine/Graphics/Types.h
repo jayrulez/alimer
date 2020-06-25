@@ -64,6 +64,13 @@ namespace alimer
         Count
     };
 
+    enum class PowerPreference : uint32_t
+    {
+        Default,
+        LowPower,
+        HighPerformance
+    };
+
     enum class GPUVendorId : uint32_t
     {
         None = 0,

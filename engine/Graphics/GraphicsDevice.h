@@ -28,10 +28,10 @@
 
 namespace alimer
 {
-#ifdef _DEBUG
-#define DEFAULT_ENABLE_DEBUG_LAYER true
+#if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#   define DEFAULT_ENABLE_DEBUG_LAYER true
 #else
-#define DEFAULT_ENABLE_DEBUG_LAYER false
+#   define DEFAULT_ENABLE_DEBUG_LAYER false
 #endif
 
     class Texture;
@@ -47,108 +47,43 @@ namespace alimer
         ~GraphicsDeviceEvents() = default;
     };
 
+    class GraphicsImpl;
+
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice final
     {
         friend class GraphicsResource;
 
     public:
-        /**
-        * Device description
-        */
-        struct Desc 
-        {
-            BackendType preferredBackendType = BackendType::Count;
-            bool enableDebugLayer = DEFAULT_ENABLE_DEBUG_LAYER;
-        };
+        GraphicsDevice(bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER, PowerPreference powerPreference = PowerPreference::Default);
+        ~GraphicsDevice();
 
-        virtual ~GraphicsDevice() = default;
+        /// Return graphics implementation, which holds the actual API-specific resources.
+        GraphicsImpl* GetImpl() const { return impl; }
 
-        GraphicsDevice(const GraphicsDevice&) = delete;
-        GraphicsDevice(GraphicsDevice&&) = delete;
-        GraphicsDevice& operator=(const GraphicsDevice&) = delete;
-        GraphicsDevice& operator=(GraphicsDevice&&) = delete;
-
-        virtual void BeginFrame() = 0;
-        virtual void EndFrame() = 0;
-
-        static GraphicsDevice* Create(const Desc& desc, const SwapChainDesc& swapchainDesc);
+        void BeginFrame();
+        void EndFrame();
 
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
-        SwapChain* GetMainSwapChain() const { return mainSwapChain.Get(); }
-
-        virtual SwapChainHandle CreateSwapChain(const SwapChainDesc& desc) = 0;
-        virtual void DestroySwapChain(SwapChainHandle handle) = 0;
-        virtual uint32_t GetBackbufferCount(SwapChainHandle handle) = 0;
-        virtual uint64_t GetBackbufferTexture(SwapChainHandle handle, uint32_t index) = 0;
-        virtual uint32_t Present(SwapChainHandle handle) = 0;
-
-        virtual TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* pData, bool autoGenerateMipmaps) = 0;
-        virtual void DestroyTexture(TextureHandle handle) = 0;
-
-        virtual void InsertDebugMarker(const char* name, CommandList commandList = 0) = 0;
-        virtual void PushDebugGroup(const char* name, CommandList commandList = 0) = 0;
-        virtual void PopDebugGroup(CommandList commandList = 0) = 0;
-        //virtual void BeginRenderPass(const RenderPassDesc* desc, CommandList commandList = 0);
-        virtual void BeginDefaultRenderPass(const Color& clearColor, float clearDepth = 1.0f, uint8_t clearStencil = 0, CommandList commandList = 0);
-        virtual void BeginRenderPass(const RenderPassDesc& desc, CommandList commandList = 0) = 0;
-        virtual void EndRenderPass(CommandList commandList = 0) = 0;
-        virtual void SetBlendColor(const Color& color, CommandList commandList = 0) = 0;
 
     private:
-        virtual void Shutdown() = 0;
+        void Shutdown();
 
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice(const Desc& desc);
+        
         void ReleaseTrackedResources();
 
-        Desc desc;
+        GraphicsImpl* impl;
         GraphicsDeviceCaps caps{};
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
         RefPtr<SwapChain> mainSwapChain;
 
-        template <typename T, uint32_t MAX_COUNT>
-        class Pool
-        {
-        public:
-            Pool()
-            {
-                values = (T*)mem;
-                for (int i = 0; i < MAX_COUNT + 1; ++i) {
-                    new (&values[i]) int(i + 1);
-                }
-                new (&values[MAX_COUNT]) int(-1);
-                first_free = 1;
-            }
-
-            int alloc()
-            {
-                if (first_free == -1) return -1;
-
-                const int id = first_free;
-                first_free = *((int*)&values[id]);
-                new (&values[id]) T;
-                return id;
-            }
-
-            void dealloc(uint32_t index)
-            {
-                values[index].~T();
-                new (&values[index]) int(first_free);
-                first_free = index;
-            }
-
-            alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)] = {};
-            T* values;
-            int first_free;
-
-            T& operator[](int index) { return values[index]; }
-            bool isFull() const { return first_free == -1; }
-        };
+    private:
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

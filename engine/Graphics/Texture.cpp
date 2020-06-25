@@ -47,7 +47,7 @@ namespace alimer
     void Texture::Destroy()
     {
         if (handle.isValid()) {
-            device.DestroyTexture(handle);
+            //device.DestroyTexture(handle);
         }
     }
 
@@ -69,7 +69,7 @@ namespace alimer
         Destroy();
 
         this->desc = desc;
-        handle = device.CreateTexture(desc, externalHandle, nullptr, false);
+        //handle = device.CreateTexture(desc, externalHandle, nullptr, false);
         return handle.isValid();
     }
 
@@ -94,7 +94,7 @@ namespace alimer
         desc.arraySize = arraySize;
         desc.sampleCount = TextureSampleCount::Count1;
 
-        handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
+        //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
         return handle.isValid();
     }
 
@@ -119,7 +119,7 @@ namespace alimer
         desc.arraySize = arraySize;
         desc.sampleCount = TextureSampleCount::Count1;
 
-        handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
+        //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
         return handle.isValid();
     }
 

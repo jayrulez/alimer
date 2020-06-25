@@ -31,7 +31,7 @@ namespace alimer
         , colorFormat(desc.colorFormat)
         , depthStencilFormat(desc.depthStencilFormat)
     {
-        handle = device.CreateSwapChain(desc);
+        /*handle = device.CreateSwapChain(desc);
         ALIMER_ASSERT(handle.isValid());
 
         TextureDescription backbufferDesc = {};
@@ -51,7 +51,7 @@ namespace alimer
         {
             depthStencilTexture = new Texture(device);
             depthStencilTexture->Define2D(desc.width, desc.height, depthStencilFormat, 1, 1, TextureUsage::RenderTarget);
-        }
+        }*/
     }
 
     SwapChain::~SwapChain()
@@ -59,7 +59,7 @@ namespace alimer
         backbufferTextures.Clear();
 
         if (handle.isValid()) {
-            device.DestroySwapChain(handle);
+            //device.DestroySwapChain(handle);
         }
 
         handle = kInvalidSwapChain;
@@ -76,7 +76,7 @@ namespace alimer
 
     void SwapChain::Present()
     {
-        backbufferIndex = device.Present(handle);
+        //backbufferIndex = device.Present(handle);
     }
 
     Texture* SwapChain::GetBackbufferTexture() const

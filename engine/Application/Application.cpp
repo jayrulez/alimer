@@ -60,7 +60,7 @@ namespace alimer
             );
 
 
-            GraphicsDevice::Desc graphicsDesc = {};
+            /*GraphicsDevice::Desc graphicsDesc = {};
 
             SwapChainDesc swapChainDesc = {};
             swapChainDesc.windowHandle = window.GetHandle();
@@ -68,9 +68,9 @@ namespace alimer
             swapChainDesc.height = window.GetSize().height;
             swapChainDesc.isFullscreen = window.IsFullscreen();
             swapChainDesc.colorFormat = PixelFormat::BGRA8Unorm;
-            //swapChainDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;
+            //swapChainDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
 
-            graphicsDevice.reset(GraphicsDevice::Create(graphicsDesc, swapChainDesc));
+            graphicsDevice.reset(new GraphicsDevice());
             if (!graphicsDevice) {
                 headless = true;
             }
@@ -124,9 +124,9 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
-        graphicsDevice->PushDebugGroup("Clear");
-        graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
-        graphicsDevice->PopDebugGroup();
+        //graphicsDevice->PushDebugGroup("Clear");
+        //graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
+        //graphicsDevice->PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -136,7 +136,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        graphicsDevice->GetMainSwapChain()->Present();
+        //graphicsDevice->GetMainSwapChain()->Present();
         graphicsDevice->EndFrame();
     }
 

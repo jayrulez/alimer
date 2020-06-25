@@ -10,7 +10,7 @@
 ## Features
 
 - Cross-platform.
-- Modern graphics-rendering API using Vulkan, Direct3D12 and Direct3D11.
+- Modern graphics-rendering API using Vulkan and Direct3D12.
 
 ## Credits
 
