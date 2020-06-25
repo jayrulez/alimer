@@ -59,6 +59,7 @@ namespace alimer
                 WindowFlags::Resizable
             );
 
+
             GraphicsDevice::Desc graphicsDesc = {};
 
             SwapChainDesc swapChainDesc = {};

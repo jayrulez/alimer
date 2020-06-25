@@ -25,7 +25,7 @@
 
 /** \mainpage Vulkan Memory Allocator
 
-<b>Version 3.0.0-development</b> (2020-03-23)
+<b>Version 3.0.0-development</b> (2020-06-24)
 
 Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
@@ -1880,6 +1880,7 @@ Features deliberately excluded from the scope of this library:
   objects in CPU memory (not Vulkan memory), allocation failures are not checked
   and handled gracefully, because that would complicate code significantly and
   is usually not needed in desktop PC applications anyway.
+  Success of an allocation is just checked with an assert.
 - Code free of any compiler warnings. Maintaining the library to compile and
   work correctly on so many different platforms is hard enough. Being free of 
   any warnings, on any version of any compiler, is simply not feasible.
@@ -3092,6 +3093,12 @@ typedef struct VmaAllocationInfo {
     /** \brief Size of this allocation, in bytes.
 
     It never changes, unless allocation is lost.
+
+    \note Allocation size returned in this variable may be greater than the size
+    requested for the resource e.g. as `VkBufferCreateInfo::size`. Whole size of the
+    allocation is accessible for operations on memory e.g. using a pointer after
+    mapping with vmaMapMemory(), but operations on the resource e.g. using
+    `vkCmdCopyBuffer` must be limited to the size of the resource.
     */
     VkDeviceSize size;
     /** \brief Pointer to the beginning of this allocation as mapped data.
@@ -4626,10 +4633,11 @@ static inline void VmaPnextChainPushFront(MainT* mainStruct, NewT* newStruct)
 
 static void* VmaMalloc(const VkAllocationCallbacks* pAllocationCallbacks, size_t size, size_t alignment)
 {
+    void* result = VMA_NULL;
     if((pAllocationCallbacks != VMA_NULL) &&
         (pAllocationCallbacks->pfnAllocation != VMA_NULL))
     {
-        return (*pAllocationCallbacks->pfnAllocation)(
+        result = (*pAllocationCallbacks->pfnAllocation)(
             pAllocationCallbacks->pUserData,
             size,
             alignment,
@@ -4637,8 +4645,10 @@ static void* VmaMalloc(const VkAllocationCallbacks* pAllocationCallbacks, size_t
     }
     else
     {
-        return VMA_SYSTEM_ALIGNED_MALLOC(size, alignment);
+        result = VMA_SYSTEM_ALIGNED_MALLOC(size, alignment);
     }
+    VMA_ASSERT(result != VMA_NULL && "CPU memory allocation failed.");
+    return result;
 }
 
 static void VmaFree(const VkAllocationCallbacks* pAllocationCallbacks, void* ptr)
