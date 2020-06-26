@@ -1,35 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-    <Type Name="alimer::Array&lt;*,*&gt;">
-        <DisplayString Condition="$T2 == 0">[{$T2}] {{}}</DisplayString>
-        <DisplayString Condition="$T2 == 1">[{$T2}] {{ {data_} }}</DisplayString>
-        <DisplayString Condition="$T2 == 2">[{$T2}] {{ {data_}, {*(data_+1)} }}</DisplayString>
-        <DisplayString Condition="$T2 == 3">[{$T2}] {{ {data_}, {*(data_+1)}, {*(data_+2)} }}</DisplayString>
-        <DisplayString Condition="$T2 == 4">[{$T2}] {{ {data_}, {*(data_+1)}, {*(data_+2)}, {*(data_+3)} }}</DisplayString>
-        <DisplayString Condition="$T2 == 5">[{$T2}] {{ {data_}, {*(data_+1)}, {*(data_+2)}, {*(data_+3)}, {*(data_+4)} }}</DisplayString>
-        <DisplayString Condition="$T2 == 6">[{$T2}] {{ {data_}, {*(data_+1)}, {*(data_+2)}, {*(data_+3)}, {*(data_+4)}, {*(data_+5)} }}</DisplayString>
-        <DisplayString Condition="$T2 &gt; 6">[{$T2}] {{ {data_}, {*(data_+1)}, {*(data_+2)}, {*(data_+3)}, {*(data_+4)}, {*(data_+5)}, ... }}</DisplayString>
-        <Expand>
-            <Item Name="[size]">$T2</Item>
-            <ArrayItems>
-                <Size>$T2</Size>
-                <ValuePointer>data_</ValuePointer>
-            </ArrayItems>
-        </Expand>
-    </Type>
-
-    <Type Name="alimer::ArrayView&lt;*&gt;">
-        <DisplayString Condition="(end_ - begin_) == 0">Empty</DisplayString>
-        <DisplayString Condition="(end_ - begin_) != 0">size = {end_ - begin_}</DisplayString>
-        <Expand>
-            <Item Name="[size]" ExcludeView="simple">(end_ - begin_)</Item>
-            <ArrayItems>
-                <Size>(end_ - begin_)</Size>
-                <ValuePointer>($T1*)begin_</ValuePointer>
-            </ArrayItems>
-        </Expand>
-    </Type>
-
     <Type Name="alimer::Vector&lt;*&gt;">
         <DisplayString Condition="size_ == 0">Empty</DisplayString>
         <DisplayString Condition="size_ == 1">[{size_}] {{ {data_[0]} }}</DisplayString>

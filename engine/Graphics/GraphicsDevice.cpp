@@ -25,6 +25,8 @@
 #include "Core/Assert.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
+#include <algorithm>
+#include "imgui_impl_glfw.h"
 
 #if defined(ALIMER_VULKAN)
 #include "Graphics/Vulkan/VulkanGraphicsDevice.h"
@@ -36,6 +38,14 @@
 
 namespace alimer
 {
+    GraphicsDevice::GraphicsDevice(const Desc& desc)
+        : desc{ desc }
+        , colorFormat{ desc.colorFormat }
+        , depthStencilFormat{ desc.depthStencilFormat }
+    {
+       
+    }
+
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()
     {
         static std::set<BackendType> availableDrivers;
@@ -62,7 +72,7 @@ namespace alimer
         return availableDrivers;
     }
 
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(bool enableValidationLayer, PowerPreference powerPreference)
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(WindowHandle window, const Desc& desc)
     {
         BackendType backend = BackendType::Count;
 
@@ -85,7 +95,7 @@ namespace alimer
         case BackendType::Vulkan:
             if (VulkanGraphicsDevice::IsAvailable())
             {
-                device = std::make_unique<VulkanGraphicsDevice>(enableValidationLayer, powerPreference);
+                device = std::make_unique<VulkanGraphicsDevice>(window, desc);
                 LOG_INFO("Using Vulkan driver");
             }
             break;
@@ -94,7 +104,7 @@ namespace alimer
         case BackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable())
             {
-                device = std::make_unique<D3D12GraphicsDevice>(enableValidationLayer, powerPreference);
+                device = std::make_unique<D3D12GraphicsDevice>(window, desc);
                 LOG_INFO("Using Direct3D12 driver");
             }
             break;
@@ -108,16 +118,121 @@ namespace alimer
         return device;
     }
 
+    void GraphicsDevice::BeginFrame()
+    {
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
+
+        if (!BeginFrameImpl()) {
+            return;
+        }
+
+        ImGuiIO& io = ImGui::GetIO();
+        IM_ASSERT(io.Fonts->IsBuilt());
+
+        // Start the Dear ImGui frame
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // Now the frame is active again.
+        frameActive = true;
+    }
+
+    void GraphicsDevice::EndFrame()
+    {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
+
+        ImGui::Render();
+        EndFrameImpl();
+
+        // Update and Render additional Platform Windows
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault(nullptr, nullptr);
+        }
+
+        // Frame is not active anymore
+        frameActive = false;
+    }
+
+    void GraphicsDevice::Resize(uint32_t width, uint32_t height)
+    {
+        if ((width != size.width || height != size.height) && width > 0 && height > 0)
+        {
+            size.width = width;
+            size.height = height;
+        }
+    }
+
+
+    static inline uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0, uint32_t depth = 0)
+    {
+        uint32_t levels = 1;
+        for (uint32_t size = max(max(width, height), depth); size > 1; levels += 1)
+        {
+            size /= 2;
+        }
+
+        return levels;
+    }
+
+    RefPtr<Texture> GraphicsDevice::CreateTexture2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* initialData)
+    {
+        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
+        const bool hasInitData = initialData != nullptr;
+        if (autoGenerateMipmaps && hasInitData)
+        {
+            usage |= TextureUsage::RenderTarget | TextureUsage::GenerateMipmaps;
+        }
+
+        TextureDescription desc = {};
+        desc.type = TextureType::Type2D;
+        desc.format = format;
+        desc.usage = usage;
+        desc.width = width;
+        desc.height = height;
+        desc.depth = 1;
+        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
+        desc.arraySize = arraySize;
+        desc.sampleCount = TextureSampleCount::Count1;
+
+        return CreateTexture(desc, initialData);
+    }
+
+    RefPtr<Texture> GraphicsDevice::CreateTextureCube(uint32_t size, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* initialData)
+    {
+        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
+        const bool hasInitData = initialData != nullptr;
+        if (autoGenerateMipmaps && hasInitData)
+        {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        TextureDescription desc = {};
+        desc.type = TextureType::TypeCube;
+        desc.format = format;
+        desc.usage = usage;
+        desc.width = size;
+        desc.height = size;
+        desc.depth = 1;
+        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(size) : mipLevels;
+        desc.arraySize = arraySize;
+        desc.sampleCount = TextureSampleCount::Count1;
+
+        return CreateTexture(desc, initialData);
+    }
+
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.Push(resource);
+        trackedResources.push_back(resource);
     }
 
     void GraphicsDevice::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.Remove(resource);
+        trackedResources.erase(std::remove(trackedResources.begin(), trackedResources.end(), resource), trackedResources.end());
     }
 
     void GraphicsDevice::ReleaseTrackedResources()
@@ -126,12 +241,22 @@ namespace alimer
             std::lock_guard<std::mutex> lock(trackedResourcesMutex);
 
             // Release all GPU objects that still exist
-            for (auto i = trackedResources.begin(); i != trackedResources.end(); ++i)
+            for (auto resource : trackedResources)
             {
-                (*i)->Release();
+                resource->Release();
             }
 
-            trackedResources.Clear();
+            trackedResources.clear();
         }
+    }
+
+    Texture* GraphicsDevice::GetBackbufferTexture() const
+    {
+        return backbufferTextures[backbufferIndex].Get();
+    }
+
+    Texture* GraphicsDevice::GetDepthStencilTexture() const
+    {
+        return depthStencilTexture.Get();
     }
 }

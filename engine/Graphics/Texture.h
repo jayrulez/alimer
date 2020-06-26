@@ -30,11 +30,9 @@ namespace alimer
     class ALIMER_API Texture : public GraphicsResource
     {
     public:
-        Texture(GraphicsDevice& device);
+        Texture(GraphicsDevice& device, const TextureDescription& desc);
 
-        bool DefineExternal(uint64_t externalHandle, const TextureDescription& desc);
-        bool Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
-        bool DefineCube(uint32_t size, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
+        
 
         /**
         * Get the texture type.

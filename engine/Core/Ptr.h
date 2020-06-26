@@ -312,10 +312,40 @@ namespace alimer
         {
             return InternalRelease();
         }
+
+        /// Perform a static cast from a shared pointer of another type.
+        template <class U> void StaticCast(const RefPtr<U>& rhs)
+        {
+            RefPtr<T> copy(static_cast<T*>(rhs.Get()));
+            Swap(copy);
+        }
+
+        /// Perform a dynamic cast from a shared pointer of another type.
+        template <class U> void DynamicCast(const RefPtr<U>& rhs)
+        {
+            RefPtr<T> copy(dynamic_cast<T*>(rhs.Get()));
+            Swap(copy);
+        }
     };
 
     template <typename T> inline void Swap(RefPtr<T>& a, RefPtr<T>& b)
     {
         a.Swap(b);
+    }
+
+    /// Perform a static cast from one shared pointer type to another.
+    template <class T, class U> RefPtr<T> StaticCast(const RefPtr<U>& ptr)
+    {
+        RefPtr<T> ret;
+        ret.StaticCast(ptr);
+        return ret;
+    }
+
+    /// Perform a dynamic cast from one weak pointer type to another.
+    template <class T, class U> RefPtr<T> DynamicCast(const RefPtr<U>& ptr)
+    {
+        RefPtr<T> ret;
+        ret.DynamicCast(ptr);
+        return ret;
     }
 }

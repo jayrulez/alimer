@@ -22,7 +22,6 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
-#include "graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
 
@@ -45,6 +44,7 @@ namespace alimer
         gameSystems.Clear();
         graphicsDevice.reset();
         window.Close();
+        ImGui::DestroyContext();
         PlatformDestroy();
     }
 
@@ -53,24 +53,64 @@ namespace alimer
         // Create main window.
         if (!headless)
         {
+            // Init ImGui
+            IMGUI_CHECKVERSION();
+            ImGui::CreateContext();
+
+            ImGuiIO& io = ImGui::GetIO();
+            io.UserData = this;
+            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+            //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+            //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+            //io.ConfigViewportsNoAutoMerge = true;
+            //io.ConfigViewportsNoTaskBarIcon = true;
+
+            // Setup Dear ImGui style
+            ImGui::StyleColorsDark();
+            //ImGui::StyleColorsClassic();
+
+            io.Fonts->AddFontDefault();
+            //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
+
+
+          // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+            ImGuiStyle& style = ImGui::GetStyle();
+            // Color scheme
+            style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+            style.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+            style.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_HeaderActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_HeaderHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
+            style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+            style.Colors[ImGuiCol_SliderGrab] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+            style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
+            style.Colors[ImGuiCol_FrameBgActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
+            style.Colors[ImGuiCol_Button] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+            style.Colors[ImGuiCol_ButtonHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+            style.Colors[ImGuiCol_ButtonActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+
+            // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            {
+                style.WindowRounding = 0.0f;
+                style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+            }
+
             window.Create(
                 config.windowTitle,
                 config.windowSize.width, config.windowSize.height,
                 WindowFlags::Resizable
             );
 
+            GraphicsDevice::Desc graphicsDesc = {};
+            graphicsDesc.colorFormat = PixelFormat::BGRA8Unorm;
+            //graphicsDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
 
-            /*GraphicsDevice::Desc graphicsDesc = {};
-
-            SwapChainDesc swapChainDesc = {};
-            swapChainDesc.windowHandle = window.GetHandle();
-            swapChainDesc.width = window.GetSize().width;
-            swapChainDesc.height = window.GetSize().height;
-            swapChainDesc.isFullscreen = window.IsFullscreen();
-            swapChainDesc.colorFormat = PixelFormat::BGRA8Unorm;
-            //swapChainDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
-
-            graphicsDevice = GraphicsDevice::Create();
+            graphicsDevice = GraphicsDevice::Create(static_cast<WindowHandle>(window.GetHandle()), graphicsDesc);
             if (!graphicsDevice) {
                 headless = true;
             }
@@ -155,7 +195,7 @@ namespace alimer
     {
         time.Tick([&]() {
             Update(time);
-        });
+            });
 
         Render();
     }

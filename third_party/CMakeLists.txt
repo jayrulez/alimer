@@ -25,10 +25,18 @@ set(IMGUI_FILES
     "${IMGUI_DIR}/imgui_internal.h"
     "${IMGUI_DIR}/imstb_rectpack.h"
     "${IMGUI_DIR}/imstb_textedit.h"
-    "${IMGUI_DIR}/imstb_truetype.h")
+    "${IMGUI_DIR}/imstb_truetype.h"
+    
+    )
 
-add_library(imgui STATIC ${IMGUI_FILES})
+set(IMGUI_IMPL_FILES
+    "${IMGUI_DIR}/imgui_impl_glfw.h"
+    "${IMGUI_DIR}/imgui_impl_glfw.cpp"
+    )
+
+add_library(imgui STATIC ${IMGUI_FILES} ${IMGUI_IMPL_FILES})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR})
+target_link_libraries(imgui PRIVATE glfw)
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
 
 if (ALIMER_VULKAN)

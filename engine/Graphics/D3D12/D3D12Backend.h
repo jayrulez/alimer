@@ -31,6 +31,8 @@
 #define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 
+#include <wrl/client.h>
+
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
@@ -38,15 +40,18 @@
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
-#define VHR(hr) if (FAILED(hr)) { ALIMER_ASSERT_FAIL("Failure with HRESULT of %08X", static_cast<unsigned int>(hr)); }
-#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
-
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
     extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
+    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
+    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
+    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
 #endif
+
+    class D3D12GraphicsDevice;
 
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(HeapType heapType)
     {
@@ -129,5 +134,15 @@ namespace alimer
         D3D12_RESOURCE_STATES state;
         D3D12_RESOURCE_STATES transitioningState;
         D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
+    };
+
+    struct DescriptorHeap
+    {
+        ID3D12DescriptorHeap* handle;
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
+        D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
+        uint32_t Size;
+        uint32_t Capacity;
+        uint32_t DescriptorSize;
     };
 }

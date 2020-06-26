@@ -102,7 +102,8 @@ namespace alimer
         None = 0,
         Sampled = (1 << 0),
         Storage = (1 << 1),
-        RenderTarget = (1 << 2)
+        RenderTarget = (1 << 2),
+        GenerateMipmaps = (1 << 3),
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 

@@ -53,33 +53,12 @@ namespace alimer
             return false;
         }
 
-        //gui->NewFrame(mainWindow->GetSize().width, mainWindow->GetSize().height, 1.0f / 60.0f);
-
         return true;
     }
 
     void Editor::Draw(const GameTime& gameTime)
     {
         Application::Draw(gameTime);
-
-        /*VGPUCommandBuffer commandBuffer = vgpuBeginCommandBuffer("Frame", false);
-
-        VGPURenderPassBeginDescription beginInfo = {};
-        beginInfo.framebuffer = vgpu_framebuffer_get_default();
-        beginInfo.colorAttachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
-        vgpuBeginRenderPass(commandBuffer, &beginInfo);
-        vgpuEndRenderPass(commandBuffer);*/
-
-        /*auto& context = graphicsDevice->BeginContext("Frame");
-        RenderPassDescriptor renderPass = {};
-        renderPass.colorAttachments[0].texture = mainView->GetCurrentColorTexture();
-        renderPass.colorAttachments[0].clearColor = clear_color;
-        context.BeginRenderPass(&renderPass);
-        context.EndRenderPass();
-        gui->Render(context);
-        context.Flush(true);*/
-
-        /* TODO:GUI
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
@@ -117,8 +96,6 @@ namespace alimer
                 show_another_window = false;
             ImGui::End();
         }
-        gui->Render();
-        */
     }
 }
 

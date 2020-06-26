@@ -25,82 +25,11 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device)
+    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
         : GraphicsResource(device, HeapType::Default)
+        , desc{ desc }
     {
 
-    }
-
-    static inline uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0, uint32_t depth = 0)
-    {
-        uint32_t levels = 1;
-        for (uint32_t size = max(max(width, height), depth); size > 1; levels += 1)
-        {
-            size /= 2;
-        }
-
-        return levels;
-    }
-
-    bool Texture::DefineExternal(uint64_t externalHandle, const TextureDescription& desc)
-    {
-        ALIMER_ASSERT(externalHandle != 0);
-
-        Destroy();
-
-        this->desc = desc;
-        //handle = device.CreateTexture(desc, externalHandle, nullptr, false);
-        return false;
-    }
-
-    bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
-    {
-        Destroy();
-
-        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
-        const bool hasInitData = pInitData != nullptr;
-        if (autoGenerateMipmaps && hasInitData)
-        {
-            usage |= TextureUsage::RenderTarget;
-        }
-
-        desc.type = TextureType::Type2D;
-        desc.format = format;
-        desc.usage = usage;
-        desc.width = width;
-        desc.height = height;
-        desc.depth = 1;
-        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
-        desc.arraySize = arraySize;
-        desc.sampleCount = TextureSampleCount::Count1;
-
-        //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
-        return false;
-    }
-
-    bool Texture::DefineCube(uint32_t size, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
-    {
-        Destroy();
-
-        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
-        const bool hasInitData = pInitData != nullptr;
-        if (autoGenerateMipmaps && hasInitData)
-        {
-            usage |= TextureUsage::RenderTarget;
-        }
-
-        desc.type = TextureType::TypeCube;
-        desc.format = format;
-        desc.usage = usage;
-        desc.width = size;
-        desc.height = size;
-        desc.depth = 1;
-        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(size) : mipLevels;
-        desc.arraySize = arraySize;
-        desc.sampleCount = TextureSampleCount::Count1;
-
-        //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
-        return false;
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const

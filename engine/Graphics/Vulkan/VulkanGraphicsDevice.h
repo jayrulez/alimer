@@ -32,7 +32,7 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference, bool headless = false);
+        VulkanGraphicsDevice(void* window, const Desc& desc);
         ~VulkanGraphicsDevice() override;
 
         const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
@@ -40,8 +40,9 @@ namespace alimer
     private:
         void Shutdown() override;
         void WaitForGPU() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
+        bool BeginFrameImpl() override;
+        void EndFrameImpl() override;
+        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };

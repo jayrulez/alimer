@@ -22,22 +22,32 @@
 
 #pragma once
 
-#include "graphics/SwapChain.h"
-#include "Math/Color.h"
-#include <memory>
+#include "Core/Ptr.h"
+#include "Graphics/Texture.h"
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <vector>
 #include <set>
 #include <mutex>
+#include <memory>
 
 namespace alimer
 {
+#if ALIMER_PLATFORM_WINDOWS
+    using WindowHandle = HWND;
+#elif ALIMER_PLATFORM_UWP
+    using WindowHandle = Platform::Agile<Windows::UI::Core::CoreWindow>;
+#elif ALIMER_PLATFORM_ANDROID
+    using WindowHandle = ANativeWindow*;
+#else
+    using WindowHandle = void*;
+#endif
+
 #if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
 #   define DEFAULT_ENABLE_DEBUG_LAYER true
 #else
 #   define DEFAULT_ENABLE_DEBUG_LAYER false
 #endif
-
-    class Texture;
-    using CommandList = uint8_t;
 
     class ALIMER_API GraphicsDeviceEvents
     {
@@ -55,33 +65,73 @@ namespace alimer
         friend class GraphicsResource;
 
     public:
+        struct Desc
+        {
+            BackendType preferredBackendType = BackendType::Count;
+            bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER;
+            PowerPreference powerPreference = PowerPreference::Default;
+
+            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;  
+            bool enableVsync = true;                                     
+        };
+
         virtual ~GraphicsDevice() = default;
 
         static std::set<BackendType> GetAvailableBackends();
-
-        static std::unique_ptr<GraphicsDevice> Create(bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER, PowerPreference powerPreference = PowerPreference::Default);
+        static std::unique_ptr<GraphicsDevice> Create(WindowHandle window, const Desc& desc);
 
         virtual void WaitForGPU() = 0;
-        virtual bool BeginFrame() = 0;
-        virtual void EndFrame() = 0;
+        void BeginFrame();
+        void EndFrame();
 
+        void Resize(uint32_t width, uint32_t height);
+
+        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
+        RefPtr<Texture> CreateTexture2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* initialData = nullptr);
+        RefPtr<Texture> CreateTextureCube(uint32_t size, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* initialData = nullptr);
+
+        /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
+
+        /// Get the current backbuffer texture.
+        Texture* GetBackbufferTexture() const;
+
+        /// Get the depth stencil texture.
+        Texture* GetDepthStencilTexture() const;
 
     private:
         virtual void Shutdown() = 0;
+        virtual bool BeginFrameImpl() { return true; }
+        virtual void EndFrameImpl() = 0;
 
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice() = default;
+        GraphicsDevice(const Desc& desc);
         void ReleaseTrackedResources();
 
         GraphicsDeviceCaps caps{};
+        Desc desc;
+        SizeU size{};
+        float dpiScale = 1.0f;
+        PixelFormat colorFormat;
+        PixelFormat depthStencilFormat;
+
         std::mutex trackedResourcesMutex;
-        Vector<GraphicsResource*> trackedResources;
+        std::vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
-        RefPtr<SwapChain> mainSwapChain;
+
+        /// Current active frame index
+        uint32_t frameIndex{ 0 };
+
+        /// Whether a frame is active or not
+        bool frameActive{ false };
+
+        uint32_t backbufferIndex{ 0 };
+        std::vector<RefPtr<Texture>> backbufferTextures;
+        RefPtr<Texture> depthStencilTexture;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

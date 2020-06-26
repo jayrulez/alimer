@@ -32,6 +32,8 @@
 
 namespace alimer
 {
+    class VulkanGraphicsDevice;
+
     const char* ToString(VkResult result);
 
     struct QueueFamilyIndices {

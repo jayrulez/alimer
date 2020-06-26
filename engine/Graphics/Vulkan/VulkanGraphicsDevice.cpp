@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "VulkanGraphicsDevice.h"
+
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
@@ -325,15 +326,12 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsDevice::VulkanGraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference, bool headless)
+    VulkanGraphicsDevice::VulkanGraphicsDevice(void* window, const Desc& desc)
+        : GraphicsDevice(desc)
     {
         ALIMER_VERIFY(IsAvailable());
 
-        VkResult result = volkInitialize();
-        if (result)
-        {
-            VK_LOG_ERROR(result, "Failed to initialize volk.");
-        }
+        const bool headless = window == nullptr;
 
         uint32_t apiVersion = volkGetInstanceVersion();
         if (apiVersion >= VK_API_VERSION_1_1) {
@@ -406,13 +404,13 @@ namespace alimer
             }
 
 
-            if (enableValidationLayer && instanceExts.debugUtils)
+            if (desc.enableValidationLayer && instanceExts.debugUtils)
             {
                 enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             }
 
             // Layers
-            if (enableValidationLayer)
+            if (desc.enableValidationLayer)
             {
                 uint32_t instanceLayerCount;
                 VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
@@ -435,7 +433,7 @@ namespace alimer
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-            if (enableValidationLayer)
+            if (desc.enableValidationLayer)
             {
                 if (instanceExts.debugUtils)
                 {
@@ -456,7 +454,7 @@ namespace alimer
             createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
 
             // Create the Vulkan instance.
-            result = vkCreateInstance(&createInfo, nullptr, &instance);
+            VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
 
             if (result != VK_SUCCESS)
             {
@@ -465,7 +463,7 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (enableValidationLayer && instanceExts.debugUtils)
+            if (desc.enableValidationLayer && instanceExts.debugUtils)
             {
                 result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
                 if (result != VK_SUCCESS)
@@ -519,13 +517,13 @@ namespace alimer
                 switch (physical_device_props.deviceType) {
                 case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
                     score += 100U;
-                    if (powerPreference == PowerPreference::Default || powerPreference == PowerPreference::HighPerformance) {
+                    if (desc.powerPreference == PowerPreference::Default || desc.powerPreference == PowerPreference::HighPerformance) {
                         score += 1000u;
                     }
                     break;
                 case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
                     score += 90U;
-                    if (powerPreference == PowerPreference::LowPower) {
+                    if (desc.powerPreference == PowerPreference::LowPower) {
                         score += 1000u;
                     }
                     break;
@@ -726,7 +724,7 @@ namespace alimer
             createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledDeviceExtensions.size());
             createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
 
-            result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+            VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
             if (result != VK_SUCCESS) {
                 return;
             }
@@ -787,13 +785,31 @@ namespace alimer
         VK_CHECK(deviceTable.vkDeviceWaitIdle(device));
     }
 
-    bool VulkanGraphicsDevice::BeginFrame()
+    bool VulkanGraphicsDevice::BeginFrameImpl()
     {
         return true;
     }
 
-    void VulkanGraphicsDevice::EndFrame()
+    void VulkanGraphicsDevice::EndFrameImpl()
     {
+        /*VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &semaphore;
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = &vk_swapchain;
+        presentInfo.pImageIndices = &active_frame_index;
+
+        VkResult result = queue.present(present_info);
+
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            handle_surface_changes();
+        }*/
+    }
+
+    RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    {
+        return nullptr;
     }
 }

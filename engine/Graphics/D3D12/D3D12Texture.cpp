@@ -20,19 +20,17 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
-#include "D3D12MemAlloc.h"
 
 namespace alimer
 {
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
         : Texture(*device, desc)
-        , dxgiFormat(ToDXGIFormat(desc.format))
+        , dxgiFormat(ToDXGIFormatWitUsage(desc.format, desc.usage))
     {
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = GetD3D12HeapType(GraphicsResourceUsage::Default);
+        allocationDesc.HeapType = GetD3D12HeapType(heapType);
 
         D3D12_RESOURCE_DESC resourceDesc = {};
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -40,11 +38,11 @@ namespace alimer
         resourceDesc.Width = desc.width;
         resourceDesc.Height = desc.height;
         resourceDesc.DepthOrArraySize = desc.depth;
-        resourceDesc.MipLevels = desc.mipLevelCount;
+        resourceDesc.MipLevels = desc.mipLevels;
         resourceDesc.Format = dxgiFormat;
         resourceDesc.SampleDesc.Count = static_cast<UINT>(desc.sampleCount);
         resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
         if (any(desc.usage & TextureUsage::Storage))
@@ -65,7 +63,7 @@ namespace alimer
             pClearValue = &clearValue;
         }
 
-        state = GetD3D12ResourceState(GraphicsResourceUsage::Default);
+        state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(heapType);
         if (any(desc.usage & TextureUsage::RenderTarget))
         {
             if (IsDepthStencilFormat(desc.format))
@@ -128,12 +126,9 @@ namespace alimer
         }
 
         D3D12GraphicsDevice* d3d12GraphicsDevice = static_cast<D3D12GraphicsDevice*>(&device);
-        D3D12_CPU_DESCRIPTOR_HANDLE handle = d3d12GraphicsDevice->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+        D3D12_CPU_DESCRIPTOR_HANDLE handle = d3d12GraphicsDevice->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
         d3d12GraphicsDevice->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, handle);
         rtvs[view] = handle;
         return handle;
     }
 }
-
-
-#endif // TODO

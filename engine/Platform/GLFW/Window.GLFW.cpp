@@ -32,9 +32,23 @@
 #   define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
+#include "imgui_impl_glfw.h"
 
 namespace alimer
 {
+    namespace
+    {
+        static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
+        {
+            return glfwGetClipboardString((GLFWwindow*)user_data);
+        }
+
+        static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
+        {
+            glfwSetClipboardString((GLFWwindow*)user_data, text);
+        }
+    }
+
     bool Window::Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags)
     {
         this->title = title;
@@ -98,6 +112,10 @@ namespace alimer
         glfwSetWindowUserPointer(handle, this);
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
+
+        // Init imgui stuff
+        ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
+
         return true;
     }
 
