@@ -27,38 +27,85 @@
 #include "Graphics/Texture.h"
 
 #if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
-#elif defined(ALIMER_D3D12)
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#endif
+
+#if defined(ALIMER_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference)
-        : impl(new GraphicsImpl(enableValidationLayer, powerPreference))
+    std::set<BackendType> GraphicsDevice::GetAvailableBackends()
     {
+        static std::set<BackendType> availableDrivers;
 
+        if (availableDrivers.empty())
+        {
+            availableDrivers.insert(BackendType::Null);
+
+#if defined(ALIMER_D3D12)
+            if (D3D12GraphicsDevice::IsAvailable())
+            {
+                availableDrivers.insert(BackendType::Direct3D12);
+            }
+#endif
+
+#if defined(ALIMER_VULKAN)
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                availableDrivers.insert(BackendType::Vulkan);
+            }
+#endif
+        }
+
+        return availableDrivers;
     }
 
-    GraphicsDevice::~GraphicsDevice()
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(bool enableValidationLayer, PowerPreference powerPreference)
     {
-        Shutdown();
-        SafeDelete(impl);
-    }
+        BackendType backend = BackendType::Count;
 
-    void GraphicsDevice::Shutdown()
-    {
-        
-    }
+        if (backend == BackendType::Count)
+        {
+            auto availableDrivers = GetAvailableBackends();
 
-    void GraphicsDevice::BeginFrame()
-    {
+            if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
+                backend = BackendType::Direct3D12;
+            else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
+                backend = BackendType::Vulkan;
+            else
+                backend = BackendType::Null;
+        }
 
-    }
+        std::unique_ptr<GraphicsDevice> device = nullptr;
+        switch (backend)
+        {
+#if defined(ALIMER_VULKAN)
+        case BackendType::Vulkan:
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                device = std::make_unique<VulkanGraphicsDevice>(enableValidationLayer, powerPreference);
+                LOG_INFO("Using Vulkan driver");
+            }
+            break;
+#endif
+#if defined(ALIMER_D3D12)
+        case BackendType::Direct3D12:
+            if (D3D12GraphicsDevice::IsAvailable())
+            {
+                device = std::make_unique<D3D12GraphicsDevice>(enableValidationLayer, powerPreference);
+                LOG_INFO("Using Direct3D12 driver");
+            }
+            break;
+#endif
 
-    void GraphicsDevice::EndFrame()
-    {
+        default:
+            // TODO: Create Null backend
+            break;
+        }
 
+        return device;
     }
 
     void GraphicsDevice::TrackResource(GraphicsResource* resource)

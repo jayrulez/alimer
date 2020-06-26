@@ -22,21 +22,27 @@
 
 #pragma once
 
+#include "graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class GraphicsImpl final
+    class VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
-        GraphicsImpl(bool enableValidationLayer, PowerPreference powerPreference, bool headless = false);
-        ~GraphicsImpl();
+        static bool IsAvailable();
 
-        void WaitForGPU();
+        VulkanGraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference, bool headless = false);
+        ~VulkanGraphicsDevice() override;
 
         const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
 
     private:
+        void Shutdown() override;
+        void WaitForGPU() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
+
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
 

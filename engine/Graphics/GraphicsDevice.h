@@ -24,6 +24,8 @@
 
 #include "graphics/SwapChain.h"
 #include "Math/Color.h"
+#include <memory>
+#include <set>
 #include <mutex>
 
 namespace alimer
@@ -47,36 +49,34 @@ namespace alimer
         ~GraphicsDeviceEvents() = default;
     };
 
-    class GraphicsImpl;
-
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice final
+    class ALIMER_API GraphicsDevice
     {
         friend class GraphicsResource;
 
     public:
-        GraphicsDevice(bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER, PowerPreference powerPreference = PowerPreference::Default);
-        ~GraphicsDevice();
+        virtual ~GraphicsDevice() = default;
 
-        /// Return graphics implementation, which holds the actual API-specific resources.
-        GraphicsImpl* GetImpl() const { return impl; }
+        static std::set<BackendType> GetAvailableBackends();
 
-        void BeginFrame();
-        void EndFrame();
+        static std::unique_ptr<GraphicsDevice> Create(bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER, PowerPreference powerPreference = PowerPreference::Default);
+
+        virtual void WaitForGPU() = 0;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     private:
-        void Shutdown();
+        virtual void Shutdown() = 0;
 
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        
+        GraphicsDevice() = default;
         void ReleaseTrackedResources();
 
-        GraphicsImpl* impl;
         GraphicsDeviceCaps caps{};
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;

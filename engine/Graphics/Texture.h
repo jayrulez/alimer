@@ -27,17 +27,10 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture final : public GraphicsResource
+    class ALIMER_API Texture : public GraphicsResource
     {
     public:
-        Texture(GraphicsDevice & device);
-        Texture(const Texture&) = delete;
-        Texture(Texture&& other) noexcept;
-        Texture& operator=(const Texture&) = delete;
-        Texture& operator=(Texture&&) = delete;
-        ~Texture();
-
-        void Destroy() override;
+        Texture(GraphicsDevice& device);
 
         bool DefineExternal(uint64_t externalHandle, const TextureDescription& desc);
         bool Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* pInitData = nullptr);
@@ -112,13 +105,7 @@ namespace alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
-        TextureHandle GetHandle() const
-        {
-            return handle;
-        }
-
     private:
         TextureDescription desc{};
-        TextureHandle handle{ kInvalidHandle };
     };
 }

@@ -26,16 +26,16 @@
 
 namespace alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
-        : SwapChain(*device, desc)
-        , device(device)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice& device, const SwapChainDescription& desc)
+        : SwapChain(desc)
+        , device{ device }
     {
         // Flip mode doesn't support SRGB formats
         dxgiColorFormat = ToDXGIFormat(srgbToLinearFormat(desc.colorFormat));
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = width;
-        swapChainDesc.Height = height;
+        swapChainDesc.Width = desc.width;
+        swapChainDesc.Height = desc.height;
         swapChainDesc.Format = dxgiColorFormat;
         swapChainDesc.Stereo = FALSE;
         swapChainDesc.SampleDesc.Count = 1;
@@ -45,7 +45,7 @@ namespace alimer
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        if (device->IsTearingSupported())
+        if (device.IsTearingSupported())
         {
             swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
@@ -61,8 +61,8 @@ namespace alimer
             return;
         }
 
-        VHR(device->GetDXGIFactory()->CreateSwapChainForHwnd(
-            device->GetDirectCommandQueue(),
+        VHR(device.GetDXGIFactory()->CreateSwapChainForHwnd(
+            device.GetDirectCommandQueue(),
             hwnd,
             &swapChainDesc,
             &fsSwapChainDesc,
@@ -71,7 +71,7 @@ namespace alimer
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        VHR(device->GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+        VHR(device.GetDXGIFactory()->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
 #else
         VHR(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
             device->GetDirectCommandQueue(),
@@ -109,7 +109,7 @@ namespace alimer
         SAFE_RELEASE(swapChain);
     }
 
-    void D3D12SwapChain::Present()
+    /*void D3D12SwapChain::Present()
     {
         HRESULT hr = swapChain->Present(syncInterval, presentFlags);
 
@@ -127,15 +127,15 @@ namespace alimer
     Texture* D3D12SwapChain::GetCurrentColorTexture() const
     {
         return colorTextures[backbufferIndex];
-    }
+    }*/
 
     void D3D12SwapChain::CreateRenderTargets()
     {
         for (uint32_t index = 0; index < kNumBackBuffers; ++index)
         {
-            ID3D12Resource* backbuffer;
-            VHR(swapChain->GetBuffer(index, IID_PPV_ARGS(&backbuffer)));
-            colorTextures[index] = D3D12Texture::CreateFromExternal(device, backbuffer, colorFormat, D3D12_RESOURCE_STATE_PRESENT);
+            //ID3D12Resource* backbuffer;
+            //VHR(swapChain->GetBuffer(index, IID_PPV_ARGS(&backbuffer)));
+            //colorTextures[index] = D3D12Texture::CreateFromExternal(device, backbuffer, colorFormat, D3D12_RESOURCE_STATE_PRESENT);
         }
 
         backbufferIndex = swapChain->GetCurrentBackBufferIndex();

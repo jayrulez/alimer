@@ -56,17 +56,18 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(Window* window, const Desc& desc)
-        : GraphicsDevice(window, desc)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference)
+        : powerPreference{ powerPreference }
     {
+        ALIMER_VERIFY(IsAvailable());
 
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (desc.enableDebugLayer)
+        if (enableValidationLayer)
         {
-            ID3D12Debug* debugController;
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+            RefPtr<ID3D12Debug> debugController;
+            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
             {
                 debugController->EnableDebugLayer();
 
@@ -77,8 +78,6 @@ namespace alimer
                     //d3d12Debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
                     d3d12Debug1->Release();
                 }
-
-                debugController->Release();
             }
             else
             {
@@ -145,7 +144,7 @@ namespace alimer
         d3dDevice->SetName(L"Alimer Device");
 
         // Configure debug device (if active).
-        if (desc.enableDebugLayer)
+        if (enableValidationLayer)
         {
             ID3D12InfoQueue* d3dInfoQueue;
             if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
@@ -302,7 +301,7 @@ namespace alimer
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == GPUPowerPreference::LowPower) {
+            if (powerPreference == PowerPreference::LowPower) {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
 
@@ -400,14 +399,14 @@ namespace alimer
             VHR(dxgiAdapter->GetDesc1(&desc));
 
             caps.backendType = BackendType::Direct3D12;
-            caps.vendorId = desc.VendorId;
+            caps.vendorId = static_cast<GPUVendorId>(desc.VendorId);
             caps.deviceId = desc.DeviceId;
 
             std::wstring deviceName(desc.Description);
             caps.adapterName = alimer::ToUtf8(deviceName);
 
             // Detect adapter type.
-            if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+            /*if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
             {
                 caps.adapterType = GPUAdapterType::CPU;
             }
@@ -416,7 +415,7 @@ namespace alimer
                 VHR(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
 
                 caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
-            }
+            }*/
 
             // Determine maximum supported feature level for this device
             static const D3D_FEATURE_LEVEL s_featureLevels[] =
@@ -539,12 +538,17 @@ namespace alimer
         }
     }
 
+    void D3D12GraphicsDevice::WaitForGPU()
+    {
+
+    }
+
     bool D3D12GraphicsDevice::BeginFrame()
     {
         return true;
     }
 
-    void D3D12GraphicsDevice::Present()
+    void D3D12GraphicsDevice::EndFrame()
     {
     }
 

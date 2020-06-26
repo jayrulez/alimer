@@ -74,8 +74,9 @@ if (ALIMER_VULKAN)
     target_link_libraries(volk PUBLIC vulkan)
     target_include_directories(volk PUBLIC ${VOLK_DIR})
     set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
+endif ()
 
-elseif (ALIMER_D3D12)
+if (ALIMER_D3D12)
     set(D3D12MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator/src")
     set(D3D12MA_FILES
         "${D3D12MA_DIR}/D3D12MemAlloc.cpp"

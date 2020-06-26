@@ -70,7 +70,7 @@ namespace alimer
             swapChainDesc.colorFormat = PixelFormat::BGRA8Unorm;
             //swapChainDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
 
-            graphicsDevice.reset(new GraphicsDevice());
+            graphicsDevice = GraphicsDevice::Create();
             if (!graphicsDevice) {
                 headless = true;
             }

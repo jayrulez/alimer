@@ -48,33 +48,17 @@ namespace alimer
     extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
 #endif
 
-    static inline D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
+    static inline D3D12_HEAP_TYPE GetD3D12HeapType(HeapType heapType)
     {
-        switch (queueType)
+        switch (heapType)
         {
-        case CommandQueueType::Compute:
-            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-
-        case CommandQueueType::Copy:
-            return D3D12_COMMAND_LIST_TYPE_COPY;
-
-        default:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-        }
-    }
-
-    static inline D3D12_HEAP_TYPE GetD3D12HeapType(GraphicsResourceUsage usage)
-    {
-        switch (usage)
-        {
-        case GraphicsResourceUsage::Default:
-        case GraphicsResourceUsage::Immutable:
+        case HeapType::Default:
             return D3D12_HEAP_TYPE_DEFAULT;
 
-        case GraphicsResourceUsage::Dynamic:
+        case HeapType::Upload:
             return D3D12_HEAP_TYPE_UPLOAD;
 
-        case GraphicsResourceUsage::Staging:
+        case HeapType::Readback:
             return D3D12_HEAP_TYPE_READBACK;
 
         default:
@@ -82,18 +66,17 @@ namespace alimer
         }
     }
 
-    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(GraphicsResourceUsage usage)
+    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(HeapType heapType)
     {
-        switch (usage)
+        switch (heapType)
         {
-        case GraphicsResourceUsage::Default:
-        case GraphicsResourceUsage::Immutable:
+        case HeapType::Default:
             return D3D12_RESOURCE_STATE_COMMON;
 
-        case GraphicsResourceUsage::Dynamic:
+        case HeapType::Upload:
             return D3D12_RESOURCE_STATE_GENERIC_READ;
 
-        case GraphicsResourceUsage::Staging:
+        case HeapType::Readback:
             return D3D12_RESOURCE_STATE_COPY_DEST;
 
         default:

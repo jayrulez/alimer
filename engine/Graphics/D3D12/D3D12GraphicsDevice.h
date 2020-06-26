@@ -37,7 +37,7 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        D3D12GraphicsDevice(Window* window, const Desc& desc);
+        D3D12GraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference);
         ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
@@ -56,9 +56,11 @@ namespace alimer
         void GetAdapter(IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void Shutdown();
+        void WaitForGPU() override;
         bool BeginFrame() override;
-        void Present() override;
+        void EndFrame() override;
 
+        PowerPreference powerPreference;
         bool supportsRenderPass = false;
 
         IDXGIFactory4* dxgiFactory = nullptr;

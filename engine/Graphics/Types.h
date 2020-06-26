@@ -38,13 +38,6 @@ namespace alimer
     static constexpr uint32_t kMaxPossibleMipLevels = -1;
     static constexpr uint32_t kMaxCommandLists = 16u;
 
-    /* Handles */
-    struct SwapChainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandle; } };
-
-    static constexpr SwapChainHandle kInvalidSwapChain = { kInvalidHandle };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidHandle };
-
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
     {
@@ -52,12 +45,6 @@ namespace alimer
         Vulkan,
         /// Direct3D 12 backend.
         Direct3D12,
-        /// Direct3D 11.1+ backend.
-        Direct3D11,
-        /// Metal backend.
-        Metal,
-        /// OpenGL backend.
-        OpenGL,
         /// Null renderer.
         Null,
         /// Default best platform supported backend.
@@ -224,9 +211,10 @@ namespace alimer
         const char* label = nullptr;
     };
 
+    class Texture;
     struct RenderPassColorAttachment
     {
-        TextureHandle texture;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -238,7 +226,7 @@ namespace alimer
     };
 
     struct RenderPassDepthStencilAttachment {
-        TextureHandle texture;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -260,7 +248,7 @@ namespace alimer
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
-    struct SwapChainDesc
+    struct SwapChainDescription
     {
         void* windowHandle = nullptr;
         uint32_t width = 0;

@@ -50,7 +50,9 @@ endif ()
 
 if (ALIMER_VULKAN)
     define_engine_source_files(Graphics/Vulkan)
-elseif (ALIMER_D3D12)
+endif ()
+
+if (ALIMER_D3D12)
     define_engine_source_files(Graphics/D3D)
     define_engine_source_files(Graphics/D3D12)
 endif ()
@@ -79,7 +81,9 @@ if (ALIMER_VULKAN)
         volk
         vma
     )
-elseif (ALIMER_D3D12)
+endif ()
+
+if (ALIMER_D3D12)
     target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemoryAllocator)
 endif ()
 

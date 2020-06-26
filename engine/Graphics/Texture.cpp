@@ -31,26 +31,6 @@ namespace alimer
 
     }
 
-    Texture::Texture(Texture&& other) noexcept
-        : GraphicsResource(other.device, other.heapType)
-        , desc{ other.desc }
-    {
-        handle = other.handle;
-        other.handle = kInvalidTexture;
-    }
-
-    Texture::~Texture()
-    {
-        Destroy();
-    }
-
-    void Texture::Destroy()
-    {
-        if (handle.isValid()) {
-            //device.DestroyTexture(handle);
-        }
-    }
-
     static inline uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0, uint32_t depth = 0)
     {
         uint32_t levels = 1;
@@ -70,7 +50,7 @@ namespace alimer
 
         this->desc = desc;
         //handle = device.CreateTexture(desc, externalHandle, nullptr, false);
-        return handle.isValid();
+        return false;
     }
 
     bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
@@ -95,7 +75,7 @@ namespace alimer
         desc.sampleCount = TextureSampleCount::Count1;
 
         //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
-        return handle.isValid();
+        return false;
     }
 
     bool Texture::DefineCube(uint32_t size, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* pInitData)
@@ -120,7 +100,7 @@ namespace alimer
         desc.sampleCount = TextureSampleCount::Count1;
 
         //handle = device.CreateTexture(desc, 0, pInitData, autoGenerateMipmaps);
-        return handle.isValid();
+        return false;
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const

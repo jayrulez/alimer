@@ -21,7 +21,7 @@
 //
 
 #include "config.h"
-#include "VulkanGraphicsImpl.h"
+#include "VulkanGraphicsDevice.h"
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
@@ -305,8 +305,30 @@ namespace alimer
         }
     }
 
-    GraphicsImpl::GraphicsImpl(bool enableValidationLayer, PowerPreference powerPreference, bool headless)
+
+    bool VulkanGraphicsDevice::IsAvailable()
     {
+        static bool available_initialized = false;
+        static bool available = false;
+        if (available_initialized) {
+            return available;
+        }
+
+        available_initialized = true;
+        VkResult result = volkInitialize();
+        if (result != VK_SUCCESS)
+        {
+            return false;
+        }
+
+        available = true;
+        return true;
+    }
+
+    VulkanGraphicsDevice::VulkanGraphicsDevice(bool enableValidationLayer, PowerPreference powerPreference, bool headless)
+    {
+        ALIMER_VERIFY(IsAvailable());
+
         VkResult result = volkInitialize();
         if (result)
         {
@@ -726,10 +748,15 @@ namespace alimer
         }
     }
 
-    GraphicsImpl::~GraphicsImpl()
+    VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {
         WaitForGPU();
 
+        Shutdown();
+    }
+
+    void VulkanGraphicsDevice::Shutdown()
+    {
         if (allocator != VK_NULL_HANDLE)
         {
             VmaStats stats;
@@ -755,8 +782,18 @@ namespace alimer
         }
     }
 
-    void GraphicsImpl::WaitForGPU()
+    void VulkanGraphicsDevice::WaitForGPU()
     {
         VK_CHECK(deviceTable.vkDeviceWaitIdle(device));
+    }
+
+    bool VulkanGraphicsDevice::BeginFrame()
+    {
+        return true;
+    }
+
+    void VulkanGraphicsDevice::EndFrame()
+    {
+
     }
 }

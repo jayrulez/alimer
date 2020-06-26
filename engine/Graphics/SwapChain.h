@@ -28,13 +28,11 @@
 
 namespace alimer
 {
-    class SwapChain final : public RefCounted
+    class SwapChain : public RefCounted
     {
     public:
         /// Constructor.
-        SwapChain(GraphicsDevice& device, const SwapChainDesc& desc);
-        /// Destructor.
-        ~SwapChain();
+        SwapChain(const SwapChainDescription& desc);
 
         void Resize(uint32_t width, uint32_t height);
 
@@ -48,9 +46,9 @@ namespace alimer
         Texture* GetDepthStencilTexture() const;
 
     private:
-        GraphicsDevice& device;
+        virtual void Destroy() = 0;
 
-        SwapChainHandle handle{ kInvalidHandle };
+    protected:
         SizeU size;
         PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;

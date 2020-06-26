@@ -32,19 +32,19 @@ namespace alimer
     class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        D3D12SwapChain(D3D12GraphicsDevice& device, const SwapChainDescription& desc);
         ~D3D12SwapChain() override;
-        void Destroy() override;
 
-        void Present() override;
-        Texture* GetCurrentColorTexture() const override;
+        //void Present() override;
+        //Texture* GetCurrentColorTexture() const override;
 
     private:
+        void Destroy() override;
         void CreateRenderTargets();
 
         static constexpr u32 kNumBackBuffers = 2;
 
-        D3D12GraphicsDevice* device;
+        D3D12GraphicsDevice& device;
         
         DXGI_FORMAT dxgiColorFormat;
 

@@ -25,44 +25,11 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(GraphicsDevice& device, const SwapChainDesc& desc)
-        : device(device)
-        , size(desc.width, desc.height)
+    SwapChain::SwapChain(const SwapChainDescription& desc)
+        : size(desc.width, desc.height)
         , colorFormat(desc.colorFormat)
         , depthStencilFormat(desc.depthStencilFormat)
     {
-        /*handle = device.CreateSwapChain(desc);
-        ALIMER_ASSERT(handle.isValid());
-
-        TextureDescription backbufferDesc = {};
-        backbufferDesc.format = desc.colorFormat;
-        backbufferDesc.usage = TextureUsage::RenderTarget;
-        backbufferDesc.width = desc.width;
-        backbufferDesc.height = desc.height;
-
-        backbufferTextures.Resize(device.GetBackbufferCount(handle));
-        for (uint32_t i = 0; i < backbufferTextures.Size(); i++)
-        {
-            backbufferTextures[i] = new Texture(device);
-            backbufferTextures[i]->DefineExternal(device.GetBackbufferTexture(handle, i), backbufferDesc);
-        }
-
-        if (depthStencilFormat != PixelFormat::Unknown)
-        {
-            depthStencilTexture = new Texture(device);
-            depthStencilTexture->Define2D(desc.width, desc.height, depthStencilFormat, 1, 1, TextureUsage::RenderTarget);
-        }*/
-    }
-
-    SwapChain::~SwapChain()
-    {
-        backbufferTextures.Clear();
-
-        if (handle.isValid()) {
-            //device.DestroySwapChain(handle);
-        }
-
-        handle = kInvalidSwapChain;
     }
 
     void SwapChain::Resize(uint32_t width, uint32_t height)
