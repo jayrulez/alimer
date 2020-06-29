@@ -33,7 +33,24 @@ namespace alimer
     class GraphicsResource : public RefCounted
     {
     public:
-        GraphicsResource(GraphicsDevice &device, HeapType heapType);
+        /// Describes GPU resource type.
+        enum class Type : uint32_t
+        {
+            /// Resource is of unknown type.
+            Unknown,
+            /// Resource is a buffer.
+            Buffer,
+            /// One dimensional texture.
+            Texture1D,
+            /// Two dimensional texture.
+            Texture2D,
+            /// Three dimensional texture.
+            Texture3D,
+            /// A cubemap texture.
+            TextureCube
+        };
+
+        GraphicsResource(GraphicsDevice& device, Type type, const std::string& name, MemoryUsage memoryUsage);
         virtual ~GraphicsResource();
 
         /// Release the GPU resource.
@@ -47,12 +64,46 @@ namespace alimer
         const GraphicsDevice& GetDevice() const;
 
         /**
-        * Get the heap type.
+        * Get the resource type.
         */
-        HeapType GetHeapType() const { return heapType; }
+        Type GetType() const { return type; }
+
+        /**
+        * Set the resource name
+        */
+        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
+
+        /**
+        * Get the resource name
+        */
+        const std::string& GetName() const { return name; }
+
+        /**
+        * Get the memory type.
+        */
+        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
+
+        /**
+        * Get the size of the resource
+        */
+        uint64_t GetSize() const { return size; }
+
+        bool IsAllocated() const { return handle.isValid(); }
+
+        /**
+        * Gets the GPU handle.
+        */
+        GpuHandle GetHandle() const { return handle; }
+
+    private:
+        virtual void BackendSetName() {}
 
     protected:
         GraphicsDevice& device;
-        HeapType heapType;
+        GpuHandle handle{ kInvalidId };
+        Type type;
+        MemoryUsage memoryUsage;
+        std::string name;
+        uint64_t size{ 0 };
     };
 }

@@ -29,14 +29,18 @@
 
 namespace alimer
 {
-    static constexpr uint32_t kInvalidHandle = 0;
+    static constexpr uint32_t kInvalidId = 0;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
-    static constexpr uint32_t kMaxPossibleMipLevels = -1;
     static constexpr uint32_t kMaxCommandLists = 16u;
+
+    /* Handles */
+    struct GpuHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+
+    static constexpr GpuHandle kInvalidGpuHandle = { kInvalidId };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -69,31 +73,11 @@ namespace alimer
         Qualcomm = 0x5143
     };
 
-    enum class HeapType : uint32_t
+    enum class MemoryUsage : uint32_t
     {
-        Default,
-        Upload,
-        Readback
-    };
-
-    enum class TextureSampleCount : uint32_t
-    {
-        Count1 = 1,
-        Count2 = 2,
-        Count4 = 4,
-        Count8 = 8,
-        Count16 = 16,
-        Count32 = 32,
-    };
-
-    enum class TextureType : uint32_t
-    {
-        /// Two dimensional texture
-        Type2D,
-        /// Three dimensional texture
-        Type3D,
-        /// Cube texture
-        TypeCube
+        GpuOnly,
+        CpuOnly,
+        GpuToCpu
     };
 
     /// Defines the usage of Texture.
@@ -103,9 +87,21 @@ namespace alimer
         Sampled = (1 << 0),
         Storage = (1 << 1),
         RenderTarget = (1 << 2),
-        GenerateMipmaps = (1 << 3),
+        Cubemap = (1 << 3),
+        GenerateMipmaps = (1 << 4),
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+
+    enum class BufferUsage : uint32_t
+    {
+        None = 0,
+        Vertex = 1 << 0,
+        Index = 1 << 1,
+        Uniform = 1 << 2,
+        Storage = 1 << 3,
+        Indirect = 1 << 4,
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
 
     enum class TextureCubemapFace : uint8_t {
         PositiveX = 0, //!< +x face
@@ -199,16 +195,23 @@ namespace alimer
 
     struct TextureDescription
     {
-        TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
-        uint32_t width = 1;
-        uint32_t height = 1;
-        uint32_t depth = 1;
-        uint32_t mipLevels = 1;
-        uint32_t arraySize = 1;
-        TextureSampleCount sampleCount = TextureSampleCount::Count1;
+        Extent3D size = { 1u, 1u, 1u };
+        uint32_t mipLevels = 1u;
+        uint32_t sampleCount = 1u;
 
+        const char* label = nullptr;
+    };
+
+    /// Describes a Graphics buffer.
+    struct BufferDescription
+    {
+        BufferUsage usage;
+        uint64_t size;
+        uint64_t stride = 0;
+        MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
+        const void* content = nullptr;
         const char* label = nullptr;
     };
 

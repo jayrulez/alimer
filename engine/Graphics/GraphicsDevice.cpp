@@ -25,7 +25,6 @@
 #include "Core/Assert.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
-#include <algorithm>
 #include "imgui_impl_glfw.h"
 
 #if defined(ALIMER_VULKAN)
@@ -165,74 +164,16 @@ namespace alimer
         }
     }
 
-
-    static inline uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0, uint32_t depth = 0)
-    {
-        uint32_t levels = 1;
-        for (uint32_t size = max(max(width, height), depth); size > 1; levels += 1)
-        {
-            size /= 2;
-        }
-
-        return levels;
-    }
-
-    RefPtr<Texture> GraphicsDevice::CreateTexture2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* initialData)
-    {
-        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
-        const bool hasInitData = initialData != nullptr;
-        if (autoGenerateMipmaps && hasInitData)
-        {
-            usage |= TextureUsage::RenderTarget | TextureUsage::GenerateMipmaps;
-        }
-
-        TextureDescription desc = {};
-        desc.type = TextureType::Type2D;
-        desc.format = format;
-        desc.usage = usage;
-        desc.width = width;
-        desc.height = height;
-        desc.depth = 1;
-        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(width, height) : mipLevels;
-        desc.arraySize = arraySize;
-        desc.sampleCount = TextureSampleCount::Count1;
-
-        return CreateTexture(desc, initialData);
-    }
-
-    RefPtr<Texture> GraphicsDevice::CreateTextureCube(uint32_t size, PixelFormat format, uint32_t mipLevels, uint32_t arraySize, TextureUsage usage, const void* initialData)
-    {
-        const bool autoGenerateMipmaps = mipLevels == kMaxPossibleMipLevels;
-        const bool hasInitData = initialData != nullptr;
-        if (autoGenerateMipmaps && hasInitData)
-        {
-            usage |= TextureUsage::RenderTarget;
-        }
-
-        TextureDescription desc = {};
-        desc.type = TextureType::TypeCube;
-        desc.format = format;
-        desc.usage = usage;
-        desc.width = size;
-        desc.height = size;
-        desc.depth = 1;
-        desc.mipLevels = autoGenerateMipmaps ? CalculateMipLevels(size) : mipLevels;
-        desc.arraySize = arraySize;
-        desc.sampleCount = TextureSampleCount::Count1;
-
-        return CreateTexture(desc, initialData);
-    }
-
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.push_back(resource);
+        trackedResources.Push(resource);
     }
 
     void GraphicsDevice::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.erase(std::remove(trackedResources.begin(), trackedResources.end(), resource), trackedResources.end());
+        trackedResources.Remove(resource);
     }
 
     void GraphicsDevice::ReleaseTrackedResources()
@@ -246,7 +187,7 @@ namespace alimer
                 resource->Release();
             }
 
-            trackedResources.clear();
+            trackedResources.Clear();
         }
     }
 

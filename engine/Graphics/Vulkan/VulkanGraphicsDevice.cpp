@@ -26,14 +26,10 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-#include <vector>
-
 #if defined(__linux__) || defined(__APPLE__)
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #endif
-
-using namespace std;
 
 namespace alimer
 {
@@ -57,7 +53,7 @@ namespace alimer
             return VK_FALSE;
         }
 
-        bool ValidateLayers(const std::vector<const char*>& required, const std::vector<VkLayerProperties>& available)
+        bool ValidateLayers(const Vector<const char*>& required, const Vector<VkLayerProperties>& available)
         {
             for (auto layer : required)
             {
@@ -81,9 +77,9 @@ namespace alimer
             return true;
         }
 
-        vector<const char*> GetOptimalValidationLayers(const vector<VkLayerProperties>& supportedInstanceLayers)
+        Vector<const char*> GetOptimalValidationLayers(const Vector<VkLayerProperties>& supportedInstanceLayers)
         {
-            vector<vector<const char*>> validation_layer_priority_list =
+            Vector<Vector<const char*>> validation_layer_priority_list =
             {
                 // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
                 {"VK_LAYER_KHRONOS_validation"},
@@ -133,8 +129,8 @@ namespace alimer
             uint32_t queueCount = 0u;
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, nullptr);
 
-            vector<VkQueueFamilyProperties> queue_families(queueCount);
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queue_families.data());
+            Vector<VkQueueFamilyProperties> queue_families(queueCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queue_families.Data());
 
             QueueFamilyIndices result;
             result.graphicsQueueFamily = VK_QUEUE_FAMILY_IGNORED;
@@ -206,8 +202,8 @@ namespace alimer
             uint32_t count = 0;
             VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr));
 
-            vector<VkExtensionProperties> extensions(count);
-            VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, extensions.data()));
+            Vector<VkExtensionProperties> extensions(count);
+            VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, extensions.Data()));
 
             PhysicalDeviceExtensions result = {};
             for (uint32_t i = 0; i < count; ++i) {
@@ -306,7 +302,6 @@ namespace alimer
         }
     }
 
-
     bool VulkanGraphicsDevice::IsAvailable()
     {
         static bool available_initialized = false;
@@ -343,14 +338,14 @@ namespace alimer
 
         // Create instance
         {
-            vector<const char*> enabledInstanceExtensions;
-            vector<const char*> enabledInstanceLayers;
+            Vector<const char*> enabledInstanceExtensions;
+            Vector<const char*> enabledInstanceLayers;
 
             uint32_t instanceExtensionCount;
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
 
-            vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
-            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
+            Vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.Data()));
             for (auto& availableExtension : availableInstanceExtensions)
             {
                 if (strcmp(availableExtension.extensionName, "VK_KHR_get_physical_device_properties2") == 0) {
@@ -381,32 +376,32 @@ namespace alimer
 
             if (!instanceExts.apiVersion11)
             {
-                enabledInstanceExtensions.push_back("VK_KHR_get_physical_device_properties2");
-                enabledInstanceExtensions.push_back("VK_KHR_external_memory_capabilities");
-                enabledInstanceExtensions.push_back("VK_KHR_external_semaphore_capabilities");
+                enabledInstanceExtensions.Push("VK_KHR_get_physical_device_properties2");
+                enabledInstanceExtensions.Push("VK_KHR_external_memory_capabilities");
+                enabledInstanceExtensions.Push("VK_KHR_external_semaphore_capabilities");
             }
 
             if (headless)
             {
-                enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.Push(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
             else
             {
-                enabledInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.Push(VK_KHR_SURFACE_EXTENSION_NAME);
 
 #if defined(_WIN32)
-                enabledInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.Push(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 
                 if (instanceExts.getSurfaceCapabilities2) {
-                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                    enabledInstanceExtensions.Push(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                 }
             }
 
 
             if (desc.enableValidationLayer && instanceExts.debugUtils)
             {
-                enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             }
 
             // Layers
@@ -415,12 +410,12 @@ namespace alimer
                 uint32_t instanceLayerCount;
                 VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
 
-                vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
-                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.data()));
+                Vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
+                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.Data()));
 
                 // Determine the optimal validation layers to enable that are necessary for useful debugging
-                vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
-                enabledInstanceLayers.insert(enabledInstanceLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
+                Vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
+                enabledInstanceLayers.Push(optimalValidationLayers);
             }
 
             VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
@@ -448,10 +443,10 @@ namespace alimer
 
             createInfo.pApplicationInfo = &appInfo;
 
-            createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
-            createInfo.ppEnabledLayerNames = enabledInstanceLayers.data();
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
-            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
+            createInfo.enabledLayerCount = enabledInstanceLayers.Size();
+            createInfo.ppEnabledLayerNames = enabledInstanceLayers.Data();
+            createInfo.enabledExtensionCount = enabledInstanceExtensions.Size();
+            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.Data();
 
             // Create the Vulkan instance.
             VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -493,8 +488,8 @@ namespace alimer
                 assert(0);
             }
 
-            std::vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
-            vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.data());
+            Vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
+            vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.Data());
 
             VkSurfaceKHR surface = VK_NULL_HANDLE;
             uint32_t bestDeviceScore = 0U;
@@ -565,8 +560,8 @@ namespace alimer
         {
             uint32_t queue_count;
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, nullptr);
-            vector<VkQueueFamilyProperties> queue_families(queue_count);
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_families.data());
+            Vector<VkQueueFamilyProperties> queue_families(queue_count);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_families.Data());
 
             uint32_t universal_queue_index = 1;
             uint32_t compute_queue_index = 0;
@@ -626,25 +621,24 @@ namespace alimer
 
             /* Setup device extensions now. */
             const bool deviceApiVersion11 = physicalDeviceProperties.properties.apiVersion >= VK_API_VERSION_1_1;
-            vector<const char*> enabledDeviceExtensions;
-
+            Vector<const char*> enabledDeviceExtensions;
 
             if (!headless) {
-                enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                enabledDeviceExtensions.Push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
 
             if (!deviceApiVersion11) {
                 if (physicalDeviceExts.maintenance_1)
                 {
-                    enabledDeviceExtensions.push_back("VK_KHR_maintenance1");
+                    enabledDeviceExtensions.Push("VK_KHR_maintenance1");
                 }
 
                 if (physicalDeviceExts.maintenance_2) {
-                    enabledDeviceExtensions.push_back("VK_KHR_maintenance2");
+                    enabledDeviceExtensions.Push("VK_KHR_maintenance2");
                 }
 
                 if (physicalDeviceExts.maintenance_3) {
-                    enabledDeviceExtensions.push_back("VK_KHR_maintenance3");
+                    enabledDeviceExtensions.Push("VK_KHR_maintenance3");
                 }
             }
 
@@ -676,7 +670,7 @@ namespace alimer
             if (physicalDeviceExts.multiview)
             {
                 if (!deviceApiVersion11) {
-                    enabledDeviceExtensions.push_back("VK_KHR_multiview");
+                    enabledDeviceExtensions.Push("VK_KHR_multiview");
                 }
 
                 *ppNext = &multiview_features;
@@ -721,8 +715,8 @@ namespace alimer
             createInfo.pNext = &features;
             createInfo.queueCreateInfoCount = queueCreateCount;
             createInfo.pQueueCreateInfos = queue_info;
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledDeviceExtensions.size());
-            createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
+            createInfo.enabledExtensionCount = enabledDeviceExtensions.Size();
+            createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.Data();
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
             if (result != VK_SUCCESS) {
@@ -808,8 +802,80 @@ namespace alimer
         }*/
     }
 
-    RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    GpuHandle VulkanGraphicsDevice::AllocTextureHandle()
     {
-        return nullptr;
+        if (textures.isFull()) {
+            LOG_ERROR("Vulkan: Not enough free texture slots.");
+            return kInvalidGpuHandle;
+        }
+        const int id = textures.alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        TextureVk& texture = textures[id];
+        texture.handle = VK_NULL_HANDLE;
+        texture.allocation = VK_NULL_HANDLE;
+        return { (uint32_t)id };
+    }
+
+    GpuHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
+    {
+        GpuHandle handle = AllocTextureHandle();
+        TextureVk& texture = textures[handle.id];
+        return handle;
+    }
+
+    void VulkanGraphicsDevice::DestroyTexture(GpuHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        TextureVk& texture = textures[handle.id];
+        /* TODO: Deferred destroy */
+        textures.dealloc(handle.id);
+    }
+
+    GpuHandle VulkanGraphicsDevice::AllocBufferHandle()
+    {
+        if (buffers.isFull()) {
+            LOG_ERROR("Vulkan: Not enough free buffer slots.");
+            return kInvalidGpuHandle;
+        }
+        const int id = buffers.alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        BufferVk& buffer = buffers[id];
+        buffer.handle = VK_NULL_HANDLE;
+        buffer.allocation = VK_NULL_HANDLE;
+        return { (uint32_t)id };
+    }
+
+    GpuHandle VulkanGraphicsDevice::CreateBuffer(const BufferDescription& desc)
+    {
+        GpuHandle handle = AllocBufferHandle();
+        BufferVk& buffer = buffers[handle.id];
+        return handle;
+    }
+
+    void VulkanGraphicsDevice::DestroyBuffer(GpuHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        BufferVk& buffer = buffers[handle.id];
+        /* TODO: Deferred destroy */
+        buffers.dealloc(handle.id);
+    }
+
+    void VulkanGraphicsDevice::SetName(GpuHandle handle, const char* name)
+    {
+        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        {
+            VkDebugUtilsObjectNameInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            info.objectType = VK_OBJECT_TYPE_BUFFER;
+            info.objectHandle = (uint64_t)buffers[handle.id].handle;
+            info.pObjectName = name;
+
+            VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
+        }
     }
 }

@@ -42,7 +42,15 @@ namespace alimer
         void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
-        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
+        // Resource creation methods.
+        GpuHandle AllocTextureHandle();
+        GpuHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
+        void DestroyTexture(GpuHandle handle) override;
+
+        GpuHandle AllocBufferHandle();
+        GpuHandle CreateBuffer(const BufferDescription& desc) override;
+        void DestroyBuffer(GpuHandle handle) override;
+        void SetName(GpuHandle handle, const char* name) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -64,5 +72,23 @@ namespace alimer
 
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
+
+        /* Handles and pools */
+        struct TextureVk {
+            enum { MAX_COUNT = 4096 };
+
+            VkImage handle;
+            VmaAllocation allocation;
+        };
+
+        struct BufferVk {
+            enum { MAX_COUNT = 4096 };
+
+            VkBuffer handle;
+            VmaAllocation allocation;
+        };
+
+        Pool<TextureVk, TextureVk::MAX_COUNT> textures;
+        Pool<BufferVk, BufferVk::MAX_COUNT> buffers;
     };
 }

@@ -23,10 +23,10 @@
 #pragma once
 
 #include "Core/Ptr.h"
+#include "Core/Vector.h"
 #include "Graphics/Texture.h"
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <vector>
 #include <set>
 #include <mutex>
 #include <memory>
@@ -87,9 +87,13 @@ namespace alimer
 
         void Resize(uint32_t width, uint32_t height);
 
-        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) = 0;
-        RefPtr<Texture> CreateTexture2D(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* initialData = nullptr);
-        RefPtr<Texture> CreateTextureCube(uint32_t size, PixelFormat format, uint32_t mipLevels = kMaxPossibleMipLevels, uint32_t arraySize = 1, TextureUsage usage = TextureUsage::Sampled, const void* initialData = nullptr);
+        // Resource creation methods.
+        virtual GpuHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) = 0;
+        virtual void DestroyTexture(GpuHandle handle) = 0;
+
+        virtual GpuHandle CreateBuffer(const BufferDescription& desc) = 0;
+        virtual void DestroyBuffer(GpuHandle handle) = 0;
+        virtual void SetName(GpuHandle handle, const char* name) = 0;
 
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
@@ -120,7 +124,7 @@ namespace alimer
         PixelFormat depthStencilFormat;
 
         std::mutex trackedResourcesMutex;
-        std::vector<GraphicsResource*> trackedResources;
+        Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
 
         /// Current active frame index
@@ -130,8 +134,47 @@ namespace alimer
         bool frameActive{ false };
 
         uint32_t backbufferIndex{ 0 };
-        std::vector<RefPtr<Texture>> backbufferTextures;
+        Vector<RefPtr<Texture>> backbufferTextures;
         RefPtr<Texture> depthStencilTexture;
+
+        template <typename T, uint32_t MAX_COUNT>
+        class Pool
+        {
+        public:
+            Pool()
+            {
+                values = (T*)mem;
+                for (int i = 0; i < MAX_COUNT + 1; ++i) {
+                    new (&values[i]) int(i + 1);
+                }
+                new (&values[MAX_COUNT]) int(-1);
+                first_free = 1;
+            }
+
+            int alloc()
+            {
+                if (first_free == -1) return -1;
+
+                const int id = first_free;
+                first_free = *((int*)&values[id]);
+                new (&values[id]) T;
+                return id;
+            }
+
+            void dealloc(uint32_t index)
+            {
+                values[index].~T();
+                new (&values[index]) int(first_free);
+                first_free = index;
+            }
+
+            alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)] = {};
+            T* values;
+            int first_free;
+
+            T& operator[](int index) { return values[index]; }
+            bool isFull() const { return first_free == -1; }
+        };
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Platform.h"
+#include "Core/ArrayView.h"
 #include "Core/Assert.h"
 #include <cstdlib>
 #include <initializer_list>
@@ -177,6 +178,8 @@ namespace alimer {
             return false;
         }
 
+        operator ArrayView<T>() { return ArrayView<T>(data_, size_); }
+        operator ArrayView<const T>() const { return ArrayView<const T>(data_, size_); }
 
         T& operator[](IndexType index)
         {

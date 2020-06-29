@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
 #include <vector>
 #include <queue>
@@ -30,7 +30,7 @@
 
 namespace alimer
 {
-    class D3D12Texture;
+    class Texture;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
@@ -61,7 +61,16 @@ namespace alimer
         void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
-        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
+
+        // Resource creation methods.
+        GpuHandle AllocTextureHandle();
+        GpuHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
+        void DestroyTexture(GpuHandle handle) override;
+
+        GpuHandle AllocBufferHandle();
+        GpuHandle CreateBuffer(const BufferDescription& desc) override;
+        void DestroyBuffer(GpuHandle handle) override;
+        void SetName(GpuHandle handle, const char* name) override;
 
         void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
         void CreateUIObjects();
@@ -110,10 +119,23 @@ namespace alimer
         HANDLE frameFenceEvent;
         uint64_t frameCount{ 0 };
 
+        /* Handles and pools */
+        struct ResourceD3D12 {
+            enum { MAX_COUNT = 4096 };
+
+            ID3D12Resource* handle;
+            D3D12MA::Allocation* allocation;
+            D3D12_RESOURCE_STATES state;
+            DXGI_FORMAT format;
+        };
+
+        Pool<ResourceD3D12, ResourceD3D12::MAX_COUNT> textures;
+        Pool<ResourceD3D12, ResourceD3D12::MAX_COUNT> buffers;
+
         // Imgui objects.
         ID3D12RootSignature* uiRootSignature = nullptr;
         ID3D12PipelineState* uiPipelineState = nullptr;
-        RefPtr<D3D12Texture> fontTexture;
+        RefPtr<Texture> fontTexture;
         D3D12_CPU_DESCRIPTOR_HANDLE FontSRV;
     };
 }

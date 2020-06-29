@@ -27,8 +27,6 @@
 #include "core/Log.h"
 #include "graphics/Types.h"
 #include "graphics/D3D/D3DHelpers.h"
-#include "d3d12.h"
-#define D3D12MA_D3D12_HEADERS_ALREADY_INCLUDED
 #include "D3D12MemAlloc.h"
 
 #include <wrl/client.h>
@@ -53,17 +51,17 @@ namespace alimer
 
     class D3D12GraphicsDevice;
 
-    static inline D3D12_HEAP_TYPE GetD3D12HeapType(HeapType heapType)
+    static inline D3D12_HEAP_TYPE GetD3D12HeapType(MemoryUsage usage)
     {
-        switch (heapType)
+        switch (usage)
         {
-        case HeapType::Default:
+        case MemoryUsage::GpuOnly:
             return D3D12_HEAP_TYPE_DEFAULT;
 
-        case HeapType::Upload:
+        case MemoryUsage::CpuOnly:
             return D3D12_HEAP_TYPE_UPLOAD;
 
-        case HeapType::Readback:
+        case MemoryUsage::GpuToCpu:
             return D3D12_HEAP_TYPE_READBACK;
 
         default:
@@ -71,17 +69,17 @@ namespace alimer
         }
     }
 
-    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(HeapType heapType)
+    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(MemoryUsage usage)
     {
-        switch (heapType)
+        switch (usage)
         {
-        case HeapType::Default:
+        case MemoryUsage::GpuOnly:
             return D3D12_RESOURCE_STATE_COMMON;
 
-        case HeapType::Upload:
+        case MemoryUsage::CpuOnly:
             return D3D12_RESOURCE_STATE_GENERIC_READ;
 
-        case HeapType::Readback:
+        case MemoryUsage::GpuToCpu:
             return D3D12_RESOURCE_STATE_COPY_DEST;
 
         default:

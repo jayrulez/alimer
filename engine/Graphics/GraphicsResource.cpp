@@ -26,9 +26,11 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, HeapType heapType)
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type, const std::string& name, MemoryUsage memoryUsage)
         : device{ device }
-        , heapType{ heapType }
+        , type{ type }
+        , name{ name }
+        , memoryUsage{ memoryUsage }
     {
         device.TrackResource(this);
     }

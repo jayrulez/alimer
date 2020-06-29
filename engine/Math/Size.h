@@ -46,7 +46,7 @@ namespace alimer
         constexpr TSize2(const TSize2&) = default;
 
         template <typename U>
-        explicit constexpr TSize2(const TSize2<U> & u)
+        explicit constexpr TSize2(const TSize2<U>& u)
         {
             width = T(u.width);
             height = T(u.height);
@@ -69,55 +69,32 @@ namespace alimer
         }
     };
 
-    template <typename T>
-    struct TSize3
+    struct Extent3D
     {
     public:
-        static constexpr size_t SIZE = 3;
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
 
-        union
+        Extent3D() noexcept : width(0), height(0), depth(0) {}
+
+        constexpr Extent3D(uint32_t width, uint32_t height, uint32_t depth) noexcept
+            : width{ width }, height{ height }, depth{ depth }
         {
-            T data[SIZE];
-            struct
-            {
-                T width, height, depth;
-            };
-        };
-
-        constexpr TSize3() = default;
-        constexpr TSize3(const TSize3&) = default;
-
-        template <typename U>
-        explicit constexpr TSize3(const TSize3<U>& u)
-        {
-            width = T(u.width);
-            height = T(u.height);
-            depth = T(u.depth);
         }
 
-        constexpr TSize3(T width_, T height_, T depth_)
-        {
-            width = width_;
-            height = height_;
-            depth = depth_;
-        }
+        Extent3D(const Extent3D&) = default;
+        Extent3D& operator=(const Extent3D&) = default;
 
-        inline constexpr T const& operator[](size_t i) const noexcept {
-            assert(i < SIZE);
-            return data[i];
-        }
+        Extent3D(Extent3D&&) = default;
+        Extent3D& operator=(Extent3D&&) = default;
 
-        inline constexpr T& operator[](size_t i) noexcept {
-            assert(i < SIZE);
-            return data[i];
-        }
+        // Comparison operators
+        bool operator == (const Extent3D& rhs) const noexcept { return (width == rhs.width) && (height == rhs.height) && (depth == rhs.depth); }
+        bool operator != (const Extent3D& rhs) const noexcept { return (width != rhs.width) || (height != rhs.height) || (depth != rhs.depth); }
     };
 
     using Size = TSize2<int32_t>;
     using SizeU = TSize2<uint32_t>;
     using SizeF = TSize2<float>;
-
-    using Size3 = TSize3<int32_t>;
-    using Size3U = TSize3<uint32_t>;
-    using Size3F = TSize3<float>;
-} 
+}

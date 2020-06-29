@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <assert.h>
+#include "Core/Assert.h"
 #include <cmath>
 
 #ifdef _MSC_VER
@@ -59,6 +58,23 @@ namespace alimer {
     /// Check whether two floating point values are equal within accuracy.
     template <typename T>
     inline bool Equals(T lhs, T rhs, T eps = M_EPSILON) { return lhs + eps >= rhs && lhs - eps <= rhs; }
+
+    template <typename T> inline bool IsPowerOfTwo(T value)
+    {
+        return 0 == (value & (value - 1));
+    }
+
+    inline uint32_t AlignTo(uint32_t value, uint32_t alignment)
+    {
+        ALIMER_ASSERT(alignment > 0);
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
+
+    inline uint64_t AlignTo(uint64_t value, uint64_t alignment)
+    {
+        ALIMER_ASSERT(alignment > 0);
+        return ((value + alignment - 1) / alignment) * alignment;
+    }
 
     /// Linear interpolation between two values.
     template <typename T, typename U>
@@ -112,12 +128,12 @@ namespace alimer {
         }
 
         inline constexpr T const& operator[](size_t i) const noexcept {
-            assert(i < SIZE);
+            ALIMER_ASSERT(i < SIZE);
             return data[i];
         }
 
         inline constexpr T& operator[](size_t i) noexcept {
-            assert(i < SIZE);
+            ALIMER_ASSERT(i < SIZE);
             return data[i];
         }
 

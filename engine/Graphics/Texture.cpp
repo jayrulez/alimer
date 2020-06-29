@@ -20,31 +20,135 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Texture.h"
-#include "graphics/GraphicsDevice.h"
+#include "Graphics/Texture.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
-        : GraphicsResource(device, HeapType::Default)
-        , desc{ desc }
+    namespace
+    {
+        /*inline TextureType FindTextureType(Extent3D extent)
+        {
+            TextureType result{};
+
+            uint32_t count = 0;
+
+            if (extent.width >= 1)
+            {
+                count++;
+            }
+
+            if (extent.height >= 1)
+            {
+                count++;
+            }
+
+            if (extent.depth > 1)
+            {
+                count++;
+            }
+
+            switch (count)
+            {
+            case 1:
+                result = TextureType::Type1D;
+                break;
+            case 2:
+                result = TextureType::Type2D;
+                break;
+            case 3:
+                result = TextureType::Type3D;
+                break;
+            default:
+                LOG_ERROR("Cannot detect valid texture type.");
+                break;
+            }
+
+            return result;
+        }*/
+
+        static inline uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0, uint32_t depth = 1)
+        {
+            uint32_t mipLevels = 0;
+            uint32_t size = max(max(width, height), depth);
+            while (1u << mipLevels <= size) {
+                ++mipLevels;
+            }
+
+            if (1u << mipLevels < size) {
+                ++mipLevels;
+            }
+
+            return mipLevels;
+        }
+    }
+
+    Texture::Texture(GraphicsDevice& device, const std::string& name)
+        : GraphicsResource(device, Type::Unknown, name, MemoryUsage::GpuOnly)
     {
 
+    }
+
+    Texture::Texture(GraphicsDevice& device, const Extent3D& size, PixelFormat format, TextureUsage usage, uint32_t mipLevels, uint32_t sampleCount, const void* initialData)
+        : GraphicsResource(device, Type::Unknown, "", MemoryUsage::GpuOnly)
+        //, type(FindTextureType(size))
+        , size{ size }
+        , format{ format }
+        , usage{ usage }
+        , sampleCount{ sampleCount }
+    {
+        const uint32_t maxMipLevels = CalculateMipLevels(size.width, size.height);
+        if (mipLevels == 0)
+            mipLevels = maxMipLevels;
+
+        ALIMER_ASSERT(mipLevels <= maxMipLevels);
+
+        const bool autoGenerateMipmaps = false; // mipLevels == kMaxPossibleMipLevels;
+        /*const bool hasInitData = initialData != nullptr;
+        if (autoGenerateMipmaps && hasInitData)
+        {
+            usage |= TextureUsage::RenderTarget | TextureUsage::GenerateMipmaps;
+        }*/
+
+        TextureDescription desc{};
+        //desc.type = TextureType::Type2D;
+        desc.format = format;
+        desc.usage = usage;
+        desc.size = size;
+        desc.mipLevels = mipLevels;
+        desc.sampleCount = sampleCount;
+        handle = device.CreateTexture(desc, 0, initialData, autoGenerateMipmaps);
+    }
+
+    Texture::~Texture()
+    {
+        Destroy();
+    }
+
+    void Texture::Destroy()
+    {
+        if (handle.isValid()) {
+            device.DestroyTexture(handle);
+        }
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1u, desc.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1u, size.width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1u, desc.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1u, size.height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < desc.mipLevels) ? max(1U, desc.depth >> mipLevel) : 0;
+        if (type == Type::Texture3D)
+            return 1u;
+
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1U, size.depth >> mipLevel) : 0;
     }
 }
 

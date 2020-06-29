@@ -20,22 +20,27 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "graphics/GraphicsBuffer.h"
-#include "D3D12Backend.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class D3D12GraphicsBuffer final : public GraphicsBuffer
+    GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device, const std::string& name)
+        : GraphicsResource(device, Type::Buffer, name, MemoryUsage::GpuOnly)
     {
-    public:
-        D3D12GraphicsBuffer(D3D12GraphicsDevice* device, const BufferDescriptor* descriptor, const void* initialData);
-        ~D3D12GraphicsBuffer() override;
 
-        void Destroy() override;
+    }
 
-    private:
-        D3D12MA::Allocation* allocation;
-    };
+    GraphicsBuffer::~GraphicsBuffer()
+    {
+        Destroy();
+    }
+
+    void GraphicsBuffer::Destroy()
+    {
+        if (handle.isValid()) {
+            device.DestroyBuffer(handle);
+        }
+    }
 }
+

@@ -21,13 +21,12 @@
 //
 
 #include "D3D12GraphicsDevice.h"
-#include "D3D12Texture.h"
+#include "Graphics/Texture.h"
 #include "core/String.h"
 #include <d3dcompiler.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
-
 
 using Microsoft::WRL::ComPtr;
 
@@ -859,9 +858,201 @@ namespace alimer
         //GPUUploadMemoryHeaps[frameIndex].Size = 0;
     }
 
-    RefPtr<Texture> D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    GpuHandle D3D12GraphicsDevice::AllocTextureHandle()
     {
-        return new D3D12Texture(this, desc, initialData);
+        if (textures.isFull()) {
+            LOG_ERROR("D3D12: Not enough free texture slots.");
+            return kInvalidGpuHandle;
+        }
+        const int id = textures.alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        ResourceD3D12& texture = textures[id];
+        texture.handle = nullptr;
+        texture.allocation = nullptr;
+        texture.state = D3D12_RESOURCE_STATE_COMMON;
+        return { (uint32_t)id };
+    }
+
+    GpuHandle D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
+    {
+        GpuHandle handle = AllocTextureHandle();
+        ResourceD3D12& texture = textures[handle.id];
+        texture.format = ToDXGIFormatWitUsage(desc.format, desc.usage);
+
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+        D3D12_RESOURCE_DESC resourceDesc = {};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        resourceDesc.Alignment = 0;
+        resourceDesc.Width = desc.size.width;
+        resourceDesc.Height = desc.size.height;
+        resourceDesc.DepthOrArraySize = desc.size.depth;
+        resourceDesc.MipLevels = desc.mipLevels;
+        resourceDesc.Format = texture.format;
+        resourceDesc.SampleDesc.Count = desc.sampleCount;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        D3D12_CLEAR_VALUE clearValue = {};
+        D3D12_CLEAR_VALUE* pClearValue = nullptr;
+
+        if (!any(desc.usage & TextureUsage::Sampled))
+        {
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+        }
+
+        if (any(desc.usage & TextureUsage::Storage))
+        {
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        }
+
+        if (any(desc.usage & TextureUsage::RenderTarget))
+        {
+            clearValue.Format = resourceDesc.Format;
+            if (IsDepthStencilFormat(desc.format))
+            {
+                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+                // Depth textures cannot be accessed as shader resource
+                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+
+                clearValue.DepthStencil.Depth = 1.0f;
+            }
+            else
+            {
+                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            }
+
+            pClearValue = &clearValue;
+            //allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+        }
+
+        // TODO: Use D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+
+        texture.state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
+        if (any(desc.usage & TextureUsage::RenderTarget))
+        {
+            if (IsDepthStencilFormat(desc.format))
+            {
+                texture.state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+            }
+        }
+
+        HRESULT hr = memoryAllocator->CreateResource(
+            &allocationDesc,
+            &resourceDesc,
+            texture.state,
+            pClearValue,
+            &texture.allocation,
+            IID_PPV_ARGS(&texture.handle)
+        );
+
+        if (FAILED(hr)) {
+            LOG_ERROR("Direct3D12: Failed to create texture");
+            textures.dealloc(handle.id);
+        }
+
+        return handle;
+    }
+
+    void D3D12GraphicsDevice::DestroyTexture(GpuHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        ResourceD3D12& texture = textures[handle.id];
+        /* TODO: Deferred destroy */
+        SAFE_RELEASE(texture.allocation);
+        SAFE_RELEASE(texture.handle);
+        textures.dealloc(handle.id);
+    }
+
+    GpuHandle D3D12GraphicsDevice::AllocBufferHandle()
+    {
+        if (buffers.isFull()) {
+            LOG_ERROR("D3D12: Not enough free buffer slots.");
+            return kInvalidGpuHandle;
+        }
+        const int id = buffers.alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        ResourceD3D12& buffer = buffers[id];
+        buffer.handle = nullptr;
+        buffer.allocation = nullptr;
+        buffer.state = D3D12_RESOURCE_STATE_COMMON;
+        return { (uint32_t)id };
+    }
+
+    GpuHandle D3D12GraphicsDevice::CreateBuffer(const BufferDescription& desc)
+    {
+        GpuHandle handle = AllocBufferHandle();
+        ResourceD3D12& resource = buffers[handle.id];
+
+        uint64_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        if (any(desc.usage & BufferUsage::Uniform))
+        {
+            alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
+        }
+        uint64_t alignedSize = AlignTo(desc.size, alignment);
+
+        D3D12_RESOURCE_DESC resourceDesc;
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Alignment = 0;
+        resourceDesc.Width = alignedSize;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        if (any(desc.usage & BufferUsage::Storage))
+        {
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        }
+
+        D3D12MA::ALLOCATION_DESC allocDesc = {};
+        allocDesc.HeapType = GetD3D12HeapType(desc.memoryUsage);
+
+        resource.state = desc.content != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
+
+        HRESULT hr = memoryAllocator->CreateResource(
+            &allocDesc,
+            &resourceDesc,
+            resource.state,
+            nullptr,
+            &resource.allocation,
+            IID_PPV_ARGS(&resource.handle)
+            );
+
+        if (FAILED(hr)) {
+            LOG_ERROR("Direct3D12: Failed to create buffer");
+            buffers.dealloc(handle.id);
+        }
+
+        return handle;
+    }
+
+    void D3D12GraphicsDevice::DestroyBuffer(GpuHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        ResourceD3D12& buffer = buffers[handle.id];
+        /* TODO: Deferred destroy */
+        SAFE_RELEASE(buffer.handle);
+        buffers.dealloc(handle.id);
+    }
+
+    void D3D12GraphicsDevice::SetName(GpuHandle handle, const char* name)
+    {
+        ResourceD3D12& buffer = buffers[handle.id];
+        auto wideName = ToUtf16(name, strlen(name));
+        buffer.handle->SetName(wideName.c_str());
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible)
@@ -1116,7 +1307,8 @@ namespace alimer
 
         // Upload texture to graphics system
         {
-            fontTexture = StaticCast<D3D12Texture>(CreateTexture2D(width, height, PixelFormat::RGBA8UNorm, 1, 1, TextureUsage::Sampled, pixels));
+            Extent3D fontExtent(width, height, 1u);
+            fontTexture = new Texture(*this, fontExtent, PixelFormat::RGBA8UNorm, TextureUsage::Sampled, 1u, 1u, pixels);
 
             UINT uploadPitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
             UINT uploadSize = height * uploadPitch;
@@ -1162,14 +1354,14 @@ namespace alimer
             srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
 
             D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-            dstLocation.pResource = fontTexture->GetResource();
+            dstLocation.pResource = textures[fontTexture->GetHandle().id].handle;
             dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             dstLocation.SubresourceIndex = 0;
 
             D3D12_RESOURCE_BARRIER barrier = {};
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = fontTexture->GetResource();
+            barrier.Transition.pResource = textures[fontTexture->GetHandle().id].handle;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -1203,7 +1395,7 @@ namespace alimer
             srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
             FontSRV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
-            d3dDevice->CreateShaderResourceView(fontTexture->GetResource(), &srvDesc, FontSRV);
+            d3dDevice->CreateShaderResourceView(textures[fontTexture->GetHandle().id].handle, &srvDesc, FontSRV);
         }
 
         // Store our identifier

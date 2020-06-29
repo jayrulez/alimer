@@ -26,31 +26,22 @@
 
 namespace alimer
 {
-    enum class BufferUsage : uint32_t
+    class GraphicsBuffer final : public GraphicsResource
     {
-        None = 0,
-        MapRead = 1 << 0,
-        MapWrite = 1 << 1,
-        CopySrc = 1 << 2,
-        CopyDst = 1 << 3,
-        Index = 1 << 4,
-        Vertex = 1 << 5,
-        Uniform = 1 << 6,
-        Storage = 1 << 7,
-        Indirect = 1 << 8,
-    };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
+    public:
+        /// Constructor
+        GraphicsBuffer(GraphicsDevice& device, const std::string& name = "");
+        /// Destructor
+        ~GraphicsBuffer() override;
+        void Destroy() override;
 
-    /// Describes a Graphics buffer.
-    struct BufferDesc
-    {
-        const char* name = nullptr;
-        BufferUsage usage;
-        uint64_t size;
-    };
+        /**
+        * Get a mip-level width.
+        */
+        uint32_t GetElementCount() const { return elementCount; }
 
-    class GraphicsBuffer : public GraphicsResource
-    {
-        virtual BufferDesc GetDesc() const = 0;
+    private:
+        uint32_t elementCount;
+        uint32_t elementSize;
     };
 } 
