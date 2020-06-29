@@ -878,4 +878,9 @@ namespace alimer
             VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
         }
     }
+
+    CommandList VulkanGraphicsDevice::BeginCommandList(const char* name)
+    {
+        return 0;
+    }
 }

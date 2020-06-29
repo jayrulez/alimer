@@ -34,6 +34,25 @@ namespace alimer
 {
     namespace
     {
+        inline D3D12_RESOURCE_DIMENSION D3D12GetResourceDimension(TextureType type)
+        {
+            switch (type)
+            {
+            case TextureType::Texture1D:
+                return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+
+            case TextureType::Texture2D:
+            case TextureType::TextureCube:
+                return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+            case TextureType::Texture3D:
+                return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+            default:
+                ALIMER_UNREACHABLE();
+                return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+            }
+        }
+
         struct FrameResources
         {
             ID3D12Resource* IndexBuffer;
@@ -287,14 +306,26 @@ namespace alimer
 
         // Create command queue's
         {
-            D3D12_COMMAND_QUEUE_DESC directQueueDesc = {};
+            D3D12_COMMAND_QUEUE_DESC directQueueDesc;
             directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
             directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
             directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            directQueueDesc.NodeMask = 0;
+            directQueueDesc.NodeMask = 1;
 
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&directCommandQueue)));
-            directCommandQueue->SetName(L"Direct Command Queue");
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            graphicsQueue->SetName(L"Direct Command Queue");
+        }
+
+        // Create Copy data.
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc;
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 1;
+
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&copyQueue)));
+            copyQueue->SetName(L"Copy Command Queue");
         }
 
         // Create descriptor heaps
@@ -350,7 +381,7 @@ namespace alimer
             fsSwapChainDesc.Windowed = TRUE;
 
             ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-                directCommandQueue.Get(),
+                graphicsQueue,
                 window,
                 &swapChainDesc,
                 &fsSwapChainDesc,
@@ -364,7 +395,7 @@ namespace alimer
             swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
             ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-                directCommandQueue.Get(),
+                graphicsQueue,
                 window,
                 &swapChainDesc,
                 nullptr,
@@ -380,17 +411,6 @@ namespace alimer
                 swapChainRenderTargetDescriptor[i] = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
                 d3dDevice->CreateRenderTargetView(swapChainRenderTargets[i], nullptr, swapChainRenderTargetDescriptor[i]);
             }
-        }
-
-        // Create frame command list and allocators
-        {
-            for (uint32_t Idx = 0; Idx < 2; ++Idx)
-            {
-                ThrowIfFailed(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[Idx])));
-            }
-
-            ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
-            ThrowIfFailed(commandList->Close());
         }
 
         // Create a fence for tracking GPU execution progress.
@@ -436,14 +456,27 @@ namespace alimer
     {
         SAFE_RELEASE(RTVHeap.handle);
         SAFE_RELEASE(DSVHeap.handle);
-        for (uint32_t Idx = 0; Idx < 2; ++Idx)
+        for (uint32_t index = 0; index < maxInflightFrames; ++index)
         {
-            SAFE_RELEASE(commandAllocators[Idx]);
-            SAFE_RELEASE(GPUDescriptorHeaps[Idx].handle);
+            SAFE_RELEASE(GPUDescriptorHeaps[index].handle);
             //SAFE_RELEASE(GPUUploadMemoryHeaps[Idx].handle);
         }
         SAFE_RELEASE(CPUDescriptorHeap.handle);
-        SAFE_RELEASE(commandList);
+
+        for (uint32_t i = 0; i < kMaxCommandLists; i++)
+        {
+            if (commandLists[i]) {
+                commandLists[i]->Release();
+                commandLists[i] = nullptr;
+
+                for (uint32_t index = 0; index < maxInflightFrames; ++index)
+                {
+                    SAFE_RELEASE(frames[index].commandAllocators[i]);
+                }
+            }
+        }
+
+        //SAFE_RELEASE(commandList);
 
         ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         if (ImGuiViewportDataD3D12* data = (ImGuiViewportDataD3D12*)mainViewport->RendererUserData)
@@ -459,12 +492,13 @@ namespace alimer
 
         SAFE_RELEASE(uiRootSignature);
         SAFE_RELEASE(uiPipelineState);
-        fontTexture.Reset();
+        DestroyTexture(fontTexture);
 
         // Release leaked resources.
         ReleaseTrackedResources();
 
-        directCommandQueue.Reset();
+        SAFE_RELEASE(copyQueue);
+        SAFE_RELEASE(graphicsQueue);
         CloseHandle(frameFenceEvent);
         SAFE_RELEASE(frameFence);
         for (uint32_t i = 0; i < backBufferCount; i++)
@@ -514,7 +548,7 @@ namespace alimer
             }
         }
 #endif
-    }
+        }
 
     void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
     {
@@ -786,7 +820,7 @@ namespace alimer
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
-        directCommandQueue->Signal(frameFence, ++frameCount);
+        graphicsQueue->Signal(frameFence, ++frameCount);
         frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
         WaitForSingleObject(frameFenceEvent, INFINITE);
 
@@ -794,14 +828,14 @@ namespace alimer
         //GPUUploadMemoryHeaps[frameIndex].Size = 0;
     }
 
+    static CommandList commandList = 0;
+
     bool D3D12GraphicsDevice::BeginFrameImpl()
     {
         if (!uiPipelineState)
             CreateUIObjects();
 
-        commandAllocators[frameIndex]->Reset();
-        commandList->Reset(commandAllocators[frameIndex], nullptr);
-        commandList->SetDescriptorHeaps(1, &GPUDescriptorHeaps[frameIndex].handle);
+        commandList = BeginCommandList("Frame");
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -811,18 +845,19 @@ namespace alimer
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-        commandList->ResourceBarrier(1, &barrier);
+        GetCommandList(commandList)->ResourceBarrier(1, &barrier);
         Color clearColor = Colors::CornflowerBlue;
 
-        commandList->ClearRenderTargetView(swapChainRenderTargetDescriptor[backbufferIndex], &clearColor.r, 0, nullptr);
-        commandList->OMSetRenderTargets(1, &swapChainRenderTargetDescriptor[backbufferIndex], FALSE, nullptr);
+        GetCommandList(commandList)->ClearRenderTargetView(swapChainRenderTargetDescriptor[backbufferIndex], &clearColor.r, 0, nullptr);
+        GetCommandList(commandList)->OMSetRenderTargets(1, &swapChainRenderTargetDescriptor[backbufferIndex], FALSE, nullptr);
 
         return true;
     }
 
     void D3D12GraphicsDevice::EndFrameImpl()
     {
-        RenderDrawData(ImGui::GetDrawData(), commandList);
+        RenderDrawData(ImGui::GetDrawData(), GetCommandList(commandList));
+
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -831,19 +866,34 @@ namespace alimer
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        commandList->ResourceBarrier(1, &barrier);
+        GetCommandList(commandList)->ResourceBarrier(1, &barrier);
 
-        commandList->Close();
+        // Execute all command lists
+        {
+            ID3D12CommandList* commandLists[kMaxCommandLists];
+            uint32_t commandListsCount = 0;
 
-        ID3D12CommandList* commandLists[] = { commandList };
-        directCommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+            CommandList cmd;
+            while (activeCommandLists.pop_front(cmd))
+            {
+                // TODO: Perform query resolve.
+                ThrowIfFailed(GetCommandList(cmd)->Close());
+
+                commandLists[commandListsCount] = GetCommandList(cmd);
+                commandListsCount++;
+
+                freeCommandLists.push_back(cmd);
+            }
+
+            graphicsQueue->ExecuteCommandLists(commandListsCount, commandLists);
+        }
 
         if (swapChain) {
             swapChain->Present(1, 0);
             backbufferIndex = swapChain->GetCurrentBackBufferIndex();
         }
 
-        directCommandQueue->Signal(frameFence, ++frameCount);
+        graphicsQueue->Signal(frameFence, ++frameCount);
 
         uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
@@ -877,20 +927,32 @@ namespace alimer
     GpuHandle D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
     {
         GpuHandle handle = AllocTextureHandle();
-        ResourceD3D12& texture = textures[handle.id];
-        texture.format = ToDXGIFormatWitUsage(desc.format, desc.usage);
+        ResourceD3D12& resource = textures[handle.id];
+        resource.format = ToDXGIFormatWitUsage(desc.format, desc.usage);
 
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         D3D12_RESOURCE_DESC resourceDesc = {};
-        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        resourceDesc.Dimension = D3D12GetResourceDimension(desc.type);
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = desc.size.width;
-        resourceDesc.Height = desc.size.height;
-        resourceDesc.DepthOrArraySize = desc.size.depth;
+        resourceDesc.Width = desc.width;
+        resourceDesc.Height = desc.height;
+        if (desc.type == TextureType::TextureCube)
+        {
+            resourceDesc.DepthOrArraySize = desc.depth * 6;
+        }
+        else if (desc.type == TextureType::Texture3D)
+        {
+            resourceDesc.DepthOrArraySize = desc.depth;
+        }
+        else
+        {
+            resourceDesc.DepthOrArraySize = desc.depth;
+        }
+
         resourceDesc.MipLevels = desc.mipLevels;
-        resourceDesc.Format = texture.format;
+        resourceDesc.Format = resource.format;
         resourceDesc.SampleDesc.Count = desc.sampleCount;
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -915,8 +977,10 @@ namespace alimer
             if (IsDepthStencilFormat(desc.format))
             {
                 resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-                // Depth textures cannot be accessed as shader resource
-                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+                if (!any(desc.usage & TextureUsage::Sampled))
+                {
+                    resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+                }
 
                 clearValue.DepthStencil.Depth = 1.0f;
             }
@@ -931,27 +995,42 @@ namespace alimer
 
         // TODO: Use D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 
-        texture.state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
+        resource.state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
         if (any(desc.usage & TextureUsage::RenderTarget))
         {
             if (IsDepthStencilFormat(desc.format))
             {
-                texture.state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+                resource.state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
             }
         }
 
         HRESULT hr = memoryAllocator->CreateResource(
             &allocationDesc,
             &resourceDesc,
-            texture.state,
+            resource.state,
             pClearValue,
-            &texture.allocation,
-            IID_PPV_ARGS(&texture.handle)
+            &resource.allocation,
+            IID_PPV_ARGS(&resource.handle)
         );
 
         if (FAILED(hr)) {
             LOG_ERROR("Direct3D12: Failed to create texture");
             textures.dealloc(handle.id);
+        }
+
+        if (!IsDepthStencilFormat(desc.format))
+        {
+            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+            srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Texture2D.MostDetailedMip = 0;
+            srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
+            srvDesc.Texture2D.PlaneSlice = 0;
+            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+            resource.SRV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
+            d3dDevice->CreateShaderResourceView(resource.handle, &srvDesc, resource.SRV);
         }
 
         return handle;
@@ -1027,7 +1106,7 @@ namespace alimer
             nullptr,
             &resource.allocation,
             IID_PPV_ARGS(&resource.handle)
-            );
+        );
 
         if (FAILED(hr)) {
             LOG_ERROR("Direct3D12: Failed to create buffer");
@@ -1053,6 +1132,32 @@ namespace alimer
         ResourceD3D12& buffer = buffers[handle.id];
         auto wideName = ToUtf16(name, strlen(name));
         buffer.handle->SetName(wideName.c_str());
+    }
+
+    CommandList D3D12GraphicsDevice::BeginCommandList(const char* name)
+    {
+        CommandList cmd;
+        if (!freeCommandLists.pop_front(cmd))
+        {
+            // need to create one more command list:
+            cmd = commandlistCount.fetch_add(1);
+            assert(cmd < kMaxCommandLists);
+
+            for (uint32_t i = 0; i < maxInflightFrames; ++i)
+            {
+                ThrowIfFailed(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[i].commandAllocators[cmd])));
+            }
+
+            ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[0].commandAllocators[cmd], nullptr, IID_PPV_ARGS(&commandLists[cmd])));
+            ThrowIfFailed(commandLists[cmd]->Close());
+        }
+
+        ThrowIfFailed(frame().commandAllocators[cmd]->Reset());
+        ThrowIfFailed(commandLists[cmd]->Reset(frame().commandAllocators[cmd], nullptr));
+        commandLists[cmd]->SetDescriptorHeaps(1, &GPUDescriptorHeaps[frameIndex].handle);
+
+        activeCommandLists.push_back(cmd);
+        return cmd;
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible)
@@ -1304,11 +1409,18 @@ namespace alimer
         unsigned char* pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
         // Upload texture to graphics system
         {
-            Extent3D fontExtent(width, height, 1u);
-            fontTexture = new Texture(*this, fontExtent, PixelFormat::RGBA8UNorm, TextureUsage::Sampled, 1u, 1u, pixels);
+            TextureDescription textureDesc = {};
+            textureDesc.type = TextureType::Texture2D;
+            textureDesc.format = PixelFormat::RGBA8UNorm;
+            textureDesc.usage = TextureUsage::Sampled;
+            textureDesc.width = width;
+            textureDesc.height = height;
+            textureDesc.mipLevels = 1u;
+            textureDesc.sampleCount = 1u;
+            textureDesc.label = "ImGui FontTexture";
+            fontTexture = CreateTexture(textureDesc, 0, pixels, false);
 
             UINT uploadPitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
             UINT uploadSize = height * uploadPitch;
@@ -1354,14 +1466,14 @@ namespace alimer
             srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
 
             D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-            dstLocation.pResource = textures[fontTexture->GetHandle().id].handle;
+            dstLocation.pResource = textures[fontTexture.id].handle;
             dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
             dstLocation.SubresourceIndex = 0;
 
             D3D12_RESOURCE_BARRIER barrier = {};
             barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = textures[fontTexture->GetHandle().id].handle;
+            barrier.Transition.pResource = textures[fontTexture.id].handle;
             barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -1380,23 +1492,16 @@ namespace alimer
             hr = cmdList->Close();
             IM_ASSERT(SUCCEEDED(hr));
 
-            directCommandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
+            graphicsQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
             WaitForGPU();
 
             cmdList->Release();
             commandAlloc->Release();
-
-            // Create texture view
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-            FontSRV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
-            d3dDevice->CreateShaderResourceView(textures[fontTexture->GetHandle().id].handle, &srvDesc, FontSRV);
         }
+
+        // Store our identifier
+        static_assert(sizeof(ImTextureID) >= sizeof(fontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
+        io.Fonts->TexID = (ImTextureID)(intptr_t)fontTexture.id;
 
         // Store our identifier
         /*static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
@@ -1575,8 +1680,12 @@ namespace alimer
                 {
                     // Apply Scissor, Bind texture, Draw
                     const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-                    //commandList->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
-                    commandList->SetGraphicsRootDescriptorTable(1, CopyDescriptorsToGPUHeap(1, FontSRV));
+
+                    uint32_t handleId = (uint32_t)(intptr_t)pcmd->TextureId;
+                    D3D12_CPU_DESCRIPTOR_HANDLE SRV = textures[handleId].SRV;
+
+                    //commandList->SetGraphicsRootDescriptorTable(1, *(GpuHandle*)&pcmd->TextureId);
+                    commandList->SetGraphicsRootDescriptorTable(1, CopyDescriptorsToGPUHeap(1, SRV));
                     commandList->RSSetScissorRects(1, &r);
                     commandList->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                 }
@@ -1594,4 +1703,4 @@ namespace alimer
         d3dDevice->CopyDescriptorsSimple(count, CPUBaseHandle, srcBaseHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         return GPUBaseHandle;
     }
-}
+    }

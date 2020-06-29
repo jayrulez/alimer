@@ -51,6 +51,7 @@ namespace alimer
 
     class D3D12GraphicsDevice;
 
+
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(MemoryUsage usage)
     {
         switch (usage)

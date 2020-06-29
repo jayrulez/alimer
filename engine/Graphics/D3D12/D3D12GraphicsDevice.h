@@ -30,8 +30,6 @@
 
 namespace alimer
 {
-    class Texture;
-
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
@@ -49,9 +47,6 @@ namespace alimer
         bool IsTearingSupported() const { return tearingSupported; }
 
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
-        D3D12MA::Allocator* GetMemoryAllocator() const { return memoryAllocator; }
-        ID3D12CommandQueue* GetDirectCommandQueue() const { return directCommandQueue.Get(); }
-
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
@@ -71,6 +66,8 @@ namespace alimer
         GpuHandle CreateBuffer(const BufferDescription& desc) override;
         void DestroyBuffer(GpuHandle handle) override;
         void SetName(GpuHandle handle, const char* name) override;
+
+        CommandList BeginCommandList(const char* name) override;
 
         void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
         void CreateUIObjects();
@@ -95,7 +92,8 @@ namespace alimer
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
         /* Command queues */
-        Microsoft::WRL::ComPtr<ID3D12CommandQueue> directCommandQueue;
+        ID3D12CommandQueue* graphicsQueue = nullptr;
+        ID3D12CommandQueue* copyQueue = nullptr;
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};
@@ -111,8 +109,19 @@ namespace alimer
         ID3D12Resource* swapChainRenderTargets[3] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
 
-        ID3D12CommandAllocator* commandAllocators[2] = {};
-        ID3D12GraphicsCommandList* commandList = nullptr;
+        std::atomic<uint8_t> commandlistCount{ 0 };
+        ThreadSafeRingBuffer<CommandList, kMaxCommandLists> freeCommandLists;
+        ThreadSafeRingBuffer<CommandList, kMaxCommandLists> activeCommandLists;
+
+        struct Frame
+        {
+            ID3D12CommandAllocator* commandAllocators[kMaxCommandLists] = {};
+        };
+        Frame frames[2];
+        Frame& frame() { return frames[frameIndex]; }
+
+        ID3D12GraphicsCommandList* commandLists[kMaxCommandLists] = {};
+        inline ID3D12GraphicsCommandList* GetCommandList(CommandList cmd) { return commandLists[cmd]; }
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;
@@ -127,6 +136,7 @@ namespace alimer
             D3D12MA::Allocation* allocation;
             D3D12_RESOURCE_STATES state;
             DXGI_FORMAT format;
+            D3D12_CPU_DESCRIPTOR_HANDLE SRV;
         };
 
         Pool<ResourceD3D12, ResourceD3D12::MAX_COUNT> textures;
@@ -135,7 +145,6 @@ namespace alimer
         // Imgui objects.
         ID3D12RootSignature* uiRootSignature = nullptr;
         ID3D12PipelineState* uiPipelineState = nullptr;
-        RefPtr<Texture> fontTexture;
-        D3D12_CPU_DESCRIPTOR_HANDLE FontSRV;
+        GpuHandle fontTexture;
     };
 }

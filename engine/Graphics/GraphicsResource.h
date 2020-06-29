@@ -33,24 +33,7 @@ namespace alimer
     class GraphicsResource : public RefCounted
     {
     public:
-        /// Describes GPU resource type.
-        enum class Type : uint32_t
-        {
-            /// Resource is of unknown type.
-            Unknown,
-            /// Resource is a buffer.
-            Buffer,
-            /// One dimensional texture.
-            Texture1D,
-            /// Two dimensional texture.
-            Texture2D,
-            /// Three dimensional texture.
-            Texture3D,
-            /// A cubemap texture.
-            TextureCube
-        };
-
-        GraphicsResource(GraphicsDevice& device, Type type, const std::string& name, MemoryUsage memoryUsage);
+        GraphicsResource(GraphicsDevice& device, const std::string& name, MemoryUsage memoryUsage);
         virtual ~GraphicsResource();
 
         /// Release the GPU resource.
@@ -62,11 +45,6 @@ namespace alimer
         * return - A pointer to the device that created this resource.
         */
         const GraphicsDevice& GetDevice() const;
-
-        /**
-        * Get the resource type.
-        */
-        Type GetType() const { return type; }
 
         /**
         * Set the resource name
@@ -101,9 +79,9 @@ namespace alimer
     protected:
         GraphicsDevice& device;
         GpuHandle handle{ kInvalidId };
-        Type type;
-        MemoryUsage memoryUsage;
         std::string name;
+
         uint64_t size{ 0 };
+        MemoryUsage memoryUsage;
     };
 }

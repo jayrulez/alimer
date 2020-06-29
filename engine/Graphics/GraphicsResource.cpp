@@ -26,9 +26,8 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type, const std::string& name, MemoryUsage memoryUsage)
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, const std::string& name, MemoryUsage memoryUsage)
         : device{ device }
-        , type{ type }
         , name{ name }
         , memoryUsage{ memoryUsage }
     {

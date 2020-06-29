@@ -38,6 +38,7 @@ namespace alimer
     static constexpr uint32_t kMaxCommandLists = 16u;
 
     /* Handles */
+    using CommandList = uint8_t;
     struct GpuHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
 
     static constexpr GpuHandle kInvalidGpuHandle = { kInvalidId };
@@ -80,15 +81,26 @@ namespace alimer
         GpuToCpu
     };
 
-    /// Defines the usage of Texture.
+    /// Describes texture type.
+    enum class TextureType : uint32_t
+    {
+        /// One dimensional texture.
+        Texture1D,
+        /// Two dimensional texture.
+        Texture2D,
+        /// Three dimensional texture.
+        Texture3D,
+        /// A cubemap texture.
+        TextureCube
+    };
+
+    /// Defines the usage of texture resource.
     enum class TextureUsage : uint32_t
     {
         None = 0,
         Sampled = (1 << 0),
         Storage = (1 << 1),
-        RenderTarget = (1 << 2),
-        Cubemap = (1 << 3),
-        GenerateMipmaps = (1 << 4),
+        RenderTarget = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
@@ -195,9 +207,15 @@ namespace alimer
 
     struct TextureDescription
     {
+        TextureType type = TextureType::Texture2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
-        Extent3D size = { 1u, 1u, 1u };
+        uint32_t width = 1u;
+        uint32_t height = 1u;
+        union {
+            uint32_t depth = 1u;
+            uint32_t arrayLayers;
+        };
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
 

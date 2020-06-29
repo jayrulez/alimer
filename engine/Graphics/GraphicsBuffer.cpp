@@ -26,7 +26,7 @@
 namespace alimer
 {
     GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device, const std::string& name)
-        : GraphicsResource(device, Type::Buffer, name, MemoryUsage::GpuOnly)
+        : GraphicsResource(device, name, MemoryUsage::GpuOnly)
     {
 
     }

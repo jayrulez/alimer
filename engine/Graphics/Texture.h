@@ -30,30 +30,19 @@ namespace alimer
     class ALIMER_API Texture : public GraphicsResource
     {
     public:
-        /// Constructor
+        /// Constructor.
         Texture(GraphicsDevice& device, const std::string& name = "");
-
-        /// Constructor
-        Texture(GraphicsDevice& device, const Extent3D& size, PixelFormat format, TextureUsage usage = TextureUsage::Sampled, uint32_t mipLevels = 1, uint32_t sampleCount = 1u, const void* initialData = nullptr);
-
-        /// Destructor
+        /// Destructor.
         ~Texture() override;
         void Destroy() override;
 
-        /**
-        * Gets the texture description.
-        */
-        const TextureDescription& GetDescription() const { return desc; }
+        /// Defines texture as 2D texture
+        bool Define2D(uint32_t width, uint32_t height, PixelFormat format, bool mipmapped = false, const void* initialData = nullptr, TextureUsage usage = TextureUsage::Sampled);
 
         /**
         * Get the texture pixel format.
         */
-        PixelFormat GetPixelFormat() const { return format; }
-
-        /**
-        * Get the texture usage.
-        */
-        TextureUsage GetUsage() const { return usage; }
+        PixelFormat GetFormat() const { return description.format; }
 
         /**
         * Get a mip-level width.
@@ -73,27 +62,32 @@ namespace alimer
         /**
         * Gets number of mipmap levels of the texture.
         */
-        uint32_t GetMipLevels() const { return mipLevels; }
+        uint32_t GetMipLevels() const { return description.mipLevels; }
 
         /**
         * Get the array size of the texture.
         */
-        uint32_t GetArraySize() const { return (type != Type::Texture3D ? size.depth : 1u); }
+        uint32_t GetArraySize() const { return (description.type != TextureType::Texture3D ? description.arrayLayers : 1u); }
+
+        /**
+        * Get the texture usage.
+        */
+        TextureUsage GetUsage() const { return description.usage; }
 
         /**
         * Get the array index of a subresource.
         */
-        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
+        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / description.mipLevels; }
 
         /**
         * Get the mip-level of a subresource.
         */
-        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % mipLevels; }
+        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % description.mipLevels; }
 
         /**
         * Get the subresource index.
         */
-        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * mipLevels; }
+        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * description.mipLevels; }
 
         /**
         * Calculates the resulting size at a single level for an original size.
@@ -105,11 +99,6 @@ namespace alimer
         }
 
     private:
-        TextureDescription desc{};
-        Extent3D size{};
-        PixelFormat format;
-        TextureUsage usage;
-        uint32_t mipLevels;
-        uint32_t sampleCount;
+        TextureDescription description{};
     };
 }

@@ -85,40 +85,9 @@ namespace alimer
     }
 
     Texture::Texture(GraphicsDevice& device, const std::string& name)
-        : GraphicsResource(device, Type::Unknown, name, MemoryUsage::GpuOnly)
+        : GraphicsResource(device, name, MemoryUsage::GpuOnly)
     {
 
-    }
-
-    Texture::Texture(GraphicsDevice& device, const Extent3D& size, PixelFormat format, TextureUsage usage, uint32_t mipLevels, uint32_t sampleCount, const void* initialData)
-        : GraphicsResource(device, Type::Unknown, "", MemoryUsage::GpuOnly)
-        //, type(FindTextureType(size))
-        , size{ size }
-        , format{ format }
-        , usage{ usage }
-        , sampleCount{ sampleCount }
-    {
-        const uint32_t maxMipLevels = CalculateMipLevels(size.width, size.height);
-        if (mipLevels == 0)
-            mipLevels = maxMipLevels;
-
-        ALIMER_ASSERT(mipLevels <= maxMipLevels);
-
-        const bool autoGenerateMipmaps = false; // mipLevels == kMaxPossibleMipLevels;
-        /*const bool hasInitData = initialData != nullptr;
-        if (autoGenerateMipmaps && hasInitData)
-        {
-            usage |= TextureUsage::RenderTarget | TextureUsage::GenerateMipmaps;
-        }*/
-
-        TextureDescription desc{};
-        //desc.type = TextureType::Type2D;
-        desc.format = format;
-        desc.usage = usage;
-        desc.size = size;
-        desc.mipLevels = mipLevels;
-        desc.sampleCount = sampleCount;
-        handle = device.CreateTexture(desc, 0, initialData, autoGenerateMipmaps);
     }
 
     Texture::~Texture()
@@ -133,22 +102,46 @@ namespace alimer
         }
     }
 
+    bool Texture::Define2D(uint32_t width, uint32_t height, PixelFormat format, bool mipmapped, const void* initialData, TextureUsage usage)
+    {
+        Destroy();
+
+        description.type = TextureType::Texture2D;
+        description.format = format;
+        description.usage = usage;
+        description.width = width;
+        description.height = height;
+        description.depth = 1u;
+        description.mipLevels = mipmapped ? CalculateMipLevels(width, height) : 1u;
+        description.sampleCount = 1u;
+        description.label = name.c_str();
+
+        const bool hasInitData = initialData != nullptr;
+        if (mipmapped && hasInitData)
+        {
+            description.usage |= TextureUsage::RenderTarget;
+        }
+
+        handle = device.CreateTexture(description, 0, initialData, mipmapped);
+        return handle.isValid();
+    }
+
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1u, size.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1u, description.width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1u, size.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1u, description.height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
     {
-        if (type == Type::Texture3D)
+        if (description.type == TextureType::Texture3D)
             return 1u;
 
-        return (mipLevel == 0) || (mipLevel < mipLevels) ? max(1U, size.depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1U, description.depth >> mipLevel) : 0;
     }
 }
 

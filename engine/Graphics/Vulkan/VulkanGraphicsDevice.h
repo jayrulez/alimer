@@ -52,6 +52,8 @@ namespace alimer
         void DestroyBuffer(GpuHandle handle) override;
         void SetName(GpuHandle handle, const char* name) override;
 
+        CommandList BeginCommandList(const char* name) override;
+
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
 
