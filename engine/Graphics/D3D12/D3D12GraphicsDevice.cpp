@@ -310,26 +310,14 @@ namespace alimer
 
         // Create command queue's
         {
-            D3D12_COMMAND_QUEUE_DESC directQueueDesc;
-            directQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-            directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            directQueueDesc.NodeMask = 1;
-
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&graphicsQueue)));
-            graphicsQueue->SetName(L"Direct Command Queue");
-        }
-
-        // Create Copy data.
-        {
-            D3D12_COMMAND_QUEUE_DESC queueDesc;
-            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
             queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
             queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
             queueDesc.NodeMask = 1;
 
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&copyQueue)));
-            copyQueue->SetName(L"Copy Command Queue");
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            graphicsQueue->SetName(L"Direct Command Queue");
         }
 
         // Create descriptor heaps
@@ -350,21 +338,24 @@ namespace alimer
         // Create SwapChain if not headless
         if (window)
         {
+            uint32_t width = 0;
+            uint32_t height = 0;
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             RECT rect;
             BOOL success = GetClientRect(window, &rect);
             ALIMER_ASSERT_MSG(success, "GetWindowRect error.");
-            size.width = rect.right - rect.left;
-            size.height = rect.bottom - rect.top;
+            width = rect.right - rect.left;
+            height = rect.bottom - rect.top;
 #else
             float dpiscale = 1.0f;
-            size.width = uint32_t(window->Bounds.Width * dpiscale);
-            size.height = uint32_t(window->Bounds.Height * dpiscale);
+            width = uint32_t(window->Bounds.Width * dpiscale);
+            height = uint32_t(window->Bounds.Height * dpiscale);
 #endif
 
             DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = size.width;
-            swapChainDesc.Height = size.height;
+            swapChainDesc.Width = width;
+            swapChainDesc.Height = height;
             swapChainDesc.Format = backBufferFormat;
             swapChainDesc.Stereo = FALSE;
             swapChainDesc.SampleDesc.Count = 1;
@@ -409,6 +400,9 @@ namespace alimer
 
             ThrowIfFailed(tempSwapChain.As(&swapChain));
 
+            size.width = float(width);
+            size.height = float(height);
+
             for (uint32_t i = 0; i < backBufferCount; i++)
             {
                 swapChain->GetBuffer(i, IID_PPV_ARGS(&swapChainRenderTargets[i]));
@@ -428,6 +422,9 @@ namespace alimer
                 LOG_ERROR("Direct3D12: CreateEventEx failed.");
             }
         }
+
+        // Setup upload data.
+        InitializeUpload();
 
         // Setup ImGui
         {
@@ -501,7 +498,8 @@ namespace alimer
         // Release leaked resources.
         ReleaseTrackedResources();
 
-        SAFE_RELEASE(copyQueue);
+        ShutdownUpload();
+
         SAFE_RELEASE(graphicsQueue);
         CloseHandle(frameFenceEvent);
         SAFE_RELEASE(frameFence);
@@ -552,6 +550,91 @@ namespace alimer
             }
         }
 #endif
+    }
+
+    void D3D12GraphicsDevice::InitializeUpload()
+    {
+        D3D12_COMMAND_QUEUE_DESC queueDesc = { };
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&uploadCommandQueue)));
+        uploadCommandQueue->SetName(L"Upload Copy Queue");
+
+        // Fence
+        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence)));
+        uploadFence->SetName(L"Upload Fence");
+
+        uploadFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        if (!uploadFenceEvent)
+        {
+            LOG_ERROR("Direct3D12: CreateEventEx failed.");
+        }
+
+        D3D12MA::ALLOCATION_DESC allocationDesc = {};
+        allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+        D3D12_RESOURCE_DESC resourceDesc = { };
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Width = uploadBufferSize;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Alignment = 0;
+
+        ThrowIfFailed(memoryAllocator->CreateResource(
+            &allocationDesc,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            &uploadBufferAllocation,
+            IID_PPV_ARGS(&uploadBuffer)
+        ));
+
+        D3D12_RANGE readRange = { };
+        ThrowIfFailed(uploadBuffer->Map(0, &readRange, reinterpret_cast<void**>(&uploadBufferCPUAddr)));
+
+        // Temporary buffer memory that swaps every frame
+        resourceDesc.Width = tempBufferSize;
+
+        for (uint64_t i = 0; i < kRenderLatency; ++i)
+        {
+            ThrowIfFailed(memoryAllocator->CreateResource(
+                &allocationDesc,
+                &resourceDesc,
+                D3D12_RESOURCE_STATE_GENERIC_READ,
+                nullptr,
+                &tempBufferAllocations[i],
+                IID_PPV_ARGS(&tempFrameBuffers[i]))
+            );
+
+            ThrowIfFailed(tempFrameBuffers[i]->Map(0, &readRange, reinterpret_cast<void**>(&tempFrameCPUMem[i])));
+            tempFrameGPUMem[i] = tempFrameBuffers[i]->GetGPUVirtualAddress();
+        }
+    }
+
+    void D3D12GraphicsDevice::ShutdownUpload()
+    {
+        for (uint64_t i = 0; i < _countof(tempFrameBuffers); ++i)
+        {
+            Release(tempBufferAllocations[i]);
+            Release(tempFrameBuffers[i]);
+        }
+
+        Release(uploadBufferAllocation);
+        Release(uploadBuffer);
+        Release(uploadCommandQueue);
+        CloseHandle(uploadFenceEvent);
+        Release(uploadFence);
+    }
+
+    void D3D12GraphicsDevice::EndFrameUpload()
+    {
+        tempFrameUsed = 0;
     }
 
     void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
@@ -866,7 +949,6 @@ namespace alimer
     {
         RenderDrawData(ImGui::GetDrawData(), commandList);
 
-
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -875,6 +957,8 @@ namespace alimer
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
         GetCommandList(commandList)->ResourceBarrier(1, &barrier);
+
+        EndFrameUpload();
 
         // Execute all command lists
         {
@@ -916,11 +1000,11 @@ namespace alimer
         //GPUUploadMemoryHeaps[frameIndex].Size = 0;
     }
 
-    GpuHandle D3D12GraphicsDevice::AllocTextureHandle()
+    TextureHandle D3D12GraphicsDevice::AllocTextureHandle()
     {
         if (textures.isFull()) {
             LOG_ERROR("D3D12: Not enough free texture slots.");
-            return kInvalidGpuHandle;
+            return kInvalidTexture;
         }
         const int id = textures.alloc();
         ALIMER_ASSERT(id >= 0);
@@ -932,9 +1016,9 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    GpuHandle D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
+    TextureHandle D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
     {
-        GpuHandle handle = AllocTextureHandle();
+        TextureHandle handle = AllocTextureHandle();
         ResourceD3D12& resource = textures[handle.id];
         resource.format = ToDXGIFormatWitUsage(desc.format, desc.usage);
 
@@ -1044,7 +1128,7 @@ namespace alimer
         return handle;
     }
 
-    void D3D12GraphicsDevice::DestroyTexture(GpuHandle handle)
+    void D3D12GraphicsDevice::DestroyTexture(TextureHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -1056,11 +1140,11 @@ namespace alimer
         textures.dealloc(handle.id);
     }
 
-    GpuHandle D3D12GraphicsDevice::AllocBufferHandle()
+    BufferHandle D3D12GraphicsDevice::AllocBufferHandle()
     {
         if (buffers.isFull()) {
             LOG_ERROR("D3D12: Not enough free buffer slots.");
-            return kInvalidGpuHandle;
+            return kInvalidBuffer;
         }
         const int id = buffers.alloc();
         ALIMER_ASSERT(id >= 0);
@@ -1072,17 +1156,17 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    GpuHandle D3D12GraphicsDevice::CreateBuffer(const BufferDescription& desc)
+    BufferHandle D3D12GraphicsDevice::CreateBuffer(const BufferDescription& desc)
     {
-        GpuHandle handle = AllocBufferHandle();
+        BufferHandle handle = AllocBufferHandle();
         ResourceD3D12& resource = buffers[handle.id];
 
-        uint64_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
         if (any(desc.usage & BufferUsage::Uniform))
         {
             alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
         }
-        uint64_t alignedSize = AlignTo(desc.size, alignment);
+        uint32_t alignedSize = AlignTo(desc.size, alignment);
 
         D3D12_RESOURCE_DESC resourceDesc;
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -1124,7 +1208,7 @@ namespace alimer
         return handle;
     }
 
-    void D3D12GraphicsDevice::DestroyBuffer(GpuHandle handle)
+    void D3D12GraphicsDevice::DestroyBuffer(BufferHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -1135,7 +1219,7 @@ namespace alimer
         buffers.dealloc(handle.id);
     }
 
-    void D3D12GraphicsDevice::SetName(GpuHandle handle, const char* name)
+    void D3D12GraphicsDevice::SetName(BufferHandle handle, const char* name)
     {
         ResourceD3D12& buffer = buffers[handle.id];
         auto wideName = ToUtf16(name, strlen(name));
@@ -1185,7 +1269,7 @@ namespace alimer
         PIXEndEvent(commandLists[commandList]);
     }
 
-    void D3D12GraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    void D3D12GraphicsDevice::SetScissorRect(CommandList commandList, const Rect& scissorRect)
     {
         D3D12_RECT d3dScissorRect;
         d3dScissorRect.left = LONG(scissorRect.x);
@@ -1195,7 +1279,7 @@ namespace alimer
         commandLists[commandList]->RSSetScissorRects(1, &d3dScissorRect);
     }
 
-    void D3D12GraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    void D3D12GraphicsDevice::SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count)
     {
         D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
         for (uint32_t i = 0; i < count; ++i)
@@ -1233,6 +1317,28 @@ namespace alimer
         commandLists[commandList]->OMSetBlendFactor(color.Data());
     }
 
+    void D3D12GraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer)
+    {
+        ResourceD3D12& resource = buffers[buffer.id];
+
+        uint64_t offset = 0;
+        D3D12_GPU_VIRTUAL_ADDRESS bufferLocation = resource.handle->GetGPUVirtualAddress() + offset;
+
+        const bool compute = false;
+        if (compute) {
+            commandLists[commandList]->SetComputeRootConstantBufferView(slot, bufferLocation);
+        }
+        else {
+            commandLists[commandList]->SetGraphicsRootConstantBufferView(slot, bufferLocation);
+        }
+    }
+
+    void D3D12GraphicsDevice::BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size)
+    {
+        D3D12MapResult tempMem = AllocateGPUMemory(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+        memcpy(tempMem.CPUAddress, data, size);
+        commandLists[commandList]->SetGraphicsRootConstantBufferView(slot, tempMem.GPUAddress);
+    }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible)
     {
@@ -1274,6 +1380,23 @@ namespace alimer
         OutGPUHandle->ptr = heap->GPUStart.ptr + (size_t)heap->Size * heap->DescriptorSize;
 
         heap->Size += count;
+    }
+
+    D3D12MapResult D3D12GraphicsDevice::AllocateGPUMemory(uint64_t size, uint64_t alignment)
+    {
+        uint64_t allocSize = size + alignment;
+        uint64_t offset = InterlockedAdd64(&tempFrameUsed, allocSize) - allocSize;
+        if (alignment > 0)
+            offset = AlignTo(offset, alignment);
+        ALIMER_ASSERT(offset + size <= tempBufferSize);
+
+        D3D12MapResult result;
+        result.CPUAddress = tempFrameCPUMem[frameIndex] + offset;
+        result.GPUAddress = tempFrameGPUMem[frameIndex] + offset;
+        result.ResourceOffset = offset;
+        result.Resource = tempFrameBuffers[frameIndex];
+
+        return result;
     }
 
     void D3D12GraphicsDevice::HandleDeviceLost()
@@ -1626,11 +1749,12 @@ namespace alimer
         GetCommandList(commandList)->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         GetCommandList(commandList)->SetPipelineState(uiPipelineState);
         GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
-        GetCommandList(commandList)->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
+        BindBufferData(commandList, 1, &vertex_constant_buffer, sizeof(Matrix4x4));
+        //GetCommandList(commandList)->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
         // Setup blend factor
-        const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-        GetCommandList(commandList)->OMSetBlendFactor(blend_factor);
+        Color blendFactor(0.f, 0.f, 0.f, 0.f);
+        SetBlendColor(commandList, blendFactor);
     }
 
     void D3D12GraphicsDevice::RenderDrawData(ImDrawData* drawData, CommandList commandList)
@@ -1763,11 +1887,11 @@ namespace alimer
                         if (clip_rect.y < 0.0f)
                             clip_rect.y = 0.0f;
 
-                        RectI scissor;
-                        scissor.x = (int32_t)(clip_rect.x);
-                        scissor.y = (int32_t)(clip_rect.y);
-                        scissor.width = (int32_t)(clip_rect.z - clip_rect.x);
-                        scissor.height = (int32_t)(clip_rect.w - clip_rect.y);
+                        Rect scissor;
+                        scissor.x = clip_rect.x;
+                        scissor.y = clip_rect.y;
+                        scissor.width = clip_rect.z - clip_rect.x;
+                        scissor.height = clip_rect.w - clip_rect.y;
                         SetScissorRect(commandList, scissor);
 
                         //commandList->SetGraphicsRootDescriptorTable(1, *(GpuHandle*)&pcmd->TextureId);

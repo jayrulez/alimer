@@ -40,9 +40,11 @@ namespace alimer
 
     /* Handles */
     using CommandList = uint8_t;
-    struct GpuHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
 
-    static constexpr GpuHandle kInvalidGpuHandle = { kInvalidId };
+    static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
+    static constexpr TextureHandle kInvalidTexture = { kInvalidId };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -228,8 +230,8 @@ namespace alimer
     struct BufferDescription
     {
         BufferUsage usage;
-        uint64_t size;
-        uint64_t stride = 0;
+        uint32_t size;
+        uint32_t stride = 0;
         MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
         const void* content = nullptr;
         const char* label = nullptr;

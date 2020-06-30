@@ -35,17 +35,4 @@ namespace alimer
         sprintf(tempBuffer, "%g %g %g %g", x, y, width, height);
         return String(tempBuffer);
     }
-
-    /* RectI */
-    bool RectI::IsEmpty() const
-    {
-        return (x == 0 && y == 0 && width == 0 && height == 0);
-    }
-
-    String RectI::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d %d %d", x, y, width, height);
-        return String(tempBuffer);
-    }
 }

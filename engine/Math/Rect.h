@@ -68,38 +68,4 @@ namespace alimer
         /// Return as string.
         String ToString() const;
     };
-
-    /// Defines an integer rectangle.
-    class ALIMER_API RectI final
-    {
-    public:
-        /// Specifies the x-coordinate of the rectangle.
-        int x;
-        /// Specifies the y-coordinate of the rectangle.
-        int y;
-        /// Specifies the width of the rectangle.
-        int width;
-        /// Specifies the height of the rectangle.
-        int height;
-
-        constexpr RectI() noexcept : x(0), y(0), width(0), height(0) {}
-        constexpr RectI(int x_, int y_, int width_, int height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
-        constexpr RectI(int width_, int height_) noexcept : x(0), y(0), width(width_), height(height_) {}
-        constexpr RectI(const SizeI& size) noexcept : x(0), y(0), width(size.width), height(size.height) {}
-
-        RectI(const RectI&) = default;
-        RectI& operator=(const RectI&) = default;
-
-        RectI(RectI&&) = default;
-        RectI& operator=(RectI&&) = default;
-
-        /// Gets a value that indicates whether the rectangle is empty.
-        bool IsEmpty() const;
-
-        /// Return integer data.
-        const int* Data() const { return &x; }
-
-        /// Return as string.
-        String ToString() const;
-    };
 } 

@@ -802,11 +802,11 @@ namespace alimer
         }*/
     }
 
-    GpuHandle VulkanGraphicsDevice::AllocTextureHandle()
+    TextureHandle VulkanGraphicsDevice::AllocTextureHandle()
     {
         if (textures.isFull()) {
             LOG_ERROR("Vulkan: Not enough free texture slots.");
-            return kInvalidGpuHandle;
+            return kInvalidTexture;
         }
         const int id = textures.alloc();
         ALIMER_ASSERT(id >= 0);
@@ -817,14 +817,14 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    GpuHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
+    TextureHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
     {
-        GpuHandle handle = AllocTextureHandle();
+        TextureHandle handle = AllocTextureHandle();
         TextureVk& texture = textures[handle.id];
         return handle;
     }
 
-    void VulkanGraphicsDevice::DestroyTexture(GpuHandle handle)
+    void VulkanGraphicsDevice::DestroyTexture(TextureHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -834,11 +834,11 @@ namespace alimer
         textures.dealloc(handle.id);
     }
 
-    GpuHandle VulkanGraphicsDevice::AllocBufferHandle()
+    BufferHandle VulkanGraphicsDevice::AllocBufferHandle()
     {
         if (buffers.isFull()) {
             LOG_ERROR("Vulkan: Not enough free buffer slots.");
-            return kInvalidGpuHandle;
+            return kInvalidBuffer;
         }
         const int id = buffers.alloc();
         ALIMER_ASSERT(id >= 0);
@@ -849,14 +849,14 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    GpuHandle VulkanGraphicsDevice::CreateBuffer(const BufferDescription& desc)
+    BufferHandle VulkanGraphicsDevice::CreateBuffer(const BufferDescription& desc)
     {
-        GpuHandle handle = AllocBufferHandle();
+        BufferHandle handle = AllocBufferHandle();
         BufferVk& buffer = buffers[handle.id];
         return handle;
     }
 
-    void VulkanGraphicsDevice::DestroyBuffer(GpuHandle handle)
+    void VulkanGraphicsDevice::DestroyBuffer(BufferHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -866,7 +866,7 @@ namespace alimer
         buffers.dealloc(handle.id);
     }
 
-    void VulkanGraphicsDevice::SetName(GpuHandle handle, const char* name)
+    void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
     {
         if (name && desc.enableValidationLayer && instanceExts.debugUtils)
         {
@@ -920,23 +920,23 @@ namespace alimer
         }
     }
 
-    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const Rect& scissorRect)
     {
         VkRect2D vkScissorRect;
-        vkScissorRect.offset.x = scissorRect.x;
-        vkScissorRect.offset.y = scissorRect.y;
+        vkScissorRect.offset.x = static_cast<int32_t>(scissorRect.x);
+        vkScissorRect.offset.y = static_cast<int32_t>(scissorRect.y);
         vkScissorRect.extent.width = static_cast<uint32_t>(scissorRect.width);
         vkScissorRect.extent.height = static_cast<uint32_t>(scissorRect.height);
         deviceTable.vkCmdSetScissor(commandBuffers[commandList], 0, 1, &vkScissorRect);
     }
 
-    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count)
     {
         VkRect2D vkScissorRects[kMaxViewportAndScissorRects];
         for (uint32_t i = 0; i < count; ++i)
         {
-            vkScissorRects[i].offset.x = scissorRects[i].x;
-            vkScissorRects[i].offset.y = scissorRects[i].y;
+            vkScissorRects[i].offset.x = static_cast<int32_t>(scissorRects[i].x);
+            vkScissorRects[i].offset.y = static_cast<int32_t>(scissorRects[i].y);
             vkScissorRects[i].extent.width = static_cast<uint32_t>(scissorRects[i].width);
             vkScissorRects[i].extent.height = static_cast<uint32_t>(scissorRects[i].height);
         }
@@ -967,5 +967,15 @@ namespace alimer
     void VulkanGraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
     {
         deviceTable.vkCmdSetBlendConstants(commandBuffers[commandList], color.Data());
+    }
+
+    void VulkanGraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer)
+    {
+
+    }
+
+    void VulkanGraphicsDevice::BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size)
+    {
+
     }
 }

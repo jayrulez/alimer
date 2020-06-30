@@ -159,8 +159,8 @@ namespace alimer
     {
         if ((width != size.width || height != size.height) && width > 0 && height > 0)
         {
-            size.width = width;
-            size.height = height;
+            size.width = float(width);
+            size.height = float(height);
         }
     }
 

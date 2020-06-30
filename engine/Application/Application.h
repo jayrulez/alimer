@@ -45,7 +45,7 @@ namespace alimer
         String windowTitle = "Alimer";
 
         /// Main window size.
-        SizeI windowSize = { 1280, 720 };
+        Size windowSize = { 1280, 720 };
     };
 
     struct Engine;

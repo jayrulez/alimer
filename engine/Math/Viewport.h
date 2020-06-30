@@ -49,9 +49,6 @@ namespace alimer
         explicit Viewport(const Rect& rect) noexcept
             : x(rect.x), y(rect.y), width(rect.width), height(rect.height), minDepth(0.0f), maxDepth(1.0f) {}
 
-        explicit Viewport(const RectI& rect) noexcept
-            : x(float(rect.x)), y(float(rect.y)), width(float(rect.width)), height(float(rect.height)), minDepth(0.0f), maxDepth(1.0f) {}
-
         Viewport(const Viewport&) = default;
         Viewport& operator=(const Viewport&) = default;
 
@@ -65,16 +62,6 @@ namespace alimer
             y = rect.y;
             width = rect.width;
             height = rect.height;
-            minDepth = 0.0f; maxDepth = 1.0f;
-            return *this;
-        }
-
-        Viewport& operator= (const RectI& rect) noexcept
-        {
-            x = float(rect.x);
-            y = float(rect.y);
-            width = float(rect.width);
-            height = float(rect.height);
             minDepth = 0.0f; maxDepth = 1.0f;
             return *this;
         }

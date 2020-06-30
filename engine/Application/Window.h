@@ -22,10 +22,9 @@
 
 #pragma once
 
-#include "Core/Platform.h"
+#include "Core/String.h"
 #include "Core/Utils.h"
 #include "Math/Size.h"
-#include <string>
 
 namespace alimer
 {
@@ -48,10 +47,10 @@ namespace alimer
     public:
         Window() = default;
 
-        bool Create(const std::string& title, const SizeI& size, WindowFlags flags);
+        bool Create(const String& title, const Size& size, WindowFlags flags);
         void Close();
 
-        const SizeI& GetSize() const { return size; }
+        const Size& GetSize() const { return size; }
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
@@ -60,8 +59,8 @@ namespace alimer
         void* GetHandle() const;
 
     private:
-        std::string title;
-        SizeI size;
+        String title;
+        Size size;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
 

@@ -71,6 +71,13 @@ namespace alimer
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
 
+    template<typename T> void Release(T*& resource) {
+        if (resource != nullptr) {
+            resource->Release();
+            resource = nullptr;
+        }
+    }
+
 #ifdef ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 

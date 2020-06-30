@@ -88,12 +88,12 @@ namespace alimer
         void Resize(uint32_t width, uint32_t height);
 
         // Resource creation methods.
-        virtual GpuHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) = 0;
-        virtual void DestroyTexture(GpuHandle handle) = 0;
+        virtual TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) = 0;
+        virtual void DestroyTexture(TextureHandle handle) = 0;
 
-        virtual GpuHandle CreateBuffer(const BufferDescription& desc) = 0;
-        virtual void DestroyBuffer(GpuHandle handle) = 0;
-        virtual void SetName(GpuHandle handle, const char* name) = 0;
+        virtual BufferHandle CreateBuffer(const BufferDescription& desc) = 0;
+        virtual void DestroyBuffer(BufferHandle handle) = 0;
+        virtual void SetName(BufferHandle handle, const char* name) = 0;
 
         // CommandList
         virtual CommandList BeginCommandList(const char* name) = 0;
@@ -101,11 +101,14 @@ namespace alimer
         virtual void PushDebugGroup(CommandList commandList, const char* name) = 0;
         virtual void PopDebugGroup(CommandList commandList) = 0;
 
-        virtual void SetScissorRect(CommandList commandList, const RectI& scissorRect) = 0;
-        virtual void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) = 0;
+        virtual void SetScissorRect(CommandList commandList, const Rect& scissorRect) = 0;
+        virtual void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) = 0;
         virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
         virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
         virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
+
+        virtual void BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer) = 0;
+        virtual void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) = 0;
 
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
@@ -130,7 +133,7 @@ namespace alimer
 
         GraphicsDeviceCaps caps{};
         Desc desc;
-        SizeI size{};
+        Size size{};
         float dpiScale = 1.0f;
         PixelFormat colorFormat;
         PixelFormat depthStencilFormat;

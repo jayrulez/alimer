@@ -30,11 +30,4 @@ namespace alimer
         sprintf(tempBuffer, "%g %g", width, height);
         return String(tempBuffer);
     }
-
-    String SizeI::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
-    }
 }

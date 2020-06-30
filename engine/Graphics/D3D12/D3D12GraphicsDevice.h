@@ -41,6 +41,8 @@ namespace alimer
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
+        // Temporary CPU-writable buffer memory
+        D3D12MapResult AllocateGPUMemory(uint64_t size, uint64_t alignment);
 
         void HandleDeviceLost();
 
@@ -58,26 +60,33 @@ namespace alimer
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
 
-        // Resource creation methods.
-        GpuHandle AllocTextureHandle();
-        GpuHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
-        void DestroyTexture(GpuHandle handle) override;
+        void InitializeUpload();
+        void ShutdownUpload();
+        void EndFrameUpload();
 
-        GpuHandle AllocBufferHandle();
-        GpuHandle CreateBuffer(const BufferDescription& desc) override;
-        void DestroyBuffer(GpuHandle handle) override;
-        void SetName(GpuHandle handle, const char* name) override;
+        // Resource creation methods.
+        TextureHandle AllocTextureHandle();
+        TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
+        void DestroyTexture(TextureHandle handle) override;
+
+        BufferHandle AllocBufferHandle();
+        BufferHandle CreateBuffer(const BufferDescription& desc) override;
+        void DestroyBuffer(BufferHandle handle) override;
+        void SetName(BufferHandle handle, const char* name) override;
 
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
         void PushDebugGroup(CommandList commandList, const char* name) override;
         void PopDebugGroup(CommandList commandList) override;
 
-        void SetScissorRect(CommandList commandList, const RectI& scissorRect) override;
-        void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) override;
+        void SetScissorRect(CommandList commandList, const Rect& scissorRect) override;
+        void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) override;
         void SetViewport(CommandList commandList, const Viewport& viewport) override;
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(CommandList commandList, const Color& color) override;
+
+        void BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer) override;
+        void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
 
         void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
         void CreateUIObjects();
@@ -86,6 +95,8 @@ namespace alimer
         void SetupRenderState(ImDrawData* drawData, CommandList commandList);
         void RenderDrawData(ImDrawData* drawData, CommandList commandList);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
+
+        static constexpr uint64_t kRenderLatency = 2;
 
         bool supportsRenderPass = false;
 
@@ -103,13 +114,12 @@ namespace alimer
 
         /* Command queues */
         ID3D12CommandQueue* graphicsQueue = nullptr;
-        ID3D12CommandQueue* copyQueue = nullptr;
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};
         DescriptorHeap DSVHeap{};
         DescriptorHeap CPUDescriptorHeap;
-        DescriptorHeap GPUDescriptorHeaps[2];
+        DescriptorHeap GPUDescriptorHeaps[kRenderLatency];
 
         /* Main swap chain */
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -127,7 +137,7 @@ namespace alimer
         {
             ID3D12CommandAllocator* commandAllocators[kMaxCommandLists] = {};
         };
-        Frame frames[2];
+        Frame frames[kRenderLatency];
         Frame& frame() { return frames[frameIndex]; }
 
         ID3D12GraphicsCommandList* commandLists[kMaxCommandLists] = {};
@@ -137,6 +147,23 @@ namespace alimer
         ID3D12Fence* frameFence = nullptr;
         HANDLE frameFenceEvent;
         uint64_t frameCount{ 0 };
+
+        /* Upload data */
+        ID3D12CommandQueue* uploadCommandQueue = nullptr;
+        ID3D12Fence* uploadFence = nullptr;
+        HANDLE uploadFenceEvent;
+
+        uint64_t uploadBufferSize = 16 * 1024 * 1024;
+        D3D12MA::Allocation* uploadBufferAllocation = nullptr;
+        ID3D12Resource* uploadBuffer = nullptr;
+        uint8_t* uploadBufferCPUAddr = nullptr;
+
+        const uint64_t tempBufferSize = 2 * 1024 * 1024;
+        D3D12MA::Allocation* tempBufferAllocations[kRenderLatency] = { };
+        ID3D12Resource* tempFrameBuffers[kRenderLatency] = { };
+        uint8_t* tempFrameCPUMem[kRenderLatency] = { };
+        uint64_t tempFrameGPUMem[kRenderLatency] = { };
+        volatile int64_t tempFrameUsed = 0;
 
         /* Handles and pools */
         struct ResourceD3D12 {
@@ -155,6 +182,6 @@ namespace alimer
         // Imgui objects.
         ID3D12RootSignature* uiRootSignature = nullptr;
         ID3D12PipelineState* uiPipelineState = nullptr;
-        GpuHandle fontTexture;
+        TextureHandle fontTexture;
     };
 }

@@ -98,7 +98,11 @@ namespace alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
+        /// Gets the GPU handle.
+        TextureHandle GetHandle() const { return handle; }
+
     private:
+        TextureHandle handle{ kInvalidId };
         TextureDescription description{};
     };
 }

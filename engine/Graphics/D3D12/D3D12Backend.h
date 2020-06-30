@@ -51,6 +51,13 @@ namespace alimer
 
     class D3D12GraphicsDevice;
 
+    struct D3D12MapResult
+    {
+        void* CPUAddress = nullptr;
+        uint64_t GPUAddress = 0;
+        uint64_t ResourceOffset = 0;
+        ID3D12Resource* Resource = nullptr;
+    };
 
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(MemoryUsage usage)
     {

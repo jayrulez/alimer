@@ -66,19 +66,11 @@ namespace alimer
         */
         uint64_t GetSize() const { return size; }
 
-        bool IsAllocated() const { return handle.isValid(); }
-
-        /**
-        * Gets the GPU handle.
-        */
-        GpuHandle GetHandle() const { return handle; }
-
     private:
         virtual void BackendSetName() {}
 
     protected:
         GraphicsDevice& device;
-        GpuHandle handle{ kInvalidId };
         std::string name;
 
         uint64_t size{ 0 };

@@ -35,13 +35,23 @@ namespace alimer
         ~GraphicsBuffer() override;
         void Destroy() override;
 
-        /**
-        * Get a mip-level width.
-        */
-        uint32_t GetElementCount() const { return elementCount; }
+        /// Gets buffer size in bytes.
+        uint32_t GetSize() const { return description.size; }
+
+        /// Gets buffer stride  in bytes.
+        uint32_t GetStride() const { return description.stride; }
+
+        /// Gets buffer elements count (size divided by the stride).
+        uint32_t GetElementCount() const { return description.size / description.stride; }
+
+        /// Return true if buffer has been allocated.
+        bool IsAllocated() const { return handle.isValid(); }
+
+        /// Gets the GPU handle.
+        BufferHandle GetHandle() const { return handle; }
 
     private:
-        uint32_t elementCount;
-        uint32_t elementSize;
+        BufferHandle handle{ kInvalidId };
+        BufferDescription description{};
     };
 } 
