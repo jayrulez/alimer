@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Core/Platform.h"
 #include "Math/Rect.h"
 
 namespace alimer
@@ -47,11 +46,11 @@ namespace alimer
         Viewport() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f), minDepth(0.0f), maxDepth(1.0f) {}
         constexpr Viewport(float x_, float y_, float width_, float height_, float minDepth_ = 0.0f, float maxDepth_ = 1.0f) noexcept
             : x(x_), y(y_), width(width_), height(height_), minDepth(minDepth_), maxDepth(maxDepth_) {}
-        //explicit Viewport(const Rect& rect) noexcept
-        //    : x(rect.x), y(rect.y), width(rect.width), height(rect.height), minDepth(0.0f), maxDepth(1.0f) {}
+        explicit Viewport(const Rect& rect) noexcept
+            : x(rect.x), y(rect.y), width(rect.width), height(rect.height), minDepth(0.0f), maxDepth(1.0f) {}
 
-        //explicit Viewport(const RectI& rect) noexcept
-        //    : x(float(rect.x)), y(float(rect.y)), width(float(rect.width)), height(float(rect.height)), minDepth(0.0f), maxDepth(1.0f) {}
+        explicit Viewport(const RectI& rect) noexcept
+            : x(float(rect.x)), y(float(rect.y)), width(float(rect.width)), height(float(rect.height)), minDepth(0.0f), maxDepth(1.0f) {}
 
         Viewport(const Viewport&) = default;
         Viewport& operator=(const Viewport&) = default;
@@ -60,7 +59,7 @@ namespace alimer
         Viewport& operator=(Viewport&&) = default;
 
         // Assignment operators
-        /*Viewport& operator= (const Rect& rect) noexcept
+        Viewport& operator= (const Rect& rect) noexcept
         {
             x = rect.x;
             y = rect.y;
@@ -78,30 +77,32 @@ namespace alimer
             height = float(rect.height);
             minDepth = 0.0f; maxDepth = 1.0f;
             return *this;
-        }*/
+        }
 
         /// Test for equality with another vector without epsilon.
-        bool operator ==(const Viewport& rhs) const {
-            return x == rhs.x &&
-                y == rhs.y &&
-                width == rhs.width &&
-                height == rhs.height &&
-                minDepth == rhs.minDepth &&
-                maxDepth == rhs.maxDepth; }
+        bool operator ==(const Viewport& rhs) const
+        {
+            return x == rhs.x
+                && y == rhs.y
+                && width == rhs.width
+                && height == rhs.height
+                && minDepth == rhs.minDepth
+                && maxDepth == rhs.maxDepth;
+        }
 
         /// Test for inequality with another vector without epsilon.
-        bool operator !=(const Viewport& rhs) const {
-            return x != rhs.x ||
-                y != rhs.y ||
-                width != rhs.width ||
-                height != rhs.height ||
-                minDepth != rhs.minDepth ||
-                maxDepth != rhs.maxDepth;
+        bool operator !=(const Viewport& rhs) const
+        {
+            return x != rhs.x
+                || y != rhs.y
+                || width != rhs.width
+                || height != rhs.height
+                || minDepth != rhs.minDepth
+                || maxDepth != rhs.maxDepth;
         }
 
         // Viewport operations
         float AspectRatio() const noexcept;
-
         /// Return float data.
         const float* Data() const { return &x; }
     };

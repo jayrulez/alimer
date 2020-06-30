@@ -20,17 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Quaternion.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
-    const Quaternion Quaternion::Zero = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const Quaternion Quaternion::Identity = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    String Quaternion::ToString() const
+    String Size::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return std::string(tempBuffer);
+        sprintf(tempBuffer, "%g %g", width, height);
+        return String(tempBuffer);
+    }
+
+    String SizeI::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%d %d", width, height);
+        return String(tempBuffer);
     }
 }

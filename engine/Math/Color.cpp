@@ -24,4 +24,10 @@
 
 namespace alimer
 {
+    String Color::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g %g", r, g, b, a);
+        return String(tempBuffer);
+    }
 }

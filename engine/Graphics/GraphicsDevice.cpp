@@ -71,7 +71,7 @@ namespace alimer
         return availableDrivers;
     }
 
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(WindowHandle window, const Desc& desc)
+    GraphicsDevice* GraphicsDevice::Create(WindowHandle window, const Desc& desc)
     {
         BackendType backend = BackendType::Count;
 
@@ -87,14 +87,14 @@ namespace alimer
                 backend = BackendType::Null;
         }
 
-        std::unique_ptr<GraphicsDevice> device = nullptr;
+        GraphicsDevice* device = nullptr;
         switch (backend)
         {
 #if defined(ALIMER_VULKAN)
         case BackendType::Vulkan:
             if (VulkanGraphicsDevice::IsAvailable())
             {
-                device = std::make_unique<VulkanGraphicsDevice>(window, desc);
+                device = new VulkanGraphicsDevice(window, desc);
                 LOG_INFO("Using Vulkan driver");
             }
             break;
@@ -103,7 +103,7 @@ namespace alimer
         case BackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable())
             {
-                device = std::make_unique<D3D12GraphicsDevice>(window, desc);
+                device = new D3D12GraphicsDevice(window, desc);
                 LOG_INFO("Using Direct3D12 driver");
             }
             break;

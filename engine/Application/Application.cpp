@@ -42,7 +42,7 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        graphicsDevice.reset();
+        SafeDelete(graphicsDevice);
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
@@ -53,7 +53,6 @@ namespace alimer
         // Create main window.
         if (!headless)
         {
-            // Init ImGui
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
 
@@ -73,11 +72,10 @@ namespace alimer
             io.Fonts->AddFontDefault();
             //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
 
-
-          // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+            // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
             ImGuiStyle& style = ImGui::GetStyle();
             // Color scheme
-            style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+            /*style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
             style.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
             style.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
             style.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
@@ -91,7 +89,7 @@ namespace alimer
             style.Colors[ImGuiCol_FrameBgActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
             style.Colors[ImGuiCol_Button] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
             style.Colors[ImGuiCol_ButtonHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-            style.Colors[ImGuiCol_ButtonActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+            style.Colors[ImGuiCol_ButtonActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);*/
 
             // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
             if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -100,11 +98,7 @@ namespace alimer
                 style.Colors[ImGuiCol_WindowBg].w = 1.0f;
             }
 
-            window.Create(
-                config.windowTitle,
-                config.windowSize.width, config.windowSize.height,
-                WindowFlags::Resizable
-            );
+            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
             GraphicsDevice::Desc graphicsDesc = {};
             graphicsDesc.colorFormat = PixelFormat::BGRA8Unorm;

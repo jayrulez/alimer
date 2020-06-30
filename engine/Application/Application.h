@@ -28,23 +28,24 @@
 #include "Application/GameSystem.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Math/Size.h"
-#include <memory>
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace alimer
 {
     struct Configuration
     {
         /// Name of the application.
-        std::string applicationName = "Alimer";
+        String applicationName = "Alimer";
 
         /// Run engine in headless mode.
         bool headless = false;
 
         /// Main window title.
-        std::string windowTitle = "Alimer";
+        String windowTitle = "Alimer";
 
         /// Main window size.
-        SizeU windowSize = { 1280, 720 };
+        SizeI windowSize = { 1280, 720 };
     };
 
     struct Engine;
@@ -99,7 +100,7 @@ namespace alimer
     protected:
         Vector<std::string> args;
 
-        std::unique_ptr<GraphicsDevice> graphicsDevice;
+        GraphicsDevice* graphicsDevice;
 
         int exitCode = 0;
         Configuration config;

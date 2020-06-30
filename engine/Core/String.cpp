@@ -29,11 +29,13 @@
 #   include <windows.h>
 #endif
 
-namespace alimer {
-    const std::string EMPTY_STRING{};
+namespace alimer
+{
+    const String EMPTY_STRING{};
+    const  WString EMPTY_WSTRING{};
 
 #ifdef _WIN32
-    std::string ToUtf8(const wchar_t* wstr, size_t len)
+    String ToUtf8(const wchar_t* wstr, size_t len)
     {
         Vector<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
@@ -41,15 +43,15 @@ namespace alimer {
             return EMPTY_STRING;
         char_buffer.Resize(ret);
         WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.Data(), static_cast<int>(char_buffer.Size()), nullptr, nullptr);
-        return std::string(char_buffer.Data(), char_buffer.Size());
+        return String(char_buffer.Data(), char_buffer.Size());
     }
 
-    std::string ToUtf8(const std::wstring& wstr)
+    String ToUtf8(const WString& wstr)
     {
         return ToUtf8(wstr.data(), wstr.size());
     }
 
-    std::wstring ToUtf16(const char* str, size_t len)
+    WString ToUtf16(const char* str, size_t len)
     {
         Vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
@@ -57,10 +59,10 @@ namespace alimer {
             return L"";
         wchar_buffer.Resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.Data(), static_cast<int>(wchar_buffer.Size()));
-        return std::wstring(wchar_buffer.Data(), wchar_buffer.Size());
+        return WString(wchar_buffer.Data(), wchar_buffer.Size());
     }
 
-    std::wstring ToUtf16(const std::string& str)
+    WString ToUtf16(const String& str)
     {
         return ToUtf16(str.data(), str.size());
     }

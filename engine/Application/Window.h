@@ -48,10 +48,10 @@ namespace alimer
     public:
         Window() = default;
 
-        bool Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags);
+        bool Create(const std::string& title, const SizeI& size, WindowFlags flags);
         void Close();
 
-        const SizeU& GetSize() const { return size; }
+        const SizeI& GetSize() const { return size; }
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
@@ -61,7 +61,7 @@ namespace alimer
 
     private:
         std::string title;
-        SizeU size;
+        SizeI size;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
 

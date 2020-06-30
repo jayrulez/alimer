@@ -20,17 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Quaternion.h"
+#include "Math/Rect.h"
 
 namespace alimer
 {
-    const Quaternion Quaternion::Zero = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const Quaternion Quaternion::Identity = { 0.0f, 0.0f, 0.0f, 1.0f };
+    bool Rect::IsEmpty() const
+    {
+        return (x == 0 && y == 0 && width == 0 && height == 0);
+    }
 
-    String Quaternion::ToString() const
+    String Rect::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return std::string(tempBuffer);
+        sprintf(tempBuffer, "%g %g %g %g", x, y, width, height);
+        return String(tempBuffer);
+    }
+
+    /* RectI */
+    bool RectI::IsEmpty() const
+    {
+        return (x == 0 && y == 0 && width == 0 && height == 0);
+    }
+
+    String RectI::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%d %d %d %d", x, y, width, height);
+        return String(tempBuffer);
     }
 }

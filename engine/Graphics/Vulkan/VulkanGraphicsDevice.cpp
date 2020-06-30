@@ -883,4 +883,89 @@ namespace alimer
     {
         return 0;
     }
+
+    void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
+    {
+        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        {
+            VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+            label.pLabelName = name;
+            label.color[0] = 0.0f;
+            label.color[1] = 0.0f;
+            label.color[2] = 0.0f;
+            label.color[3] = 1.0f;
+            vkCmdInsertDebugUtilsLabelEXT(commandBuffers[commandList], &label);
+        }
+    }
+
+    void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
+    {
+        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        {
+            VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+            label.pLabelName = name;
+            label.color[0] = 0.0f;
+            label.color[1] = 0.0f;
+            label.color[2] = 0.0f;
+            label.color[3] = 1.0f;
+            vkCmdBeginDebugUtilsLabelEXT(commandBuffers[commandList], &label);
+        }
+    }
+
+    void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
+    {
+        if (desc.enableValidationLayer && instanceExts.debugUtils)
+        {
+            vkCmdEndDebugUtilsLabelEXT(commandBuffers[commandList]);
+        }
+    }
+
+    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    {
+        VkRect2D vkScissorRect;
+        vkScissorRect.offset.x = scissorRect.x;
+        vkScissorRect.offset.y = scissorRect.y;
+        vkScissorRect.extent.width = static_cast<uint32_t>(scissorRect.width);
+        vkScissorRect.extent.height = static_cast<uint32_t>(scissorRect.height);
+        deviceTable.vkCmdSetScissor(commandBuffers[commandList], 0, 1, &vkScissorRect);
+    }
+
+    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    {
+        VkRect2D vkScissorRects[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            vkScissorRects[i].offset.x = scissorRects[i].x;
+            vkScissorRects[i].offset.y = scissorRects[i].y;
+            vkScissorRects[i].extent.width = static_cast<uint32_t>(scissorRects[i].width);
+            vkScissorRects[i].extent.height = static_cast<uint32_t>(scissorRects[i].height);
+        }
+        deviceTable.vkCmdSetScissor(commandBuffers[commandList], 0, count, vkScissorRects);
+    }
+
+    void VulkanGraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
+    {
+        deviceTable.vkCmdSetViewport(commandBuffers[commandList], 0, 1, reinterpret_cast<const VkViewport*>(&viewport));
+    }
+
+    void VulkanGraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
+    {
+        VkViewport vkViewports[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            vkViewports[i].x = viewports[i].x;
+            vkViewports[i].y = viewports[i].y;
+            vkViewports[i].width = viewports[i].width;
+            vkViewports[i].height = viewports[i].height;
+            vkViewports[i].minDepth = viewports[i].minDepth;
+            vkViewports[i].maxDepth = viewports[i].maxDepth;
+        }
+
+        deviceTable.vkCmdSetViewport(commandBuffers[commandList], 0, count, vkViewports);
+    }
+
+    void VulkanGraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
+    {
+        deviceTable.vkCmdSetBlendConstants(commandBuffers[commandList], color.Data());
+    }
 }

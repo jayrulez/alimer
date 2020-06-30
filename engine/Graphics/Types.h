@@ -35,6 +35,7 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributes = 16u;
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+    static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
     static constexpr uint32_t kMaxCommandLists = 16u;
 
     /* Handles */
@@ -130,10 +131,11 @@ namespace alimer
         Discard
     };
 
-    enum class PresentMode : uint32_t {
-        Immediate = 0,
-        Mailbox = 1,
-        Fifo = 2
+    enum class PresentInterval : uint32_t {
+        Default = 0,
+        One,
+        Two,
+        immediate
     };
 
     /**
@@ -264,20 +266,20 @@ namespace alimer
     struct RenderPassDesc
     {
         // Render area will be clipped to the actual framebuffer.
-        RectU renderArea = { UINT32_MAX, UINT32_MAX };
+        //RectU renderArea = { UINT32_MAX, UINT32_MAX };
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
-    struct SwapChainDescription
+    struct PresentationParameters
     {
-        void* windowHandle = nullptr;
         uint32_t width = 0;
         uint32_t height = 0;
         PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        PresentMode presentMode;
+        PresentInterval presentationInterval = PresentInterval::Default;
         bool isFullscreen = false;
+        void* windowHandle = nullptr;
     };
 }

@@ -22,7 +22,11 @@
 
 #include "D3D12GraphicsDevice.h"
 #include "Graphics/Texture.h"
-#include "core/String.h"
+#include "Core/String.h"
+#include "Math/Matrix4x4.h"
+#include <imgui.h>
+#include <imgui_internal.h>
+
 #include <d3dcompiler.h>
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
@@ -125,9 +129,9 @@ namespace alimer
             //    ::SwitchToThread();
         }
 
-        struct VERTEX_CONSTANT_BUFFER
+        struct ImGuiConstants
         {
-            float   mvp[4][4];
+            Matrix4x4 mvp;
         };
     }
 
@@ -548,7 +552,7 @@ namespace alimer
             }
         }
 #endif
-        }
+    }
 
     void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
     {
@@ -787,6 +791,10 @@ namespace alimer
             caps.limits.minStorageBufferOffsetAlignment = 16;
             caps.limits.maxSamplerAnisotropy = D3D12_MAX_MAXANISOTROPY;
             caps.limits.maxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+            if (caps.limits.maxViewports > kMaxViewportAndScissorRects) {
+                caps.limits.maxViewports = kMaxViewportAndScissorRects;
+            }
+
             caps.limits.maxViewportWidth = D3D12_VIEWPORT_BOUNDS_MAX;
             caps.limits.maxViewportHeight = D3D12_VIEWPORT_BOUNDS_MAX;
             caps.limits.maxTessellationPatchSize = D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT;
@@ -856,7 +864,7 @@ namespace alimer
 
     void D3D12GraphicsDevice::EndFrameImpl()
     {
-        RenderDrawData(ImGui::GetDrawData(), GetCommandList(commandList));
+        RenderDrawData(ImGui::GetDrawData(), commandList);
 
 
         D3D12_RESOURCE_BARRIER barrier = {};
@@ -1160,6 +1168,72 @@ namespace alimer
         return cmd;
     }
 
+    void D3D12GraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
+    {
+        auto wideName = ToUtf16(name, strlen(name));
+        PIXSetMarker(commandLists[commandList], PIX_COLOR_DEFAULT, wideName.c_str());
+    }
+
+    void D3D12GraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
+    {
+        auto wideName = ToUtf16(name, strlen(name));
+        PIXBeginEvent(commandLists[commandList], PIX_COLOR_DEFAULT, wideName.c_str());
+    }
+
+    void D3D12GraphicsDevice::PopDebugGroup(CommandList commandList)
+    {
+        PIXEndEvent(commandLists[commandList]);
+    }
+
+    void D3D12GraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    {
+        D3D12_RECT d3dScissorRect;
+        d3dScissorRect.left = LONG(scissorRect.x);
+        d3dScissorRect.top = LONG(scissorRect.y);
+        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        commandLists[commandList]->RSSetScissorRects(1, &d3dScissorRect);
+    }
+
+    void D3D12GraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    {
+        D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dScissorRects[i].left = LONG(scissorRects[i].x);
+            d3dScissorRects[i].top = LONG(scissorRects[i].y);
+            d3dScissorRects[i].right = LONG(scissorRects[i].x + scissorRects[i].width);
+            d3dScissorRects[i].bottom = LONG(scissorRects[i].y + scissorRects[i].height);
+        }
+        commandLists[commandList]->RSSetScissorRects(count, d3dScissorRects);
+    }
+
+    void D3D12GraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
+    {
+        commandLists[commandList]->RSSetViewports(1, reinterpret_cast<const D3D12_VIEWPORT*>(&viewport));
+    }
+
+    void D3D12GraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
+    {
+        D3D12_VIEWPORT d3dViewports[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dViewports[i].TopLeftX = viewports[i].x;
+            d3dViewports[i].TopLeftY = viewports[i].y;
+            d3dViewports[i].Width = viewports[i].width;
+            d3dViewports[i].Height = viewports[i].height;
+            d3dViewports[i].MinDepth = viewports[i].minDepth;
+            d3dViewports[i].MaxDepth = viewports[i].maxDepth;
+        }
+        commandLists[commandList]->RSSetViewports(count, d3dViewports);
+    }
+
+    void D3D12GraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
+    {
+        commandLists[commandList]->OMSetBlendFactor(color.Data());
+    }
+
+
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible)
     {
         DescriptorHeap* heap = nullptr;
@@ -1271,13 +1345,15 @@ namespace alimer
         }
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        psoDesc.NodeMask = 1;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.pRootSignature = uiRootSignature;
         psoDesc.SampleMask = UINT_MAX;
+        psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+        psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
         psoDesc.NumRenderTargets = 1;
         psoDesc.RTVFormats[0] = backBufferFormat;
         psoDesc.SampleDesc.Count = 1;
+        psoDesc.NodeMask = 1;
         psoDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
         ID3DBlob* vertexShaderBlob;
@@ -1513,38 +1589,24 @@ namespace alimer
 
     }
 
-    void D3D12GraphicsDevice::SetupRenderState(ImDrawData* drawData, ID3D12GraphicsCommandList* commandList)
+    void D3D12GraphicsDevice::SetupRenderState(ImDrawData* drawData, CommandList commandList)
     {
         ImGuiViewportDataD3D12* render_data = (ImGuiViewportDataD3D12*)drawData->OwnerViewport->RendererUserData;
         FrameResources* fr = &render_data->frame[frameIndex];
 
         // Setup orthographic projection matrix into our constant buffer
         // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
-        VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
+        ImGuiConstants vertex_constant_buffer;
         {
             float L = drawData->DisplayPos.x;
             float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
             float T = drawData->DisplayPos.y;
             float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
-            float mvp[4][4] =
-            {
-                { 2.0f / (R - L),   0.0f,           0.0f,       0.0f },
-                { 0.0f,         2.0f / (T - B),     0.0f,       0.0f },
-                { 0.0f,         0.0f,           0.5f,       0.0f },
-                { (R + L) / (L - R),  (T + B) / (B - T),    0.5f,       1.0f },
-            };
-            memcpy(&vertex_constant_buffer.mvp, mvp, sizeof(mvp));
+            Matrix4x4::CreateOrthographicOffCenter(L, R, B, T, -1.0f, 1.0f, &vertex_constant_buffer.mvp);
         }
 
         // Setup viewport
-        D3D12_VIEWPORT vp;
-        memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-        vp.Width = drawData->DisplaySize.x;
-        vp.Height = drawData->DisplaySize.y;
-        vp.MinDepth = 0.0f;
-        vp.MaxDepth = 1.0f;
-        vp.TopLeftX = vp.TopLeftY = 0.0f;
-        commandList->RSSetViewports(1, &vp);
+        SetViewport(commandList, Viewport(0.0f, 0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y));
 
         // Bind shader and vertex buffers
         unsigned int stride = sizeof(ImDrawVert);
@@ -1554,30 +1616,30 @@ namespace alimer
         vbv.BufferLocation = fr->VertexBuffer->GetGPUVirtualAddress() + offset;
         vbv.SizeInBytes = fr->VertexBufferSize * stride;
         vbv.StrideInBytes = stride;
-        commandList->IASetVertexBuffers(0, 1, &vbv);
+        GetCommandList(commandList)->IASetVertexBuffers(0, 1, &vbv);
         D3D12_INDEX_BUFFER_VIEW ibv;
         memset(&ibv, 0, sizeof(D3D12_INDEX_BUFFER_VIEW));
         ibv.BufferLocation = fr->IndexBuffer->GetGPUVirtualAddress();
         ibv.SizeInBytes = fr->IndexBufferSize * sizeof(ImDrawIdx);
         ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-        commandList->IASetIndexBuffer(&ibv);
-        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->SetPipelineState(uiPipelineState);
-        commandList->SetGraphicsRootSignature(uiRootSignature);
-        commandList->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
+        GetCommandList(commandList)->IASetIndexBuffer(&ibv);
+        GetCommandList(commandList)->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        GetCommandList(commandList)->SetPipelineState(uiPipelineState);
+        GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
+        GetCommandList(commandList)->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
         // Setup blend factor
         const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-        commandList->OMSetBlendFactor(blend_factor);
+        GetCommandList(commandList)->OMSetBlendFactor(blend_factor);
     }
 
-    void D3D12GraphicsDevice::RenderDrawData(ImDrawData* drawData, ID3D12GraphicsCommandList* commandList)
+    void D3D12GraphicsDevice::RenderDrawData(ImDrawData* drawData, CommandList commandList)
     {
         // Avoid rendering when minimized
-        if (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
-            return;
-
-        if (drawData->TotalVtxCount == 0)
+        // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+        int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+        int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+        if (fb_width <= 0 || fb_height <= 0)
             return;
 
         ImGuiViewportDataD3D12* render_data = (ImGuiViewportDataD3D12*)drawData->OwnerViewport->RendererUserData;
@@ -1660,7 +1722,10 @@ namespace alimer
         // (Because we merged all buffers into a single one, we maintain our own offset into them)
         int global_vtx_offset = 0;
         int global_idx_offset = 0;
+
         ImVec2 clip_off = drawData->DisplayPos;
+        ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
         for (int n = 0; n < drawData->CmdListsCount; n++)
         {
             const ImDrawList* cmd_list = drawData->CmdLists[n];
@@ -1678,16 +1743,36 @@ namespace alimer
                 }
                 else
                 {
-                    // Apply Scissor, Bind texture, Draw
-                    const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
-
+                    // Bind SRV
                     uint32_t handleId = (uint32_t)(intptr_t)pcmd->TextureId;
                     D3D12_CPU_DESCRIPTOR_HANDLE SRV = textures[handleId].SRV;
+                    GetCommandList(commandList)->SetGraphicsRootDescriptorTable(1, CopyDescriptorsToGPUHeap(1, SRV));
 
-                    //commandList->SetGraphicsRootDescriptorTable(1, *(GpuHandle*)&pcmd->TextureId);
-                    commandList->SetGraphicsRootDescriptorTable(1, CopyDescriptorsToGPUHeap(1, SRV));
-                    commandList->RSSetScissorRects(1, &r);
-                    commandList->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    // Project scissor/clipping rectangles into framebuffer space
+                    ImVec4 clip_rect;
+                    clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
+                    clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
+                    clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
+                    clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+
+                    if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+                    {
+                        // Negative offsets are illegal for vkCmdSetScissor
+                        if (clip_rect.x < 0.0f)
+                            clip_rect.x = 0.0f;
+                        if (clip_rect.y < 0.0f)
+                            clip_rect.y = 0.0f;
+
+                        RectI scissor;
+                        scissor.x = (int32_t)(clip_rect.x);
+                        scissor.y = (int32_t)(clip_rect.y);
+                        scissor.width = (int32_t)(clip_rect.z - clip_rect.x);
+                        scissor.height = (int32_t)(clip_rect.w - clip_rect.y);
+                        SetScissorRect(commandList, scissor);
+
+                        //commandList->SetGraphicsRootDescriptorTable(1, *(GpuHandle*)&pcmd->TextureId);
+                        GetCommandList(commandList)->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                    }
                 }
             }
             global_idx_offset += cmd_list->IdxBuffer.Size;
@@ -1703,4 +1788,4 @@ namespace alimer
         d3dDevice->CopyDescriptorsSimple(count, CPUBaseHandle, srcBaseHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         return GPUBaseHandle;
     }
-    }
+}

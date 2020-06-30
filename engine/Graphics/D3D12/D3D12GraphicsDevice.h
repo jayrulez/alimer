@@ -27,6 +27,7 @@
 #include <vector>
 #include <queue>
 #include <mutex>
+struct ImDrawData;
 
 namespace alimer
 {
@@ -68,13 +69,22 @@ namespace alimer
         void SetName(GpuHandle handle, const char* name) override;
 
         CommandList BeginCommandList(const char* name) override;
+        void InsertDebugMarker(CommandList commandList, const char* name) override;
+        void PushDebugGroup(CommandList commandList, const char* name) override;
+        void PopDebugGroup(CommandList commandList) override;
+
+        void SetScissorRect(CommandList commandList, const RectI& scissorRect) override;
+        void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) override;
+        void SetViewport(CommandList commandList, const Viewport& viewport) override;
+        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
+        void SetBlendColor(CommandList commandList, const Color& color) override;
 
         void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
         void CreateUIObjects();
         void CreateFontsTexture();
         void DestroyUIObjects();
-        void SetupRenderState(ImDrawData* drawData, ID3D12GraphicsCommandList* commandList);
-        void RenderDrawData(ImDrawData* drawData, ID3D12GraphicsCommandList* commandList);
+        void SetupRenderState(ImDrawData* drawData, CommandList commandList);
+        void RenderDrawData(ImDrawData* drawData, CommandList commandList);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
         bool supportsRenderPass = false;

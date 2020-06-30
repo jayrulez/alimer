@@ -26,19 +26,22 @@
 #include <cmath>
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable:4244) // Conversion from 'double' to 'float'
-#pragma warning(disable:4702) // unreachable code
+#   pragma warning(push)
+#   pragma warning(disable:4244) // Conversion from 'double' to 'float'
+#   pragma warning(disable:4702) // unreachable code
 #endif
 
-namespace alimer {
+namespace alimer
+{
     static constexpr float M_EPSILON = 0.000001f;
 
     template <typename T> inline T pi() { return T(3.1415926535897932384626433832795028841971); }
     template <typename T> inline T half_pi() { return T(0.5) * pi<T>(); }
-    template <typename T> inline T one_over_root_two() { return T(0.7071067811865476); }
 
-    // min, max, clamp
+    template<typename T> inline T abs(T v) { return std::abs(v); }
+    template<typename T> inline T min(T a, T b) { return (a < b) ? a : b; }
+    template<typename T> inline T max(T a, T b) { return (a < b) ? b : a; }
+    template<typename T> inline T clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
     template <typename T> T sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
     template <typename T> T sin(T v) { return std::sin(v); }
     template <typename T> T cos(T v) { return std::cos(v); }
@@ -56,8 +59,20 @@ namespace alimer {
     template <typename T> T degrees(T a) { return a * (T(180) / pi<T>()); }
 
     /// Check whether two floating point values are equal within accuracy.
-    template <typename T>
-    inline bool Equals(T lhs, T rhs, T eps = M_EPSILON) { return lhs + eps >= rhs && lhs - eps <= rhs; }
+    template <typename T> inline bool Equals(T lhs, T rhs, T eps = M_EPSILON) { return lhs + eps >= rhs && lhs - eps <= rhs; }
+
+    /// Linear interpolation between two values.
+    template <typename T, typename U> inline T lerp(T lhs, T rhs, U t) { return lhs * (1.0 - t) + rhs * t; }
+
+    /// Inverse linear interpolation between two values.
+    template <typename T> inline T inverse_lerp(T lhs, T rhs, T x) { return (x - lhs) / (rhs - lhs); }
+
+    /// Check whether a floating point value is NaN.
+    template <class T> inline bool is_naN(T value) { return std::isnan(value); }
+
+    /// Check whether a floating point value is positive or negative infinity.
+    template <class T> inline bool is_inf(T value) { return std::isinf(value); }
+
 
     template <typename T> inline bool IsPowerOfTwo(T value)
     {
@@ -76,57 +91,35 @@ namespace alimer {
         return ((value + alignment - 1) / alignment) * alignment;
     }
 
-    /// Linear interpolation between two values.
-    template <typename T, typename U>
-    inline T lerp(T lhs, T rhs, U t) { return lhs * (1.0 - t) + rhs * t; }
-
-    /// Inverse linear interpolation between two values.
-    template <typename T>
-    inline T inverse_lerp(T lhs, T rhs, T x) { return (x - lhs) / (rhs - lhs); }
-
-    /// Check whether a floating point value is NaN.
-    template <typename T> inline bool is_nan(T value) { return isnan(value); }
-
-    /// Check whether a floating point value is positive or negative infinity
-    template <typename T> inline bool is_inf(T value) { return isinf(value); }
-
     template <typename T> struct tvec2;
     template <typename T> struct tvec3;
-    template <typename T> struct tvec4;
     template <typename T> struct tmat2;
     template <typename T> struct tmat3;
     template <typename T> struct tmat4;
 
-    template <typename T>
+    template<typename T>
     struct tvec2
     {
         static constexpr size_t SIZE = 2;
 
-        union
-        {
-            T data[2];
-            struct
-            {
-                T x, y;
-            };
+        union {
+            T data[SIZE];
+            struct { T x, y; };
+            struct { T s, t; };
+            struct { T r, g; };
         };
 
-        constexpr tvec2() = default;
-        constexpr tvec2(const tvec2&) = default;
+        tvec2() = default;
+        tvec2(const tvec2&) = default;
+
+        constexpr tvec2(T value) noexcept : x(value), y(value) {}
 
         template <typename U>
-        explicit constexpr tvec2(const tvec2 <U>& u)
-        {
-            x = T(u.x);
-            y = T(u.y);
-        }
+        constexpr tvec2(const tvec2<U>& u) noexcept : x(T(u.x)), y(T(u.y)) {}
 
-        constexpr tvec2(T x_, T y_)
-        {
-            x = x_;
-            y = y_;
-        }
+        constexpr tvec2(T x_, T y_) noexcept : x(x_), y(y_) {}
 
+        // array access
         inline constexpr T const& operator[](size_t i) const noexcept {
             ALIMER_ASSERT(i < SIZE);
             return data[i];
@@ -137,10 +130,10 @@ namespace alimer {
             return data[i];
         }
 
-        inline constexpr tvec2 xx() const { return tvec2(x, x); }
-        inline constexpr tvec2 xy() const { return tvec2(x, y); }
-        inline constexpr tvec2 yx() const { return tvec2(y, x); }
-        inline constexpr tvec2 yy() const { return tvec2(y, y); }
+        inline tvec2 xx() const;
+        inline tvec2 xy() const;
+        inline tvec2 yx() const;
+        inline tvec2 yy() const;
     };
 
     template <typename T>
@@ -203,152 +196,136 @@ namespace alimer {
             return data[i];
         }
     };
-
+    
     template <typename T>
-    struct tvec4
+    struct tmat2
     {
-    public:
-        static constexpr size_t SIZE = 4;
+        tmat2() = default;
 
-        union
+        explicit inline tmat2(T v)
         {
-            T data[SIZE];
-            struct
-            {
-                T x, y, z, w;
-            };
-        };
-
-        tvec4() = default;
-        tvec4(const tvec4&) = default;
-
-        template <typename U>
-        explicit inline tvec4(const tvec4<U>& u)
-        {
-            x = T(u.x);
-            y = T(u.y);
-            z = T(u.z);
-            w = T(u.w);
+            vec[0] = tvec2<T>(v, T(0));
+            vec[1] = tvec2<T>(T(0), v);
         }
 
-        inline tvec4(const tvec2<T>& a, const tvec2<T>& b)
+        inline tmat2(const tvec2<T>& a, const tvec2<T>& b)
         {
-            x = a.x;
-            y = a.y;
-            z = b.x;
-            w = b.y;
-        }
-
-        inline tvec4(const tvec3<T>& a, T b)
-        {
-            x = a.x;
-            y = a.y;
-            z = a.z;
-            w = b;
-        }
-
-        inline tvec4(T a, const tvec3<T>& b)
-        {
-            x = a;
-            y = b.x;
-            z = b.y;
-            w = b.z;
-        }
-
-        inline tvec4(const tvec2<T>& a, T b, T c)
-        {
-            x = a.x;
-            y = a.y;
-            z = b;
-            w = c;
-        }
-
-        inline tvec4(T a, const tvec2<T>& b, T c)
-        {
-            x = a;
-            y = b.x;
-            z = b.y;
-            w = c;
-        }
-
-        inline tvec4(T a, T b, const tvec2<T>& c)
-        {
-            x = a;
-            y = b;
-            z = c.x;
-            w = c.y;
-        }
-
-        explicit inline tvec4(T v)
-        {
-            x = v;
-            y = v;
-            z = v;
-            w = v;
-        }
-
-        inline tvec4(T x_, T y_, T z_, T w_)
-        {
-            x = x_;
-            y = y_;
-            z = z_;
-            w = w_;
+            vec[0] = a;
+            vec[1] = b;
         }
 
         // array access
-        inline constexpr T const& operator[](size_t i) const noexcept {
-            ALIMER_ASSERT(i < SIZE);
-            return data[i];
+        inline constexpr tvec2<T> const& operator[](size_t i) const noexcept {
+            return vec[i];
         }
 
-        inline constexpr T& operator[](size_t i) noexcept {
-            ALIMER_ASSERT(i < SIZE);
-            return data[i];
+        inline constexpr tvec2<T>& operator[](size_t i) noexcept {
+            return vec[i];
         }
+
+    private:
+        tvec2<T> vec[2];
+    };
+
+    template <typename T>
+    struct tmat3
+    {
+        tmat3() = default;
+
+        explicit inline tmat3(T v)
+        {
+            vec[0] = tvec3<T>(v, T(0), T(0));
+            vec[1] = tvec3<T>(T(0), v, T(0));
+            vec[2] = tvec3<T>(T(0), T(0), v);
+        }
+
+        inline tmat3(const tvec3<T>& a, const tvec3<T>& b, const tvec3<T>& c)
+        {
+            vec[0] = a;
+            vec[1] = b;
+            vec[2] = c;
+        }
+
+        explicit inline tmat3(const tmat4<T>& m)
+        {
+            for (int col = 0; col < 3; col++)
+                for (int row = 0; row < 3; row++)
+                    vec[col][row] = m[col][row];
+        }
+
+        // array access
+        inline constexpr tvec3<T> const& operator[](size_t i) const noexcept {
+            return vec[i];
+        }
+
+        inline constexpr tvec3<T>& operator[](size_t i) noexcept {
+            return vec[i];
+        }
+
+    private:
+        tvec3<T> vec[3];
     };
 
     using uint = uint32_t;
     using float2 = tvec2<float>;
     using float3 = tvec3<float>;
-    using float4 = tvec4<float>;
     using float2x2 = tmat2<float>;
     using float3x3 = tmat3<float>;
     using float4x4 = tmat4<float>;
 
     using double2 = tvec2<double>;
     using double3 = tvec3<double>;
-    using double4 = tvec4<double>;
     using double2x2 = tmat2<double>;
     using double3x3 = tmat3<double>;
     using double4x4 = tmat4<double>;
 
     using int2 = tvec2<int32_t>;
     using int3 = tvec3<int32_t>;
-    using int4 = tvec4<int32_t>;
-    using uint2 = tvec2<uint32_t>;
     using uint3 = tvec3<uint32_t>;
-    using uint4 = tvec4<uint32_t>;
 
     using ushort2 = tvec2<uint16_t>;
     using ushort3 = tvec3<uint16_t>;
-    using ushort4 = tvec4<uint16_t>;
-    using short2 = tvec2<int16_t>;
     using short3 = tvec3<int16_t>;
-    using short4 = tvec4<int16_t>;
 
-    //using half2 = tvec2<half>;
     using ubyte2 = tvec2<uint8_t>;
     using ubyte3 = tvec3<uint8_t>;
-    using ubyte4 = tvec4<uint8_t>;
     using byte2 = tvec2<int8_t>;
     using byte3 = tvec3<int8_t>;
-    using byte4 = tvec4<int8_t>;
 
     using bool2 = tvec2<bool>;
     using bool3 = tvec3<bool>;
-    using bool4 = tvec4<bool>;
-}  // namespace alimer
+
+    // select
+    template <typename T> inline T select(T a, T b, bool lerp) {
+        return lerp ? b : a;
+    }
+
+    template <typename T> inline tvec2<T> select(const tvec2<T>& a, const tvec2<T>& b, const tvec2<bool>& lerp) {
+        return tvec2<T>(lerp.x ? b.x : a.x, lerp.y ? b.y : a.y);
+    }
+
+    template <typename T> inline tvec3<T> select(const tvec3<T>& a, const tvec3<T>& b, const tvec3<bool>& lerp) {
+        return tvec3<T>(lerp.x ? b.x : a.x, lerp.y ? b.y : a.y, lerp.z ? b.z : a.z);
+    }
+
+    // smoothstep
+    template <typename T> inline T smoothstep(const T& lo, const T& hi, T val) {
+        val = clamp((val - lo) / (hi - lo), T(0.0f), T(1.0f));
+        return val * val * (3.0f - 2.0f * val);
+    }
+
+    /* Implementation */
+#define MATH_IMPL_SWIZZLE(ret_type, self_type, swiz, ...) template <typename T> t##ret_type<T> t##self_type<T>::swiz() const { return t##ret_type<T>(__VA_ARGS__); }
+
+    // vec2
+    MATH_IMPL_SWIZZLE(vec2, vec2, xx, x, x);
+    MATH_IMPL_SWIZZLE(vec2, vec2, xy, x, y);
+    MATH_IMPL_SWIZZLE(vec2, vec2, yx, y, x);
+    MATH_IMPL_SWIZZLE(vec2, vec2, yy, y, y);
+
+#undef MATH_IMPL_SWIZZLE
+}
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+#   pragma warning(pop)
 #endif

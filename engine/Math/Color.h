@@ -22,8 +22,7 @@
 
 #pragma once
 
-#include "Core/Platform.h"
-#include <string>
+#include "Math/Vector4.h"
 
 #if defined(__GNUC__) && !defined(__MINGW32__)
 #define ALIMER_SELECT_ANY __attribute__((weak))
@@ -31,7 +30,8 @@
 #define ALIMER_SELECT_ANY __declspec(selectany)
 #endif
 
-namespace alimer {
+namespace alimer
+{
     /// Class specifying a floating-point RGBA color.
     class ALIMER_API Color final
     {
@@ -46,25 +46,32 @@ namespace alimer {
         float a;
 
         /// Constructor.
-        Color() noexcept
-            : r(0.0f)
-            , g(0.0f)
-            , b(0.0f)
-            , a(1.0f)
-        {
-        }
+        Color() noexcept : r(0.0f), g(0.0f), b(0.0f), a(1.0f) {}
+        constexpr Color(float r_, float g_, float b_) noexcept : r(r_), g(g_), b(b_), a(1.0f) {}
+        constexpr Color(float r_, float g_, float b_, float a_) noexcept : r(r_), g(g_), b(b_), a(a_) {}
+        //explicit Color(const Vector3& clr) noexcept : XMFLOAT4(clr.x, clr.y, clr.z, 1.f) {}
+        explicit Color(const Vector4& vector) noexcept : r(vector.x), g(vector.y), b(vector.z), a(vector.w) {}
+        explicit Color(_In_reads_(4) const float* data) noexcept : r(data[0]), g(data[1]), b(data[2]), a(data[3]) {}
 
-        Color(float r_, float g_, float b_, float a_ = 1.0f) noexcept
-            : r(r_), g(g_), b(b_), a(a_)
-        {
-        }
+        Color(const Color&) = default;
+        Color& operator=(const Color&) = default;
+        Color(Color&&) = default;
+        Color& operator=(Color&&) = default;
+
+        // Comparison operators
+        bool operator == (const Color& rhs) const noexcept { return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a; }
+        bool operator != (const Color& rhs) const noexcept { return r != rhs.r || g != rhs.g || b != rhs.b || a != rhs.a; }
 
         /// Return float data.
         const float* Data() const { return &r; }
+
+        /// Return as string.
+        String ToString() const;
     };
 
     /* Copied from DirectXMath (https://github.com/microsoft/DirectXMath/blob/b412a61c518923e52e2d43d9e4d7084af8352ca2/Inc/DirectXColors.h) */
-    namespace Colors {
+    namespace Colors
+    {
         // Standard colors (Red/Green/Blue/Alpha)
         extern const ALIMER_SELECT_ANY Color AliceBlue = { 0.941176534f, 0.972549081f, 1.0f, 1.0f };
         extern const ALIMER_SELECT_ANY Color AntiqueWhite = { 0.980392218f, 0.921568692f, 0.843137324f, 1.0f };
@@ -207,6 +214,5 @@ namespace alimer {
         extern const ALIMER_SELECT_ANY Color WhiteSmoke = { 0.960784376f, 0.960784376f, 0.960784376f, 1.0f };
         extern const ALIMER_SELECT_ANY Color Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
         extern const ALIMER_SELECT_ANY Color YellowGreen = { 0.603921592f, 0.803921640f, 0.196078449f, 1.0f };
-
-    } // namespace Colors
-} // namespace alimer
+    }
+}

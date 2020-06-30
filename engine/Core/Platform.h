@@ -391,6 +391,7 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #define _In_z_
 #define _In_opt_
 #define _Inout_
+#define _In_reads_(size)
 #endif
 
 //---------------------------------------------
@@ -440,12 +441,4 @@ namespace alimer {
     ALIMER_MAKE_LIMITS(u64, 0, UINT64_MAX);
     ALIMER_MAKE_LIMITS(float, -FLT_MAX, FLT_MAX);
     ALIMER_MAKE_LIMITS(double, -DBL_MAX, DBL_MAX);
-
-    //---------------------------------------------
-    // Basic comparisons
-    //---------------------------------------------
-    template<typename T> inline T abs(T v) { return (v >= 0) ? v : -v; }
-    template<typename T> inline T min(T a, T b) { return (a < b) ? a : b; }
-    template<typename T> inline T max(T a, T b) { return (a < b) ? b : a; }
-    template<typename T> inline T clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
 } // namespace alimer

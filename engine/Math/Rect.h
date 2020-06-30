@@ -27,70 +27,79 @@
 
 namespace alimer
 {
-    /// Class specifying a two-dimensional rectangle.
-    template <typename T>
-    class TRect final
+    /// Defines a floating-point rectangle.
+    class ALIMER_API Rect final
     {
     public:
-        static constexpr size_t SIZE = 4;
+        /// Specifies the x-coordinate of the rectangle.
+        float x;
+        /// Specifies the y-coordinate of the rectangle.
+        float y;
+        /// Specifies the width of the rectangle.
+        float width;
+        /// Specifies the height of the rectangle.
+        float height;
 
-        union
-        {
-            T data[SIZE];
-            struct
-            {
-                T x, y, width, height;
-            };
-        };
+        constexpr Rect() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f) {}
+        constexpr Rect(float x_, float y_, float width_, float height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
+        constexpr Rect(float width_, float height_) noexcept : x(0.0f), y(0.0f), width(width_), height(height_) {}
+        constexpr Rect(const Size& size) noexcept : x(0.0f), y(0.0f), width(size.width), height(size.height) {}
 
-        constexpr TRect() = default;
-        constexpr TRect(const TRect&) = default;
+        Rect(const Rect&) = default;
+        Rect& operator=(const Rect&) = default;
 
-        template <typename U>
-        explicit constexpr TRect(const TRect<U>& u)
-        {
-            x = T(u.x);
-            y = T(u.y);
-            width = T(u.width);
-            height = T(u.height);
+        Rect(Rect&&) = default;
+        Rect& operator=(Rect&&) = default;
+
+        /// Test for equality with another rect with epsilon.
+        bool Equals(const Rect& rhs, float eps = M_EPSILON) const {
+            return alimer::Equals(x, rhs.x)
+                && alimer::Equals(y, rhs.y)
+                && alimer::Equals(width, rhs.width)
+                && alimer::Equals(height, rhs.height);
         }
 
-        constexpr TRect(T x_, T y_, T width_, T height_)
-        {
-            x = x_;
-            y = y_;
-            width = width_;
-            height = height_;
-        }
+        /// Gets a value that indicates whether the rectangle is empty.
+        bool IsEmpty() const;
 
-        constexpr TRect(T width_, T height_)
-        {
-            x = T(0);
-            y = T(0);
-            width = width_;
-            height = height_;
-        }
+        /// Return float data.
+        const float* Data() const { return &x; }
 
-        constexpr TRect(const TSize2<T>& size)
-        {
-            x = T(0);
-            y = T(0);
-            width = size.width;
-            height = size.height;
-        }
-
-        // array access
-        inline constexpr T const& operator[](size_t i) const noexcept {
-            ALIMER_ASSERT(i < SIZE);
-            return data[i];
-        }
-
-        inline constexpr T& operator[](size_t i) noexcept {
-            ALIMER_ASSERT(i < SIZE);
-            return data[i];
-        }
+        /// Return as string.
+        String ToString() const;
     };
 
-    using Rect = TRect<int32_t>;
-    using RectU = TRect<uint32_t>;
+    /// Defines an integer rectangle.
+    class ALIMER_API RectI final
+    {
+    public:
+        /// Specifies the x-coordinate of the rectangle.
+        int x;
+        /// Specifies the y-coordinate of the rectangle.
+        int y;
+        /// Specifies the width of the rectangle.
+        int width;
+        /// Specifies the height of the rectangle.
+        int height;
+
+        constexpr RectI() noexcept : x(0), y(0), width(0), height(0) {}
+        constexpr RectI(int x_, int y_, int width_, int height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
+        constexpr RectI(int width_, int height_) noexcept : x(0), y(0), width(width_), height(height_) {}
+        constexpr RectI(const SizeI& size) noexcept : x(0), y(0), width(size.width), height(size.height) {}
+
+        RectI(const RectI&) = default;
+        RectI& operator=(const RectI&) = default;
+
+        RectI(RectI&&) = default;
+        RectI& operator=(RectI&&) = default;
+
+        /// Gets a value that indicates whether the rectangle is empty.
+        bool IsEmpty() const;
+
+        /// Return integer data.
+        const int* Data() const { return &x; }
+
+        /// Return as string.
+        String ToString() const;
+    };
 } 

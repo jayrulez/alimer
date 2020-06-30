@@ -20,14 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Quaternion.h"
+#include "Math/Vector4.h"
 
 namespace alimer
 {
-    const Quaternion Quaternion::Zero = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const Quaternion Quaternion::Identity = { 0.0f, 0.0f, 0.0f, 1.0f };
-
-    String Quaternion::ToString() const
+    String Vector4::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);

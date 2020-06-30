@@ -25,11 +25,10 @@
 #include "Core/Ptr.h"
 #include "Core/Vector.h"
 #include "Graphics/Texture.h"
-#include <imgui.h>
-#include <imgui_internal.h>
+#include "Math/Rect.h"
+#include "Math/Viewport.h"
 #include <set>
 #include <mutex>
-#include <memory>
 #include <atomic>
 
 namespace alimer
@@ -80,7 +79,7 @@ namespace alimer
         virtual ~GraphicsDevice() = default;
 
         static std::set<BackendType> GetAvailableBackends();
-        static std::unique_ptr<GraphicsDevice> Create(WindowHandle window, const Desc& desc);
+        static GraphicsDevice* Create(WindowHandle window, const Desc& desc);
 
         virtual void WaitForGPU() = 0;
         void BeginFrame();
@@ -98,6 +97,15 @@ namespace alimer
 
         // CommandList
         virtual CommandList BeginCommandList(const char* name) = 0;
+        virtual void InsertDebugMarker(CommandList commandList, const char* name) = 0;
+        virtual void PushDebugGroup(CommandList commandList, const char* name) = 0;
+        virtual void PopDebugGroup(CommandList commandList) = 0;
+
+        virtual void SetScissorRect(CommandList commandList, const RectI& scissorRect) = 0;
+        virtual void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) = 0;
+        virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
+        virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
+        virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
 
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
@@ -122,7 +130,7 @@ namespace alimer
 
         GraphicsDeviceCaps caps{};
         Desc desc;
-        SizeU size{};
+        SizeI size{};
         float dpiScale = 1.0f;
         PixelFormat colorFormat;
         PixelFormat depthStencilFormat;

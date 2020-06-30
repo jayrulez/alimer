@@ -53,6 +53,15 @@ namespace alimer
         void SetName(GpuHandle handle, const char* name) override;
 
         CommandList BeginCommandList(const char* name) override;
+        void InsertDebugMarker(CommandList commandList, const char* name) override;
+        void PushDebugGroup(CommandList commandList, const char* namet) override;
+        void PopDebugGroup(CommandList commandList) override;
+
+        void SetScissorRect(CommandList commandList, const RectI& scissorRect) override;
+        void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) override;
+        void SetViewport(CommandList commandList, const Viewport& viewport) override;
+        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
+        void SetBlendColor(CommandList commandList, const Color& color) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -74,6 +83,8 @@ namespace alimer
 
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
+
+        VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
 
         /* Handles and pools */
         struct TextureVk {

@@ -22,46 +22,44 @@
 
 #pragma once
 
-#include "Math/Vector4.h"
+#include "Math/MathHelper.h"
+#include "Core/String.h"
 
 namespace alimer
 {
-    /// Class specifying a four-dimensional quaternion.
-    class ALIMER_API Quaternion
+    /// Class specifying a four-dimensional vector.
+    class ALIMER_API Vector4
     {
     public:
-        /// Specifies the x-component of the quaternion.
+        /// Specifies the x-component of the vector.
         float x;
-        /// Specifies the y-component of the quaternion.
+        /// Specifies the y-component of the vector.
         float y;
-        /// Specifies the z-component of the quaternion.
+        /// Specifies the z-component of the vector.
         float z;
-        /// Specifies the w-component of the quaternion.
+        /// Specifies the w-component of the vector.
         float w;
 
         /// Constructor.
-        Quaternion() noexcept : x(0.0f), y(0.0f), z(0.0f), w(1.0f) {}
-        constexpr Quaternion(float x_, float y_, float z_, float w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
-        explicit Quaternion(_In_reads_(4) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]), w(data[3]) {}
+        Vector4() noexcept : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
+        constexpr explicit Vector4(float value) noexcept : x(value), y(value), z(value), w(value) {}
+        constexpr Vector4(float x_, float y_, float z_, float w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
+        explicit Vector4(_In_reads_(4) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]), w(data[3]) {}
 
-        Quaternion(const Quaternion&) = default;
-        Quaternion& operator=(const Quaternion&) = default;
+        Vector4(const Vector4&) = default;
+        Vector4& operator=(const Vector4&) = default;
 
-        Quaternion(Quaternion&&) = default;
-        Quaternion& operator=(Quaternion&&) = default;
+        Vector4(Vector4&&) = default;
+        Vector4& operator=(Vector4&&) = default;
 
         // Comparison operators
-        bool operator == (const Quaternion& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
-        bool operator != (const Quaternion& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
+        bool operator == (const Vector4& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
+        bool operator != (const Vector4& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
 
         /// Return float data.
         const float* Data() const { return &x; }
 
         /// Return as string.
         String ToString() const;
-
-        // Constants
-        static const Quaternion Zero;
-        static const Quaternion Identity;
     };
 }

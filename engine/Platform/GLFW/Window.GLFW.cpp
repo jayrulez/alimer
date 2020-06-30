@@ -49,11 +49,10 @@ namespace alimer
         }
     }
 
-    bool Window::Create(const std::string& title, uint32_t width, uint32_t height, WindowFlags flags)
+    bool Window::Create(const std::string& title, const SizeI& size, WindowFlags flags)
     {
         this->title = title;
-        size.width = width;
-        size.height = height;
+        this->size = size;
         fullscreen = any(flags & WindowFlags::Fullscreen);
         exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
 
@@ -96,7 +95,7 @@ namespace alimer
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        GLFWwindow* handle = glfwCreateWindow((int)size.width, (int)size.height, title.c_str(), monitor, NULL);
+        GLFWwindow* handle = glfwCreateWindow(size.width, size.height, title.c_str(), monitor, NULL);
         if (!handle)
         {
             LOG_ERROR("GLFW: Failed to create window.");
