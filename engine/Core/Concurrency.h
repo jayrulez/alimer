@@ -25,16 +25,16 @@
 
 namespace alimer
 {
-    ALIMER_API i32 AtomicIncrement(volatile i32* value);
-    ALIMER_API i64 AtomicIncrement(volatile i64* value);
-    ALIMER_API i32 AtomicDecrement(volatile i32* value);
-    ALIMER_API i64 AtomicDecrement(volatile i64* value);
+    ALIMER_API int32_t AtomicIncrement(volatile int32_t* value);
+    ALIMER_API int64_t AtomicIncrement(volatile int64_t* value);
+    ALIMER_API int32_t AtomicDecrement(volatile int32_t* value);
+    ALIMER_API int64_t AtomicDecrement(volatile int64_t* value);
 
-    ALIMER_API i32 AtomicAdd(i32 volatile* addend, i32 value);
-    ALIMER_API i64 AtomicAdd(i64 volatile* addend, i64 value);
-    ALIMER_API i32 AtomicSubtract(i32 volatile* addend, i32 value);
-    ALIMER_API i64 AtomicSubtract(i64 volatile* addend, i64 value);
+    ALIMER_API int32_t AtomicAdd(int32_t volatile* addend, int32_t value);
+    ALIMER_API int64_t AtomicAdd(int64_t volatile* addend, int64_t value);
+    ALIMER_API int32_t AtomicSubtract(int32_t volatile* addend, int32_t value);
+    ALIMER_API int64_t AtomicSubtract(int64_t volatile* addend, int64_t value);
 
-    ALIMER_API bool CompareAndExchange(i32 volatile* dest, i32 exchange, i32 comperand);
-    ALIMER_API bool CompareAndExchange64(i64 volatile* dest, i64 exchange, i64 comperand);
+    ALIMER_API bool CompareAndExchange(int32_t volatile* dest, int32_t exchange, int32_t comperand);
+    ALIMER_API bool CompareAndExchange64(int64_t volatile* dest, int64_t exchange, int64_t comperand);
 }

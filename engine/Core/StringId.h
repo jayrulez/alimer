@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "Core/Platform.h"
-#include <string>
+#include "Core/String.h"
 
-namespace alimer {
+namespace alimer
+{
     /// 32-bit hash value for a string.
     class ALIMER_API StringId32
     {
@@ -40,7 +40,7 @@ namespace alimer {
         StringId32(const StringId32& rhs) noexcept = default;
 
         /// Construct with an initial value.
-        explicit StringId32(u32 value_) noexcept
+        explicit StringId32(uint32_t value_) noexcept
             : value(value_)
         {
         }
@@ -48,7 +48,7 @@ namespace alimer {
         /// Construct from a C string.
         StringId32(const char* str) noexcept;
         /// Construct from a string.
-        StringId32(const std::string& str) noexcept;
+        StringId32(const String& str) noexcept;
 
         /// Assign from another hash.
         StringId32& operator =(const StringId32& rhs) noexcept = default;
@@ -84,17 +84,17 @@ namespace alimer {
         explicit operator bool() const { return value != 0; }
 
         /// Return hash value.
-        u32 Value() const { return value; }
+        uint32_t Value() const { return value; }
 
         /// Return as string.
-        std::string ToString() const;
+        String ToString() const;
 
         /// Zero hash.
         static const StringId32 Zero;
 
     private:
         /// Hash value.
-        u32 value;
+        uint32_t value;
     };
 
     /// 64-bit hash value for a string.
@@ -111,7 +111,7 @@ namespace alimer {
         StringId64(const StringId64& rhs) noexcept = default;
 
         /// Construct with an initial value.
-        explicit StringId64(u64 value_) noexcept
+        explicit StringId64(uint64_t value_) noexcept
             : value(value_)
         {
         }
@@ -119,7 +119,7 @@ namespace alimer {
         /// Construct from a C string.
         StringId64(const char* str) noexcept;
         /// Construct from a string.
-        StringId64(const std::string& str) noexcept;
+        StringId64(const String& str) noexcept;
 
         /// Assign from another hash.
         StringId64& operator =(const StringId64& rhs) noexcept = default;
@@ -155,16 +155,36 @@ namespace alimer {
         explicit operator bool() const { return value != 0; }
 
         /// Return hash value.
-        u64 Value() const { return value; }
+        uint64_t Value() const { return value; }
 
         /// Return as string.
-        std::string ToString() const;
+        String ToString() const;
 
         /// Zero hash.
         static const StringId64 Zero;
 
     private:
         /// Hash value.
-        u64 value;
+        uint64_t value;
     };
-} // namespace alimer
+}
+
+namespace std {
+    template<>
+    class hash<alimer::StringId32> {
+    public:
+        size_t operator()(const alimer::StringId32& value) const
+        {
+            return value.Value();
+        }
+    };
+
+    template<>
+    class hash<alimer::StringId64> {
+    public:
+        size_t operator()(const alimer::StringId64& value) const
+        {
+            return value.Value();
+        }
+    };
+}

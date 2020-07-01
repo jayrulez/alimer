@@ -25,7 +25,8 @@
 #include "Core/Ptr.h"
 #include "Core/StringId.h"
 
-namespace alimer {
+namespace alimer
+{
     /// Type info.
     class ALIMER_API TypeInfo final
     {
@@ -58,6 +59,9 @@ namespace alimer {
         const TypeInfo* baseTypeInfo;
     };
 
+    class ObjectFactory;
+    template <class T> class ObjectFactoryImpl;
+
     /// Base class for objects with type identification, subsystem access
     class ALIMER_API Object : public RefCounted
     {
@@ -86,8 +90,66 @@ namespace alimer {
         template<typename T> T* Cast() { return IsInstanceOf<T>() ? static_cast<T*>(this) : nullptr; }
         /// Cast the object to specified most derived class.
         template<typename T> const T* Cast() const { return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr; }
+
+        /// Register an object as a subsystem that can be accessed globally. Note that the subsystems container does not own the objects.
+        static void AddSubsystem(Object* subsystem);
+        /// Remove a subsystem by object pointer.
+        static void RemoveSubsystem(Object* subsystem);
+        /// Remove a subsystem by type.
+        static void RemoveSubsystem(StringId32 type);
+        /// Return a subsystem by type, or null if not registered.
+        static Object* GetSubsystem(StringId32 type);
+        /// Register an object factory.
+        static void RegisterFactory(ObjectFactory* factory);
+        /// Create an object by type hash. Return pointer to it or null if no factory found.
+        static RefPtr<Object> Create(StringId32 objectType);
+
+        /// Return a subsystem, template version.
+        template <class T> static T* GetSubsystem() { return static_cast<T*>(GetSubsystem(T::GetTypeStatic())); }
+        /// Register an object factory, template version.
+        template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
+        /// Create and return an object through a factory, template version.
+        template <class T> static inline RefPtr<T> Create() { return StaticCast<T>(Create(T::GetTypeStatic())); }
     };
-} // namespace alimer
+
+    /// Base class for object factories.
+    class ALIMER_API ObjectFactory
+    {
+    public:
+        /// Destruct.
+        virtual ~ObjectFactory() = default;
+
+        /// /// Create an object.
+        virtual RefPtr<Object> Create() = 0;
+
+        /// Return type info of objects created by this factory.
+        const TypeInfo* GetTypeInfo() const { return typeInfo; }
+
+        /// Return type hash of objects created by this factory.
+        StringId32 GetType() const { return typeInfo->GetType(); }
+
+        /// Return type name of objects created by this factory.
+        const String& GetTypeName() const { return typeInfo->GetTypeName(); }
+
+    protected:
+        /// Type info.
+        const TypeInfo* typeInfo = nullptr;
+    };
+
+    /// Template implementation of the object factory.
+    template <class T> class ObjectFactoryImpl : public ObjectFactory
+    {
+    public:
+        /// Construct.
+        ObjectFactoryImpl()
+        {
+            typeInfo = T::GetTypeInfoStatic();
+        }
+
+        /// Create an object of the specific type.
+        RefPtr<Object> Create() override { return RefPtr<Object>(new T()); }
+    };
+}
 
 #define ALIMER_OBJECT(typeName, baseTypeName) \
     public: \

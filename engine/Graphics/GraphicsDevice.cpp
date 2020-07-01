@@ -42,7 +42,12 @@ namespace alimer
         , colorFormat{ desc.colorFormat }
         , depthStencilFormat{ desc.depthStencilFormat }
     {
-       
+        AddSubsystem(this);
+    }
+
+    GraphicsDevice::~GraphicsDevice()
+    {
+        RemoveSubsystem(this);
     }
 
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()

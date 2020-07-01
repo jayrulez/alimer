@@ -21,9 +21,53 @@
 //
 
 #include "Core/Object.h"
+#include <memory>
+#include <unordered_map>
 
 namespace alimer
 {
+    namespace details
+    {
+        struct Context
+        {
+            /// Object factories.
+            std::unordered_map<StringId32, Object*> subsystems;
+            std::unordered_map<StringId32, std::unique_ptr<ObjectFactory> > factories;
+
+            void AddSubsystem(Object* subsystem)
+            {
+                subsystems[subsystem->GetType()] = subsystem;
+            }
+
+            void RemoveSubsystem(StringId32 subsystemType)
+            {
+                subsystems.erase(subsystemType);
+            }
+
+            Object* GetSubsystem(StringId32 type)
+            {
+                auto it = subsystems.find(type);
+                return it != subsystems.end() ? it->second : nullptr;
+            }
+
+            void RegisterFactory(ObjectFactory* factory)
+            {
+                factories[factory->GetType()].reset(factory);
+            }
+
+            RefPtr<Object> CreateObject(StringId32 type)
+            {
+                auto it = factories.find(type);
+                return it != factories.end() ? it->second->Create() : nullptr;
+            }
+        };
+
+        Context& context() {
+            static Context s_context;
+            return s_context;
+        }
+    }
+
     TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
         : type(typeName_)
         , typeName(typeName_)
@@ -72,5 +116,44 @@ namespace alimer
     bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
     {
         return GetTypeInfo()->IsTypeOf(typeInfo);
+    }
+
+    void Object::AddSubsystem(Object* subsystem)
+    {
+        if (!subsystem)
+            return;
+
+        details::context().AddSubsystem(subsystem);
+    }
+
+    void Object::RemoveSubsystem(Object* subsystem)
+    {
+        if (!subsystem)
+            return;
+
+        details::context().RemoveSubsystem(subsystem->GetType());
+    }
+
+    void Object::RemoveSubsystem(StringId32 type)
+    {
+        details::context().RemoveSubsystem(type);
+    }
+
+    Object* Object::GetSubsystem(StringId32 type)
+    {
+        return details::context().GetSubsystem(type);
+    }
+
+    void Object::RegisterFactory(ObjectFactory* factory)
+    {
+        if (!factory)
+            return;
+
+        details::context().RegisterFactory(factory);
+    }
+
+    RefPtr<Object> Object::Create(StringId32 objectType)
+    {
+        return details::context().CreateObject(objectType);
     }
 }

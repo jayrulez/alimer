@@ -28,7 +28,7 @@
 
 namespace alimer
 {
-    i32 AtomicIncrement(volatile i32* value) {
+    int32_t AtomicIncrement(volatile int32_t* value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedIncrement((volatile long*)value);
 #else
@@ -36,7 +36,7 @@ namespace alimer
 #endif
     }
 
-    i64 AtomicIncrement(volatile i64* value) {
+    int64_t AtomicIncrement(volatile int64_t* value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedIncrement64((volatile long long*)value);
 #else
@@ -44,7 +44,7 @@ namespace alimer
 #endif
     }
 
-    i32 AtomicDecrement(volatile i32* value) {
+    int32_t AtomicDecrement(volatile int32_t* value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedDecrement((volatile long*)value);
 #else
@@ -52,7 +52,7 @@ namespace alimer
 #endif
     }
 
-    i64 AtomicDecrement(volatile i64* value) {
+    int64_t AtomicDecrement(volatile int64_t* value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedDecrement64((volatile long long*)value);
 #else
@@ -60,7 +60,7 @@ namespace alimer
 #endif
     }
 
-    i32 AtomicAdd(i32 volatile* addend, i32 value) {
+    int32_t AtomicAdd(int32_t volatile* addend, int32_t value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedExchangeAdd((volatile long*)addend, value);
 #else
@@ -68,7 +68,7 @@ namespace alimer
 #endif
     }
 
-    i64 AtomicAdd(i64 volatile* addend, i64 value) {
+    int64_t AtomicAdd(int64_t volatile* addend, int64_t value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedExchangeAdd64((volatile long long*)addend, value);
 #else
@@ -76,7 +76,7 @@ namespace alimer
 #endif
     }
 
-    i32 AtomicSubtract(i32 volatile* addend, i32 value) {
+    int32_t AtomicSubtract(int32_t volatile* addend, int32_t value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedExchangeAdd((volatile long*)addend, -value);
 #else
@@ -84,7 +84,7 @@ namespace alimer
 #endif
     }
 
-    i64 AtomicSubtract(i64 volatile* addend, i64 value) {
+    int64_t AtomicSubtract(int64_t volatile* addend, int64_t value) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedExchangeAdd64((volatile long long*)addend, -value);
 #else
@@ -92,7 +92,7 @@ namespace alimer
 #endif
     }
 
-    bool CompareAndExchange(i32 volatile* dest, i32 exchange, i32 comperand) {
+    bool CompareAndExchange(int32_t volatile* dest, int32_t exchange, int32_t comperand) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedCompareExchange((volatile long*)dest, exchange, comperand) == comperand;
 #else
@@ -100,7 +100,7 @@ namespace alimer
 #endif
     }
 
-    bool CompareAndExchange64(i64 volatile* dest, i64 exchange, i64 comperand) {
+    bool CompareAndExchange64(int64_t volatile* dest, int64_t exchange, int64_t comperand) {
 #if ALIMER_PLATFORM_WINDOWS
         return _InterlockedCompareExchange64(dest, exchange, comperand) == comperand;
 #else

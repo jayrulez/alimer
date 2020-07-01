@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Ptr.h"
+#include "Core/Object.h"
 #include "Core/Vector.h"
 #include "Graphics/Texture.h"
 #include "Math/Rect.h"
@@ -60,8 +60,10 @@ namespace alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice : public Object
     {
+        ALIMER_OBJECT(GraphicsDevice, Object);
+
         friend class GraphicsResource;
 
     public:
@@ -76,7 +78,7 @@ namespace alimer
             bool enableVsync = true;                                     
         };
 
-        virtual ~GraphicsDevice() = default;
+        virtual ~GraphicsDevice();
 
         static std::set<BackendType> GetAvailableBackends();
         static GraphicsDevice* Create(WindowHandle window, const Desc& desc);

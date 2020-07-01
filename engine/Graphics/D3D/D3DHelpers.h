@@ -71,7 +71,7 @@ namespace alimer
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
 
-    template<typename T> void Release(T*& resource) {
+    template<typename T> void SafeRelease(T*& resource) {
         if (resource != nullptr) {
             resource->Release();
             resource = nullptr;

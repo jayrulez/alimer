@@ -621,15 +621,15 @@ namespace alimer
     {
         for (uint64_t i = 0; i < _countof(tempFrameBuffers); ++i)
         {
-            Release(tempBufferAllocations[i]);
-            Release(tempFrameBuffers[i]);
+            SafeRelease(tempBufferAllocations[i]);
+            SafeRelease(tempFrameBuffers[i]);
         }
 
-        Release(uploadBufferAllocation);
-        Release(uploadBuffer);
-        Release(uploadCommandQueue);
+        SafeRelease(uploadBufferAllocation);
+        SafeRelease(uploadBuffer);
+        SafeRelease(uploadCommandQueue);
         CloseHandle(uploadFenceEvent);
-        Release(uploadFence);
+        SafeRelease(uploadFence);
     }
 
     void D3D12GraphicsDevice::EndFrameUpload()
@@ -1418,18 +1418,17 @@ namespace alimer
             descRange.RegisterSpace = 0;
             descRange.OffsetInDescriptorsFromTableStart = 0;
 
-            D3D12_ROOT_PARAMETER1 param[2] = {};
+            D3D12_ROOT_PARAMETER1 rootParameters[2] = {};
 
-            param[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-            param[0].Constants.ShaderRegister = 0;
-            param[0].Constants.RegisterSpace = 0;
-            param[0].Constants.Num32BitValues = 16;
-            param[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+            rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+            rootParameters[0].Descriptor.ShaderRegister = 0;
+            rootParameters[0].Descriptor.RegisterSpace = 0;
+            rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-            param[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-            param[1].DescriptorTable.NumDescriptorRanges = 1;
-            param[1].DescriptorTable.pDescriptorRanges = &descRange;
-            param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+            rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            rootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+            rootParameters[1].DescriptorTable.pDescriptorRanges = &descRange;
+            rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
             D3D12_STATIC_SAMPLER_DESC staticSampler = {};
             staticSampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -1448,8 +1447,8 @@ namespace alimer
 
             D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc = {};
             desc.Version = rootSignatureVersion;
-            desc.Desc_1_1.NumParameters = _countof(param);
-            desc.Desc_1_1.pParameters = param;
+            desc.Desc_1_1.NumParameters = _countof(rootParameters);
+            desc.Desc_1_1.pParameters = rootParameters;
             desc.Desc_1_1.NumStaticSamplers = 1;
             desc.Desc_1_1.pStaticSamplers = &staticSampler;
             desc.Desc_1_1.Flags =
@@ -1512,7 +1511,7 @@ namespace alimer
               return output;\
             }";
 
-            if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &vertexShaderBlob, NULL)))
+            if (FAILED(D3DCompile(vertexShader, strlen(vertexShader), nullptr, nullptr, nullptr, "main", "vs_5_0", 0, 0, &vertexShaderBlob, nullptr)))
                 return;
 
             psoDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
@@ -1749,8 +1748,7 @@ namespace alimer
         GetCommandList(commandList)->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         GetCommandList(commandList)->SetPipelineState(uiPipelineState);
         GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
-        BindBufferData(commandList, 1, &vertex_constant_buffer, sizeof(Matrix4x4));
-        //GetCommandList(commandList)->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
+        BindBufferData(commandList, 0, &vertex_constant_buffer, sizeof(Matrix4x4));
 
         // Setup blend factor
         Color blendFactor(0.f, 0.f, 0.f, 0.f);
@@ -1894,7 +1892,6 @@ namespace alimer
                         scissor.height = clip_rect.w - clip_rect.y;
                         SetScissorRect(commandList, scissor);
 
-                        //commandList->SetGraphicsRootDescriptorTable(1, *(GpuHandle*)&pcmd->TextureId);
                         GetCommandList(commandList)->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
                     }
                 }
