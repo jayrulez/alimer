@@ -798,71 +798,12 @@ namespace alimer
         }*/
     }
 
-    TextureHandle VulkanGraphicsDevice::AllocTextureHandle()
+    RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
     {
-        if (textures.isFull()) {
-            LOG_ERROR("Vulkan: Not enough free texture slots.");
-            return kInvalidTexture;
-        }
-        const int id = textures.alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        TextureVk& texture = textures[id];
-        texture.handle = VK_NULL_HANDLE;
-        texture.allocation = VK_NULL_HANDLE;
-        return { (uint32_t)id };
+        return nullptr;
     }
 
-    TextureHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
-    {
-        TextureHandle handle = AllocTextureHandle();
-        TextureVk& texture = textures[handle.id];
-        return handle;
-    }
-
-    void VulkanGraphicsDevice::DestroyTexture(TextureHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        TextureVk& texture = textures[handle.id];
-        /* TODO: Deferred destroy */
-        textures.dealloc(handle.id);
-    }
-
-    BufferHandle VulkanGraphicsDevice::AllocBufferHandle()
-    {
-        if (buffers.isFull()) {
-            LOG_ERROR("Vulkan: Not enough free buffer slots.");
-            return kInvalidBuffer;
-        }
-        const int id = buffers.alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        BufferVk& buffer = buffers[id];
-        buffer.handle = VK_NULL_HANDLE;
-        buffer.allocation = VK_NULL_HANDLE;
-        return { (uint32_t)id };
-    }
-
-    BufferHandle VulkanGraphicsDevice::CreateBuffer(const BufferDescription& desc)
-    {
-        BufferHandle handle = AllocBufferHandle();
-        BufferVk& buffer = buffers[handle.id];
-        return handle;
-    }
-
-    void VulkanGraphicsDevice::DestroyBuffer(BufferHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        BufferVk& buffer = buffers[handle.id];
-        /* TODO: Deferred destroy */
-        buffers.dealloc(handle.id);
-    }
-
-    void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
+    /*void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
     {
         if (name && enableValidationLayer && instanceExts.debugUtils)
         {
@@ -873,7 +814,7 @@ namespace alimer
 
             VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
         }
-    }
+    }*/
 
     CommandList VulkanGraphicsDevice::BeginCommandList(const char* name)
     {
@@ -965,7 +906,7 @@ namespace alimer
         deviceTable.vkCmdSetBlendConstants(commandBuffers[commandList], color.Data());
     }
 
-    void VulkanGraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer)
+    void VulkanGraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer)
     {
 
     }

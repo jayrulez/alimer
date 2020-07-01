@@ -33,6 +33,8 @@
 
 namespace alimer
 {
+    class GraphicsBuffer;
+
     class ALIMER_API GraphicsDeviceEvents
     {
     public:
@@ -67,12 +69,7 @@ namespace alimer
         void Resize(uint32_t width, uint32_t height);
 
         // Resource creation methods.
-        virtual TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) = 0;
-        virtual void DestroyTexture(TextureHandle handle) = 0;
-
-        virtual BufferHandle CreateBuffer(const BufferDescription& desc) = 0;
-        virtual void DestroyBuffer(BufferHandle handle) = 0;
-        virtual void SetName(BufferHandle handle, const char* name) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
 
         // CommandList
         virtual CommandList BeginCommandList(const char* name) = 0;
@@ -86,7 +83,7 @@ namespace alimer
         virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
         virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
 
-        virtual void BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer) = 0;
+        virtual void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) = 0;
         virtual void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) = 0;
 
         /// Get the device capabilities.

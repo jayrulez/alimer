@@ -31,13 +31,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        Texture(GraphicsDevice& device, const std::string& name = "");
-        /// Destructor.
-        ~Texture() override;
-        void Destroy() override;
-
-        /// Defines texture as 2D texture
-        bool Define2D(uint32_t width, uint32_t height, PixelFormat format, bool mipmapped = false, const void* initialData = nullptr, TextureUsage usage = TextureUsage::Sampled);
+        Texture(GraphicsDevice& device, const TextureDescription& desc);
 
         /**
         * Get the texture pixel format.
@@ -67,7 +61,7 @@ namespace alimer
         /**
         * Get the array size of the texture.
         */
-        uint32_t GetArraySize() const { return (description.type != TextureType::Texture3D ? description.arrayLayers : 1u); }
+        uint32_t GetArraySize() const { return (description.type != TextureType::Texture3D ? description.depth : 1u); }
 
         /**
         * Get the texture usage.
@@ -98,11 +92,9 @@ namespace alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
-        /// Gets the GPU handle.
-        TextureHandle GetHandle() const { return handle; }
+        uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0u, uint32_t depth = 1u);
 
     private:
-        TextureHandle handle{ kInvalidId };
         TextureDescription description{};
     };
 }

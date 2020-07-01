@@ -26,32 +26,24 @@
 
 namespace alimer
 {
-    class GraphicsBuffer final : public GraphicsResource
+    class GraphicsBuffer : public GraphicsResource
     {
     public:
         /// Constructor
-        GraphicsBuffer(GraphicsDevice& device, const std::string& name = "");
-        /// Destructor
-        ~GraphicsBuffer() override;
-        void Destroy() override;
+        GraphicsBuffer(GraphicsDevice& device, const BufferDescription& desc);
 
         /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return description.size; }
+        uint32_t GetSize() const { return size; }
 
         /// Gets buffer stride  in bytes.
-        uint32_t GetStride() const { return description.stride; }
+        uint32_t GetStride() const { return stride; }
 
         /// Gets buffer elements count (size divided by the stride).
-        uint32_t GetElementCount() const { return description.size / description.stride; }
-
-        /// Return true if buffer has been allocated.
-        bool IsAllocated() const { return handle.isValid(); }
-
-        /// Gets the GPU handle.
-        BufferHandle GetHandle() const { return handle; }
+        uint32_t GetElementCount() const { return size / stride; }
 
     private:
-        BufferHandle handle{ kInvalidId };
-        BufferDescription description{};
+        BufferUsage usage;
+        uint32_t size;
+        uint32_t stride;
     };
-} 
+}

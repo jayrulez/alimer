@@ -20,18 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "Graphics/Texture.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device, const BufferDescription& desc)
-        : GraphicsResource(device, desc.name, desc.memoryUsage)
-        , usage(desc.usage)
-        , size(desc.size)
-        , stride(desc.stride)
+    class D3D12Texture final : public Texture
     {
+    public:
+        D3D12Texture(D3D12GraphicsDevice& device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state);
+        D3D12Texture(D3D12GraphicsDevice& device, const TextureDescription& desc, const void* initialData);
+        ~D3D12Texture() override;
+        void Destroy() override;
 
-    }
+        void UploadTextureData(const Texture& texture, const void* initData);
+        void UploadTextureData(const Texture& texture, const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
+
+    private:
+        void BackendSetName() override;
+
+        DXGI_FORMAT format{ DXGI_FORMAT_UNKNOWN };
+        ID3D12Resource* resource = nullptr;
+        D3D12MA::Allocation* allocation = nullptr;
+        D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
+        D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
+        UINT64 sizeInBytes{ 0 };
+    };
 }
-

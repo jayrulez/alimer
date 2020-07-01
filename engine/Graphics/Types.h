@@ -40,11 +40,6 @@ namespace alimer
 
     /* Handles */
     using CommandList = uint8_t;
-    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-
-    static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidId };
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -96,7 +91,8 @@ namespace alimer
         None = 0,
         Sampled = (1 << 0),
         Storage = (1 << 1),
-        RenderTarget = (1 << 2)
+        RenderTarget = (1 << 2),
+        GenerateMipmaps = (1 << 3)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
 
@@ -204,30 +200,25 @@ namespace alimer
 
     struct TextureDescription
     {
+        String name;
         TextureType type = TextureType::Texture2D;
         PixelFormat format = PixelFormat::RGBA8UNorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32_t width = 1u;
         uint32_t height = 1u;
-        union {
-            uint32_t depth = 1u;
-            uint32_t arrayLayers;
-        };
+        uint32_t depth = 1u;
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
-
-        const char* label = nullptr;
     };
 
     /// Describes a Graphics buffer.
     struct BufferDescription
     {
+        String name;
         BufferUsage usage;
         uint32_t size;
         uint32_t stride = 0;
         MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
-        const void* content = nullptr;
-        const char* label = nullptr;
     };
 
     class Texture;

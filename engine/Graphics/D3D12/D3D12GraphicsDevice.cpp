@@ -21,7 +21,8 @@
 //
 
 #include "D3D12GraphicsDevice.h"
-#include "Graphics/Texture.h"
+#include "D3D12Texture.h"
+#include "D3D12Buffer.h"
 #include "Core/String.h"
 #include "Math/Matrix4x4.h"
 #include <imgui.h>
@@ -292,7 +293,7 @@ namespace alimer
 
         SAFE_RELEASE(uiRootSignature);
         SAFE_RELEASE(uiPipelineState);
-        DestroyTexture(fontTexture);
+        fontTexture.Reset();
 
         // Release leaked resources.
         ReleaseTrackedResources();
@@ -311,14 +312,13 @@ namespace alimer
 
         // Allocator
         D3D12MA::Stats stats;
-        memoryAllocator->CalculateStats(&stats);
+        allocator->CalculateStats(&stats);
 
         if (stats.Total.UsedBytes > 0) {
             LOG_ERROR("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
         }
 
-        memoryAllocator->Release();
-        memoryAllocator = nullptr;
+        SafeRelease(allocator);
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -399,8 +399,8 @@ namespace alimer
             desc.pDevice = d3dDevice;
             desc.pAdapter = adapter.Get();
 
-            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &memoryAllocator));
-            switch (memoryAllocator->GetD3D12Options().ResourceHeapTier)
+            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
+            switch (allocator->GetD3D12Options().ResourceHeapTier)
             {
             case D3D12_RESOURCE_HEAP_TIER_1:
                 LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
@@ -553,6 +553,15 @@ namespace alimer
 
     void D3D12GraphicsDevice::InitializeUpload()
     {
+        for (uint64_t i = 0; i < kMaxUploadSubmissions; ++i) {
+            UploadSubmission& submission = uploadSubmissions[i];
+            ThrowIfFailed(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&submission.commandAllocator)));
+            ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, submission.commandAllocator, nullptr, IID_PPV_ARGS(&submission.commandList)));
+            ThrowIfFailed(submission.commandList->Close());
+
+            submission.commandList->SetName(L"Upload Command List");
+        }
+
         D3D12_COMMAND_QUEUE_DESC queueDesc = { };
         queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -574,7 +583,7 @@ namespace alimer
 
         D3D12_RESOURCE_DESC resourceDesc = { };
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resourceDesc.Width = uploadBufferSize;
+        resourceDesc.Width = kUploadBufferSize;
         resourceDesc.Height = 1;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = 1;
@@ -585,7 +594,7 @@ namespace alimer
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         resourceDesc.Alignment = 0;
 
-        ThrowIfFailed(memoryAllocator->CreateResource(
+        ThrowIfFailed(allocator->CreateResource(
             &allocationDesc,
             &resourceDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -602,7 +611,7 @@ namespace alimer
 
         for (uint64_t i = 0; i < kRenderLatency; ++i)
         {
-            ThrowIfFailed(memoryAllocator->CreateResource(
+            ThrowIfFailed(allocator->CreateResource(
                 &allocationDesc,
                 &resourceDesc,
                 D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -633,7 +642,122 @@ namespace alimer
 
     void D3D12GraphicsDevice::EndFrameUpload()
     {
+        // If we can grab the lock, try to clear out any completed submissions
+        if (TryAcquireSRWLockExclusive(&uploadSubmissionLock))
+        {
+            ClearFinishedUploads(0);
+
+            ReleaseSRWLockExclusive(&uploadSubmissionLock);
+        }
+
+        {
+            AcquireSRWLockExclusive(&uploadQueueLock);
+
+            // Make sure to sync on any pending uploads
+            ClearFinishedUploads(0);
+            graphicsQueue->Wait(uploadFence, uploadFenceValue);
+
+            ReleaseSRWLockExclusive(&uploadQueueLock);
+        }
+
         tempFrameUsed = 0;
+    }
+
+    D3D12GraphicsDevice::UploadSubmission* D3D12GraphicsDevice::AllocUploadSubmission(uint64_t size)
+    {
+        ALIMER_ASSERT(uploadSubmissionUsed <= kMaxUploadSubmissions);
+        if (uploadSubmissionUsed == kMaxUploadSubmissions)
+            return nullptr;
+
+        const uint64_t submissionIdx = (uploadSubmissionStart + uploadSubmissionUsed) % kMaxUploadSubmissions;
+        ALIMER_ASSERT(uploadSubmissions[submissionIdx].Size == 0);
+
+        ALIMER_ASSERT(uploadBufferUsed <= kUploadBufferSize);
+        if (size > (kUploadBufferSize - uploadBufferUsed))
+            return nullptr;
+
+        const uint64_t start = uploadBufferStart;
+        const uint64_t end = uploadBufferStart + uploadBufferUsed;
+        uint64_t allocOffset = uint64_t(-1);
+        uint64_t padding = 0;
+        if (end < kUploadBufferSize)
+        {
+            const uint64_t endAmt = kUploadBufferSize - end;
+            if (endAmt >= size)
+            {
+                allocOffset = end;
+            }
+            else if (start >= size)
+            {
+                // Wrap around to the beginning
+                allocOffset = 0;
+                uploadBufferUsed += endAmt;
+                padding = endAmt;
+            }
+        }
+        else
+        {
+            const uint64_t wrappedEnd = end % kUploadBufferSize;
+            if ((start - wrappedEnd) >= size)
+                allocOffset = wrappedEnd;
+        }
+
+        if (allocOffset == uint64_t(-1))
+            return nullptr;
+
+        uploadSubmissionUsed += 1;
+        uploadBufferUsed += size;
+
+        UploadSubmission* submission = &uploadSubmissions[submissionIdx];
+        submission->Offset = allocOffset;
+        submission->Size = size;
+        submission->FenceValue = uint64_t(-1);
+        submission->Padding = padding;
+
+        return submission;
+    }
+
+
+    void D3D12GraphicsDevice::ClearFinishedUploads(uint64_t flushCount)
+    {
+        const uint64_t start = uploadSubmissionStart;
+        const uint64_t used = uploadSubmissionUsed;
+        for (uint64_t i = 0; i < used; ++i)
+        {
+            const uint64_t idx = (start + i) % kMaxUploadSubmissions;
+            UploadSubmission& submission = uploadSubmissions[idx];
+            ALIMER_ASSERT(submission.Size > 0);
+            ALIMER_ASSERT(uploadBufferUsed >= submission.Size);
+
+            // If the submission hasn't been sent to the GPU yet we can't wait for it
+            if (submission.FenceValue == uint64_t(-1))
+                return;
+
+            if (i < flushCount)
+            {
+                // Wait for fence value
+                if (uploadFence->GetCompletedValue() < submission.FenceValue)
+                {
+                    ThrowIfFailed(uploadFence->SetEventOnCompletion(submission.FenceValue, uploadFenceEvent));
+                    WaitForSingleObject(uploadFenceEvent, INFINITE);
+                }
+            }
+
+            if (uploadFence->GetCompletedValue() >= submission.FenceValue)
+            {
+                uploadSubmissionStart = (uploadSubmissionStart + 1) % kMaxUploadSubmissions;
+                uploadSubmissionUsed -= 1;
+                uploadBufferStart = (uploadBufferStart + submission.Padding) % kUploadBufferSize;
+                ALIMER_ASSERT(submission.Offset == uploadBufferStart);
+                ALIMER_ASSERT(uploadBufferStart + submission.Size <= kUploadBufferSize);
+                uploadBufferStart = (uploadBufferStart + submission.Size) % kUploadBufferSize;
+                uploadBufferUsed -= (submission.Size + submission.Padding);
+                submission.Reset();
+
+                if (uploadBufferUsed == 0)
+                    uploadBufferStart = 0;
+            }
+        }
     }
 
     void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower)
@@ -999,230 +1123,9 @@ namespace alimer
         //GPUUploadMemoryHeaps[frameIndex].Size = 0;
     }
 
-    TextureHandle D3D12GraphicsDevice::AllocTextureHandle()
+    RefPtr<Texture> D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
     {
-        if (textures.isFull()) {
-            LOG_ERROR("D3D12: Not enough free texture slots.");
-            return kInvalidTexture;
-        }
-        const int id = textures.alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        ResourceD3D12& texture = textures[id];
-        texture.handle = nullptr;
-        texture.allocation = nullptr;
-        texture.state = D3D12_RESOURCE_STATE_COMMON;
-        return { (uint32_t)id };
-    }
-
-    TextureHandle D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps)
-    {
-        TextureHandle handle = AllocTextureHandle();
-        ResourceD3D12& resource = textures[handle.id];
-        resource.format = ToDXGIFormatWitUsage(desc.format, desc.usage);
-
-        D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-        D3D12_RESOURCE_DESC resourceDesc = {};
-        resourceDesc.Dimension = D3D12GetResourceDimension(desc.type);
-        resourceDesc.Alignment = 0;
-        resourceDesc.Width = desc.width;
-        resourceDesc.Height = desc.height;
-        if (desc.type == TextureType::TextureCube)
-        {
-            resourceDesc.DepthOrArraySize = desc.depth * 6;
-        }
-        else if (desc.type == TextureType::Texture3D)
-        {
-            resourceDesc.DepthOrArraySize = desc.depth;
-        }
-        else
-        {
-            resourceDesc.DepthOrArraySize = desc.depth;
-        }
-
-        resourceDesc.MipLevels = desc.mipLevels;
-        resourceDesc.Format = resource.format;
-        resourceDesc.SampleDesc.Count = desc.sampleCount;
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-        D3D12_CLEAR_VALUE clearValue = {};
-        D3D12_CLEAR_VALUE* pClearValue = nullptr;
-
-        if (!any(desc.usage & TextureUsage::Sampled))
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-        }
-
-        if (any(desc.usage & TextureUsage::Storage))
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        }
-
-        if (any(desc.usage & TextureUsage::RenderTarget))
-        {
-            clearValue.Format = resourceDesc.Format;
-            if (IsDepthStencilFormat(desc.format))
-            {
-                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-                if (!any(desc.usage & TextureUsage::Sampled))
-                {
-                    resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-                }
-
-                clearValue.DepthStencil.Depth = 1.0f;
-            }
-            else
-            {
-                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-            }
-
-            pClearValue = &clearValue;
-            //allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
-        }
-
-        // TODO: Use D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-
-        resource.state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
-        if (any(desc.usage & TextureUsage::RenderTarget))
-        {
-            if (IsDepthStencilFormat(desc.format))
-            {
-                resource.state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-            }
-        }
-
-        HRESULT hr = memoryAllocator->CreateResource(
-            &allocationDesc,
-            &resourceDesc,
-            resource.state,
-            pClearValue,
-            &resource.allocation,
-            IID_PPV_ARGS(&resource.handle)
-        );
-
-        if (FAILED(hr)) {
-            LOG_ERROR("Direct3D12: Failed to create texture");
-            textures.dealloc(handle.id);
-        }
-
-        if (!IsDepthStencilFormat(desc.format))
-        {
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-            srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-            srvDesc.Texture2D.PlaneSlice = 0;
-            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-            resource.SRV = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
-            d3dDevice->CreateShaderResourceView(resource.handle, &srvDesc, resource.SRV);
-        }
-
-        return handle;
-    }
-
-    void D3D12GraphicsDevice::DestroyTexture(TextureHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        ResourceD3D12& texture = textures[handle.id];
-        /* TODO: Deferred destroy */
-        SAFE_RELEASE(texture.allocation);
-        SAFE_RELEASE(texture.handle);
-        textures.dealloc(handle.id);
-    }
-
-    BufferHandle D3D12GraphicsDevice::AllocBufferHandle()
-    {
-        if (buffers.isFull()) {
-            LOG_ERROR("D3D12: Not enough free buffer slots.");
-            return kInvalidBuffer;
-        }
-        const int id = buffers.alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        ResourceD3D12& buffer = buffers[id];
-        buffer.handle = nullptr;
-        buffer.allocation = nullptr;
-        buffer.state = D3D12_RESOURCE_STATE_COMMON;
-        return { (uint32_t)id };
-    }
-
-    BufferHandle D3D12GraphicsDevice::CreateBuffer(const BufferDescription& desc)
-    {
-        BufferHandle handle = AllocBufferHandle();
-        ResourceD3D12& resource = buffers[handle.id];
-
-        uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-        if (any(desc.usage & BufferUsage::Uniform))
-        {
-            alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
-        }
-        uint32_t alignedSize = AlignTo(desc.size, alignment);
-
-        D3D12_RESOURCE_DESC resourceDesc;
-        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        resourceDesc.Alignment = 0;
-        resourceDesc.Width = alignedSize;
-        resourceDesc.Height = 1;
-        resourceDesc.DepthOrArraySize = 1;
-        resourceDesc.MipLevels = 1;
-        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-        resourceDesc.SampleDesc.Count = 1;
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-        if (any(desc.usage & BufferUsage::Storage))
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        }
-
-        D3D12MA::ALLOCATION_DESC allocDesc = {};
-        allocDesc.HeapType = GetD3D12HeapType(desc.memoryUsage);
-
-        resource.state = desc.content != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
-
-        HRESULT hr = memoryAllocator->CreateResource(
-            &allocDesc,
-            &resourceDesc,
-            resource.state,
-            nullptr,
-            &resource.allocation,
-            IID_PPV_ARGS(&resource.handle)
-        );
-
-        if (FAILED(hr)) {
-            LOG_ERROR("Direct3D12: Failed to create buffer");
-            buffers.dealloc(handle.id);
-        }
-
-        return handle;
-    }
-
-    void D3D12GraphicsDevice::DestroyBuffer(BufferHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        ResourceD3D12& buffer = buffers[handle.id];
-        /* TODO: Deferred destroy */
-        SAFE_RELEASE(buffer.handle);
-        buffers.dealloc(handle.id);
-    }
-
-    void D3D12GraphicsDevice::SetName(BufferHandle handle, const char* name)
-    {
-        ResourceD3D12& buffer = buffers[handle.id];
-        auto wideName = ToUtf16(name, strlen(name));
-        buffer.handle->SetName(wideName.c_str());
+        return new D3D12Texture(*this, desc, initialData);
     }
 
     CommandList D3D12GraphicsDevice::BeginCommandList(const char* name)
@@ -1316,12 +1219,12 @@ namespace alimer
         commandLists[commandList]->OMSetBlendFactor(color.Data());
     }
 
-    void D3D12GraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer)
+    void D3D12GraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer)
     {
-        ResourceD3D12& resource = buffers[buffer.id];
+        D3D12Buffer* d3dBuffer = static_cast<D3D12Buffer*>(buffer);
 
         uint64_t offset = 0;
-        D3D12_GPU_VIRTUAL_ADDRESS bufferLocation = resource.handle->GetGPUVirtualAddress() + offset;
+        D3D12_GPU_VIRTUAL_ADDRESS bufferLocation = d3dBuffer->GetGpuVirtualAddress() + offset;
 
         const bool compute = false;
         if (compute) {
@@ -1396,6 +1299,66 @@ namespace alimer
         result.Resource = tempFrameBuffers[frameIndex];
 
         return result;
+    }
+
+    UploadContext D3D12GraphicsDevice::ResourceUploadBegin(uint64_t size)
+    {
+        size = AlignTo(size, 512);
+        ALIMER_ASSERT(size <= kUploadBufferSize);
+        ALIMER_ASSERT(size > 0);
+
+        UploadSubmission* submission = nullptr;
+
+        {
+            AcquireSRWLockExclusive(&uploadSubmissionLock);
+
+            ClearFinishedUploads(0);
+
+            submission = AllocUploadSubmission(size);
+            while (submission == nullptr)
+            {
+                ClearFinishedUploads(1);
+                submission = AllocUploadSubmission(size);
+            }
+
+            ReleaseSRWLockExclusive(&uploadSubmissionLock);
+        }
+
+        ThrowIfFailed(submission->commandAllocator->Reset());
+        ThrowIfFailed(submission->commandList->Reset(submission->commandAllocator, nullptr));
+
+        UploadContext context;
+        context.commandList = submission->commandList;
+        context.Resource = uploadBuffer;
+        context.CPUAddress = uploadBufferCPUAddr + submission->Offset;
+        context.ResourceOffset = submission->Offset;
+        context.Submission = submission;
+
+        return context;
+    }
+
+    void D3D12GraphicsDevice::ResourceUploadEnd(UploadContext& context)
+    {
+        ALIMER_ASSERT(context.commandList != nullptr);
+        ALIMER_ASSERT(context.Submission != nullptr);
+        UploadSubmission* submission = reinterpret_cast<UploadSubmission*>(context.Submission);
+
+        {
+            AcquireSRWLockExclusive(&uploadQueueLock);
+
+            // Finish off and execute the command list
+            ThrowIfFailed(submission->commandList->Close());
+            ID3D12CommandList* cmdLists[1] = { submission->commandList };
+            uploadCommandQueue->ExecuteCommandLists(1, cmdLists);
+
+            ++uploadFenceValue;
+            uploadCommandQueue->Signal(uploadFence, uploadFenceValue);
+            submission->FenceValue = uploadFenceValue;
+
+            ReleaseSRWLockExclusive(&uploadQueueLock);
+        }
+
+        context = UploadContext();
     }
 
     void D3D12GraphicsDevice::HandleDeviceLost()
@@ -1609,6 +1572,7 @@ namespace alimer
         // Upload texture to graphics system
         {
             TextureDescription textureDesc = {};
+            textureDesc.name = "ImGui FontTexture";
             textureDesc.type = TextureType::Texture2D;
             textureDesc.format = PixelFormat::RGBA8UNorm;
             textureDesc.usage = TextureUsage::Sampled;
@@ -1616,89 +1580,13 @@ namespace alimer
             textureDesc.height = height;
             textureDesc.mipLevels = 1u;
             textureDesc.sampleCount = 1u;
-            textureDesc.label = "ImGui FontTexture";
-            fontTexture = CreateTexture(textureDesc, 0, pixels, false);
+            fontTexture = CreateTexture(textureDesc, pixels);
 
-            UINT uploadPitch = (width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
-            UINT uploadSize = height * uploadPitch;
-
-            D3D12_RESOURCE_DESC resourceDesc = {};
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resourceDesc.Alignment = 0;
-            resourceDesc.Width = uploadSize;
-            resourceDesc.Height = 1;
-            resourceDesc.DepthOrArraySize = 1;
-            resourceDesc.MipLevels = 1;
-            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-            resourceDesc.SampleDesc.Count = 1;
-            resourceDesc.SampleDesc.Quality = 0;
-            resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-            D3D12_HEAP_PROPERTIES props;
-            memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
-            props.Type = D3D12_HEAP_TYPE_UPLOAD;
-            props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-            ComPtr<ID3D12Resource> uploadBuffer;
-            HRESULT hr = d3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
-            IM_ASSERT(SUCCEEDED(hr));
-
-            void* mapped = NULL;
-            D3D12_RANGE range = { 0, uploadSize };
-            hr = uploadBuffer->Map(0, &range, &mapped);
-            IM_ASSERT(SUCCEEDED(hr));
-            for (int y = 0; y < height; y++)
-                memcpy((void*)((uintptr_t)mapped + y * uploadPitch), pixels + y * width * 4, width * 4);
-            uploadBuffer->Unmap(0, &range);
-
-            D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
-            srcLocation.pResource = uploadBuffer.Get();
-            srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            srcLocation.PlacedFootprint.Footprint.Width = width;
-            srcLocation.PlacedFootprint.Footprint.Height = height;
-            srcLocation.PlacedFootprint.Footprint.Depth = 1;
-            srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
-
-            D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-            dstLocation.pResource = textures[fontTexture.id].handle;
-            dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-            dstLocation.SubresourceIndex = 0;
-
-            D3D12_RESOURCE_BARRIER barrier = {};
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = textures[fontTexture.id].handle;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-            ID3D12CommandAllocator* commandAlloc = NULL;
-            hr = d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAlloc));
-            IM_ASSERT(SUCCEEDED(hr));
-
-            ID3D12GraphicsCommandList* cmdList = NULL;
-            hr = d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAlloc, NULL, IID_PPV_ARGS(&cmdList));
-            IM_ASSERT(SUCCEEDED(hr));
-
-            cmdList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, NULL);
-            cmdList->ResourceBarrier(1, &barrier);
-
-            hr = cmdList->Close();
-            IM_ASSERT(SUCCEEDED(hr));
-
-            graphicsQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
-            WaitForGPU();
-
-            cmdList->Release();
-            commandAlloc->Release();
         }
 
         // Store our identifier
         static_assert(sizeof(ImTextureID) >= sizeof(fontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-        io.Fonts->TexID = (ImTextureID)(intptr_t)fontTexture.id;
+        io.Fonts->TexID = (ImTextureID)fontTexture.Get();
 
         // Store our identifier
         /*static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
@@ -1865,8 +1753,8 @@ namespace alimer
                 else
                 {
                     // Bind SRV
-                    uint32_t handleId = (uint32_t)(intptr_t)pcmd->TextureId;
-                    D3D12_CPU_DESCRIPTOR_HANDLE SRV = textures[handleId].SRV;
+                    Texture* texture = (Texture*)pcmd->TextureId;
+                    D3D12_CPU_DESCRIPTOR_HANDLE SRV = static_cast<D3D12Texture*>(texture)->GetSRV();
                     GetCommandList(commandList)->SetGraphicsRootDescriptorTable(1, CopyDescriptorsToGPUHeap(1, SRV));
 
                     // Project scissor/clipping rectangles into framebuffer space

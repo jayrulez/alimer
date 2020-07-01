@@ -31,6 +31,16 @@ struct ImDrawData;
 
 namespace alimer
 {
+    struct UploadContext
+    {
+        ID3D12GraphicsCommandList* commandList;
+        void* CPUAddress = nullptr;
+        uint64_t ResourceOffset = 0;
+        ID3D12Resource* Resource = nullptr;
+        void* Submission = nullptr;
+    };
+
+
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
@@ -44,12 +54,19 @@ namespace alimer
         // Temporary CPU-writable buffer memory
         D3D12MapResult AllocateGPUMemory(uint64_t size, uint64_t alignment);
 
+        // Resource upload/init
+        UploadContext ResourceUploadBegin(uint64_t size);
+        void ResourceUploadEnd(UploadContext& context);
+
+        void WaitForGPU() override;
         void HandleDeviceLost();
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return tearingSupported; }
 
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
+        D3D12MA::Allocator* GetAllocator() const { return allocator; }
+        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
@@ -57,23 +74,16 @@ namespace alimer
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         bool BackendInitialize(const PresentationParameters& presentationParameters) override;
         void Shutdown() override;
-        void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
 
         void InitializeUpload();
         void ShutdownUpload();
         void EndFrameUpload();
+        void ClearFinishedUploads(uint64_t flushCount);
 
         // Resource creation methods.
-        TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
-        void DestroyTexture(TextureHandle handle) override;
-
-        BufferHandle AllocBufferHandle();
-        BufferHandle CreateBuffer(const BufferDescription& desc) override;
-        void DestroyBuffer(BufferHandle handle) override;
-        void SetName(BufferHandle handle, const char* name) override;
+        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
@@ -86,7 +96,7 @@ namespace alimer
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(CommandList commandList, const Color& color) override;
 
-        void BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer) override;
+        void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
         void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
 
         void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
@@ -107,7 +117,7 @@ namespace alimer
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D12Device* d3dDevice = nullptr;
-        D3D12MA::Allocator* memoryAllocator = nullptr;
+        D3D12MA::Allocator* allocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
         /// Root signature version
@@ -150,14 +160,47 @@ namespace alimer
         uint64_t frameCount{ 0 };
 
         /* Upload data */
+        struct UploadSubmission
+        {
+            ID3D12CommandAllocator* commandAllocator = nullptr;
+            ID3D12GraphicsCommandList1* commandList = nullptr;
+            uint64_t Offset = 0;
+            uint64_t Size = 0;
+            uint64_t FenceValue = 0;
+            uint64_t Padding = 0;
+
+            void Reset()
+            {
+                Offset = 0;
+                Size = 0;
+                FenceValue = 0;
+                Padding = 0;
+            }
+        };
+
+
+        UploadSubmission* AllocUploadSubmission(uint64_t size);
+
         ID3D12CommandQueue* uploadCommandQueue = nullptr;
         ID3D12Fence* uploadFence = nullptr;
         HANDLE uploadFenceEvent;
+        uint64_t uploadFenceValue = 0;
 
-        uint64_t uploadBufferSize = 16 * 1024 * 1024;
+        static constexpr uint64_t kUploadBufferSize = 256 * 1024 * 1024;
+        static constexpr uint64_t kMaxUploadSubmissions = 16;
+
+        // These are protected by UploadSubmissionLock
+        uint64_t uploadBufferStart = 0;
+        uint64_t uploadBufferUsed = 0;
+        UploadSubmission uploadSubmissions[kMaxUploadSubmissions];
+        uint64_t uploadSubmissionStart = 0;
+        uint64_t uploadSubmissionUsed = 0;
+
         D3D12MA::Allocation* uploadBufferAllocation = nullptr;
         ID3D12Resource* uploadBuffer = nullptr;
         uint8_t* uploadBufferCPUAddr = nullptr;
+        SRWLOCK uploadSubmissionLock = SRWLOCK_INIT;
+        SRWLOCK uploadQueueLock = SRWLOCK_INIT;
 
         const uint64_t tempBufferSize = 2 * 1024 * 1024;
         D3D12MA::Allocation* tempBufferAllocations[kRenderLatency] = { };
@@ -166,23 +209,9 @@ namespace alimer
         uint64_t tempFrameGPUMem[kRenderLatency] = { };
         volatile int64_t tempFrameUsed = 0;
 
-        /* Handles and pools */
-        struct ResourceD3D12 {
-            enum { MAX_COUNT = 4096 };
-
-            ID3D12Resource* handle;
-            D3D12MA::Allocation* allocation;
-            D3D12_RESOURCE_STATES state;
-            DXGI_FORMAT format;
-            D3D12_CPU_DESCRIPTOR_HANDLE SRV;
-        };
-
-        Pool<ResourceD3D12, ResourceD3D12::MAX_COUNT> textures;
-        Pool<ResourceD3D12, ResourceD3D12::MAX_COUNT> buffers;
-
         // Imgui objects.
         ID3D12RootSignature* uiRootSignature = nullptr;
         ID3D12PipelineState* uiPipelineState = nullptr;
-        TextureHandle fontTexture;
+        RefPtr<Texture> fontTexture;
     };
 }

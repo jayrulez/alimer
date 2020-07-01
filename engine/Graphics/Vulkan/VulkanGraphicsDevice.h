@@ -43,15 +43,9 @@ namespace alimer
         void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
-        // Resource creation methods.
-        TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* initialData, bool autoGenerateMipmaps) override;
-        void DestroyTexture(TextureHandle handle) override;
 
-        BufferHandle AllocBufferHandle();
-        BufferHandle CreateBuffer(const BufferDescription& desc) override;
-        void DestroyBuffer(BufferHandle handle) override;
-        void SetName(BufferHandle handle, const char* name) override;
+        // Resource creation methods.
+        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
@@ -64,7 +58,7 @@ namespace alimer
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(CommandList commandList, const Color& color) override;
 
-        void BindBuffer(CommandList commandList, uint32_t slot, BufferHandle buffer) override;
+        void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
         void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
 
         InstanceExtensions instanceExts{};
@@ -89,23 +83,5 @@ namespace alimer
         VmaAllocator allocator{ VK_NULL_HANDLE };
 
         VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
-
-        /* Handles and pools */
-        struct TextureVk {
-            enum { MAX_COUNT = 4096 };
-
-            VkImage handle;
-            VmaAllocation allocation;
-        };
-
-        struct BufferVk {
-            enum { MAX_COUNT = 4096 };
-
-            VkBuffer handle;
-            VmaAllocation allocation;
-        };
-
-        Pool<TextureVk, TextureVk::MAX_COUNT> textures;
-        Pool<BufferVk, BufferVk::MAX_COUNT> buffers;
     };
 }

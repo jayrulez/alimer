@@ -20,18 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsDevice.h"
+#pragma once
+
+#include "Graphics/GraphicsBuffer.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device, const BufferDescription& desc)
-        : GraphicsResource(device, desc.name, desc.memoryUsage)
-        , usage(desc.usage)
-        , size(desc.size)
-        , stride(desc.stride)
+    class D3D12Buffer final : public GraphicsBuffer
     {
+    public:
+        D3D12Buffer(D3D12GraphicsDevice& device, const BufferDescription& desc, const void* initialData);
+        ~D3D12Buffer() override;
+        void Destroy() override;
 
-    }
+        D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
+
+    private:
+        void BackendSetName() override;
+
+        ID3D12Resource* resource = nullptr;
+        D3D12MA::Allocation* allocation = nullptr;
+        D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
+        D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress{ D3D12_GPU_VIRTUAL_ADDRESS_NULL };
+    };
 }
-
