@@ -20,21 +20,26 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#pragma once
+
+#include "Scene/Entity.h"
+#include <unordered_set>
 
 namespace alimer
 {
-    String Size::ToString() const
+    class ALIMER_API EntityManager
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
-    }
+    public:
+        virtual ~EntityManager();
 
-    String SizeI::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
-    }
+    protected:
+        void AddRoot(Entity* entity);
+        void RemoveRoot(Entity* entity);
+
+    private:
+        void Add(Entity* entity);
+        void Remove(Entity* entity);
+
+        std::unordered_set<Entity*> entities;
+    };
 }

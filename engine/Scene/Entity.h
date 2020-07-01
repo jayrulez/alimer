@@ -20,21 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#pragma once
+
+#include "Core/Object.h"
+#include "Core/String.h"
+#include "Math/Matrix4x4.h"
 
 namespace alimer
 {
-    String Size::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
-    }
+    class EntityManager;
 
-    String SizeI::ToString() const
+    class ALIMER_API Entity final : public Object
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
-    }
+        ALIMER_OBJECT(Entity, Object);
+
+        friend class EntityManager;
+
+    public:
+        Entity(const String& name = "");
+        ~Entity();
+
+        /// Return parent entity.
+        Entity* GetParent() const { return parent; }
+
+        /// Return the owning entity manager.
+        EntityManager* GetEntityManager() const { return manager; }
+
+    private:
+        void SetEntityManager(EntityManager* newManager);
+
+        String name;
+        /// Parent scene node.
+        Entity* parent{ nullptr };
+        EntityManager* manager{ nullptr };
+    };
 }

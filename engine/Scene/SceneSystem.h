@@ -20,21 +20,22 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#pragma once
+
+#include "Scene/EntityManager.h"
 
 namespace alimer
 {
-    String Size::ToString() const
+    class ALIMER_API SceneSystem final : public EntityManager
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
-    }
+    public:
+        SceneSystem();
+        ~SceneSystem();
 
-    String SizeI::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
-    }
+        void SetRootEntity(Entity* entity);
+        Entity* GetRootEntity() const { return rootEntity.Get(); }
+
+    private:
+        RefPtr<Entity> rootEntity;
+    };
 }

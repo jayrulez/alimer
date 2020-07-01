@@ -37,6 +37,7 @@ define_engine_source_files(
     Math
     Graphics
     Input
+    Scene
     Application
 )
 

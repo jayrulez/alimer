@@ -59,13 +59,6 @@ namespace alimer
         Count
     };
 
-    enum class PowerPreference : uint32_t
-    {
-        Default,
-        LowPower,
-        HighPerformance
-    };
-
     enum class GPUVendorId : uint32_t
     {
         None = 0,
@@ -278,10 +271,10 @@ namespace alimer
     {
         uint32_t width = 0;
         uint32_t height = 0;
-        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         PresentInterval presentationInterval = PresentInterval::Default;
         bool isFullscreen = false;
-        void* windowHandle = nullptr;
+        uintptr_t windowHandle;
     };
 }

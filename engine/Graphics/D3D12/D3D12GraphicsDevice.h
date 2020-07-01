@@ -36,7 +36,7 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        D3D12GraphicsDevice(WindowHandle window, const Desc& desc);
+        D3D12GraphicsDevice(bool enableValidationLayer);
         ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
@@ -53,8 +53,9 @@ namespace alimer
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
-        void GetAdapter(IDXGIAdapter1** ppAdapter);
+        void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
+        bool BackendInitialize(const PresentationParameters& presentationParameters) override;
         void Shutdown() override;
         void WaitForGPU() override;
         bool BeginFrameImpl() override;

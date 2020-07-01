@@ -47,20 +47,20 @@ namespace alimer
     public:
         Window() = default;
 
-        bool Create(const String& title, const Size& size, WindowFlags flags);
+        bool Create(const String& title, const SizeI& size, WindowFlags flags);
         void Close();
 
-        const Size& GetSize() const { return size; }
+        const SizeI& GetSize() const { return size; }
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
         bool IsFullscreen() const;
-        void* GetHandle() const;
+        uintptr_t GetHandle() const;
 
     private:
         String title;
-        Size size;
+        SizeI size;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
 

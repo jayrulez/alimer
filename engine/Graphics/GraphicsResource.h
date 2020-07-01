@@ -49,12 +49,12 @@ namespace alimer
         /**
         * Set the resource name
         */
-        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
+        void SetName(const String& newName) { name = newName; BackendSetName(); }
 
         /**
         * Get the resource name
         */
-        const std::string& GetName() const { return name; }
+        const String& GetName() const { return name; }
 
         /**
         * Get the memory type.
@@ -71,7 +71,7 @@ namespace alimer
 
     protected:
         GraphicsDevice& device;
-        std::string name;
+        String name;
 
         uint64_t size{ 0 };
         MemoryUsage memoryUsage;

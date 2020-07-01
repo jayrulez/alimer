@@ -33,22 +33,6 @@
 
 namespace alimer
 {
-#if ALIMER_PLATFORM_WINDOWS
-    using WindowHandle = HWND;
-#elif ALIMER_PLATFORM_UWP
-    using WindowHandle = Platform::Agile<Windows::UI::Core::CoreWindow>;
-#elif ALIMER_PLATFORM_ANDROID
-    using WindowHandle = ANativeWindow*;
-#else
-    using WindowHandle = void*;
-#endif
-
-#if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-#   define DEFAULT_ENABLE_DEBUG_LAYER true
-#else
-#   define DEFAULT_ENABLE_DEBUG_LAYER false
-#endif
-
     class ALIMER_API GraphicsDeviceEvents
     {
     public:
@@ -67,21 +51,14 @@ namespace alimer
         friend class GraphicsResource;
 
     public:
-        struct Desc
-        {
-            BackendType preferredBackendType = BackendType::Count;
-            bool enableValidationLayer = DEFAULT_ENABLE_DEBUG_LAYER;
-            PowerPreference powerPreference = PowerPreference::Default;
-
-            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;  
-            bool enableVsync = true;                                     
-        };
-
+        /// Destructor
         virtual ~GraphicsDevice();
 
         static std::set<BackendType> GetAvailableBackends();
-        static GraphicsDevice* Create(WindowHandle window, const Desc& desc);
+        static BackendType GetPreferredBackend();
+        static void SetPreferredBackend(BackendType backendType);
+
+        static RefPtr<GraphicsDevice> Create(bool enableValidationLayer, const PresentationParameters& presentationParameters);
 
         virtual void WaitForGPU() = 0;
         void BeginFrame();
@@ -122,6 +99,7 @@ namespace alimer
         Texture* GetDepthStencilTexture() const;
 
     private:
+        virtual bool BackendInitialize(const PresentationParameters& presentationParameters) = 0;
         virtual void Shutdown() = 0;
         virtual bool BeginFrameImpl() { return true; }
         virtual void EndFrameImpl() = 0;
@@ -130,15 +108,15 @@ namespace alimer
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice(const Desc& desc);
+        GraphicsDevice(bool enableValidationLayer);
         void ReleaseTrackedResources();
 
+        bool enableValidationLayer;
+        bool headless;
         GraphicsDeviceCaps caps{};
-        Desc desc;
-        Size size{};
+        uint32_t backbufferWidth = 0;
+        uint32_t backbufferHeight = 0;
         float dpiScale = 1.0f;
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
 
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;

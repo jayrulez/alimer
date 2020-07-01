@@ -42,7 +42,7 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        SafeDelete(graphicsDevice);
+        graphicsDevice.Reset();
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
@@ -100,12 +100,22 @@ namespace alimer
 
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
-            GraphicsDevice::Desc graphicsDesc = {};
-            graphicsDesc.colorFormat = PixelFormat::BGRA8Unorm;
+            bool enableValidationLayer = false;
+#ifdef _DEBUG
+            enableValidationLayer = true;
+#endif
+
+            PresentationParameters presentationParameters = {};
+            presentationParameters.width = window.GetSize().width;
+            presentationParameters.height = window.GetSize().height;
+            presentationParameters.isFullscreen = window.IsFullscreen();
+            presentationParameters.windowHandle = window.GetHandle();
+            presentationParameters.colorFormat = PixelFormat::BGRA8Unorm;
             //graphicsDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
 
-            graphicsDevice = GraphicsDevice::Create(static_cast<WindowHandle>(window.GetHandle()), graphicsDesc);
-            if (!graphicsDevice) {
+            graphicsDevice = GraphicsDevice::Create(enableValidationLayer, presentationParameters);
+            if (graphicsDevice.IsNull())
+            {
                 headless = true;
             }
         }

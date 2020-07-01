@@ -37,10 +37,11 @@
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(const Desc& desc)
-        : desc{ desc }
-        , colorFormat{ desc.colorFormat }
-        , depthStencilFormat{ desc.depthStencilFormat }
+    static BackendType s_GraphicsBackend = BackendType::Count;
+
+    GraphicsDevice::GraphicsDevice(bool enableValidationLayer)
+        : enableValidationLayer{ enableValidationLayer }
+        , headless(false)
     {
         AddSubsystem(this);
     }
@@ -76,30 +77,39 @@ namespace alimer
         return availableDrivers;
     }
 
-    GraphicsDevice* GraphicsDevice::Create(WindowHandle window, const Desc& desc)
+    BackendType GraphicsDevice::GetPreferredBackend()
     {
-        BackendType backend = BackendType::Count;
+        return s_GraphicsBackend;
+    }
 
-        if (backend == BackendType::Count)
+    void GraphicsDevice::SetPreferredBackend(BackendType backendType)
+    {
+        s_GraphicsBackend = backendType;
+    }
+
+
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(bool enableValidationLayer, const PresentationParameters& presentationParameters)
+    {
+        if (s_GraphicsBackend == BackendType::Count)
         {
             auto availableDrivers = GetAvailableBackends();
 
             if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
-                backend = BackendType::Direct3D12;
+                s_GraphicsBackend = BackendType::Direct3D12;
             else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
-                backend = BackendType::Vulkan;
+                s_GraphicsBackend = BackendType::Vulkan;
             else
-                backend = BackendType::Null;
+                s_GraphicsBackend = BackendType::Null;
         }
 
-        GraphicsDevice* device = nullptr;
-        switch (backend)
+        RefPtr<GraphicsDevice> device = nullptr;
+        switch (s_GraphicsBackend)
         {
 #if defined(ALIMER_VULKAN)
         case BackendType::Vulkan:
             if (VulkanGraphicsDevice::IsAvailable())
             {
-                device = new VulkanGraphicsDevice(window, desc);
+                device = new VulkanGraphicsDevice(enableValidationLayer);
                 LOG_INFO("Using Vulkan driver");
             }
             break;
@@ -108,7 +118,7 @@ namespace alimer
         case BackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable())
             {
-                device = new D3D12GraphicsDevice(window, desc);
+                device = new D3D12GraphicsDevice(enableValidationLayer);
                 LOG_INFO("Using Direct3D12 driver");
             }
             break;
@@ -117,6 +127,11 @@ namespace alimer
         default:
             // TODO: Create Null backend
             break;
+        }
+
+        if (device == nullptr || !device->BackendInitialize(presentationParameters))
+        {
+            return nullptr;
         }
 
         return device;
@@ -162,10 +177,10 @@ namespace alimer
 
     void GraphicsDevice::Resize(uint32_t width, uint32_t height)
     {
-        if ((width != size.width || height != size.height) && width > 0 && height > 0)
+        if ((width != backbufferWidth || height != backbufferHeight) && width > 0 && height > 0)
         {
-            size.width = float(width);
-            size.height = float(height);
+            backbufferWidth = width;
+            backbufferHeight = height;
         }
     }
 

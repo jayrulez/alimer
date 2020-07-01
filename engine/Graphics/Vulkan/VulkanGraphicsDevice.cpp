@@ -321,12 +321,10 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsDevice::VulkanGraphicsDevice(void* window, const Desc& desc)
-        : GraphicsDevice(desc)
+    VulkanGraphicsDevice::VulkanGraphicsDevice(bool enableValidationLayer)
+        : GraphicsDevice(enableValidationLayer)
     {
         ALIMER_VERIFY(IsAvailable());
-
-        const bool headless = window == nullptr;
 
         uint32_t apiVersion = volkGetInstanceVersion();
         if (apiVersion >= VK_API_VERSION_1_1) {
@@ -399,13 +397,13 @@ namespace alimer
             }
 
 
-            if (desc.enableValidationLayer && instanceExts.debugUtils)
+            if (enableValidationLayer && instanceExts.debugUtils)
             {
                 enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             }
 
             // Layers
-            if (desc.enableValidationLayer)
+            if (enableValidationLayer)
             {
                 uint32_t instanceLayerCount;
                 VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
@@ -428,7 +426,7 @@ namespace alimer
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-            if (desc.enableValidationLayer)
+            if (enableValidationLayer)
             {
                 if (instanceExts.debugUtils)
                 {
@@ -458,7 +456,7 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (desc.enableValidationLayer && instanceExts.debugUtils)
+            if (enableValidationLayer && instanceExts.debugUtils)
             {
                 result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
                 if (result != VK_SUCCESS)
@@ -477,7 +475,43 @@ namespace alimer
                 LOG_INFO("Instance extension '%s'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
+    }
 
+    VulkanGraphicsDevice::~VulkanGraphicsDevice()
+    {
+        WaitForGPU();
+        Shutdown();
+    }
+
+    void VulkanGraphicsDevice::Shutdown()
+    {
+        if (allocator != VK_NULL_HANDLE)
+        {
+            VmaStats stats;
+            vmaCalculateStats(allocator, &stats);
+
+            if (stats.total.usedBytes > 0) {
+                LOG_ERROR("Total device memory leaked: %llx bytes.", stats.total.usedBytes);
+            }
+
+            vmaDestroyAllocator(allocator);
+        }
+
+        deviceTable.vkDestroyDevice(device, nullptr);
+
+        if (debugUtilsMessenger != VK_NULL_HANDLE)
+        {
+            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
+        }
+
+        if (instance != VK_NULL_HANDLE)
+        {
+            vkDestroyInstance(instance, nullptr);
+        }
+    }
+
+    bool VulkanGraphicsDevice::BackendInitialize(const PresentationParameters& presentationParameters)
+    {
         // Enumerating and creating devices:
         {
             uint32_t physicalDevicesCount = 0;
@@ -511,16 +545,10 @@ namespace alimer
 
                 switch (physical_device_props.deviceType) {
                 case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                    score += 100U;
-                    if (desc.powerPreference == PowerPreference::Default || desc.powerPreference == PowerPreference::HighPerformance) {
-                        score += 1000u;
-                    }
+                    score += 1000u;
                     break;
                 case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                    score += 90U;
-                    if (desc.powerPreference == PowerPreference::LowPower) {
-                        score += 1000u;
-                    }
+                    score += 100u;
                     break;
                 case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
                     score += 80U;
@@ -539,7 +567,7 @@ namespace alimer
 
             if (bestDeviceIndex == VK_QUEUE_FAMILY_IGNORED) {
                 LOG_ERROR("Vulkan: Cannot find suitable physical device.");
-                return;
+                return false;
             }
 
             physicalDevice = physicalDevices[bestDeviceIndex];
@@ -720,7 +748,7 @@ namespace alimer
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
             if (result != VK_SUCCESS) {
-                return;
+                return false;
             }
 
             volkLoadDeviceTable(&deviceTable, device);
@@ -738,40 +766,8 @@ namespace alimer
                 LOG_INFO("Device extension '%s'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
-    }
 
-    VulkanGraphicsDevice::~VulkanGraphicsDevice()
-    {
-        WaitForGPU();
-
-        Shutdown();
-    }
-
-    void VulkanGraphicsDevice::Shutdown()
-    {
-        if (allocator != VK_NULL_HANDLE)
-        {
-            VmaStats stats;
-            vmaCalculateStats(allocator, &stats);
-
-            if (stats.total.usedBytes > 0) {
-                LOG_ERROR("Total device memory leaked: %llx bytes.", stats.total.usedBytes);
-            }
-
-            vmaDestroyAllocator(allocator);
-        }
-
-        deviceTable.vkDestroyDevice(device, nullptr);
-
-        if (debugUtilsMessenger != VK_NULL_HANDLE)
-        {
-            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
-        }
-
-        if (instance != VK_NULL_HANDLE)
-        {
-            vkDestroyInstance(instance, nullptr);
-        }
+        return true;
     }
 
     void VulkanGraphicsDevice::WaitForGPU()
@@ -868,7 +864,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
     {
-        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        if (name && enableValidationLayer && instanceExts.debugUtils)
         {
             VkDebugUtilsObjectNameInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
             info.objectType = VK_OBJECT_TYPE_BUFFER;
@@ -886,7 +882,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
     {
-        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        if (name && enableValidationLayer && instanceExts.debugUtils)
         {
             VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
             label.pLabelName = name;
@@ -900,7 +896,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
     {
-        if (name && desc.enableValidationLayer && instanceExts.debugUtils)
+        if (name && enableValidationLayer && instanceExts.debugUtils)
         {
             VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
             label.pLabelName = name;
@@ -914,7 +910,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
     {
-        if (desc.enableValidationLayer && instanceExts.debugUtils)
+        if (enableValidationLayer && instanceExts.debugUtils)
         {
             vkCmdEndDebugUtilsLabelEXT(commandBuffers[commandList]);
         }

@@ -20,21 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#include "Scene/SceneSystem.h"
 
 namespace alimer
 {
-    String Size::ToString() const
+    SceneSystem::SceneSystem()
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
+
     }
 
-    String SizeI::ToString() const
+    SceneSystem::~SceneSystem()
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
+
+    }
+
+    void SceneSystem::SetRootEntity(Entity* entity)
+    {
+        if (rootEntity.Get() == entity) return;
+
+        if (rootEntity != nullptr)
+        {
+            RemoveRoot(rootEntity);
+        }
+
+        if (entity != nullptr)
+        {
+            AddRoot(entity);
+        }
+
+        rootEntity = entity;
     }
 }

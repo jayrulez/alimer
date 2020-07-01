@@ -169,15 +169,15 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(WindowHandle window, const Desc& desc)
-        : GraphicsDevice(desc)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(bool enableValidationLayer)
+        : GraphicsDevice(enableValidationLayer)
     {
         ALIMER_VERIFY(IsAvailable());
 
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (desc.enableValidationLayer)
+        if (enableValidationLayer)
         {
             ID3D12Debug* debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
@@ -244,207 +244,6 @@ namespace alimer
             }
 
             SAFE_RELEASE(dxgiFactory5);
-        }
-
-        ComPtr<IDXGIAdapter1> adapter;
-        GetAdapter(adapter.GetAddressOf());
-
-        // Create the DX12 API device object.
-        ThrowIfFailed(D3D12CreateDevice(
-            adapter.Get(),
-            minFeatureLevel,
-            IID_PPV_ARGS(&d3dDevice)
-        ));
-
-        d3dDevice->SetName(L"Alimer Device");
-
-        // Configure debug device (if active).
-        if (desc.enableValidationLayer)
-        {
-            ID3D12InfoQueue* d3dInfoQueue;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
-            {
-#ifdef _DEBUG
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-#endif
-                D3D12_MESSAGE_ID hide[] =
-                {
-                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
-                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
-                };
-                D3D12_INFO_QUEUE_FILTER filter = {};
-                filter.DenyList.NumIDs = _countof(hide);
-                filter.DenyList.pIDList = hide;
-                d3dInfoQueue->AddStorageFilterEntries(&filter);
-                d3dInfoQueue->Release();
-            }
-        }
-
-        // Create memory allocator
-        {
-            D3D12MA::ALLOCATOR_DESC desc = {};
-            desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            desc.pDevice = d3dDevice;
-            desc.pAdapter = adapter.Get();
-
-            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &memoryAllocator));
-            switch (memoryAllocator->GetD3D12Options().ResourceHeapTier)
-            {
-            case D3D12_RESOURCE_HEAP_TIER_1:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
-                break;
-            case D3D12_RESOURCE_HEAP_TIER_2:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
-                break;
-            default:
-                break;
-            }
-        }
-
-        InitCapabilities(adapter.Get());
-
-        // Create command queue's
-        {
-            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            queueDesc.NodeMask = 1;
-
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
-            graphicsQueue->SetName(L"Direct Command Queue");
-        }
-
-        // Create descriptor heaps
-        {
-            // Render target descriptor heap (RTV).
-            InitDescriptorHeap(&RTVHeap, 1024, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-            // Depth-stencil descriptor heap (DSV).
-            InitDescriptorHeap(&DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
-            // Non-shader visible descriptor heap (CBV, SRV, UAV).
-            InitDescriptorHeap(&CPUDescriptorHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-            // Shader visible descriptor heaps (CBV, SRV, UAV).
-            for (uint32_t index = 0; index < maxInflightFrames; ++index)
-            {
-                InitDescriptorHeap(&GPUDescriptorHeaps[index], 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-            }
-        }
-
-        // Create SwapChain if not headless
-        if (window)
-        {
-            uint32_t width = 0;
-            uint32_t height = 0;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            RECT rect;
-            BOOL success = GetClientRect(window, &rect);
-            ALIMER_ASSERT_MSG(success, "GetWindowRect error.");
-            width = rect.right - rect.left;
-            height = rect.bottom - rect.top;
-#else
-            float dpiscale = 1.0f;
-            width = uint32_t(window->Bounds.Width * dpiscale);
-            height = uint32_t(window->Bounds.Height * dpiscale);
-#endif
-
-            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = width;
-            swapChainDesc.Height = height;
-            swapChainDesc.Format = backBufferFormat;
-            swapChainDesc.Stereo = FALSE;
-            swapChainDesc.SampleDesc.Count = 1;
-            swapChainDesc.SampleDesc.Quality = 0;
-            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swapChainDesc.BufferCount = backBufferCount;
-            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-            if (!desc.enableVsync && tearingSupported)
-            {
-                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-            }
-
-            ComPtr<IDXGISwapChain1> tempSwapChain;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-            fsSwapChainDesc.Windowed = TRUE;
-
-            ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-                graphicsQueue,
-                window,
-                &swapChainDesc,
-                &fsSwapChainDesc,
-                NULL,
-                tempSwapChain.GetAddressOf()
-            ));
-
-            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-            ThrowIfFailed(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
-#else
-            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-
-            ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-                graphicsQueue,
-                window,
-                &swapChainDesc,
-                nullptr,
-                tempSwapChain.GetAddressOf()
-            ));
-#endif
-
-            ThrowIfFailed(tempSwapChain.As(&swapChain));
-
-            size.width = float(width);
-            size.height = float(height);
-
-            for (uint32_t i = 0; i < backBufferCount; i++)
-            {
-                swapChain->GetBuffer(i, IID_PPV_ARGS(&swapChainRenderTargets[i]));
-                swapChainRenderTargetDescriptor[i] = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
-                d3dDevice->CreateRenderTargetView(swapChainRenderTargets[i], nullptr, swapChainRenderTargetDescriptor[i]);
-            }
-        }
-
-        // Create a fence for tracking GPU execution progress.
-        {
-            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-            frameFence->SetName(L"Frame Fence");
-
-            frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-            if (!frameFenceEvent)
-            {
-                LOG_ERROR("Direct3D12: CreateEventEx failed.");
-            }
-        }
-
-        // Setup upload data.
-        InitializeUpload();
-
-        // Setup ImGui
-        {
-            ImGuiIO& io = ImGui::GetIO();
-            io.BackendRendererName = "Alimer Direct3D12";
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
-
-            ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-            main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataD3D12)(maxInflightFrames);
-
-            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-                platform_io.Renderer_CreateWindow = ImGui_D3D12_CreateWindow;
-                platform_io.Renderer_DestroyWindow = ImGui_D3D12_DestroyWindow;
-                platform_io.Renderer_SetWindowSize = ImGui_D3D12_SetWindowSize;
-                platform_io.Renderer_RenderWindow = ImGui_D3D12_RenderWindow;
-                platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
-            }
         }
     }
 
@@ -552,6 +351,206 @@ namespace alimer
 #endif
     }
 
+    bool D3D12GraphicsDevice::BackendInitialize(const PresentationParameters& presentationParameters)
+    {
+        ComPtr<IDXGIAdapter1> adapter;
+        GetAdapter(adapter.GetAddressOf());
+
+        // Create the DX12 API device object.
+        ThrowIfFailed(D3D12CreateDevice(
+            adapter.Get(),
+            minFeatureLevel,
+            IID_PPV_ARGS(&d3dDevice)
+        ));
+
+        d3dDevice->SetName(L"Alimer Device");
+
+        // Configure debug device (if active).
+        if (enableValidationLayer)
+        {
+            ID3D12InfoQueue* d3dInfoQueue;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
+            {
+#ifdef _DEBUG
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#endif
+                D3D12_MESSAGE_ID hide[] =
+                {
+                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
+                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+                };
+                D3D12_INFO_QUEUE_FILTER filter = {};
+                filter.DenyList.NumIDs = _countof(hide);
+                filter.DenyList.pIDList = hide;
+                d3dInfoQueue->AddStorageFilterEntries(&filter);
+                d3dInfoQueue->Release();
+            }
+        }
+
+        // Create memory allocator
+        {
+            D3D12MA::ALLOCATOR_DESC desc = {};
+            desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+            desc.pDevice = d3dDevice;
+            desc.pAdapter = adapter.Get();
+
+            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &memoryAllocator));
+            switch (memoryAllocator->GetD3D12Options().ResourceHeapTier)
+            {
+            case D3D12_RESOURCE_HEAP_TIER_1:
+                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
+                break;
+            case D3D12_RESOURCE_HEAP_TIER_2:
+                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
+                break;
+            default:
+                break;
+            }
+        }
+
+        InitCapabilities(adapter.Get());
+
+        // Create command queue's
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 1;
+
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            graphicsQueue->SetName(L"Direct Command Queue");
+        }
+
+        // Create descriptor heaps
+        {
+            // Render target descriptor heap (RTV).
+            InitDescriptorHeap(&RTVHeap, 1024, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+            // Depth-stencil descriptor heap (DSV).
+            InitDescriptorHeap(&DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
+            // Non-shader visible descriptor heap (CBV, SRV, UAV).
+            InitDescriptorHeap(&CPUDescriptorHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
+            // Shader visible descriptor heaps (CBV, SRV, UAV).
+            for (uint32_t index = 0; index < maxInflightFrames; ++index)
+            {
+                InitDescriptorHeap(&GPUDescriptorHeaps[index], 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+            }
+        }
+
+        // Create SwapChain if not headless
+        if (presentationParameters.windowHandle)
+        {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            if (!IsWindow((HWND)presentationParameters.windowHandle)) {
+                LOG_ERROR("Invalid HWND handle");
+                return false;
+            }
+#endif
+
+            backbufferWidth = presentationParameters.width;
+            backbufferHeight = presentationParameters.height;
+            backBufferFormat = ToDXGIFormat(srgbToLinearFormat(presentationParameters.colorFormat));
+
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+            swapChainDesc.Width = presentationParameters.width;
+            swapChainDesc.Height = presentationParameters.height;
+            swapChainDesc.Format = backBufferFormat;
+            swapChainDesc.Stereo = FALSE;
+            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = backBufferCount;
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            if (presentationParameters.presentationInterval == PresentInterval::immediate
+                && tearingSupported)
+            {
+                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+            }
+
+            ComPtr<IDXGISwapChain1> tempSwapChain;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            fsSwapChainDesc.Windowed = TRUE;
+
+            ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+                graphicsQueue,
+                (HWND)presentationParameters.windowHandle,
+                &swapChainDesc,
+                &fsSwapChainDesc,
+                NULL,
+                tempSwapChain.GetAddressOf()
+            ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            ThrowIfFailed(dxgiFactory->MakeWindowAssociation((HWND)presentationParameters.windowHandle, DXGI_MWA_NO_ALT_ENTER));
+#else
+            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+
+            ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
+                graphicsQueue,
+                (IUnknown*)presentationParameters.windowHandle,
+                &swapChainDesc,
+                nullptr,
+                tempSwapChain.GetAddressOf()
+            ));
+#endif
+
+            ThrowIfFailed(tempSwapChain.As(&swapChain));
+
+            for (uint32_t i = 0; i < backBufferCount; i++)
+            {
+                swapChain->GetBuffer(i, IID_PPV_ARGS(&swapChainRenderTargets[i]));
+                swapChainRenderTargetDescriptor[i] = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
+                d3dDevice->CreateRenderTargetView(swapChainRenderTargets[i], nullptr, swapChainRenderTargetDescriptor[i]);
+            }
+        }
+
+        // Create a fence for tracking GPU execution progress.
+        {
+            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+            frameFence->SetName(L"Frame Fence");
+
+            frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+            if (!frameFenceEvent)
+            {
+                LOG_ERROR("Direct3D12: CreateEventEx failed.");
+            }
+        }
+
+        // Setup upload data.
+        InitializeUpload();
+
+        // Setup ImGui
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            io.BackendRendererName = "Alimer Direct3D12";
+            io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+            io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+
+            ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+            main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataD3D12)(maxInflightFrames);
+
+            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            {
+                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+                platform_io.Renderer_CreateWindow = ImGui_D3D12_CreateWindow;
+                platform_io.Renderer_DestroyWindow = ImGui_D3D12_DestroyWindow;
+                platform_io.Renderer_SetWindowSize = ImGui_D3D12_SetWindowSize;
+                platform_io.Renderer_RenderWindow = ImGui_D3D12_RenderWindow;
+                platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
+            }
+        }
+
+        return true;
+    }
+
     void D3D12GraphicsDevice::InitializeUpload()
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = { };
@@ -637,7 +636,7 @@ namespace alimer
         tempFrameUsed = 0;
     }
 
-    void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
+    void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower)
     {
         *ppAdapter = nullptr;
 
@@ -649,7 +648,7 @@ namespace alimer
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == PowerPreference::LowPower) {
+            if (lowPower) {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
 

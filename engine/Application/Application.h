@@ -45,7 +45,7 @@ namespace alimer
         String windowTitle = "Alimer";
 
         /// Main window size.
-        Size windowSize = { 1280, 720 };
+        SizeI windowSize = { 1280, 720 };
     };
 
     struct Engine;
@@ -98,9 +98,8 @@ namespace alimer
         void Render();
 
     protected:
-        Vector<std::string> args;
-
-        GraphicsDevice* graphicsDevice;
+        Vector<String> args;
+        RefPtr<GraphicsDevice> graphicsDevice;
 
         int exitCode = 0;
         Configuration config;

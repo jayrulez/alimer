@@ -20,21 +20,45 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#include "Scene/EntityManager.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    String Size::ToString() const
+    void EntityManager::AddRoot(Entity* entity)
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
+        ALIMER_ASSERT(entity);
+
+        if (entity->parent != nullptr)
+        {
+            LOG_ERROR("Entity has already a parent");
+        }
+
+        Add(entity);
     }
 
-    String SizeI::ToString() const
+    void EntityManager::RemoveRoot(Entity* entity)
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
+        Remove(entity);
+    }
+
+    void EntityManager::Add(Entity* entity)
+    {
+        if (entities.find(entity) != entities.end()) {
+            return;
+        }
+
+        if (entity->manager != nullptr)
+        {
+            LOG_ERROR("This entity is already used by another entity manager.");
+        }
+
+        entity->SetEntityManager(this);
+        entities.insert(entity);
+    }
+
+    void EntityManager::Remove(Entity* entity)
+    {
+        if (!entities.erase(entity)) return;
     }
 }

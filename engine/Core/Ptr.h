@@ -268,6 +268,21 @@ namespace alimer
 
         operator bool() const noexcept { return ptr_ != nullptr; }
 
+        /// Test for less than with another shared pointer.
+        template <class U> bool operator <(const RefPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+
+        /// Test for equality with another shared pointer.
+        template <class U> bool operator ==(const RefPtr<U>& rhs) const { return ptr_ == rhs.ptr_; }
+
+        /// Test for inequality with another shared pointer.
+        template <class U> bool operator !=(const RefPtr<U>& rhs) const { return ptr_ != rhs.ptr_; }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return ptr_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return ptr_ != nullptr; }
+
         /// Return the raw pointer.
         T* Get() const noexcept { return ptr_; }
 

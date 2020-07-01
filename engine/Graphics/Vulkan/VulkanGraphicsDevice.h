@@ -32,12 +32,13 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsDevice(void* window, const Desc& desc);
+        VulkanGraphicsDevice(bool enableValidationLayer);
         ~VulkanGraphicsDevice() override;
 
         const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
 
     private:
+        bool BackendInitialize(const PresentationParameters& presentationParameters) override;
         void Shutdown() override;
         void WaitForGPU() override;
         bool BeginFrameImpl() override;

@@ -20,21 +20,22 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#include "Scene/Entity.h"
+#include "Scene/EntityManager.h"
 
 namespace alimer
 {
-    String Size::ToString() const
+    Entity::Entity(const String& name)
+        : name{ name }
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
     }
 
-    String SizeI::ToString() const
+    Entity::~Entity()
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
+    }
+
+    void Entity::SetEntityManager(EntityManager* newManager)
+    {
+        manager = newManager;
     }
 }
