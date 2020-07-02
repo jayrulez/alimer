@@ -35,8 +35,8 @@ namespace alimer
         ~D3D12Texture() override;
         void Destroy() override;
 
-        void UploadTextureData(const Texture& texture, const void* initData);
-        void UploadTextureData(const Texture& texture, const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
+        void UploadTextureData(const void* initData);
+        void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
         D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
 
     private:

@@ -188,6 +188,7 @@ namespace alimer
 
         static constexpr uint64_t kUploadBufferSize = 256 * 1024 * 1024;
         static constexpr uint64_t kMaxUploadSubmissions = 16;
+        static constexpr uint64_t kTempBufferSize = 4 * 1024 * 1024;
 
         // These are protected by UploadSubmissionLock
         uint64_t uploadBufferStart = 0;
@@ -202,7 +203,7 @@ namespace alimer
         SRWLOCK uploadSubmissionLock = SRWLOCK_INIT;
         SRWLOCK uploadQueueLock = SRWLOCK_INIT;
 
-        const uint64_t tempBufferSize = 2 * 1024 * 1024;
+        
         D3D12MA::Allocation* tempBufferAllocations[kRenderLatency] = { };
         ID3D12Resource* tempFrameBuffers[kRenderLatency] = { };
         uint8_t* tempFrameCPUMem[kRenderLatency] = { };

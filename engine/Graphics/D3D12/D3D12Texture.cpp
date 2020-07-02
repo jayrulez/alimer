@@ -152,79 +152,7 @@ namespace alimer
 
         if (initialData != nullptr)
         {
-            UINT uploadPitch = (desc.width * 4 + D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u) & ~(D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1u);
-
-            D3D12_RESOURCE_DESC resourceDesc = {};
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resourceDesc.Alignment = 0;
-            resourceDesc.Width = sizeInBytes;
-            resourceDesc.Height = 1;
-            resourceDesc.DepthOrArraySize = 1;
-            resourceDesc.MipLevels = 1;
-            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-            resourceDesc.SampleDesc.Count = 1;
-            resourceDesc.SampleDesc.Quality = 0;
-            resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-            D3D12_HEAP_PROPERTIES props = {};
-            props.Type = D3D12_HEAP_TYPE_UPLOAD;
-
-            ID3D12Resource* uploadBuffer;
-            HRESULT hr = device.GetD3DDevice()->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&uploadBuffer));
-            ThrowIfFailed(hr);
-
-            void* mapped = NULL;
-            ThrowIfFailed(uploadBuffer->Map(0, nullptr, &mapped));
-            for (uint32_t y = 0; y < desc.height; y++)
-            {
-                memcpy((void*)((uintptr_t)mapped + y * uploadPitch), (uint8_t*)initialData + y * desc.width * 4, desc.width * 4);
-            }
-
-            uploadBuffer->Unmap(0, nullptr);
-
-            D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
-            srcLocation.pResource = uploadBuffer;
-            srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            srcLocation.PlacedFootprint.Footprint.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            srcLocation.PlacedFootprint.Footprint.Width = desc.width;
-            srcLocation.PlacedFootprint.Footprint.Height = desc.height;
-            srcLocation.PlacedFootprint.Footprint.Depth = 1;
-            srcLocation.PlacedFootprint.Footprint.RowPitch = uploadPitch;
-
-            D3D12_TEXTURE_COPY_LOCATION dstLocation = {};
-            dstLocation.pResource = resource;
-            dstLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-            dstLocation.SubresourceIndex = 0;
-
-            D3D12_RESOURCE_BARRIER barrier = {};
-            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrier.Transition.pResource = resource;
-            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-            ID3D12CommandAllocator* commandAlloc = NULL;
-            hr = device.GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAlloc));
-            ThrowIfFailed(hr);
-
-            ID3D12GraphicsCommandList* cmdList = NULL;
-            hr = device.GetD3DDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAlloc, NULL, IID_PPV_ARGS(&cmdList));
-            ThrowIfFailed(hr);
-
-            cmdList->CopyTextureRegion(&dstLocation, 0, 0, 0, &srcLocation, NULL);
-            cmdList->ResourceBarrier(1, &barrier);
-
-            hr = cmdList->Close();
-            ThrowIfFailed(hr);
-
-            device.GetGraphicsQueue()->ExecuteCommandLists(1, (ID3D12CommandList* const*)&cmdList);
-            device.WaitForGPU();
-
-            cmdList->Release();
-            commandAlloc->Release();
-            uploadBuffer->Release();
+            UploadTextureData(initialData);
         }
 
         if (!IsDepthStencilFormat(desc.format))
@@ -260,12 +188,75 @@ namespace alimer
         resource->SetName(wideName.c_str());
     }
 
-    void D3D12Texture::UploadTextureData(const Texture& texture, const void* initData)
+    void D3D12Texture::UploadTextureData(const void* initData)
     {
+        // Get a GPU upload buffer
+        UploadContext uploadContext = static_cast<D3D12GraphicsDevice*>(&device)->ResourceUploadBegin(sizeInBytes);
+
+        UploadTextureData(initData, uploadContext.commandList, uploadContext.Resource, uploadContext.CPUAddress, uploadContext.ResourceOffset);
+
+        static_cast<D3D12GraphicsDevice*>(&device)->ResourceUploadEnd(uploadContext);
     }
 
-    void D3D12Texture::UploadTextureData(const Texture& texture, const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset)
+    void D3D12Texture::UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset)
     {
+        D3D12_RESOURCE_DESC textureDesc = resource->GetDesc();
+        const uint64_t arraySize = description.type == TextureType::TextureCube ? description.depth * 6 : description.depth;
 
+        const uint64_t numSubResources = max(1u, description.mipLevels) * arraySize;
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT* layouts = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * numSubResources);
+        uint32_t* numRows = (uint32_t*)_alloca(sizeof(uint32_t) * numSubResources);
+        uint64_t* rowSizes = (uint64_t*)_alloca(sizeof(uint64_t) * numSubResources);
+
+        uint64_t textureMemSize = 0;
+        static_cast<D3D12GraphicsDevice*>(&device)->GetD3DDevice()->GetCopyableFootprints(&textureDesc, 0, uint32_t(numSubResources), 0, layouts, numRows, rowSizes, &textureMemSize);
+
+        // Get a GPU upload buffer
+        uint8_t* uploadMem = reinterpret_cast<uint8_t*>(uploadCPUMem);
+
+        const uint8_t* srcMem = reinterpret_cast<const uint8_t*>(initData);
+        const uint64_t srcTexelSize = GetFormatBitsPerPixel(description.format) / 8;
+
+        for (uint64_t arrayIdx = 0; arrayIdx < arraySize; ++arrayIdx)
+        {
+            uint64_t mipWidth = description.width;
+            for (uint64_t mipIdx = 0; mipIdx < description.mipLevels; ++mipIdx)
+            {
+                const uint64_t subResourceIdx = mipIdx + (arrayIdx * description.mipLevels);
+
+                const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIdx];
+                const uint64_t subResourceHeight = numRows[subResourceIdx];
+                const uint64_t subResourcePitch = subResourceLayout.Footprint.RowPitch;
+                const uint64_t subResourceDepth = subResourceLayout.Footprint.Depth;
+                const uint64_t srcPitch = mipWidth * srcTexelSize;
+                uint8_t* dstSubResourceMem = uploadMem + subResourceLayout.Offset;
+
+                for (uint64_t z = 0; z < subResourceDepth; ++z)
+                {
+                    for (uint64_t y = 0; y < subResourceHeight; ++y)
+                    {
+                        memcpy(dstSubResourceMem, srcMem, min(subResourcePitch, srcPitch));
+                        dstSubResourceMem += subResourcePitch;
+                        srcMem += srcPitch;
+                    }
+                }
+
+                mipWidth = max(mipWidth / 2, 1ull);
+            }
+        }
+
+        for (uint64_t subResourceIdx = 0; subResourceIdx < numSubResources; ++subResourceIdx)
+        {
+            D3D12_TEXTURE_COPY_LOCATION dst = {};
+            dst.pResource = resource;
+            dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dst.SubresourceIndex = uint32_t(subResourceIdx);
+            D3D12_TEXTURE_COPY_LOCATION src = {};
+            src.pResource = uploadResource;
+            src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            src.PlacedFootprint = layouts[subResourceIdx];
+            src.PlacedFootprint.Offset += resourceOffset;
+            cmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+        }
     }
 }

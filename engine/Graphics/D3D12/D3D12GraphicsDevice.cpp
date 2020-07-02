@@ -58,35 +58,12 @@ namespace alimer
             }
         }
 
-        struct FrameResources
-        {
-            ID3D12Resource* IndexBuffer;
-            ID3D12Resource* VertexBuffer;
-            int IndexBufferSize;
-            int VertexBufferSize;
-        };
-
-
         struct ImGuiViewportDataD3D12
         {
             IDXGISwapChain3* swapChain = nullptr;
-            FrameResources* frame;
 
             ImGuiViewportDataD3D12(uint32_t frameCount)
             {
-                frame = new FrameResources[frameCount];
-
-                for (UINT i = 0; i < frameCount; ++i)
-                {
-                    //FrameCtx[i].CommandAllocator = NULL;
-                    //FrameCtx[i].RenderTarget = NULL;
-
-                    // Create buffers with a default size (they will later be grown as needed)
-                    frame[i].IndexBuffer = NULL;
-                    frame[i].VertexBuffer = NULL;
-                    frame[i].VertexBufferSize = 5000;
-                    frame[i].IndexBufferSize = 10000;
-                }
             }
 
             ~ImGuiViewportDataD3D12()
@@ -282,11 +259,6 @@ namespace alimer
         ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         if (ImGuiViewportDataD3D12* data = (ImGuiViewportDataD3D12*)mainViewport->RendererUserData)
         {
-            for (UINT i = 0; i < maxInflightFrames; i++)
-            {
-                SAFE_RELEASE(data->frame[i].IndexBuffer);
-                SAFE_RELEASE(data->frame[i].VertexBuffer);
-            }
             IM_DELETE(data);
         }
         mainViewport->RendererUserData = nullptr;
@@ -607,7 +579,7 @@ namespace alimer
         ThrowIfFailed(uploadBuffer->Map(0, &readRange, reinterpret_cast<void**>(&uploadBufferCPUAddr)));
 
         // Temporary buffer memory that swaps every frame
-        resourceDesc.Width = tempBufferSize;
+        resourceDesc.Width = kTempBufferSize;
 
         for (uint64_t i = 0; i < kRenderLatency; ++i)
         {
@@ -627,6 +599,11 @@ namespace alimer
 
     void D3D12GraphicsDevice::ShutdownUpload()
     {
+        for (uint64_t i = 0; i < kMaxUploadSubmissions; ++i) {
+            SafeRelease(uploadSubmissions[i].commandAllocator);
+            SafeRelease(uploadSubmissions[i].commandList);
+        }
+
         for (uint64_t i = 0; i < _countof(tempFrameBuffers); ++i)
         {
             SafeRelease(tempBufferAllocations[i]);
@@ -1290,7 +1267,7 @@ namespace alimer
         uint64_t offset = InterlockedAdd64(&tempFrameUsed, allocSize) - allocSize;
         if (alignment > 0)
             offset = AlignTo(offset, alignment);
-        ALIMER_ASSERT(offset + size <= tempBufferSize);
+        ALIMER_ASSERT(offset + size <= kTempBufferSize);
 
         D3D12MapResult result;
         result.CPUAddress = tempFrameCPUMem[frameIndex] + offset;
@@ -1601,7 +1578,6 @@ namespace alimer
     void D3D12GraphicsDevice::SetupRenderState(ImDrawData* drawData, CommandList commandList)
     {
         ImGuiViewportDataD3D12* render_data = (ImGuiViewportDataD3D12*)drawData->OwnerViewport->RendererUserData;
-        FrameResources* fr = &render_data->frame[frameIndex];
 
         // Setup orthographic projection matrix into our constant buffer
         // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
@@ -1617,21 +1593,6 @@ namespace alimer
         // Setup viewport
         SetViewport(commandList, Viewport(0.0f, 0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y));
 
-        // Bind shader and vertex buffers
-        unsigned int stride = sizeof(ImDrawVert);
-        unsigned int offset = 0;
-        D3D12_VERTEX_BUFFER_VIEW vbv;
-        memset(&vbv, 0, sizeof(D3D12_VERTEX_BUFFER_VIEW));
-        vbv.BufferLocation = fr->VertexBuffer->GetGPUVirtualAddress() + offset;
-        vbv.SizeInBytes = fr->VertexBufferSize * stride;
-        vbv.StrideInBytes = stride;
-        GetCommandList(commandList)->IASetVertexBuffers(0, 1, &vbv);
-        D3D12_INDEX_BUFFER_VIEW ibv;
-        memset(&ibv, 0, sizeof(D3D12_INDEX_BUFFER_VIEW));
-        ibv.BufferLocation = fr->IndexBuffer->GetGPUVirtualAddress();
-        ibv.SizeInBytes = fr->IndexBufferSize * sizeof(ImDrawIdx);
-        ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-        GetCommandList(commandList)->IASetIndexBuffer(&ibv);
         GetCommandList(commandList)->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         GetCommandList(commandList)->SetPipelineState(uiPipelineState);
         GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
@@ -1644,111 +1605,71 @@ namespace alimer
 
     void D3D12GraphicsDevice::RenderDrawData(ImDrawData* drawData, CommandList commandList)
     {
-        // Avoid rendering when minimized
         // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
         int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
         int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
         if (fb_width <= 0 || fb_height <= 0)
             return;
 
+        if (!drawData->TotalVtxCount || !drawData->TotalIdxCount)
+            return;
+
         ImGuiViewportDataD3D12* render_data = (ImGuiViewportDataD3D12*)drawData->OwnerViewport->RendererUserData;
-        FrameResources* fr = &render_data->frame[frameIndex];
 
-        // Create and grow vertex/index buffers if needed
-        if (fr->VertexBuffer == NULL || fr->VertexBufferSize < drawData->TotalVtxCount)
+        // Get memory for vertex and index buffers
+        const uint64_t vbSize = sizeof(ImDrawVert) * drawData->TotalVtxCount;
+        const uint64_t ibSize = sizeof(ImDrawIdx) * drawData->TotalIdxCount;
+        D3D12MapResult vertexMem = AllocateGPUMemory(vbSize, 4);
+        D3D12MapResult indexMem = AllocateGPUMemory(ibSize, 4);
+
+        // Copy and convert all vertices into a single contiguous buffer
+        ImDrawVert* vertexCPUMem = reinterpret_cast<ImDrawVert*>(vertexMem.CPUAddress);
+        ImDrawIdx* indexCPUMem = reinterpret_cast<ImDrawIdx*>(indexMem.CPUAddress);
+        for (int i = 0; i < drawData->CmdListsCount; i++)
         {
-            SAFE_RELEASE(fr->VertexBuffer);
-            fr->VertexBufferSize = drawData->TotalVtxCount + 5000;
-
-            D3D12_HEAP_PROPERTIES props = {};
-            props.Type = D3D12_HEAP_TYPE_UPLOAD;
-            props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-            D3D12_RESOURCE_DESC desc = {};
-            memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
-            desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            desc.Width = fr->VertexBufferSize * sizeof(ImDrawVert);
-            desc.Height = 1;
-            desc.DepthOrArraySize = 1;
-            desc.MipLevels = 1;
-            desc.Format = DXGI_FORMAT_UNKNOWN;
-            desc.SampleDesc.Count = 1;
-            desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-            if (d3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&fr->VertexBuffer)) < 0)
-                return;
-        }
-        if (fr->IndexBuffer == NULL || fr->IndexBufferSize < drawData->TotalIdxCount)
-        {
-            SAFE_RELEASE(fr->IndexBuffer);
-            fr->IndexBufferSize = drawData->TotalIdxCount + 10000;
-            D3D12_HEAP_PROPERTIES props;
-            memset(&props, 0, sizeof(D3D12_HEAP_PROPERTIES));
-            props.Type = D3D12_HEAP_TYPE_UPLOAD;
-            props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-            D3D12_RESOURCE_DESC desc;
-            memset(&desc, 0, sizeof(D3D12_RESOURCE_DESC));
-            desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            desc.Width = fr->IndexBufferSize * sizeof(ImDrawIdx);
-            desc.Height = 1;
-            desc.DepthOrArraySize = 1;
-            desc.MipLevels = 1;
-            desc.Format = DXGI_FORMAT_UNKNOWN;
-            desc.SampleDesc.Count = 1;
-            desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-            if (d3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&fr->IndexBuffer)) < 0)
-                return;
+            const ImDrawList* drawList = drawData->CmdLists[i];
+            memcpy(vertexCPUMem, drawList->VtxBuffer.Data, drawList->VtxBuffer.Size * sizeof(ImDrawVert));
+            memcpy(indexCPUMem, drawList->IdxBuffer.Data, drawList->IdxBuffer.Size * sizeof(ImDrawIdx));
+            vertexCPUMem += drawList->VtxBuffer.Size;
+            indexCPUMem += drawList->IdxBuffer.Size;
         }
 
-        // Upload vertex/index data into a single contiguous GPU buffer
-        void* vtx_resource, * idx_resource;
-        D3D12_RANGE range;
-        memset(&range, 0, sizeof(D3D12_RANGE));
-        if (fr->VertexBuffer->Map(0, &range, &vtx_resource) != S_OK)
-            return;
-        if (fr->IndexBuffer->Map(0, &range, &idx_resource) != S_OK)
-            return;
-        ImDrawVert* vtx_dst = (ImDrawVert*)vtx_resource;
-        ImDrawIdx* idx_dst = (ImDrawIdx*)idx_resource;
-        for (int n = 0; n < drawData->CmdListsCount; n++)
-        {
-            const ImDrawList* cmd_list = drawData->CmdLists[n];
-            memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-            memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-            vtx_dst += cmd_list->VtxBuffer.Size;
-            idx_dst += cmd_list->IdxBuffer.Size;
-        }
-        fr->VertexBuffer->Unmap(0, &range);
-        fr->IndexBuffer->Unmap(0, &range);
+        D3D12_VERTEX_BUFFER_VIEW vbView = {};
+        vbView.BufferLocation = vertexMem.GPUAddress;
+        vbView.SizeInBytes = UINT(vbSize);
+        vbView.StrideInBytes = sizeof(ImDrawVert);
+        GetCommandList(commandList)->IASetVertexBuffers(0, 1, &vbView);
+
+        // Bind shader and vertex buffers
+        D3D12_INDEX_BUFFER_VIEW ibView = { };
+        ibView.BufferLocation = indexMem.GPUAddress;
+        ibView.SizeInBytes = UINT(ibSize);
+        ibView.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+        GetCommandList(commandList)->IASetIndexBuffer(&ibView);
 
         // Setup desired DX state
         SetupRenderState(drawData, commandList);
 
-        // Render command lists
-        // (Because we merged all buffers into a single one, we maintain our own offset into them)
-        int global_vtx_offset = 0;
-        int global_idx_offset = 0;
-
         ImVec2 clip_off = drawData->DisplayPos;
         ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
-        for (int n = 0; n < drawData->CmdListsCount; n++)
+        // Render command lists
+        uint32_t vtxOffset = 0;
+        uint32_t idxOffset = 0;
+        for (int commandListIndex = 0; commandListIndex < drawData->CmdListsCount; commandListIndex++)
         {
-            const ImDrawList* cmd_list = drawData->CmdLists[n];
-            for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+            const ImDrawList* drawList = drawData->CmdLists[commandListIndex];
+            for (int cmdIdx = 0; cmdIdx < drawList->CmdBuffer.Size; cmdIdx++)
             {
-                const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-                if (pcmd->UserCallback != NULL)
+                const ImDrawCmd* pcmd = &drawList->CmdBuffer[cmdIdx];
+                if (pcmd->UserCallback != nullptr)
                 {
                     // User callback, registered via ImDrawList::AddCallback()
                     // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
                     if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
                         SetupRenderState(drawData, commandList);
                     else
-                        pcmd->UserCallback(cmd_list, pcmd);
+                        pcmd->UserCallback(drawList, pcmd);
                 }
                 else
                 {
@@ -1779,12 +1700,12 @@ namespace alimer
                         scissor.height = clip_rect.w - clip_rect.y;
                         SetScissorRect(commandList, scissor);
 
-                        GetCommandList(commandList)->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
+                        GetCommandList(commandList)->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + idxOffset, pcmd->VtxOffset + vtxOffset, 0);
                     }
                 }
             }
-            global_idx_offset += cmd_list->IdxBuffer.Size;
-            global_vtx_offset += cmd_list->VtxBuffer.Size;
+            idxOffset += drawList->IdxBuffer.Size;
+            vtxOffset += drawList->VtxBuffer.Size;
         }
     }
 

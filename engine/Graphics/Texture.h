@@ -92,9 +92,9 @@ namespace alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
-        uint32_t CalculateMipLevels(uint32_t width, uint32_t height = 0u, uint32_t depth = 1u);
+        uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 
-    private:
+    protected:
         TextureDescription description{};
     };
 }

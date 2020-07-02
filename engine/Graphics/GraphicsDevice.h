@@ -129,45 +129,6 @@ namespace alimer
         Vector<RefPtr<Texture>> backbufferTextures;
         RefPtr<Texture> depthStencilTexture;
 
-        template <typename T, uint32_t MAX_COUNT>
-        class Pool
-        {
-        public:
-            Pool()
-            {
-                values = (T*)mem;
-                for (int i = 0; i < MAX_COUNT + 1; ++i) {
-                    new (&values[i]) int(i + 1);
-                }
-                new (&values[MAX_COUNT]) int(-1);
-                first_free = 1;
-            }
-
-            int alloc()
-            {
-                if (first_free == -1) return -1;
-
-                const int id = first_free;
-                first_free = *((int*)&values[id]);
-                new (&values[id]) T;
-                return id;
-            }
-
-            void dealloc(uint32_t index)
-            {
-                values[index].~T();
-                new (&values[index]) int(first_free);
-                first_free = index;
-            }
-
-            alignas(T) uint8_t mem[sizeof(T) * (MAX_COUNT + 1)] = {};
-            T* values;
-            int first_free;
-
-            T& operator[](int index) { return values[index]; }
-            bool isFull() const { return first_free == -1; }
-        };
-
         // Fixed size very simple thread safe ring buffer
         template <typename T, size_t capacity>
         class ThreadSafeRingBuffer
