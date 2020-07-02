@@ -2,6 +2,11 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
+# vgpu
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+add_subdirectory(vgpu)
+set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
+
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
