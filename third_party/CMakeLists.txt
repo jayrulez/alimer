@@ -88,16 +88,3 @@ if (ALIMER_VULKAN)
     target_include_directories(volk PUBLIC ${VOLK_DIR})
     set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
 endif ()
-
-if (ALIMER_D3D12)
-    set(D3D12MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator/src")
-    set(D3D12MA_FILES
-        "${D3D12MA_DIR}/D3D12MemAlloc.cpp"
-        "${D3D12MA_DIR}/D3D12MemAlloc.h"
-        "${D3D12MA_DIR}/D3D12MemAlloc.natvis"
-    )
-
-    add_library(D3D12MemoryAllocator STATIC ${D3D12MA_FILES})
-    target_include_directories(D3D12MemoryAllocator PUBLIC ${D3D12MA_DIR})
-    set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
-endif ()

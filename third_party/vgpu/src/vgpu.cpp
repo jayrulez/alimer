@@ -32,6 +32,13 @@ static const vgpu_driver* drivers[] = {
 
 static vgpu_renderer* s_gpu_renderer = nullptr;
 
+static vgpu_config _vgpu_config_defaults(const vgpu_config* desc) {
+    vgpu_config def = *desc;
+    def.swapchain.color_format = _vgpu_def(desc->swapchain.color_format, VGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    def.swapchain.depth_stencil_format = _vgpu_def(desc->swapchain.depth_stencil_format, VGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    return def;
+}
+
 bool vgpu_init(const vgpu_config* config) {
     if (s_gpu_renderer) {
         return true;
@@ -69,4 +76,12 @@ void vgpu_shutdown(void) {
 
     s_gpu_renderer->shutdown();
     s_gpu_renderer = nullptr;
+}
+
+void vgpu_begin_frame(void) {
+    s_gpu_renderer->begin_frame();
+}
+
+void vgpu_end_frame(void) {
+    s_gpu_renderer->end_frame();
 }

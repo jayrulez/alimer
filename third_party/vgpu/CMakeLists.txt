@@ -37,6 +37,7 @@ add_library(vgpu
 	include/vgpu.h
     # Internal Headers
 	src/vgpu_driver.h
+    src/vgpu_d3d_common.h
     # Source Files
 	src/vgpu.cpp
     src/vgpu_driver_d3d12.cpp
@@ -49,5 +50,14 @@ target_include_directories(vgpu PUBLIC
 )
 
 if (VGPU_DRIVER_D3D12)
+    target_sources(vgpu PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.natvis
+    )
+
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D12)
+    target_include_directories(vgpu PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src>
+    )
 endif ()

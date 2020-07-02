@@ -31,10 +31,6 @@
 #include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-
 namespace alimer
 {
     static BackendType s_GraphicsBackend = BackendType::Count;
@@ -58,13 +54,6 @@ namespace alimer
         if (availableDrivers.empty())
         {
             availableDrivers.insert(BackendType::Null);
-
-#if defined(ALIMER_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable())
-            {
-                availableDrivers.insert(BackendType::Direct3D12);
-            }
-#endif
 
 #if defined(ALIMER_VULKAN)
             if (VulkanGraphicsDevice::IsAvailable())
@@ -111,15 +100,6 @@ namespace alimer
             {
                 device = new VulkanGraphicsDevice(enableValidationLayer);
                 LOG_INFO("Using Vulkan driver");
-            }
-            break;
-#endif
-#if defined(ALIMER_D3D12)
-        case BackendType::Direct3D12:
-            if (D3D12GraphicsDevice::IsAvailable())
-            {
-                device = new D3D12GraphicsDevice(enableValidationLayer);
-                LOG_INFO("Using Direct3D12 driver");
             }
             break;
 #endif

@@ -24,6 +24,7 @@
 #include "Application/Window.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
+#include <vgpu.h>
 
 namespace alimer
 {
@@ -43,6 +44,7 @@ namespace alimer
 
         gameSystems.Clear();
         graphicsDevice.Reset();
+        vgpu_shutdown();
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
@@ -100,24 +102,30 @@ namespace alimer
 
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
-            bool enableValidationLayer = false;
+            vgpu_config gpu_config = {};
 #ifdef _DEBUG
-            enableValidationLayer = true;
+            gpu_config.debug = true;
 #endif
+            gpu_config.swapchain.native_handle = window.GetHandle();
+            gpu_config.swapchain.width = window.GetSize().width;
+            gpu_config.swapchain.height = window.GetSize().height;
+            gpu_config.swapchain.is_fullscreen = window.IsFullscreen();
 
-            PresentationParameters presentationParameters = {};
-            presentationParameters.width = window.GetSize().width;
-            presentationParameters.height = window.GetSize().height;
+            if (!vgpu_init(&gpu_config)) {
+                headless = true;
+            }
+
+            /*PresentationParameters presentationParameters = {};
             presentationParameters.isFullscreen = window.IsFullscreen();
             presentationParameters.windowHandle = window.GetHandle();
             presentationParameters.colorFormat = PixelFormat::BGRA8Unorm;
-            //graphicsDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;*/
+            //graphicsDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;
 
             graphicsDevice = GraphicsDevice::Create(enableValidationLayer, presentationParameters);
             if (graphicsDevice.IsNull())
             {
                 headless = true;
-            }
+            }*/
         }
 
         Initialize();
@@ -151,7 +159,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        graphicsDevice->BeginFrame();
+        vgpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -180,8 +188,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //graphicsDevice->GetMainSwapChain()->Present();
-        graphicsDevice->EndFrame();
+        vgpu_end_frame();
     }
 
     int Application::Run()

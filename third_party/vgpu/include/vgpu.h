@@ -60,13 +60,111 @@ extern "C" {
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_backend_type;
 
+    typedef enum vgpu_device_preference {
+        VGPU_DEVICE_PREFERENCE_HIGH_PERFORMANCE = 0,
+        VGPU_DEVICE_PREFERENCE_LOW_POWER = 1,
+        VGPU_DEVICE_PREFERENCE_DONT_CARE = 2,
+        _VGPU_DEVICE_PREFERENCE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_device_preference;
+
+    /// Defines pixel format.
+    typedef enum vgpu_texture_format {
+        VGPU_TEXTURE_FORMAT_UNDEFINED = 0,
+        // 8-bit pixel formats
+        VGPU_TEXTURE_FORMAT_R8_UNORM,
+        VGPU_TEXTURE_FORMAT_R8_SNORM,
+        VGPU_TEXTURE_FORMAT_R8_UINT,
+        VGPU_TEXTURE_FORMAT_R8_SINT,
+        // 16-bit pixel formats
+        VGPU_TEXTURE_FORMAT_R16_UINT,
+        VGPU_TEXTURE_FORMAT_R16_SINT,
+        VGPU_TEXTURE_FORMAT_R16_FLOAT,
+        VGPU_TEXTURE_FORMAT_RG8_UNORM,
+        VGPU_TEXTURE_FORMAT_RG8_SNORM,
+        VGPU_TEXTURE_FORMAT_RG8_UINT,
+        VGPU_TEXTURE_FORMAT_RG8_SINT,
+        // 32-bit pixel formats
+        VGPU_TEXTURE_FORMAT_R32_UINT,
+        VGPU_TEXTURE_FORMAT_R32_SINT,
+        VGPU_TEXTURE_FORMAT_R32_FLOAT,
+        VGPU_TEXTURE_FORMAT_RG16_UINT,
+        VGPU_TEXTURE_FORMAT_RG16_SINT,
+        VGPU_TEXTURE_FORMAT_RG16_FLOAT,
+        VGPU_TEXTURE_FORMAT_RGBA8_UNORM,
+        VGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB,
+        VGPU_TEXTURE_FORMAT_RGBA8_SNORM,
+        VGPU_TEXTURE_FORMAT_RGBA8_UINT,
+        VGPU_TEXTURE_FORMAT_RGBA8_SINT,
+        VGPU_TEXTURE_FORMAT_BGRA8_UNORM,
+        VGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB,
+
+        // Packed 32-Bit Pixel formats
+        VGPU_TEXTURE_FORMAT_RGB10A2_UNORM,
+        VGPU_TEXTURE_FORMAT_RG11B10_FLOAT,
+
+        // 64-Bit Pixel Formats
+        VGPU_TEXTURE_FORMAT_RG32_UINT,
+        VGPU_TEXTURE_FORMAT_RG32_SINT,
+        VGPU_TEXTURE_FORMAT_RG32_FLOAT,
+        VGPU_TEXTURE_FORMAT_RGBA16_UINT,
+        VGPU_TEXTURE_FORMAT_RGBA16_SINT,
+        VGPU_TEXTURE_FORMAT_RGBA16_FLOAT,
+
+        // 128-Bit Pixel Formats
+        VGPU_TEXTURE_FORMAT_RGBA32_UINT,
+        VGPU_TEXTURE_FORMAT_RGBA32_SINT,
+        VGPU_TEXTURE_FORMAT_RGBA32_FLOAT,
+
+        // Depth-stencil
+        VGPU_TEXTURE_FORMAT_DEPTH32_FLOAT,
+        VGPU_TEXTURE_FORMAT_DEPTH24_PLUS,
+        VGPU_TEXTURE_FORMAT_DEPTH24_STENCIL8,
+
+        // Compressed BC formats
+        VGPU_TEXTURE_FORMAT_BC1,
+        VGPU_TEXTURE_FORMAT_BC1_SRGB,
+        VGPU_TEXTURE_FORMAT_BC2,
+        VGPU_TEXTURE_FORMAT_BC2_SRGB,
+        VGPU_TEXTURE_FORMAT_BC3,
+        VGPU_TEXTURE_FORMAT_BC3_SRGB,
+        VGPU_TEXTURE_FORMAT_BC4,
+        VGPU_TEXTURE_FORMAT_BC4S,
+        VGPU_TEXTURE_FORMAT_BC5,
+        VGPU_TEXTURE_FORMAT_BC5S,
+        VGPU_TEXTURE_FORMAT_BC6H_UFLOAT,
+        VGPU_TEXTURE_FORMAT_BC6H_SFLOAT,
+        VGPU_TEXTURE_FORMAT_BC7,
+        VGPU_TEXTURE_FORMAT_BC7_SRGB,
+
+        _VGPU_TEXTURE_FORMAT_COUNT,
+        _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_texture_format;
+
     /* Structs */
+    typedef struct vgpu_swapchain_info {
+        uintptr_t native_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
+        uint32_t width;             /**< Width of swapchain. */
+        uint32_t height;            /**< Width of swapchain. */
+        vgpu_texture_format color_format;
+        vgpu_texture_format depth_stencil_format;
+        bool is_fullscreen;
+    } vgpu_swapchain_info;
+
     typedef struct vgpu_config {
         vgpu_backend_type preferred_backend;
+        bool debug;
+        void* (*get_proc_ddress)(const char*);
+        void (*callback)(void* context, const char* message, int level);
+        void* context;
+        vgpu_device_preference device_preference;
+        vgpu_swapchain_info swapchain;
     } vgpu_config;
 
     VGPU_API bool vgpu_init(const vgpu_config* config);
     VGPU_API void vgpu_shutdown(void);
+    VGPU_API void vgpu_begin_frame(void);
+    VGPU_API void vgpu_end_frame(void);
+
 #ifdef __cplusplus
 }
 #endif 

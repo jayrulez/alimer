@@ -53,11 +53,6 @@ if (ALIMER_VULKAN)
     define_engine_source_files(Graphics/Vulkan)
 endif ()
 
-if (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D12)
-endif ()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -74,6 +69,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
+    vgpu
     stb
     imgui
 )
@@ -83,10 +79,6 @@ if (ALIMER_VULKAN)
         volk
         vma
     )
-endif ()
-
-if (ALIMER_D3D12)
-    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemoryAllocator)
 endif ()
 
 # Link platform specific libraries

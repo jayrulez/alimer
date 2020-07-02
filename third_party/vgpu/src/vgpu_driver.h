@@ -25,6 +25,27 @@
 
 #include "vgpu.h"
 
+#ifndef VGPU_ASSERT
+#   include <assert.h>
+#   define VGPU_ASSERT(c) assert(c)
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#   if defined(__i386__) || defined(__x86_64__)
+#       define VGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
+#   else
+#       define VGPU_BREAKPOINT() ((void)0)
+#   endif
+#   define VGPU_UNREACHABLE() __builtin_unreachable()
+
+#elif defined(_MSC_VER)
+extern void __cdecl __debugbreak(void);
+#   define VGPU_BREAKPOINT() __debugbreak()
+#   define VGPU_UNREACHABLE() __assume(false)
+#else
+#   error "Unsupported compiler"
+#endif
+
 #define _vgpu_def(val, def) (((val) == 0) ? (def) : (val))
 #define _vgpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
 #define _vgpu_min(a,b) ((a<b)?a:b)
@@ -35,6 +56,8 @@
 typedef struct vgpu_renderer {
     bool (*init)(const vgpu_config* config);
     void (*shutdown)(void);
+    void (*begin_frame)(void);
+    void (*end_frame)(void);
 } vgpu_renderer;
 
 typedef struct vgpu_driver {

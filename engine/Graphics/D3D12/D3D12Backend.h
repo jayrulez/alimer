@@ -27,7 +27,6 @@
 #include "core/Log.h"
 #include "graphics/Types.h"
 #include "graphics/D3D/D3DHelpers.h"
-#include "D3D12MemAlloc.h"
 
 #include <wrl/client.h>
 
