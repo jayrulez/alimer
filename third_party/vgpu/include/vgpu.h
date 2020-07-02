@@ -49,7 +49,7 @@
 extern "C" {
 #endif
     /* Handles*/
-    typedef struct vgpu_texture vgpu_texture;
+    typedef struct vgpu_texture_t* vgpu_texture;
 
     /* Enums */
     typedef enum vgpu_backend_type {
@@ -140,7 +140,28 @@ extern "C" {
         _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_format;
 
+    typedef enum vgpu_texture_type {
+        VGPU_TEXTURE_TYPE_2D,
+        VGPU_TEXTURE_TYPE_3D,
+        VGPU_TEXTURE_TYPE_CUBE,
+        VGPU_TEXTURE_TYPE_ARRAY,
+        _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_texture_type;
+
     /* Structs */
+    typedef struct vgpu_texture_info {
+        vgpu_texture_type type;
+        vgpu_texture_format format;
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+        uint32_t layers;
+        uint32_t mipmaps;
+        uint32_t usage;
+        const char* label;
+        uintptr_t external_handle;
+    } vgpu_texture_info;
+
     typedef struct vgpu_swapchain_info {
         uintptr_t native_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
         uint32_t width;             /**< Width of swapchain. */
@@ -164,6 +185,9 @@ extern "C" {
     VGPU_API void vgpu_shutdown(void);
     VGPU_API void vgpu_begin_frame(void);
     VGPU_API void vgpu_end_frame(void);
+
+    VGPU_API vgpu_texture vgpu_texture_create(const vgpu_texture_info* info);
+    VGPU_API void vgpu_texture_destroy(vgpu_texture texture);
 
 #ifdef __cplusplus
 }

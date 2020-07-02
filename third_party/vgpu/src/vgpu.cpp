@@ -85,3 +85,11 @@ void vgpu_begin_frame(void) {
 void vgpu_end_frame(void) {
     s_gpu_renderer->end_frame();
 }
+
+vgpu_texture vgpu_texture_create(const vgpu_texture_info* info) {
+    return s_gpu_renderer->texture_create(info);
+}
+
+void vgpu_texture_destroy(vgpu_texture texture) {
+    s_gpu_renderer->texture_destroy(texture);
+}

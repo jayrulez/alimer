@@ -61,3 +61,12 @@ if (VGPU_DRIVER_D3D12)
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src>
     )
 endif ()
+
+
+if (MSVC)
+    # Set warning level 3 and treat all other warnings as errors
+	target_compile_options(vgpu PRIVATE
+        /W3
+        /WX
+    )
+endif ()

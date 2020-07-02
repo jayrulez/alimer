@@ -30,6 +30,12 @@
 #   define VGPU_ASSERT(c) assert(c)
 #endif
 
+#ifndef VGPU_ALLOC
+#include <stdlib.h>
+#define VGPU_ALLOC(T)     ((T*) malloc(sizeof(T)))
+#define VGPU_FREE(ptr)       (free((void*)(ptr)))
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 #   if defined(__i386__) || defined(__x86_64__)
 #       define VGPU_BREAKPOINT() __asm__ __volatile__("int $3\n\t")
@@ -58,6 +64,10 @@ typedef struct vgpu_renderer {
     void (*shutdown)(void);
     void (*begin_frame)(void);
     void (*end_frame)(void);
+
+    vgpu_texture(*texture_create)(const vgpu_texture_info* info);
+    void(*texture_destroy)(vgpu_texture handle);
+
 } vgpu_renderer;
 
 typedef struct vgpu_driver {
