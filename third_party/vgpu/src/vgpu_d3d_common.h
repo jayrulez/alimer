@@ -34,7 +34,7 @@
 #define VHR(hr) if (FAILED(hr)) { __debugbreak(); }
 #define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
-static inline DXGI_FORMAT _vgpu_d3d_format(vgpu_texture_format format) {
+static inline DXGI_FORMAT _vgpu_d3d_format(vgpu_pixel_format format) {
     switch (format) {
     case VGPU_TEXTURE_FORMAT_R8_UNORM:  return DXGI_FORMAT_R8_UNORM;
     case VGPU_TEXTURE_FORMAT_R8_SNORM:  return DXGI_FORMAT_R8_SNORM;
@@ -85,26 +85,26 @@ static inline DXGI_FORMAT _vgpu_d3d_format(vgpu_texture_format format) {
     case VGPU_TEXTURE_FORMAT_DEPTH24_PLUS:      return DXGI_FORMAT_D32_FLOAT;
     case VGPU_TEXTURE_FORMAT_DEPTH24_STENCIL8:  return DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-    case VGPU_TEXTURE_FORMAT_BC1:               return DXGI_FORMAT_BC1_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC1_SRGB:          return DXGI_FORMAT_BC1_UNORM_SRGB;
-    case VGPU_TEXTURE_FORMAT_BC2:               return DXGI_FORMAT_BC2_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC2_SRGB:          return DXGI_FORMAT_BC2_UNORM_SRGB;
-    case VGPU_TEXTURE_FORMAT_BC3:               return DXGI_FORMAT_BC3_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC3_SRGB:          return DXGI_FORMAT_BC3_UNORM_SRGB;
-    case VGPU_TEXTURE_FORMAT_BC4:               return DXGI_FORMAT_BC4_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC4S:              return DXGI_FORMAT_BC4_SNORM;
-    case VGPU_TEXTURE_FORMAT_BC5:               return DXGI_FORMAT_BC5_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC5S:              return DXGI_FORMAT_BC5_SNORM;
-    case VGPU_TEXTURE_FORMAT_BC6H_UFLOAT:       return DXGI_FORMAT_BC6H_UF16;
-    case VGPU_TEXTURE_FORMAT_BC6H_SFLOAT:       return DXGI_FORMAT_BC6H_SF16;
-    case VGPU_TEXTURE_FORMAT_BC7:               return DXGI_FORMAT_BC7_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC7_SRGB:          return DXGI_FORMAT_BC7_UNORM_SRGB;
+    case VGPU_PIXEL_FORMAT_BC1:               return DXGI_FORMAT_BC1_UNORM;
+    case VGPU_PIXEL_FORMAT_BC1_SRGB:          return DXGI_FORMAT_BC1_UNORM_SRGB;
+    case VGPU_PIXEL_FORMAT_BC2:               return DXGI_FORMAT_BC2_UNORM;
+    case VGPU_PIXEL_FORMAT_BC2_SRGB:          return DXGI_FORMAT_BC2_UNORM_SRGB;
+    case VGPU_PIXEL_FORMAT_BC3:               return DXGI_FORMAT_BC3_UNORM;
+    case VGPU_PIXEL_FORMAT_BC3_SRGB:          return DXGI_FORMAT_BC3_UNORM_SRGB;
+    case VGPU_PIXEL_FORMAT_BC4:               return DXGI_FORMAT_BC4_UNORM;
+    case VGPU_PIXEL_FORMAT_BC4S:              return DXGI_FORMAT_BC4_SNORM;
+    case VGPU_PIXEL_FORMAT_BC5:               return DXGI_FORMAT_BC5_UNORM;
+    case VGPU_PIXEL_FORMAT_BC5S:              return DXGI_FORMAT_BC5_SNORM;
+    case VGPU_PIXEL_FORMAT_BC6H_UFLOAT:       return DXGI_FORMAT_BC6H_UF16;
+    case VGPU_PIXEL_FORMAT_BC6H_SFLOAT:       return DXGI_FORMAT_BC6H_SF16;
+    case VGPU_PIXEL_FORMAT_BC7:               return DXGI_FORMAT_BC7_UNORM;
+    case VGPU_PIXEL_FORMAT_BC7_SRGB:          return DXGI_FORMAT_BC7_UNORM_SRGB;
     default:
         VGPU_UNREACHABLE();
     }
 }
 
-static inline DXGI_FORMAT vgpu_d3d_swapchain_format(vgpu_texture_format format) {
+static inline DXGI_FORMAT vgpu_d3d_swapchain_format(vgpu_pixel_format format) {
     switch (format) {
     case VGPU_TEXTURE_FORMAT_RGBA16_FLOAT:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -163,7 +163,7 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     IUnknown* deviceOrCommandQueue,
     uintptr_t window_handle,
     uint32_t width, uint32_t height,
-    vgpu_texture_format format,
+    vgpu_pixel_format format,
     uint32_t backbuffer_count,
     bool is_fullscreen)
 {

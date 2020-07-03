@@ -52,6 +52,15 @@ extern "C" {
     typedef struct vgpu_texture_t* vgpu_texture;
 
     /* Enums */
+    typedef enum vgpu_log_level {
+        VGPU_LOG_LEVEL_ERROR = 0,
+        VGPU_LOG_LEVEL_WARN = 1,
+        VGPU_LOG_LEVEL_INFO = 2,
+        VGPU_LOG_LEVEL_DEBUG = 3,
+        _VGPU_LOG_LEVEL_COUNT,
+        _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_log_level;
+
     typedef enum vgpu_backend_type {
         VGPU_BACKEND_TYPE_DEFAULT,
         VGPU_BACKEND_TYPE_NULL,
@@ -68,8 +77,8 @@ extern "C" {
     } vgpu_device_preference;
 
     /// Defines pixel format.
-    typedef enum vgpu_texture_format {
-        VGPU_TEXTURE_FORMAT_UNDEFINED = 0,
+    typedef enum vgpu_pixel_format {
+        VGPU_PIXEL_FORMAT_UNDEFINED = 0,
         // 8-bit pixel formats
         VGPU_TEXTURE_FORMAT_R8_UNORM,
         VGPU_TEXTURE_FORMAT_R8_SNORM,
@@ -121,24 +130,24 @@ extern "C" {
         VGPU_TEXTURE_FORMAT_DEPTH24_STENCIL8,
 
         // Compressed BC formats
-        VGPU_TEXTURE_FORMAT_BC1,
-        VGPU_TEXTURE_FORMAT_BC1_SRGB,
-        VGPU_TEXTURE_FORMAT_BC2,
-        VGPU_TEXTURE_FORMAT_BC2_SRGB,
-        VGPU_TEXTURE_FORMAT_BC3,
-        VGPU_TEXTURE_FORMAT_BC3_SRGB,
-        VGPU_TEXTURE_FORMAT_BC4,
-        VGPU_TEXTURE_FORMAT_BC4S,
-        VGPU_TEXTURE_FORMAT_BC5,
-        VGPU_TEXTURE_FORMAT_BC5S,
-        VGPU_TEXTURE_FORMAT_BC6H_UFLOAT,
-        VGPU_TEXTURE_FORMAT_BC6H_SFLOAT,
-        VGPU_TEXTURE_FORMAT_BC7,
-        VGPU_TEXTURE_FORMAT_BC7_SRGB,
+        VGPU_PIXEL_FORMAT_BC1,
+        VGPU_PIXEL_FORMAT_BC1_SRGB,
+        VGPU_PIXEL_FORMAT_BC2,
+        VGPU_PIXEL_FORMAT_BC2_SRGB,
+        VGPU_PIXEL_FORMAT_BC3,
+        VGPU_PIXEL_FORMAT_BC3_SRGB,
+        VGPU_PIXEL_FORMAT_BC4,
+        VGPU_PIXEL_FORMAT_BC4S,
+        VGPU_PIXEL_FORMAT_BC5,
+        VGPU_PIXEL_FORMAT_BC5S,
+        VGPU_PIXEL_FORMAT_BC6H_UFLOAT,
+        VGPU_PIXEL_FORMAT_BC6H_SFLOAT,
+        VGPU_PIXEL_FORMAT_BC7,
+        VGPU_PIXEL_FORMAT_BC7_SRGB,
 
-        _VGPU_TEXTURE_FORMAT_COUNT,
-        _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_format;
+        _VGPU_PIXEL_FORMAT_COUNT,
+        _VGPU_PIXEL_FORMAT_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_pixel_format;
 
     typedef enum vgpu_texture_type {
         VGPU_TEXTURE_TYPE_2D,
@@ -148,10 +157,17 @@ extern "C" {
         _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_type;
 
+    typedef enum vgpu_texture_usage {
+        VGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
+        VGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
+        VGPU_TEXTURE_USAGE_RENDER_TARGET = (1 << 2),
+        _VGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_texture_usage;
+
     /* Structs */
     typedef struct vgpu_texture_info {
         vgpu_texture_type type;
-        vgpu_texture_format format;
+        vgpu_pixel_format format;
         uint32_t width;
         uint32_t height;
         uint32_t depth;
@@ -166,21 +182,20 @@ extern "C" {
         uintptr_t native_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
         uint32_t width;             /**< Width of swapchain. */
         uint32_t height;            /**< Width of swapchain. */
-        vgpu_texture_format color_format;
-        vgpu_texture_format depth_stencil_format;
+        vgpu_pixel_format color_format;
+        vgpu_pixel_format depth_stencil_format;
         bool is_fullscreen;
     } vgpu_swapchain_info;
 
     typedef struct vgpu_config {
-        vgpu_backend_type preferred_backend;
         bool debug;
-        void* (*get_proc_ddress)(const char*);
-        void (*callback)(void* context, const char* message, int level);
+        void (*callback)(void* context, const char* message, vgpu_log_level level);
         void* context;
         vgpu_device_preference device_preference;
         vgpu_swapchain_info swapchain;
     } vgpu_config;
 
+    VGPU_API bool vgpu_set_preferred_backend(vgpu_backend_type backend);
     VGPU_API bool vgpu_init(const vgpu_config* config);
     VGPU_API void vgpu_shutdown(void);
     VGPU_API void vgpu_begin_frame(void);

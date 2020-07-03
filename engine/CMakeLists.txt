@@ -49,10 +49,6 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-if (ALIMER_VULKAN)
-    define_engine_source_files(Graphics/Vulkan)
-endif ()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -73,13 +69,6 @@ target_link_libraries(${TARGET_NAME} PUBLIC
     stb
     imgui
 )
-
-if (ALIMER_VULKAN)
-    target_link_libraries(${TARGET_NAME} PRIVATE
-        volk
-        vma
-    )
-endif ()
 
 # Link platform specific libraries
 if (WIN32)

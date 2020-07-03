@@ -27,10 +27,6 @@
 #include "Graphics/Texture.h"
 #include "imgui_impl_glfw.h"
 
-#if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
-#endif
-
 namespace alimer
 {
     static BackendType s_GraphicsBackend = BackendType::Count;
@@ -74,47 +70,6 @@ namespace alimer
     void GraphicsDevice::SetPreferredBackend(BackendType backendType)
     {
         s_GraphicsBackend = backendType;
-    }
-
-
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(bool enableValidationLayer, const PresentationParameters& presentationParameters)
-    {
-        if (s_GraphicsBackend == BackendType::Count)
-        {
-            auto availableDrivers = GetAvailableBackends();
-
-            if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
-                s_GraphicsBackend = BackendType::Direct3D12;
-            else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
-                s_GraphicsBackend = BackendType::Vulkan;
-            else
-                s_GraphicsBackend = BackendType::Null;
-        }
-
-        RefPtr<GraphicsDevice> device = nullptr;
-        switch (s_GraphicsBackend)
-        {
-#if defined(ALIMER_VULKAN)
-        case BackendType::Vulkan:
-            if (VulkanGraphicsDevice::IsAvailable())
-            {
-                device = new VulkanGraphicsDevice(enableValidationLayer);
-                LOG_INFO("Using Vulkan driver");
-            }
-            break;
-#endif
-
-        default:
-            // TODO: Create Null backend
-            break;
-        }
-
-        if (device == nullptr || !device->BackendInitialize(presentationParameters))
-        {
-            return nullptr;
-        }
-
-        return device;
     }
 
     void GraphicsDevice::BeginFrame()

@@ -60,8 +60,6 @@ namespace alimer
         static BackendType GetPreferredBackend();
         static void SetPreferredBackend(BackendType backendType);
 
-        static RefPtr<GraphicsDevice> Create(bool enableValidationLayer, const PresentationParameters& presentationParameters);
-
         virtual void WaitForGPU() = 0;
         void BeginFrame();
         void EndFrame();

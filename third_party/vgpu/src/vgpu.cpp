@@ -27,9 +27,13 @@ static const vgpu_driver* drivers[] = {
 #if defined(VGPU_DRIVER_D3D12)
     &d3d12_driver,
 #endif
+#if defined(VGPU_DRIVER_VULKAN)
+    &vulkan_driver,
+#endif
     nullptr
 };
 
+static vgpu_backend_type s_preferred_backend = VGPU_BACKEND_TYPE_DEFAULT;
 static vgpu_renderer* s_gpu_renderer = nullptr;
 
 static vgpu_config _vgpu_config_defaults(const vgpu_config* desc) {
@@ -39,12 +43,21 @@ static vgpu_config _vgpu_config_defaults(const vgpu_config* desc) {
     return def;
 }
 
+bool vgpu_set_preferred_backend(vgpu_backend_type backend) {
+    if (s_gpu_renderer != nullptr) {
+        return false;
+    }
+
+    s_preferred_backend = backend;
+    return true;
+}
+
 bool vgpu_init(const vgpu_config* config) {
     if (s_gpu_renderer) {
         return true;
     }
 
-    if (config->preferred_backend == VGPU_BACKEND_TYPE_DEFAULT) {
+    if (s_preferred_backend == VGPU_BACKEND_TYPE_DEFAULT) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
@@ -54,7 +67,7 @@ bool vgpu_init(const vgpu_config* config) {
     }
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->backendType == config->preferred_backend && drivers[i]->is_supported()) {
+            if (drivers[i]->backendType == s_preferred_backend && drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
                 break;
             }

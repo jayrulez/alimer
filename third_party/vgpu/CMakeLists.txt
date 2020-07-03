@@ -15,9 +15,10 @@ option(VGPU_INSTALL "Generate installation target" ON)
 option(BUILD_SHARED_LIBS "Build shared library" ON)
 
 # Driver Options
-if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+if (WIN32)
     option(VGPU_DRIVER_D3D12 "Include Direct3D12 backend" ON)
-elseif (${CMAKE_SYSTEM_NAME} STREQUAL "WindowsStore")
+    option(VGPU_DRIVER_VULKAN "Include Vulkan backend" ON)
+elseif (WINDOWS_STORE)
     option(VGPU_DRIVER_D3D12 "Include Direct3D12 backend" ON)
 else()
 endif ()
@@ -41,14 +42,15 @@ add_library(vgpu
     # Source Files
 	src/vgpu.cpp
     src/vgpu_driver_d3d12.cpp
+    src/vgpu_driver_vulkan.cpp
 )
 
 target_include_directories(vgpu PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	#$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulkan/include>
 )
 
+# Direct3D12
 if (VGPU_DRIVER_D3D12)
     target_sources(vgpu PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
@@ -62,6 +64,19 @@ if (VGPU_DRIVER_D3D12)
     )
 endif ()
 
+# Vulkan
+if (VGPU_DRIVER_VULKAN)
+    target_sources(vgpu PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vma/vk_mem_alloc.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/vma/vk_mem_alloc.natvis
+    )
+
+    target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_VULKAN)
+    target_include_directories(vgpu PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/vulkan/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/vma>
+    )
+endif ()
 
 if (MSVC)
     # Set warning level 3 and treat all other warnings as errors

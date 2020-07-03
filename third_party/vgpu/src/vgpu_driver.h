@@ -31,9 +31,18 @@
 #endif
 
 #ifndef VGPU_ALLOC
-#include <stdlib.h>
-#define VGPU_ALLOC(T)     ((T*) malloc(sizeof(T)))
-#define VGPU_FREE(ptr)       (free((void*)(ptr)))
+#   include <stdlib.h>
+#   define VGPU_ALLOC(T)     ((T*) malloc(sizeof(T)))
+#   define VGPU_FREE(ptr)       (free((void*)(ptr)))
+#endif
+
+#ifndef VGPU_ALLOCA
+#   include <malloc.h>
+#   if defined(_MSC_VER) || defined(__MINGW32__)
+#       define VGPU_ALLOCA(type, count) ((type*)(_malloca(sizeof(type) * (count))))
+#   else
+#       define VGPU_ALLOCA(type, count) ((type*)(alloca(sizeof(type) * (count))))
+#   endif
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -77,5 +86,6 @@ typedef struct vgpu_driver {
 } vgpu_driver;
 
 extern vgpu_driver d3d12_driver;
+extern vgpu_driver vulkan_driver;
 
 #endif /* _VGPU_DRIVER_H */

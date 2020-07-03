@@ -102,6 +102,8 @@ namespace alimer
 
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
+            vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
+
             vgpu_config gpu_config = {};
 #ifdef _DEBUG
             gpu_config.debug = true;
