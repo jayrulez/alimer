@@ -102,7 +102,7 @@ namespace alimer
 
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
-            vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
+            //vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
 
             vgpu_config gpu_config = {};
 #ifdef _DEBUG
@@ -179,6 +179,11 @@ namespace alimer
         }
 
         //graphicsDevice->PushDebugGroup("Clear");
+        vgpu_pass_begin_info begin_info = {};
+        begin_info.color_attachments[0].texture = vgpu_get_backbuffer_texture();
+        begin_info.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
+        vgpu_begin_pass(&begin_info);
+        vgpu_end_pass();
         //graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
         //graphicsDevice->PopDebugGroup();
     }

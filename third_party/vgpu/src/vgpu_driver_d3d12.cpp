@@ -22,8 +22,6 @@
 
 #if defined(VGPU_DRIVER_D3D12)
 
-#include "vgpu_d3d_common.h"
-
 // Use the C++ standard templated min / max
 #define NOMINMAX
 
@@ -46,6 +44,7 @@
 
 #include <d3d12.h>
 #include "D3D12MemAlloc.h"
+#include "vgpu_d3d_common.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
@@ -71,20 +70,43 @@ struct ResourceRelease
     IUnknown* resource;
 };
 
+struct d3d12_persistent_descriptor
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE handles[VGPU_NUM_INFLIGHT_FRAMES];
+    uint32_t index;
+};
+
 struct d3d12_descriptor_heap
 {
-    ID3D12DescriptorHeap* handle;
-    D3D12_CPU_DESCRIPTOR_HANDLE cpu_start;
-    D3D12_GPU_DESCRIPTOR_HANDLE gpu_start;
-    uint32_t size;
-    uint32_t capacity;
+    uint32_t persistent_allocated;
+    uint32_t num_persistent;
+    uint32_t heap_index;
+    uint32_t num_heaps;
     uint32_t descriptor_size;
+    uint32_t total_descriptors;
+
+    ID3D12DescriptorHeap* heaps[VGPU_NUM_INFLIGHT_FRAMES];
+    std::vector<uint32_t> dead_list;
+    D3D12_CPU_DESCRIPTOR_HANDLE cpu_start[VGPU_NUM_INFLIGHT_FRAMES];
+    D3D12_GPU_DESCRIPTOR_HANDLE gpu_start[VGPU_NUM_INFLIGHT_FRAMES];
+    SRWLOCK lock;
 };
 
 struct d3d12_texture {
+    vgpu_texture_info info;
     D3D12MA::Allocation* allocation;
     ID3D12Resource* handle;
-    D3D12_RESOURCE_STATES state;
+    D3D12_RESOURCE_STATES state; 
+    union {
+        D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+    };
+};
+
+struct d3d12_framebuffer {
+    uint32_t color_rtvs_count;
+    D3D12_CPU_DESCRIPTOR_HANDLE color_rtvs[VGPU_MAX_COLOR_ATTACHMENTS];
+    D3D12_CPU_DESCRIPTOR_HANDLE* dsv;
 };
 
 /* Global data */
@@ -116,6 +138,9 @@ static struct {
     D3D_FEATURE_LEVEL min_feature_level = D3D_FEATURE_LEVEL_11_0;
     ID3D12Device* device;
     D3D12MA::Allocator* allocator;
+    D3D_FEATURE_LEVEL feature_level;
+    D3D_ROOT_SIGNATURE_VERSION root_signature_version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    bool render_pass_support;
 
     ID3D12CommandQueue* direct_command_queue;
     ID3D12CommandQueue* compute_command_queue;
@@ -126,6 +151,7 @@ static struct {
     uint32_t num_backbuffers;
     IDXGISwapChain3* swapchain;
     vgpu_texture backbuffer_textures[3u];
+    vgpu_texture depth_stencil_texture;
     uint32_t backbuffer_index;
 
     /* Frame data */
@@ -137,6 +163,7 @@ static struct {
 
     ID3D12CommandAllocator* command_allocators[3u];
     ID3D12GraphicsCommandList* command_list;
+    ID3D12GraphicsCommandList4* command_list4;
 
     bool shutting_down;
     std::queue<ResourceRelease> deferred_releases;
@@ -175,31 +202,134 @@ static void d3d12_execute_deferred_releases() {
     }
 }
 
-static d3d12_descriptor_heap d3d12_create_descriptor_heap(uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+static d3d12_descriptor_heap d3d12_create_descriptor_heap(uint32_t num_persistent, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shader_visible)
 {
-    VGPU_ASSERT(capacity > 0);
+    VGPU_ASSERT(num_persistent > 0);
+
+    if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV || type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+        shader_visible = false;
 
     d3d12_descriptor_heap descriptor_heap = {};
+    descriptor_heap.persistent_allocated = 0;
+    descriptor_heap.num_persistent = num_persistent;
+    descriptor_heap.heap_index = 0;
+    descriptor_heap.num_heaps = shader_visible ? VGPU_NUM_INFLIGHT_FRAMES : 1;
+    descriptor_heap.total_descriptors = num_persistent;
+
+    descriptor_heap.dead_list.resize(num_persistent);
+    for (uint32_t i = 0; i < num_persistent; ++i)
+    {
+        descriptor_heap.dead_list[i] = uint32_t(i);
+    }
+
+    descriptor_heap.descriptor_size = d3d12.device->GetDescriptorHandleIncrementSize(type);
+    descriptor_heap.lock = SRWLOCK_INIT;
 
     D3D12_DESCRIPTOR_HEAP_DESC d3d12_desc = {};
     d3d12_desc.Type = type;
-    d3d12_desc.NumDescriptors = capacity;
-    d3d12_desc.Flags = flags;
+    d3d12_desc.NumDescriptors = descriptor_heap.total_descriptors;
+    d3d12_desc.Flags = shader_visible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     d3d12_desc.NodeMask = 0;
-    VHR(d3d12.device->CreateDescriptorHeap(&d3d12_desc, IID_PPV_ARGS(&descriptor_heap.handle)));
-
-    descriptor_heap.cpu_start = descriptor_heap.handle->GetCPUDescriptorHandleForHeapStart();
-    if (flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
+    for (uint32_t i = 0; i < descriptor_heap.num_heaps; ++i)
     {
-        descriptor_heap.gpu_start = descriptor_heap.handle->GetGPUDescriptorHandleForHeapStart();
+        VHR(d3d12.device->CreateDescriptorHeap(&d3d12_desc, IID_PPV_ARGS(&descriptor_heap.heaps[i])));
+        descriptor_heap.cpu_start[i] = descriptor_heap.heaps[i]->GetCPUDescriptorHandleForHeapStart();
+
+        if (shader_visible)
+        {
+            descriptor_heap.gpu_start[i] = descriptor_heap.heaps[i]->GetGPUDescriptorHandleForHeapStart();
+        }
     }
 
-    descriptor_heap.size = 0;
-    descriptor_heap.capacity = capacity;
-    descriptor_heap.descriptor_size = d3d12.device->GetDescriptorHandleIncrementSize(type);
+    descriptor_heap.num_persistent = num_persistent;
+
     return descriptor_heap;
 }
 
+static void d3d12_destroy_descriptor_heap(d3d12_descriptor_heap* heap) {
+    VGPU_ASSERT(heap != nullptr);
+    VGPU_ASSERT(heap->persistent_allocated == 0);
+    for (uint32_t i = 0; i < heap->num_heaps; ++i)
+    {
+        SAFE_RELEASE(heap->heaps[i]);
+    }
+}
+
+static d3d12_persistent_descriptor d3d12_allocate_persistent(d3d12_descriptor_heap* heap) {
+    VGPU_ASSERT(heap != nullptr && heap->heaps[0] != nullptr);
+
+    AcquireSRWLockExclusive(&heap->lock);
+
+    VGPU_ASSERT(heap->persistent_allocated < heap->num_persistent);
+    uint32_t index = heap->dead_list[heap->persistent_allocated];
+    ++heap->persistent_allocated;
+
+    ReleaseSRWLockExclusive(&heap->lock);
+
+    d3d12_persistent_descriptor alloc;
+    alloc.index = index;
+    for (uint32_t i = 0; i < heap->num_heaps; ++i)
+    {
+        alloc.handles[i] = heap->cpu_start[i];
+        alloc.handles[i].ptr += index * heap->descriptor_size;
+    }
+
+    return alloc;
+}
+
+static uint32_t d3d12_index_from_handle(d3d12_descriptor_heap* heap, D3D12_CPU_DESCRIPTOR_HANDLE handle) {
+    VGPU_ASSERT(heap->heaps[0] != nullptr);
+    VGPU_ASSERT(handle.ptr >= heap->cpu_start[heap->heap_index].ptr);
+    VGPU_ASSERT(handle.ptr < heap->cpu_start[heap->heap_index].ptr + heap->descriptor_size * heap->total_descriptors);
+    VGPU_ASSERT((handle.ptr - heap->cpu_start[heap->heap_index].ptr) % heap->descriptor_size == 0);
+    return uint32_t(handle.ptr - heap->cpu_start[heap->heap_index].ptr) / heap->descriptor_size;
+}
+
+static void d3d12_free_persistent(d3d12_descriptor_heap* heap, uint32_t& index) {
+    if (index == uint32_t(-1))
+        return;
+
+    VGPU_ASSERT(index < heap->num_persistent);
+    VGPU_ASSERT(heap->heaps[0] != nullptr);
+
+    AcquireSRWLockExclusive(&heap->lock);
+
+    VGPU_ASSERT(heap->persistent_allocated > 0);
+    heap->dead_list[heap->persistent_allocated - 1] = index;
+    --heap->persistent_allocated;
+
+    ReleaseSRWLockExclusive(&heap->lock);
+
+    index = uint32_t(-1);
+}
+
+static void d3d12_free_persistent(d3d12_descriptor_heap* heap, D3D12_CPU_DESCRIPTOR_HANDLE& handle) {
+    VGPU_ASSERT(heap->num_heaps == 1);
+    if (handle.ptr != 0)
+    {
+        uint32_t index = d3d12_index_from_handle(heap, handle);
+        d3d12_free_persistent(heap, index);
+        handle = {};
+    }
+}
+
+/* Command List helpers */
+static void _vgpu_d3d12_transition_resource(
+    ID3D12GraphicsCommandList* command_list,
+    ID3D12Resource* resource,
+    D3D12_RESOURCE_STATES before,
+    D3D12_RESOURCE_STATES after,
+    uint32_t subResource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+{
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource = resource;
+    barrier.Transition.StateBefore = before;
+    barrier.Transition.StateAfter = after;
+    barrier.Transition.Subresource = subResource;
+    command_list->ResourceBarrier(1, &barrier);
+}
 
 static IDXGIAdapter1* d3d12_get_adapter(vgpu_device_preference device_preference) {
     /* Detect adapter now. */
@@ -280,7 +410,7 @@ static IDXGIAdapter1* d3d12_get_adapter(vgpu_device_preference device_preference
 #endif
 
     return adapter;
-    }
+}
 
 static bool d3d12_init(const vgpu_config* config) {
     // Enable the debug layer (requires the Graphics Tools "optional feature").
@@ -332,9 +462,9 @@ static bool d3d12_init(const vgpu_config* config) {
             filter.DenyList.pIDList = hide;
             dxgiInfoQueue->AddStorageFilterEntries(vgpu_DXGI_DEBUG_DXGI, &filter);
             dxgiInfoQueue->Release();
-    }
+        }
 #endif
-}
+    }
 
     VHR(_vgpu_CreateDXGIFactory2(d3d12.factory_flags, IID_PPV_ARGS(&d3d12.factory)));
 
@@ -430,8 +560,8 @@ static bool d3d12_init(const vgpu_config* config) {
 
     // Create descriptor heaps.
     {
-        d3d12.rtv_heap = d3d12_create_descriptor_heap(256, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
-        d3d12.dsv_heap = d3d12_create_descriptor_heap(256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+        d3d12.rtv_heap = d3d12_create_descriptor_heap(256u, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+        d3d12.dsv_heap = d3d12_create_descriptor_heap(256u, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
     }
 
     if (config->swapchain.native_handle) {
@@ -460,7 +590,7 @@ static bool d3d12_init(const vgpu_config* config) {
         texture_info.format = config->swapchain.color_format;
         texture_info.width = config->swapchain.width;
         texture_info.height = config->swapchain.height;
-        texture_info.depth = 1u;
+        texture_info.usage = VGPU_TEXTURE_USAGE_RENDER_TARGET;
 
         for (uint32_t index = 0; index < d3d12.num_backbuffers; ++index)
         {
@@ -468,13 +598,76 @@ static bool d3d12_init(const vgpu_config* config) {
             VHR(d3d12.swapchain->GetBuffer(index, IID_PPV_ARGS(&resource)));
 
             texture_info.external_handle = (uintptr_t)resource;
-            d3d12.backbuffer_textures[index] = vgpu_texture_create(&texture_info);
+            d3d12.backbuffer_textures[index] = vgpu_create_texture(&texture_info);
+        }
 
-            //d3d12.device->CreateRenderTargetView(resource, nullptr, Handle);
-            //Handle.ptr += Dx.RtvHeap.DescriptorSize;
+        if (config->swapchain.depth_stencil_format != VGPU_PIXEL_FORMAT_UNDEFINED) {
+            vgpu_texture_info depth_stencil_texture_info = {};
+            depth_stencil_texture_info.type = VGPU_TEXTURE_TYPE_2D;
+            depth_stencil_texture_info.format = config->swapchain.depth_stencil_format;
+            depth_stencil_texture_info.width = config->swapchain.width;
+            depth_stencil_texture_info.height = config->swapchain.height;
+            depth_stencil_texture_info.usage = VGPU_TEXTURE_USAGE_RENDER_TARGET;
+            d3d12.depth_stencil_texture = vgpu_create_texture(&depth_stencil_texture_info);
         }
 
         d3d12.backbuffer_index = d3d12.swapchain->GetCurrentBackBufferIndex();
+    }
+
+    // Initialize caps
+    // Determine maximum supported feature level for this device
+    static const D3D_FEATURE_LEVEL s_featureLevels[] =
+    {
+        D3D_FEATURE_LEVEL_12_1,
+        D3D_FEATURE_LEVEL_12_0,
+        D3D_FEATURE_LEVEL_11_1,
+        D3D_FEATURE_LEVEL_11_0,
+    };
+
+    D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
+    {
+        _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
+    };
+
+    HRESULT hr = d3d12.device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels));
+    if (SUCCEEDED(hr))
+    {
+        d3d12.feature_level = featLevels.MaxSupportedFeatureLevel;
+    }
+    else
+    {
+        d3d12.feature_level = d3d12.min_feature_level;
+    }
+
+    // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+    D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+    if (FAILED(d3d12.device->CheckFeatureSupport(
+        D3D12_FEATURE_ROOT_SIGNATURE,
+        &featureData, sizeof(featureData))))
+    {
+        d3d12.root_signature_version = D3D_ROOT_SIGNATURE_VERSION_1_0;
+    }
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
+    if (SUCCEEDED(d3d12.device->CheckFeatureSupport(
+        D3D12_FEATURE_D3D12_OPTIONS5,
+        &d3d12options5, sizeof(d3d12options5)))
+        && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+    {
+        //caps.features.raytracing = true;
+    }
+    else
+    {
+        //caps.features.raytracing = false;
+    }
+
+    d3d12.render_pass_support = false;
+    if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0/* &&
+        static_cast<GPUVendorId>(caps.vendorId) != GPUVendorId::Intel*/)
+    {
+        d3d12.render_pass_support = true;
     }
 
     SAFE_RELEASE(dxgi_adapter);
@@ -502,8 +695,13 @@ static bool d3d12_init(const vgpu_config* config) {
         }
 
         VHR(d3d12.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d12.command_allocators[0], nullptr, IID_PPV_ARGS(&d3d12.command_list)));
-        VHR(d3d12.command_list->Close());
         d3d12.command_list->SetName(L"Frame Command List");
+
+        if (FAILED(d3d12.command_list->QueryInterface(&d3d12.command_list4))) {
+            d3d12.render_pass_support = false;
+        }
+
+        VHR(d3d12.command_list->Close());
     }
 
     return true;
@@ -529,7 +727,10 @@ static void d3d12_shutdown(void) {
     SAFE_RELEASE(d3d12.frame_fence);
     for (uint32_t index = 0; index < d3d12.num_backbuffers; ++index)
     {
-        vgpu_texture_destroy(d3d12.backbuffer_textures[index]);
+        vgpu_destroy_texture(d3d12.backbuffer_textures[index]);
+    }
+    if (d3d12.depth_stencil_texture) {
+        vgpu_destroy_texture(d3d12.depth_stencil_texture);
     }
 
     SAFE_RELEASE(d3d12.swapchain);
@@ -538,9 +739,10 @@ static void d3d12_shutdown(void) {
     {
         SAFE_RELEASE(d3d12.command_allocators[i]);
     }
+    SAFE_RELEASE(d3d12.command_list4);
     SAFE_RELEASE(d3d12.command_list);
-    SAFE_RELEASE(d3d12.rtv_heap.handle);
-    SAFE_RELEASE(d3d12.dsv_heap.handle);
+    d3d12_destroy_descriptor_heap(&d3d12.rtv_heap);
+    d3d12_destroy_descriptor_heap(&d3d12.dsv_heap);
 
     // Allocator
     D3D12MA::Stats stats;
@@ -583,8 +785,8 @@ static void d3d12_shutdown(void) {
         {
             dxgiDebug->ReportLiveObjects(vgpu_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
             dxgiDebug->Release();
+        }
     }
-}
 #endif
 
     memset(&d3d12, 0, sizeof(d3d12));
@@ -595,9 +797,21 @@ static void d3d12_begin_frame(void) {
     VHR(d3d12.command_allocators[d3d12.frame_index]->Reset());
     VHR(d3d12.command_list->Reset(d3d12.command_allocators[d3d12.frame_index], nullptr));
     //d3d12.command_list->SetDescriptorHeaps(1, &d3d12->CbvSrvUavGpuHeaps[d3d12.frame_index].Heap);
+
+    // Indicate that the back buffer will be used as a render target.
+    if (d3d12.swapchain) {
+        d3d12_texture* texture = (d3d12_texture*)d3d12.backbuffer_textures[d3d12.backbuffer_index];
+        _vgpu_d3d12_transition_resource(d3d12.command_list, texture->handle, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    }
 }
 
 static void d3d12_end_frame(void) {
+    // Indicate that the back buffer will now be used to present.
+    if (d3d12.swapchain) {
+        d3d12_texture* texture = (d3d12_texture*)d3d12.backbuffer_textures[d3d12.backbuffer_index];
+        _vgpu_d3d12_transition_resource(d3d12.command_list, texture->handle, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    }
+
     VHR(d3d12.command_list->Close());
 
     // TODO: Finish upload
@@ -629,15 +843,107 @@ static void d3d12_end_frame(void) {
     d3d12.frame_index = d3d12.frame_number % d3d12.render_latency;
 }
 
+/* Texture */
 static vgpu_texture d3d12_texture_create(const vgpu_texture_info* info) {
     d3d12_texture* texture = VGPU_ALLOC(d3d12_texture);
+    texture->info = *info;
+
+    DXGI_FORMAT dxgi_format = _vgpu_d3d_format_with_usage(info->format, info->usage);
+
     if (info->external_handle) {
         texture->allocation = nullptr;
         texture->handle = (ID3D12Resource*)info->external_handle;
         texture->state = D3D12_RESOURCE_STATE_COMMON;
     }
     else {
+        D3D12MA::ALLOCATION_DESC allocation_desc = {};
+        allocation_desc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
+        D3D12_RESOURCE_DESC resource_desc = {};
+        resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; // D3D12GetResourceDimension(desc.type);
+        resource_desc.Alignment = 0;
+        resource_desc.Width = info->width;
+        resource_desc.Height = info->height;
+        resource_desc.DepthOrArraySize = 1;
+
+        if (info->type == VGPU_TEXTURE_TYPE_CUBE)
+        {
+            resource_desc.DepthOrArraySize = info->array_layers * 6;
+        }
+        else
+        {
+            resource_desc.DepthOrArraySize = info->depth;
+        }
+
+        resource_desc.MipLevels = info->mip_levels;
+        resource_desc.Format = dxgi_format;
+        resource_desc.SampleDesc.Count = 1u;
+        resource_desc.SampleDesc.Quality = 0;
+        resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON;
+        D3D12_CLEAR_VALUE clear_value = {};
+        D3D12_CLEAR_VALUE* p_clear_value = nullptr;
+
+        if (info->usage & VGPU_TEXTURE_USAGE_RENDER_TARGET) {
+            // Render and Depth/Stencil targets are always committed resources
+            allocation_desc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
+
+            clear_value.Format = dxgi_format;
+            if (vgpu_is_depth_stencil_format(info->format))
+            {
+                initial_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+                resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+                if (!(info->usage & VGPU_TEXTURE_USAGE_SAMPLED))
+                {
+                    resource_desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+                }
+
+                clear_value.DepthStencil.Depth = 1.0f;
+            }
+            else
+            {
+                initial_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+                resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            }
+
+            p_clear_value = &clear_value;
+        }
+
+        texture->state = info->content != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initial_state;
+
+        HRESULT hr = d3d12.allocator->CreateResource(
+            &allocation_desc,
+            &resource_desc,
+            texture->state,
+            p_clear_value,
+            &texture->allocation,
+            IID_PPV_ARGS(&texture->handle)
+        );
+
+        if (FAILED(hr)) {
+            //LOG_ERROR("Direct3D12: Failed to create texture");
+            return nullptr;
+        }
+    }
+
+    if (info->usage & VGPU_TEXTURE_USAGE_RENDER_TARGET) {
+        if (vgpu_is_depth_stencil_format(info->format)) {
+            texture->dsv = d3d12_allocate_persistent(&d3d12.dsv_heap).handles[0];
+            d3d12.device->CreateDepthStencilView(texture->handle, nullptr, texture->dsv);
+        }
+        else {
+            texture->rtv = d3d12_allocate_persistent(&d3d12.rtv_heap).handles[0];
+
+            D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = { };
+            rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtv_desc.Format = dxgi_format;
+            rtv_desc.Texture2D.MipSlice = 0;
+            rtv_desc.Texture2D.PlaneSlice = 0;
+            d3d12.device->CreateRenderTargetView(texture->handle, &rtv_desc, texture->rtv);
+        }
     }
 
     return (vgpu_texture)texture;
@@ -645,8 +951,64 @@ static vgpu_texture d3d12_texture_create(const vgpu_texture_info* info) {
 
 static void d3d12_texture_destroy(vgpu_texture handle) {
     d3d12_texture* texture = (d3d12_texture*)handle;
+    if (texture->info.usage & VGPU_TEXTURE_USAGE_RENDER_TARGET) {
+        if (vgpu_is_depth_stencil_format(texture->info.format)) {
+            d3d12_free_persistent(&d3d12.dsv_heap, texture->dsv);
+        }
+        else {
+            d3d12_free_persistent(&d3d12.rtv_heap, texture->rtv);
+        }
+    }
+
+    SAFE_RELEASE(texture->allocation);
     d3d12_release_resource(texture->handle);
     VGPU_FREE(texture);
+}
+
+static vgpu_texture_info d3d12_query_texture_info(vgpu_texture handle) {
+    d3d12_texture* texture = (d3d12_texture*)handle;
+    return texture->info;
+}
+/* Commands */
+static vgpu_texture d3d12_get_backbuffer_texture(void) {
+    return d3d12.backbuffer_textures[d3d12.backbuffer_index];
+}
+
+static void d3d12_begin_pass(const vgpu_pass_begin_info* info) {
+    if (d3d12.render_pass_support) {
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+
+        D3D12_RENDER_PASS_FLAGS renderPassFlags = D3D12_RENDER_PASS_FLAG_NONE;
+        //d3d12.command_list4->BeginRenderPass(framebuffer->color_rtvs_count, colorRenderPassTargets, nullptr, renderPassFlags);
+    }
+    else {
+        uint32_t color_rtvs_count = 0;
+        D3D12_CPU_DESCRIPTOR_HANDLE color_rtvs[VGPU_MAX_COLOR_ATTACHMENTS] = {};
+
+        for (uint32_t i = 0; i < VGPU_MAX_COLOR_ATTACHMENTS; i++)
+        {
+            const vgpu_color_attachment_info* attachment = &info->color_attachments[i];
+            if (!attachment->texture) {
+                break;
+            }
+
+            d3d12_texture* texture = (d3d12_texture*)attachment->texture;
+            //TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+            if (attachment->load_op == VGPU_LOAD_OP_CLEAR)
+            {
+                d3d12.command_list->ClearRenderTargetView(texture->rtv, &attachment->clear_color.r, 0, nullptr);
+            }
+            color_rtvs[color_rtvs_count++] = texture->rtv;
+        }
+
+        d3d12.command_list->OMSetRenderTargets(color_rtvs_count, color_rtvs, FALSE, NULL);
+    }
+}
+
+static void d3d12_end_pass(void) {
+    if (d3d12.render_pass_support) {
+        d3d12.command_list4->EndRenderPass();
+    }
 }
 
 /* Driver */
@@ -707,6 +1069,11 @@ static vgpu_renderer* d3d12_init_renderer(void) {
 
     renderer.texture_create = d3d12_texture_create;
     renderer.texture_destroy = d3d12_texture_destroy;
+    renderer.query_texture_info = d3d12_query_texture_info;
+
+    renderer.get_backbuffer_texture = d3d12_get_backbuffer_texture;
+    renderer.begin_pass = d3d12_begin_pass;
+    renderer.end_pass = d3d12_end_pass;
 
     return &renderer;
 }

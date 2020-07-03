@@ -76,6 +76,11 @@ typedef struct vgpu_renderer {
 
     vgpu_texture(*texture_create)(const vgpu_texture_info* info);
     void(*texture_destroy)(vgpu_texture handle);
+    vgpu_texture_info(*query_texture_info)(vgpu_texture handle);
+
+    vgpu_texture(*get_backbuffer_texture)(void);
+    void (*begin_pass)(const vgpu_pass_begin_info* info);
+    void (*end_pass)(void);
 
 } vgpu_renderer;
 
