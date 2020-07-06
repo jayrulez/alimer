@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/String.h"
+#include "Core/Object.h"
 #include "Core/Utils.h"
 #include "Math/Size.h"
 
@@ -41,9 +41,13 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowFlags);
 
+    class SwapChain;
+
     /// Defines an OS window.
-    class ALIMER_API Window final
+    class ALIMER_API Window final : public Object
     {
+        ALIMER_OBJECT(Window, Object);
+
     public:
         Window() = default;
 
@@ -56,14 +60,22 @@ namespace alimer
         bool IsMaximized() const;
         bool IsMinimized() const;
         bool IsFullscreen() const;
+        bool IsMain() const;
         uintptr_t GetHandle() const;
 
+        // Gets rendering output swap chain
+        ALIMER_FORCEINLINE SwapChain* GetSwapChain() const
+        {
+            return _swapChain.Get();
+        }
+
     private:
+        bool _isMain = false;
         String title;
         SizeI size;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
-
         void* window = nullptr;
+        RefPtr<SwapChain> _swapChain;
     };
 } 

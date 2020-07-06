@@ -20,42 +20,49 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Library.h"
-#if defined(_DEBUG)
-#include "Core/Log.h"
-#endif
+#include "D3D12SwapChain.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
-    LibHandle LibraryOpen(const char* libName)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
+        : SwapChain(desc)
+        , _device(device)
     {
-        HMODULE handle = LoadLibraryA(libName);
-
-#if defined(_DEBUG)
-        if (handle == nullptr)
-        {
-            LOG_WARN("LibraryOpen - Windows Error: %d", GetLastError());
+        DXGIFactoryCaps factoryCaps = DXGIFactoryCaps::FlipPresent;
+        if (device->IsTearingSupported()) {
+            factoryCaps |= DXGIFactoryCaps::Tearing;
         }
-#endif
 
-        return (LibHandle)handle;
+        IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+            device->GetDXGIFactory(),
+            factoryCaps,
+            device->GetGraphicsQueue(),
+            desc.windowHandle,
+            desc.width, desc.height,
+            desc.colorFormat,
+            2u,
+            desc.isFullscreen
+        );
+
+        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
+        SafeRelease(tempSwapChain);
     }
 
-    void LibraryClose(LibHandle handle)
+    D3D12SwapChain::~D3D12SwapChain()
     {
-        FreeLibrary(static_cast<HMODULE>(handle));
+        Destroy();
     }
 
-    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    void D3D12SwapChain::Destroy()
     {
-        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+        SafeRelease(handle);
+    }
 
-#if defined(_DEBUG)
-        if (proc == nullptr)
-        {
-            LOG_WARN("LibrarySymbol - Windows Error: {}", GetLastError());
-        }
-#endif
-        return proc;
+    void D3D12SwapChain::BackendSetName()
+    {
+        //auto wideName = ToUtf16(name);
+        //handle->SetName(wideName.c_str());
+        DXGISetObjectName(handle, name.c_str());
     }
 }

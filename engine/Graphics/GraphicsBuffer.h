@@ -30,7 +30,7 @@ namespace alimer
     {
     public:
         /// Constructor
-        GraphicsBuffer(GraphicsDevice& device, const BufferDescription& desc);
+        GraphicsBuffer(const BufferDescription& desc);
 
         /// Gets buffer size in bytes.
         uint32_t GetSize() const { return size; }

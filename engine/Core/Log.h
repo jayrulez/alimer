@@ -23,11 +23,11 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <string>
+#include "Core/String.h"
+#include <fmt/format.h>
 
-namespace alimer {
-    static constexpr uint32_t kMaxLogMessage = 4096;
-
+namespace alimer
+{
     enum class LogLevel : uint32_t
     {
         Trace,
@@ -38,51 +38,32 @@ namespace alimer {
         Off
     };
 
-    class ALIMER_API Logger final
-    {
-    public:
-        Logger(const std::string& name);
-        ~Logger();
-
-        bool IsEnabled() const { return _enabled; }
-        void SetEnabled(bool value);
-        bool IsLevelEnabled(LogLevel level) const;
-
-        void Log(LogLevel level, const char* message);
-        void Log(LogLevel level, const std::string& message);
-        void LogFormat(LogLevel level, const char* format, ...);
-
-    private:
-        std::string _name;
-        bool _enabled = true;
-        LogLevel _level;
-    };
-
     class ALIMER_API Log final
     {
     public:
-        static Logger* GetDefault();
+        static bool IsEnabled() { return _enabled; }
+        static void SetEnabled(bool value);
+        static bool IsLevelEnabled(LogLevel level);
+
+        static void Write(LogLevel level, const char* str);
+        static void Write(LogLevel level, const String& str);
+
+    private:
+        Log() = delete;
+        ~Log() = delete;
+
+        static bool _enabled;
+        static LogLevel _level;
     };
-} // namespace alimer
+} 
 
-// Current function macro.
-#ifdef WIN32
-#define __current__func__ __FUNCTION__
-#else
-#define __current__func__ __func__
-#endif
+#define LOG_TRACE(...) alimer::Log::Write(alimer::LogLevel::Trace, fmt::format(__VA_ARGS__))
+#define LOG_DEBUG(...) alimer::Log::Write(alimer::LogLevel::Debug, fmt::format(__VA_ARGS__))
+#define LOG_INFO(...) alimer::Log::Write(alimer::LogLevel::Info, fmt::format(__VA_ARGS__))
+#define LOG_WARN(...) alimer::Log::Write(alimer::LogLevel::Warning, fmt::format(__VA_ARGS__))
 
-#define LOG_TRACE(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Trace, __VA_ARGS__)
-#define LOG_DEBUG(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Debug, __VA_ARGS__)
-#define LOG_INFO(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Info, __VA_ARGS__)
-#define LOG_WARN(...) alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Warning, __VA_ARGS__)
-
-#ifdef ALIMER_ERRORS_AS_WARNINGS
-#define LOG_ERROR LOG_WARN
-#else
 #define LOG_ERROR(...) do \
     { \
-        alimer::Log::GetDefault()->LogFormat(alimer::LogLevel::Error, "%s -- %s", __current__func__, __VA_ARGS__); \
+        alimer::Log::Write(alimer::LogLevel::Error, fmt::format("{}:{}] {}", __FILE__, __LINE__,  fmt::format(__VA_ARGS__))); \
         ALIMER_FORCE_CRASH(); \
     } while (0)
-#endif

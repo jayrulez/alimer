@@ -22,48 +22,15 @@
 
 #pragma once
 
+#include "core/Utils.h"
+#include "core/Assert.h"
+#include "core/Log.h"
 #include "graphics/Types.h"
-#include "Core/Ptr.h"
+#include "graphics/D3D/D3DHelpers.h"
+#define D3D11_NO_HELPERS
+#include <d3d11_1.h>
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public RefCounted
-    {
-    public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
-
-    private:
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-
-        uint64_t size{ 0 };
-        MemoryUsage memoryUsage;
-    };
+    class D3D11GraphicsDevice;
 }

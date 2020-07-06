@@ -22,9 +22,10 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
-#include <vgpu.h>
 
 namespace alimer
 {
@@ -33,6 +34,8 @@ namespace alimer
     {
         gameSystems.Push(input);
         PlatformConstuct();
+        GraphicsDevice::Create(BackendType::Count);
+        LOG_INFO("Application started");
     }
 
     Application::~Application()
@@ -43,11 +46,11 @@ namespace alimer
         }
 
         gameSystems.Clear();
-        graphicsDevice.Reset();
-        vgpu_shutdown();
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
+        GraphicsDevice::Shutdown();
+        LOG_INFO("Application destroyed correctly");
     }
 
     void Application::InitBeforeRun()
@@ -100,34 +103,25 @@ namespace alimer
                 style.Colors[ImGuiCol_WindowBg].w = 1.0f;
             }
 
-            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+            /*ImGuiIO& io = ImGui::GetIO();
+            io.BackendRendererName = "Alimer Direct3D12";
+            io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+            io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
 
-            //vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
+            ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+            main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataD3D12)(maxInflightFrames);
 
-            vgpu_config gpu_config = {};
-#ifdef _DEBUG
-            gpu_config.debug = true;
-#endif
-            gpu_config.swapchain.native_handle = window.GetHandle();
-            gpu_config.swapchain.width = window.GetSize().width;
-            gpu_config.swapchain.height = window.GetSize().height;
-            gpu_config.swapchain.is_fullscreen = window.IsFullscreen();
-
-            if (!vgpu_init(&gpu_config)) {
-                headless = true;
-            }
-
-            /*PresentationParameters presentationParameters = {};
-            presentationParameters.isFullscreen = window.IsFullscreen();
-            presentationParameters.windowHandle = window.GetHandle();
-            presentationParameters.colorFormat = PixelFormat::BGRA8Unorm;
-            //graphicsDesc.colorFormat = PixelFormat::BGRA8UnormSrgb;
-
-            graphicsDevice = GraphicsDevice::Create(enableValidationLayer, presentationParameters);
-            if (graphicsDevice.IsNull())
+            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
             {
-                headless = true;
+                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+                platform_io.Renderer_CreateWindow = ImGui_D3D12_CreateWindow;
+                platform_io.Renderer_DestroyWindow = ImGui_D3D12_DestroyWindow;
+                platform_io.Renderer_SetWindowSize = ImGui_D3D12_SetWindowSize;
+                platform_io.Renderer_RenderWindow = ImGui_D3D12_RenderWindow;
+                platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
             }*/
+
+            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
         }
 
         Initialize();
@@ -161,7 +155,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu_begin_frame();
+        //vgpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -179,11 +173,11 @@ namespace alimer
         }
 
         //graphicsDevice->PushDebugGroup("Clear");
-        vgpu_pass_begin_info begin_info = {};
+        /*vgpu_pass_begin_info begin_info = {};
         begin_info.color_attachments[0].texture = vgpu_get_backbuffer_texture();
         begin_info.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
         vgpu_begin_pass(&begin_info);
-        vgpu_end_pass();
+        vgpu_end_pass();*/
         //graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
         //graphicsDevice->PopDebugGroup();
     }
@@ -195,7 +189,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        vgpu_end_frame();
+        //vgpu_end_frame();
     }
 
     int Application::Run()

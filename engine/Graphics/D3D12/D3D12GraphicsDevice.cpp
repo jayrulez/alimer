@@ -21,6 +21,7 @@
 //
 
 #include "D3D12GraphicsDevice.h"
+#include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
 #include "D3D12Buffer.h"
 #include "Core/String.h"
@@ -32,8 +33,6 @@
 #ifdef _MSC_VER
 #pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
 #endif
-
-using Microsoft::WRL::ComPtr;
 
 namespace alimer
 {
@@ -125,10 +124,10 @@ namespace alimer
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         static HMODULE dxgiLib = LoadLibraryA("dxgi.dll");
         CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
-        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
         if (CreateDXGIFactory2 == nullptr) {
             return false;
         }
+        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
 
         static HMODULE d3d12Lib = LoadLibraryA("d3d12.dll");
         D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12Lib, "D3D12CreateDevice");
@@ -147,28 +146,27 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(bool enableValidationLayer)
-        : GraphicsDevice(enableValidationLayer)
+    D3D12GraphicsDevice::D3D12GraphicsDevice()
     {
         ALIMER_VERIFY(IsAvailable());
 
+#if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (enableValidationLayer)
         {
             ID3D12Debug* debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
             {
                 debugController->EnableDebugLayer();
 
-                /*ID3D12Debug1* d3d12Debug1 = nullptr;
+                ID3D12Debug1* d3d12Debug1 = nullptr;
                 if (SUCCEEDED(debugController->QueryInterface(&d3d12Debug1)))
                 {
                     d3d12Debug1->SetEnableGPUBasedValidation(true);
                     //d3d12Debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
                     d3d12Debug1->Release();
-                }*/
+                }
 
                 debugController->Release();
             }
@@ -183,8 +181,8 @@ namespace alimer
             {
                 dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
-                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
-                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+                dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+                dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
 
                 DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
                 {
@@ -193,11 +191,12 @@ namespace alimer
                 DXGI_INFO_QUEUE_FILTER filter = {};
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
-                dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
                 dxgiInfoQueue->Release();
             }
 #endif
         }
+#endif
 
         ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
 
@@ -223,14 +222,117 @@ namespace alimer
 
             SAFE_RELEASE(dxgiFactory5);
         }
+
+        IDXGIAdapter1* adapter;
+        GetAdapter(&adapter);
+
+        // Create the DX12 API device object.
+        {
+            ThrowIfFailed(D3D12CreateDevice(adapter, minFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
+            d3dDevice->SetName(L"Alimer Device");
+
+            // Configure debug device (if active).
+#ifndef NDEBUG
+            {
+                ID3D12InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
+                {
+#ifdef _DEBUG
+                    d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+                    d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#endif
+                    D3D12_MESSAGE_ID hide[] =
+                    {
+                        D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                        D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                        D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
+                        D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                        D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                        D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+                    };
+                    D3D12_INFO_QUEUE_FILTER filter = {};
+                    filter.DenyList.NumIDs = _countof(hide);
+                    filter.DenyList.pIDList = hide;
+                    d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
+                }
+            }
+#endif
+
+            // Create memory allocator
+            {
+                D3D12MA::ALLOCATOR_DESC desc = {};
+                desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+                desc.pDevice = d3dDevice;
+                desc.pAdapter = adapter;
+
+                ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
+                switch (allocator->GetD3D12Options().ResourceHeapTier)
+                {
+                case D3D12_RESOURCE_HEAP_TIER_1:
+                    LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
+                    break;
+                case D3D12_RESOURCE_HEAP_TIER_2:
+                    LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            InitCapabilities(adapter);
+            adapter->Release();
+        }
+
+        // Create command queue's
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 1;
+
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            graphicsQueue->SetName(L"Direct Command Queue");
+        }
+
+        // Setup upload data.
+        InitializeUpload();
+
+        // Create descriptor heaps
+        {
+            // Render target descriptor heap (RTV).
+            InitDescriptorHeap(&RTVHeap, 1024, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+            // Depth-stencil descriptor heap (DSV).
+            InitDescriptorHeap(&DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
+            // Non-shader visible descriptor heap (CBV, SRV, UAV).
+            InitDescriptorHeap(&CPUDescriptorHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
+            // Shader visible descriptor heaps (CBV, SRV, UAV).
+            for (uint32_t index = 0; index < maxInflightFrames; ++index)
+            {
+                InitDescriptorHeap(&GPUDescriptorHeaps[index], 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+            }
+        }
+
+        // Create a fence for tracking GPU execution progress.
+        {
+            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+            frameFence->SetName(L"Frame Fence");
+
+            frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+            if (!frameFenceEvent)
+            {
+                LOG_ERROR("Direct3D12: CreateEventEx failed.");
+            }
+        }
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
-        Shutdown();
+        BackendShutdown();
     }
 
-    void D3D12GraphicsDevice::Shutdown()
+    void D3D12GraphicsDevice::BackendShutdown()
     {
         SAFE_RELEASE(RTVHeap.handle);
         SAFE_RELEASE(DSVHeap.handle);
@@ -241,7 +343,7 @@ namespace alimer
         }
         SAFE_RELEASE(CPUDescriptorHeap.handle);
 
-        for (uint32_t i = 0; i < kMaxCommandLists; i++)
+        /*for (uint32_t i = 0; i < kMaxCommandLists; i++)
         {
             if (commandLists[i]) {
                 commandLists[i]->Release();
@@ -254,9 +356,9 @@ namespace alimer
             }
         }
 
-        //SAFE_RELEASE(commandList);
+        //SAFE_RELEASE(commandList);*/
 
-        ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+        /*ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         if (ImGuiViewportDataD3D12* data = (ImGuiViewportDataD3D12*)mainViewport->RendererUserData)
         {
             IM_DELETE(data);
@@ -265,7 +367,7 @@ namespace alimer
 
         SAFE_RELEASE(uiRootSignature);
         SAFE_RELEASE(uiPipelineState);
-        fontTexture.Reset();
+        fontTexture.Reset();*/
 
         // Release leaked resources.
         ReleaseTrackedResources();
@@ -275,12 +377,12 @@ namespace alimer
         SAFE_RELEASE(graphicsQueue);
         CloseHandle(frameFenceEvent);
         SAFE_RELEASE(frameFence);
-        for (uint32_t i = 0; i < backBufferCount; i++)
+        /*for (uint32_t i = 0; i < backBufferCount; i++)
         {
             SAFE_RELEASE(swapChainRenderTargets[i]);
         }
 
-        swapChain.Reset();
+        //swapChain.Reset();*/
 
         // Allocator
         D3D12MA::Stats stats;
@@ -296,7 +398,7 @@ namespace alimer
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
-            LOG_DEBUG("Direct3D12: There are %d unreleased references left on the device", refCount);
+            LOG_DEBUG("Direct3D12: There are {} unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
             if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
@@ -314,215 +416,16 @@ namespace alimer
 
 #ifdef _DEBUG
         {
-            ComPtr<IDXGIDebug1> dxgiDebug;
+            IDXGIDebug1* dxgiDebug;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
             {
-                dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug->Release();
             }
         }
 #endif
     }
-
-    bool D3D12GraphicsDevice::BackendInitialize(const PresentationParameters& presentationParameters)
-    {
-        ComPtr<IDXGIAdapter1> adapter;
-        GetAdapter(adapter.GetAddressOf());
-
-        // Create the DX12 API device object.
-        ThrowIfFailed(D3D12CreateDevice(
-            adapter.Get(),
-            minFeatureLevel,
-            IID_PPV_ARGS(&d3dDevice)
-        ));
-
-        d3dDevice->SetName(L"Alimer Device");
-
-        // Configure debug device (if active).
-        if (enableValidationLayer)
-        {
-            ID3D12InfoQueue* d3dInfoQueue;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
-            {
-#ifdef _DEBUG
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
-#endif
-                D3D12_MESSAGE_ID hide[] =
-                {
-                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
-                    D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
-                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
-                };
-                D3D12_INFO_QUEUE_FILTER filter = {};
-                filter.DenyList.NumIDs = _countof(hide);
-                filter.DenyList.pIDList = hide;
-                d3dInfoQueue->AddStorageFilterEntries(&filter);
-                d3dInfoQueue->Release();
-            }
-        }
-
-        // Create memory allocator
-        {
-            D3D12MA::ALLOCATOR_DESC desc = {};
-            desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            desc.pDevice = d3dDevice;
-            desc.pAdapter = adapter.Get();
-
-            ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
-            switch (allocator->GetD3D12Options().ResourceHeapTier)
-            {
-            case D3D12_RESOURCE_HEAP_TIER_1:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
-                break;
-            case D3D12_RESOURCE_HEAP_TIER_2:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
-                break;
-            default:
-                break;
-            }
-        }
-
-        InitCapabilities(adapter.Get());
-
-        // Create command queue's
-        {
-            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            queueDesc.NodeMask = 1;
-
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
-            graphicsQueue->SetName(L"Direct Command Queue");
-        }
-
-        // Create descriptor heaps
-        {
-            // Render target descriptor heap (RTV).
-            InitDescriptorHeap(&RTVHeap, 1024, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-            // Depth-stencil descriptor heap (DSV).
-            InitDescriptorHeap(&DSVHeap, 256, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, false);
-            // Non-shader visible descriptor heap (CBV, SRV, UAV).
-            InitDescriptorHeap(&CPUDescriptorHeap, 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-            // Shader visible descriptor heaps (CBV, SRV, UAV).
-            for (uint32_t index = 0; index < maxInflightFrames; ++index)
-            {
-                InitDescriptorHeap(&GPUDescriptorHeaps[index], 16 * 1024, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-            }
-        }
-
-        // Create SwapChain if not headless
-        if (presentationParameters.windowHandle)
-        {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            if (!IsWindow((HWND)presentationParameters.windowHandle)) {
-                LOG_ERROR("Invalid HWND handle");
-                return false;
-            }
-#endif
-
-            backbufferWidth = presentationParameters.width;
-            backbufferHeight = presentationParameters.height;
-            backBufferFormat = ToDXGIFormat(srgbToLinearFormat(presentationParameters.colorFormat));
-
-            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = presentationParameters.width;
-            swapChainDesc.Height = presentationParameters.height;
-            swapChainDesc.Format = backBufferFormat;
-            swapChainDesc.Stereo = FALSE;
-            swapChainDesc.SampleDesc.Count = 1;
-            swapChainDesc.SampleDesc.Quality = 0;
-            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swapChainDesc.BufferCount = backBufferCount;
-            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-            if (presentationParameters.presentationInterval == PresentInterval::immediate
-                && tearingSupported)
-            {
-                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-            }
-
-            ComPtr<IDXGISwapChain1> tempSwapChain;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-            fsSwapChainDesc.Windowed = TRUE;
-
-            ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-                graphicsQueue,
-                (HWND)presentationParameters.windowHandle,
-                &swapChainDesc,
-                &fsSwapChainDesc,
-                NULL,
-                tempSwapChain.GetAddressOf()
-            ));
-
-            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-            ThrowIfFailed(dxgiFactory->MakeWindowAssociation((HWND)presentationParameters.windowHandle, DXGI_MWA_NO_ALT_ENTER));
-#else
-            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-
-            ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-                graphicsQueue,
-                (IUnknown*)presentationParameters.windowHandle,
-                &swapChainDesc,
-                nullptr,
-                tempSwapChain.GetAddressOf()
-            ));
-#endif
-
-            ThrowIfFailed(tempSwapChain.As(&swapChain));
-
-            for (uint32_t i = 0; i < backBufferCount; i++)
-            {
-                swapChain->GetBuffer(i, IID_PPV_ARGS(&swapChainRenderTargets[i]));
-                swapChainRenderTargetDescriptor[i] = AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, false);
-                d3dDevice->CreateRenderTargetView(swapChainRenderTargets[i], nullptr, swapChainRenderTargetDescriptor[i]);
-            }
-        }
-
-        // Create a fence for tracking GPU execution progress.
-        {
-            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-            frameFence->SetName(L"Frame Fence");
-
-            frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
-            if (!frameFenceEvent)
-            {
-                LOG_ERROR("Direct3D12: CreateEventEx failed.");
-            }
-        }
-
-        // Setup upload data.
-        InitializeUpload();
-
-        // Setup ImGui
-        {
-            ImGuiIO& io = ImGui::GetIO();
-            io.BackendRendererName = "Alimer Direct3D12";
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
-
-            ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-            main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataD3D12)(maxInflightFrames);
-
-            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-                platform_io.Renderer_CreateWindow = ImGui_D3D12_CreateWindow;
-                platform_io.Renderer_DestroyWindow = ImGui_D3D12_DestroyWindow;
-                platform_io.Renderer_SetWindowSize = ImGui_D3D12_SetWindowSize;
-                platform_io.Renderer_RenderWindow = ImGui_D3D12_RenderWindow;
-                platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
-            }
-        }
-
-        return true;
-    }
-
+    
     void D3D12GraphicsDevice::InitializeUpload()
     {
         for (uint64_t i = 0; i < kMaxUploadSubmissions; ++i) {
@@ -741,7 +644,7 @@ namespace alimer
     {
         *ppAdapter = nullptr;
 
-        ComPtr<IDXGIAdapter1> adapter;
+        IDXGIAdapter1* adapter;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
         IDXGIFactory6* dxgiFactory6 = nullptr;
@@ -757,7 +660,7 @@ namespace alimer
                 SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
                     adapterIndex,
                     gpuPreference,
-                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+                    IID_PPV_ARGS(&adapter)));
                 adapterIndex++)
             {
                 DXGI_ADAPTER_DESC1 desc;
@@ -766,11 +669,13 @@ namespace alimer
                 if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
                 {
                     // Don't select the Basic Render Driver adapter.
+                    adapter->Release();
+
                     continue;
                 }
 
                 // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                if (SUCCEEDED(D3D12CreateDevice(adapter, minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
                 {
 #ifdef _DEBUG
                     wchar_t buff[256] = {};
@@ -786,11 +691,7 @@ namespace alimer
 #endif
         if (!adapter)
         {
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(dxgiFactory->EnumAdapters1(
-                    adapterIndex,
-                    adapter.ReleaseAndGetAddressOf()));
-                ++adapterIndex)
+            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex)
             {
                 DXGI_ADAPTER_DESC1 desc;
                 ThrowIfFailed(adapter->GetDesc1(&desc));
@@ -798,11 +699,13 @@ namespace alimer
                 if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
                 {
                     // Don't select the Basic Render Driver adapter.
+                    adapter->Release();
+
                     continue;
                 }
 
                 // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                if (SUCCEEDED(D3D12CreateDevice(adapter, minFeatureLevel, _uuidof(ID3D12Device), nullptr)))
                 {
 #ifdef _DEBUG
                     wchar_t buff[256] = {};
@@ -818,7 +721,7 @@ namespace alimer
         if (!adapter)
         {
             // Try WARP12 instead
-            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf()))))
+            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter))))
             {
                 LOG_ERROR("WARP12 not available. Enable the 'Graphics Tools' optional feature");
             }
@@ -832,7 +735,7 @@ namespace alimer
             LOG_ERROR("No Direct3D 12 device found");
         }
 
-        *ppAdapter = adapter.Detach();
+        *ppAdapter = adapter;
     }
 
     void D3D12GraphicsDevice::InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible)
@@ -1023,7 +926,7 @@ namespace alimer
 
     bool D3D12GraphicsDevice::BeginFrameImpl()
     {
-        if (!uiPipelineState)
+        /*if (!uiPipelineState)
             CreateUIObjects();
 
         commandList = BeginCommandList("Frame");
@@ -1040,14 +943,14 @@ namespace alimer
         Color clearColor = Colors::CornflowerBlue;
 
         GetCommandList(commandList)->ClearRenderTargetView(swapChainRenderTargetDescriptor[backbufferIndex], &clearColor.r, 0, nullptr);
-        GetCommandList(commandList)->OMSetRenderTargets(1, &swapChainRenderTargetDescriptor[backbufferIndex], FALSE, nullptr);
+        GetCommandList(commandList)->OMSetRenderTargets(1, &swapChainRenderTargetDescriptor[backbufferIndex], FALSE, nullptr);*/
 
         return true;
     }
 
     void D3D12GraphicsDevice::EndFrameImpl()
     {
-        RenderDrawData(ImGui::GetDrawData(), commandList);
+        /*RenderDrawData(ImGui::GetDrawData(), commandList);
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1057,6 +960,7 @@ namespace alimer
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
         GetCommandList(commandList)->ResourceBarrier(1, &barrier);
+        */
 
         EndFrameUpload();
 
@@ -1082,7 +986,7 @@ namespace alimer
 
         if (swapChain) {
             swapChain->Present(1, 0);
-            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
+            //backbufferIndex = swapChain->GetCurrentBackBufferIndex();
         }
 
         graphicsQueue->Signal(frameFence, ++frameCount);
@@ -1100,9 +1004,14 @@ namespace alimer
         //GPUUploadMemoryHeaps[frameIndex].Size = 0;
     }
 
-    RefPtr<Texture> D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    SwapChain* D3D12GraphicsDevice::CreateSwapChain(const SwapChainDescription& desc)
     {
-        return new D3D12Texture(*this, desc, initialData);
+        return new D3D12SwapChain(this, desc);
+    }
+
+    Texture* D3D12GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    {
+        return new D3D12Texture(this, desc, initialData);
     }
 
     CommandList D3D12GraphicsDevice::BeginCommandList(const char* name)
@@ -1345,6 +1254,7 @@ namespace alimer
 
     void D3D12GraphicsDevice::CreateUIObjects()
     {
+#if TODO
         if (uiPipelineState)
             DestroyUIObjects();
 
@@ -1537,12 +1447,14 @@ namespace alimer
         pixelShaderBlob->Release();
 
         CreateFontsTexture();
+#endif // TODO
+
     }
 
     void D3D12GraphicsDevice::CreateFontsTexture()
     {
         // Build texture atlas
-        ImGuiIO& io = ImGui::GetIO();
+       /* ImGuiIO& io = ImGui::GetIO();
         unsigned char* pixels;
         int width, height;
         io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -1563,11 +1475,7 @@ namespace alimer
 
         // Store our identifier
         static_assert(sizeof(ImTextureID) >= sizeof(fontTexture), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-        io.Fonts->TexID = (ImTextureID)fontTexture.Get();
-
-        // Store our identifier
-        /*static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-        io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;*/
+        io.Fonts->TexID = (ImTextureID)fontTexture.Get();*/
     }
 
     void D3D12GraphicsDevice::DestroyUIObjects()
@@ -1594,8 +1502,8 @@ namespace alimer
         SetViewport(commandList, Viewport(0.0f, 0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y));
 
         GetCommandList(commandList)->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        GetCommandList(commandList)->SetPipelineState(uiPipelineState);
-        GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
+        //GetCommandList(commandList)->SetPipelineState(uiPipelineState);
+        //GetCommandList(commandList)->SetGraphicsRootSignature(uiRootSignature);
         BindBufferData(commandList, 0, &vertex_constant_buffer, sizeof(Matrix4x4));
 
         // Setup blend factor

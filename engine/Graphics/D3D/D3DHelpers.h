@@ -47,18 +47,13 @@
 #   include <dxgi1_5.h>
 #endif
 
-#if ( defined(_DEBUG) || defined(PROFILE) )
-#   include <dxgidebug.h>
-
-#   if !defined(_XBOX_ONE) || !defined(_TITLE)
-#       pragma comment(lib,"dxguid.lib")
-#   endif
+#ifdef _DEBUG
+#include <dxgidebug.h>
 #endif
 
 #define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
@@ -66,17 +61,24 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
 
-    template<typename T> void SafeRelease(T*& resource) {
+    template<typename T> void SafeRelease(T*& resource)
+    {
         if (resource != nullptr) {
             resource->Release();
             resource = nullptr;
         }
     }
+
+#ifdef _DEBUG
+    // Declare Guids to avoid linking with "dxguid.lib"
+    static constexpr GUID g_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8 } };
+    static constexpr GUID g_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a } };
+    static constexpr GUID g_D3DDebugObjectName = { 0x429b8c22, 0x9188, 0x4b0c, { 0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00 } };
+#endif
 
 #ifdef ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
@@ -161,8 +163,120 @@ namespace alimer
         return ToDXGIFormat(format);
     }
 
+    static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format)
+    {
+        switch (format) {
+        case PixelFormat::RGBA16Float:
+            return DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+        case PixelFormat::BGRA8Unorm:
+        case PixelFormat::BGRA8UnormSrgb:
+            return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+        case PixelFormat::RGBA8UNorm:
+        case PixelFormat::RGBA8UNormSrgb:
+            return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        case PixelFormat::RGB10A2Unorm:
+            return DXGI_FORMAT_R10G10B10A2_UNORM;
+        }
+
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+    }
+
     static inline uint32_t CalcSubresource(uint32_t mipSlice, uint32_t arraySlice, uint32_t mipLevels)
     {
         return mipSlice + arraySlice * mipLevels;
     }
+
+    enum class DXGIFactoryCaps : uint8_t {
+        FlipPresent = (1 << 0),
+        Tearing = (1 << 1),
+    };
+    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(DXGIFactoryCaps);
+
+    static inline IDXGISwapChain1* DXGICreateSwapchain(
+        IDXGIFactory2* dxgiFactory,
+        DXGIFactoryCaps factoryCaps,
+        IUnknown* deviceOrCommandQueue,
+        uintptr_t window_handle,
+        uint32_t width, uint32_t height,
+        PixelFormat colorFormat,
+        uint32_t backbufferCount,
+        bool isFullscreen)
+    {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = (HWND)window_handle;
+        if (!IsWindow(window)) {
+            //vgpu_log_error("Invalid HWND handle");
+            return NULL;
+        }
+#else
+        IUnknown* window = (IUnknown*)handle;
+#endif
+
+        UINT flags = 0;
+
+        if (any(factoryCaps & DXGIFactoryCaps::Tearing))
+        {
+            flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
+        DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+        if (!(any(factoryCaps & DXGIFactoryCaps::FlipPresent)))
+        {
+            swapEffect = DXGI_SWAP_EFFECT_DISCARD;
+        }
+#else
+        DXGI_SCALING scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+        DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#endif
+
+        DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {};
+        swapchain_desc.Width = width;
+        swapchain_desc.Height = height;
+        swapchain_desc.Format = ToDXGISwapChainFormat(colorFormat);
+        swapchain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapchain_desc.BufferCount = backbufferCount;
+        swapchain_desc.SampleDesc.Count = 1;
+        swapchain_desc.SampleDesc.Quality = 0;
+        swapchain_desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapchain_desc.Scaling = scaling;
+        swapchain_desc.SwapEffect = swapEffect;
+        swapchain_desc.Flags = flags;
+
+        IDXGISwapChain1* result = NULL;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapchain_fullscreen_desc = {};
+        swapchain_fullscreen_desc.Windowed = !isFullscreen;
+
+        // Create a SwapChain from a Win32 window.
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+            deviceOrCommandQueue,
+            window,
+            &swapchain_desc,
+            &swapchain_fullscreen_desc,
+            nullptr,
+            &result
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+#else
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
+            deviceOrCommandQueue,
+            window,
+            &swapchain_desc,
+            nullptr,
+            &result
+        ));
+#endif
+
+        return result;
+    }
+
+    void DXGISetObjectName(IDXGIObject* obj, const char* name);
 }

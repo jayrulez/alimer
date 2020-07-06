@@ -63,7 +63,7 @@ namespace alimer
         BGRA8Unorm,
         BGRA8UnormSrgb,
         // Packed 32-Bit Pixel formats
-        RGB10A2UNorm,
+        RGB10A2Unorm,
         RG11B10Float,
         // 64-Bit Pixel Formats
         RG32UInt,

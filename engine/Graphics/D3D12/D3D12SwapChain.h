@@ -22,48 +22,22 @@
 
 #pragma once
 
-#include "graphics/Types.h"
-#include "Core/Ptr.h"
+#include "Graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public RefCounted
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
+        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        ~D3D12SwapChain() override;
+        void Destroy() override;
 
     private:
-        virtual void BackendSetName() {}
+        void BackendSetName() override;
 
-    protected:
-        String name;
-
-        uint64_t size{ 0 };
-        MemoryUsage memoryUsage;
+        D3D12GraphicsDevice* _device;
+        IDXGISwapChain3* handle;
     };
 }

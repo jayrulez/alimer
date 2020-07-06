@@ -24,7 +24,6 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
-#include <vector>
 #include <queue>
 #include <mutex>
 struct ImDrawData;
@@ -46,7 +45,7 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        D3D12GraphicsDevice(bool enableValidationLayer);
+        D3D12GraphicsDevice();
         ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
@@ -72,8 +71,7 @@ namespace alimer
     private:
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        bool BackendInitialize(const PresentationParameters& presentationParameters) override;
-        void Shutdown() override;
+        void BackendShutdown() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
 
@@ -83,7 +81,8 @@ namespace alimer
         void ClearFinishedUploads(uint64_t flushCount);
 
         // Resource creation methods.
-        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
+        SwapChain* CreateSwapChain(const SwapChainDescription& desc) override;
+        Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
@@ -136,7 +135,7 @@ namespace alimer
         DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
         uint32_t maxInflightFrames = 2u;
         uint32_t backBufferCount = 2u;
-        Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
+        IDXGISwapChain3* swapChain = nullptr;
         ID3D12Resource* swapChainRenderTargets[3] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
 
@@ -211,8 +210,8 @@ namespace alimer
         volatile int64_t tempFrameUsed = 0;
 
         // Imgui objects.
-        ID3D12RootSignature* uiRootSignature = nullptr;
-        ID3D12PipelineState* uiPipelineState = nullptr;
-        RefPtr<Texture> fontTexture;
+        //ID3D12RootSignature* uiRootSignature = nullptr;
+        //ID3D12PipelineState* uiPipelineState = nullptr;
+        //RefPtr<Texture> fontTexture;
     };
 }

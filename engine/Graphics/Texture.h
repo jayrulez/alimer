@@ -31,12 +31,12 @@ namespace alimer
     {
     public:
         /// Constructor.
-        Texture(GraphicsDevice& device, const TextureDescription& desc);
+        Texture(const TextureDescription& desc);
 
         /**
         * Get the texture pixel format.
         */
-        PixelFormat GetFormat() const { return description.format; }
+        PixelFormat GetFormat() const { return _desc.format; }
 
         /**
         * Get a mip-level width.
@@ -56,32 +56,32 @@ namespace alimer
         /**
         * Gets number of mipmap levels of the texture.
         */
-        uint32_t GetMipLevels() const { return description.mipLevels; }
+        uint32_t GetMipLevels() const { return _desc.mipLevels; }
 
         /**
         * Get the array size of the texture.
         */
-        uint32_t GetArraySize() const { return (description.type != TextureType::Texture3D ? description.depth : 1u); }
+        uint32_t GetArraySize() const { return (_desc.type != TextureType::Texture3D ? _desc.depth : 1u); }
 
         /**
         * Get the texture usage.
         */
-        TextureUsage GetUsage() const { return description.usage; }
+        TextureUsage GetUsage() const { return _desc.usage; }
 
         /**
         * Get the array index of a subresource.
         */
-        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / description.mipLevels; }
+        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / _desc.mipLevels; }
 
         /**
         * Get the mip-level of a subresource.
         */
-        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % description.mipLevels; }
+        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % _desc.mipLevels; }
 
         /**
         * Get the subresource index.
         */
-        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * description.mipLevels; }
+        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * _desc.mipLevels; }
 
         /**
         * Calculates the resulting size at a single level for an original size.
@@ -95,6 +95,6 @@ namespace alimer
         uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 
     protected:
-        TextureDescription description{};
+        TextureDescription _desc;
     };
 }

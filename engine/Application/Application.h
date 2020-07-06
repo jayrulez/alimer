@@ -26,7 +26,6 @@
 #include "Application/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Graphics/GraphicsDevice.h"
 #include "Math/Size.h"
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -99,7 +98,6 @@ namespace alimer
 
     protected:
         Vector<String> args;
-        RefPtr<GraphicsDevice> graphicsDevice;
 
         int exitCode = 0;
         Configuration config;

@@ -26,22 +26,16 @@
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, const std::string& name, MemoryUsage memoryUsage)
-        : device{ device }
-        , name{ name }
+    GraphicsResource::GraphicsResource(const String& name, MemoryUsage memoryUsage)
+        : name{ name }
         , memoryUsage{ memoryUsage }
     {
-        device.TrackResource(this);
+        GraphicsDevice::Instance->TrackResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        device.UntrackResource(this);
-    }
-
-    const GraphicsDevice& GraphicsResource::GetDevice() const
-    {
-        return device;
+        GraphicsDevice::Instance->UntrackResource(this);
     }
 }
 

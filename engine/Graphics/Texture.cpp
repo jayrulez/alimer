@@ -26,29 +26,29 @@
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
-        : GraphicsResource(device, desc.name, MemoryUsage::GpuOnly)
-        , description(desc)
+    Texture::Texture(const TextureDescription& desc)
+        : GraphicsResource(desc.name, MemoryUsage::GpuOnly)
+        , _desc(desc)
     {
 
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1u, description.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? max(1u, _desc.width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1u, description.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? max(1u, _desc.height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
     {
-        if (description.type == TextureType::Texture3D)
+        if (_desc.type == TextureType::Texture3D)
             return 1u;
 
-        return (mipLevel == 0) || (mipLevel < description.mipLevels) ? max(1U, description.depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? max(1U, _desc.depth >> mipLevel) : 0;
     }
 
     uint32_t Texture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)

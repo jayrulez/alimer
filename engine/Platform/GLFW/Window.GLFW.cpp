@@ -21,6 +21,8 @@
 //
 
 #include "Application/Window.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/SwapChain.h"
 #include "Core/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -38,6 +40,8 @@ namespace alimer
 {
     namespace
     {
+        uint32_t windowCount = 0;
+
         static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
         {
             return glfwGetClipboardString((GLFWwindow*)user_data);
@@ -115,12 +119,27 @@ namespace alimer
         // Init imgui stuff
         ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
 
+        // Create SwapChain
+        SwapChainDescription swapChainDesc = {};
+        swapChainDesc.width = size.width;
+        swapChainDesc.height = size.height;
+        swapChainDesc.windowHandle = GetHandle();
+        _swapChain = GraphicsDevice::Instance->CreateSwapChain(swapChainDesc);
+
+        if (windowCount == 0) {
+            _isMain = true;
+        }
+
+        windowCount++;
+
         return true;
     }
 
     void Window::Close()
     {
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
+        _swapChain.Reset();
+        windowCount--;
     }
 
     bool Window::ShouldClose() const
@@ -148,10 +167,15 @@ namespace alimer
         return fullscreen || exclusiveFullscreen;
     }
 
+    bool Window::IsMain() const
+    {
+        return _isMain;
+    }
+
     uintptr_t Window::GetHandle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return (uintptr_t) glfwGetWin32Window((GLFWwindow*)window);
+        return (uintptr_t)glfwGetWin32Window((GLFWwindow*)window);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
         return (uintptr_t)glfwGetX11Window((GLFWwindow*)window);
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)

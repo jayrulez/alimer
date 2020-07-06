@@ -53,15 +53,17 @@ namespace alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice& device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state)
-        : Texture(device, ConvertResourceDesc(resource->GetDesc()))
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state)
+        : Texture(ConvertResourceDesc(resource->GetDesc()))
+        , _device(device)
         , state{ state }
     {
 
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice& device, const TextureDescription& desc, const void* initialData)
-        : Texture(device, desc)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
+        : Texture(desc)
+        , _device(device)
     {
         format = ToDXGIFormatWitUsage(desc.format, desc.usage);
 
@@ -133,7 +135,7 @@ namespace alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
-        HRESULT hr = device.GetAllocator()->CreateResource(
+        HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
             &resourceDesc,
             state,
@@ -148,7 +150,7 @@ namespace alimer
         }
 
         const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
-        device.GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);
+        device->GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);
 
         if (initialData != nullptr)
         {
@@ -166,8 +168,8 @@ namespace alimer
             srvDesc.Texture2D.PlaneSlice = 0;
             srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-            SRV = device.AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
-            device.GetD3DDevice()->CreateShaderResourceView(resource, &srvDesc, SRV);
+            SRV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
+            device->GetD3DDevice()->CreateShaderResourceView(resource, &srvDesc, SRV);
         }
     }
 
@@ -191,38 +193,38 @@ namespace alimer
     void D3D12Texture::UploadTextureData(const void* initData)
     {
         // Get a GPU upload buffer
-        UploadContext uploadContext = static_cast<D3D12GraphicsDevice*>(&device)->ResourceUploadBegin(sizeInBytes);
+        UploadContext uploadContext = _device->ResourceUploadBegin(sizeInBytes);
 
         UploadTextureData(initData, uploadContext.commandList, uploadContext.Resource, uploadContext.CPUAddress, uploadContext.ResourceOffset);
 
-        static_cast<D3D12GraphicsDevice*>(&device)->ResourceUploadEnd(uploadContext);
+        _device->ResourceUploadEnd(uploadContext);
     }
 
     void D3D12Texture::UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset)
     {
         D3D12_RESOURCE_DESC textureDesc = resource->GetDesc();
-        const uint64_t arraySize = description.type == TextureType::TextureCube ? description.depth * 6 : description.depth;
+        const uint64_t arraySize = _desc.type == TextureType::TextureCube ? _desc.depth * 6 : _desc.depth;
 
-        const uint64_t numSubResources = max(1u, description.mipLevels) * arraySize;
+        const uint64_t numSubResources = max(1u, _desc.mipLevels) * arraySize;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT* layouts = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * numSubResources);
         uint32_t* numRows = (uint32_t*)_alloca(sizeof(uint32_t) * numSubResources);
         uint64_t* rowSizes = (uint64_t*)_alloca(sizeof(uint64_t) * numSubResources);
 
         uint64_t textureMemSize = 0;
-        static_cast<D3D12GraphicsDevice*>(&device)->GetD3DDevice()->GetCopyableFootprints(&textureDesc, 0, uint32_t(numSubResources), 0, layouts, numRows, rowSizes, &textureMemSize);
+        _device->GetD3DDevice()->GetCopyableFootprints(&textureDesc, 0, uint32_t(numSubResources), 0, layouts, numRows, rowSizes, &textureMemSize);
 
         // Get a GPU upload buffer
         uint8_t* uploadMem = reinterpret_cast<uint8_t*>(uploadCPUMem);
 
         const uint8_t* srcMem = reinterpret_cast<const uint8_t*>(initData);
-        const uint64_t srcTexelSize = GetFormatBitsPerPixel(description.format) / 8;
+        const uint64_t srcTexelSize = GetFormatBitsPerPixel(_desc.format) / 8;
 
         for (uint64_t arrayIdx = 0; arrayIdx < arraySize; ++arrayIdx)
         {
-            uint64_t mipWidth = description.width;
-            for (uint64_t mipIdx = 0; mipIdx < description.mipLevels; ++mipIdx)
+            uint64_t mipWidth = _desc.width;
+            for (uint64_t mipIdx = 0; mipIdx < _desc.mipLevels; ++mipIdx)
             {
-                const uint64_t subResourceIdx = mipIdx + (arrayIdx * description.mipLevels);
+                const uint64_t subResourceIdx = mipIdx + (arrayIdx * _desc.mipLevels);
 
                 const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIdx];
                 const uint64_t subResourceHeight = numRows[subResourceIdx];

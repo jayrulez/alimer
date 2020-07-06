@@ -25,11 +25,9 @@
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
-
 
 #ifdef ALIMER_ENABLE_ASSERT
 #define CHK_ERRA(hrchk) case hrchk: wcscpy_s( desc, count, L#hrchk )
@@ -183,7 +181,7 @@ namespace alimer
         {PixelFormat::BGRA8Unorm,                   DXGI_FORMAT_B8G8R8A8_UNORM},
         {PixelFormat::BGRA8UnormSrgb,               DXGI_FORMAT_B8G8R8A8_UNORM_SRGB},
         // Packed 32-Bit Pixel formats
-        {PixelFormat::RGB10A2UNorm,                 DXGI_FORMAT_R10G10B10A2_UNORM},
+        {PixelFormat::RGB10A2Unorm,                 DXGI_FORMAT_R10G10B10A2_UNORM},
         {PixelFormat::RG11B10Float,                 DXGI_FORMAT_R11G11B10_FLOAT},
         // 64-Bit Pixel Formats
         {PixelFormat::RG32UInt,                     DXGI_FORMAT_R32G32_UINT},
@@ -220,4 +218,23 @@ namespace alimer
         {PixelFormat::BC7RGBAUNormSrgb,             DXGI_FORMAT_BC7_UNORM_SRGB},
     };
     static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kDxgiFormatDesc), "Invalid PixelFormat size");
+
+    void DXGISetObjectName(IDXGIObject* obj, const char* name)
+    {
+#ifdef _DEBUG
+        if (obj != nullptr)
+        {
+            if (name != nullptr)
+            {
+                const std::size_t length = std::strlen(name);
+                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(length), name);
+            }
+            else
+                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
+        }
+#else
+        ALIMER_UNUSED(obj);
+        ALIMER_UNUSED(name);
+#endif
+    }
 }

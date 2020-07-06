@@ -48,6 +48,8 @@ namespace alimer
         Vulkan,
         /// Direct3D 12 backend.
         Direct3D12,
+        /// Direct3D 11.1 or higher backend.
+        Direct3D11,
         /// Null renderer.
         Null,
         /// Default best platform supported backend.
@@ -258,7 +260,7 @@ namespace alimer
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
-    struct PresentationParameters
+    struct SwapChainDescription
     {
         uint32_t width = 0;
         uint32_t height = 0;

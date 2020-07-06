@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,50 +20,8 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Types.h"
-#include "Core/Ptr.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public RefCounted
-    {
-    public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
-
-    private:
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-
-        uint64_t size{ 0 };
-        MemoryUsage memoryUsage;
-    };
 }

@@ -25,23 +25,21 @@
 #include "Core/Assert.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
+
+#if defined(ALIMER_D3D11)
+//#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+
+#if defined(ALIMER_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#endif
+
+
 #include "imgui_impl_glfw.h"
 
 namespace alimer
 {
-    static BackendType s_GraphicsBackend = BackendType::Count;
-
-    GraphicsDevice::GraphicsDevice(bool enableValidationLayer)
-        : enableValidationLayer{ enableValidationLayer }
-        , headless(false)
-    {
-        AddSubsystem(this);
-    }
-
-    GraphicsDevice::~GraphicsDevice()
-    {
-        RemoveSubsystem(this);
-    }
+    GraphicsDevice* GraphicsDevice::Instance = nullptr;
 
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()
     {
@@ -51,25 +49,64 @@ namespace alimer
         {
             availableDrivers.insert(BackendType::Null);
 
-#if defined(ALIMER_VULKAN)
-            if (VulkanGraphicsDevice::IsAvailable())
-            {
-                availableDrivers.insert(BackendType::Vulkan);
-            }
+#if defined(ALIMER_D3D12)
+            if (D3D12GraphicsDevice::IsAvailable())
+                availableDrivers.insert(BackendType::Direct3D12);
+#endif
+
+#if defined(ALIMER_D3D11)
+            availableDrivers.insert(BackendType::Direct3D11);
 #endif
         }
 
         return availableDrivers;
     }
 
-    BackendType GraphicsDevice::GetPreferredBackend()
+    void GraphicsDevice::Create(BackendType preferredBackendType)
     {
-        return s_GraphicsBackend;
+        if (Instance != nullptr) {
+            return;
+        }
+
+        if (preferredBackendType == BackendType::Count)
+        {
+            auto availableDrivers = GetAvailableBackends();
+
+            if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
+                preferredBackendType = BackendType::Direct3D12;
+            else if (availableDrivers.find(BackendType::Direct3D11) != availableDrivers.end())
+                preferredBackendType = BackendType::Direct3D11;
+            else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
+                preferredBackendType = BackendType::Vulkan;
+            else
+                preferredBackendType = BackendType::Null;
+        }
+
+        switch (preferredBackendType)
+        {
+        case BackendType::Vulkan:
+            break;
+
+#if defined(ALIMER_D3D12)
+        case BackendType::Direct3D12:
+            if (D3D12GraphicsDevice::IsAvailable()) {
+                Instance = new D3D12GraphicsDevice();
+            }
+#endif
+            break;
+        case BackendType::Direct3D11:
+            break;
+        default:
+            break;
+        }
     }
 
-    void GraphicsDevice::SetPreferredBackend(BackendType backendType)
+    void GraphicsDevice::Shutdown()
     {
-        s_GraphicsBackend = backendType;
+        if (Instance != nullptr) {
+            delete Instance;
+            Instance = nullptr;
+        }
     }
 
     void GraphicsDevice::BeginFrame()
@@ -144,15 +181,5 @@ namespace alimer
 
             trackedResources.Clear();
         }
-    }
-
-    Texture* GraphicsDevice::GetBackbufferTexture() const
-    {
-        return backbufferTextures[backbufferIndex].Get();
-    }
-
-    Texture* GraphicsDevice::GetDepthStencilTexture() const
-    {
-        return depthStencilTexture.Get();
     }
 }

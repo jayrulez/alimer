@@ -25,8 +25,9 @@
 
 namespace alimer
 {
-    D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice& device, const BufferDescription& desc, const void* initialData)
-        : GraphicsBuffer(device, desc)
+    D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
+        : GraphicsBuffer(desc)
+        , _device(device)
         , state(D3D12_RESOURCE_STATE_COMMON)
     {
         uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
@@ -59,7 +60,7 @@ namespace alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
 
-        HRESULT hr = device.GetAllocator()->CreateResource(
+        HRESULT hr = device->GetAllocator()->CreateResource(
             &allocDesc,
             &resourceDesc,
             state,

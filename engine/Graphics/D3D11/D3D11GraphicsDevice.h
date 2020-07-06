@@ -22,28 +22,18 @@
 
 #pragma once
 
-#include "graphics/GraphicsDevice.h"
-#include "graphics/Types.h"
-#include "graphics/D3D/D3DHelpers.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Types.h"
+#include "D3D11Backend.h"
 #include "Math/Size.h"
-#ifndef D3D11_NO_HELPERS
-#   define D3D11_NO_HELPERS
-#endif
-#include <d3d11_1.h>
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
-    class GraphicsDevice_D3D11 final : public GraphicsDevice
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-
-        GraphicsDevice_D3D11(const Desc& desc);
-        ~GraphicsDevice_D3D11();
+        D3D11GraphicsDevice(const Desc& desc);
+        ~D3D11GraphicsDevice();
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return tearingSupported; }

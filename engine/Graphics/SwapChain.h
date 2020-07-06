@@ -22,48 +22,29 @@
 
 #pragma once
 
-#include "graphics/Types.h"
-#include "Core/Ptr.h"
+#include "graphics/Texture.h"
+#include "Core/Vector.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public RefCounted
+    class ALIMER_API SwapChain : public GraphicsResource
     {
     public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
+        /// Constructor.
+        SwapChain(const SwapChainDescription& desc);
 
-        /// Release the GPU resource.
-        virtual void Destroy() {}
+        /// Get the current backbuffer texture.
+        Texture* GetBackbufferTexture() const;
 
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
-
-    private:
-        virtual void BackendSetName() {}
+        /// Get the depth stencil texture.
+        Texture* GetDepthStencilTexture() const;
 
     protected:
-        String name;
+        SwapChainDescription _desc;
 
-        uint64_t size{ 0 };
-        MemoryUsage memoryUsage;
+        uint32_t backbufferIndex{ 0 };
+        Vector<RefPtr<Texture>> backbufferTextures;
+        RefPtr<Texture> depthStencilTexture;
     };
 }

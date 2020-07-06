@@ -21,7 +21,6 @@
 //
 
 #include "Core/Log.h"
-#include "Core/Vector.h"
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -39,177 +38,146 @@
 #   include <emscripten.h>
 #endif
 
-namespace alimer {
-    static Vector<Logger*> _loggers;
+#include <memory>
 
-    Logger::Logger(const std::string& name)
-        : _name(name)
+namespace alimer
+{
+    bool Log::_enabled = true;
 #ifdef _DEBUG
-        , _level{ LogLevel::Debug }
+    LogLevel Log::_level = LogLevel::Debug;
 #else
-        , _level{ LogLevel::Info }
+    LogLevel Log::_level = LogLevel::Info;
 #endif
-    {
-        _loggers.Push(this);
-    }
 
-    Logger::~Logger()
-    {
-
-    }
-
-    void Logger::SetEnabled(bool value)
+    void Log::SetEnabled(bool value)
     {
         _enabled = value;
     }
 
-    bool Logger::IsLevelEnabled(LogLevel level) const
+    bool Log::IsLevelEnabled(LogLevel level)
     {
         return _enabled && level != LogLevel::Off && level >= _level;
     }
 
-    void Logger::Log(LogLevel level, const char* message)
+    void Log::Write(LogLevel level, const char* str)
     {
-        if (IsLevelEnabled(level))
-        {
+        if (!IsLevelEnabled(level))
+            return;
+
+        Write(level, String(str));
+    }
+
+    void Log::Write(LogLevel level, const String& str)
+    {
+        if (!IsLevelEnabled(level))
+            return;
+
 #if defined(__ANDROID__)
-            int priority = 0;
-            switch (level)
-            {
-            case LogLevel::Trace: priority = ANDROID_LOG_VERBOSE; break;
-            case LogLevel::Debug: priority = ANDROID_LOG_DEBUG; break;
-            case LogLevel::Info: priority = ANDROID_LOG_INFO; break;
-            case LogLevel::Warning: priority = ANDROID_LOG_WARN; break;
-            case LogLevel::Error: priority = ANDROID_LOG_ERROR; break;
-            default: return;
-            }
-            __android_log_print(priority, _name.c_str(), "%s", message);
+        int priority = 0;
+        switch (level)
+        {
+        case LogLevel::Trace: priority = ANDROID_LOG_VERBOSE; break;
+        case LogLevel::Debug: priority = ANDROID_LOG_DEBUG; break;
+        case LogLevel::Info: priority = ANDROID_LOG_INFO; break;
+        case LogLevel::Warning: priority = ANDROID_LOG_WARN; break;
+        case LogLevel::Error: priority = ANDROID_LOG_ERROR; break;
+        default: return;
+        }
+        __android_log_print(priority, "Alimer", "%s", message);
 #elif TARGET_OS_IOS || TARGET_OS_TV
-            int priority = 0;
-            switch (level)
-            {
-            case LogLevel::Trace: priority = LOG_DEBUG; break;
-            case LogLevel::Debug: priority = LOG_DEBUG; break;
-            case LogLevel::Info: priority = LOG_INFO; break;
-            case LogLevel::Warning: priority = LOG_WARNING; break;
-            case LogLevel::Error: priority = LOG_ERR; break;
-            default: return;
-            }
-            syslog(priority, "%s", message);
+        int priority = 0;
+        switch (level)
+        {
+        case LogLevel::Trace: priority = LOG_DEBUG; break;
+        case LogLevel::Debug: priority = LOG_DEBUG; break;
+        case LogLevel::Info: priority = LOG_INFO; break;
+        case LogLevel::Warning: priority = LOG_WARNING; break;
+        case LogLevel::Error: priority = LOG_ERR; break;
+        default: return;
+        }
+        syslog(priority, "%s", str.c_str());
 #elif TARGET_OS_MAC || defined(__linux__)
-            int fd = 0;
-            switch (level)
-            {
-            case LogLevel::Trace:
-            case LogLevel::Debug:
-            case LogLevel::Info:
-                fd = STDERR_FILENO;
-                break;
-            case LogLevel::Warning:
-            case LogLevel::Error:
-                fd = STDOUT_FILENO;
-                break;
-            default: return;
-            }
+        int fd = 0;
+        switch (level)
+        {
+        case LogLevel::Trace:
+        case LogLevel::Debug:
+        case LogLevel::Info:
+            fd = STDERR_FILENO;
+            break;
+        case LogLevel::Warning:
+        case LogLevel::Error:
+            fd = STDOUT_FILENO;
+            break;
+        default: return;
+        }
 
-            vector<char> output(str.begin(), str.end());
-            output.push_back('\n');
+        vector<char> output(str.begin(), str.end());
+        output.push_back('\n');
 
-            size_t offset = 0;
-            while (offset < output.size())
-            {
-                const ssize_t written = write(fd, output.data() + offset, output.size() - offset);
-                if (written == -1)
-                    return;
+        size_t offset = 0;
+        while (offset < output.size())
+        {
+            const ssize_t written = write(fd, output.data() + offset, output.size() - offset);
+            if (written == -1)
+                return;
 
-                offset += static_cast<size_t>(written);
-            }
+            offset += static_cast<size_t>(written);
+}
 #elif defined(_WIN32)
-            const int bufferSize = MultiByteToWideChar(CP_UTF8, 0, message, -1, nullptr, 0);
-            if (bufferSize == 0)
-                return;
+        const int bufferSize = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
+        if (bufferSize == 0)
+            return;
 
-            Vector<WCHAR> buffer(bufferSize + 1); // +1 for the newline
-            if (MultiByteToWideChar(CP_UTF8, 0, message, -1, buffer.Data(), static_cast<int>(buffer.Size())) == 0)
-                return;
+        auto buffer = std::make_unique<WCHAR[]>(bufferSize + 1); // +1 for the newline
+        if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.get(), bufferSize) == 0)
+            return;
 
-            if (FAILED(StringCchCatW(buffer.Data(), buffer.Size(), L"\n")))
-                return;
+        if (FAILED(StringCchCatW(buffer.get(), static_cast<size_t>(bufferSize+1), L"\n")))
+            return;
 
-            OutputDebugStringW(buffer.Data());
+        OutputDebugStringW(buffer.get());
 #   ifdef _DEBUG
-            HANDLE handle;
-            switch (level)
-            {
-            case LogLevel::Warning:
-            case LogLevel::Error:
-                handle = GetStdHandle(STD_ERROR_HANDLE);
-                break;
-            default:
-                handle = GetStdHandle(STD_OUTPUT_HANDLE);
-                break;
-            }
+        HANDLE handle;
+        switch (level)
+        {
+        case LogLevel::Warning:
+        case LogLevel::Error:
+            handle = GetStdHandle(STD_ERROR_HANDLE);
+            break;
+        default:
+            handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            break;
+        }
 
-            DWORD bytesWritten;
-            WriteConsoleW(handle, buffer.Data(), static_cast<DWORD>(wcslen(buffer.Data())), &bytesWritten, nullptr);
+        DWORD bytesWritten;
+        WriteConsoleW(handle, buffer.get(), static_cast<DWORD>(wcslen(buffer.get())), &bytesWritten, nullptr);
 #   endif
 #elif defined(__EMSCRIPTEN__)
-            int flags = EM_LOG_NO_PATHS;
-            int flags = EM_LOG_CONSOLE;
-            switch (level)
-            {
-            case LogLevel::Trace:
-            case LogLevel::Debug:
-            case LogLevel::Info:
-                flags |= EM_LOG_CONSOLE;
-                break;
-
-            case LogLevel::Warning:
-                flags |= EM_LOG_CONSOLE | EM_LOG_WARN;
-                break;
-
-            case LogLevel::Error:
-                flags |= EM_LOG_CONSOLE | EM_LOG_ERROR;
-                break;
-
-            case Log::Level::Info:
-            case Log::Level::All:
-                break;
-            default: return;
-            }
-            emscripten_log(flags, "%s", message);
-#endif
-        }
-    }
-
-    void Logger::Log(LogLevel level, const std::string& message)
-    {
-        Log(level, message.c_str());
-    }
-
-    void Logger::LogFormat(LogLevel level, const char* format, ...)
-    {
-        if (IsLevelEnabled(level))
+        int flags = EM_LOG_NO_PATHS;
+        int flags = EM_LOG_CONSOLE;
+        switch (level)
         {
-            va_list args;
-            va_start(args, format);
-            char message[kMaxLogMessage];
-            vsnprintf(message, kMaxLogMessage, format, args);
-            size_t len = strlen(message);
-            if ((len > 0) && (message[len - 1] == '\n')) {
-                message[--len] = '\0';
-                if ((len > 0) && (message[len - 1] == '\r')) {  /* catch "\r\n", too. */
-                    message[--len] = '\0';
-                }
-            }
-            Log(level, message);
-            va_end(args);
-        }
-    }
+        case LogLevel::Trace:
+        case LogLevel::Debug:
+        case LogLevel::Info:
+            flags |= EM_LOG_CONSOLE;
+            break;
 
-    Logger* Log::GetDefault()
-    {
-        static Logger defaultLogger("alimer");
-        return &defaultLogger;
+        case LogLevel::Warning:
+            flags |= EM_LOG_CONSOLE | EM_LOG_WARN;
+            break;
+
+        case LogLevel::Error:
+            flags |= EM_LOG_CONSOLE | EM_LOG_ERROR;
+            break;
+
+        case Log::Level::Info:
+        case Log::Level::All:
+            break;
+        default: return;
+        }
+        emscripten_log(flags, "%s", str.c_str());
+#endif
     }
-} // namespace alimer
+}

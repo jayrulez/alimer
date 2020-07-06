@@ -20,50 +20,26 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "graphics/Types.h"
-#include "Core/Ptr.h"
+#include "Graphics/SwapChain.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class GraphicsResource : public RefCounted
+    SwapChain::SwapChain(const SwapChainDescription& desc)
+        : _desc(desc)
     {
-    public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
 
-        /// Release the GPU resource.
-        virtual void Destroy() {}
+    }
 
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
+    Texture* SwapChain::GetBackbufferTexture() const
+    {
+        return backbufferTextures[backbufferIndex].Get();
+    }
 
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
-
-    private:
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-
-        uint64_t size{ 0 };
-        MemoryUsage memoryUsage;
-    };
+    Texture* SwapChain::GetDepthStencilTexture() const
+    {
+        return depthStencilTexture.Get();
+    }
 }
+

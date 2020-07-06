@@ -22,11 +22,10 @@
 
 #pragma once
 
-#include "Core/Object.h"
 #include "Core/Vector.h"
-#include "Graphics/Texture.h"
 #include "Math/Rect.h"
 #include "Math/Viewport.h"
+#include "Graphics/Types.h"
 #include <set>
 #include <mutex>
 #include <atomic>
@@ -34,6 +33,8 @@
 namespace alimer
 {
     class GraphicsBuffer;
+    class Texture;
+    class SwapChain;
 
     class ALIMER_API GraphicsDeviceEvents
     {
@@ -46,19 +47,17 @@ namespace alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice : public Object
+    class ALIMER_API GraphicsDevice 
     {
-        ALIMER_OBJECT(GraphicsDevice, Object);
-
         friend class GraphicsResource;
 
     public:
-        /// Destructor
-        virtual ~GraphicsDevice();
+        /// Get the singleton instance of GraphicsDevice.
+        static GraphicsDevice* Instance;
 
         static std::set<BackendType> GetAvailableBackends();
-        static BackendType GetPreferredBackend();
-        static void SetPreferredBackend(BackendType backendType);
+        static void Create(BackendType preferredBackendType = BackendType::Count);
+        static void Shutdown();
 
         virtual void WaitForGPU() = 0;
         void BeginFrame();
@@ -67,7 +66,8 @@ namespace alimer
         void Resize(uint32_t width, uint32_t height);
 
         // Resource creation methods.
-        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
+        virtual SwapChain* CreateSwapChain(const SwapChainDescription& desc) = 0;
+        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
 
         // CommandList
         virtual CommandList BeginCommandList(const char* name) = 0;
@@ -87,15 +87,8 @@ namespace alimer
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
-        /// Get the current backbuffer texture.
-        Texture* GetBackbufferTexture() const;
-
-        /// Get the depth stencil texture.
-        Texture* GetDepthStencilTexture() const;
-
     private:
-        virtual bool BackendInitialize(const PresentationParameters& presentationParameters) = 0;
-        virtual void Shutdown() = 0;
+        virtual void BackendShutdown() = 0;
         virtual bool BeginFrameImpl() { return true; }
         virtual void EndFrameImpl() = 0;
 
@@ -103,11 +96,12 @@ namespace alimer
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice(bool enableValidationLayer);
+        GraphicsDevice() = default;
+        virtual ~GraphicsDevice() = default;
+
         void ReleaseTrackedResources();
 
-        bool enableValidationLayer;
-        bool headless;
+        bool headless = false;
         GraphicsDeviceCaps caps{};
         uint32_t backbufferWidth = 0;
         uint32_t backbufferHeight = 0;
@@ -122,10 +116,6 @@ namespace alimer
 
         /// Whether a frame is active or not
         bool frameActive{ false };
-
-        uint32_t backbufferIndex{ 0 };
-        Vector<RefPtr<Texture>> backbufferTextures;
-        RefPtr<Texture> depthStencilTexture;
 
         // Fixed size very simple thread safe ring buffer
         template <typename T, size_t capacity>

@@ -20,16 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "GraphicsDevice_D3D11.h"
+#if TODO
+#include "D3D11GraphicsDevice.h"
 #include "Graphics/Texture.h"
 #include "core/String.h"
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
     namespace
     {
 #if defined(_DEBUG)
@@ -338,11 +335,11 @@ namespace alimer
         }
         else
         {
-        }
+    }
 #endif // TODO
 
 
-    }
+}
 
     void GraphicsDevice_D3D11::AfterReset(SwapChainHandle handle)
     {
@@ -459,7 +456,7 @@ namespace alimer
             }
         }
 #endif
-    }
+        }
 
     void GraphicsDevice_D3D11::CreateFactory()
     {
@@ -775,7 +772,7 @@ namespace alimer
         AfterReset(handle);
 
         return handle;
-    }
+        }
 
     void GraphicsDevice_D3D11::DestroySwapChain(SwapChainHandle handle)
     {
@@ -1159,4 +1156,6 @@ namespace alimer
     {
         blendColors[commandList] = color;
     }
-}
+    }
+
+#endif // TODO
