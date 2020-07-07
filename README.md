@@ -22,7 +22,7 @@ Uses the following open-source and third-party libraries:
 
 - [Nothings](https://github.com/nothings/stb) single file libs.
   - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
-- [fmt 6.2.1](https://fmt.dev)
+- [fmt 7.0.0](https://fmt.dev)
 - [glfw](https://www.glfw.org)
 - [volk](https://github.com/zeux/volk)
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
