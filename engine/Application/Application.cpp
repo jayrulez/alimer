@@ -59,6 +59,9 @@ namespace alimer
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
             vgpu_init_info gpu_init_info = {};
+#ifdef _DEBUG
+            gpu_init_info.debug = true;
+#endif
             gpu_init_info.swapchain.native_handle = window.GetHandle();
             gpu_init_info.swapchain.width = window.GetSize().width;
             gpu_init_info.swapchain.height = window.GetSize().height;

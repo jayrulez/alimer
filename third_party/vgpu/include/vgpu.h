@@ -56,6 +56,7 @@ extern "C" {
 #endif
     /* Handles*/
     typedef struct vgpu_texture_t* vgpu_texture;
+    typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
 
     /* Enums */
     enum {
@@ -190,7 +191,6 @@ extern "C" {
         VGPU_TEXTURE_TYPE_2D,
         VGPU_TEXTURE_TYPE_3D,
         VGPU_TEXTURE_TYPE_CUBE,
-        VGPU_TEXTURE_TYPE_ARRAY,
         _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_type;
 
@@ -250,10 +250,13 @@ extern "C" {
         uint8_t clear_stencil;
     } vgpu_depth_stencil_pass_info;
 
-    typedef struct vgpu_pass_begin_info {
-        vgpu_color_attachment_info color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
-        vgpu_depth_stencil_pass_info depth_stencil;
-    } vgpu_pass_begin_info;
+    typedef struct vgpu_framebuffer_info {
+        uint32_t width;
+        uint32_t height;
+        uint32_t layers;
+        vgpu_attachment_info color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
+        vgpu_attachment_info depth_stencil;
+    } vgpu_framebuffer_info;
 
     typedef struct vgpu_swapchain_info {
         uintptr_t           native_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
@@ -354,12 +357,15 @@ extern "C" {
 
     VGPU_API vgpu_texture vgpu_create_texture(const vgpu_texture_info* info);
     VGPU_API void vgpu_destroy_texture(vgpu_texture texture);
-    VGPU_API vgpu_texture_info vgpu_query_texture_info(vgpu_texture texture);
+
+    VGPU_API vgpu_framebuffer vgpu_create_framebuffer(const vgpu_framebuffer_info* info);
+    VGPU_API vgpu_framebuffer vgpu_create_framebuffer_swapchain(const vgpu_swapchain_info* info);
+    VGPU_API void vgpu_destroy_framebuffer(vgpu_framebuffer framebuffer);
 
     /* commands */
     VGPU_API vgpu_texture vgpu_get_backbuffer_texture(void);
-    VGPU_API void vgpu_begin_pass(const vgpu_pass_begin_info* info);
-    VGPU_API void vgpu_end_pass(void);
+    //VGPU_API void vgpu_begin_pass(const vgpu_pass_begin_info* info);
+    //VGPU_API void vgpu_end_pass(void);
 
     /* pixel format helpers */
     VGPU_API uint32_t vgpu_get_format_bytes_per_block(vgpu_pixel_format format);
@@ -368,6 +374,9 @@ extern "C" {
     VGPU_API bool vgpu_is_stencil_format(vgpu_pixel_format format);
     VGPU_API bool vgpu_is_depth_stencil_format(vgpu_pixel_format format);
     VGPU_API bool vgpu_is_compressed_format(vgpu_pixel_format format);
+    VGPU_API uint32_t vgpu_get_format_width_compression_ratio(vgpu_pixel_format format);
+    VGPU_API uint32_t vgpu_get_format_height_compression_ratio(vgpu_pixel_format format);
+    VGPU_API uint32_t vgpu_get_format_channel_count(vgpu_pixel_format format);
 
 #ifdef __cplusplus
 }

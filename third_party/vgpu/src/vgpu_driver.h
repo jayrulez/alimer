@@ -70,6 +70,7 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_max(a,b) ((a>b)?a:b)
 #define _vgpu_clamp(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
+#define _vgpu_align_to(_alignment, _val) ((((_val) + (_alignment) - 1) / (_alignment)) * (_alignment))
 
 typedef struct vgpu_renderer {
     bool (*init)(const vgpu_init_info* config);
@@ -78,13 +79,16 @@ typedef struct vgpu_renderer {
     void (*begin_frame)(void);
     void (*end_frame)(void);
 
-    vgpu_texture(*texture_create)(const vgpu_texture_info* info);
+    vgpu_texture(*create_texture)(const vgpu_texture_info* info);
     void(*texture_destroy)(vgpu_texture handle);
-    vgpu_texture_info(*query_texture_info)(vgpu_texture handle);
+
+    vgpu_framebuffer(*create_framebuffer)(const vgpu_framebuffer_info* info);
+    vgpu_framebuffer(*create_framebuffer_swapchain)(const vgpu_swapchain_info* info);
+    void(*destroy_framebuffer)(vgpu_framebuffer handle);
 
     vgpu_texture(*get_backbuffer_texture)(void);
-    void (*begin_pass)(const vgpu_pass_begin_info* info);
-    void (*end_pass)(void);
+   // void (*begin_pass)(const vgpu_pass_begin_info* info);
+    //void (*end_pass)(void);
 } vgpu_renderer;
 
 typedef struct vgpu_driver {

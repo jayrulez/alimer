@@ -937,12 +937,13 @@ static vgpu_texture_info d3d12_query_texture_info(vgpu_texture handle) {
     d3d12_texture* texture = (d3d12_texture*)handle;
     return texture->info;
 }
+
 /* Commands */
 static vgpu_texture d3d12_get_backbuffer_texture(void) {
     return d3d12.backbuffer_textures[d3d12.backbuffer_index];
 }
 
-static void d3d12_begin_pass(const vgpu_pass_begin_info* info) {
+/*static void d3d12_begin_pass(const vgpu_pass_begin_info* info) {
     if (d3d12.render_pass_support) {
         D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
@@ -971,7 +972,7 @@ static void d3d12_begin_pass(const vgpu_pass_begin_info* info) {
 
         d3d12.command_list->OMSetRenderTargets(color_rtvs_count, color_rtvs, FALSE, NULL);
     }
-}
+}*/
 
 static void d3d12_end_pass(void) {
     if (d3d12.render_pass_support) {
@@ -1035,13 +1036,12 @@ static vgpu_renderer* d3d12_init_renderer(void) {
     renderer.begin_frame = d3d12_begin_frame;
     renderer.end_frame = d3d12_end_frame;
 
-    renderer.texture_create = d3d12_texture_create;
+    renderer.create_texture = d3d12_texture_create;
     renderer.texture_destroy = d3d12_texture_destroy;
-    renderer.query_texture_info = d3d12_query_texture_info;
 
     renderer.get_backbuffer_texture = d3d12_get_backbuffer_texture;
-    renderer.begin_pass = d3d12_begin_pass;
-    renderer.end_pass = d3d12_end_pass;
+    //renderer.begin_pass = d3d12_begin_pass;
+    //renderer.end_pass = d3d12_end_pass;
 
     return &renderer;
 }

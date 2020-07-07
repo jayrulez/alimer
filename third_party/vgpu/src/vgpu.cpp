@@ -184,7 +184,6 @@ void vgpu_end_frame(void) {
     s_gpu_renderer->end_frame();
 }
 
-/* Texture */
 static vgpu_texture_info _vgpu_texture_info_def(const vgpu_texture_info* info) {
     vgpu_texture_info def = *info;
     def.type = _vgpu_def(info->type, VGPU_TEXTURE_TYPE_2D);
@@ -198,25 +197,46 @@ static vgpu_texture_info _vgpu_texture_info_def(const vgpu_texture_info* info) {
 }
 
 vgpu_texture vgpu_create_texture(const vgpu_texture_info* info) {
-    //VGPU_ASSERT(s_gpu_renderer);
+    VGPU_ASSERT(s_gpu_renderer);
     VGPU_ASSERT(info);
 
     vgpu_texture_info def = _vgpu_texture_info_def(info);
-    //return s_gpu_renderer->texture_create(&def);
-    return nullptr;
+    return s_gpu_renderer->create_texture(&def);
 }
 
 void vgpu_destroy_texture(vgpu_texture texture) {
-    //VGPU_ASSERT(s_gpu_renderer);
+    VGPU_ASSERT(s_gpu_renderer);
     VGPU_ASSERT(texture);
 
-    //s_gpu_renderer->texture_destroy(texture);
+    s_gpu_renderer->texture_destroy(texture);
 }
 
-vgpu_texture_info vgpu_query_texture_info(vgpu_texture texture) {
-    //VGPU_ASSERT(s_gpu_renderer);
-    //return s_gpu_renderer->query_texture_info(texture);
-    return {};
+/* Framebuffer */
+static vgpu_framebuffer_info _vgpu_framebuffer_info_def(const vgpu_framebuffer_info* info) {
+    vgpu_framebuffer_info def = *info;
+    return def;
+}
+
+vgpu_framebuffer vgpu_create_framebuffer(const vgpu_framebuffer_info* info) {
+    VGPU_ASSERT(s_gpu_renderer);
+    VGPU_ASSERT(info);
+
+    vgpu_framebuffer_info def = _vgpu_framebuffer_info_def(info);
+    return s_gpu_renderer->create_framebuffer(&def);
+}
+
+vgpu_framebuffer vgpu_create_framebuffer_swapchain(const vgpu_swapchain_info* info) {
+    VGPU_ASSERT(s_gpu_renderer);
+    VGPU_ASSERT(info);
+
+    return s_gpu_renderer->create_framebuffer_swapchain(info);
+}
+
+void vgpu_destroy_framebuffer(vgpu_framebuffer framebuffer) {
+    VGPU_ASSERT(s_gpu_renderer);
+    VGPU_ASSERT(framebuffer);
+
+    s_gpu_renderer->destroy_framebuffer(framebuffer);
 }
 
 vgpu_texture vgpu_get_backbuffer_texture(void) {
@@ -224,11 +244,11 @@ vgpu_texture vgpu_get_backbuffer_texture(void) {
     return nullptr;
 }
 
-void vgpu_begin_pass(const vgpu_pass_begin_info* info) {
+/*void vgpu_begin_pass(const vgpu_pass_begin_info* info) {
 }
 
 void vgpu_end_pass(void) {
-}
+}*/
 
 /* Pixel format helpers */
 struct pixel_format_desc
@@ -330,21 +350,37 @@ uint32_t vgpu_get_format_pixels_per_block(vgpu_pixel_format format) {
     return k_format_desc[format].compression_ratio.width * k_format_desc[(uint32_t)format].compression_ratio.height;
 }
 
-VGPU_API bool vgpu_is_depth_format(vgpu_pixel_format format) {
+bool vgpu_is_depth_format(vgpu_pixel_format format) {
     VGPU_ASSERT(k_format_desc[format].format == format);
     return k_format_desc[format].depth;
 }
 
-VGPU_API bool vgpu_is_stencil_format(vgpu_pixel_format format) {
+bool vgpu_is_stencil_format(vgpu_pixel_format format) {
     VGPU_ASSERT(k_format_desc[format].format == format);
     return k_format_desc[format].stencil;
 }
 
-VGPU_API bool vgpu_is_depth_stencil_format(vgpu_pixel_format format) {
+bool vgpu_is_depth_stencil_format(vgpu_pixel_format format) {
     return vgpu_is_depth_format(format) || vgpu_is_stencil_format(format);
 }
 
-VGPU_API bool vgpu_is_compressed_format(vgpu_pixel_format format) {
+bool vgpu_is_compressed_format(vgpu_pixel_format format) {
     VGPU_ASSERT(k_format_desc[format].format == format);
     return k_format_desc[format].compressed;
+}
+
+
+uint32_t vgpu_get_format_width_compression_ratio(vgpu_pixel_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return k_format_desc[format].compression_ratio.width;
+}
+
+uint32_t vgpu_get_format_height_compression_ratio(vgpu_pixel_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return k_format_desc[format].compression_ratio.height;
+}
+
+uint32_t vgpu_get_format_channel_count(vgpu_pixel_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return k_format_desc[format].channelCount;
 }

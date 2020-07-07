@@ -438,7 +438,7 @@ static vgpu_renderer* vulkan_init_renderer(void) {
     renderer.begin_frame = vulkan_begin_frame;
     renderer.end_frame = vulkan_end_frame;
 
-    renderer.texture_create = vulkan_texture_create;
+    renderer.create_texture = vulkan_texture_create;
     renderer.texture_destroy = vulkan_texture_destroy;
 
     return &renderer;
