@@ -61,7 +61,7 @@ namespace alimer
         void HandleDeviceLost();
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return tearingSupported; }
+        DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
@@ -84,6 +84,7 @@ namespace alimer
         SwapChain* CreateSwapChain(const SwapChainDescription& desc) override;
         Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
+        // Commands
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
         void PushDebugGroup(CommandList commandList, const char* name) override;
@@ -110,9 +111,10 @@ namespace alimer
 
         bool supportsRenderPass = false;
 
-        IDXGIFactory4* dxgiFactory = nullptr;
         DWORD dxgiFactoryFlags = 0;
-        bool tearingSupported = false;
+        IDXGIFactory4* dxgiFactory = nullptr;
+        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent;
+
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D12Device* d3dDevice = nullptr;

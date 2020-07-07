@@ -24,4 +24,22 @@
 
 namespace alimer
 {
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const char* name)
+    {
+#ifdef _DEBUG
+        if (obj != nullptr)
+        {
+            if (name != nullptr)
+            {
+                const std::size_t length = std::strlen(name);
+                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(length), name);
+            }
+            else
+                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
+        }
+#else
+        ALIMER_UNUSED(obj);
+        ALIMER_UNUSED(name);
+#endif
+    }
 }

@@ -41,6 +41,12 @@
 #   define VGPU_API
 #endif  // defined(VGPU_SHARED_LIBRARY)
 
+#if defined(_WIN32)
+#   define VGPU_CALL __cdecl
+#else
+#   define VGPU_CALL
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -53,8 +59,12 @@ extern "C" {
 
     /* Enums */
     enum {
-        VGPU_NUM_INFLIGHT_FRAMES = 2,
-        VGPU_MAX_COLOR_ATTACHMENTS = 8,
+        VGPU_NUM_INFLIGHT_FRAMES = 2u,
+        VGPU_MAX_COLOR_ATTACHMENTS = 8u,
+        VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+        VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+        VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+        VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
     };
 
     typedef enum vgpu_log_level {
@@ -69,6 +79,7 @@ extern "C" {
     typedef enum vgpu_backend_type {
         VGPU_BACKEND_TYPE_DEFAULT,
         VGPU_BACKEND_TYPE_NULL,
+        VGPU_BACKEND_TYPE_D3D11,
         VGPU_BACKEND_TYPE_D3D12,
         VGPU_BACKEND_TYPE_VULKAN,
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
@@ -253,17 +264,91 @@ extern "C" {
         bool                is_fullscreen;
     } vgpu_swapchain_info;
 
-    typedef struct vgpu_config {
-        bool debug;
-        void (*callback)(void* context, const char* message, vgpu_log_level level);
-        void* context;
-        vgpu_device_preference device_preference;
-        vgpu_swapchain_info swapchain;
-    } vgpu_config;
+    typedef struct vgpu_allocation_callbacks {
+        void* user_data;
+        void* (VGPU_CALL* allocate)(void* user_data, size_t size);
+        void* (VGPU_CALL* allocate_cleared)(void* user_data, size_t size);
+        void (VGPU_CALL* free)(void* user_data, void* ptr);
+    } vgpu_allocation_callbacks;
 
-    VGPU_API bool vgpu_set_preferred_backend(vgpu_backend_type backend);
-    VGPU_API bool vgpu_init(const vgpu_config* config);
+    typedef struct vgpu_init_info {
+        vgpu_backend_type preferred_backend;
+        vgpu_device_preference device_preference;
+        bool debug;
+        vgpu_swapchain_info swapchain;
+    } vgpu_init_info;
+
+    typedef struct vgpu_features {
+        bool independent_blend;
+        bool computeShader;
+        bool tessellationShader;
+        bool multiViewport;
+        bool indexUInt32;
+        bool multiDrawIndirect;
+        bool fillModeNonSolid;
+        bool samplerAnisotropy;
+        bool textureCompressionETC2;
+        bool textureCompressionASTC_LDR;
+        bool textureCompressionBC;
+        bool textureCubeArray;
+        bool raytracing;
+    } vgpu_features;
+
+    typedef struct vgpu_limits {
+        uint32_t        max_vertex_attributes;
+        uint32_t        max_vertex_bindings;
+        uint32_t        max_vertex_attribute_offset;
+        uint32_t        max_vertex_binding_stride;
+        uint32_t        max_texture_size_1d;
+        uint32_t        max_texture_size_2d;
+        uint32_t        max_texture_size_3d;
+        uint32_t        max_texture_size_cube;
+        uint32_t        max_texture_array_layers;
+        uint32_t        max_color_attachments;
+        uint32_t        max_uniform_buffer_size;
+        uint64_t        min_uniform_buffer_offset_alignment;
+        uint32_t        max_storage_buffer_size;
+        uint64_t        min_storage_buffer_offset_alignment;
+        uint32_t        max_sampler_anisotropy;
+        uint32_t        max_viewports;
+        uint32_t        max_viewport_width;
+        uint32_t        max_viewport_height;
+        uint32_t        max_tessellation_patch_size;
+        float           point_size_range_min;
+        float           point_size_range_max;
+        float           line_width_range_min;
+        float           line_width_range_max;
+        uint32_t        max_compute_shared_memory_size;
+        uint32_t        max_compute_work_group_count_x;
+        uint32_t        max_compute_work_group_count_y;
+        uint32_t        max_compute_work_group_count_z;
+        uint32_t        max_compute_work_group_invocations;
+        uint32_t        max_compute_work_group_size_x;
+        uint32_t        max_compute_work_group_size_y;
+        uint32_t        max_compute_work_group_size_z;
+    } vgpu_limits;
+
+    typedef struct vgpu_caps {
+        vgpu_backend_type backend_type;
+        uint32_t vendor_id;
+        uint32_t device_id;
+        vgpu_features features;
+        vgpu_limits limits;
+    } vgpu_caps;
+
+    /* Allocation functions */
+    VGPU_API void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks);
+
+    /* Log functions */
+    typedef void(VGPU_CALL* vgpu_log_callback)(void* user_data, vgpu_log_level level, const char* message);
+    VGPU_API void vgpu_set_log_callback(vgpu_log_callback callback, void* user_data);
+    VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
+    VGPU_API void vgpu_log_error(const char* format, ...);
+    VGPU_API void vgpu_log_info(const char* format, ...);
+
+    VGPU_API bool vgpu_init(const vgpu_init_info* info);
     VGPU_API void vgpu_shutdown(void);
+    VGPU_API vgpu_caps vgpu_query_caps();
     VGPU_API void vgpu_begin_frame(void);
     VGPU_API void vgpu_end_frame(void);
 

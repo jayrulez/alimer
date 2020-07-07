@@ -32,14 +32,23 @@ namespace alimer
 
     }
 
+    void SwapChain::SetVSync(bool enabled)
+    {
+        if (_vyncEnabled == enabled)
+            return;
+
+        _vyncEnabled = enabled;
+        Recreate(true);
+    }
+
     Texture* SwapChain::GetBackbufferTexture() const
     {
-        return backbufferTextures[backbufferIndex].Get();
+        return _backbufferTextures[_backbufferIndex].Get();
     }
 
     Texture* SwapChain::GetDepthStencilTexture() const
     {
-        return depthStencilTexture.Get();
+        return _depthStencilTexture.Get();
     }
 }
 

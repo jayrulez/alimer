@@ -38,25 +38,6 @@ namespace alimer
 {
     namespace
     {
-        inline D3D12_RESOURCE_DIMENSION D3D12GetResourceDimension(TextureType type)
-        {
-            switch (type)
-            {
-            case TextureType::Texture1D:
-                return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-
-            case TextureType::Texture2D:
-            case TextureType::TextureCube:
-                return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-            case TextureType::Texture3D:
-                return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-            default:
-                ALIMER_UNREACHABLE();
-                return D3D12_RESOURCE_DIMENSION_UNKNOWN;
-            }
-        }
-
         struct ImGuiViewportDataD3D12
         {
             IDXGISwapChain3* swapChain = nullptr;
@@ -202,7 +183,6 @@ namespace alimer
 
         // Determines whether tearing support is available for fullscreen borderless windows.
         {
-            tearingSupported = true;
             BOOL allowTearing = FALSE;
 
             IDXGIFactory5* dxgiFactory5 = nullptr;
@@ -214,13 +194,16 @@ namespace alimer
 
             if (FAILED(hr) || !allowTearing)
             {
-                tearingSupported = false;
 #ifdef _DEBUG
                 OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
 #endif
             }
+            else
+            {
+                dxgiFactoryCaps |= DXGIFactoryCaps::Tearing;
+            }
 
-            SAFE_RELEASE(dxgiFactory5);
+            SafeRelease(dxgiFactory5);
         }
 
         IDXGIAdapter1* adapter;
@@ -334,14 +317,14 @@ namespace alimer
 
     void D3D12GraphicsDevice::BackendShutdown()
     {
-        SAFE_RELEASE(RTVHeap.handle);
-        SAFE_RELEASE(DSVHeap.handle);
+        SafeRelease(RTVHeap.handle);
+        SafeRelease(DSVHeap.handle);
         for (uint32_t index = 0; index < maxInflightFrames; ++index)
         {
-            SAFE_RELEASE(GPUDescriptorHeaps[index].handle);
-            //SAFE_RELEASE(GPUUploadMemoryHeaps[Idx].handle);
+            SafeRelease(GPUDescriptorHeaps[index].handle);
+            //SafeRelease(GPUUploadMemoryHeaps[Idx].handle);
         }
-        SAFE_RELEASE(CPUDescriptorHeap.handle);
+        SafeRelease(CPUDescriptorHeap.handle);
 
         /*for (uint32_t i = 0; i < kMaxCommandLists; i++)
         {
@@ -351,12 +334,12 @@ namespace alimer
 
                 for (uint32_t index = 0; index < maxInflightFrames; ++index)
                 {
-                    SAFE_RELEASE(frames[index].commandAllocators[i]);
+                    SafeRelease(frames[index].commandAllocators[i]);
                 }
             }
         }
 
-        //SAFE_RELEASE(commandList);*/
+        //SafeRelease(commandList);*/
 
         /*ImGuiViewport* mainViewport = ImGui::GetMainViewport();
         if (ImGuiViewportDataD3D12* data = (ImGuiViewportDataD3D12*)mainViewport->RendererUserData)
@@ -374,9 +357,9 @@ namespace alimer
 
         ShutdownUpload();
 
-        SAFE_RELEASE(graphicsQueue);
+        SafeRelease(graphicsQueue);
         CloseHandle(frameFenceEvent);
-        SAFE_RELEASE(frameFence);
+        SafeRelease(frameFence);
         /*for (uint32_t i = 0; i < backBufferCount; i++)
         {
             SAFE_RELEASE(swapChainRenderTargets[i]);
@@ -412,7 +395,7 @@ namespace alimer
 #endif
 
         // Release factory at last.
-        SAFE_RELEASE(dxgiFactory);
+        SafeRelease(dxgiFactory);
 
 #ifdef _DEBUG
         {
@@ -687,7 +670,7 @@ namespace alimer
             }
         }
 
-        SAFE_RELEASE(dxgiFactory6);
+        SafeRelease(dxgiFactory6);
 #endif
         if (!adapter)
         {

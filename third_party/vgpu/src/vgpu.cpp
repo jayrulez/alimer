@@ -21,43 +21,123 @@
 //
 
 #include "vgpu_driver.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h> /* memset */
+
+/* Allocation */
+void* vgpu_default_allocate_memory(void* user_data, size_t size) {
+    VGPU_UNUSED(user_data);
+    return malloc(size);
+}
+
+void* vgpu_default_allocate_cleard_memory(void* user_data, size_t size) {
+    VGPU_UNUSED(user_data);
+    void* mem = malloc(size);
+    memset(mem, 0, size);
+    return mem;
+}
+
+void vgpu_default_free_memory(void* user_data, void* ptr) {
+    VGPU_UNUSED(user_data);
+    free(ptr);
+}
+
+const vgpu_allocation_callbacks vgpu_default_alloc_cb = {
+    nullptr,
+    vgpu_default_allocate_memory,
+    vgpu_default_allocate_cleard_memory,
+    vgpu_default_free_memory
+};
+
+const vgpu_allocation_callbacks* vgpu_alloc_cb = &vgpu_default_alloc_cb;
+void* vgpu_allocation_user_data = nullptr;
+
+void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks) {
+    if (callbacks == nullptr) {
+        vgpu_alloc_cb = &vgpu_default_alloc_cb;
+    }
+    else {
+        vgpu_alloc_cb = callbacks;
+    }
+}
+
+/* Log */
+#define VGPU_MAX_LOG_MESSAGE (4096)
+static vgpu_log_callback s_log_function = nullptr;
+static void* s_log_user_data = nullptr;
+
+void vgpu_set_log_callback(vgpu_log_callback callback, void* user_data) {
+    s_log_function = callback;
+    s_log_user_data = user_data;
+}
+
+void vgpu_log(vgpu_log_level level, const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, level, message);
+        va_end(args);
+    }
+}
+
+void vgpu_log_error(const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, VGPU_LOG_LEVEL_ERROR, message);
+        va_end(args);
+    }
+}
+
+void vgpu_log_info(const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, VGPU_LOG_LEVEL_INFO, message);
+        va_end(args);
+    }
+}
+
 
 /* Drivers */
 static const vgpu_driver* drivers[] = {
-#if defined(VGPU_DRIVER_D3D12)
+#if defined(VGPU_DRIVER_D3D11)
+    &d3d11_driver,
+#endif
+#if defined(VGPU_DRIVER_D3D12) 
     &d3d12_driver,
 #endif
-#if defined(VGPU_DRIVER_VULKAN)
+#if defined(VGPU_DRIVER_VULKAN)&& defined(TODO)
     &vulkan_driver,
 #endif
     nullptr
 };
 
-static vgpu_backend_type s_preferred_backend = VGPU_BACKEND_TYPE_DEFAULT;
 static vgpu_renderer* s_gpu_renderer = nullptr;
 
-static vgpu_config _vgpu_config_defaults(const vgpu_config* desc) {
-    vgpu_config def = *desc;
+static vgpu_init_info _vgpu_config_defaults(const vgpu_init_info* desc) {
+    vgpu_init_info def = *desc;
     def.swapchain.color_format = _vgpu_def(desc->swapchain.color_format, VGPU_PIXEL_FORMAT_BGRA8_UNORM);
     def.swapchain.depth_stencil_format = _vgpu_def(desc->swapchain.depth_stencil_format, VGPU_PIXEL_FORMAT_DEPTH32_FLOAT);
     return def;
 }
 
-bool vgpu_set_preferred_backend(vgpu_backend_type backend) {
-    if (s_gpu_renderer != nullptr) {
-        return false;
-    }
+bool vgpu_init(const vgpu_init_info* info) {
+    VGPU_ASSERT(info);
 
-    s_preferred_backend = backend;
-    return true;
-}
-
-bool vgpu_init(const vgpu_config* config) {
     if (s_gpu_renderer) {
         return true;
     }
 
-    if (s_preferred_backend == VGPU_BACKEND_TYPE_DEFAULT) {
+    if (info->preferred_backend == VGPU_BACKEND_TYPE_DEFAULT) {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
             if (drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
@@ -67,15 +147,15 @@ bool vgpu_init(const vgpu_config* config) {
     }
     else {
         for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-            if (drivers[i]->backendType == s_preferred_backend && drivers[i]->is_supported()) {
+            if (drivers[i]->backendType == info->preferred_backend && drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
                 break;
             }
         }
     }
 
-    vgpu_config config_def = _vgpu_config_defaults(config);
-    if (!s_gpu_renderer->init(&config_def)) {
+    vgpu_init_info def = _vgpu_config_defaults(info);
+    if (!s_gpu_renderer->init(&def)) {
         s_gpu_renderer = nullptr;
         return false;
     }
@@ -90,6 +170,10 @@ void vgpu_shutdown(void) {
 
     s_gpu_renderer->shutdown();
     s_gpu_renderer = nullptr;
+}
+
+vgpu_caps vgpu_query_caps() {
+    return s_gpu_renderer->query_caps();
 }
 
 void vgpu_begin_frame(void) {
@@ -114,36 +198,36 @@ static vgpu_texture_info _vgpu_texture_info_def(const vgpu_texture_info* info) {
 }
 
 vgpu_texture vgpu_create_texture(const vgpu_texture_info* info) {
-    VGPU_ASSERT(s_gpu_renderer);
+    //VGPU_ASSERT(s_gpu_renderer);
     VGPU_ASSERT(info);
 
     vgpu_texture_info def = _vgpu_texture_info_def(info);
-    return s_gpu_renderer->texture_create(&def);
+    //return s_gpu_renderer->texture_create(&def);
+    return nullptr;
 }
 
 void vgpu_destroy_texture(vgpu_texture texture) {
-    VGPU_ASSERT(s_gpu_renderer);
+    //VGPU_ASSERT(s_gpu_renderer);
     VGPU_ASSERT(texture);
 
-    s_gpu_renderer->texture_destroy(texture);
+    //s_gpu_renderer->texture_destroy(texture);
 }
 
 vgpu_texture_info vgpu_query_texture_info(vgpu_texture texture) {
-    VGPU_ASSERT(s_gpu_renderer);
-
-    return s_gpu_renderer->query_texture_info(texture);
+    //VGPU_ASSERT(s_gpu_renderer);
+    //return s_gpu_renderer->query_texture_info(texture);
+    return {};
 }
 
 vgpu_texture vgpu_get_backbuffer_texture(void) {
-    return s_gpu_renderer->get_backbuffer_texture();
+    //return s_gpu_renderer->get_backbuffer_texture();
+    return nullptr;
 }
 
 void vgpu_begin_pass(const vgpu_pass_begin_info* info) {
-    s_gpu_renderer->begin_pass(info);
 }
 
 void vgpu_end_pass(void) {
-    s_gpu_renderer->end_pass();
 }
 
 /* Pixel format helpers */

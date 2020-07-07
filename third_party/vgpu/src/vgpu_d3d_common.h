@@ -25,10 +25,33 @@
 #if defined(VGPU_DRIVER_D3D11) || defined(VGPU_DRIVER_D3D12)
 #include "vgpu_driver.h"
 
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #if defined(NTDDI_WIN10_RS2)
 #   include <dxgi1_6.h>
 #else
 #   include <dxgi1_5.h>
+#endif
+
+#ifdef _DEBUG
+#include <dxgidebug.h>
+
+static const GUID vgpu_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
+static const GUID vgpu_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
+#endif
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID _riid, void** _factory);
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
+typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
 #define VHR(hr) if (FAILED(hr)) { __debugbreak(); }
@@ -153,6 +176,7 @@ static inline DXGI_FORMAT _vgpu_d3d_format_with_usage(vgpu_pixel_format format, 
 typedef enum {
     DXGIFACTORY_CAPS_FLIP_PRESENT = (1 << 0),
     DXGIFACTORY_CAPS_TEARING = (1 << 1),
+    _DXGIFACTORY_CAPS_FORCE_U32 = 0x7FFFFFFF
 } dxgi_factory_caps;
 
 static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(

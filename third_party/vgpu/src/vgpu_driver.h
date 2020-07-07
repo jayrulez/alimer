@@ -30,11 +30,12 @@
 #   define VGPU_ASSERT(c) assert(c)
 #endif
 
-#ifndef VGPU_ALLOC
-#   include <stdlib.h>
-#   define VGPU_ALLOC(T)     ((T*) malloc(sizeof(T)))
-#   define VGPU_FREE(ptr)       (free((void*)(ptr)))
-#endif
+extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
+extern void* vgpu_allocation_user_data;
+
+#define VGPU_ALLOC(T)     ((T*) vgpu_alloc_cb->allocate(vgpu_allocation_user_data, sizeof(T)))
+#define VGPU_FREE(ptr)       (vgpu_alloc_cb->free(vgpu_allocation_user_data, (void*)(ptr)))
+#define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared(vgpu_allocation_user_data, sizeof(T)))
 
 #ifndef VGPU_ALLOCA
 #   include <malloc.h>
@@ -61,6 +62,8 @@ extern void __cdecl __debugbreak(void);
 #   error "Unsupported compiler"
 #endif
 
+#define VGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
+
 #define _vgpu_def(val, def) (((val) == 0) ? (def) : (val))
 #define _vgpu_def_flt(val, def) (((val) == 0.0f) ? (def) : (val))
 #define _vgpu_min(a,b) ((a<b)?a:b)
@@ -69,8 +72,9 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 
 typedef struct vgpu_renderer {
-    bool (*init)(const vgpu_config* config);
+    bool (*init)(const vgpu_init_info* config);
     void (*shutdown)(void);
+    vgpu_caps(*query_caps)(void);
     void (*begin_frame)(void);
     void (*end_frame)(void);
 
@@ -81,7 +85,6 @@ typedef struct vgpu_renderer {
     vgpu_texture(*get_backbuffer_texture)(void);
     void (*begin_pass)(const vgpu_pass_begin_info* info);
     void (*end_pass)(void);
-
 } vgpu_renderer;
 
 typedef struct vgpu_driver {
@@ -90,6 +93,7 @@ typedef struct vgpu_driver {
     vgpu_renderer* (*init_renderer)(void);
 } vgpu_driver;
 
+extern vgpu_driver d3d11_driver;
 extern vgpu_driver d3d12_driver;
 extern vgpu_driver vulkan_driver;
 

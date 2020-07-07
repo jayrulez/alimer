@@ -22,10 +22,9 @@
 
 #include "Application/Application.h"
 #include "Application/Window.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
 #include "Input/InputManager.h"
 #include "Core/Log.h"
+#include <vgpu.h>
 
 namespace alimer
 {
@@ -34,7 +33,6 @@ namespace alimer
     {
         gameSystems.Push(input);
         PlatformConstuct();
-        GraphicsDevice::Create(BackendType::Count);
         LOG_INFO("Application started");
     }
 
@@ -49,7 +47,7 @@ namespace alimer
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
-        GraphicsDevice::Shutdown();
+        vgpu_shutdown();
         LOG_INFO("Application destroyed correctly");
     }
 
@@ -58,6 +56,16 @@ namespace alimer
         // Create main window.
         if (!headless)
         {
+            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+
+            vgpu_init_info gpu_init_info = {};
+            gpu_init_info.swapchain.native_handle = window.GetHandle();
+            gpu_init_info.swapchain.width = window.GetSize().width;
+            gpu_init_info.swapchain.height = window.GetSize().height;
+            if (!vgpu_init(&gpu_init_info)) {
+                headless = true;
+            }
+
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
 
@@ -121,7 +129,7 @@ namespace alimer
                 platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
             }*/
 
-            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+            
         }
 
         Initialize();
@@ -155,7 +163,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //vgpu_begin_frame();
+        vgpu_begin_frame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -189,7 +197,8 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //vgpu_end_frame();
+        //window.GetSwapChain()->Present();
+        vgpu_end_frame();
     }
 
     int Application::Run()

@@ -77,8 +77,6 @@ namespace alimer
     /// Describes texture type.
     enum class TextureType : uint32_t
     {
-        /// One dimensional texture.
-        Texture1D,
         /// Two dimensional texture.
         Texture2D,
         /// Three dimensional texture.
@@ -209,6 +207,7 @@ namespace alimer
         uint32_t width = 1u;
         uint32_t height = 1u;
         uint32_t depth = 1u;
+        uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
     };

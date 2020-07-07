@@ -33,4 +33,25 @@
 namespace alimer
 {
     class D3D11GraphicsDevice;
+
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const char* name);
+
+    static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
+    {
+        TextureUsage usage = TextureUsage::None;
+        if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
+            usage |= TextureUsage::Sampled;
+        }
+        if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
+            usage |= TextureUsage::Storage;
+        }
+        if (bindFlags & D3D11_BIND_RENDER_TARGET) {
+            usage |= TextureUsage::RenderTarget;
+        }
+        if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        return usage;
+    }
 }

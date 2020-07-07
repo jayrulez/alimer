@@ -41,8 +41,6 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(WindowFlags);
 
-    class SwapChain;
-
     /// Defines an OS window.
     class ALIMER_API Window final : public Object
     {
@@ -63,12 +61,6 @@ namespace alimer
         bool IsMain() const;
         uintptr_t GetHandle() const;
 
-        // Gets rendering output swap chain
-        ALIMER_FORCEINLINE SwapChain* GetSwapChain() const
-        {
-            return _swapChain.Get();
-        }
-
     private:
         bool _isMain = false;
         String title;
@@ -76,6 +68,5 @@ namespace alimer
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
         void* window = nullptr;
-        RefPtr<SwapChain> _swapChain;
     };
 } 

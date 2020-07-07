@@ -27,7 +27,7 @@
 #include "Graphics/Texture.h"
 
 #if defined(ALIMER_D3D11)
-//#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_D3D12)
@@ -39,6 +39,7 @@
 
 namespace alimer
 {
+    BackendType GraphicsDevice::PreferredBackendType = BackendType::Count;
     GraphicsDevice* GraphicsDevice::Instance = nullptr;
 
     std::set<BackendType> GraphicsDevice::GetAvailableBackends()
@@ -92,10 +93,15 @@ namespace alimer
             if (D3D12GraphicsDevice::IsAvailable()) {
                 Instance = new D3D12GraphicsDevice();
             }
+            break;
 #endif
-            break;
+
+#if defined(ALIMER_D3D11)
         case BackendType::Direct3D11:
+            Instance = new D3D11GraphicsDevice();
             break;
+#endif
+
         default:
             break;
         }
@@ -117,12 +123,12 @@ namespace alimer
             return;
         }
 
-        ImGuiIO& io = ImGui::GetIO();
+        /*ImGuiIO& io = ImGui::GetIO();
         IM_ASSERT(io.Fonts->IsBuilt());
 
         // Start the Dear ImGui frame
         ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        ImGui::NewFrame();*/
 
         // Now the frame is active again.
         frameActive = true;
@@ -132,16 +138,16 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
-        ImGui::Render();
+        //ImGui::Render();
         EndFrameImpl();
 
         // Update and Render additional Platform Windows
-        ImGuiIO& io = ImGui::GetIO();
+        /*ImGuiIO& io = ImGui::GetIO();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault(nullptr, nullptr);
-        }
+        }*/
 
         // Frame is not active anymore
         frameActive = false;

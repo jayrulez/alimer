@@ -41,6 +41,7 @@ add_library(vgpu
     src/vgpu_d3d_common.h
     # Source Files
 	src/vgpu.cpp
+    src/vgpu_driver_d3d11.cpp
     src/vgpu_driver_d3d12.cpp
     src/vgpu_driver_vulkan.cpp
 )
@@ -50,17 +51,22 @@ target_include_directories(vgpu PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
+# Direct3D11
+if (WIN32 OR WINDOWS_STORE)
+    target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D11)
+endif ()
+
 # Direct3D12
 if (VGPU_DRIVER_D3D12)
     target_sources(vgpu PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src/D3D12MemAlloc.natvis
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/D3D12MemAlloc.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/D3D12MemAlloc.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/D3D12MemAlloc.natvis
     )
 
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D12)
     target_include_directories(vgpu PRIVATE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator/src>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/third_party/D3D12MemoryAllocator>
     )
 endif ()
 

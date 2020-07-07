@@ -34,17 +34,24 @@ namespace alimer
         /// Constructor.
         SwapChain(const SwapChainDescription& desc);
 
+        void SetVSync(bool enabled);
+        virtual void Present() = 0;
+
         /// Get the current backbuffer texture.
         Texture* GetBackbufferTexture() const;
 
         /// Get the depth stencil texture.
         Texture* GetDepthStencilTexture() const;
 
+    private:
+        virtual void Recreate(bool vsyncChanged) = 0;
+
     protected:
         SwapChainDescription _desc;
 
-        uint32_t backbufferIndex{ 0 };
-        Vector<RefPtr<Texture>> backbufferTextures;
-        RefPtr<Texture> depthStencilTexture;
+        uint32_t _backbufferIndex = 0;
+        Vector<RefPtr<Texture>> _backbufferTextures;
+        RefPtr<Texture> _depthStencilTexture;
+        bool _vyncEnabled = false;
     };
 }

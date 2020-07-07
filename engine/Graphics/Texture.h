@@ -61,7 +61,7 @@ namespace alimer
         /**
         * Get the array size of the texture.
         */
-        uint32_t GetArraySize() const { return (_desc.type != TextureType::Texture3D ? _desc.depth : 1u); }
+        uint32_t GetArraySize() const { return _desc.arraySize; }
 
         /**
         * Get the texture usage.
@@ -96,5 +96,10 @@ namespace alimer
 
     protected:
         TextureDescription _desc;
+    };
+
+    class ALIMER_API TextureView : public RefCounted
+    {
+
     };
 }

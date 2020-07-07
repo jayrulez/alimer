@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(VGPU_DRIVER_VULKAN)
+#if defined(VGPU_DRIVER_VULKAN) 
 
 #include "vgpu_driver.h"
 #include <string.h>
@@ -180,7 +180,7 @@ VGPU_FOREACH_INSTANCE(VGPU_VK_DECLARE);
 VGPU_FOREACH_INSTANCE_SURFACE(VGPU_VK_DECLARE);
 GPU_FOREACH_DEVICE(VGPU_VK_DECLARE);
 
-#define VGPU_VK_THROW(str) if (vk.config.callback) { vk.config.callback(vk.config.context, str, VGPU_LOG_LEVEL_ERROR); }
+#define VGPU_VK_THROW(str) if (vk.debug) { vgpu_log_error("%", str); }
 #define VGPU_VK_CHECK(c, str) if (!(c)) { VGPU_VK_THROW(str); }
 #define VK_CHECK(res) do { VkResult r = (res); VGPU_VK_CHECK(r >= 0, _vgpu_vk_get_error_string(r)); } while (0)
 
@@ -199,7 +199,7 @@ static struct {
     void* library;
 #endif
 
-    vgpu_config config;
+    bool debug;
 
     struct {
         bool debug_utils;
@@ -240,23 +240,21 @@ static uint32_t _vgpu_vulkan_get_instance_version(void)
 }
 
 static VkBool32 _vgpu_vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context) {
-    if (vk.config.callback) {
-        if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-            vk.config.callback(vk.config.context, data->pMessage, VGPU_LOG_LEVEL_ERROR);
-        }
-        else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-            vk.config.callback(vk.config.context, data->pMessage, VGPU_LOG_LEVEL_WARN);
-        }
-        else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-            vk.config.callback(vk.config.context, data->pMessage, VGPU_LOG_LEVEL_INFO);
-        }
+    if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        vgpu_log(VGPU_LOG_LEVEL_ERROR, "%s", data->pMessage);
+    }
+    else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        vgpu_log(VGPU_LOG_LEVEL_WARN, "%s", data->pMessage);
+    }
+    else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+        vgpu_log(VGPU_LOG_LEVEL_INFO, "%s", data->pMessage);
     }
 
     return VK_FALSE;
 }
 
-static bool vulkan_init(const vgpu_config* config) {
-    memcpy(&vk.config, config, sizeof(vgpu_config));
+static bool vulkan_init(const vgpu_init_info* info) {
+    vk.debug = info->debug;
 
     // Create instance and optional debug messenger.
     {
@@ -275,7 +273,7 @@ static bool vulkan_init(const vgpu_config* config) {
         {
             if (strcmp(available_instance_extensions[i].extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
                 vk.instance_exts.debug_utils = true;
-                if (config->debug) {
+                if (info->debug) {
                     enabled_instance_exts[enabled_instance_exts_count++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
                 }
             }
@@ -310,14 +308,14 @@ static bool vulkan_init(const vgpu_config* config) {
         VkInstanceCreateInfo instance_info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
         VkDebugUtilsMessengerCreateInfoEXT debug_utils_create_info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-        if (config->debug)
+        if (info->debug)
         {
             //if (instanceExts.debugUtils)
             {
                 debug_utils_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
                 debug_utils_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
                 debug_utils_create_info.pfnUserCallback = _vgpu_vk_debug_callback;
-                debug_utils_create_info.pUserData = config->context;
+                debug_utils_create_info.pUserData = nullptr;
 
                 instance_info.pNext = &debug_utils_create_info;
             }

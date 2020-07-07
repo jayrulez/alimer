@@ -20,9 +20,10 @@
 // THE SOFTWARE.
 //
 
-#if TODO
+
 #include "D3D11GraphicsDevice.h"
-#include "Graphics/Texture.h"
+#include "D3D11SwapChain.h"
+#include "D3D11Texture.h"
 #include "core/String.h"
 
 namespace alimer
@@ -98,7 +99,7 @@ namespace alimer
                         break;
                     }
                 }
-                SAFE_RELEASE(dxgiFactory6);
+                SafeRelease(dxgiFactory6);
             }
 #endif
 
@@ -123,49 +124,28 @@ namespace alimer
         }
     }
 
-
-    bool GraphicsDevice_D3D11::IsAvailable()
-    {
-        static bool available_initialized = false;
-        static bool available = false;
-        if (available_initialized) {
-            return available;
-        }
-
-        available_initialized = true;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        static HMODULE dxgiLib = LoadLibraryA("dxgi.dll");
-        CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY1)GetProcAddress(dxgiLib, "CreateDXGIFactory1");
-        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
-        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
-        if (CreateDXGIFactory2 == nullptr) {
-            return false;
-        }
-
-        static HMODULE d3d11Lib = LoadLibraryA("d3d11.dll");
-        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(d3d11Lib, "D3D11CreateDevice");
-        if (D3D11CreateDevice == nullptr) {
-            return false;
-        }
-#endif
-
-        available = true;
-        return true;
-    }
-
-    GraphicsDevice_D3D11::GraphicsDevice_D3D11(const Desc& desc)
-        : GraphicsDevice(desc)
+    D3D11GraphicsDevice::D3D11GraphicsDevice()
+        : GraphicsDevice()
         , d3dFeatureLevel(D3D_FEATURE_LEVEL_9_1)
     {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        dxgiLib = LoadLibraryA("dxgi.dll");
+        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
+        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
+#endif
+
         CreateDeviceResources();
     }
 
-    GraphicsDevice_D3D11::~GraphicsDevice_D3D11()
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
     {
-        Shutdown();
+        BackendShutdown();
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        FreeLibrary(dxgiLib);
+#endif
     }
 
-    void GraphicsDevice_D3D11::CreateDeviceResources()
+    void D3D11GraphicsDevice::CreateDeviceResources()
     {
         UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
@@ -180,8 +160,6 @@ namespace alimer
             OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
         }
 #endif
-
-        CreateFactory();
 
         RefPtr<IDXGIAdapter1> adapter;
         GetHardwareAdapter(dxgiFactory, adapter.GetAddressOf(), DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE);
@@ -277,8 +255,8 @@ namespace alimer
             ThrowIfFailed(device->QueryInterface(&d3dDevice));
             ThrowIfFailed(context->QueryInterface(&deviceContexts[0]));
             ThrowIfFailed(context->QueryInterface(&userDefinedAnnotations[0]));
-            SAFE_RELEASE(context);
-            SAFE_RELEASE(device);
+            SafeRelease(context);
+            SafeRelease(device);
         }
 
 #if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -292,7 +270,7 @@ namespace alimer
         InitCapabilities(adapter.Get());
     }
 
-    void GraphicsDevice_D3D11::CreateWindowSizeDependentResources()
+    void D3D11GraphicsDevice::CreateWindowSizeDependentResources()
     {
 
 #if TODO
@@ -335,96 +313,19 @@ namespace alimer
         }
         else
         {
-    }
+        }
 #endif // TODO
-
-
-}
-
-    void GraphicsDevice_D3D11::AfterReset(SwapChainHandle handle)
-    {
-        SwapChainD3D11& swapChain = swapChains[handle.id];
-
-
-
-        bool isDisplayHDR10 = false;
-
-#if defined(NTDDI_WIN10_RS2)
-        if (swapChain.handle)
-        {
-            RefPtr<IDXGIOutput> output;
-            if (SUCCEEDED(swapChain.handle->GetContainingOutput(output.GetAddressOf())))
-            {
-                RefPtr<IDXGIOutput6> output6;
-                if (SUCCEEDED(output->QueryInterface(IID_PPV_ARGS(output6.GetAddressOf()))))
-                {
-                    DXGI_OUTPUT_DESC1 desc;
-                    ThrowIfFailed(output6->GetDesc1(&desc));
-
-                    if (desc.ColorSpace == DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020)
-                    {
-                        // Display output is HDR10.
-                        isDisplayHDR10 = true;
-                    }
-                }
-            }
-        }
-#endif
-
-        DXGI_COLOR_SPACE_TYPE newColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
-        if (isDisplayHDR10)
-        {
-            switch (swapChain.colorFormat)
-            {
-            case PixelFormat::RGB10A2UNorm:
-                // The application creates the HDR10 signal.
-                newColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
-                break;
-
-            case PixelFormat::RGBA16Float:
-                // The system creates the HDR10 signal; application uses linear values.
-                newColorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        swapChain.colorSpace = newColorSpace;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        RefPtr<IDXGISwapChain3> swapChain3;
-        if (SUCCEEDED(swapChain.handle->QueryInterface(swapChain3.GetAddressOf())))
-        {
-            UINT colorSpaceSupport = 0;
-            if (SUCCEEDED(swapChain3->CheckColorSpaceSupport(newColorSpace, &colorSpaceSupport))
-                && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
-            {
-                ThrowIfFailed(swapChain3->SetColorSpace1(newColorSpace));
-            }
-        }
-#else
-        UINT colorSpaceSupport = 0;
-        if (SUCCEEDED(swapChain->CheckColorSpaceSupport(newColorSpace, &colorSpaceSupport))
-            && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
-        {
-            ThrowIfFailed(swapChain->SetColorSpace1(newColorSpace));
-        }
-#endif
     }
 
-    void GraphicsDevice_D3D11::Shutdown()
+    void D3D11GraphicsDevice::BackendShutdown()
     {
-        mainSwapChain.Reset();
-
         // Release leaked resources.
         ReleaseTrackedResources();
 
         for (uint32_t i = 0; i < kTotalCommandContexts; i++)
         {
-            SAFE_RELEASE(userDefinedAnnotations[i]);
-            SAFE_RELEASE(deviceContexts[i]);
+            SafeRelease(userDefinedAnnotations[i]);
+            SafeRelease(deviceContexts[i]);
         }
 
         ULONG refCount = d3dDevice->Release();
@@ -432,7 +333,7 @@ namespace alimer
 #ifdef _DEBUG
         if (refCount > 0)
         {
-            LOG_WARN("There are %d unreleased references left on the ID3D11Device", refCount);
+            LOG_WARN("There are {} unreleased references left on the ID3D11Device", refCount);
 
             ID3D11Debug* d3dDebug;
             if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
@@ -444,98 +345,25 @@ namespace alimer
 #else
         (void)refCount; // avoid warning
 #endif
-        SAFE_RELEASE(dxgiFactory);
+        SafeRelease(dxgiFactory);
 
 #ifdef _DEBUG
         {
             IDXGIDebug1* dxgiDebug;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
-            {
-                dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-                dxgiDebug->Release();
-            }
-        }
-#endif
-        }
-
-    void GraphicsDevice_D3D11::CreateFactory()
-    {
-        SAFE_RELEASE(dxgiFactory);
-
-#if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
-        bool debugDXGI = false;
-        {
-            IDXGIInfoQueue* dxgiInfoQueue;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+            if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
 #else
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue))))
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug))))
 #endif
             {
-                debugDXGI = true;
-
-                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
-
-                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
-                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
-
-                DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
-                {
-                    80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
-                };
-                DXGI_INFO_QUEUE_FILTER filter = {};
-                filter.DenyList.NumIDs = _countof(hide);
-                filter.DenyList.pIDList = hide;
-                dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
-                dxgiInfoQueue->Release();
-            }
-        }
-
-        if (!debugDXGI)
-#endif
-        {
-            ThrowIfFailed(CreateDXGIFactory1(__uuidof(IDXGIFactory2), (void**)&dxgiFactory));
-        }
-
-        // Determines whether tearing support is available for fullscreen borderless windows.
-        {
-            tearingSupported = true;
-            BOOL allowTearing = FALSE;
-
-            RefPtr<IDXGIFactory5> factory5;
-            HRESULT hr = dxgiFactory->QueryInterface(__uuidof(IDXGIFactory5), (void**)factory5.GetAddressOf());
-            if (SUCCEEDED(hr))
-            {
-                hr = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
-            }
-
-            if (FAILED(hr) || !allowTearing)
-            {
-                tearingSupported = false;
-#ifdef _DEBUG
-                OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
-#endif
-            }
-        }
-
-        // Disable FLIP if not on a supporting OS
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        {
-            flipPresentSupported = true;
-
-            RefPtr<IDXGIFactory4> factory4;
-            if (FAILED(dxgiFactory->QueryInterface(__uuidof(IDXGIFactory4), (void**)factory4.GetAddressOf())))
-            {
-                flipPresentSupported = false;
-#ifdef _DEBUG
-                OutputDebugStringA("INFO: Flip swap effects not supported");
-#endif
+                dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug->Release();
             }
         }
 #endif
     }
 
-    void GraphicsDevice_D3D11::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
+    void D3D11GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
     {
         // Init capabilities
         {
@@ -619,26 +447,22 @@ namespace alimer
         }
     }
 
-    void GraphicsDevice_D3D11::BeginFrame()
+    void D3D11GraphicsDevice::WaitForGPU()
     {
-        if (!isLost)
-            return;
+        return deviceContexts[0]->Flush();
     }
 
-    void GraphicsDevice_D3D11::EndFrame()
+    bool D3D11GraphicsDevice::BeginFrameImpl()
     {
-        if (!isLost)
-            return;
-
-
-        if (!dxgiFactory->IsCurrent())
-        {
-            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-            CreateFactory();
-        }
+        return !isLost;
     }
 
-    void GraphicsDevice_D3D11::HandleDeviceLost()
+    void D3D11GraphicsDevice::EndFrameImpl()
+    {
+        
+    }
+
+    void D3D11GraphicsDevice::HandleDeviceLost()
     {
         if (events)
         {
@@ -650,8 +474,8 @@ namespace alimer
 
         for (uint32_t i = 0; i < kTotalCommandContexts; i++)
         {
-            SAFE_RELEASE(userDefinedAnnotations[i]);
-            SAFE_RELEASE(deviceContexts[i]);
+            SafeRelease(userDefinedAnnotations[i]);
+            SafeRelease(deviceContexts[i]);
         }
 
         ULONG refCount = d3dDevice->Release();
@@ -667,7 +491,7 @@ namespace alimer
         }
 #endif
 
-        SAFE_RELEASE(dxgiFactory);
+        SafeRelease(dxgiFactory);
 
         CreateDeviceResources();
         CreateWindowSizeDependentResources();
@@ -678,484 +502,102 @@ namespace alimer
         }
     }
 
-    SwapChainHandle GraphicsDevice_D3D11::CreateSwapChain(const SwapChainDesc& desc)
+    SwapChain* D3D11GraphicsDevice::CreateSwapChain(const SwapChainDescription& desc)
     {
-        if (swapChains.isFull()) {
-            LOG_ERROR("D3D11: Not enough free SwapChain slots.");
-            return kInvalidSwapChain;
-        }
-        const int id = swapChains.alloc();
-        ALIMER_ASSERT(id >= 0);
+        return new D3D11SwapChain(this, desc);
+    }
 
-        SwapChainD3D11& swapChain = swapChains[id];
-        swapChain.backbufferCount = 2u;
-        switch (desc.presentMode)
+    Texture* D3D11GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    {
+        return new D3D11Texture(this, desc, initialData);
+    }
+
+    CommandList D3D11GraphicsDevice::BeginCommandList(const char* name)
+    {
+        CommandList cmd = commandlistCount.fetch_add(1);
+        if (deviceContexts[cmd] == nullptr)
         {
-        case PresentMode::Immediate:
-            swapChain.syncInterval = 0u;
-            if (tearingSupported)
-            {
-                swapChain.presentFlags = DXGI_PRESENT_ALLOW_TEARING;
-            }
-            break;
+            // need to create one more command list:
+            ALIMER_ASSERT(cmd < kMaxCommandLists);
 
-        case PresentMode::Mailbox:
-            swapChain.syncInterval = 2u;
-            swapChain.presentFlags = 0u;
-            break;
-
-        default:
-            swapChain.syncInterval = 1u;
-            swapChain.presentFlags = 0u;
-            break;
+            ThrowIfFailed(d3dDevice->CreateDeferredContext1(0, &deviceContexts[cmd]));
+            ThrowIfFailed(deviceContexts[cmd]->QueryInterface(&userDefinedAnnotations[cmd]));
         }
 
-        swapChain.colorFormat = desc.colorFormat;
-        swapChain.depthStencilFormat = desc.depthStencilFormat;
-
-        // Determine the render target size in pixels.
-        const DXGI_FORMAT backBufferFormat = ToDXGIFormat(srgbToLinearFormat(desc.colorFormat));
-
-        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = desc.width;
-        swapChainDesc.Height = desc.height;
-        swapChainDesc.Format = backBufferFormat;
-        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = swapChain.backbufferCount;
-        swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.SampleDesc.Quality = 0;
-        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (!flipPresentSupported) {
-            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        }
-#else
-        swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-#endif
-        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        if (tearingSupported) {
-            swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !desc.isFullscreen;
-
-        // Create a SwapChain from a Win32 window.
-        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-            d3dDevice,
-            (HWND)desc.windowHandle,
-            &swapChainDesc,
-            &fsSwapChainDesc,
-            nullptr,
-            &swapChain.handle
-        ));
-
-        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(dxgiFactory->MakeWindowAssociation((HWND)desc.windowHandle, DXGI_MWA_NO_ALT_ENTER));
-#else
-        // Create a swap chain for the window.
-        RefPtr<IDXGISwapChain1> tempSwapChain;
-        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-            d3dDevice,
-            window,
-            &swapChainDesc,
-            nullptr,
-            tempSwapChain.GetAddressOf()
-        ));
-
-        ThrowIfFailed(tempSwapChain->QueryInterface(&swapChain.handle));
-#endif
-
-        SwapChainHandle handle = { (uint32_t)id };
-        AfterReset(handle);
-
-        return handle;
-        }
-
-    void GraphicsDevice_D3D11::DestroySwapChain(SwapChainHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        SwapChainD3D11& swapChain = swapChains[handle.id];
-        SAFE_RELEASE(swapChain.handle);
-        swapChains.dealloc(handle.id);
+        return cmd;
     }
 
-    uint32_t GraphicsDevice_D3D11::GetBackbufferCount(SwapChainHandle handle)
-    {
-        // Under Direct3D11 we only use first buffer.
-        ALIMER_UNUSED(handle);
-        return 1;
-    }
-
-    uint64_t GraphicsDevice_D3D11::GetBackbufferTexture(SwapChainHandle handle, uint32_t index)
-    {
-        ALIMER_ASSERT(index == 0);
-        ID3D11Texture2D* backbuffer;
-        ThrowIfFailed(swapChains[handle.id].handle->GetBuffer(0, IID_PPV_ARGS(&backbuffer)));
-
-        return (uint64_t)backbuffer;
-    }
-
-    uint32_t GraphicsDevice_D3D11::Present(SwapChainHandle handle)
-    {
-        SwapChainD3D11& swapChain = swapChains[handle.id];
-        HRESULT hr = swapChain.handle->Present(swapChain.syncInterval, swapChain.presentFlags);
-
-        // If the device was removed either by a disconnection or a driver upgrade, we
-        // must recreate all device resources.
-        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-        {
-#ifdef _DEBUG
-            char buff[64] = {};
-            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
-                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
-            OutputDebugStringA(buff);
-#endif
-
-            isLost = true;
-
-            HandleDeviceLost();
-        }
-        else
-        {
-            ThrowIfFailed(hr);
-        }
-
-        return 0;
-    }
-
-    TextureHandle GraphicsDevice_D3D11::AllocTextureHandle()
-    {
-        if (textures.isFull()) {
-            LOG_ERROR("D3D11: Not enough free texture slots.");
-            return kInvalidTexture;
-        }
-        const int id = textures.alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        TextureD3D11& texture = textures[id];
-        texture.handle = nullptr;
-        return { (uint32_t)id };
-    }
-
-    TextureHandle GraphicsDevice_D3D11::CreateTexture(const TextureDescription& desc, uint64_t nativeHandle, const void* pData, bool autoGenerateMipmaps)
-    {
-        TextureHandle handle = AllocTextureHandle();
-        TextureD3D11& texture = textures[handle.id];
-        texture.dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
-        texture.width = desc.width;
-        texture.height = desc.height;
-        texture.mipLevels = desc.mipLevels;
-
-        HRESULT hr = S_OK;
-        if (nativeHandle)
-        {
-            texture.handle = (ID3D11Texture2D*)nativeHandle;
-        }
-        else
-        {
-            D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
-            UINT bindFlags = 0;
-            UINT CPUAccessFlags = 0;
-            UINT miscFlags = 0;
-            if (desc.type == TextureType::TypeCube) {
-                miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
-            }
-
-            if ((desc.usage & TextureUsage::Sampled) != TextureUsage::None) {
-                bindFlags |= D3D11_BIND_SHADER_RESOURCE;
-            }
-            if ((desc.usage & TextureUsage::Storage) != TextureUsage::None) {
-                bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
-            }
-
-            if ((desc.usage & TextureUsage::RenderTarget) != TextureUsage::None) {
-                if (IsDepthStencilFormat(desc.format)) {
-                    bindFlags |= D3D11_BIND_DEPTH_STENCIL;
-                }
-                else {
-                    bindFlags |= D3D11_BIND_RENDER_TARGET;
-                }
-            }
-
-            if (autoGenerateMipmaps)
-            {
-                UINT formatSupport = 0;
-                if (FAILED(d3dDevice->CheckFormatSupport(texture.dxgiFormat, &formatSupport))) {
-                    textures.dealloc(handle.id);
-                    return kInvalidTexture;
-                }
-
-                if ((formatSupport & D3D11_FORMAT_SUPPORT_MIP_AUTOGEN) == 0) {
-
-                }
-
-                bindFlags |= D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-                miscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-            }
-
-            if (desc.type == TextureType::Type2D || desc.type == TextureType::TypeCube) {
-                D3D11_TEXTURE2D_DESC d3d11_desc = {};
-                d3d11_desc.Width = desc.width;
-                d3d11_desc.Height = desc.height;
-                d3d11_desc.MipLevels = desc.mipLevels;
-                d3d11_desc.ArraySize = desc.arraySize;
-                d3d11_desc.Format = texture.dxgiFormat;
-                d3d11_desc.SampleDesc.Count = 1;
-                d3d11_desc.SampleDesc.Quality = 0;
-                d3d11_desc.Usage = usage;
-                d3d11_desc.BindFlags = bindFlags;
-                d3d11_desc.CPUAccessFlags = CPUAccessFlags;
-                d3d11_desc.MiscFlags = miscFlags;
-
-                hr = d3dDevice->CreateTexture2D(
-                    &d3d11_desc,
-                    NULL,
-                    (ID3D11Texture2D**)&texture.handle
-                );
-            }
-            else if (desc.type == TextureType::Type3D) {
-                D3D11_TEXTURE3D_DESC d3d11_desc = {};
-                d3d11_desc.Width = desc.width;
-                d3d11_desc.Height = desc.height;
-                d3d11_desc.Depth = desc.depth;
-                d3d11_desc.MipLevels = desc.mipLevels;
-                d3d11_desc.Format = texture.dxgiFormat;
-                d3d11_desc.Usage = usage;
-                d3d11_desc.BindFlags = bindFlags;
-                d3d11_desc.CPUAccessFlags = CPUAccessFlags;
-                d3d11_desc.MiscFlags = miscFlags;
-
-                hr = d3dDevice->CreateTexture3D(
-                    &d3d11_desc,
-                    NULL,
-                    (ID3D11Texture3D**)&texture.handle
-                );
-            }
-        }
-
-        if (FAILED(hr)) {
-            textures.dealloc(handle.id);
-            return kInvalidTexture;
-        }
-
-        if ((desc.usage & TextureUsage::RenderTarget) != TextureUsage::None)
-        {
-            if (IsDepthStencilFormat(desc.format)) {
-                ID3D11DepthStencilView* dsv;
-                ThrowIfFailed(d3dDevice->CreateDepthStencilView(texture.handle, nullptr, &dsv));
-                texture.DSVs.Push(dsv);
-            }
-            else
-            {
-                D3D11_RENDER_TARGET_VIEW_DESC rtViewDesc = {};
-                rtViewDesc.Format = texture.dxgiFormat;
-
-                switch (desc.type)
-                {
-                case TextureType::Type2D:
-
-                    if (desc.sampleCount <= TextureSampleCount::Count1)
-                    {
-                        if (desc.arraySize > 1)
-                        {
-                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-                            rtViewDesc.Texture2DArray.MipSlice = 0;
-                            //rtViewDesc.Texture2DArray.FirstArraySlice = slice;
-                            rtViewDesc.Texture2DArray.ArraySize = desc.arraySize;
-                        }
-                        else
-                        {
-                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-                            rtViewDesc.Texture2D.MipSlice = 0;
-                        }
-                    }
-                    else
-                    {
-                        if (desc.arraySize > 1)
-                        {
-                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
-                            //rtViewDesc.Texture2DMSArray.FirstArraySlice = slice;
-                            rtViewDesc.Texture2DMSArray.ArraySize = desc.arraySize;
-                        }
-                        else
-                        {
-                            rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
-                        }
-                    }
-
-                    break;
-                case TextureType::Type3D:
-                    rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
-                    rtViewDesc.Texture3D.MipSlice = 0;
-                    rtViewDesc.Texture3D.FirstWSlice = 0;
-                    rtViewDesc.Texture3D.WSize = (UINT)-1;
-                    break;
-                case TextureType::TypeCube:
-                    rtViewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
-                    rtViewDesc.Texture2DArray.MipSlice = 0;
-                    rtViewDesc.Texture2DArray.FirstArraySlice = 0;
-                    rtViewDesc.Texture2DArray.ArraySize = desc.arraySize;
-                    break;
-
-                default:
-                    break;
-                }
-
-                ID3D11RenderTargetView* rtv;
-                ThrowIfFailed(d3dDevice->CreateRenderTargetView(texture.handle, &rtViewDesc, &rtv));
-                texture.RTVs.Push(rtv);
-            }
-        }
-
-        return handle;
-    }
-
-    void GraphicsDevice_D3D11::DestroyTexture(TextureHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        TextureD3D11& texture = textures[handle.id];
-        for (uint32_t i = 0; i < texture.RTVs.Size(); i++) {
-            texture.RTVs[i]->Release();
-        }
-        for (uint32_t i = 0; i < texture.DSVs.Size(); i++) {
-            texture.DSVs[i]->Release();
-        }
-
-        texture.RTVs.Clear();
-        texture.DSVs.Clear();
-        SAFE_RELEASE(texture.handle);
-        textures.dealloc(handle.id);
-    }
-
-    void GraphicsDevice_D3D11::ClearState(CommandList commandList)
-    {
-        deviceContexts[commandList]->ClearState();
-    }
-
-    void GraphicsDevice_D3D11::InsertDebugMarker(const char* name, CommandList commandList)
+    void D3D11GraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
     {
         auto wideName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[commandList]->SetMarker(wideName.c_str());
     }
 
-    void GraphicsDevice_D3D11::PushDebugGroup(const char* name, CommandList commandList)
+    void D3D11GraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
     {
         auto wideName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[commandList]->BeginEvent(wideName.c_str());
     }
 
-    void GraphicsDevice_D3D11::PopDebugGroup(CommandList commandList)
+    void D3D11GraphicsDevice::PopDebugGroup(CommandList commandList)
     {
         userDefinedAnnotations[commandList]->EndEvent();
     }
 
-    void GraphicsDevice_D3D11::BeginRenderPass(const RenderPassDesc& desc, CommandList commandList)
+    void D3D11GraphicsDevice::SetScissorRect(CommandList commandList, const Rect& scissorRect)
     {
-        uint32_t width = UINT32_MAX;
-        uint32_t height = UINT32_MAX;
+        D3D11_RECT d3dScissorRect;
+        d3dScissorRect.left = LONG(scissorRect.x);
+        d3dScissorRect.top = LONG(scissorRect.y);
+        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        deviceContexts[commandList]->RSSetScissorRects(1, &d3dScissorRect);
+    }
 
-        uint32_t rtvsCount = 0;
-        ID3D11RenderTargetView* rtvs[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-        ID3D11DepthStencilView* depthStencilView = nullptr;
-
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
+    void D3D11GraphicsDevice::SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count)
+    {
+        D3D11_RECT d3dScissorRects[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
         {
-            const RenderPassColorAttachment* attachment = &desc.colorAttachments[i];
-            if (!attachment->texture.isValid())
-                break;
-
-            TextureD3D11& texture = textures[attachment->texture.id];
-
-            width = min(width, Texture::CalculateMipSize(attachment->mipLevel, texture.width));
-            height = min(height, Texture::CalculateMipSize(attachment->mipLevel, texture.height));
-
-            uint32_t viewIndex = CalcSubresource(attachment->mipLevel, attachment->slice, texture.mipLevels);
-            ID3D11RenderTargetView* rtv = texture.RTVs[viewIndex];
-
-            if (attachment->loadAction == LoadAction::Clear)
-            {
-                deviceContexts[commandList]->ClearRenderTargetView(
-                    rtv,
-                    &desc.colorAttachments[i].clearColor.r
-                );
-            }
-            rtvs[rtvsCount++] = rtv;
+            d3dScissorRects[i].left = LONG(scissorRects[i].x);
+            d3dScissorRects[i].top = LONG(scissorRects[i].y);
+            d3dScissorRects[i].right = LONG(scissorRects[i].x + scissorRects[i].width);
+            d3dScissorRects[i].bottom = LONG(scissorRects[i].y + scissorRects[i].height);
         }
+        deviceContexts[commandList]->RSSetScissorRects(count, d3dScissorRects);
+    }
 
-        if (desc.depthStencilAttachment.texture.isValid())
+    void D3D11GraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
+    {
+        deviceContexts[commandList]->RSSetViewports(1, reinterpret_cast<const D3D11_VIEWPORT*>(&viewport));
+    }
+
+    void D3D11GraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
+    {
+        D3D11_VIEWPORT d3dViewports[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
         {
-            const RenderPassDepthStencilAttachment* attachment = &desc.depthStencilAttachment;
-            TextureD3D11& texture = textures[attachment->texture.id];
-            width = min(width, Texture::CalculateMipSize(attachment->mipLevel, texture.width));
-            height = min(height, Texture::CalculateMipSize(attachment->mipLevel, texture.height));
-
-            UINT clearFlags = 0;
-            if (attachment->depthLoadAction == LoadAction::Clear)
-            {
-                clearFlags |= D3D11_CLEAR_DEPTH;
-            }
-
-            if (attachment->stencilLoadOp == LoadAction::Clear)
-            {
-                clearFlags |= D3D11_CLEAR_STENCIL;
-            }
-
-            uint32_t viewIndex = CalcSubresource(attachment->mipLevel, attachment->slice, texture.mipLevels);
-            depthStencilView = texture.DSVs[viewIndex];
-            deviceContexts[commandList]->ClearDepthStencilView(
-                depthStencilView,
-                clearFlags,
-                attachment->clearDepth,
-                attachment->clearStencil
-            );
+            d3dViewports[i].TopLeftX = viewports[i].x;
+            d3dViewports[i].TopLeftY = viewports[i].y;
+            d3dViewports[i].Width = viewports[i].width;
+            d3dViewports[i].Height = viewports[i].height;
+            d3dViewports[i].MinDepth = viewports[i].minDepth;
+            d3dViewports[i].MaxDepth = viewports[i].maxDepth;
         }
-
-        deviceContexts[commandList]->OMSetRenderTargets(rtvsCount, rtvs, depthStencilView);
-
-        // set viewport and scissor rect to cover render target size
-        RectU rect = desc.renderArea;
-        rect.x = min(width, rect.x);
-        rect.y = min(height, rect.y);
-        rect.width = min(width - rect.x, rect.width);
-        rect.height = min(height - rect.y, rect.height);
-
-        D3D11_VIEWPORT viewport;
-        viewport.TopLeftX = float(rect.x);
-        viewport.TopLeftY = float(rect.y);
-        viewport.Width = float(rect.width);
-        viewport.Height = float(rect.height);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-
-        D3D11_RECT scissorRect;
-        scissorRect.left = long(rect.x);
-        scissorRect.top = long(rect.y);
-        scissorRect.right = long(rect.width);
-        scissorRect.bottom = long(rect.height);
-
-        deviceContexts[commandList]->RSSetViewports(1, &viewport);
-        deviceContexts[commandList]->RSSetScissorRects(1, &scissorRect);
-
-        blendColors[commandList] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        deviceContexts[commandList]->OMSetBlendState(nullptr, nullptr, 0xFFFFFFFF);
+        deviceContexts[commandList]->RSSetViewports(count, d3dViewports);
     }
 
-    void GraphicsDevice_D3D11::EndRenderPass(CommandList commandList)
+    void D3D11GraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
     {
-        ClearState(commandList);
+        //deviceContexts[commandList]->OMSetBlendFactor(color.Data());
     }
 
-    void GraphicsDevice_D3D11::SetBlendColor(const Color& color, CommandList commandList)
+    void D3D11GraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer)
     {
-        blendColors[commandList] = color;
-    }
+        //D3D11Buffer* d3dBuffer = static_cast<D3D11Buffer*>(buffer);
     }
 
-#endif // TODO
+    void D3D11GraphicsDevice::BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size)
+    {
+    }
+}

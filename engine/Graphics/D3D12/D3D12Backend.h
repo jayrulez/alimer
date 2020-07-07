@@ -115,7 +115,7 @@ namespace alimer
 
         virtual void Destroy()
         {
-            SAFE_RELEASE(resource);
+            SafeRelease(resource);
             gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
         }
 

@@ -52,6 +52,8 @@ namespace alimer
         friend class GraphicsResource;
 
     public:
+        static BackendType PreferredBackendType;
+
         /// Get the singleton instance of GraphicsDevice.
         static GraphicsDevice* Instance;
 

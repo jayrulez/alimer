@@ -51,8 +51,6 @@
 #include <dxgidebug.h>
 #endif
 
-#define SAFE_RELEASE(obj) if ((obj)) { obj->Release(); (obj) = nullptr; }
-
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
@@ -189,7 +187,9 @@ namespace alimer
         return mipSlice + arraySlice * mipLevels;
     }
 
-    enum class DXGIFactoryCaps : uint8_t {
+    enum class DXGIFactoryCaps : uint8_t
+    {
+        None = 0,
         FlipPresent = (1 << 0),
         Tearing = (1 << 1),
     };
@@ -199,17 +199,20 @@ namespace alimer
         IDXGIFactory2* dxgiFactory,
         DXGIFactoryCaps factoryCaps,
         IUnknown* deviceOrCommandQueue,
-        uintptr_t window_handle,
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window,
+#else
+        IUnknown* window,
+#endif
         uint32_t width, uint32_t height,
         PixelFormat colorFormat,
         uint32_t backbufferCount,
         bool isFullscreen)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = (HWND)window_handle;
         if (!IsWindow(window)) {
-            //vgpu_log_error("Invalid HWND handle");
-            return NULL;
+            LOG_ERROR("Invalid HWND handle");
+            return nullptr;
         }
 #else
         IUnknown* window = (IUnknown*)handle;

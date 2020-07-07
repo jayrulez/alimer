@@ -117,14 +117,7 @@ namespace alimer
         window = handle;
 
         // Init imgui stuff
-        ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
-
-        // Create SwapChain
-        SwapChainDescription swapChainDesc = {};
-        swapChainDesc.width = size.width;
-        swapChainDesc.height = size.height;
-        swapChainDesc.windowHandle = GetHandle();
-        _swapChain = GraphicsDevice::Instance->CreateSwapChain(swapChainDesc);
+        //ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
 
         if (windowCount == 0) {
             _isMain = true;
@@ -138,7 +131,6 @@ namespace alimer
     void Window::Close()
     {
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
-        _swapChain.Reset();
         windowCount--;
     }
 

@@ -22,45 +22,13 @@
 
 #if defined(VGPU_DRIVER_D3D12)
 
-// Use the C++ standard templated min / max
-#define NOMINMAX
-
-// DirectX apps don't need GDI
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-
-// Include <mcx.h> if you need this
-#define NOMCX
-
-// Include <winsvc.h> if you need this
-#define NOSERVICE
-
-// WinHelp is deprecated
-#define NOHELP
-
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-
+#include "vgpu_d3d_common.h"
 #include <d3d12.h>
 #include "D3D12MemAlloc.h"
-#include "vgpu_d3d_common.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
-
-#ifdef _DEBUG
-#include <dxgidebug.h>
-
-static const GUID vgpu_DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8} };
-static const GUID vgpu_DXGI_DEBUG_DXGI = { 0x25cddaa4, 0xb1c6, 0x47e1, {0xac, 0x3e, 0x98, 0x87, 0x5b, 0x5a, 0x2e, 0x2a} };
-#endif
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
-#endif
 
 #include <queue>
 
@@ -412,11 +380,11 @@ static IDXGIAdapter1* d3d12_get_adapter(vgpu_device_preference device_preference
     return adapter;
 }
 
-static bool d3d12_init(const vgpu_config* config) {
+static bool d3d12_init(const vgpu_init_info* info) {
     // Enable the debug layer (requires the Graphics Tools "optional feature").
     //
     // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-    if (config->debug)
+    if (info->debug)
     {
         ID3D12Debug* debugController;
         if (SUCCEEDED(_vgpu_D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
@@ -491,14 +459,14 @@ static bool d3d12_init(const vgpu_config* config) {
         SAFE_RELEASE(dxgiFactory5);
     }
 
-    IDXGIAdapter1* dxgi_adapter = d3d12_get_adapter(config->device_preference);
+    IDXGIAdapter1* dxgi_adapter = d3d12_get_adapter(info->device_preference);
 
     // Create the DX12 API device object.
     VHR(_vgpu_D3D12CreateDevice(dxgi_adapter, d3d12.min_feature_level, IID_PPV_ARGS(&d3d12.device)));
     d3d12.device->SetName(L"vgpu device");
 
     // Configure debug device (if active).
-    if (config->debug)
+    if (info->debug)
     {
         ID3D12InfoQueue* d3dInfoQueue;
         if (SUCCEEDED(d3d12.device->QueryInterface(&d3dInfoQueue)))
@@ -564,7 +532,7 @@ static bool d3d12_init(const vgpu_config* config) {
         d3d12.dsv_heap = d3d12_create_descriptor_heap(256u, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
     }
 
-    if (config->swapchain.native_handle) {
+    if (info->swapchain.native_handle) {
         uint32_t factory_caps = DXGIFACTORY_CAPS_FLIP_PRESENT;
         if (d3d12.tearing_support) {
             factory_caps |= DXGIFACTORY_CAPS_TEARING;
@@ -576,20 +544,20 @@ static bool d3d12_init(const vgpu_config* config) {
             d3d12.factory,
             factory_caps,
             d3d12.direct_command_queue,
-            config->swapchain.native_handle,
-            config->swapchain.width, config->swapchain.height,
-            config->swapchain.color_format,
+            info->swapchain.native_handle,
+            info->swapchain.width, info->swapchain.height,
+            info->swapchain.color_format,
             d3d12.num_backbuffers,
-            config->swapchain.is_fullscreen
+            info->swapchain.is_fullscreen
         );
         VHR(tempSwapChain->QueryInterface(IID_PPV_ARGS(&d3d12.swapchain)));
         SAFE_RELEASE(tempSwapChain);
 
         vgpu_texture_info texture_info = {};
         texture_info.type = VGPU_TEXTURE_TYPE_2D;
-        texture_info.format = config->swapchain.color_format;
-        texture_info.width = config->swapchain.width;
-        texture_info.height = config->swapchain.height;
+        texture_info.format = info->swapchain.color_format;
+        texture_info.width = info->swapchain.width;
+        texture_info.height = info->swapchain.height;
         texture_info.usage = VGPU_TEXTURE_USAGE_RENDER_TARGET;
 
         for (uint32_t index = 0; index < d3d12.num_backbuffers; ++index)
@@ -601,12 +569,12 @@ static bool d3d12_init(const vgpu_config* config) {
             d3d12.backbuffer_textures[index] = vgpu_create_texture(&texture_info);
         }
 
-        if (config->swapchain.depth_stencil_format != VGPU_PIXEL_FORMAT_UNDEFINED) {
+        if (info->swapchain.depth_stencil_format != VGPU_PIXEL_FORMAT_UNDEFINED) {
             vgpu_texture_info depth_stencil_texture_info = {};
             depth_stencil_texture_info.type = VGPU_TEXTURE_TYPE_2D;
-            depth_stencil_texture_info.format = config->swapchain.depth_stencil_format;
-            depth_stencil_texture_info.width = config->swapchain.width;
-            depth_stencil_texture_info.height = config->swapchain.height;
+            depth_stencil_texture_info.format = info->swapchain.depth_stencil_format;
+            depth_stencil_texture_info.width = info->swapchain.width;
+            depth_stencil_texture_info.height = info->swapchain.height;
             depth_stencil_texture_info.usage = VGPU_TEXTURE_USAGE_RENDER_TARGET;
             d3d12.depth_stencil_texture = vgpu_create_texture(&depth_stencil_texture_info);
         }

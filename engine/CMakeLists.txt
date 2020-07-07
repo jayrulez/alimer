@@ -57,10 +57,6 @@ if (ALIMER_D3D11)
     define_engine_source_files(Graphics/D3D11)
 endif()
 
-if (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D12)
-endif()
-
 if (ALIMER_VULKAN)
     #define_engine_source_files(Graphics/Vulkan)
 endif()
@@ -82,6 +78,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 
 target_link_libraries(${TARGET_NAME} PUBLIC
     stb
+    vgpu
     fmt
     imgui
 )
@@ -100,11 +97,7 @@ endif()
 
 if (ALIMER_D3D11)
     target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D11)
-    target_link_libraries(${TARGET_NAME} PRIVATE dxgi d3d11)
-endif()
-
-if (ALIMER_D3D12)
-    target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_D3D12)
+    
 endif()
 
 if (ALIMER_VULKAN)

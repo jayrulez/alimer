@@ -31,9 +31,6 @@ namespace alimer
         {
             switch (type)
             {
-            case TextureType::Texture1D:
-                return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-
             case TextureType::Texture2D:
             case TextureType::TextureCube:
                 return D3D12_RESOURCE_DIMENSION_TEXTURE2D;

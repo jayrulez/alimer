@@ -29,24 +29,19 @@ namespace alimer
         : SwapChain(desc)
         , _device(device)
     {
-        DXGIFactoryCaps factoryCaps = DXGIFactoryCaps::FlipPresent;
-        if (device->IsTearingSupported()) {
-            factoryCaps |= DXGIFactoryCaps::Tearing;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        window = (HWND)desc.windowHandle;
+        ALIMER_ASSERT(IsWindow(window));
+#else
+        window = (IUnknown*)desc.windowHandle;
+#endif
+
+        Recreate(false);
+        _syncInterval = 0;
+        if (any(device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing)) {
+            _presentFlags = DXGI_PRESENT_ALLOW_TEARING;
         }
-
-        IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
-            device->GetDXGIFactory(),
-            factoryCaps,
-            device->GetGraphicsQueue(),
-            desc.windowHandle,
-            desc.width, desc.height,
-            desc.colorFormat,
-            2u,
-            desc.isFullscreen
-        );
-
-        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
-        SafeRelease(tempSwapChain);
     }
 
     D3D12SwapChain::~D3D12SwapChain()
@@ -54,9 +49,49 @@ namespace alimer
         Destroy();
     }
 
+    void D3D12SwapChain::Recreate(bool vsyncChanged)
+    {
+        if (handle != nullptr)
+        {
+            if (vsyncChanged)
+            {
+                _syncInterval = _vyncEnabled ? 1 : 0;
+                if (!_vyncEnabled && any(_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing)) {
+                    _presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+                }
+                else {
+                    _presentFlags = 0;
+                }
+
+                return;
+            }
+        }
+        else
+        {
+            IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+                _device->GetDXGIFactory(),
+                _device->GetDXGIFactoryCaps(),
+                _device->GetD3DDevice(),
+                window,
+                _desc.width, _desc.height,
+                _desc.colorFormat,
+                2u,
+                _desc.isFullscreen
+            );
+
+            ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
+            SafeRelease(tempSwapChain);
+        }
+    }
+
     void D3D12SwapChain::Destroy()
     {
         SafeRelease(handle);
+    }
+
+    void D3D12SwapChain::Present()
+    {
+        HRESULT hr = handle->Present(_syncInterval, _presentFlags);
     }
 
     void D3D12SwapChain::BackendSetName()
