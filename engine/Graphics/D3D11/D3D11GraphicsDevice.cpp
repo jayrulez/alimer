@@ -196,7 +196,7 @@ namespace alimer
             }
 #endif
 
-            ThrowIfFailed(device.As(&d3dDevice));
+            ThrowIfFailed(device->QueryInterface(&d3dDevice));
             ThrowIfFailed(context.As(&d3dContext));
             ///ThrowIfFailed(context.As(&m_d3dAnnotation));
         }
@@ -210,17 +210,18 @@ namespace alimer
     void D3D11GraphicsDevice::BackendShutdown()
     {
         d3dContext.Reset();
-        ULONG refCount = d3dDevice.Reset();
+        ULONG refCount = d3dDevice->Release();
 #ifdef _DEBUG
         if (refCount > 0)
         {
             LOG_DEBUG("Direct3D11: There are {} unreleased references left on the device", refCount);
 
-            /*ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(d3dDevice.As(&d3dDebug)))
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
             {
                 d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY);
-            }*/
+                d3dDebug->Release();
+            }
         }
 #else
         (void)refCount; // avoid warning
@@ -523,17 +524,12 @@ namespace alimer
         //commandLists[commandList]->OMSetBlendFactor(color.Data());
     }
 
-    void D3D11GraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer)
+    void D3D11GraphicsDevice::HandleDeviceLost(HRESULT hr)
     {
-        D3D11Buffer* d3dBuffer = static_cast<D3D11Buffer*>(buffer);
-    }
-
-    void D3D11GraphicsDevice::BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size)
-    {
-    }
-
-    void D3D11GraphicsDevice::HandleDeviceLost()
-    {
-
+#ifdef _DEBUG
+        char buff[64] = {};
+        sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+        OutputDebugStringA(buff);
+#endif
     }
 }

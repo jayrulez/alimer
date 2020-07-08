@@ -38,10 +38,12 @@ namespace alimer
         D3D11GraphicsDevice();
         ~D3D11GraphicsDevice();
 
+        void HandleDeviceLost(HRESULT hr);
+
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
-        ID3D11Device1* GetD3DDevice() const { return d3dDevice.Get(); }
+        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         ID3D11DeviceContext1* GetD3DDeviceContext() const { return d3dContext.Get(); }
 
     private:
@@ -52,7 +54,6 @@ namespace alimer
         void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
-        void HandleDeviceLost();
 
         // Resource creation methods.
         RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
@@ -70,9 +71,6 @@ namespace alimer
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(CommandList commandList, const Color& color) override;
 
-        void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
-        void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
-
         static constexpr uint64_t kRenderLatency = 2;
 
         ComPtr<IDXGIFactory2> dxgiFactory = nullptr;
@@ -80,7 +78,7 @@ namespace alimer
 
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
-        ComPtr<ID3D11Device1> d3dDevice;
+        ID3D11Device1* d3dDevice = nullptr;
         ComPtr<ID3D11DeviceContext1> d3dContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;

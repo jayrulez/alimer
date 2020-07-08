@@ -20,8 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11SwapChain.h"
 #include "D3D11GraphicsDevice.h"
+#include "D3D11SwapChain.h"
+#include "D3D11Texture.h"
 
 namespace alimer
 {
@@ -30,48 +31,38 @@ namespace alimer
         , _device(device)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        _window = (HWND)desc.windowHandle;
-        ALIMER_ASSERT(IsWindow(_window));
+        _handle = DXGICreateSwapchain(
+            _device->GetDXGIFactory(),
+            _device->GetDXGIFactoryCaps(),
+            _device->GetD3DDevice(),
+            _desc.windowHandle,
+            _desc.width, _desc.height,
+            _desc.colorFormat,
+            kNumBackBuffers,
+            _desc.isFullscreen
+        );
 #else
-        _window = (IUnknown*)desc.windowHandle;
+        IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+            _device->GetDXGIFactory(),
+            _device->GetDXGIFactoryCaps(),
+            _device->GetD3DDevice(),
+            _desc.windowHandle,
+            _desc.width, _desc.height,
+            _desc.colorFormat,
+            kNumBackBuffers,
+            _desc.isFullscreen
+        );
+
+        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&_handle)));
+        SafeRelease(tempSwapChain);
 #endif
 
-        Recreate(false);
+        AfterReset();
     }
 
     D3D11SwapChain::~D3D11SwapChain()
     {
         Destroy();
-    }
-
-    void D3D11SwapChain::Recreate(bool vsyncChanged)
-    {
-        _syncInterval = _vyncEnabled ? 1 : 0;
-        if (!_vyncEnabled && any(_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing)) {
-            _presentFlags = DXGI_PRESENT_ALLOW_TEARING;
-        }
-        else {
-            _presentFlags = 0;
-        }
-
-        if (_handle != nullptr)
-        {
-            if (vsyncChanged)
-                return;
-        }
-        else
-        {
-            _handle = DXGICreateSwapchain(
-                _device->GetDXGIFactory(),
-                _device->GetDXGIFactoryCaps(),
-                _device->GetD3DDevice(),
-                _window,
-                _desc.width, _desc.height,
-                _desc.colorFormat,
-                2u,
-                _desc.isFullscreen
-            );
-        }
     }
 
     void D3D11SwapChain::Destroy()
@@ -81,11 +72,55 @@ namespace alimer
 
     void D3D11SwapChain::Present()
     {
-        HRESULT hr = _handle->Present(_syncInterval, _presentFlags);
+        UINT syncInterval = 1u;
+        UINT presentFlags = 0;
+        if (_desc.presentationInterval == PresentInterval::immediate)
+        {
+            syncInterval = 0;
+            if (((_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)) {
+                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+            }
+        }
+
+        HRESULT hr = _handle->Present(syncInterval, presentFlags);
+    }
+
+    void D3D11SwapChain::Recreate()
+    {
+        UINT swapChainFlags = 0;
+        if (_desc.presentationInterval == PresentInterval::immediate
+            && ((_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)) {
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
+
+        HRESULT hr = _handle->ResizeBuffers(
+            kNumBackBuffers,
+            _desc.width,
+            _desc.height,
+            ToDXGISwapChainFormat(_desc.colorFormat),
+            swapChainFlags
+        );
+
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+            // If the device was removed for any reason, a new device and swap chain will need to be created.
+            _device->HandleDeviceLost(hr);
+
+            // Everything is set up now. Do not continue execution of this method. HandleDeviceLost will reenter this method
+            // and correctly set up the new device.
+            return;
+        }
     }
 
     void D3D11SwapChain::BackendSetName()
     {
         DXGISetObjectName(_handle, name);
+    }
+
+    void D3D11SwapChain::AfterReset()
+    {
+        ID3D11Texture2D* resource;
+        ThrowIfFailed(_handle->GetBuffer(0, IID_PPV_ARGS(&resource)));
+        _backbufferTextures.Push(new D3D11Texture(_device, resource));
     }
 }

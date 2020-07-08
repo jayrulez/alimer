@@ -59,9 +59,6 @@ namespace alimer
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(CommandList commandList, const Color& color) override;
 
-        void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
-        void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
-
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
 

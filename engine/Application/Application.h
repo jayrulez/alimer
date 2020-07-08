@@ -115,7 +115,6 @@ namespace alimer
 } 
 
 #if defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
-#include "Core/MiniDump.h"
 #include <windows.h>
 #include <crtdbg.h>
 #endif

@@ -25,16 +25,14 @@
 #include "Core/Vector.h"
 #include "Math/Rect.h"
 #include "Math/Viewport.h"
+#include "Graphics/CommandContext.h"
 #include "Graphics/SwapChain.h"
+#include "Graphics/Buffer.h"
 #include <set>
 #include <mutex>
 
 namespace alimer
 {
-    class GraphicsBuffer;
-    class Texture;
-    class SwapChain;
-
     class ALIMER_API GraphicsDeviceEvents
     {
     public:
@@ -81,9 +79,6 @@ namespace alimer
         virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
         virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
         virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
-
-        virtual void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) = 0;
-        virtual void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) = 0;
 
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }

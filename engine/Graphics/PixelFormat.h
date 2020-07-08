@@ -220,7 +220,7 @@ namespace alimer
     /**
     * Check if a format represents sRGB color space.
     */
-    inline bool isSrgbFormat(PixelFormat format)
+    inline bool IsSrgbFormat(PixelFormat format)
     {
         return (GetFormatType(format) == PixelFormatType::UnormSrgb);
     }
@@ -228,7 +228,7 @@ namespace alimer
     /**
     * Convert a SRGB format to linear. If the format is already linear no conversion will be made.
     */
-    inline PixelFormat srgbToLinearFormat(PixelFormat format)
+    inline PixelFormat SRGBToLinearFormat(PixelFormat format)
     {
         switch (format)
         {
@@ -245,7 +245,7 @@ namespace alimer
         case PixelFormat::BC7RGBAUNormSrgb:
             return PixelFormat::BC7RGBAUNorm;
         default:
-            ALIMER_ASSERT(isSrgbFormat(format) == false);
+            ALIMER_ASSERT(IsSrgbFormat(format) == false);
             return format;
         }
     }
@@ -253,7 +253,7 @@ namespace alimer
     /**
     * Convert an linear format to sRGB. If the format doesn't have a matching sRGB format no conversion will be made.
     */
-    inline PixelFormat linearToSrgbFormat(PixelFormat format)
+    inline PixelFormat LinearToSRGBFormat(PixelFormat format)
     {
         switch (format)
         {

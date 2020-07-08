@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,27 @@
 
 #pragma once
 
-#if defined(_WIN32)
-#include "Core/Platform.h"
+#include "Graphics/GraphicsResource.h"
 
-namespace alimer {
-    /// Write a minidump. Needs to be called from within a structured exception handler.
-    ALIMER_API int WriteMiniDump(const char* applicationName, void* exceptionPointers);
-} // namespace alimer
-#endif
+namespace alimer
+{
+    /// 
+    class Buffer : public GraphicsResource
+    {
+    public:
+        /// Constructor
+        Buffer(const BufferDescription& desc);
+
+        /// Gets buffer size in bytes.
+        uint32_t GetSize() const { return _desc.size; }
+
+        /// Gets buffer stride  in bytes.
+        uint32_t GetStride() const { return _desc.stride; }
+
+        /// Gets buffer elements count (size divided by the stride).
+        uint32_t GetElementCount() const { return _desc.size / _desc.stride; }
+
+    protected:
+        BufferDescription _desc;
+    };
+}

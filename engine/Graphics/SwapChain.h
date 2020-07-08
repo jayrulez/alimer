@@ -35,6 +35,7 @@ namespace alimer
         SwapChain(const SwapChainDescription& desc);
 
         void SetVSync(bool enabled);
+        void Resize(uint32_t newWidth, uint32_t newHeight);
         virtual void Present() = 0;
 
         /// Get the current backbuffer texture.
@@ -44,7 +45,8 @@ namespace alimer
         Texture* GetDepthStencilTexture() const;
 
     private:
-        virtual void Recreate(bool vsyncChanged) = 0;
+        virtual void Recreate() = 0;
+        virtual void OnVSyncChanged() {}
 
     protected:
         SwapChainDescription _desc;

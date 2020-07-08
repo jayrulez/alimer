@@ -24,6 +24,7 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/SwapChain.h"
 #include "Core/Log.h"
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
@@ -41,24 +42,14 @@ namespace alimer
     namespace
     {
         uint32_t windowCount = 0;
-
-        static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
-        {
-            return glfwGetClipboardString((GLFWwindow*)user_data);
-        }
-
-        static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
-        {
-            glfwSetClipboardString((GLFWwindow*)user_data, text);
-        }
     }
 
     bool Window::Create(const String& title, const SizeI& size, WindowFlags flags)
     {
         this->title = title;
         this->size = size;
-        fullscreen = any(flags & WindowFlags::Fullscreen);
-        exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
+        fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
+        exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
 
         /*if ((flags & WINDOW_FLAG_OPENGL)) {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -71,15 +62,22 @@ namespace alimer
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }*/
 
-        glfwWindowHint(GLFW_RESIZABLE, any(flags & WindowFlags::Resizable) ? GLFW_TRUE : GLFW_FALSE);
-        glfwWindowHint(GLFW_VISIBLE, !any(flags & WindowFlags::Hidden));
+        glfwWindowHint(GLFW_RESIZABLE, ((flags & WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
+        if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        }
+        else
+        {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+        }
+
         //glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_FLAG_BORDERLESS) ? GLFW_FALSE : GLFW_TRUE);
 
-        if (any(flags & WindowFlags::Minimized))
+        if ((flags & WindowFlags::Minimized) != WindowFlags::None)
         {
             glfwWindowHint(GLFW_ICONIFIED, GLFW_TRUE);
         }
-        else if (any(flags & WindowFlags::Maximized))
+        else if ((flags & WindowFlags::Maximized) != WindowFlags::None)
         {
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
         }
@@ -119,10 +117,18 @@ namespace alimer
         // Init imgui stuff
         //ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
 
+        SwapChainDescription swapChainDesc = {};
+        swapChainDesc.windowHandle = GetHandle();
+        swapChainDesc.width = size.width;
+        swapChainDesc.height = size.height;
+        swapChainDesc.isFullscreen = IsFullscreen();
+
         if (windowCount == 0) {
             _isMain = true;
+            swapChainDesc.presentationInterval = PresentInterval::One;
         }
 
+        _swapChain = GraphicsDevice::Instance->CreateSwapChain(swapChainDesc);
         windowCount++;
 
         return true;
@@ -131,6 +137,7 @@ namespace alimer
     void Window::Close()
     {
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
+        _swapChain.Reset();
         windowCount--;
     }
 

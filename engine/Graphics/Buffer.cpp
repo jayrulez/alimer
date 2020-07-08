@@ -20,27 +20,16 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Buffer.h"
-#include "D3D11Backend.h"
+#include "graphics/Buffer.h"
+#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    class D3D11Buffer final : public Buffer
+    Buffer::Buffer(const BufferDescription& desc)
+        : GraphicsResource(desc.name, desc.memoryUsage)
+        , _desc(desc)
     {
-    public:
-        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D11Buffer() override;
-        void Destroy() override;
 
-        ID3D11Buffer* GetHandle() const { return _handle; }
-
-    private:
-        void Create(const void* data);
-        void BackendSetName() override;
-
-        D3D11GraphicsDevice* _device;
-        ID3D11Buffer* _handle = nullptr;
-    };
+    }
 }
+

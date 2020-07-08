@@ -23,24 +23,18 @@
 #pragma once
 
 #include "Graphics/Buffer.h"
-#include "D3D11Backend.h"
+#include "Graphics/Texture.h"
 
 namespace alimer
 {
-    class D3D11Buffer final : public Buffer
+    class ALIMER_API CommandContext : public RefCounted
     {
     public:
-        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D11Buffer() override;
-        void Destroy() override;
+        /// Constructor.
+        CommandContext();
+        virtual ~CommandContext() = default;
 
-        ID3D11Buffer* GetHandle() const { return _handle; }
-
-    private:
-        void Create(const void* data);
-        void BackendSetName() override;
-
-        D3D11GraphicsDevice* _device;
-        ID3D11Buffer* _handle = nullptr;
+        virtual void BindBuffer(uint32_t slot, Buffer* buffer) = 0;
+        virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
     };
 }

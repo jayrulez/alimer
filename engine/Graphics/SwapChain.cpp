@@ -38,7 +38,21 @@ namespace alimer
             return;
 
         _vyncEnabled = enabled;
-        Recreate(true);
+        OnVSyncChanged();
+    }
+
+    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        if ((newWidth != _desc.width || newHeight != _desc.height) && newWidth > 0 && newHeight > 0)
+        {
+            _depthStencilTexture.Reset();
+            _backbufferTextures.Clear();
+
+            _desc.width = Math::Max(newWidth, 1u);
+            _desc.height = Math::Max(newHeight, 1u);
+
+            Recreate();
+        }
     }
 
     Texture* SwapChain::GetBackbufferTexture() const

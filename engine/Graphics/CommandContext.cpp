@@ -20,16 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/GraphicsBuffer.h"
-#include "graphics/GraphicsDevice.h"
+#include "Graphics/CommandContext.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    GraphicsBuffer::GraphicsBuffer(const BufferDescription& desc)
-        : GraphicsResource(desc.name, desc.memoryUsage)
-        , usage(desc.usage)
-        , size(desc.size)
-        , stride(desc.stride)
+    CommandContext::CommandContext()
     {
 
     }

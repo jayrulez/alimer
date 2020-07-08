@@ -52,18 +52,12 @@ namespace alimer
         */
         MemoryUsage GetMemoryUsage() const { return memoryUsage; }
 
-        /**
-        * Get the size of the resource
-        */
-        uint64_t GetSize() const { return size; }
-
     private:
         virtual void BackendSetName() {}
 
     protected:
         String name;
 
-        uint64_t size{ 0 };
         MemoryUsage memoryUsage;
     };
 }

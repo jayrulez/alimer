@@ -917,14 +917,4 @@ namespace alimer
     {
         deviceTable.vkCmdSetBlendConstants(commandBuffers[commandList], color.Data());
     }
-
-    void VulkanGraphicsDevice::BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer)
-    {
-
-    }
-
-    void VulkanGraphicsDevice::BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size)
-    {
-
-    }
-    }
+}

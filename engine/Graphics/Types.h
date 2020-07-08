@@ -178,9 +178,9 @@ namespace alimer
             uint32_t maxTextureArrayLayers;
             uint32_t maxColorAttachments;
             uint32_t maxUniformBufferSize;
-            uint64_t minUniformBufferOffsetAlignment;
+            uint32_t minUniformBufferOffsetAlignment;
             uint32_t maxStorageBufferSize;
-            uint64_t minStorageBufferOffsetAlignment;
+            uint32_t minStorageBufferOffsetAlignment;
             uint32_t maxSamplerAnisotropy;
             uint32_t maxViewports;
             uint32_t maxViewportWidth;

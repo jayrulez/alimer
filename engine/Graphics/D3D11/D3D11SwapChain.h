@@ -32,22 +32,21 @@ namespace alimer
     public:
         D3D11SwapChain(D3D11GraphicsDevice* device, const SwapChainDescription& desc);
         ~D3D11SwapChain() override;
-        void Recreate(bool vsyncChanged) override;
         void Destroy() override;
         void Present() override;
 
     private:
+        void AfterReset();
+        void Recreate() override;
         void BackendSetName() override;
 
-        D3D11GraphicsDevice* _device;
-        IDXGISwapChain1* _handle;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND _window;
-#else
-        IUnknown* _window;
-#endif
+        static const uint32_t kNumBackBuffers = 2;
 
-        UINT _syncInterval;
-        UINT _presentFlags;
+        D3D11GraphicsDevice* _device;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        IDXGISwapChain1* _handle = nullptr;
+#else
+        IDXGISwapChain3* _handle = nullptr;
+#endif
     };
 }

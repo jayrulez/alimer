@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,36 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Buffer.h"
-#include "D3D11Backend.h"
+#include "D3D11CommandContext.h"
+#include "D3D11Buffer.h"
+#include "D3D11Texture.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace alimer
 {
-    class D3D11Buffer final : public Buffer
+    D3D11CommandContext::D3D11CommandContext(D3D11GraphicsDevice* device, const ComPtr<ID3D11DeviceContext1>& context)
+        : _device(device)
+        , _context(context)
     {
-    public:
-        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D11Buffer() override;
-        void Destroy() override;
+    }
 
-        ID3D11Buffer* GetHandle() const { return _handle; }
+    void D3D11CommandContext::BindBuffer(uint32_t slot, Buffer* buffer)
+    {
+        if (buffer != nullptr)
+        {
+            auto d3d11Buffer = static_cast<D3D11Buffer*>(buffer)->GetHandle();
+            _context->VSSetConstantBuffers(slot, 1, &d3d11Buffer);
+            _context->PSSetConstantBuffers(slot, 1, &d3d11Buffer);
+        }
+        else
+        {
+            _context->VSSetConstantBuffers(slot, 1, nullptr);
+            _context->PSSetConstantBuffers(slot, 1, nullptr);
+        }
+    }
 
-    private:
-        void Create(const void* data);
-        void BackendSetName() override;
-
-        D3D11GraphicsDevice* _device;
-        ID3D11Buffer* _handle = nullptr;
-    };
+    void D3D11CommandContext::BindBufferData(uint32_t slot, const void* data, uint32_t size)
+    {
+        // TODO:
+    }
 }

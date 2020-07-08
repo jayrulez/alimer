@@ -396,3 +396,14 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 
 #include <stddef.h>
 #include <stdint.h>
+
+#if !defined(ALIMER_DEFINE_ENUM_FLAG_OPERATORS)
+#define ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EnumType, UnderlyingEnumType) \
+inline constexpr EnumType operator | (EnumType a, EnumType b) { return (EnumType)((UnderlyingEnumType)(a) | (UnderlyingEnumType)(b)); } \
+inline constexpr EnumType& operator |= (EnumType &a, EnumType b) { return a = a | b; } \
+inline constexpr EnumType operator & (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) & ((UnderlyingEnumType)b)); } \
+inline constexpr EnumType& operator &= (EnumType &a, EnumType b) { return a = a & b; } \
+inline constexpr EnumType operator ~ (EnumType a) { return EnumType(~((UnderlyingEnumType)a)); } \
+inline constexpr EnumType operator ^ (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) ^ ((UnderlyingEnumType)b)); } \
+inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) { return a = a ^ b; }
+#endif

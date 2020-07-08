@@ -50,7 +50,13 @@ namespace alimer
 
         inline TextureDescription ConvertResourceDesc(ID3D11Texture2D* resource)
         {
+            D3D11_TEXTURE2D_DESC d3dDesc;
+            resource->GetDesc(&d3dDesc);
+
             TextureDescription description = {};
+            description.type = TextureType::Texture2D;
+            description.width = d3dDesc.Width;
+            description.height = d3dDesc.Height;
             return description;
         }
     }
@@ -58,6 +64,7 @@ namespace alimer
     D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* resource)
         : Texture(ConvertResourceDesc(resource))
         , _device(device)
+        , _handle(resource)
     {
 
     }

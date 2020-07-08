@@ -58,4 +58,29 @@ namespace alimer
 
         return usage;
     }
+
+
+    static inline D3D11_USAGE D3D11GetUsage(MemoryUsage usage)
+    {
+        switch (usage)
+        {
+        case MemoryUsage::GpuOnly: return D3D11_USAGE_DEFAULT;
+        case MemoryUsage::CpuOnly: return D3D11_USAGE_STAGING;
+        //case MemoryUsage::CpuToGpu: return D3D11_USAGE_DYNAMIC;
+        case MemoryUsage::GpuToCpu: return D3D11_USAGE_STAGING;
+        default: ALIMER_UNREACHABLE(); return D3D11_USAGE_DEFAULT;
+        }
+    }
+
+    static inline D3D11_CPU_ACCESS_FLAG D3D11GetCpuAccessFlags(MemoryUsage usage)
+    {
+        switch (usage)
+        {
+        case MemoryUsage::GpuOnly: return (D3D11_CPU_ACCESS_FLAG)0;
+        case MemoryUsage::CpuOnly: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE);
+        //case MemoryUsage::CpuToGpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_WRITE);
+        case MemoryUsage::GpuToCpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ);
+        default: ALIMER_UNREACHABLE(); return (D3D11_CPU_ACCESS_FLAG)0;
+        }
+    }
 }

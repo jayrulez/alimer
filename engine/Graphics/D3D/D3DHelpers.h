@@ -202,23 +202,20 @@ namespace alimer
         Tearing = (1 << 1),
         HDR = (1 << 2)
     };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(DXGIFactoryCaps);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8_t);
 
     static inline IDXGISwapChain1* DXGICreateSwapchain(
         IDXGIFactory2* dxgiFactory,
         DXGIFactoryCaps factoryCaps,
         IUnknown* deviceOrCommandQueue,
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window,
-#else
-        IUnknown* window,
-#endif
+        uintptr_t windowHandle,
         uint32_t width, uint32_t height,
         PixelFormat colorFormat,
         uint32_t backbufferCount,
         bool isFullscreen)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = (HWND)windowHandle;
         if (!IsWindow(window)) {
             LOG_ERROR("Invalid HWND handle");
             return nullptr;
@@ -229,7 +226,7 @@ namespace alimer
 
         UINT flags = 0;
 
-        if (any(factoryCaps & DXGIFactoryCaps::Tearing))
+        if ((factoryCaps & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)
         {
             flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
@@ -238,7 +235,7 @@ namespace alimer
         DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
         DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-        if (!(any(factoryCaps & DXGIFactoryCaps::FlipPresent)))
+        if (!((factoryCaps & DXGIFactoryCaps::FlipPresent) != DXGIFactoryCaps::None))
         {
             swapEffect = DXGI_SWAP_EFFECT_DISCARD;
         }

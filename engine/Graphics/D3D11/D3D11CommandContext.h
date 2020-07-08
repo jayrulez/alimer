@@ -22,28 +22,21 @@
 
 #pragma once
 
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/CommandContext.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    class GraphicsBuffer : public GraphicsResource
+    class D3D11CommandContext final : public CommandContext
     {
     public:
-        /// Constructor
-        GraphicsBuffer(const BufferDescription& desc);
+        D3D11CommandContext(D3D11GraphicsDevice* device, const ComPtr<ID3D11DeviceContext1>& context);
 
-        /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return size; }
-
-        /// Gets buffer stride  in bytes.
-        uint32_t GetStride() const { return stride; }
-
-        /// Gets buffer elements count (size divided by the stride).
-        uint32_t GetElementCount() const { return size / stride; }
+        void BindBuffer(uint32_t slot, Buffer* buffer) override;
+        void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
     private:
-        BufferUsage usage;
-        uint32_t size;
-        uint32_t stride;
+        D3D11GraphicsDevice* _device;
+        ComPtr<ID3D11DeviceContext1> _context;
     };
 }
