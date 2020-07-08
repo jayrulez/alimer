@@ -2,12 +2,8 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
-# vgpu
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
-
 add_subdirectory(fmt)
+add_subdirectory(imgui)
 
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
@@ -20,28 +16,51 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
 
-# imgui
-set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
-set(IMGUI_FILES
-    "${IMGUI_DIR}/imgui.cpp"
-    "${IMGUI_DIR}/imgui_demo.cpp"
-    "${IMGUI_DIR}/imgui_draw.cpp"
-    "${IMGUI_DIR}/imgui_widgets.cpp"
-    "${IMGUI_DIR}/imconfig.h"
-    "${IMGUI_DIR}/imgui.h"
-    "${IMGUI_DIR}/imgui_internal.h"
-    "${IMGUI_DIR}/imstb_rectpack.h"
-    "${IMGUI_DIR}/imstb_textedit.h"
-    "${IMGUI_DIR}/imstb_truetype.h"
-    
-    )
+if (ALIMER_VULKAN)
+    # vulkan
+    add_library(vulkan INTERFACE)
+    set(VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
+    target_sources(vulkan INTERFACE ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h)
+    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
+    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
 
-set(IMGUI_IMPL_FILES
-    "${IMGUI_DIR}/imgui_impl_glfw.h"
-    "${IMGUI_DIR}/imgui_impl_glfw.cpp"
-    )
+    if(ANDROID)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
+    elseif(WIN32)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
+    elseif(APPLE)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
+    elseif(UNIX)
+        # See whether X11 is available. If not, fall back to direct-to-display mode.
+        find_package(X11 QUIET)
+        if (X11_FOUND)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
+        else()
+            set(DIRECT_TO_DISPLAY TRUE)
+            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
+        endif()
+    endif()
 
-add_library(imgui STATIC ${IMGUI_FILES} ${IMGUI_IMPL_FILES})
-target_include_directories(imgui PUBLIC ${IMGUI_DIR})
-target_link_libraries(imgui PRIVATE glfw)
-set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
+    # vma
+    add_library(vma INTERFACE)
+    set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma)
+    target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
+    target_include_directories(vma INTERFACE ${VMA_DIR})
+    target_link_libraries(vma INTERFACE vulkan)
+
+    # volk
+    set(VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk")
+    set(VOLK_FILES
+        "${VOLK_DIR}/volk.c"
+        "${VOLK_DIR}/volk.h")
+
+    add_library(volk STATIC ${VOLK_FILES})
+    target_link_libraries(volk PUBLIC vulkan)
+    target_include_directories(volk PUBLIC ${VOLK_DIR})
+    set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
+endif ()
+
+if (ALIMER_D3D12)
+    add_subdirectory(D3D12MemoryAllocator)
+endif ()
