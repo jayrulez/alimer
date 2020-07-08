@@ -70,7 +70,7 @@ namespace alimer
 
         float yScale = 1.0f / tan(fieldOfView * 0.5f);
         float xScale = yScale / aspectRatio;
-        const float negFarRange = is_inf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
+        const float negFarRange = Math::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
 
         result->m11 = xScale;
         result->m12 = 0.0f;

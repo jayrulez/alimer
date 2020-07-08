@@ -473,11 +473,102 @@ namespace alimer
 
     private:
         T* ptr_;
+    };
 
+    /// Pointer which takes ownership of an array allocated with new[] and deletes it when the pointer goes out of scope.
+    template <class T> class UniqueArrayPtr
+    {
+    public:
+        /// Construct a null pointer.
+        UniqueArrayPtr() : ptr_(nullptr) { }
+
+        /// Construct and take ownership of the array.
+        explicit UniqueArrayPtr(T* array_) : ptr_(array_)
+        {
+        }
+
+        /// Construct empty.
+        UniqueArrayPtr(std::nullptr_t) : ptr_(nullptr) { }   // NOLINT(google-explicit-constructor)
+
+        /// Prevent copy construction.
+        UniqueArrayPtr(const UniqueArrayPtr&) = delete;
+        /// Prevent assignment.
+        UniqueArrayPtr& operator=(const UniqueArrayPtr&) = delete;
+
+        /// Move-construct from UniquePtr.
+        UniqueArrayPtr(UniqueArrayPtr&& up) noexcept : ptr_(up.Detach()) {}
+
+        /// Move-assign from UniquePtr.
+        UniqueArrayPtr& operator =(UniqueArrayPtr&& up) noexcept
+        {
+            Reset(up.Detach());
+            return *this;
+        }
+
+        /// Destruct. Delete the array pointed to.
+        ~UniqueArrayPtr()
+        {
+            Reset();
+        }
+
+        /// Reset.
+        void Reset(T* ptr = nullptr)
+        {
+            delete[] ptr_;
+            ptr_ = ptr;
+        }
+
+        /// Assign a new array. Existing array is deleted.
+        UniqueArrayPtr<T>& operator= (T* ptr)
+        {
+            Reset(ptr);
+            return *this;
+        }
+
+        /// Point to the object.
+        T* operator -> () const { ALIMER_ASSERT(ptr_); return ptr_; }
+        /// Dereference the array.
+        T& operator * () const { ALIMER_ASSERT(ptr_); return *ptr_; }
+        /// Index the array.
+        T& operator [] (size_t index) { ALIMER_ASSERT(ptr_); return ptr_[index]; }
+        /// Const-index the array.
+        const T& operator [] (size_t index) const { ALIMER_ASSERT(ptr_); return ptr_[index]; }
+        /// Cast pointer to bool.
+        operator bool() const { return !!ptr_; }    // NOLINT(google-explicit-constructor)
+
+        /// Swap with another UniqueArrayPtr.
+        void Swap(UniqueArrayPtr& rhs) { std::swap(ptr_, rhs.ptr_); }
+
+        /// Detach the array from the pointer without destroying it and return it. The pointer becomes null.
+        T* Detach()
+        {
+            T* ptr = ptr_;
+            ptr_ = nullptr;
+            return ptr;
+        }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return ptr_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return ptr_ != nullptr; }
+
+        /// Return the raw pointer.
+        T* Get() const { return ptr_; }
+
+    private:
+        /// Array pointer.
+        T* ptr_;
     };
 
     /// Swap two UniquePtr-s.
     template <class T> void Swap(UniquePtr<T>& first, UniquePtr<T>& second)
+    {
+        first.Swap(second);
+    }
+
+    /// Swap two UniquePtr-s.
+    template <class T> void Swap(UniqueArrayPtr<T>& first, UniqueArrayPtr<T>& second)
     {
         first.Swap(second);
     }

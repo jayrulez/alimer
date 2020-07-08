@@ -21,6 +21,7 @@
 //
 
 #include "Core/Log.h"
+#include "Core/Ptr.h"
 
 #if defined(__APPLE__)
 #   include <TargetConditionals.h>
@@ -37,8 +38,6 @@
 #elif defined(__EMSCRIPTEN__)
 #   include <emscripten.h>
 #endif
-
-#include <memory>
 
 namespace alimer
 {
@@ -129,14 +128,14 @@ namespace alimer
         if (bufferSize == 0)
             return;
 
-        auto buffer = std::make_unique<WCHAR[]>(bufferSize + 1); // +1 for the newline
-        if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.get(), bufferSize) == 0)
+        UniqueArrayPtr<WCHAR> buffer(new WCHAR[bufferSize + 1]); // +1 for the newline
+        if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.Get(), bufferSize) == 0)
             return;
 
-        if (FAILED(StringCchCatW(buffer.get(), static_cast<size_t>(bufferSize+1), L"\n")))
+        if (FAILED(StringCchCatW(buffer.Get(), static_cast<size_t>(bufferSize+1), L"\n")))
             return;
 
-        OutputDebugStringW(buffer.get());
+        OutputDebugStringW(buffer.Get());
 #   ifdef _DEBUG
         HANDLE handle;
         switch (level)
@@ -151,7 +150,7 @@ namespace alimer
         }
 
         DWORD bytesWritten;
-        WriteConsoleW(handle, buffer.get(), static_cast<DWORD>(wcslen(buffer.get())), &bytesWritten, nullptr);
+        WriteConsoleW(handle, buffer.Get(), static_cast<DWORD>(wcslen(buffer.Get())), &bytesWritten, nullptr);
 #   endif
 #elif defined(__EMSCRIPTEN__)
         int flags = EM_LOG_NO_PATHS;

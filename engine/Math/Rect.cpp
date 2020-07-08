@@ -24,6 +24,8 @@
 
 namespace alimer
 {
+    const Rect Rect::Empty = { 0.0f, 0.0f, 0.0f, 0.0f };
+
     bool Rect::IsEmpty() const
     {
         return (x == 0 && y == 0 && width == 0 && height == 0);

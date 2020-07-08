@@ -21,7 +21,6 @@
 //
 
 #include "Core/Object.h"
-#include <memory>
 #include <unordered_map>
 
 namespace alimer
@@ -32,7 +31,7 @@ namespace alimer
         {
             /// Object factories.
             std::unordered_map<StringId32, Object*> subsystems;
-            std::unordered_map<StringId32, std::unique_ptr<ObjectFactory> > factories;
+            std::unordered_map<StringId32, UniquePtr<ObjectFactory>> factories;
 
             void AddSubsystem(Object* subsystem)
             {
@@ -52,7 +51,7 @@ namespace alimer
 
             void RegisterFactory(ObjectFactory* factory)
             {
-                factories[factory->GetType()].reset(factory);
+                factories[factory->GetType()].Reset(factory);
             }
 
             RefPtr<Object> CreateObject(StringId32 type)

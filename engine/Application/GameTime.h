@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Stopwatch.h"
-#include <cmath>
+#include "Math/MathHelper.h"
 
 namespace alimer
 {
@@ -67,7 +67,7 @@ namespace alimer
                  // accumulate enough tiny errors that it would drop a frame. It is better to just round
                  // small deviations down to zero to leave things running smoothly.
 
-                 if (static_cast<uint64_t>(std::abs(static_cast<int64_t>(timeDelta - targetElapsedTicks))) < TicksPerSecond / 4000)
+                 if (static_cast<uint64_t>(Math::Abs(static_cast<int64_t>(timeDelta - targetElapsedTicks))) < TicksPerSecond / 4000)
                  {
                      timeDelta = targetElapsedTicks;
                  }
