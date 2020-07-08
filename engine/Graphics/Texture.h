@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/GraphicsResource.h"
+#include "Graphics/GraphicsResource.h"
 #include "Math/Size.h"
 
 namespace alimer

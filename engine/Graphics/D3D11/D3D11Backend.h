@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,36 +20,42 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#pragma once
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
+#include "core/Utils.h"
+#include "core/Assert.h"
+#include "core/Log.h"
+#include "graphics/Types.h"
+#include "graphics/D3D/D3DHelpers.h"
+#define D3D11_NO_HELPERS
+#include <d3d11_1.h>
 
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PLUGINS
-
-/* Graphics */
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_D3D11
-
-/* Audio */
-#cmakedefine ALIMER_ENABLE_AUDIO
-#cmakedefine ALIMER_AUDIO_XAUDIO2
-#cmakedefine ALIMER_AUDIO_OPENAL
-
-/* Physics */
-#cmakedefine ALIMER_ENABLE_PHYSICS
-#cmakedefine ALIMER_PHYSICS_PHYSX
-#cmakedefine ALIMER_PHYSICS_BULLET
-
+namespace alimer
+{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
+
+    class D3D11GraphicsDevice;
+
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
+
+    static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
+    {
+        TextureUsage usage = TextureUsage::None;
+        if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
+            usage |= TextureUsage::Sampled;
+        }
+        if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
+            usage |= TextureUsage::Storage;
+        }
+        if (bindFlags & D3D11_BIND_RENDER_TARGET) {
+            usage |= TextureUsage::RenderTarget;
+        }
+        if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        return usage;
+    }
+}

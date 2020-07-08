@@ -22,35 +22,46 @@
 
 #pragma once
 
-#include "graphics/GraphicsDevice.h"
-#include "VulkanBackend.h"
+#include "Graphics/GraphicsDevice.h"
+#include "D3D11Backend.h"
+#include <queue>
+#include <mutex>
+struct ImDrawData;
 
 namespace alimer
 {
-    class VulkanGraphicsDevice final : public GraphicsDevice
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsDevice();
-        ~VulkanGraphicsDevice() override;
+        D3D11GraphicsDevice();
+        ~D3D11GraphicsDevice();
 
-        const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
+
+        ID3D11Device1* GetD3DDevice() const { return d3dDevice.Get(); }
+        ID3D11DeviceContext1* GetD3DDeviceContext() const { return d3dContext.Get(); }
 
     private:
-        //bool BackendInitialize(const PresentationParameters& presentationParameters) override;
+        void CreateFactory();
+        void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
+        void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void BackendShutdown() override;
         void WaitForGPU() override;
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
+        void HandleDeviceLost();
 
         // Resource creation methods.
         RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
         RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
+        // Commands
         CommandList BeginCommandList(const char* name) override;
         void InsertDebugMarker(CommandList commandList, const char* name) override;
-        void PushDebugGroup(CommandList commandList, const char* namet) override;
+        void PushDebugGroup(CommandList commandList, const char* name) override;
         void PopDebugGroup(CommandList commandList) override;
 
         void SetScissorRect(CommandList commandList, const Rect& scissorRect) override;
@@ -62,27 +73,16 @@ namespace alimer
         void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
         void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
 
-        InstanceExtensions instanceExts{};
-        VkInstance instance{ VK_NULL_HANDLE };
+        static constexpr uint64_t kRenderLatency = 2;
 
-        /// Debug utils messenger callback for VK_EXT_Debug_Utils
-        VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
+        ComPtr<IDXGIFactory2> dxgiFactory = nullptr;
+        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
-        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
-        VkPhysicalDeviceProperties2 physicalDeviceProperties{};
-        QueueFamilyIndices queueFamilies;
-        PhysicalDeviceExtensions physicalDeviceExts;
+        D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
-        /* Device + queue's  */
-        VkDevice device{ VK_NULL_HANDLE };
-        VolkDeviceTable deviceTable = {};
-        VkQueue graphicsQueue{ VK_NULL_HANDLE };
-        VkQueue computeQueue{ VK_NULL_HANDLE };
-        VkQueue copyQueue{ VK_NULL_HANDLE };
-
-        /* Memory allocator */
-        VmaAllocator allocator{ VK_NULL_HANDLE };
-
-        VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
+        ComPtr<ID3D11Device1> d3dDevice;
+        ComPtr<ID3D11DeviceContext1> d3dContext;
+        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
+        bool isLost = false;
     };
 }

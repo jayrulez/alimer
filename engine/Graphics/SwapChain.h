@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "graphics/Texture.h"
+#include "Graphics/Texture.h"
 #include "Core/Vector.h"
 #include "Math/Size.h"
 

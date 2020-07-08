@@ -24,6 +24,7 @@
 
 #include "Core/Assert.h"
 #include "Core/Concurrency.h"
+#include <utility>
 
 namespace alimer
 {
@@ -362,5 +363,134 @@ namespace alimer
         RefPtr<T> ret;
         ret.DynamicCast(ptr);
         return ret;
+    }
+
+    /// Delete object of type T. T must be complete. See boost::checked_delete.
+    template<class T> inline void CheckedDelete(T* x)
+    {
+        // intentionally complex - simplification causes regressions
+        using type_must_be_complete = char[sizeof(T) ? 1 : -1];
+        (void)sizeof(type_must_be_complete);
+        delete x;
+    }
+
+    /// Unique pointer template class.
+    template <class T> class UniquePtr
+    {
+    public:
+        /// Construct empty.
+        UniquePtr() : ptr_(nullptr) { }
+
+        /// Construct from pointer.
+        explicit UniquePtr(T* ptr) : ptr_(ptr) { }
+
+        /// Prevent copy construction.
+        UniquePtr(const UniquePtr&) = delete;
+        /// Prevent assignment.
+        UniquePtr& operator=(const UniquePtr&) = delete;
+
+        /// Assign from pointer.
+        UniquePtr& operator = (T* ptr)
+        {
+            Reset(ptr);
+            return *this;
+        }
+
+        /// Construct empty.
+        UniquePtr(std::nullptr_t) : ptr_(nullptr) { }   // NOLINT(google-explicit-constructor)
+
+        /// Move-construct from UniquePtr.
+        UniquePtr(UniquePtr&& up) noexcept : ptr_(up.Detach()) {}
+
+        /// Move-assign from UniquePtr.
+        UniquePtr& operator =(UniquePtr&& up) noexcept
+        {
+            Reset(up.Detach());
+            return *this;
+        }
+
+        /// Point to the object.
+        T* operator ->() const
+        {
+            ALIMER_ASSERT(ptr_);
+            return ptr_;
+        }
+
+        /// Dereference the object.
+        T& operator *() const
+        {
+            ALIMER_ASSERT(ptr_);
+            return *ptr_;
+        }
+
+        /// Test for less than with another unique pointer.
+        template <class U>
+        bool operator <(const UniquePtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+
+        /// Test for equality with another unique pointer.
+        template <class U>
+        bool operator ==(const UniquePtr<U>& rhs) const { return ptr_ == rhs.ptr_; }
+
+        /// Test for inequality with another unique pointer.
+        template <class U>
+        bool operator !=(const UniquePtr<U>& rhs) const { return ptr_ != rhs.ptr_; }
+
+        /// Cast pointer to bool.
+        operator bool() const { return !!ptr_; }    // NOLINT(google-explicit-constructor)
+
+        /// Swap with another UniquePtr.
+        void Swap(UniquePtr& up) { std::swap(ptr_, up.ptr_); }
+
+        /// Detach pointer from UniquePtr without destroying.
+        T* Detach()
+        {
+            T* ptr = ptr_;
+            ptr_ = nullptr;
+            return ptr;
+        }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return ptr_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return ptr_ != nullptr; }
+
+        /// Return the raw pointer.
+        T* Get() const { return ptr_; }
+
+        /// Reset.
+        void Reset(T* ptr = nullptr)
+        {
+            CheckedDelete(ptr_);
+            ptr_ = ptr;
+        }
+
+        /// Destruct.
+        ~UniquePtr()
+        {
+            Reset();
+        }
+
+    private:
+        T* ptr_;
+
+    };
+
+    /// Swap two UniquePtr-s.
+    template <class T> void Swap(UniquePtr<T>& first, UniquePtr<T>& second)
+    {
+        first.Swap(second);
+    }
+
+    /// Construct UniquePtr.
+    template <class T, class ... Args> UniquePtr<T> MakeUnique(Args&& ... args)
+    {
+        return UniquePtr<T>(new T(std::forward<Args>(args)...));
+    }
+
+    /// Construct SharedPtr.
+    template <class T, class ... Args> RefPtr<T> MakeShared(Args&& ... args)
+    {
+        return RefPtr<T>(new T(std::forward<Args>(args)...));
     }
 }

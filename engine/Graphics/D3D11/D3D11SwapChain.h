@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,36 +20,34 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#pragma once
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
+#include "Graphics/SwapChain.h"
+#include "D3D11Backend.h"
 
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PLUGINS
+namespace alimer
+{
+    class D3D11SwapChain final : public SwapChain
+    {
+    public:
+        D3D11SwapChain(D3D11GraphicsDevice* device, const SwapChainDescription& desc);
+        ~D3D11SwapChain() override;
+        void Recreate(bool vsyncChanged) override;
+        void Destroy() override;
+        void Present() override;
 
-/* Graphics */
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_D3D11
+    private:
+        void BackendSetName() override;
 
-/* Audio */
-#cmakedefine ALIMER_ENABLE_AUDIO
-#cmakedefine ALIMER_AUDIO_XAUDIO2
-#cmakedefine ALIMER_AUDIO_OPENAL
-
-/* Physics */
-#cmakedefine ALIMER_ENABLE_PHYSICS
-#cmakedefine ALIMER_PHYSICS_PHYSX
-#cmakedefine ALIMER_PHYSICS_BULLET
-
+        D3D11GraphicsDevice* _device;
+        IDXGISwapChain1* _handle;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND _window;
+#else
+        IUnknown* _window;
 #endif
+
+        UINT _syncInterval;
+        UINT _presentFlags;
+    };
+}

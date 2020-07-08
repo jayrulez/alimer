@@ -20,36 +20,29 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#include "D3D11Backend.h"
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
-
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PLUGINS
-
-/* Graphics */
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_D3D11
-
-/* Audio */
-#cmakedefine ALIMER_ENABLE_AUDIO
-#cmakedefine ALIMER_AUDIO_XAUDIO2
-#cmakedefine ALIMER_AUDIO_OPENAL
-
-/* Physics */
-#cmakedefine ALIMER_ENABLE_PHYSICS
-#cmakedefine ALIMER_PHYSICS_PHYSX
-#cmakedefine ALIMER_PHYSICS_BULLET
-
+namespace alimer
+{
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
+
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
+    {
+#ifdef _DEBUG
+        if (obj != nullptr)
+        {
+            if (!name.empty())
+            {
+                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(name.length()), name.c_str());
+            }
+            else
+                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
+        }
+#else
+        ALIMER_UNUSED(obj);
+        ALIMER_UNUSED(name);
+#endif
+    }
+}

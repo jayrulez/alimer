@@ -321,8 +321,8 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsDevice::VulkanGraphicsDevice(bool enableValidationLayer)
-        : GraphicsDevice(enableValidationLayer)
+    VulkanGraphicsDevice::VulkanGraphicsDevice()
+        : GraphicsDevice()
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -396,25 +396,23 @@ namespace alimer
                 }
             }
 
-
-            if (enableValidationLayer && instanceExts.debugUtils)
+#if defined(GRAPHICS_DEBUG)
+            if (instanceExts.debugUtils)
             {
                 enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             }
 
             // Layers
-            if (enableValidationLayer)
-            {
-                uint32_t instanceLayerCount;
-                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
+            uint32_t instanceLayerCount;
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
 
-                Vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
-                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.Data()));
+            Vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.Data()));
 
-                // Determine the optimal validation layers to enable that are necessary for useful debugging
-                Vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
-                enabledInstanceLayers.Push(optimalValidationLayers);
-            }
+            // Determine the optimal validation layers to enable that are necessary for useful debugging
+            Vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
+            enabledInstanceLayers.Push(optimalValidationLayers);
+#endif
 
             VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
             appInfo.pApplicationName = "Alimer";
@@ -426,18 +424,17 @@ namespace alimer
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-            if (enableValidationLayer)
+#if defined(GRAPHICS_DEBUG)
+            if (instanceExts.debugUtils)
             {
-                if (instanceExts.debugUtils)
-                {
-                    debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-                    debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-                    debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
-                    debugUtilsCreateInfo.pUserData = this;
+                debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
+                debugUtilsCreateInfo.pUserData = this;
 
-                    createInfo.pNext = &debugUtilsCreateInfo;
-                }
+                createInfo.pNext = &debugUtilsCreateInfo;
             }
+#endif
 
             createInfo.pApplicationInfo = &appInfo;
 
@@ -456,7 +453,8 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (enableValidationLayer && instanceExts.debugUtils)
+#if defined(GRAPHICS_DEBUG)
+            if (instanceExts.debugUtils)
             {
                 result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
                 if (result != VK_SUCCESS)
@@ -464,6 +462,7 @@ namespace alimer
                     VK_LOG_ERROR(result, "Could not create debug utils messenger");
                 }
             }
+#endif
 
             LOG_INFO("Created VkInstance with version: %u.%u.%u", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
             if (createInfo.enabledLayerCount) {
@@ -483,7 +482,7 @@ namespace alimer
         Shutdown();
     }
 
-    void VulkanGraphicsDevice::Shutdown()
+    void VulkanGraphicsDevice::BackendShutdown()
     {
         if (allocator != VK_NULL_HANDLE)
         {
@@ -510,6 +509,7 @@ namespace alimer
         }
     }
 
+#if TODO
     bool VulkanGraphicsDevice::BackendInitialize(const PresentationParameters& presentationParameters)
     {
         // Enumerating and creating devices:
@@ -769,6 +769,8 @@ namespace alimer
 
         return true;
     }
+#endif // TODO
+
 
     void VulkanGraphicsDevice::WaitForGPU()
     {
@@ -798,7 +800,17 @@ namespace alimer
         }*/
     }
 
+    RefPtr<SwapChain> VulkanGraphicsDevice::CreateSwapChain(const SwapChainDescription& desc)
+    {
+        return nullptr;
+    }
+
     RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    {
+        return nullptr;
+    }
+
+    /*RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
     {
         return nullptr;
     }
@@ -823,7 +835,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
     {
-        if (name && enableValidationLayer && instanceExts.debugUtils)
+        if (name && instanceExts.debugUtils)
         {
             VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
             label.pLabelName = name;
@@ -837,7 +849,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
     {
-        if (name && enableValidationLayer && instanceExts.debugUtils)
+        if (name && instanceExts.debugUtils)
         {
             VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
             label.pLabelName = name;
@@ -851,7 +863,7 @@ namespace alimer
 
     void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
     {
-        if (enableValidationLayer && instanceExts.debugUtils)
+        if (instanceExts.debugUtils)
         {
             vkCmdEndDebugUtilsLabelEXT(commandBuffers[commandList]);
         }
@@ -915,4 +927,4 @@ namespace alimer
     {
 
     }
-}
+    }

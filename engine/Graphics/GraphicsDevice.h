@@ -25,7 +25,7 @@
 #include "Core/Vector.h"
 #include "Math/Rect.h"
 #include "Math/Viewport.h"
-#include "Graphics/Types.h"
+#include "Graphics/SwapChain.h"
 #include <set>
 #include <mutex>
 #include <atomic>
@@ -58,7 +58,7 @@ namespace alimer
         static GraphicsDevice* Instance;
 
         static std::set<BackendType> GetAvailableBackends();
-        static void Create(BackendType preferredBackendType = BackendType::Count);
+        static void Initialize();
         static void Shutdown();
 
         virtual void WaitForGPU() = 0;
@@ -68,8 +68,8 @@ namespace alimer
         void Resize(uint32_t width, uint32_t height);
 
         // Resource creation methods.
-        virtual SwapChain* CreateSwapChain(const SwapChainDescription& desc) = 0;
-        virtual Texture* CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
+        virtual RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
 
         // CommandList
         virtual CommandList BeginCommandList(const char* name) = 0;

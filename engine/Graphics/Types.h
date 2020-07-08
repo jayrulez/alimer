@@ -27,6 +27,12 @@
 #include "Math/Rect.h"
 #include "graphics/PixelFormat.h"
 
+#if !defined(GRAPHICS_DEBUG)
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#       define GRAPHICS_DEBUG
+#   endif
+#endif /* !defined(GRAPHICS_DEBUG) */
+
 namespace alimer
 {
     static constexpr uint32_t kInvalidId = 0;

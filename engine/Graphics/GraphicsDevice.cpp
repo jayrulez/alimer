@@ -26,14 +26,15 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
+#if defined(ALIMER_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#endif
+#if defined(ALIMER_D3D12)
+//#include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#endif
 #if defined(ALIMER_D3D11)
 #include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
-
-#if defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-
 
 #include "imgui_impl_glfw.h"
 
@@ -50,9 +51,16 @@ namespace alimer
         {
             availableDrivers.insert(BackendType::Null);
 
+#if defined(ALIMER_VULKAN)
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                availableDrivers.insert(BackendType::Vulkan);
+            }
+#endif
+
 #if defined(ALIMER_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable())
-                availableDrivers.insert(BackendType::Direct3D12);
+            //if (D3D12GraphicsDevice::IsAvailable())
+            //    availableDrivers.insert(BackendType::Direct3D12);
 #endif
 
 #if defined(ALIMER_D3D11)
@@ -63,38 +71,46 @@ namespace alimer
         return availableDrivers;
     }
 
-    void GraphicsDevice::Create(BackendType preferredBackendType)
+    void GraphicsDevice::Initialize()
     {
         if (Instance != nullptr) {
             return;
         }
 
-        if (preferredBackendType == BackendType::Count)
+        BackendType backendType = PreferredBackendType;
+        if (PreferredBackendType == BackendType::Count)
         {
             auto availableDrivers = GetAvailableBackends();
 
             if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
-                preferredBackendType = BackendType::Direct3D12;
+                backendType = BackendType::Direct3D12;
             else if (availableDrivers.find(BackendType::Direct3D11) != availableDrivers.end())
-                preferredBackendType = BackendType::Direct3D11;
+                backendType = BackendType::Direct3D11;
             else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
-                preferredBackendType = BackendType::Vulkan;
+                backendType = BackendType::Vulkan;
             else
-                preferredBackendType = BackendType::Null;
+                backendType = BackendType::Null;
         }
 
-        switch (preferredBackendType)
+        switch (backendType)
         {
+#if defined(ALIMER_VULKAN)
         case BackendType::Vulkan:
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                Instance = new VulkanGraphicsDevice();
+            }
             break;
+#endif
 
+            /*
 #if defined(ALIMER_D3D12)
         case BackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable()) {
                 Instance = new D3D12GraphicsDevice();
             }
             break;
-#endif
+#endif*/
 
 #if defined(ALIMER_D3D11)
         case BackendType::Direct3D11:

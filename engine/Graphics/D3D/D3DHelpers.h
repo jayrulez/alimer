@@ -51,7 +51,10 @@
 #include <dxgidebug.h>
 #endif
 
+#include <wrl/client.h>
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID riid, _COM_Outptr_ void** ppFactory);
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
@@ -59,9 +62,14 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
+
+    // Type alias for ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     template<typename T> void SafeRelease(T*& resource)
     {
@@ -192,6 +200,7 @@ namespace alimer
         None = 0,
         FlipPresent = (1 << 0),
         Tearing = (1 << 1),
+        HDR = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(DXGIFactoryCaps);
 
@@ -281,5 +290,5 @@ namespace alimer
         return result;
     }
 
-    void DXGISetObjectName(IDXGIObject* obj, const char* name);
+    void DXGISetObjectName(IDXGIObject* obj, const String& name);
 }

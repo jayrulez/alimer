@@ -49,8 +49,16 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
+if (ALIMER_D3D11 OR ALIMER_D3D12)
+    define_engine_source_files(Graphics/D3D)
+endif()
+
+if (ALIMER_D3D11)
+    define_engine_source_files(Graphics/D3D11)
+endif()
+
 if (ALIMER_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
+    define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()
@@ -70,7 +78,6 @@ target_include_directories(${TARGET_NAME} PUBLIC
 
 target_link_libraries(${TARGET_NAME} PUBLIC
     stb
-    vgpu
     fmt
     imgui
 )
@@ -87,8 +94,17 @@ else()
     endif()
 endif()
 
+if (ALIMER_D3D12)
+    target_link_libraries(${TARGET_NAME} PRIVATE
+        D3D12MemAlloc
+    )
+endif()
+
 if (ALIMER_VULKAN)
-    target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_VULKAN)
+    target_link_libraries(${TARGET_NAME} PRIVATE
+        volk
+        vma
+    )
 endif()
 
 if (MSVC)

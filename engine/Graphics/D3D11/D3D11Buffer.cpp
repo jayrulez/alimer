@@ -20,36 +20,29 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#include "D3D11Buffer.h"
+#include "D3D11GraphicsDevice.h"
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
+namespace alimer
+{
+    D3D11Buffer::D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
+        : GraphicsBuffer(desc)
+        , _device(device)
+    {
+    }
 
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PLUGINS
+    D3D11Buffer::~D3D11Buffer()
+    {
+        Destroy();
+    }
 
-/* Graphics */
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_D3D11
+    void D3D11Buffer::Destroy()
+    {
+        SafeRelease(_handle);
+    }
 
-/* Audio */
-#cmakedefine ALIMER_ENABLE_AUDIO
-#cmakedefine ALIMER_AUDIO_XAUDIO2
-#cmakedefine ALIMER_AUDIO_OPENAL
-
-/* Physics */
-#cmakedefine ALIMER_ENABLE_PHYSICS
-#cmakedefine ALIMER_PHYSICS_PHYSX
-#cmakedefine ALIMER_PHYSICS_BULLET
-
-#endif
+    void D3D11Buffer::BackendSetName()
+    {
+        D3D11SetObjectName(_handle, name);
+    }
+}
