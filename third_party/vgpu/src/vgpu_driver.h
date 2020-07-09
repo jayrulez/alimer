@@ -25,18 +25,6 @@
 
 #include "vgpu.h"
 
-#ifndef VGPU_ASSERT
-#   include <assert.h>
-#   define VGPU_ASSERT(c) assert(c)
-#endif
-
-extern const vgpu_allocation_callbacks* vgpu_alloc_cb;
-extern void* vgpu_allocation_user_data;
-
-#define VGPU_ALLOC(T)     ((T*) vgpu_alloc_cb->allocate(vgpu_allocation_user_data, sizeof(T)))
-#define VGPU_FREE(ptr)       (vgpu_alloc_cb->free(vgpu_allocation_user_data, (void*)(ptr)))
-#define VGPU_ALLOC_HANDLE(T) ((T*) vgpu_alloc_cb->allocate_cleared(vgpu_allocation_user_data, sizeof(T)))
-
 #ifndef VGPU_ALLOCA
 #   include <malloc.h>
 #   if defined(_MSC_VER) || defined(__MINGW32__)
@@ -72,33 +60,66 @@ extern void __cdecl __debugbreak(void);
 #define _vgpu_count_of(x) (sizeof(x) / sizeof(x[0]))
 #define _vgpu_align_to(_alignment, _val) ((((_val) + (_alignment) - 1) / (_alignment)) * (_alignment))
 
-typedef struct vgpu_renderer {
-    bool (*init)(const vgpu_init_info* config);
-    void (*shutdown)(void);
-    vgpu_caps(*query_caps)(void);
-    void (*begin_frame)(void);
-    void (*end_frame)(void);
+#include <new>
+#include <vector>
 
-    vgpu_texture(*create_texture)(const vgpu_texture_info* info);
-    void(*texture_destroy)(vgpu_texture handle);
+namespace vgpu 
+{
+    template <typename T, uint32_t MAX_COUNT>
+    struct Pool
+    {
+        void init()
+        {
+            values = (T*)mem;
+            for (int i = 0; i < MAX_COUNT; ++i) {
+                new (&values[i]) int(i + 1);
+            }
+            new (&values[MAX_COUNT - 1]) int(-1);
+            first_free = 0;
+        }
 
-    vgpu_framebuffer(*create_framebuffer)(const vgpu_framebuffer_info* info);
-    vgpu_framebuffer(*create_framebuffer_swapchain)(const vgpu_swapchain_info* info);
-    void(*destroy_framebuffer)(vgpu_framebuffer handle);
+        int alloc()
+        {
+            if (first_free == -1) return -1;
 
-    vgpu_texture(*get_backbuffer_texture)(void);
-   // void (*begin_pass)(const vgpu_pass_begin_info* info);
-    //void (*end_pass)(void);
-} vgpu_renderer;
+            const int id = first_free;
+            first_free = *((int*)&values[id]);
+            new (&values[id]) T;
+            return id;
+        }
 
-typedef struct vgpu_driver {
-    vgpu_backend_type backendType;
-    bool(*is_supported)(void);
-    vgpu_renderer* (*init_renderer)(void);
-} vgpu_driver;
+        void dealloc(uint32_t index)
+        {
+            values[index].~T();
+            new (&values[index]) int(first_free);
+            first_free = index;
+        }
 
-extern vgpu_driver d3d11_driver;
-extern vgpu_driver d3d12_driver;
-extern vgpu_driver vulkan_driver;
+        alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
+        T* values;
+        int first_free;
+
+        T& operator[](int index) { return values[index]; }
+        bool isFull() const { return first_free == -1; }
+    };
+
+    struct Renderer
+    {
+        bool (*init)(InitFlags flags, const SwapchainInfo& swapchainInfo);
+        void (*shutdown)(void);
+        void (*beginFrame)(void);
+        void (*endFrame)(void);
+        const Caps* (*queryCaps)(void);
+    };
+
+    struct Driver {
+        BackendType backendType;
+        bool(*isSupported)(void);
+        Renderer* (*initRenderer)(void);
+    };
+
+    extern Driver d3d11_driver;
+    extern Driver vulkan_driver;
+}
 
 #endif /* _VGPU_DRIVER_H */

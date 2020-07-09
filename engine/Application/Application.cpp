@@ -25,6 +25,7 @@
 #include "Input/InputManager.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
+#include <vgpu.h>
 
 namespace alimer
 {
@@ -33,7 +34,6 @@ namespace alimer
     {
         gameSystems.Push(input);
         PlatformConstuct();
-        GraphicsDevice::Initialize();
         LOG_INFO("Application started");
     }
 
@@ -48,7 +48,7 @@ namespace alimer
         window.Close();
         ImGui::DestroyContext();
         PlatformDestroy();
-        GraphicsDevice::Shutdown();
+        vgpu::shutdown();
         LOG_INFO("Application destroyed correctly");
     }
 
@@ -58,6 +58,22 @@ namespace alimer
         if (!headless)
         {
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+
+            vgpu::InitFlags initFlags = vgpu::InitFlags::None;
+#ifdef _DEBUG
+            initFlags |= vgpu::InitFlags::DebugRutime;
+#endif
+
+            vgpu::SwapchainInfo swapChainInfo = {};
+            swapChainInfo.display = window.GetNativeDisplay();
+            swapChainInfo.handle = window.GetNativeHandle();
+            swapChainInfo.width = window.GetSize().width;
+            swapChainInfo.height = window.GetSize().height;
+            swapChainInfo.isFullscreen = window.IsFullscreen();
+
+            if (!vgpu::init(initFlags, swapChainInfo)) {
+
+            }
 
            /* vgpu_init_info gpu_init_info = {};
 #ifdef _DEBUG
@@ -167,7 +183,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        GraphicsDevice::Instance->BeginFrame();
+        vgpu::beginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -202,7 +218,7 @@ namespace alimer
         }
 
         //window.GetSwapChain()->Present();
-        GraphicsDevice::Instance->EndFrame();
+        vgpu::endFrame();
     }
 
     int Application::Run()

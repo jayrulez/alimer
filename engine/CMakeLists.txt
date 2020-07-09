@@ -57,10 +57,6 @@ if (ALIMER_D3D11)
     define_engine_source_files(Graphics/D3D11)
 endif()
 
-if (ALIMER_VULKAN)
-    define_engine_source_files(Graphics/Vulkan)
-endif()
-
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
@@ -77,6 +73,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
+    vgpu
     stb
     fmt
     imgui
@@ -92,19 +89,6 @@ else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
         target_link_libraries(${TARGET_NAME} PRIVATE glfw)
     endif()
-endif()
-
-if (ALIMER_D3D12)
-    target_link_libraries(${TARGET_NAME} PRIVATE
-        D3D12MemAlloc
-    )
-endif()
-
-if (ALIMER_VULKAN)
-    target_link_libraries(${TARGET_NAME} PRIVATE
-        volk
-        vma
-    )
 endif()
 
 if (MSVC)

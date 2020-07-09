@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#ifndef _VGPU_H
-#define _VGPU_H
+#pragma once
 
 #if defined(VGPU_SHARED_LIBRARY)
 #   if defined(_WIN32)
@@ -47,18 +46,29 @@
 #   define VGPU_CALL
 #endif
 
-#include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef VGPU_ASSERT
+#   include <assert.h>
+#   define VGPU_ASSERT(c) assert(c)
 #endif
-    /* Handles*/
-    typedef struct vgpu_texture_t* vgpu_texture;
-    typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
 
-    /* Enums */
+#if !defined(VGPU_DEFINE_ENUM_FLAG_OPERATORS)
+#define VGPU_DEFINE_ENUM_FLAG_OPERATORS(EnumType, UnderlyingEnumType) \
+inline constexpr EnumType operator | (EnumType a, EnumType b) { return (EnumType)((UnderlyingEnumType)(a) | (UnderlyingEnumType)(b)); } \
+inline constexpr EnumType& operator |= (EnumType &a, EnumType b) { return a = a | b; } \
+inline constexpr EnumType operator & (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) & ((UnderlyingEnumType)b)); } \
+inline constexpr EnumType& operator &= (EnumType &a, EnumType b) { return a = a & b; } \
+inline constexpr EnumType operator ~ (EnumType a) { return EnumType(~((UnderlyingEnumType)a)); } \
+inline constexpr EnumType operator ^ (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) ^ ((UnderlyingEnumType)b)); } \
+inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) { return a = a ^ b; } \
+inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
+#endif
+
+namespace vgpu
+{
+    /* Constants */
+    static constexpr uint32_t kInvalidId = { 0xFFffFFff };
     enum {
         VGPU_NUM_INFLIGHT_FRAMES = 2u,
         VGPU_MAX_COLOR_ATTACHMENTS = 8u,
@@ -68,6 +78,15 @@ extern "C" {
         VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
     };
 
+    /* Handles*/
+    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+    typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
+
+    static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
+    static constexpr TextureHandle kInvalidTexture = { kInvalidId };
+
+    /* Enums */
     typedef enum vgpu_log_level {
         VGPU_LOG_LEVEL_ERROR = 0,
         VGPU_LOG_LEVEL_WARN = 1,
@@ -77,30 +96,21 @@ extern "C" {
         _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
     } vgpu_log_level;
 
-    typedef enum vgpu_backend_type {
-        VGPU_BACKEND_TYPE_DEFAULT,
-        VGPU_BACKEND_TYPE_NULL,
-        VGPU_BACKEND_TYPE_D3D11,
-        VGPU_BACKEND_TYPE_D3D12,
-        VGPU_BACKEND_TYPE_VULKAN,
-        _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_backend_type;
-
-    typedef enum vgpu_device_preference {
-        VGPU_DEVICE_PREFERENCE_HIGH_PERFORMANCE = 0,
-        VGPU_DEVICE_PREFERENCE_LOW_POWER = 1,
-        VGPU_DEVICE_PREFERENCE_DONT_CARE = 2,
-        _VGPU_DEVICE_PREFERENCE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_device_preference;
+    enum class BackendType : uint32_t {
+        Null,
+        Vulkan,
+        Direct3D11,
+        Count
+    };
 
     /// Defines pixel format.
-    typedef enum vgpu_pixel_format {
-        VGPU_PIXEL_FORMAT_UNDEFINED = 0,
+    enum class PixelFormat : uint32_t {
+        Invalid = 0,
         // 8-bit pixel formats
-        VGPU_PIXEL_FORMAT_R8_UNORM,
-        VGPU_PIXEL_FORMAT_R8_SNORM,
-        VGPU_PIXEL_FORMAT_R8_UINT,
-        VGPU_PIXEL_FORMAT_R8_SINT,
+        R8Unorm,
+        R8Snorm,
+        R8Uint,
+        R8Sint,
         // 16-bit pixel formats
         VGPU_PIXEL_FORMAT_R16_UINT,
         VGPU_PIXEL_FORMAT_R16_SINT,
@@ -141,51 +151,48 @@ extern "C" {
         VGPU_PIXEL_FORMAT_DEPTH32_FLOAT,
         VGPU_PIXEL_FORMAT_DEPTH24_STENCIL8,
         // Compressed BC formats
-        VGPU_PIXEL_FORMAT_BC1,
-        VGPU_PIXEL_FORMAT_BC1_SRGB,
-        VGPU_PIXEL_FORMAT_BC2,
-        VGPU_PIXEL_FORMAT_BC2_SRGB,
-        VGPU_PIXEL_FORMAT_BC3,
-        VGPU_PIXEL_FORMAT_BC3_SRGB,
-        VGPU_PIXEL_FORMAT_BC4R_UNORM,
-        VGPU_PIXEL_FORMAT_BC4R_SNORM,
-        VGPU_PIXEL_FORMAT_BC5RG_UNORM,
-        VGPU_PIXEL_FORMAT_BC5RG_SNORM,
+        BC1RGBAUnorm,
+        BC1RGBAUnormSrgb,
+        BC2RGBAUnorm,
+        BC2RGBAUnormSrgb,
+        BC3RGBAUnorm,
+        BC3RGBAUnormSrgb,
+        BC4RUnorm,
+        BC4RSnorm,
+        BC5RGUnorm,
+        BC5RGSnorm,
         VGPU_PIXEL_FORMAT_BC6HRGB_UFLOAT,
         VGPU_PIXEL_FORMAT_BC6HRGB_SFLOAT,
         VGPU_PIXEL_FORMAT_BC7RGBA_UNORM,
         VGPU_PIXEL_FORMAT_BC7RGBA_UNORM_SRGB,
 
-        _VGPU_PIXEL_FORMAT_COUNT,
-        _VGPU_PIXEL_FORMAT_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_pixel_format;
+        Count,
+    };
 
     /// Defines pixel format type.
-    typedef enum vgpu_pixel_format_type {
+    enum class PixelFormatType {
         /// Unknown format Type
-        VGPU_PIXEL_FORMAT_TYPE_UNKNOWN = 0,
+        Unknown,
         /// floating-point formats.
-        VGPU_PIXEL_FORMAT_TYPE_FLOAT = 1,
+        Float,
         /// Unsigned normalized formats.
-        VGPU_PIXEL_FORMAT_TYPE_UNORM = 2,
+        Unorm,
         /// Unsigned normalized SRGB formats
-        VGPU_PIXEL_FORMAT_TYPE_UNORM_SRGB = 3,
+        UnormSrgb,
         /// Signed normalized formats.
-        VGPU_PIXEL_FORMAT_TYPE_SNORM = 4,
+        Snorm,
         /// Unsigned integer formats.
-        VGPU_PIXEL_FORMAT_TYPE_UINT = 5,
+        Uint,
         /// Signed integer formats.
-        VGPU_PIXEL_FORMAT_TYPE_SINT = 6,
-        _VGPU_PIXEL_FORMAT_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_pixel_format_type;
+        Sint
+    };
 
-    typedef enum vgpu_pixel_format_aspect {
-        VGPU_PIXEL_FORMAT_ASPECT_COLOR = 0,
-        VGPU_PIXEL_FORMAT_ASPECT_DEPTH = 1,
-        VGPU_PIXEL_FORMAT_ASPECT_STENCIL = 2,
-        VGPU_PIXEL_FORMAT_ASPECT_DEPTH_STENCIL = 3,
-        _VGPU_PIXEL_FORMAT_ASPECT_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_pixel_format_aspect;
+    enum class PixelFormatAspect {
+        Color,
+        Depth,
+        Stencil,
+        DepthStencil
+    };
 
     typedef enum vgpu_texture_type {
         VGPU_TEXTURE_TYPE_2D,
@@ -217,7 +224,7 @@ extern "C" {
 
     typedef struct vgpu_texture_info {
         vgpu_texture_type type;
-        vgpu_pixel_format format;
+        PixelFormat format;
         uint32_t width;
         uint32_t height;
         uint32_t depth;
@@ -230,13 +237,13 @@ extern "C" {
     } vgpu_texture_info;
 
     typedef struct vgpu_attachment_info {
-        vgpu_texture texture;
+        TextureHandle texture;
         uint32_t level;
         uint32_t slice;
     } vgpu_attachment_info;
 
     typedef struct vgpu_color_attachment_info {
-        vgpu_texture texture;
+        TextureHandle texture;
         uint32_t level;
         uint32_t slice;
         vgpu_load_op load_op;
@@ -258,14 +265,24 @@ extern "C" {
         vgpu_attachment_info depth_stencil;
     } vgpu_framebuffer_info;
 
-    typedef struct vgpu_swapchain_info {
-        uintptr_t           native_handle;    /**< HWND, ANativeWindow, NSWindow, etc. */
-        uint32_t            width;             /**< Width of swapchain. */
-        uint32_t            height;            /**< Width of swapchain. */
-        vgpu_pixel_format   color_format;
-        vgpu_pixel_format   depth_stencil_format;
-        bool                is_fullscreen;
-    } vgpu_swapchain_info;
+    struct SwapchainInfo {
+        void* display;
+        void* handle;
+        uint32_t            width;
+        uint32_t            height;
+        PixelFormat         colorFormat = PixelFormat::VGPU_PIXEL_FORMAT_BGRA8_UNORM;
+        PixelFormat         depthStencilFormat = PixelFormat::Invalid;
+        bool                isFullscreen;
+    };
+
+    enum class InitFlags : uint32_t {
+        None = 0,
+        DebugRutime = (1 << 0),
+        GPUBasedValidation = (1 << 1),
+        GPUPreferenceLowPower = (1 << 2),
+        RenderDoc = (1 << 3)
+    };
+    VGPU_DEFINE_ENUM_FLAG_OPERATORS(InitFlags, uint32_t);
 
     typedef struct vgpu_allocation_callbacks {
         void* user_data;
@@ -273,13 +290,6 @@ extern "C" {
         void* (VGPU_CALL* allocate_cleared)(void* user_data, size_t size);
         void (VGPU_CALL* free)(void* user_data, void* ptr);
     } vgpu_allocation_callbacks;
-
-    typedef struct vgpu_init_info {
-        vgpu_backend_type preferred_backend;
-        vgpu_device_preference device_preference;
-        bool debug;
-        vgpu_swapchain_info swapchain;
-    } vgpu_init_info;
 
     typedef struct vgpu_features {
         bool independent_blend;
@@ -331,55 +341,140 @@ extern "C" {
         uint32_t        max_compute_work_group_size_z;
     } vgpu_limits;
 
-    typedef struct vgpu_caps {
-        vgpu_backend_type backend_type;
-        uint32_t vendor_id;
-        uint32_t device_id;
+    struct Caps {
+        BackendType backendType;
+        uint32_t vendorId;
+        uint32_t deviceId;
         vgpu_features features;
         vgpu_limits limits;
-    } vgpu_caps;
-
-    /* Allocation functions */
-    VGPU_API void vgpu_set_allocation_callbacks(const vgpu_allocation_callbacks* callbacks);
+    };
 
     /* Log functions */
-    typedef void(VGPU_CALL* vgpu_log_callback)(void* user_data, vgpu_log_level level, const char* message);
-    VGPU_API void vgpu_set_log_callback(vgpu_log_callback callback, void* user_data);
-    VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
-    VGPU_API void vgpu_log_error(const char* format, ...);
-    VGPU_API void vgpu_log_info(const char* format, ...);
+    typedef void(VGPU_CALL* LogCallback)(void* user_data, vgpu_log_level level, const char* message);
 
-    VGPU_API bool vgpu_init(const vgpu_init_info* info);
-    VGPU_API void vgpu_shutdown(void);
-    VGPU_API vgpu_caps vgpu_query_caps();
-    VGPU_API void vgpu_begin_frame(void);
-    VGPU_API void vgpu_end_frame(void);
+    VGPU_API void setLogCallback(LogCallback callback, void* userData);
+    VGPU_API void log(vgpu_log_level level, const char* format, ...);
+    VGPU_API void logError(const char* format, ...);
+    VGPU_API void logInfo(const char* format, ...);
 
-    VGPU_API vgpu_texture vgpu_create_texture(const vgpu_texture_info* info);
-    VGPU_API void vgpu_destroy_texture(vgpu_texture texture);
+    VGPU_API bool init(InitFlags flags, const SwapchainInfo& swapchainInfo);
+    VGPU_API void shutdown(void);
+    VGPU_API void beginFrame(void);
+    VGPU_API void endFrame(void);
+    VGPU_API const Caps* queryCaps();
+
+    VGPU_API TextureHandle vgpu_create_texture(const vgpu_texture_info* info);
+    VGPU_API void vgpu_destroy_texture(TextureHandle texture);
 
     VGPU_API vgpu_framebuffer vgpu_create_framebuffer(const vgpu_framebuffer_info* info);
-    VGPU_API vgpu_framebuffer vgpu_create_framebuffer_swapchain(const vgpu_swapchain_info* info);
     VGPU_API void vgpu_destroy_framebuffer(vgpu_framebuffer framebuffer);
 
     /* commands */
-    VGPU_API vgpu_texture vgpu_get_backbuffer_texture(void);
+    VGPU_API TextureHandle vgpu_get_backbuffer_texture(void);
     //VGPU_API void vgpu_begin_pass(const vgpu_pass_begin_info* info);
     //VGPU_API void vgpu_end_pass(void);
 
     /* pixel format helpers */
-    VGPU_API uint32_t vgpu_get_format_bytes_per_block(vgpu_pixel_format format);
-    VGPU_API uint32_t vgpu_get_format_pixels_per_block(vgpu_pixel_format format);
-    VGPU_API bool vgpu_is_depth_format(vgpu_pixel_format format);
-    VGPU_API bool vgpu_is_stencil_format(vgpu_pixel_format format);
-    VGPU_API bool vgpu_is_depth_stencil_format(vgpu_pixel_format format);
-    VGPU_API bool vgpu_is_compressed_format(vgpu_pixel_format format);
-    VGPU_API uint32_t vgpu_get_format_width_compression_ratio(vgpu_pixel_format format);
-    VGPU_API uint32_t vgpu_get_format_height_compression_ratio(vgpu_pixel_format format);
-    VGPU_API uint32_t vgpu_get_format_channel_count(vgpu_pixel_format format);
+    struct PixelFormatDesc
+    {
+        PixelFormat format;
+        const char* name;
+        uint32_t bytesPerBlock;
+        uint32_t channelCount;
+        PixelFormatType type;
+        struct
+        {
+            bool isDepth;
+            bool isStencil;
+            bool isCompressed;
+        };
+        struct
+        {
+            uint32_t width;
+            uint32_t height;
+        } compressionRatio;
+        int numChannelBits[4];
+    };
 
-#ifdef __cplusplus
+    extern const VGPU_API PixelFormatDesc kFormatDesc[];
+
+    /// Get the number of bytes per format
+    inline uint32_t getFormatBytesPerBlock(PixelFormat format)
+    {
+        VGPU_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].bytesPerBlock;
+    }
+
+    inline uint32_t getFormatPixelsPerBlock(PixelFormat format)
+    {
+        VGPU_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compressionRatio.width * kFormatDesc[(uint32_t)format].compressionRatio.height;
+    }
+
+    /// Check if the format has a depth component
+    inline bool isDepthFormat(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].isDepth;
+    }
+
+    /// Check if the format has a stencil component
+    inline bool isStencilFormat(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].isStencil;
+    }
+
+    /// Check if the format has depth or stencil components
+    inline bool isDepthStencilFormat(PixelFormat format)
+    {
+        return isDepthFormat(format) || isStencilFormat(format);
+    }
+
+    /// Check if the format is a compressed format
+    inline bool isCompressedFormat(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].isCompressed;
+    }
+
+    /// Get the format compression ration along the x-axis.
+    inline uint32_t getFormatWidthCompressionRatio(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compressionRatio.width;
+    }
+
+    /// Get the format compression ration along the y-axis
+    inline uint32_t getFormatHeightCompressionRatio(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compressionRatio.height;
+    }
+
+    /// Get the number of channels
+    inline uint32_t getFormatChannelCount(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].channelCount;
+    }
+
+    /** Get the format Type
+    */
+    inline PixelFormatType getFormatType(PixelFormat format)
+    {
+        assert(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].type;
+    }
+
+    inline uint32_t getNumChannelBits(PixelFormat format, int channel)
+    {
+        return kFormatDesc[(uint32_t)format].numChannelBits[channel];
+    }
+
+    /// Check if a format represents sRGB color space
+    inline bool isSrgbFormat(PixelFormat format)
+    {
+        return (getFormatType(format) == PixelFormatType::UnormSrgb);
+    }
 }
-#endif 
-
-#endif /* _VGPU_H */

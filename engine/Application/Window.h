@@ -41,8 +41,6 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
-    class SwapChain;
-
     /// Defines an OS window.
     class ALIMER_API Window final : public Object
     {
@@ -61,11 +59,8 @@ namespace alimer
         bool IsMinimized() const;
         bool IsFullscreen() const;
         bool IsMain() const;
-        uintptr_t GetHandle() const;
-
-        ALIMER_FORCEINLINE SwapChain* GetSwapChain() const {
-            return _swapChain.Get();
-        }
+        void* GetNativeHandle() const;
+        void* GetNativeDisplay() const;
 
     private:
         bool _isMain = false;
@@ -74,6 +69,5 @@ namespace alimer
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
         void* window = nullptr;
-        RefPtr<SwapChain> _swapChain;
     };
 } 

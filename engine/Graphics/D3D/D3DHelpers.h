@@ -235,7 +235,7 @@ namespace alimer
         DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
         DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-        if (!((factoryCaps & DXGIFactoryCaps::FlipPresent) != DXGIFactoryCaps::None))
+        if ((factoryCaps & DXGIFactoryCaps::FlipPresent) == DXGIFactoryCaps::None)
         {
             swapEffect = DXGI_SWAP_EFFECT_DISCARD;
         }

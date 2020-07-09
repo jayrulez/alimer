@@ -26,9 +26,6 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
-#if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
-#endif
 #if defined(ALIMER_D3D12)
 //#include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
@@ -50,13 +47,6 @@ namespace alimer
         if (availableDrivers.empty())
         {
             availableDrivers.insert(BackendType::Null);
-
-#if defined(ALIMER_VULKAN)
-            if (VulkanGraphicsDevice::IsAvailable())
-            {
-                availableDrivers.insert(BackendType::Vulkan);
-            }
-#endif
 
 #if defined(ALIMER_D3D12)
             //if (D3D12GraphicsDevice::IsAvailable())
@@ -94,15 +84,6 @@ namespace alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_VULKAN)
-        case BackendType::Vulkan:
-            if (VulkanGraphicsDevice::IsAvailable())
-            {
-                Instance = new VulkanGraphicsDevice();
-            }
-            break;
-#endif
-
             /*
 #if defined(ALIMER_D3D12)
         case BackendType::Direct3D12:

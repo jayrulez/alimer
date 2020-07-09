@@ -117,18 +117,10 @@ namespace alimer
         // Init imgui stuff
         //ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
 
-        SwapChainDescription swapChainDesc = {};
-        swapChainDesc.windowHandle = GetHandle();
-        swapChainDesc.width = size.width;
-        swapChainDesc.height = size.height;
-        swapChainDesc.isFullscreen = IsFullscreen();
-
         if (windowCount == 0) {
             _isMain = true;
-            swapChainDesc.presentationInterval = PresentInterval::One;
         }
 
-        _swapChain = GraphicsDevice::Instance->CreateSwapChain(swapChainDesc);
         windowCount++;
 
         return true;
@@ -137,7 +129,6 @@ namespace alimer
     void Window::Close()
     {
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
-        _swapChain.Reset();
         windowCount--;
     }
 
@@ -171,16 +162,33 @@ namespace alimer
         return _isMain;
     }
 
-    uintptr_t Window::GetHandle() const
+    void* Window::GetNativeHandle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return (uintptr_t)glfwGetWin32Window((GLFWwindow*)window);
+        return glfwGetWin32Window((GLFWwindow*)window);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (uintptr_t)glfwGetX11Window((GLFWwindow*)window);
+        return (void*)(uintptr_t)glfwGetX11Window((GLFWwindow*)window);
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return (uintptr_t)glfwGetCocoaWindow((GLFWwindow*)window);
+        return glfwGetCocoaWindow((GLFWwindow*)window);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandWindow(window);
 #else
-        return 0;
+        return nullptr;
 #endif
-}
+    }
+
+    void* Window::GetNativeDisplay() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Display();
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandDisplay();
+#else
+        return nullptr;
+#endif
+    }
 }
