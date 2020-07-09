@@ -64,14 +64,13 @@ namespace alimer
             initFlags |= vgpu::InitFlags::DebugRutime;
 #endif
 
-            vgpu::SwapchainInfo swapChainInfo = {};
-            swapChainInfo.display = window.GetNativeDisplay();
-            swapChainInfo.handle = window.GetNativeHandle();
-            swapChainInfo.width = window.GetSize().width;
-            swapChainInfo.height = window.GetSize().height;
-            swapChainInfo.isFullscreen = window.IsFullscreen();
+            vgpu::PresentationParameters presentationParameters = {};
+            presentationParameters.backbufferWidth = window.GetSize().width;
+            presentationParameters.backbufferHeight = window.GetSize().height;
+            presentationParameters.windowHandle = window.GetNativeHandle();
+            presentationParameters.display = window.GetNativeDisplay();
 
-            if (!vgpu::init(initFlags, swapChainInfo)) {
+            if (!vgpu::init(initFlags, presentationParameters)) {
 
             }
 

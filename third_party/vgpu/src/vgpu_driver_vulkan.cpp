@@ -71,13 +71,14 @@ namespace vgpu
             bool debug_utils;
             bool headless;
             bool surface_capabilities2;
-            bool external_semaphore_capabilities;
             bool win32_full_screen_exclusive;
         } instance_exts;
 
+        Caps caps;
+
         VkInstance instance;
         VkDebugUtilsMessengerEXT messenger;
-        Caps caps;
+        VkSurfaceKHR surface;
 
         Pool<BufferVk, BufferVk::MAX_COUNT> buffers;
         Pool<TextureVk, TextureVk::MAX_COUNT> textures;
@@ -97,7 +98,7 @@ namespace vgpu
         return VK_FALSE;
     }
 
-    static bool vulkan_init(InitFlags flags, const SwapchainInfo& swapchainInfo)
+    static bool vulkan_init(InitFlags flags, const PresentationParameters& presentationParameters)
     {
         if (any(flags & InitFlags::DebugRutime) || any(flags & InitFlags::GPUBasedValidation))
         {
@@ -205,6 +206,25 @@ namespace vgpu
             }
 
             volkLoadInstance(vk.instance);
+        }
+
+        // Create surface if not running headless
+        if (presentationParameters.windowHandle)
+        {
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+            VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
+            surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+            surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
+            surfaceCreateInfo.hwnd = (HWND)presentationParameters.windowHandle;
+            result = vkCreateWin32SurfaceKHR(vk.instance, &surfaceCreateInfo, nullptr, &vk.surface);
+#else
+#endif
+
+            if (result != VK_SUCCESS)
+            {
+                vgpu::shutdown();
+                return false;
+            }
         }
 
         return true;

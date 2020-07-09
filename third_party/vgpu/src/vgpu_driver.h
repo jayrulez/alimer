@@ -105,11 +105,15 @@ namespace vgpu
 
     struct Renderer
     {
-        bool (*init)(InitFlags flags, const SwapchainInfo& swapchainInfo);
+        bool (*init)(InitFlags flags, const PresentationParameters& presentationParameters);
         void (*shutdown)(void);
         void (*beginFrame)(void);
         void (*endFrame)(void);
         const Caps* (*queryCaps)(void);
+
+        /* Commands */
+        void (*cmdSetViewport)(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth);
+        void (*cmdSetScissor)(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
     };
 
     struct Driver {

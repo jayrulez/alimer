@@ -28,9 +28,6 @@
 
 namespace vgpu
 {
-    static BackendType s_backendType = BackendType::Count;
-    static Renderer* s_renderer = nullptr;
-
     /* Log */
 #define VGPU_MAX_LOG_MESSAGE (4096)
     static LogCallback s_log_callback = nullptr;
@@ -89,7 +86,10 @@ namespace vgpu
         nullptr
     };
 
-    bool init(InitFlags flags, const SwapchainInfo& swapchainInfo)
+    static BackendType s_backendType = BackendType::Count;
+    static Renderer* s_renderer = nullptr;
+
+    bool init(InitFlags flags, const PresentationParameters& presentationParameters)
     {
         if (s_renderer) {
             return true;
@@ -112,7 +112,7 @@ namespace vgpu
             }
         }
 
-        if (!s_renderer->init(flags, swapchainInfo)) {
+        if (!s_renderer->init(flags, presentationParameters)) {
             s_renderer = nullptr;
             return false;
         }
@@ -145,70 +145,82 @@ namespace vgpu
         return s_renderer->queryCaps();
     }
 
+    /* Commands */
+    void cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth)
+    {
+        s_renderer->cmdSetViewport(commandList, x, y, width, height, min_depth, max_depth);
+    }
+
+    void cmdSetScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    {
+        s_renderer->cmdSetScissor(commandList, x, y, width, height);
+    }
+
     /* Pixel format helpers */
     const PixelFormatDesc kFormatDesc[] =
     {
         // Format, Name, BytesPerBlock, ChannelCount, Type, {depth, stencil, compressed}, {CompressionRatio.Width,CompressionRatio.Height}, {numChannelBits.x, numChannelBits.y, numChannelBits.z, numChannelBits.w}
-        {PixelFormat::Invalid,   "Invalid",      0,      0,  PixelFormatType::Unknown,    {false, false, false},       {1, 1},     {0, 0, 0, 0}},
-        {PixelFormat::R8Unorm,    "R8Unorm",      1,      1,  PixelFormatType::Unorm,      {false, false, false},       {1, 1},     {8, 0, 0, 0}},
-        {PixelFormat::R8Snorm,    "R8Snorm",      1,      1,  PixelFormatType::Snorm,      {false, false, false},       {1, 1},     {8, 0, 0, 0}},
-        {PixelFormat::R8Uint,     "R8Int",        1,      1,  PixelFormatType::Sint,       {false, false, false},       {1, 1},     {8, 0, 0, 0}},
-        {PixelFormat::R8Sint,     "R8uint",       1,      1,  PixelFormatType::Uint,       {false, false, false},       {1, 1},     {8, 0, 0, 0}},
+        {PixelFormat::Invalid,                  "Invalid",      0,      0,  PixelFormatType::Unknown,    {false, false, false},       {1, 1},     {0, 0, 0, 0}},
+        {PixelFormat::R8Unorm,                  "R8Unorm",      1,      1,  PixelFormatType::Unorm,      {false, false, false},       {1, 1},     {8, 0, 0, 0}},
+        {PixelFormat::R8Snorm,                  "R8Snorm",      1,      1,  PixelFormatType::Snorm,      {false, false, false},       {1, 1},     {8, 0, 0, 0}},
+        {PixelFormat::R8Uint,                   "R8Int",        1,      1,  PixelFormatType::Sint,       {false, false, false},       {1, 1},     {8, 0, 0, 0}},
+        {PixelFormat::R8Sint,                   "R8uint",       1,      1,  PixelFormatType::Uint,       {false, false, false},       {1, 1},     {8, 0, 0, 0}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_R16_UINT,    "R16Uint",      2,      1,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {16, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_R16_SINT,    "R16Int",       2,      1,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {16, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_R16_FLOAT,   "R16Float",     2,      1,  PixelFormatType::Float,      {false, false, false},      {1, 1},     {16, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG8_UNORM,   "RG8Unorm",     2,      2,  PixelFormatType::Unorm,      {false, false, false},      {1, 1},     {8, 8, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG8_SNORM,   "RG8Snorm",     2,      2,  PixelFormatType::Snorm,      {false, false, false},      {1, 1},     {8, 8, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG8_UINT,    "RG8Uint",      2,      2,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {8, 8, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG8_SINT,    "RG8Int",       2,      2,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {8, 8, 0, 0}},
+        {PixelFormat::R16Uint,                  "R16Uint",      2,      1,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {16, 0, 0, 0}},
+        {PixelFormat::R16Sint,                  "R16Int",       2,      1,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {16, 0, 0, 0}},
+        {PixelFormat::R16Float,                 "R16Float",     2,      1,  PixelFormatType::Float,      {false, false, false},      {1, 1},     {16, 0, 0, 0}},
+        {PixelFormat::RG8Unorm,                 "RG8Unorm",     2,      2,  PixelFormatType::Unorm,      {false, false, false},      {1, 1},     {8, 8, 0, 0}},
+        {PixelFormat::RG8Snorm,                 "RG8Snorm",     2,      2,  PixelFormatType::Snorm,      {false, false, false},      {1, 1},     {8, 8, 0, 0}},
+        {PixelFormat::RG8Uint,                  "RG8Uint",      2,      2,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {8, 8, 0, 0}},
+        {PixelFormat::RG8Sint,                  "RG8Int",       2,      2,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {8, 8, 0, 0}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_R32_UINT,    "R32Uint",      4,      1,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {32, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_R32_SINT,    "R32Int",       4,      1,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {32, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_R32_FLOAT,   "R32Float",     4,      1,  PixelFormatType::Float,      {false, false, false},      {1, 1},     {32, 0, 0, 0}},
+        {PixelFormat::R32Uint,                  "R32Uint",      4,      1,  PixelFormatType::Uint,       {false, false, false},      {1, 1},     {32, 0, 0, 0}},
+        {PixelFormat::R32Sint,                  "R32Sint",      4,      1,  PixelFormatType::Sint,       {false, false, false},      {1, 1},     {32, 0, 0, 0}},
+        {PixelFormat::R32Float,                 "R32Float",     4,      1,  PixelFormatType::Float,      {false, false, false},      {1, 1},     {32, 0, 0, 0}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG16_UINT,           "RG16Uint",         4,      2,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG16_SINT,           "RG16Int",          4,      2,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG16_FLOAT,          "RG16Float",        4,      2,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA8_UNORM,         "RGBA8Unorm",       4,      4,  PixelFormatType::Unorm,      {false,  false, false},      {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA8_UNORM_SRGB,    "RGBA8UnormSrgb",   4,      4,  PixelFormatType::UnormSrgb,  {false, false, false},      {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA8_SNORM,         "RGBA8Snorm",       4,      4,  PixelFormatType::Snorm,      {false, false, false},       {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA8_UINT,          "RGBA8Uint",        4,      4,  PixelFormatType::Uint,       {false, false, false},       {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA8_SINT,          "RGBA8Sint",        4,      4,  PixelFormatType::Sint,       {false, false, false},       {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BGRA8_UNORM,         "BGRA8Unorm",       4,      4,  PixelFormatType::Unorm,      {false, false, false},       {1, 1},     {8, 8, 8, 8}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BGRA8_UNORM_SRGB,    "BGRA8UnormSrgb",   4,      4,  PixelFormatType::UnormSrgb,  {false, false, false},      {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::RG16Uint,                 "RG16Uint",         4,      2,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
+        {PixelFormat::RG16Sint,                 "RG16Int",          4,      2,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
+        {PixelFormat::RG16Float,                "RG16Float",        4,      2,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {16, 16, 0, 0}},
+        {PixelFormat::RGBA8Unorm,               "RGBA8Unorm",       4,      4,  PixelFormatType::Unorm,      {false,  false, false},      {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::RGBA8UnormSrgb,           "RGBA8UnormSrgb",   4,      4,  PixelFormatType::UnormSrgb,  {false, false, false},      {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::RGBA8Snorm,               "RGBA8Snorm",       4,      4,  PixelFormatType::Snorm,      {false, false, false},       {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::RGBA8Uint,                "RGBA8Uint",        4,      4,  PixelFormatType::Uint,       {false, false, false},       {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::RGBA8Sint,                "RGBA8Sint",        4,      4,  PixelFormatType::Sint,       {false, false, false},       {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::BGRA8Unorm,               "BGRA8Unorm",       4,      4,  PixelFormatType::Unorm,      {false, false, false},       {1, 1},     {8, 8, 8, 8}},
+        {PixelFormat::BGRA8UnormSrgb,           "BGRA8UnormSrgb",   4,      4,  PixelFormatType::UnormSrgb,  {false, false, false},      {1, 1},     {8, 8, 8, 8}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGB10A2_UNORM,       "RGB10A2Unorm",     4,      4,  PixelFormatType::Unorm,       {false,  false, false},     {1, 1},     {10, 10, 10, 2}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG11B10_FLOAT,       "RG11B10Float",     4,      3,  PixelFormatType::Float,       {false,  false, false},     {1, 1},     {11, 11, 10, 0}},
+        {PixelFormat::RGB10A2Unorm,             "RGB10A2Unorm",     4,      4,  PixelFormatType::Unorm,       {false,  false, false},     {1, 1},     {10, 10, 10, 2}},
+        {PixelFormat::RG11B10Float,             "RG11B10Float",     4,      3,  PixelFormatType::Float,       {false,  false, false},     {1, 1},     {11, 11, 10, 0}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG32_UINT,           "RG32Uint",         8,      2,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG32_SINT,           "RG32Sin",          8,      2,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RG32_FLOAT,          "RG32Float",        8,      2,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA16_UINT,         "RGBA16Uint",       8,      4,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA16_SINT,         "RGBA16Sint",       8,      4,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA16_FLOAT,        "RGBA16Float",      8,      4,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
+        {PixelFormat::RG32Uint,                 "RG32Uint",         8,      2,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
+        {PixelFormat::RG32Sint,                 "RG32Sin",          8,      2,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
+        {PixelFormat::RG32Float,                "RG32Float",        8,      2,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {32, 32, 0, 0}},
+        {PixelFormat::RGBA16Uint,               "RGBA16Uint",       8,      4,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
+        {PixelFormat::RGBA16Sint,               "RGBA16Sint",       8,      4,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
+        {PixelFormat::RGBA16Float,              "RGBA16Float",      8,      4,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {16, 16, 16, 16}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA32_UINT,         "RGBA32Uint",       16,     4,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA32_SINT,         "RGBA32Int",        16,     4,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_RGBA32_FLOAT,        "RGBA32Float",      16,     4,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
+        {PixelFormat::RGBA32Uint,               "RGBA32Uint",       16,     4,  PixelFormatType::Uint,       {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
+        {PixelFormat::RGBA32Sint,               "RGBA32Sint",        16,     4,  PixelFormatType::Sint,       {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
+        {PixelFormat::RGBA32Float,              "RGBA32Float",      16,     4,  PixelFormatType::Float,      {false,  false, false},      {1, 1},     {32, 32, 32, 32}},
 
-        {PixelFormat::VGPU_PIXEL_FORMAT_DEPTH32_FLOAT,       "D32Float",             4,  1,  PixelFormatType::Float,      {true, false, false},        {1, 1},     {32, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_DEPTH24_STENCIL8,    "Depth24PlusStencil8",  4,  2,  PixelFormatType::Unorm,      {true, true, false},         {1, 1},     {24, 8, 0, 0}},
+        {PixelFormat::Depth16Unorm,             "Depth16Unorm",             2,  1,  PixelFormatType::Unorm,     {true, false, false},   {1, 1},     {16, 0, 0, 0}},
+        {PixelFormat::Depth32Float,             "Depth32Float",             4,  1,  PixelFormatType::Float,     {true, false, false},   {1, 1},     {32, 0, 0, 0}},
+        {PixelFormat::Depth24UnormStencil8,     "Depth24UnormStencil8",     4,  2,  PixelFormatType::Unorm,     {true, true, false},    {1, 1},     {24, 8, 0, 0}},
 
-        {PixelFormat::BC1RGBAUnorm,                         "BC1RGBAUnorm",         8,      3,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
-        {PixelFormat::BC1RGBAUnormSrgb,                     "BC1RGBAUnormSrgb",     8,      3,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
-        {PixelFormat::BC2RGBAUnorm,                         "BC2RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::BC2RGBAUnormSrgb,                     "BC2RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::BC3RGBAUnorm,                         "BC3RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::BC3RGBAUnormSrgb,                     "BC3RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::BC4RUnorm,                            "BC4RUnorm",            8,      1,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
-        {PixelFormat::BC4RSnorm,                            "BC4RSnorm",            8,      1,  PixelFormatType::Snorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
-        {PixelFormat::BC5RGUnorm,                           "BC5RGUnorm",           16,     2,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::BC5RGSnorm,                           "BC5RGSnorm",           16,     2,  PixelFormatType::Snorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BC6HRGB_UFLOAT,      "BC6HU16",              16,     3,  PixelFormatType::Float,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BC6HRGB_SFLOAT,      "BC6HS16",              16,     3,  PixelFormatType::Float,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BC7RGBA_UNORM,       "BC7RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
-        {PixelFormat::VGPU_PIXEL_FORMAT_BC7RGBA_UNORM_SRGB,  "BC7RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC1RGBAUnorm,             "BC1RGBAUnorm",         8,      3,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
+        {PixelFormat::BC1RGBAUnormSrgb,         "BC1RGBAUnormSrgb",     8,      3,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
+        {PixelFormat::BC2RGBAUnorm,             "BC2RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC2RGBAUnormSrgb,         "BC2RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC3RGBAUnorm,             "BC3RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC3RGBAUnormSrgb,         "BC3RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC4RUnorm,                "BC4RUnorm",            8,      1,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
+        {PixelFormat::BC4RSnorm,                "BC4RSnorm",            8,      1,  PixelFormatType::Snorm,       {false,  false, true},      {4, 4},     {64, 0, 0, 0}},
+        {PixelFormat::BC5RGUnorm,               "BC5RGUnorm",           16,     2,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC5RGSnorm,               "BC5RGSnorm",           16,     2,  PixelFormatType::Snorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC6HRGBUfloat,            "BC6HRGBUfloat",              16,     3,  PixelFormatType::Float,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC6HRGBSfloat,            "BC6HRGBSfloat",              16,     3,  PixelFormatType::Float,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC7RGBAUnorm,             "BC7RGBAUnorm",         16,     4,  PixelFormatType::Unorm,       {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
+        {PixelFormat::BC7RGBAUnormSrgb,         "BC7RGBAUnormSrgb",     16,     4,  PixelFormatType::UnormSrgb,  {false,  false, true},      {4, 4},     {128, 0, 0, 0}},
     };
 
     static_assert(_vgpu_count_of(kFormatDesc) == (unsigned)PixelFormat::Count, "Format desc table has a wrong size");

@@ -68,9 +68,12 @@ inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
 namespace vgpu
 {
     /* Constants */
-    static constexpr uint32_t kInvalidId = { 0xFFffFFff };
+    static constexpr uint32_t kInvalidId = 0xFFffFFff;
+    static constexpr uint32_t kNumInflightFrames = 2u;
+    static constexpr uint32_t kMaxColorAttachments = 8u;
+    static constexpr uint32_t kMaxCommandLists = 16u;
+
     enum {
-        VGPU_NUM_INFLIGHT_FRAMES = 2u,
         VGPU_MAX_COLOR_ATTACHMENTS = 8u,
         VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
         VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
@@ -85,6 +88,7 @@ namespace vgpu
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
     static constexpr TextureHandle kInvalidTexture = { kInvalidId };
+    using CommandList = uint8_t;
 
     /* Enums */
     typedef enum vgpu_log_level {
@@ -112,44 +116,45 @@ namespace vgpu
         R8Uint,
         R8Sint,
         // 16-bit pixel formats
-        VGPU_PIXEL_FORMAT_R16_UINT,
-        VGPU_PIXEL_FORMAT_R16_SINT,
-        VGPU_PIXEL_FORMAT_R16_FLOAT,
-        VGPU_PIXEL_FORMAT_RG8_UNORM,
-        VGPU_PIXEL_FORMAT_RG8_SNORM,
-        VGPU_PIXEL_FORMAT_RG8_UINT,
-        VGPU_PIXEL_FORMAT_RG8_SINT,
+        R16Uint,
+        R16Sint,
+        R16Float,
+        RG8Unorm,
+        RG8Snorm,
+        RG8Uint,
+        RG8Sint,
         // 32-bit pixel formats
-        VGPU_PIXEL_FORMAT_R32_UINT,
-        VGPU_PIXEL_FORMAT_R32_SINT,
-        VGPU_PIXEL_FORMAT_R32_FLOAT,
-        VGPU_PIXEL_FORMAT_RG16_UINT,
-        VGPU_PIXEL_FORMAT_RG16_SINT,
-        VGPU_PIXEL_FORMAT_RG16_FLOAT,
-        VGPU_PIXEL_FORMAT_RGBA8_UNORM,
-        VGPU_PIXEL_FORMAT_RGBA8_UNORM_SRGB,
-        VGPU_PIXEL_FORMAT_RGBA8_SNORM,
-        VGPU_PIXEL_FORMAT_RGBA8_UINT,
-        VGPU_PIXEL_FORMAT_RGBA8_SINT,
-        VGPU_PIXEL_FORMAT_BGRA8_UNORM,
-        VGPU_PIXEL_FORMAT_BGRA8_UNORM_SRGB,
+        R32Uint,
+        R32Sint,
+        R32Float,
+        RG16Uint,
+        RG16Sint,
+        RG16Float,
+        RGBA8Unorm,
+        RGBA8UnormSrgb,
+        RGBA8Snorm,
+        RGBA8Uint,
+        RGBA8Sint,
+        BGRA8Unorm,
+        BGRA8UnormSrgb,
         // Packed 32-Bit Pixel formats
-        VGPU_PIXEL_FORMAT_RGB10A2_UNORM,
-        VGPU_PIXEL_FORMAT_RG11B10_FLOAT,
+        RGB10A2Unorm,
+        RG11B10Float,
         // 64-Bit Pixel Formats
-        VGPU_PIXEL_FORMAT_RG32_UINT,
-        VGPU_PIXEL_FORMAT_RG32_SINT,
-        VGPU_PIXEL_FORMAT_RG32_FLOAT,
-        VGPU_PIXEL_FORMAT_RGBA16_UINT,
-        VGPU_PIXEL_FORMAT_RGBA16_SINT,
-        VGPU_PIXEL_FORMAT_RGBA16_FLOAT,
+        RG32Uint,
+        RG32Sint,
+        RG32Float,
+        RGBA16Uint,
+        RGBA16Sint,
+        RGBA16Float,
         // 128-Bit Pixel Formats
-        VGPU_PIXEL_FORMAT_RGBA32_UINT,
-        VGPU_PIXEL_FORMAT_RGBA32_SINT,
-        VGPU_PIXEL_FORMAT_RGBA32_FLOAT,
+        RGBA32Uint,
+        RGBA32Sint,
+        RGBA32Float,
         // Depth-stencil
-        VGPU_PIXEL_FORMAT_DEPTH32_FLOAT,
-        VGPU_PIXEL_FORMAT_DEPTH24_STENCIL8,
+        Depth16Unorm,
+        Depth32Float,
+        Depth24UnormStencil8,
         // Compressed BC formats
         BC1RGBAUnorm,
         BC1RGBAUnormSrgb,
@@ -161,10 +166,10 @@ namespace vgpu
         BC4RSnorm,
         BC5RGUnorm,
         BC5RGSnorm,
-        VGPU_PIXEL_FORMAT_BC6HRGB_UFLOAT,
-        VGPU_PIXEL_FORMAT_BC6HRGB_SFLOAT,
-        VGPU_PIXEL_FORMAT_BC7RGBA_UNORM,
-        VGPU_PIXEL_FORMAT_BC7RGBA_UNORM_SRGB,
+        BC6HRGBUfloat,
+        BC6HRGBSfloat,
+        BC7RGBAUnorm,
+        BC7RGBAUnormSrgb,
 
         Count,
     };
@@ -187,13 +192,6 @@ namespace vgpu
         Sint
     };
 
-    enum class PixelFormatAspect {
-        Color,
-        Depth,
-        Stencil,
-        DepthStencil
-    };
-
     typedef enum vgpu_texture_type {
         VGPU_TEXTURE_TYPE_2D,
         VGPU_TEXTURE_TYPE_3D,
@@ -213,6 +211,15 @@ namespace vgpu
         VGPU_LOAD_OP_LOAD = 1,
         _VGPU_LOAD_OP_FORCE_U32 = 0x7FFFFFFF
     } vgpu_load_op;
+
+    enum class PresentInterval : uint32_t
+    {
+        Default,
+        One,
+        Two,
+        Immediate
+    };
+
 
     /* Structs */
     typedef struct vgpu_color {
@@ -264,16 +271,6 @@ namespace vgpu
         vgpu_attachment_info color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
         vgpu_attachment_info depth_stencil;
     } vgpu_framebuffer_info;
-
-    struct SwapchainInfo {
-        void* display;
-        void* handle;
-        uint32_t            width;
-        uint32_t            height;
-        PixelFormat         colorFormat = PixelFormat::VGPU_PIXEL_FORMAT_BGRA8_UNORM;
-        PixelFormat         depthStencilFormat = PixelFormat::Invalid;
-        bool                isFullscreen;
-    };
 
     enum class InitFlags : uint32_t {
         None = 0,
@@ -349,6 +346,16 @@ namespace vgpu
         vgpu_limits limits;
     };
 
+    struct PresentationParameters {
+        uint32_t backbufferWidth;
+        uint32_t backbufferHeight;
+        PixelFormat backbufferFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Invalid;
+        PresentInterval presentInterval = PresentInterval::One;
+        void* windowHandle;
+        void* display = nullptr;
+    };
+
     /* Log functions */
     typedef void(VGPU_CALL* LogCallback)(void* user_data, vgpu_log_level level, const char* message);
 
@@ -357,22 +364,15 @@ namespace vgpu
     VGPU_API void logError(const char* format, ...);
     VGPU_API void logInfo(const char* format, ...);
 
-    VGPU_API bool init(InitFlags flags, const SwapchainInfo& swapchainInfo);
+    VGPU_API bool init(InitFlags flags, const PresentationParameters& presentationParameters);
     VGPU_API void shutdown(void);
     VGPU_API void beginFrame(void);
     VGPU_API void endFrame(void);
     VGPU_API const Caps* queryCaps();
 
-    VGPU_API TextureHandle vgpu_create_texture(const vgpu_texture_info* info);
-    VGPU_API void vgpu_destroy_texture(TextureHandle texture);
-
-    VGPU_API vgpu_framebuffer vgpu_create_framebuffer(const vgpu_framebuffer_info* info);
-    VGPU_API void vgpu_destroy_framebuffer(vgpu_framebuffer framebuffer);
-
-    /* commands */
-    VGPU_API TextureHandle vgpu_get_backbuffer_texture(void);
-    //VGPU_API void vgpu_begin_pass(const vgpu_pass_begin_info* info);
-    //VGPU_API void vgpu_end_pass(void);
+    /* Commands */
+    VGPU_API void cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
+    VGPU_API void cmdSetScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
     /* pixel format helpers */
     struct PixelFormatDesc
@@ -476,5 +476,50 @@ namespace vgpu
     inline bool isSrgbFormat(PixelFormat format)
     {
         return (getFormatType(format) == PixelFormatType::UnormSrgb);
+    }
+
+    /// Convert an SRGB format to linear. If the format is already linear, will return it.
+    inline PixelFormat srgbToLinearFormat(PixelFormat format)
+    {
+        switch (format)
+        {
+        case PixelFormat::BC1RGBAUnormSrgb:
+            return PixelFormat::BC1RGBAUnorm;
+        case PixelFormat::BC2RGBAUnormSrgb:
+            return PixelFormat::BC2RGBAUnorm;
+        case PixelFormat::BC3RGBAUnormSrgb:
+            return PixelFormat::BC3RGBAUnorm;
+        case PixelFormat::BGRA8UnormSrgb:
+            return PixelFormat::BGRA8Unorm;
+        case PixelFormat::RGBA8UnormSrgb:
+            return PixelFormat::RGBA8Unorm;
+        case PixelFormat::BC7RGBAUnormSrgb:
+            return PixelFormat::BC7RGBAUnorm;
+        default:
+            VGPU_ASSERT(isSrgbFormat(format) == false);
+            return format;
+        }
+    }
+
+    /// Convert an linear format to sRGB. If the format doesn't have a matching sRGB format, will return the original.
+    inline PixelFormat linearToSrgbFormat(PixelFormat format)
+    {
+        switch (format)
+        {
+        case PixelFormat::BC1RGBAUnorm:
+            return PixelFormat::BC1RGBAUnormSrgb;
+        case PixelFormat::BC2RGBAUnorm:
+            return PixelFormat::BC2RGBAUnormSrgb;
+        case PixelFormat::BC3RGBAUnorm:
+            return PixelFormat::BC3RGBAUnormSrgb;
+        case PixelFormat::BGRA8Unorm:
+            return PixelFormat::BGRA8UnormSrgb;
+        case PixelFormat::RGBA8Unorm:
+            return PixelFormat::RGBA8UnormSrgb;
+        case PixelFormat::BC7RGBAUnorm:
+            return PixelFormat::BC7RGBAUnormSrgb;
+        default:
+            return format;
+        }
     }
 }

@@ -51,6 +51,16 @@ namespace vgpu
         };
     };
 
+    struct ViewportD3D11 {
+        IDXGISwapChain1* swapchain;
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat;
+        PixelFormat depthStencilFormat;
+        ID3D11RenderTargetView* rtv;
+        ID3D11DepthStencilView* dsv;
+    };
+
     /* Global data */
     static struct {
         bool available_initialized;
@@ -71,8 +81,12 @@ namespace vgpu
 
         ID3D11Device1* device;
         D3D_FEATURE_LEVEL featureLevel;
-        ID3D11DeviceContext1* context;
-        ID3DUserDefinedAnnotation* annotation;
+        ID3D11DeviceContext1* contexts[kMaxCommandLists] = {};
+        ID3DUserDefinedAnnotation* annotations[kMaxCommandLists] = {};
+
+        uint32_t backbufferCount = 2;
+        ViewportD3D11*              mainViewport;   // Guaranteed to be == Viewports[0]
+        std::vector<ViewportD3D11*> viewports;      // Main viewports, followed by all secondary viewports.
     } d3d11;
 
     // Check for SDK Layer support.
@@ -256,8 +270,32 @@ namespace vgpu
         return adapter;
     }
 
+    static void d3d11_updateViewport(ViewportD3D11* viewport)
+    {
+        ID3D11Texture2D* resource;
+        VHR(viewport->swapchain->GetBuffer(0, IID_PPV_ARGS(&resource)));
+        //_backbufferTextures.Push(new D3D11Texture(_device, resource));
 
-    static bool d3d11_init(InitFlags flags, const SwapchainInfo& swapchainInfo)
+        D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+        rtvDesc.Format = ToDXGIFormat(viewport->colorFormat);
+        rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+        VHR(d3d11.device->CreateRenderTargetView(
+            resource,
+            &rtvDesc,
+            &viewport->rtv
+        ));
+
+        resource->Release();
+    }
+
+    static void d3d11_DestroyViewport(ViewportD3D11* viewport)
+    {
+        viewport->rtv->Release();
+        viewport->swapchain->Release();
+        delete viewport;
+    }
+
+    static bool d3d11_init(InitFlags flags, const PresentationParameters& presentationParameters)
     {
         if (any(flags & InitFlags::DebugRutime) || any(flags & InitFlags::GPUBasedValidation))
         {
@@ -315,8 +353,8 @@ namespace vgpu
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    &device, 
-                    &d3d11.featureLevel,     
+                    &device,
+                    &d3d11.featureLevel,
                     &context
                 );
             }
@@ -380,12 +418,38 @@ namespace vgpu
 #endif
 
             VHR(device->QueryInterface(&d3d11.device));
-            VHR(context->QueryInterface(&d3d11.context));
-            VHR(context->QueryInterface(&d3d11.annotation));
+            VHR(context->QueryInterface(&d3d11.contexts[0]));
+            VHR(context->QueryInterface(&d3d11.annotations[0]));
 
             SAFE_RELEASE(context);
             SAFE_RELEASE(device);
             SAFE_RELEASE(adapter);
+        }
+
+        // Create swap chain if not running in headless
+        if (presentationParameters.windowHandle != nullptr)
+        {
+            d3d11.mainViewport = new ViewportD3D11();
+            d3d11.mainViewport->colorFormat = presentationParameters.backbufferFormat;
+            d3d11.mainViewport->depthStencilFormat = presentationParameters.depthStencilFormat;
+
+            d3d11.mainViewport->swapchain = d3dCreateSwapchain(
+                d3d11.factory,
+                d3d11.factoryCaps,
+                d3d11.device,
+                presentationParameters.windowHandle,
+                presentationParameters.backbufferWidth,
+                presentationParameters.backbufferHeight,
+                presentationParameters.backbufferFormat,
+                d3d11.backbufferCount);
+
+            // Get dimension from SwapChain.
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+            d3d11.mainViewport->swapchain->GetDesc1(&swapChainDesc);
+            d3d11.mainViewport->width = swapChainDesc.Width;
+            d3d11.mainViewport->height = swapChainDesc.Height;
+            d3d11_updateViewport(d3d11.mainViewport);
+            d3d11.viewports.push_back(d3d11.mainViewport);
         }
 
         return true;
@@ -393,8 +457,18 @@ namespace vgpu
 
     static void d3d11_shutdown(void)
     {
-        SAFE_RELEASE(d3d11.annotation);
-        SAFE_RELEASE(d3d11.context);
+        for (size_t i = 0; i < d3d11.viewports.size(); i++)
+        {
+            d3d11_DestroyViewport(d3d11.viewports[i]);
+        }
+
+        d3d11.viewports.clear();
+
+        for (uint32_t i = 0; i < _countof(d3d11.contexts); i++)
+        {
+            SAFE_RELEASE(d3d11.annotations[i]);
+            SAFE_RELEASE(d3d11.contexts[i]);
+        }
 
         ULONG refCount = d3d11.device->Release();
 #if !defined(NDEBUG)
@@ -402,7 +476,7 @@ namespace vgpu
         {
             vgpu::logError("Direct3D11: There are %d unreleased references left on the device", refCount);
 
-            ID3D11Debug* d3dDebug = NULL;
+            ID3D11Debug* d3dDebug;
             if (SUCCEEDED(d3d11.device->QueryInterface(IID_PPV_ARGS(&d3dDebug))))
             {
                 d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
@@ -431,16 +505,68 @@ namespace vgpu
         memset(&d3d11, 0, sizeof(d3d11));
     }
 
-    static void d3d11_beginFrame(void) {
-
+    static void d3d11_beginFrame(void)
+    {
+        if (d3d11.mainViewport)
+        {
+            d3d11.contexts[0]->OMSetRenderTargets(1, &d3d11.mainViewport->rtv, d3d11.mainViewport->dsv);
+            cmdSetViewport(0, 0.0f, 0.0f, static_cast<float>(d3d11.mainViewport->width), static_cast<float>(d3d11.mainViewport->height));
+            cmdSetScissor(0, 0, 0, d3d11.mainViewport->width, d3d11.mainViewport->height);
+        }
     }
 
-    static void d3d11_endFrame(void) {
+    static void d3d11_endFrame(void)
+    {
+        HRESULT hr = S_OK;
+        for (uint32_t i = 1; i < d3d11.viewports.size(); i++) {
 
+        }
+
+        if (d3d11.mainViewport)
+        {
+            hr = d3d11.mainViewport->swapchain->Present(1, 0);
+
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                // TODO: Handle device lost.
+            }
+        }
+
+        VHR(hr);
+
+        if (!d3d11.factory->IsCurrent())
+        {
+            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+            d3d11_CreateFactory();
+        }
     }
 
     static const Caps* d3d11_queryCaps(void) {
         return &d3d11.caps;
+    }
+
+    /* Commands */
+    static void d3d11_cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth)
+    {
+        D3D11_VIEWPORT viewport = {};
+        viewport.TopLeftX = x;
+        viewport.TopLeftY = y;
+        viewport.Width = width;
+        viewport.Height = height;
+        viewport.MinDepth = min_depth;
+        viewport.MaxDepth = max_depth;
+
+        d3d11.contexts[commandList]->RSSetViewports(1, &viewport);
+    }
+
+    static void d3d11_cmdSetScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    {
+        D3D11_RECT scissorRect = {};
+        scissorRect.left = (LONG)x;
+        scissorRect.top = (LONG)y;
+        scissorRect.right = LONG(x + width);
+        scissorRect.bottom = LONG(y + height);
+        d3d11.contexts[commandList]->RSSetScissorRects(1, &scissorRect);
     }
 
     static bool d3d11_isSupported(void) {
@@ -516,6 +642,10 @@ namespace vgpu
 
         //renderer.create_texture = vulkan_texture_create;
         //renderer.texture_destroy = vulkan_texture_destroy;
+
+        /* Commands */
+        renderer.cmdSetViewport = d3d11_cmdSetViewport;
+        renderer.cmdSetScissor = d3d11_cmdSetScissor;
 
         return &renderer;
     }
