@@ -61,6 +61,7 @@ namespace alimer
         bool IsMain() const;
         void* GetNativeHandle() const;
         void* GetNativeDisplay() const;
+        void* GetWindow() const { return window; }
 
     private:
         bool _isMain = false;

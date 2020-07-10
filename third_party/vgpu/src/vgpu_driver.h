@@ -63,7 +63,7 @@ extern void __cdecl __debugbreak(void);
 #include <new>
 #include <vector>
 
-namespace vgpu 
+namespace vgpu
 {
     template <typename T, uint32_t MAX_COUNT>
     struct Pool
@@ -111,9 +111,28 @@ namespace vgpu
         void (*endFrame)(void);
         const Caps* (*queryCaps)(void);
 
+        /* Resource creation methods */
+        TextureHandle(*createTexture)(const TextureDescription& desc, const void* initialData);
+        void(*destroyTexture)(TextureHandle handle);
+
+        BufferHandle(*createBuffer)(uint32_t size, BufferUsage usage, uint32_t stride, const void* initialData);
+        void (*destroyBuffer)(BufferHandle handle);
+        void* (*MapBuffer)(BufferHandle handle);
+        void (*UnmapBuffer)(BufferHandle handle);
+
+        ShaderBlob (*compileShader)(const char* source, const char* entryPoint, ShaderStage stage);
+        ShaderHandle (*createShader)(const ShaderDescription& desc);
+        void (*destroyShader)(ShaderHandle handle);
+
         /* Commands */
         void (*cmdSetViewport)(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth);
         void (*cmdSetScissor)(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+        void (*cmdSetVertexBuffer)(CommandList commandList, BufferHandle handle);
+        void (*cmdSetIndexBuffer)(CommandList commandList, BufferHandle handle);
+        void (*cmdSetShader)(CommandList commandList, ShaderHandle handle);
+        void (*cmdBindUniformBuffer)(CommandList commandList, uint32_t slot, BufferHandle handle);
+        void (*cmdBindTexture)(CommandList commandList, uint32_t slot, TextureHandle handle);
+        void (*cmdDrawIndexed)(CommandList commandList, uint32_t indexCount, uint32_t startIndex, int32_t baseVertex);
     };
 
     struct Driver {

@@ -38,7 +38,7 @@ namespace vgpu
         s_log_userData = userData;
     }
 
-    void log(vgpu_log_level level, const char* format, ...) {
+    void log(LogLevel level, const char* format, ...) {
         if (s_log_callback) {
             va_list args;
             va_start(args, format);
@@ -55,7 +55,7 @@ namespace vgpu
             va_start(args, format);
             char message[VGPU_MAX_LOG_MESSAGE];
             vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
-            s_log_callback(s_log_userData, VGPU_LOG_LEVEL_ERROR, message);
+            s_log_callback(s_log_userData, LogLevel::Error, message);
             va_end(args);
         }
     }
@@ -66,7 +66,7 @@ namespace vgpu
             va_start(args, format);
             char message[VGPU_MAX_LOG_MESSAGE];
             vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
-            s_log_callback(s_log_userData, VGPU_LOG_LEVEL_INFO, message);
+            s_log_callback(s_log_userData, LogLevel::Info, message);
             va_end(args);
         }
     }
@@ -145,15 +145,98 @@ namespace vgpu
         return s_renderer->queryCaps();
     }
 
+    /* Resource creation methods */
+    TextureHandle createTexture(const TextureDescription& desc, const void* initialData)
+    {
+        return s_renderer->createTexture(desc, initialData);
+    }
+
+    void destroyTexture(TextureHandle handle)
+    {
+        if (handle.isValid())
+            s_renderer->destroyTexture(handle);
+    }
+
+    BufferHandle CreateBuffer(uint32_t size, BufferUsage usage, uint32_t stride, const void* initialData)
+    {
+        return s_renderer->createBuffer(size, usage, stride, initialData);
+    }
+
+    void DestroyBuffer(BufferHandle handle)
+    {
+        if (handle.isValid())
+            s_renderer->destroyBuffer(handle);
+    }
+
+    void* MapBuffer(BufferHandle handle)
+    {
+        return s_renderer->MapBuffer(handle);
+    }
+
+    void UnmapBuffer(BufferHandle handle)
+    {
+        s_renderer->UnmapBuffer(handle);
+    }
+
+    ShaderBlob CompileShader(const char* source, const char* entryPoint, ShaderStage stage)
+    {
+        VGPU_ASSERT(source);
+        VGPU_ASSERT(entryPoint);
+        VGPU_ASSERT(stage != ShaderStage::Count);
+
+        return s_renderer->compileShader(source, entryPoint, stage);
+    }
+
+    ShaderHandle CreateShader(const ShaderDescription& desc)
+    {
+        return s_renderer->createShader(desc);
+    }
+
+    void DestroyShader(ShaderHandle handle)
+    {
+        if (handle.isValid())
+            s_renderer->destroyShader(handle);
+    }
+
     /* Commands */
     void cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth)
     {
         s_renderer->cmdSetViewport(commandList, x, y, width, height, min_depth, max_depth);
     }
 
-    void cmdSetScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    void SetScissorRect(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
     {
         s_renderer->cmdSetScissor(commandList, x, y, width, height);
+    }
+
+    void SetVertexBuffer(CommandList commandList, BufferHandle handle)
+    {
+        s_renderer->cmdSetVertexBuffer(commandList, handle);
+    }
+
+    void SetIndexBuffer(CommandList commandList, BufferHandle handle)
+    {
+        s_renderer->cmdSetIndexBuffer(commandList, handle);
+    }
+
+    void SetShader(CommandList commandList, ShaderHandle shader)
+    {
+        s_renderer->cmdSetShader(commandList, shader);
+    }
+
+    void BindUniformBuffer(CommandList commandList, uint32_t slot, BufferHandle handle)
+    {
+        s_renderer->cmdBindUniformBuffer(commandList, slot, handle);
+    }
+
+    void BindTexture(CommandList commandList, uint32_t slot, TextureHandle handle)
+    {
+        s_renderer->cmdBindTexture(commandList, slot, handle);
+    }
+
+    void DrawIndexed(CommandList commandList, uint32_t indexCount, uint32_t startIndex, int32_t baseVertex)
+    {
+        s_renderer->cmdDrawIndexed(commandList, indexCount, startIndex, baseVertex);
     }
 
     /* Pixel format helpers */

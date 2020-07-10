@@ -22,42 +22,35 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
-#include "Core/Ptr.h"
+#include "Core/Assert.h"
+#include <vgpu.h>
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public RefCounted
+    class Window;
+
+    class ALIMER_API Gui final
     {
     public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
+        Gui(Window* window);
+        ~Gui();
 
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
+        void BeginFrame();
+        void Render();
 
     private:
-        virtual void BackendSetName() {}
+        void SetupRenderState(ImDrawData* drawData, vgpu::CommandList commandList);
+        void RenderDrawData(ImDrawData* drawData, vgpu::CommandList commandList);
 
-    protected:
-        String name;
+        vgpu::TextureHandle _fontTexture{ vgpu::kInvalidTexture };
+        vgpu::ShaderHandle _shader{ vgpu::kInvalidShader };
+        vgpu::BufferHandle _vertexBuffer{ vgpu::kInvalidBuffer };
+        vgpu::BufferHandle _indexBuffer{ vgpu::kInvalidBuffer };
+        vgpu::BufferHandle _uniformBuffer{ vgpu::kInvalidBuffer };
 
-        MemoryUsage memoryUsage;
+        int _vertexBufferSize = 5000;
+        int _indexBufferSize = 10000;
     };
 }

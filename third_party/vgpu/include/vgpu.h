@@ -47,6 +47,7 @@
 #endif
 
 #include <stdint.h>
+#include <string>
 
 #ifndef VGPU_ASSERT
 #   include <assert.h>
@@ -72,39 +73,45 @@ namespace vgpu
     static constexpr uint32_t kNumInflightFrames = 2u;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxCommandLists = 16u;
-
-    enum {
-        VGPU_MAX_COLOR_ATTACHMENTS = 8u,
-        VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
-        VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
-        VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
-        VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
-    };
+    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
+    static constexpr uint32_t kMaxVertexAttributes = 16u;
+    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
     /* Handles*/
     struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
     struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-    typedef struct vgpu_framebuffer_t* vgpu_framebuffer;
+    struct ShaderHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
     static constexpr TextureHandle kInvalidTexture = { kInvalidId };
+    static constexpr ShaderHandle kInvalidShader = { kInvalidId };
     using CommandList = uint8_t;
 
     /* Enums */
-    typedef enum vgpu_log_level {
-        VGPU_LOG_LEVEL_ERROR = 0,
-        VGPU_LOG_LEVEL_WARN = 1,
-        VGPU_LOG_LEVEL_INFO = 2,
-        VGPU_LOG_LEVEL_DEBUG = 3,
-        _VGPU_LOG_LEVEL_COUNT,
-        _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_log_level;
+    enum class LogLevel : uint32_t {
+        Error,
+        Warn,
+        Info,
+        Debug
+    };
 
     enum class BackendType : uint32_t {
         Null,
         Vulkan,
         Direct3D11,
         Count
+    };
+
+    enum class GPUVendorId : uint32_t
+    {
+        None = 0,
+        AMD = 0x1002,
+        Intel = 0x8086,
+        Nvidia = 0x10DE,
+        ARM = 0x13B5,
+        ImgTec = 0x1010,
+        Qualcomm = 0x5143
     };
 
     /// Defines pixel format.
@@ -192,25 +199,41 @@ namespace vgpu
         Sint
     };
 
-    typedef enum vgpu_texture_type {
-        VGPU_TEXTURE_TYPE_2D,
-        VGPU_TEXTURE_TYPE_3D,
-        VGPU_TEXTURE_TYPE_CUBE,
-        _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_type;
+    enum class TextureType : uint32_t {
+        Type2D,
+        Type3D,
+        TypeCube
+    };
 
-    typedef enum vgpu_texture_usage {
-        VGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
-        VGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
-        VGPU_TEXTURE_USAGE_RENDER_TARGET = (1 << 2),
-        _VGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_usage;
+    enum class TextureUsage : uint32_t
+    {
+        None = 0,
+        Sampled = (1 << 0),
+        Storage = (1 << 1),
+        RenderTarget = (1 << 2)
+    };
+    VGPU_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
-    typedef enum vgpu_load_op {
-        VGPU_LOAD_OP_CLEAR = 0,
-        VGPU_LOAD_OP_LOAD = 1,
-        _VGPU_LOAD_OP_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_load_op;
+    enum class BufferUsage : uint32_t
+    {
+        None = 0,
+        Uniform = (1 << 0),
+        Vertex = (1 << 1),
+        Index = (1 << 2)
+    };
+    VGPU_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
+
+    enum class ShaderStage : uint32_t {
+        Vertex,
+        Fragment,
+        Compute,
+        Count
+    };
+
+    enum class LoadOp : uint8_t {
+        Clear,
+        Load
+    };
 
     enum class PresentInterval : uint32_t
     {
@@ -229,19 +252,29 @@ namespace vgpu
         float a;
     } vgpu_color;
 
-    typedef struct vgpu_texture_info {
-        vgpu_texture_type type;
-        PixelFormat format;
-        uint32_t width;
-        uint32_t height;
-        uint32_t depth;
-        uint32_t array_layers;
-        uint32_t mip_levels;
-        uint32_t usage;
-        const void* content;
+    struct TextureDescription {
+        TextureType type = TextureType::Type2D;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
+        uint32_t width = 1u;
+        uint32_t height = 1u;
+        uint32_t depth = 1u;
+        uint32_t arraySize = 1u;
+        uint32_t mipLevels = 1u;
+        uint32_t sampleCount = 1u;
+        TextureUsage usage = TextureUsage::Sampled;
         const char* label;
-        uintptr_t external_handle;
-    } vgpu_texture_info;
+    };
+
+    struct ShaderBlob
+    {
+        uint64_t size;
+        uint8_t* data;
+    };
+
+    struct ShaderDescription {
+        ShaderBlob stages[(uint32_t)ShaderStage::Count];
+        const char* label;
+    };
 
     typedef struct vgpu_attachment_info {
         TextureHandle texture;
@@ -253,14 +286,14 @@ namespace vgpu
         TextureHandle texture;
         uint32_t level;
         uint32_t slice;
-        vgpu_load_op load_op;
+        LoadOp load_op;
         vgpu_color clear_color;
     } vgpu_color_attachment_info;
 
     typedef struct vgpu_depth_stencil_pass_info {
-        vgpu_load_op depth_load_op;
+        LoadOp depth_load_op;
         float clear_depth;
-        vgpu_load_op stencil_load_op;
+        LoadOp stencil_load_op;
         uint8_t clear_stencil;
     } vgpu_depth_stencil_pass_info;
 
@@ -268,7 +301,7 @@ namespace vgpu
         uint32_t width;
         uint32_t height;
         uint32_t layers;
-        vgpu_attachment_info color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
+        vgpu_attachment_info color_attachments[kMaxColorAttachments];
         vgpu_attachment_info depth_stencil;
     } vgpu_framebuffer_info;
 
@@ -288,10 +321,11 @@ namespace vgpu
         void (VGPU_CALL* free)(void* user_data, void* ptr);
     } vgpu_allocation_callbacks;
 
-    typedef struct vgpu_features {
-        bool independent_blend;
+    struct Features {
+        bool independentBlend;
         bool computeShader;
         bool tessellationShader;
+        bool logicOp;
         bool multiViewport;
         bool indexUInt32;
         bool multiDrawIndirect;
@@ -302,48 +336,49 @@ namespace vgpu
         bool textureCompressionBC;
         bool textureCubeArray;
         bool raytracing;
-    } vgpu_features;
+    };
 
-    typedef struct vgpu_limits {
-        uint32_t        max_vertex_attributes;
-        uint32_t        max_vertex_bindings;
-        uint32_t        max_vertex_attribute_offset;
-        uint32_t        max_vertex_binding_stride;
-        uint32_t        max_texture_size_1d;
-        uint32_t        max_texture_size_2d;
-        uint32_t        max_texture_size_3d;
-        uint32_t        max_texture_size_cube;
-        uint32_t        max_texture_array_layers;
-        uint32_t        max_color_attachments;
-        uint32_t        max_uniform_buffer_size;
-        uint64_t        min_uniform_buffer_offset_alignment;
-        uint32_t        max_storage_buffer_size;
-        uint64_t        min_storage_buffer_offset_alignment;
-        uint32_t        max_sampler_anisotropy;
-        uint32_t        max_viewports;
-        uint32_t        max_viewport_width;
-        uint32_t        max_viewport_height;
-        uint32_t        max_tessellation_patch_size;
-        float           point_size_range_min;
-        float           point_size_range_max;
-        float           line_width_range_min;
-        float           line_width_range_max;
-        uint32_t        max_compute_shared_memory_size;
-        uint32_t        max_compute_work_group_count_x;
-        uint32_t        max_compute_work_group_count_y;
-        uint32_t        max_compute_work_group_count_z;
-        uint32_t        max_compute_work_group_invocations;
-        uint32_t        max_compute_work_group_size_x;
-        uint32_t        max_compute_work_group_size_y;
-        uint32_t        max_compute_work_group_size_z;
-    } vgpu_limits;
+    struct Limits {
+        uint32_t    maxVertexAttributes;
+        uint32_t    maxVertexBindings;
+        uint32_t    maxVertexAttributeOffset;
+        uint32_t    maxVertexBindingStride;
+        uint32_t    maxTextureDimension1D;
+        uint32_t    maxTextureDimension2D;
+        uint32_t    maxTextureDimension3D;
+        uint32_t    maxTextureDimensionCube;
+        uint32_t    maxTextureArraySize;
+        uint32_t    maxColorAttachments;
+        uint32_t    maxUniformBufferSize;
+        uint32_t    minUniformBufferOffsetAlignment;
+        uint32_t    maxStorageBufferSize;
+        uint32_t    minStorageBufferOffsetAlignment;
+        uint32_t    maxSamplerAnisotropy;
+        uint32_t    maxViewports;
+        uint32_t    maxViewportWidth;
+        uint32_t    maxViewportHeight;
+        uint32_t    maxTessellationPatchSize;
+        float       pointSizeRangeMin;
+        float       pointSizeRangeMax;
+        float       lineWidthRangeMin;
+        float       lineWidthRangeMax;
+        uint32_t    maxComputeSharedMemorySize;
+        uint32_t    maxComputeWorkGroupCountX;
+        uint32_t    maxComputeWorkGroupCountY;
+        uint32_t    maxComputeWorkGroupCountZ;
+        uint32_t    maxComputeWorkGroupInvocations;
+        uint32_t    maxComputeWorkGroupSizeX;
+        uint32_t    maxComputeWorkGroupSizeY;
+        uint32_t    maxComputeWorkGroupSizeZ;
+    };
 
     struct Caps {
         BackendType backendType;
-        uint32_t vendorId;
+        GPUVendorId vendorId;
         uint32_t deviceId;
-        vgpu_features features;
-        vgpu_limits limits;
+        std::string adapterName;
+        Features features;
+        Limits limits;
     };
 
     struct PresentationParameters {
@@ -357,10 +392,10 @@ namespace vgpu
     };
 
     /* Log functions */
-    typedef void(VGPU_CALL* LogCallback)(void* user_data, vgpu_log_level level, const char* message);
+    typedef void(VGPU_CALL* LogCallback)(void* user_data, LogLevel level, const char* message);
 
     VGPU_API void setLogCallback(LogCallback callback, void* userData);
-    VGPU_API void log(vgpu_log_level level, const char* format, ...);
+    VGPU_API void log(LogLevel level, const char* format, ...);
     VGPU_API void logError(const char* format, ...);
     VGPU_API void logInfo(const char* format, ...);
 
@@ -370,9 +405,29 @@ namespace vgpu
     VGPU_API void endFrame(void);
     VGPU_API const Caps* queryCaps();
 
+    /* Resource creation methods */
+    VGPU_API TextureHandle createTexture(const TextureDescription& desc, const void* initialData = nullptr);
+    VGPU_API void destroyTexture(TextureHandle handle);
+
+    VGPU_API BufferHandle CreateBuffer(uint32_t size, BufferUsage usage, uint32_t stride = 0, const void* initialData = nullptr);
+    VGPU_API void DestroyBuffer(BufferHandle handle);
+    VGPU_API void* MapBuffer(BufferHandle handle);
+    VGPU_API void UnmapBuffer(BufferHandle handle);
+
+    VGPU_API ShaderBlob CompileShader(const char* source, const char* entryPoint, ShaderStage stage);
+    VGPU_API ShaderHandle CreateShader(const ShaderDescription& desc);
+    VGPU_API void DestroyShader(ShaderHandle handle);
+
     /* Commands */
     VGPU_API void cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f);
-    VGPU_API void cmdSetScissor(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+    VGPU_API void SetScissorRect(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+    VGPU_API void SetVertexBuffer(CommandList commandList, BufferHandle buffer);
+    VGPU_API void SetIndexBuffer(CommandList commandList, BufferHandle buffer);
+    VGPU_API void SetShader(CommandList commandList, ShaderHandle shader);
+
+    VGPU_API void BindUniformBuffer(CommandList commandList, uint32_t slot, BufferHandle handle);
+    VGPU_API void BindTexture(CommandList commandList, uint32_t slot, TextureHandle handle);
+    VGPU_API void DrawIndexed(CommandList commandList, uint32_t indexCount, uint32_t startIndex, int32_t baseVertex);
 
     /* pixel format helpers */
     struct PixelFormatDesc

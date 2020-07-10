@@ -26,9 +26,8 @@
 #include "Application/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
+#include "Graphics/Gui.h"
 #include "Math/Size.h"
-#include <imgui.h>
-#include <imgui_internal.h>
 
 namespace alimer
 {
@@ -111,6 +110,8 @@ namespace alimer
         InputManager* input;
 
         bool headless{ false };
+
+        Gui* _gui = nullptr;
     };
 } 
 

@@ -59,6 +59,18 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 
 namespace vgpu
 {
+    static inline std::string ToUtf8(const wchar_t* wstr, size_t len)
+    {
+        std::vector<char> char_buffer;
+        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
+        if (ret < 0)
+            return "";
+
+        char_buffer.resize(ret);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
+        return std::string(char_buffer.data(), char_buffer.size());
+    }
+
     static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
     {
         switch (format)
@@ -167,10 +179,11 @@ namespace vgpu
         }
     }
 
-    static inline DXGI_FORMAT _vgpu_d3d_format_with_usage(PixelFormat format, uint32_t usage) {
+    static inline DXGI_FORMAT ToDXGIFormatWithUsage(PixelFormat format, TextureUsage usage)
+    {
         // If depth and either ua or sr, set to typeless
         if (isDepthStencilFormat(format)
-            && ((usage & (VGPU_TEXTURE_USAGE_SAMPLED | VGPU_TEXTURE_USAGE_STORAGE)) != 0))
+            && any(usage & (TextureUsage::Sampled | TextureUsage::Storage)))
         {
             return _vgpu_d3d_typeless_from_depth_format(format);
         }

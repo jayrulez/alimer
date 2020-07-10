@@ -46,7 +46,7 @@ namespace alimer
 
         gameSystems.Clear();
         window.Close();
-        ImGui::DestroyContext();
+        SafeDelete(_gui);
         PlatformDestroy();
         vgpu::shutdown();
         LOG_INFO("Application destroyed correctly");
@@ -70,85 +70,14 @@ namespace alimer
             presentationParameters.windowHandle = window.GetNativeHandle();
             presentationParameters.display = window.GetNativeDisplay();
 
-            if (!vgpu::init(initFlags, presentationParameters)) {
-
-            }
-
-           /* vgpu_init_info gpu_init_info = {};
-#ifdef _DEBUG
-            gpu_init_info.debug = true;
-#endif
-            gpu_init_info.swapchain.native_handle = window.GetHandle();
-            gpu_init_info.swapchain.width = window.GetSize().width;
-            gpu_init_info.swapchain.height = window.GetSize().height;
-            if (!vgpu_init(&gpu_init_info)) {
+            if (!vgpu::init(initFlags, presentationParameters))
+            {
                 headless = true;
-            }*/
-
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-
-            ImGuiIO& io = ImGui::GetIO();
-            io.UserData = this;
-            io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-            //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-            io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-            //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-            //io.ConfigViewportsNoAutoMerge = true;
-            //io.ConfigViewportsNoTaskBarIcon = true;
-
-            // Setup Dear ImGui style
-            ImGui::StyleColorsDark();
-            //ImGui::StyleColorsClassic();
-
-            io.Fonts->AddFontDefault();
-            //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
-
-            // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-            ImGuiStyle& style = ImGui::GetStyle();
-            // Color scheme
-            /*style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-            style.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
-            style.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_HeaderActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_HeaderHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
-            style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
-            style.Colors[ImGuiCol_SliderGrab] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
-            style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
-            style.Colors[ImGuiCol_FrameBgActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
-            style.Colors[ImGuiCol_Button] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-            style.Colors[ImGuiCol_ButtonHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-            style.Colors[ImGuiCol_ButtonActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);*/
-
-            // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                style.WindowRounding = 0.0f;
-                style.Colors[ImGuiCol_WindowBg].w = 1.0f;
             }
-
-            /*ImGuiIO& io = ImGui::GetIO();
-            io.BackendRendererName = "Alimer Direct3D12";
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-            io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
-
-            ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-            main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataD3D12)(maxInflightFrames);
-
-            if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            else
             {
-                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-                platform_io.Renderer_CreateWindow = ImGui_D3D12_CreateWindow;
-                platform_io.Renderer_DestroyWindow = ImGui_D3D12_DestroyWindow;
-                platform_io.Renderer_SetWindowSize = ImGui_D3D12_SetWindowSize;
-                platform_io.Renderer_RenderWindow = ImGui_D3D12_RenderWindow;
-                platform_io.Renderer_SwapBuffers = ImGui_D3D12_SwapBuffers;
-            }*/
-
-            
+                _gui = new Gui(&window);
+            }
         }
 
         Initialize();
@@ -183,6 +112,7 @@ namespace alimer
     bool Application::BeginDraw()
     {
         vgpu::beginFrame();
+        _gui->BeginFrame();
 
         for (auto gameSystem : gameSystems)
         {
@@ -216,7 +146,7 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        //window.GetSwapChain()->Present();
+        _gui->Render();
         vgpu::endFrame();
     }
 

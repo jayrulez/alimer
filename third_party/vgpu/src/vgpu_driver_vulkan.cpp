@@ -86,13 +86,13 @@ namespace vgpu
 
     static VkBool32 _vgpu_vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT flags, const VkDebugUtilsMessengerCallbackDataEXT* data, void* context) {
         if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-            vgpu::log(VGPU_LOG_LEVEL_ERROR, "%s", data->pMessage);
+            vgpu::log(LogLevel::Error, "%s", data->pMessage);
         }
         else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-            vgpu::log(VGPU_LOG_LEVEL_WARN, "%s", data->pMessage);
+            vgpu::log(LogLevel::Warn, "%s", data->pMessage);
         }
         else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-            vgpu::log(VGPU_LOG_LEVEL_INFO, "%s", data->pMessage);
+            vgpu::log(LogLevel::Info, "%s", data->pMessage);
         }
 
         return VK_FALSE;

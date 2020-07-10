@@ -28,19 +28,4 @@
 
 namespace alimer
 {
-    class Gui final
-    {
-    public:
-        /// Constructor.
-        Gui();
-
-        /// Destructor.
-        ~Gui();
-
-        void Render();
-
-    private:
-        
-    };
-
 } 

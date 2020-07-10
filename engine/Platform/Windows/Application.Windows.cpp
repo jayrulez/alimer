@@ -80,6 +80,7 @@ namespace alimer
         {
             LOG_ERROR("GLFW couldn't be initialized.");
         }
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     }
 

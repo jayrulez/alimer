@@ -35,7 +35,6 @@
 #   define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
-#include "imgui_impl_glfw.h"
 
 namespace alimer
 {
@@ -51,17 +50,7 @@ namespace alimer
         fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
         exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
 
-        /*if ((flags & WINDOW_FLAG_OPENGL)) {
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        }
-        else
-        {
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        }*/
-
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, ((flags & WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
         if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -104,18 +93,10 @@ namespace alimer
             return false;
         }
 
-        /*if ((flags & WINDOW_FLAG_OPENGL)) {
-            glfwMakeContextCurrent(handle);
-            glfwSwapInterval(1);
-        }*/
-
         glfwDefaultWindowHints();
         glfwSetWindowUserPointer(handle, this);
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
-
-        // Init imgui stuff
-        //ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
 
         if (windowCount == 0) {
             _isMain = true;
