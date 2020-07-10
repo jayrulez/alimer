@@ -29,6 +29,8 @@ namespace alimer
     D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat)
         : _device(device)
     {
+        colorFormat = SRGBToLinearFormat(preferredColorFormat);
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         _handle = DXGICreateSwapchain(
             _device->GetDXGIFactory(),
@@ -36,7 +38,7 @@ namespace alimer
             _device->GetD3DDevice(),
             windowHandle,
             width, height,
-            preferredColorFormat,
+            colorFormat,
             kNumBackBuffers,
             isFullscreen
         );
@@ -45,9 +47,9 @@ namespace alimer
             _device->GetDXGIFactory(),
             _device->GetDXGIFactoryCaps(),
             _device->GetD3DDevice(),
-            _desc.windowHandle,
-            _desc.width, _desc.height,
-            _desc.colorFormat,
+            windowHandle,
+            width, height,
+            colorFormat,
             kNumBackBuffers,
             _desc.isFullscreen
         );
@@ -107,6 +109,9 @@ namespace alimer
     {
         ID3D11Texture2D* resource;
         ThrowIfFailed(_handle->GetBuffer(0, IID_PPV_ARGS(&resource)));
-        _backbufferTextures.Push(new D3D11Texture(_device, resource));
+        backbufferTextures.Push(new D3D11Texture(_device, resource, colorFormat));
+
+        // Update render pass description as well.
+        currentRenderPassDescription.colorAttachments[0].texture = backbufferTextures.Back();
     }
 }

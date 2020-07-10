@@ -64,6 +64,7 @@ namespace alimer
         void* GetNativeHandle() const;
         void* GetNativeDisplay() const;
         void* GetWindow() const { return window; }
+        ALIMER_FORCEINLINE SwapChain* GetSwapChain() const { return swapChain.Get(); }
 
     private:
         bool _isMain = false;

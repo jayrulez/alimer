@@ -30,15 +30,18 @@ namespace alimer
     class D3D11Texture final : public Texture
     {
     public:
-        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* resource);
+        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* resource, PixelFormat format);
         D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         ~D3D11Texture() override;
         void Destroy() override;
+
+        ID3D11RenderTargetView* GetRenderTargetView(uint32_t mipLevel, uint32_t slice);
 
     private:
         void BackendSetName() override;
 
         D3D11GraphicsDevice* device;
         ID3D11Resource* handle = nullptr;
+        ID3D11RenderTargetView* rtv = nullptr;
     };
 }

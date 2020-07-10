@@ -29,24 +29,15 @@ namespace alimer
     SwapChain::SwapChain()
         : GraphicsResource()
     {
-
-    }
-
-    void SwapChain::SetVSync(bool enabled)
-    {
-        if (_vyncEnabled == enabled)
-            return;
-
-        _vyncEnabled = enabled;
-        OnVSyncChanged();
+        currentRenderPassDescription.colorAttachments[0].slice = 0;
     }
 
     void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
         {
-            _depthStencilTexture.Reset();
-            _backbufferTextures.Clear();
+            depthStencilTexture.Reset();
+            backbufferTextures.Clear();
 
             width = Math::Max(newWidth, 1u);
             height = Math::Max(newHeight, 1u);
@@ -56,12 +47,12 @@ namespace alimer
 
     Texture* SwapChain::GetBackbufferTexture() const
     {
-        return _backbufferTextures[_backbufferIndex].Get();
+        return backbufferTextures[backbufferIndex].Get();
     }
 
     Texture* SwapChain::GetDepthStencilTexture() const
     {
-        return _depthStencilTexture.Get();
+        return depthStencilTexture.Get();
     }
 }
 

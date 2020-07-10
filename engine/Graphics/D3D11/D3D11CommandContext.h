@@ -37,6 +37,9 @@ namespace alimer
         void PopDebugGroup() override;
         void InsertDebugMarker(const String& name) override;
 
+        void BeginRenderPass(const RenderPassDescription& renderPass) override;
+        void EndRenderPass() override;
+
         void SetScissorRect(const Rect& scissorRect) override;
         void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
         void SetViewport(const Viewport& viewport) override;
@@ -51,5 +54,8 @@ namespace alimer
         ID3D11DeviceContext1* context;
         ID3DUserDefinedAnnotation* annotation;
         Color blendColor = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        ID3D11RenderTargetView* colorRTVS[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        ID3D11DepthStencilView* DSV = nullptr;
     };
 }

@@ -107,12 +107,10 @@ namespace alimer
 
         auto commandContext = Graphics::GetDefaultContext();
         commandContext->PushDebugGroup("Clear");
-        /*vgpu_pass_begin_info begin_info = {};
-        begin_info.color_attachments[0].texture = vgpu_get_backbuffer_texture();
-        begin_info.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
-        vgpu_begin_pass(&begin_info);
-        vgpu_end_pass();*/
-        //graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
+        RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
+        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        commandContext->BeginRenderPass(renderPass);
+        commandContext->EndRenderPass();
         commandContext->PopDebugGroup();
     }
 

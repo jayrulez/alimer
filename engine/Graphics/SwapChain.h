@@ -34,7 +34,6 @@ namespace alimer
         /// Constructor.
         SwapChain();
 
-        void SetVSync(bool enabled);
         void Resize(uint32_t newWidth, uint32_t newHeight);
 
         /// Get the current backbuffer texture.
@@ -43,17 +42,19 @@ namespace alimer
         /// Get the depth stencil texture.
         Texture* GetDepthStencilTexture() const;
 
+        const RenderPassDescription& GetCurrentRenderPassDescription() const { return currentRenderPassDescription; }
+
     private:
         virtual void Recreate() = 0;
-        virtual void OnVSyncChanged() {}
 
     protected:
         uint32_t width = 0;
         uint32_t height = 0;
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
 
-        uint32_t _backbufferIndex = 0;
-        Vector<RefPtr<Texture>> _backbufferTextures;
-        RefPtr<Texture> _depthStencilTexture;
-        bool _vyncEnabled = false;
+        uint32_t backbufferIndex = 0;
+        Vector<RefPtr<Texture>> backbufferTextures;
+        RefPtr<Texture> depthStencilTexture;
+        RenderPassDescription currentRenderPassDescription;
     };
 }

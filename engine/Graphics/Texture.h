@@ -100,9 +100,4 @@ namespace alimer
     protected:
         TextureDescription _desc;
     };
-
-    class ALIMER_API TextureView : public RefCounted
-    {
-
-    };
 }

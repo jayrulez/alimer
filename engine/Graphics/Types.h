@@ -244,7 +244,7 @@ namespace alimer
         uint8_t clearStencil = 0;
     };
 
-    struct RenderPassDesc
+    struct RenderPassDescription
     {
         // Render area will be clipped to the actual framebuffer.
         //RectU renderArea = { UINT32_MAX, UINT32_MAX };

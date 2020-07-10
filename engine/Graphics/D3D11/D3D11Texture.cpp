@@ -31,15 +31,15 @@ namespace alimer
         {
             switch (type)
             {
-            //case TextureType::Texture1D:
-            //    return (isArray) ? D3D11_RTV_DIMENSION_TEXTURE1DARRAY : D3D11_RTV_DIMENSION_TEXTURE1D;
+                //case TextureType::Texture1D:
+                //    return (isArray) ? D3D11_RTV_DIMENSION_TEXTURE1DARRAY : D3D11_RTV_DIMENSION_TEXTURE1D;
             case TextureType::Texture2D:
                 return (isArray) ? D3D11_RTV_DIMENSION_TEXTURE2DARRAY : D3D11_RTV_DIMENSION_TEXTURE2D;
             case TextureType::Texture3D:
                 ALIMER_ASSERT(isArray == false);
                 return D3D11_RTV_DIMENSION_TEXTURE3D;
-            //case TextureType::Texture2DMultisample:
-            //    return (isArray) ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DMS;
+                //case TextureType::Texture2DMultisample:
+                //    return (isArray) ? D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY : D3D11_RTV_DIMENSION_TEXTURE2DMS;
             case TextureType::TextureCube:
                 return D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
             default:
@@ -48,21 +48,29 @@ namespace alimer
             }
         }
 
-        inline TextureDescription ConvertResourceDesc(ID3D11Texture2D* resource)
+        inline TextureDescription ConvertResourceDesc(ID3D11Texture2D* resource, PixelFormat format)
         {
             D3D11_TEXTURE2D_DESC d3dDesc;
             resource->GetDesc(&d3dDesc);
 
             TextureDescription description = {};
             description.type = TextureType::Texture2D;
+            description.format = format;
+            description.usage = TextureUsage::None;
+            if (d3dDesc.BindFlags & D3D11_BIND_RENDER_TARGET)
+            {
+                description.usage |= TextureUsage::RenderTarget;
+            }
             description.width = d3dDesc.Width;
             description.height = d3dDesc.Height;
+            description.depth = 1u;
+            description.arraySize = d3dDesc.ArraySize;
             return description;
         }
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, ID3D11Texture2D* resource)
-        : Texture(ConvertResourceDesc(resource))
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, ID3D11Texture2D* resource, PixelFormat format)
+        : Texture(ConvertResourceDesc(resource, format))
         , device(device_)
         , handle(resource)
     {
@@ -83,11 +91,26 @@ namespace alimer
 
     void D3D11Texture::Destroy()
     {
+        SafeRelease(rtv);
         SafeRelease(handle);
     }
 
     void D3D11Texture::BackendSetName()
     {
         D3D11SetObjectName(handle, name);
+    }
+
+    ID3D11RenderTargetView* D3D11Texture::GetRenderTargetView(uint32_t mipLevel, uint32_t slice)
+    {
+        if (!rtv)
+        {
+            D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+            rtvDesc.Format = ToDXGIFormat(_desc.format);
+            rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+            ThrowIfFailed(device->GetD3DDevice()->CreateRenderTargetView(handle, &rtvDesc, &rtv));
+        }
+
+        return rtv;
     }
 }
