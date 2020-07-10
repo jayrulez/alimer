@@ -61,17 +61,17 @@ namespace alimer
         }
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* resource)
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, ID3D11Texture2D* resource)
         : Texture(ConvertResourceDesc(resource))
-        , _device(device)
-        , _handle(resource)
+        , device(device_)
+        , handle(resource)
     {
 
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, const TextureDescription& desc, const void* initialData)
         : Texture(desc)
-        , _device(device)
+        , device(device_)
     {
         const DXGI_FORMAT format = ToDXGIFormatWitUsage(desc.format, desc.usage);
     }
@@ -83,11 +83,11 @@ namespace alimer
 
     void D3D11Texture::Destroy()
     {
-        SafeRelease(_handle);
+        SafeRelease(handle);
     }
 
     void D3D11Texture::BackendSetName()
     {
-        D3D11SetObjectName(_handle, name);
+        D3D11SetObjectName(handle, name);
     }
 }

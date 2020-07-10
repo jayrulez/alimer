@@ -38,7 +38,7 @@ namespace alimer
     private:
         void BackendSetName() override;
 
-        D3D11GraphicsDevice* _device;
-        ID3D11Resource* _handle = nullptr;
+        D3D11GraphicsDevice* device;
+        ID3D11Resource* handle = nullptr;
     };
 }

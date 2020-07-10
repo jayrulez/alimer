@@ -23,12 +23,12 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Core/Utils.h"
 #include "Math/Size.h"
 
 namespace alimer
 {
-    enum class WindowFlags : uint32_t {
+    enum class WindowFlags : uint32_t
+    {
         None = 0,
         Resizable = (1 << 0),
         Fullscreen = (1 << 1),
@@ -40,6 +40,8 @@ namespace alimer
         OpenGL = (1 << 7),
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
+
+    class SwapChain;
 
     /// Defines an OS window.
     class ALIMER_API Window final : public Object
@@ -70,5 +72,6 @@ namespace alimer
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
         void* window = nullptr;
+        RefPtr<SwapChain> swapChain;
     };
 } 

@@ -26,6 +26,11 @@
 
 namespace alimer
 {
+    Texture::Texture()
+    {
+
+    }
+
     Texture::Texture(const TextureDescription& desc)
         : GraphicsResource(desc.name, MemoryUsage::GpuOnly)
         , _desc(desc)

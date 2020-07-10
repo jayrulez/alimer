@@ -22,9 +22,7 @@
 
 #pragma once
 
-#include "Core/Vector.h"
-#include "Math/Rect.h"
-#include "Math/Viewport.h"
+
 #include "Graphics/CommandContext.h"
 #include "Graphics/SwapChain.h"
 #include "Graphics/Buffer.h"
@@ -44,7 +42,7 @@ namespace alimer
     };
 
     /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice 
+    class ALIMER_API GraphicsDevice
     {
         friend class GraphicsResource;
 
@@ -62,24 +60,19 @@ namespace alimer
         void BeginFrame();
         void EndFrame();
 
-        void Resize(uint32_t width, uint32_t height);
+        /**
+        * Get the default command context.
+        * The default context is managed completely by the device.
+        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
+        */
+        virtual CommandContext* GetDefaultContext() const = 0;
 
         // Resource creation methods.
-        virtual RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) = 0;
+        virtual RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) = 0;
         virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
 
         // CommandList
-        virtual CommandList BeginCommandList(const char* name) = 0;
-        virtual void InsertDebugMarker(CommandList commandList, const char* name) = 0;
-        virtual void PushDebugGroup(CommandList commandList, const char* name) = 0;
-        virtual void PopDebugGroup(CommandList commandList) = 0;
-
-        virtual void SetScissorRect(CommandList commandList, const Rect& scissorRect) = 0;
-        virtual void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) = 0;
-        virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
-        virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
-        virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
-
+        
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
@@ -99,9 +92,6 @@ namespace alimer
 
         bool headless = false;
         GraphicsDeviceCaps caps{};
-        uint32_t backbufferWidth = 0;
-        uint32_t backbufferHeight = 0;
-        float dpiScale = 1.0f;
 
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
@@ -116,4 +106,27 @@ namespace alimer
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
+
+    namespace Graphics
+    {
+        ALIMER_FORCEINLINE void BeginFrame()
+        {
+            GraphicsDevice::Instance->BeginFrame();
+        }
+
+        ALIMER_FORCEINLINE void EndFrame()
+        {
+            GraphicsDevice::Instance->EndFrame();
+        }
+
+        ALIMER_FORCEINLINE CommandContext* GetDefaultContext()
+        {
+            return GraphicsDevice::Instance->GetDefaultContext();
+        }
+
+        ALIMER_FORCEINLINE RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat = PixelFormat::BGRA8Unorm, PixelFormat depthStencilFormat = PixelFormat::Invalid)
+        {
+            return GraphicsDevice::Instance->CreateSwapChain(windowHandle, width, height, isFullscreen, preferredColorFormat, depthStencilFormat);
+        }
+    }
 }

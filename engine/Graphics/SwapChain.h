@@ -32,11 +32,10 @@ namespace alimer
     {
     public:
         /// Constructor.
-        SwapChain(const SwapChainDescription& desc);
+        SwapChain();
 
         void SetVSync(bool enabled);
         void Resize(uint32_t newWidth, uint32_t newHeight);
-        virtual void Present() = 0;
 
         /// Get the current backbuffer texture.
         Texture* GetBackbufferTexture() const;
@@ -49,7 +48,8 @@ namespace alimer
         virtual void OnVSyncChanged() {}
 
     protected:
-        SwapChainDescription _desc;
+        uint32_t width = 0;
+        uint32_t height = 0;
 
         uint32_t _backbufferIndex = 0;
         Vector<RefPtr<Texture>> _backbufferTextures;

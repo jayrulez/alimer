@@ -26,8 +26,8 @@
 
 namespace alimer
 {
-    SwapChain::SwapChain(const SwapChainDescription& desc)
-        : _desc(desc)
+    SwapChain::SwapChain()
+        : GraphicsResource()
     {
 
     }
@@ -43,14 +43,13 @@ namespace alimer
 
     void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
-        if ((newWidth != _desc.width || newHeight != _desc.height) && newWidth > 0 && newHeight > 0)
+        if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
         {
             _depthStencilTexture.Reset();
             _backbufferTextures.Clear();
 
-            _desc.width = Math::Max(newWidth, 1u);
-            _desc.height = Math::Max(newHeight, 1u);
-
+            width = Math::Max(newWidth, 1u);
+            height = Math::Max(newHeight, 1u);
             Recreate();
         }
     }

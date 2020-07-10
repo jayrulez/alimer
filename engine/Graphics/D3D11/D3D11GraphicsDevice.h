@@ -24,12 +24,12 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
-#include <queue>
-#include <mutex>
-struct ImDrawData;
 
 namespace alimer
 {
+    class D3D11CommandContext;
+    class D3D11SwapChain;
+
     class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
@@ -40,11 +40,13 @@ namespace alimer
 
         void HandleDeviceLost(HRESULT hr);
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
-        ID3D11DeviceContext1* GetD3DDeviceContext() const { return d3dContext.Get(); }
+        CommandContext* GetDefaultContext() const override;
+
+        Vector<D3D11SwapChain*> viewports;
 
     private:
         void CreateFactory();
@@ -56,30 +58,18 @@ namespace alimer
         void EndFrameImpl() override;
 
         // Resource creation methods.
-        RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
+        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
         RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
-
-        // Commands
-        CommandList BeginCommandList(const char* name) override;
-        void InsertDebugMarker(CommandList commandList, const char* name) override;
-        void PushDebugGroup(CommandList commandList, const char* name) override;
-        void PopDebugGroup(CommandList commandList) override;
-
-        void SetScissorRect(CommandList commandList, const Rect& scissorRect) override;
-        void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(CommandList commandList, const Viewport& viewport) override;
-        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
-        void SetBlendColor(CommandList commandList, const Color& color) override;
 
         static constexpr uint64_t kRenderLatency = 2;
 
-        ComPtr<IDXGIFactory2> dxgiFactory = nullptr;
+        IDXGIFactory2* dxgiFactory = nullptr;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
-
+        uint32_t presentFlagsNoVSync = 0;
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D11Device1* d3dDevice = nullptr;
-        ComPtr<ID3D11DeviceContext1> d3dContext;
+        UniquePtr<D3D11CommandContext> defaultContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
     };

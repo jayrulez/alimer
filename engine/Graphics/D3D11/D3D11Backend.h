@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "core/Utils.h"
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
@@ -32,10 +31,6 @@
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
     class D3D11GraphicsDevice;
 
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);

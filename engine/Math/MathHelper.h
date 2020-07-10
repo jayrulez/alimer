@@ -26,7 +26,6 @@
 #include <cstdlib>
 #include <cmath>
 #include <limits>
-#include <type_traits>
 
 #ifdef _MSC_VER
 #   pragma warning(push)

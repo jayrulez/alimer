@@ -25,30 +25,25 @@
 #include "Input/InputManager.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
-#include <vgpu.h>
 
 namespace alimer
 {
     Application::Application()
         : input(new InputManager())
     {
-        gameSystems.Push(input);
+        //gameSystems.Push(new UniquePtr<InputManager>(input));
+        GraphicsDevice::Initialize();
         PlatformConstuct();
         LOG_INFO("Application started");
     }
 
     Application::~Application()
     {
-        for (auto gameSystem : gameSystems)
-        {
-            SafeDelete(gameSystem);
-        }
-
         gameSystems.Clear();
         window.Close();
-        SafeDelete(_gui);
+        gui.Reset();
         PlatformDestroy();
-        vgpu::shutdown();
+        GraphicsDevice::Shutdown();
         LOG_INFO("Application destroyed correctly");
     }
 
@@ -58,26 +53,7 @@ namespace alimer
         if (!headless)
         {
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
-
-            vgpu::InitFlags initFlags = vgpu::InitFlags::None;
-#ifdef _DEBUG
-            initFlags |= vgpu::InitFlags::DebugRutime;
-#endif
-
-            vgpu::PresentationParameters presentationParameters = {};
-            presentationParameters.backbufferWidth = window.GetSize().width;
-            presentationParameters.backbufferHeight = window.GetSize().height;
-            presentationParameters.windowHandle = window.GetNativeHandle();
-            presentationParameters.display = window.GetNativeDisplay();
-
-            if (!vgpu::init(initFlags, presentationParameters))
-            {
-                headless = true;
-            }
-            else
-            {
-                _gui = new Gui(&window);
-            }
+            gui = new Gui(&window);
         }
 
         Initialize();
@@ -93,7 +69,7 @@ namespace alimer
 
     void Application::Initialize()
     {
-        for (auto gameSystem : gameSystems)
+        for (auto& gameSystem : gameSystems)
         {
             gameSystem->Initialize();
         }
@@ -111,10 +87,10 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        vgpu::beginFrame();
-        _gui->BeginFrame();
+        Graphics::BeginFrame();
+        gui->BeginFrame();
 
-        for (auto gameSystem : gameSystems)
+        for (auto& gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
         }
@@ -124,30 +100,31 @@ namespace alimer
 
     void Application::Draw(const GameTime& gameTime)
     {
-        for (auto gameSystem : gameSystems)
+        for (auto& gameSystem : gameSystems)
         {
             gameSystem->Draw(time);
         }
 
-        //graphicsDevice->PushDebugGroup("Clear");
+        auto commandContext = Graphics::GetDefaultContext();
+        commandContext->PushDebugGroup("Clear");
         /*vgpu_pass_begin_info begin_info = {};
         begin_info.color_attachments[0].texture = vgpu_get_backbuffer_texture();
         begin_info.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
         vgpu_begin_pass(&begin_info);
         vgpu_end_pass();*/
         //graphicsDevice->BeginDefaultRenderPass(Colors::CornflowerBlue, 1.0f, 0);
-        //graphicsDevice->PopDebugGroup();
+        commandContext->PopDebugGroup();
     }
 
     void Application::EndDraw()
     {
-        for (auto gameSystem : gameSystems)
+        for (auto& gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
         }
 
-        _gui->Render();
-        vgpu::endFrame();
+        gui->Render();
+        Graphics::EndFrame();
     }
 
     int Application::Run()
@@ -172,7 +149,7 @@ namespace alimer
 
     void Application::Update(const GameTime& gameTime)
     {
-        for (auto gameSystem : gameSystems)
+        for (auto& gameSystem : gameSystems)
         {
             gameSystem->Update(gameTime);
         }

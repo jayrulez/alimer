@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <vgpu.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -41,7 +40,7 @@ namespace alimer
         void Render();
 
     private:
-        void SetupRenderState(ImDrawData* drawData, vgpu::CommandList commandList);
+        /*void SetupRenderState(ImDrawData* drawData, vgpu::CommandList commandList);
         void RenderDrawData(ImDrawData* drawData, vgpu::CommandList commandList);
 
         vgpu::TextureHandle _fontTexture{ vgpu::kInvalidTexture };
@@ -51,6 +50,6 @@ namespace alimer
         vgpu::BufferHandle _uniformBuffer{ vgpu::kInvalidBuffer };
 
         int _vertexBufferSize = 5000;
-        int _indexBufferSize = 10000;
+        int _indexBufferSize = 10000;*/
     };
 }

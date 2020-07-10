@@ -397,6 +397,16 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #include <stddef.h>
 #include <stdint.h>
 
+#if !defined(ALIMER_DISABLE_COPY)
+#define ALIMER_DISABLE_COPY(ClassType) \
+    ClassType(const ClassType&) = delete; ClassType& operator=(const ClassType&) = delete; \
+    ClassType(ClassType&&) = default; ClassType& operator=(ClassType&&) = default;
+
+#define ALIMER_DISABLE_COPY_MOVE(ClassType) \
+    ClassType(const ClassType&) = delete; ClassType& operator=(const ClassType&) = delete; \
+    ClassType(ClassType&&) = delete; ClassType& operator=(ClassType&&) = delete;
+#endif /* !defined(ALIMER_DISABLE_COPY) */
+
 #if !defined(ALIMER_DEFINE_ENUM_FLAG_OPERATORS)
 #define ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EnumType, UnderlyingEnumType) \
 inline constexpr EnumType operator | (EnumType a, EnumType b) { return (EnumType)((UnderlyingEnumType)(a) | (UnderlyingEnumType)(b)); } \
@@ -405,5 +415,6 @@ inline constexpr EnumType operator & (EnumType a, EnumType b) { return EnumType(
 inline constexpr EnumType& operator &= (EnumType &a, EnumType b) { return a = a & b; } \
 inline constexpr EnumType operator ~ (EnumType a) { return EnumType(~((UnderlyingEnumType)a)); } \
 inline constexpr EnumType operator ^ (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) ^ ((UnderlyingEnumType)b)); } \
-inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) { return a = a ^ b; }
-#endif
+inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) { return a = a ^ b; } \
+inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
+#endif /* !defined(ALIMER_DEFINE_ENUM_FLAG_OPERATORS) */

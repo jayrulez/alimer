@@ -73,7 +73,6 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    vgpu
     stb
     fmt
     imgui
@@ -89,6 +88,10 @@ else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
         target_link_libraries(${TARGET_NAME} PRIVATE glfw)
     endif()
+endif()
+
+if (ALIMER_D3D11)
+    target_link_libraries(${TARGET_NAME} PRIVATE dxgi d3d11)
 endif()
 
 if (MSVC)

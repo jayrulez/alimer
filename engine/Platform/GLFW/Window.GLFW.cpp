@@ -98,6 +98,8 @@ namespace alimer
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
 
+        swapChain = Graphics::CreateSwapChain(GetNativeHandle(), size.width, size.height, IsFullscreen());
+
         if (windowCount == 0) {
             _isMain = true;
         }
@@ -109,6 +111,7 @@ namespace alimer
 
     void Window::Close()
     {
+        swapChain.Reset();
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
         windowCount--;
     }

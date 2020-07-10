@@ -30,10 +30,16 @@ namespace alimer
     class D3D11SwapChain final : public SwapChain
     {
     public:
-        D3D11SwapChain(D3D11GraphicsDevice* device, const SwapChainDescription& desc);
+        D3D11SwapChain(D3D11GraphicsDevice* device, void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat);
         ~D3D11SwapChain() override;
         void Destroy() override;
-        void Present() override;
+        void Present();
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        IDXGISwapChain1* GetHandle() const { return _handle; }
+#else
+        IDXGISwapChain3* GetHandle() const { return _handle; }
+#endif
 
     private:
         void AfterReset();

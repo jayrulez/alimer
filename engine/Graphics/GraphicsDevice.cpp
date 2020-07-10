@@ -150,15 +150,6 @@ namespace alimer
         frameActive = false;
     }
 
-    void GraphicsDevice::Resize(uint32_t width, uint32_t height)
-    {
-        if ((width != backbufferWidth || height != backbufferHeight) && width > 0 && height > 0)
-        {
-            backbufferWidth = width;
-            backbufferHeight = height;
-        }
-    }
-
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);

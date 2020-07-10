@@ -23,7 +23,6 @@
 #include "Editor.h"
 #include "Application/Window.h"
 #include "gui/gui.h"
-#include "core/Utils.h"
 #include "Math/Color.h"
 
 namespace alimer

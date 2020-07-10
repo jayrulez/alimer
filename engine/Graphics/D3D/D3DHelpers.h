@@ -54,7 +54,6 @@
 #include <wrl/client.h>
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID riid, _COM_Outptr_ void** ppFactory);
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
@@ -62,7 +61,6 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
@@ -144,9 +142,8 @@ namespace alimer
     {
         switch (format)
         {
-            //case VGPUPixelFormat_D16Unorm:
-            //    return DXGI_FORMAT_R16_TYPELESS;
-        //case PixelFormat::Depth24Plus:
+        case PixelFormat::Depth16Unorm:
+            return DXGI_FORMAT_R16_TYPELESS;
         case PixelFormat::Depth24UnormStencil8:
             return DXGI_FORMAT_R24G8_TYPELESS;
         case PixelFormat::Depth32Float:
@@ -179,8 +176,8 @@ namespace alimer
         case PixelFormat::BGRA8UnormSrgb:
             return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        case PixelFormat::RGBA8UNorm:
-        case PixelFormat::RGBA8UNormSrgb:
+        case PixelFormat::RGBA8Unorm:
+        case PixelFormat::RGBA8UnormSrgb:
             return DXGI_FORMAT_R8G8B8A8_UNORM;
 
         case PixelFormat::RGB10A2Unorm:
@@ -208,7 +205,7 @@ namespace alimer
         IDXGIFactory2* dxgiFactory,
         DXGIFactoryCaps factoryCaps,
         IUnknown* deviceOrCommandQueue,
-        uintptr_t windowHandle,
+        void* windowHandle,
         uint32_t width, uint32_t height,
         PixelFormat colorFormat,
         uint32_t backbufferCount,
@@ -221,10 +218,10 @@ namespace alimer
             return nullptr;
         }
 #else
-        IUnknown* window = (IUnknown*)handle;
+        IUnknown* window = (IUnknown*)windowHandle;
 #endif
 
-        UINT flags = 0;
+        UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
         if ((factoryCaps & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)
         {

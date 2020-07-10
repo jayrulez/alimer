@@ -30,74 +30,73 @@ namespace alimer
     /// Defines pixel format.
     enum class PixelFormat : uint32_t
     {
-        Unknown = 0,
+        Invalid = 0,
         // 8-bit pixel formats
-        R8UNorm,
-        R8SNorm,
-        R8UInt,
-        R8SInt,
+        R8Unorm,
+        R8Snorm,
+        R8Uint,
+        R8Sint,
         // 16-bit pixel formats
-        R16UNorm,
-        R16SNorm,
-        R16UInt,
-        R16SInt,
+        R16Unorm,
+        R16Snorm,
+        R16Uint,
+        R16Sint,
         R16Float,
-        RG8UNorm,
-        RG8SNorm,
-        RG8UInt,
-        RG8SInt,
+        RG8Unorm,
+        RG8Snorm,
+        RG8Uint,
+        RG8Sint,
         // 32-bit pixel formats
-        R32UInt,
-        R32SInt,
+        R32Uint,
+        R32Sint,
         R32Float,
-        RG16UNorm,
-        RG16SNorm,
-        RG16UInt,
-        RG16SInt,
+        RG16Unorm,
+        RG16Snorm,
+        RG16Uint,
+        RG16Sint,
         RG16Float,
-        RGBA8UNorm,
-        RGBA8UNormSrgb,
-        RGBA8SNorm,
-        RGBA8UInt,
-        RGBA8SInt,
+        RGBA8Unorm,
+        RGBA8UnormSrgb,
+        RGBA8Snorm,
+        RGBA8Uint,
+        RGBA8Sint,
         BGRA8Unorm,
         BGRA8UnormSrgb,
         // Packed 32-Bit Pixel formats
         RGB10A2Unorm,
         RG11B10Float,
         // 64-Bit Pixel Formats
-        RG32UInt,
-        RG32SInt,
+        RG32Uint,
+        RG32Sint,
         RG32Float,
-        RGBA16UNorm,
-        RGBA16SNorm,
-        RGBA16UInt,
-        RGBA16SInt,
+        RGBA16Unorm,
+        RGBA16Snorm,
+        RGBA16Uint,
+        RGBA16Sint,
         RGBA16Float,
         // 128-Bit Pixel Formats
-        RGBA32UInt,
-        RGBA32SInt,
+        RGBA32Uint,
+        RGBA32Sint,
         RGBA32Float,
         // Depth-stencil formats
+        Depth16Unorm,
         Depth32Float,
-        //Depth16UNorm,
         Depth24UnormStencil8,
         // Compressed BC formats
-        BC1RGBAUNorm,
-        BC1RGBAUNormSrgb,
-        BC2RGBAUNorm,
-        BC2RGBAUNormSrgb,
-        BC3RGBAUNorm,
-        BC3RGBAUNormSrgb,
-        BC4RUNorm,
-        BC4RSNorm,
-        BC5RGUNorm,
-        BC5RGSNorm,
-        BC6HRGBUFloat,
-        BC6HRGBSFloat,
-        BC7RGBAUNorm,
-        BC7RGBAUNormSrgb,
-
+        BC1RGBAUnorm,
+        BC1RGBAUnormSrgb,
+        BC2RGBAUnorm,
+        BC2RGBAUnormSrgb,
+        BC3RGBAUnorm,
+        BC3RGBAUnormSrgb,
+        BC4RUnorm,
+        BC4RSnorm,
+        BC5RGUnorm,
+        BC5RGSnorm,
+        BC6HRGBUfloat,
+        BC6HRGBSfloat,
+        BC7RGBAUnorm,
+        BC7RGBAUnormSrgb,
         Count
     };
 
@@ -187,7 +186,7 @@ namespace alimer
     inline bool IsCompressedFormat(PixelFormat format)
     {
         ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
-        return format >= PixelFormat::BC1RGBAUNorm && format <= PixelFormat::BC7RGBAUNormSrgb;
+        return format >= PixelFormat::BC1RGBAUnorm && format <= PixelFormat::BC7RGBAUnormSrgb;
     }
 
     /// Get the format compression ration along the x-axis
@@ -232,18 +231,18 @@ namespace alimer
     {
         switch (format)
         {
-        case PixelFormat::BC1RGBAUNormSrgb:
-            return PixelFormat::BC1RGBAUNorm;
-        case PixelFormat::BC2RGBAUNormSrgb:
-            return PixelFormat::BC2RGBAUNorm;
-        case PixelFormat::BC3RGBAUNormSrgb:
-            return PixelFormat::BC3RGBAUNorm;
+        case PixelFormat::BC1RGBAUnormSrgb:
+            return PixelFormat::BC1RGBAUnorm;
+        case PixelFormat::BC2RGBAUnormSrgb:
+            return PixelFormat::BC2RGBAUnorm;
+        case PixelFormat::BC3RGBAUnormSrgb:
+            return PixelFormat::BC3RGBAUnorm;
         case PixelFormat::BGRA8UnormSrgb:
             return PixelFormat::BGRA8Unorm;
-        case PixelFormat::RGBA8UNormSrgb:
-            return PixelFormat::RGBA8UNorm;
-        case PixelFormat::BC7RGBAUNormSrgb:
-            return PixelFormat::BC7RGBAUNorm;
+        case PixelFormat::RGBA8UnormSrgb:
+            return PixelFormat::RGBA8Unorm;
+        case PixelFormat::BC7RGBAUnormSrgb:
+            return PixelFormat::BC7RGBAUnorm;
         default:
             ALIMER_ASSERT(IsSrgbFormat(format) == false);
             return format;
@@ -257,18 +256,18 @@ namespace alimer
     {
         switch (format)
         {
-        case PixelFormat::BC1RGBAUNorm:
-            return PixelFormat::BC1RGBAUNormSrgb;
-        case PixelFormat::BC2RGBAUNorm:
-            return PixelFormat::BC2RGBAUNormSrgb;
-        case PixelFormat::BC3RGBAUNorm:
-            return PixelFormat::BC3RGBAUNormSrgb;
+        case PixelFormat::BC1RGBAUnorm:
+            return PixelFormat::BC1RGBAUnormSrgb;
+        case PixelFormat::BC2RGBAUnorm:
+            return PixelFormat::BC2RGBAUnormSrgb;
+        case PixelFormat::BC3RGBAUnorm:
+            return PixelFormat::BC3RGBAUnormSrgb;
         case PixelFormat::BGRA8Unorm:
             return PixelFormat::BGRA8UnormSrgb;
-        case PixelFormat::RGBA8UNorm:
-            return PixelFormat::RGBA8UNormSrgb;
-        case PixelFormat::BC7RGBAUNorm:
-            return PixelFormat::BC7RGBAUNormSrgb;
+        case PixelFormat::RGBA8Unorm:
+            return PixelFormat::RGBA8UnormSrgb;
+        case PixelFormat::BC7RGBAUnorm:
+            return PixelFormat::BC7RGBAUnormSrgb;
         default:
             return format;
         }

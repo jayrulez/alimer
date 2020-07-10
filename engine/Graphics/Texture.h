@@ -31,6 +31,9 @@ namespace alimer
     {
     public:
         /// Constructor.
+        Texture();
+
+        /// Constructor.
         Texture(const TextureDescription& desc);
 
         /**

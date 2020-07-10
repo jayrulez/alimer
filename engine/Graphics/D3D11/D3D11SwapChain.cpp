@@ -26,20 +26,19 @@
 
 namespace alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, const SwapChainDescription& desc)
-        : SwapChain(desc)
-        , _device(device)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat)
+        : _device(device)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         _handle = DXGICreateSwapchain(
             _device->GetDXGIFactory(),
             _device->GetDXGIFactoryCaps(),
             _device->GetD3DDevice(),
-            _desc.windowHandle,
-            _desc.width, _desc.height,
-            _desc.colorFormat,
+            windowHandle,
+            width, height,
+            preferredColorFormat,
             kNumBackBuffers,
-            _desc.isFullscreen
+            isFullscreen
         );
 #else
         IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
@@ -57,6 +56,7 @@ namespace alimer
         SafeRelease(tempSwapChain);
 #endif
 
+        _device->viewports.Push(this);
         AfterReset();
     }
 
@@ -72,33 +72,19 @@ namespace alimer
 
     void D3D11SwapChain::Present()
     {
-        UINT syncInterval = 1u;
-        UINT presentFlags = 0;
-        if (_desc.presentationInterval == PresentInterval::immediate)
-        {
-            syncInterval = 0;
-            if (((_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)) {
-                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
-            }
-        }
-
-        HRESULT hr = _handle->Present(syncInterval, presentFlags);
+        ThrowIfFailed(_handle->Present(1, 0));
     }
 
     void D3D11SwapChain::Recreate()
     {
-        UINT swapChainFlags = 0;
-        if (_desc.presentationInterval == PresentInterval::immediate
-            && ((_device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)) {
-            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+        memset(&swapChainDesc, 0, sizeof(swapChainDesc));
+        _handle->GetDesc1(&swapChainDesc);
 
-        HRESULT hr = _handle->ResizeBuffers(
-            kNumBackBuffers,
-            _desc.width,
-            _desc.height,
-            ToDXGISwapChainFormat(_desc.colorFormat),
-            swapChainFlags
+        HRESULT hr = _handle->ResizeBuffers(swapChainDesc.BufferCount,
+            width, height,
+            swapChainDesc.Format,
+            swapChainDesc.Flags
         );
 
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)

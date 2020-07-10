@@ -104,8 +104,8 @@ namespace alimer
 
     Gui::~Gui()
     {
-        vgpu::destroyTexture(_fontTexture);
-        vgpu::DestroyShader(_shader);
+        //vgpu::destroyTexture(_fontTexture);
+        //vgpu::DestroyShader(_shader);
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
     }
@@ -113,7 +113,7 @@ namespace alimer
     void Gui::BeginFrame()
     {
         // Start the Dear ImGui frame
-        if (!_fontTexture.isValid())
+        //if (!_fontTexture.isValid())
         {
             ImGuiIO& io = ImGui::GetIO();
             unsigned char* pixels;
@@ -121,7 +121,7 @@ namespace alimer
             io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
             // Upload texture to graphics system
-            vgpu::TextureDescription textureDesc = {};
+            /*vgpu::TextureDescription textureDesc = {};
             textureDesc.label = "ImGui FontTexture";
             textureDesc.type = vgpu::TextureType::Type2D;
             textureDesc.format = vgpu::PixelFormat::RGBA8Unorm;
@@ -176,7 +176,7 @@ namespace alimer
 
             _shader = vgpu::CreateShader(shaderDesc);
 
-            _uniformBuffer = vgpu::CreateBuffer(sizeof(VERTEX_CONSTANT_BUFFER), vgpu::BufferUsage::Uniform);
+            _uniformBuffer = vgpu::CreateBuffer(sizeof(VERTEX_CONSTANT_BUFFER), vgpu::BufferUsage::Uniform);*/
         }
 
         ImGui_ImplGlfw_NewFrame();
@@ -187,7 +187,7 @@ namespace alimer
     {
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Render();
-        RenderDrawData(ImGui::GetDrawData(), 0);
+        //RenderDrawData(ImGui::GetDrawData(), 0);
 
         // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -197,6 +197,7 @@ namespace alimer
         }
     }
 
+#if TODO
     void Gui::SetupRenderState(ImDrawData* drawData, vgpu::CommandList commandList)
     {
         // Setup viewport
@@ -326,4 +327,6 @@ namespace alimer
             global_vtx_offset += cmd_list->VtxBuffer.Size;
         }
     }
+#endif // TODO
+
 }

@@ -30,13 +30,26 @@ namespace alimer
     class D3D11CommandContext final : public CommandContext
     {
     public:
-        D3D11CommandContext(D3D11GraphicsDevice* device, const ComPtr<ID3D11DeviceContext1>& context);
+        D3D11CommandContext(D3D11GraphicsDevice* device_, ID3D11DeviceContext* context_);
+        ~D3D11CommandContext() override;
+
+        void PushDebugGroup(const String& name) override;
+        void PopDebugGroup() override;
+        void InsertDebugMarker(const String& name) override;
+
+        void SetScissorRect(const Rect& scissorRect) override;
+        void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
+        void SetViewport(const Viewport& viewport) override;
+        void SetViewports(const Viewport* viewports, uint32_t count) override;
+        void SetBlendColor(const Color& color) override;
 
         void BindBuffer(uint32_t slot, Buffer* buffer) override;
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
     private:
-        D3D11GraphicsDevice* _device;
-        ComPtr<ID3D11DeviceContext1> _context;
+        D3D11GraphicsDevice* device;
+        ID3D11DeviceContext1* context;
+        ID3DUserDefinedAnnotation* annotation;
+        Color blendColor = { 0.0f, 0.0f, 0.0f, 0.0f };
     };
 }

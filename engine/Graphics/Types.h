@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Core/Utils.h"
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "graphics/PixelFormat.h"
@@ -42,10 +41,6 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
-    static constexpr uint32_t kMaxCommandLists = 16u;
-
-    /* Handles */
-    using CommandList = uint8_t;
 
     /// Enum describing the Device backend.
     enum class BackendType : uint32_t
@@ -100,7 +95,7 @@ namespace alimer
         RenderTarget = (1 << 2),
         GenerateMipmaps = (1 << 3)
     };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(TextureUsage);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
     enum class BufferUsage : uint32_t
     {
@@ -111,7 +106,7 @@ namespace alimer
         Storage = 1 << 3,
         Indirect = 1 << 4,
     };
-    ALIMER_DEFINE_ENUM_BITWISE_OPERATORS(BufferUsage);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
     enum class TextureCubemapFace : uint8_t {
         PositiveX = 0, //!< +x face
@@ -126,13 +121,6 @@ namespace alimer
         Clear,
         Load,
         Discard
-    };
-
-    enum class PresentInterval : uint32_t {
-        Default = 0,
-        One,
-        Two,
-        immediate
     };
 
     /**
@@ -208,7 +196,7 @@ namespace alimer
     {
         String name;
         TextureType type = TextureType::Texture2D;
-        PixelFormat format = PixelFormat::RGBA8UNorm;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32_t width = 1u;
         uint32_t height = 1u;
@@ -263,16 +251,5 @@ namespace alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
-    };
-
-    struct SwapChainDescription
-    {
-        uint32_t width = 0;
-        uint32_t height = 0;
-        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        PresentInterval presentationInterval = PresentInterval::Default;
-        bool isFullscreen = false;
-        uintptr_t windowHandle;
     };
 }

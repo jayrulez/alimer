@@ -106,12 +106,12 @@ namespace alimer
         GameTime time;
 
         Window window;
-        Vector<GameSystem*> gameSystems;
+        Vector<UniquePtr<GameSystem>> gameSystems;
         InputManager* input;
 
         bool headless{ false };
 
-        Gui* _gui = nullptr;
+        UniquePtr<Gui> gui;
     };
 } 
 
@@ -127,21 +127,6 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
 { \
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); \
     return function; \
-}
-// MSVC release mode: write minidump on crash
-#elif defined(ALIMER_MINIDUMPS) && !defined(ALIMER_WIN32_CONSOLE)
-#define ALIMER_DEFINE_MAIN(function) \
-int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
-{ \
-    int exitCode; \
-    __try \
-    { \
-        exitCode = function; \
-    } \
-    __except(Alimer::WriteMiniDump("Alimer", GetExceptionInformation())) \
-    { \
-    } \
-    return exitCode; \
 }
 // Other Win32 or minidumps disabled: just execute the function
 #elif defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
