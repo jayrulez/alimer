@@ -22,8 +22,6 @@
 
 #include "config.h"
 #include "gui.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Application/Window.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
 

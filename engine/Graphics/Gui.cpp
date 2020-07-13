@@ -21,7 +21,7 @@
 //
 
 #include "Graphics/Gui.h"
-#include "Application/Window.h"
+#include "Core/Window.h"
 #include "imgui_impl_glfw.h"
 
 namespace alimer

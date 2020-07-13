@@ -23,102 +23,53 @@
 #include "config.h"
 #include "Core/Log.h"
 #include "Core/Assert.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Core/Window.h"
+#include "Graphics/Graphics.h"
 #include "Graphics/Texture.h"
 
 #if defined(ALIMER_D3D12)
-//#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-#if defined(ALIMER_D3D11)
-#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#include "Graphics/D3D12/D3D12GraphicsImpl.h"
+#elif defined(ALIMER_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
 
 #include "imgui_impl_glfw.h"
 
 namespace alimer
 {
-    BackendType GraphicsDevice::PreferredBackendType = BackendType::Count;
-    GraphicsDevice* GraphicsDevice::Instance = nullptr;
-
-    std::set<BackendType> GraphicsDevice::GetAvailableBackends()
+    Graphics::Graphics()
+        : impl(new GraphicsImpl())
     {
-        static std::set<BackendType> availableDrivers;
-
-        if (availableDrivers.empty())
-        {
-            availableDrivers.insert(BackendType::Null);
-
-#if defined(ALIMER_D3D12)
-            //if (D3D12GraphicsDevice::IsAvailable())
-            //    availableDrivers.insert(BackendType::Direct3D12);
-#endif
-
-#if defined(ALIMER_D3D11)
-            availableDrivers.insert(BackendType::Direct3D11);
-#endif
-        }
-
-        return availableDrivers;
+        RegisterSubsystem(this);
     }
 
-    void GraphicsDevice::Initialize()
+    Graphics::~Graphics()
     {
-        if (Instance != nullptr) {
-            return;
-        }
-
-        BackendType backendType = PreferredBackendType;
-        if (PreferredBackendType == BackendType::Count)
-        {
-            auto availableDrivers = GetAvailableBackends();
-
-            if (availableDrivers.find(BackendType::Direct3D12) != availableDrivers.end())
-                backendType = BackendType::Direct3D12;
-            else if (availableDrivers.find(BackendType::Direct3D11) != availableDrivers.end())
-                backendType = BackendType::Direct3D11;
-            else if (availableDrivers.find(BackendType::Vulkan) != availableDrivers.end())
-                backendType = BackendType::Vulkan;
-            else
-                backendType = BackendType::Null;
-        }
-
-        switch (backendType)
-        {
-            /*
-#if defined(ALIMER_D3D12)
-        case BackendType::Direct3D12:
-            if (D3D12GraphicsDevice::IsAvailable()) {
-                Instance = new D3D12GraphicsDevice();
-            }
-            break;
-#endif*/
-
-#if defined(ALIMER_D3D11)
-        case BackendType::Direct3D11:
-            Instance = new D3D11GraphicsDevice();
-            break;
-#endif
-
-        default:
-            break;
-        }
+        //Close();
+        RemoveSubsystem(this);
     }
 
-    void GraphicsDevice::Shutdown()
+    bool Graphics::Initialize(const SharedPtr<Window>& window)
     {
-        if (Instance != nullptr) {
-            delete Instance;
-            Instance = nullptr;
+        if (impl->IsInitialized()) {
+            return true;
         }
+
+        return true;
     }
 
-    void GraphicsDevice::BeginFrame()
+    void Graphics::WaitForGPU()
+    {
+
+    }
+
+    void Graphics::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
-        if (!BeginFrameImpl()) {
-            return;
-        }
+        //if (!BeginFrameImpl()) {
+        //    return;
+        //}
 
         /*ImGuiIO& io = ImGui::GetIO();
         IM_ASSERT(io.Fonts->IsBuilt());
@@ -131,12 +82,12 @@ namespace alimer
         frameActive = true;
     }
 
-    void GraphicsDevice::EndFrame()
+    void Graphics::EndFrame()
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
         //ImGui::Render();
-        EndFrameImpl();
+        //EndFrameImpl();
 
         // Update and Render additional Platform Windows
         /*ImGuiIO& io = ImGui::GetIO();
@@ -150,19 +101,19 @@ namespace alimer
         frameActive = false;
     }
 
-    void GraphicsDevice::TrackResource(GraphicsResource* resource)
+    void Graphics::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
         trackedResources.Push(resource);
     }
 
-    void GraphicsDevice::UntrackResource(GraphicsResource* resource)
+    void Graphics::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
         trackedResources.Remove(resource);
     }
 
-    void GraphicsDevice::ReleaseTrackedResources()
+    void Graphics::ReleaseTrackedResources()
     {
         {
             std::lock_guard<std::mutex> lock(trackedResourcesMutex);
@@ -175,5 +126,10 @@ namespace alimer
 
             trackedResources.Clear();
         }
+    }
+
+    bool Graphics::IsInitialized() const
+    {
+        return impl->IsInitialized();
     }
 }

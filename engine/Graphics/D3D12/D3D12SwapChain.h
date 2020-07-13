@@ -30,11 +30,10 @@ namespace alimer
     class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        D3D12SwapChain(D3D12GraphicsDevice* device);
         ~D3D12SwapChain() override;
-        void Recreate(bool vsyncChanged) override;
         void Destroy() override;
-        void Present() override;
+        void Present();
 
     private:
         void BackendSetName() override;

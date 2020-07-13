@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "core/Utils.h"
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
@@ -39,15 +38,6 @@
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
-
     class D3D12GraphicsDevice;
 
     struct D3D12MapResult

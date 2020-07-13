@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Vector.h"
-#include "Application/Window.h"
+#include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Graphics/Gui.h"
@@ -47,7 +47,6 @@ namespace alimer
     };
 
     struct Engine;
-    class InputManager;
 
     class ALIMER_API Application : public Object
     {
@@ -69,8 +68,6 @@ namespace alimer
         /// Get the main (primary window)
         Window& GetWindow() { return window; }
         const Window& GetWindow() const { return window; }
-
-        inline InputManager* GetInput() const noexcept { return input; }
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -107,7 +104,6 @@ namespace alimer
 
         Window window;
         Vector<UniquePtr<GameSystem>> gameSystems;
-        InputManager* input;
 
         bool headless{ false };
 

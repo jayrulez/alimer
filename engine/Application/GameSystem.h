@@ -43,4 +43,4 @@ namespace alimer
         virtual void Draw(const GameTime& gameTime) {}
         virtual void EndDraw() {}
     };
-} // namespace alimer
+}

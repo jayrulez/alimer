@@ -36,6 +36,6 @@ namespace alimer
         Entity* GetRootEntity() const { return rootEntity.Get(); }
 
     private:
-        RefPtr<Entity> rootEntity;
+        SharedPtr<Entity> rootEntity;
     };
 }

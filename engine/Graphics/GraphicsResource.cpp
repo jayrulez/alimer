@@ -21,8 +21,8 @@
 //
 
 #include "Core/Assert.h"
-#include "graphics/GraphicsResource.h"
-#include "graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsResource.h"
+#include "Graphics/Graphics.h"
 
 namespace alimer
 {
@@ -30,12 +30,15 @@ namespace alimer
         : name{ name }
         , memoryUsage{ memoryUsage }
     {
-        GraphicsDevice::Instance->TrackResource(this);
+        graphics = GetSubsystem<Graphics>();
+        if (graphics)
+            graphics->TrackResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        GraphicsDevice::Instance->UntrackResource(this);
+        if (graphics)
+            graphics->UntrackResource(this);
     }
 }
 

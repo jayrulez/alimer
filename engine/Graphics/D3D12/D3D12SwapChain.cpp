@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12SwapChain.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -49,7 +50,7 @@ namespace alimer
         Destroy();
     }
 
-    void D3D12SwapChain::Recreate(bool vsyncChanged)
+    /*void D3D12SwapChain::Recreate(bool vsyncChanged)
     {
         if (handle != nullptr)
         {
@@ -82,7 +83,7 @@ namespace alimer
             ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
             SafeRelease(tempSwapChain);
         }
-    }
+    }*/
 
     void D3D12SwapChain::Destroy()
     {
@@ -101,3 +102,5 @@ namespace alimer
         DXGISetObjectName(handle, name.c_str());
     }
 }
+
+#endif // TODO

@@ -22,14 +22,18 @@
 
 #pragma once
 
+#include "Core/Object.h"
 #include "Graphics/Types.h"
-#include "Core/Ptr.h"
 
 namespace alimer
 {
+    class Graphics;
+
     /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public RefCounted
+    class ALIMER_API GraphicsResource : public Object
     {
+        ALIMER_OBJECT(GraphicsResource, Object);
+
     public:
         GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
         virtual ~GraphicsResource();
@@ -56,8 +60,9 @@ namespace alimer
         virtual void BackendSetName() {}
 
     protected:
+        /// Graphics subsystem pointer.
+        WeakPtr<Graphics> graphics;
         String name;
-
         MemoryUsage memoryUsage;
     };
 }

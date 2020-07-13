@@ -2,11 +2,6 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
-# vgpu
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
-
 add_subdirectory(fmt)
 add_subdirectory(imgui)
 
@@ -20,3 +15,9 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     add_subdirectory(glfw)
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
+
+
+if (ALIMER_D3D12)
+    add_subdirectory(D3D12MemoryAllocator)
+elseif (ALIMER_VULKAN)
+endif()

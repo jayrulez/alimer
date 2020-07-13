@@ -21,7 +21,6 @@
 //
 
 #include "graphics/Buffer.h"
-#include "graphics/GraphicsDevice.h"
 
 namespace alimer
 {

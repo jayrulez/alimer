@@ -53,8 +53,8 @@ namespace alimer
         PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
 
         uint32_t backbufferIndex = 0;
-        Vector<RefPtr<Texture>> backbufferTextures;
-        RefPtr<Texture> depthStencilTexture;
+        Vector<SharedPtr<Texture>> backbufferTextures;
+        SharedPtr<Texture> depthStencilTexture;
         RenderPassDescription currentRenderPassDescription;
     };
 }

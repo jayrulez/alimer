@@ -21,18 +21,21 @@
 //
 
 #include "Application/Application.h"
-#include "Application/Window.h"
-#include "Input/InputManager.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Core/Window.h"
+#include "Core/Input.h"
+#include "Graphics/Graphics.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
     Application::Application()
-        : input(new InputManager())
     {
-        //gameSystems.Push(new UniquePtr<InputManager>(input));
-        GraphicsDevice::Initialize();
+        // Register self as a subsystem
+        RegisterSubsystem(this);
+
+        RegisterSubsystem(new Input());
+        RegisterSubsystem(new Graphics());
+
         PlatformConstuct();
         LOG_INFO("Application started");
     }
@@ -42,17 +45,22 @@ namespace alimer
         gameSystems.Clear();
         window.Close();
         gui.Reset();
+        RemoveSubsystem<Graphics>();
+        RemoveSubsystem<Input>();
         PlatformDestroy();
-        GraphicsDevice::Shutdown();
         LOG_INFO("Application destroyed correctly");
     }
 
     void Application::InitBeforeRun()
     {
+        // Init subsytems
+        GetSubsystem<Input>()->Initialize();
+
         // Create main window.
         if (!headless)
         {
             window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+            //GetSubsystem<Graphics>()->Initialize();
             gui = new Gui(&window);
         }
 
@@ -87,7 +95,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        Graphics::BeginFrame();
+        GetSubsystem<Graphics>()->BeginFrame();
         gui->BeginFrame();
 
         for (auto& gameSystem : gameSystems)
@@ -105,13 +113,21 @@ namespace alimer
             gameSystem->Draw(time);
         }
 
-        auto commandContext = Graphics::GetDefaultContext();
+        if (GetInput()->IsMouseButtonDown(MouseButton::Right)) {
+            LOG_INFO("Right pressed");
+        }
+
+        if (GetInput()->IsMouseButtonHeld(MouseButton::Right)) {
+            LOG_INFO("Right held");
+        }
+
+        /*auto commandContext = Graphics::GetDefaultContext();
         commandContext->PushDebugGroup("Clear");
         RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         commandContext->BeginRenderPass(renderPass);
         commandContext->EndRenderPass();
-        commandContext->PopDebugGroup();
+        commandContext->PopDebugGroup();*/
     }
 
     void Application::EndDraw()
@@ -122,7 +138,7 @@ namespace alimer
         }
 
         gui->Render();
-        Graphics::EndFrame();
+        GetSubsystem<Graphics>()->EndFrame();
     }
 
     int Application::Run()
@@ -143,6 +159,9 @@ namespace alimer
             });
 
         Render();
+
+        // Update input at end of frame.
+        GetInput()->Update();
     }
 
     void Application::Update(const GameTime& gameTime)

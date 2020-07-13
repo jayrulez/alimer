@@ -21,6 +21,8 @@
 //
 
 #include "Core/Object.h"
+#include "Core/Input.h"
+#include "Graphics/Graphics.h"
 #include <unordered_map>
 
 namespace alimer
@@ -30,12 +32,27 @@ namespace alimer
         struct Context
         {
             /// Object factories.
-            std::unordered_map<StringId32, Object*> subsystems;
+            std::unordered_map<StringId32, SharedPtr<Object>> subsystems;
             std::unordered_map<StringId32, UniquePtr<ObjectFactory>> factories;
 
-            void AddSubsystem(Object* subsystem)
+            WeakPtr<Input> input;
+            WeakPtr<Graphics> graphics;
+
+            void RegisterSubsystem(Object* subsystem)
             {
                 subsystems[subsystem->GetType()] = subsystem;
+            }
+
+            void RegisterSubsystem(Input* subsystem)
+            {
+                input = subsystem;
+                RegisterSubsystem((Object*)subsystem);
+            }
+
+            void RegisterSubsystem(Graphics* subsystem)
+            {
+                graphics = subsystem;
+                RegisterSubsystem((Object*)subsystem);
             }
 
             void RemoveSubsystem(StringId32 subsystemType)
@@ -54,7 +71,7 @@ namespace alimer
                 factories[factory->GetType()].Reset(factory);
             }
 
-            RefPtr<Object> CreateObject(StringId32 type)
+            SharedPtr<Object> CreateObject(StringId32 type)
             {
                 auto it = factories.find(type);
                 return it != factories.end() ? it->second->Create() : nullptr;
@@ -117,12 +134,22 @@ namespace alimer
         return GetTypeInfo()->IsTypeOf(typeInfo);
     }
 
-    void Object::AddSubsystem(Object* subsystem)
+    void Object::RegisterSubsystem(Object* subsystem)
     {
         if (!subsystem)
             return;
 
-        details::context().AddSubsystem(subsystem);
+        details::context().RegisterSubsystem(subsystem);
+    }
+
+    void Object::RegisterSubsystem(Input* subsystem)
+    {
+        details::context().RegisterSubsystem(subsystem);
+    }
+
+    void Object::RegisterSubsystem(Graphics* subsystem)
+    {
+        details::context().RegisterSubsystem(subsystem);
     }
 
     void Object::RemoveSubsystem(Object* subsystem)
@@ -143,6 +170,16 @@ namespace alimer
         return details::context().GetSubsystem(type);
     }
 
+    Input* Object::GetInput()
+    {
+        return details::context().input;
+    }
+
+    Graphics* Object::GetGraphics()
+    {
+        return details::context().graphics;
+    }
+
     void Object::RegisterFactory(ObjectFactory* factory)
     {
         if (!factory)
@@ -151,7 +188,7 @@ namespace alimer
         details::context().RegisterFactory(factory);
     }
 
-    RefPtr<Object> Object::Create(StringId32 objectType)
+    SharedPtr<Object> Object::Create(StringId32 objectType)
     {
         return details::context().CreateObject(objectType);
     }

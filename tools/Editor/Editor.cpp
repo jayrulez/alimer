@@ -21,8 +21,7 @@
 //
 
 #include "Editor.h"
-#include "Application/Window.h"
-#include "gui/gui.h"
+#include "Core/Window.h"
 #include "Math/Color.h"
 
 namespace alimer

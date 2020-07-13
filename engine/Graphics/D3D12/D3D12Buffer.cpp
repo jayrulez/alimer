@@ -21,12 +21,12 @@
 //
 
 #include "D3D12Buffer.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GraphicsImpl.h"
 
 namespace alimer
 {
     D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
-        : GraphicsBuffer(desc)
+        : Buffer(desc)
         , _device(device)
         , state(D3D12_RESOURCE_STATE_COMMON)
     {
@@ -35,7 +35,7 @@ namespace alimer
         {
             alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
         }
-        uint32_t alignedSize = AlignTo(desc.size, alignment);
+        uint32_t alignedSize = Math::AlignTo(desc.size, alignment);
 
         D3D12_RESOURCE_DESC resourceDesc;
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -60,7 +60,7 @@ namespace alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
 
-        HRESULT hr = device->GetAllocator()->CreateResource(
+        /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocDesc,
             &resourceDesc,
             state,
@@ -73,7 +73,7 @@ namespace alimer
             LOG_ERROR("Direct3D12: Failed to create buffer");
         }
 
-        gpuVirtualAddress = resource->GetGPUVirtualAddress();
+        gpuVirtualAddress = resource->GetGPUVirtualAddress();*/
     }
 
     D3D12Buffer::~D3D12Buffer()

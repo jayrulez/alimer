@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
+#include "Graphics/Buffer.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12Buffer final : public GraphicsBuffer
+    class D3D12Buffer final : public Buffer
     {
     public:
         D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData);

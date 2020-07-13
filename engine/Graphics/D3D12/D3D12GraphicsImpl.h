@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "D3D12Backend.h"
 #include <queue>
 #include <mutex>
@@ -39,14 +39,13 @@ namespace alimer
         void* Submission = nullptr;
     };
 
-
-    class D3D12GraphicsDevice final : public GraphicsDevice
+    class GraphicsImpl final 
     {
     public:
-        static bool IsAvailable();
+        GraphicsImpl();
+        ~GraphicsImpl();
 
-        D3D12GraphicsDevice();
-        ~D3D12GraphicsDevice();
+        bool IsInitialized() const { return device != nullptr; }
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
@@ -57,13 +56,13 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
-        void WaitForGPU() override;
+        void WaitForGPU();
         void HandleDeviceLost();
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
-        ID3D12Device* GetD3DDevice() const { return d3dDevice; }
+        ID3D12Device* GetD3DDevice() const { return device; }
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
         ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
         bool SupportsRenderPass() const { return supportsRenderPass; }
@@ -71,9 +70,9 @@ namespace alimer
     private:
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        void BackendShutdown() override;
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
+        //void BackendShutdown() override;
+        //bool BeginFrameImpl() override;
+        //void EndFrameImpl() override;
 
         void InitializeUpload();
         void ShutdownUpload();
@@ -81,30 +80,14 @@ namespace alimer
         void ClearFinishedUploads(uint64_t flushCount);
 
         // Resource creation methods.
-        SwapChain* CreateSwapChain(const SwapChainDescription& desc) override;
-        Texture* CreateTexture(const TextureDescription& desc, const void* initialData) override;
+       // RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
+        //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) override;
 
-        // Commands
-        CommandList BeginCommandList(const char* name) override;
-        void InsertDebugMarker(CommandList commandList, const char* name) override;
-        void PushDebugGroup(CommandList commandList, const char* name) override;
-        void PopDebugGroup(CommandList commandList) override;
-
-        void SetScissorRect(CommandList commandList, const Rect& scissorRect) override;
-        void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(CommandList commandList, const Viewport& viewport) override;
-        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
-        void SetBlendColor(CommandList commandList, const Color& color) override;
-
-        void BindBuffer(CommandList commandList, uint32_t slot, GraphicsBuffer* buffer) override;
-        void BindBufferData(CommandList commandList, uint32_t slot, const void* data, uint32_t size) override;
-
-        void InitDescriptorHeap(DescriptorHeap* heap, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible);
         void CreateUIObjects();
         void CreateFontsTexture();
         void DestroyUIObjects();
-        void SetupRenderState(ImDrawData* drawData, CommandList commandList);
-        void RenderDrawData(ImDrawData* drawData, CommandList commandList);
+        //void SetupRenderState(ImDrawData* drawData, CommandList commandList);
+        //void RenderDrawData(ImDrawData* drawData, CommandList commandList);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
         static constexpr uint64_t kRenderLatency = 2;
@@ -117,7 +100,7 @@ namespace alimer
 
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
-        ID3D12Device* d3dDevice = nullptr;
+        ID3D12Device* device = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -141,19 +124,19 @@ namespace alimer
         ID3D12Resource* swapChainRenderTargets[3] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
 
-        std::atomic<uint8_t> commandlistCount{ 0 };
-        ThreadSafeRingBuffer<CommandList, kMaxCommandLists> freeCommandLists;
-        ThreadSafeRingBuffer<CommandList, kMaxCommandLists> activeCommandLists;
+        //std::atomic<uint8_t> commandlistCount{ 0 };
+        //ThreadSafeRingBuffer<CommandList, kMaxCommandLists> freeCommandLists;
+        //ThreadSafeRingBuffer<CommandList, kMaxCommandLists> activeCommandLists;
 
-        struct Frame
-        {
-            ID3D12CommandAllocator* commandAllocators[kMaxCommandLists] = {};
-        };
-        Frame frames[kRenderLatency];
-        Frame& frame() { return frames[frameIndex]; }
+        //struct Frame
+        //{
+        //    ID3D12CommandAllocator* commandAllocators[kMaxCommandLists] = {};
+        //};
+        //Frame frames[kRenderLatency];
+        //Frame& frame() { return frames[frameIndex]; }
 
-        ID3D12GraphicsCommandList* commandLists[kMaxCommandLists] = {};
-        inline ID3D12GraphicsCommandList* GetCommandList(CommandList cmd) { return commandLists[cmd]; }
+        //ID3D12GraphicsCommandList* commandLists[kMaxCommandLists] = {};
+        //inline ID3D12GraphicsCommandList* GetCommandList(CommandList cmd) { return commandLists[cmd]; }
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;

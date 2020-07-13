@@ -21,7 +21,7 @@
 //
 
 #include "D3D12Texture.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GraphicsImpl.h"
 
 namespace alimer
 {
@@ -132,7 +132,7 @@ namespace alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
-        HRESULT hr = device->GetAllocator()->CreateResource(
+        /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
             &resourceDesc,
             state,
@@ -167,7 +167,7 @@ namespace alimer
 
             SRV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
             device->GetD3DDevice()->CreateShaderResourceView(resource, &srvDesc, SRV);
-        }
+        }*/
     }
 
     D3D12Texture::~D3D12Texture()
@@ -190,16 +190,16 @@ namespace alimer
     void D3D12Texture::UploadTextureData(const void* initData)
     {
         // Get a GPU upload buffer
-        UploadContext uploadContext = _device->ResourceUploadBegin(sizeInBytes);
+        /*UploadContext uploadContext = _device->ResourceUploadBegin(sizeInBytes);
 
         UploadTextureData(initData, uploadContext.commandList, uploadContext.Resource, uploadContext.CPUAddress, uploadContext.ResourceOffset);
 
-        _device->ResourceUploadEnd(uploadContext);
+        _device->ResourceUploadEnd(uploadContext);*/
     }
 
     void D3D12Texture::UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset)
     {
-        D3D12_RESOURCE_DESC textureDesc = resource->GetDesc();
+        /*D3D12_RESOURCE_DESC textureDesc = resource->GetDesc();
         const uint64_t arraySize = _desc.type == TextureType::TextureCube ? _desc.depth * 6 : _desc.depth;
 
         const uint64_t numSubResources = max(1u, _desc.mipLevels) * arraySize;
@@ -256,6 +256,6 @@ namespace alimer
             src.PlacedFootprint = layouts[subResourceIdx];
             src.PlacedFootprint.Offset += resourceOffset;
             cmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-        }
+        }*/
     }
 }

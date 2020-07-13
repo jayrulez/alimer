@@ -48,7 +48,7 @@ namespace alimer
         int32_t weakRefs = 0;
     };
 
-    /// Base class for intrusively reference counted objects that can be pointed to with RefPtr. These are noncopyable and non-assignable.
+    /// Base class for intrusively reference counted objects that can be pointed to with SharedPtr. These are noncopyable and non-assignable.
     class ALIMER_API RefCounted
     {
     public:
@@ -114,6 +114,9 @@ namespace alimer
             return refCount->weakRefs - 1;
         }
 
+        /// Return pointer to the reference count structure.
+        RefCount* RefCountPtr() { return refCount; }
+
     protected:
         // A Derived class may override this if they require a custom deleter.
         virtual void DeleteThis()
@@ -132,11 +135,11 @@ namespace alimer
     };
 
     /// Pointer which holds a strong reference to a RefCounted subclass and allows shared ownership.
-    template <class T> class RefPtr
+    template <class T> class SharedPtr
     {
     protected:
         T* ptr_;
-        template<class U> friend class RefPtr;
+        template<class U> friend class SharedPtr;
 
         void InternalAddRef() const noexcept
         {
@@ -161,92 +164,92 @@ namespace alimer
 
     public:
         /// Construct a null pointer.
-        RefPtr() noexcept : ptr_(nullptr) {}
+        SharedPtr() noexcept : ptr_(nullptr) {}
 
         /// Construct a null shared pointer.
-        RefPtr(std::nullptr_t) noexcept : ptr_(nullptr) {}
+        SharedPtr(std::nullptr_t) noexcept : ptr_(nullptr) {}
 
         template<class U>
-        RefPtr(_In_opt_ U* other) noexcept : ptr_(other)
+        SharedPtr(_In_opt_ U* other) noexcept : ptr_(other)
         {
             InternalAddRef();
         }
 
         /// Copy-construct from another shared pointer.
-        RefPtr(const RefPtr& other) : ptr_(other.ptr_)
+        SharedPtr(const SharedPtr& other) : ptr_(other.ptr_)
         {
             InternalAddRef();
         }
 
         /// Copy-construct from another shared pointer allowing implicit upcasting.
         template <typename U, typename = typename std::enable_if<std::is_convertible<U*, T*>::value>::type>
-        RefPtr(const RefPtr<U>& other) noexcept : ptr_(other.ptr_)
+        SharedPtr(const SharedPtr<U>& other) noexcept : ptr_(other.ptr_)
         {
             InternalAddRef();
         }
 
         /// Move-construct from another shared pointer.
-        RefPtr(_Inout_ RefPtr<T>&& rhs) noexcept : ptr_(rhs.ptr_)
+        SharedPtr(_Inout_ SharedPtr<T>&& rhs) noexcept : ptr_(rhs.ptr_)
         {
             rhs.ptr_ = nullptr;
         }
 
         /// Destruct. Release the object reference.
-        ~RefPtr() noexcept
+        ~SharedPtr() noexcept
         {
             InternalRelease();
         }
 
-        RefPtr<T>& operator=(std::nullptr_t) noexcept
+        SharedPtr<T>& operator=(std::nullptr_t) noexcept
         {
             InternalRelease();
             return *this;
         }
 
-        RefPtr<T>& operator=(_In_opt_ T* other) noexcept
+        SharedPtr<T>& operator=(_In_opt_ T* other) noexcept
         {
             if (ptr_ != other)
             {
-                RefPtr(other).Swap(*this);
+                SharedPtr(other).Swap(*this);
             }
 
             return *this;
         }
 
         template <typename U>
-        RefPtr& operator=(_In_opt_ U* other) noexcept
+        SharedPtr& operator=(_In_opt_ U* other) noexcept
         {
-            RefPtr(other).Swap(*this);
+            SharedPtr(other).Swap(*this);
             return *this;
         }
 
-        RefPtr& operator =(const RefPtr<T>& other) noexcept
+        SharedPtr& operator =(const SharedPtr<T>& other) noexcept
         {
             if (ptr_ != other.ptr_)
             {
-                RefPtr(other).Swap(*this);
+                SharedPtr(other).Swap(*this);
             }
 
             return *this;
         }
 
         template<class U>
-        RefPtr& operator=(const RefPtr<U>& other) noexcept
+        SharedPtr& operator=(const SharedPtr<U>& other) noexcept
         {
-            RefPtr(other).Swap(*this);
+            SharedPtr(other).Swap(*this);
             return *this;
         }
 
-        RefPtr& operator=(_Inout_ RefPtr&& other) noexcept
+        SharedPtr& operator=(_Inout_ SharedPtr&& other) noexcept
         {
-            RefPtr(static_cast<RefPtr&&>(other)).Swap(*this);
+            SharedPtr(static_cast<SharedPtr&&>(other)).Swap(*this);
             return *this;
         }
 
         template<class U>
-        RefPtr& operator=(_Inout_ RefPtr<U>&& other) noexcept
+        SharedPtr& operator=(_Inout_ SharedPtr<U>&& other) noexcept
         {
-            RefPtr(static_cast<RefPtr<U>&&>(other)).Swap(*this);
+            SharedPtr(static_cast<SharedPtr<U>&&>(other)).Swap(*this);
             return *this;
         }
 
@@ -270,13 +273,13 @@ namespace alimer
         operator bool() const noexcept { return ptr_ != nullptr; }
 
         /// Test for less than with another shared pointer.
-        template <class U> bool operator <(const RefPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+        template <class U> bool operator <(const SharedPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
 
         /// Test for equality with another shared pointer.
-        template <class U> bool operator ==(const RefPtr<U>& rhs) const { return ptr_ == rhs.ptr_; }
+        template <class U> bool operator ==(const SharedPtr<U>& rhs) const { return ptr_ == rhs.ptr_; }
 
         /// Test for inequality with another shared pointer.
-        template <class U> bool operator !=(const RefPtr<U>& rhs) const { return ptr_ != rhs.ptr_; }
+        template <class U> bool operator !=(const SharedPtr<U>& rhs) const { return ptr_ != rhs.ptr_; }
 
         /// Check if the pointer is null.
         bool IsNull() const { return ptr_ == nullptr; }
@@ -287,14 +290,14 @@ namespace alimer
         /// Return the raw pointer.
         T* Get() const noexcept { return ptr_; }
 
-        void Swap(_Inout_ RefPtr&& r) noexcept
+        void Swap(_Inout_ SharedPtr&& r) noexcept
         {
             T* tmp = ptr_;
             ptr_ = r.ptr_;
             r.ptr_ = tmp;
         }
 
-        void Swap(_Inout_ RefPtr& rhs) noexcept
+        void Swap(_Inout_ SharedPtr& rhs) noexcept
         {
             T* tmp = ptr_;
             ptr_ = rhs.ptr_;
@@ -330,40 +333,297 @@ namespace alimer
         }
 
         /// Perform a static cast from a shared pointer of another type.
-        template <class U> void StaticCast(const RefPtr<U>& rhs)
+        template <class U> void StaticCast(const SharedPtr<U>& rhs)
         {
-            RefPtr<T> copy(static_cast<T*>(rhs.Get()));
+            SharedPtr<T> copy(static_cast<T*>(rhs.Get()));
             Swap(copy);
         }
 
-        /// Perform a dynamic cast from a shared pointer of another type.
-        template <class U> void DynamicCast(const RefPtr<U>& rhs)
+        /// Perform a dynamic cast from a shared SharedPtr of another type.
+        template <class U> void DynamicCast(const SharedPtr<U>& rhs)
         {
-            RefPtr<T> copy(dynamic_cast<T*>(rhs.Get()));
+            SharedPtr<T> copy(dynamic_cast<T*>(rhs.Get()));
             Swap(copy);
         }
     };
 
-    template <typename T> inline void Swap(RefPtr<T>& a, RefPtr<T>& b)
+    /// Weak pointer template class with intrusive reference counting. Does not keep the object pointed to alive.
+    template <class T> class WeakPtr
     {
-        a.Swap(b);
-    }
+    public:
+        /// Construct a null weak pointer.
+        WeakPtr() noexcept
+            : ptr_(nullptr)
+            , refCount_(nullptr)
+        {
+        }
 
-    /// Perform a static cast from one shared pointer type to another.
-    template <class T, class U> RefPtr<T> StaticCast(const RefPtr<U>& ptr)
-    {
-        RefPtr<T> ret;
-        ret.StaticCast(ptr);
-        return ret;
-    }
+        /// Construct a null weak pointer.
+        WeakPtr(std::nullptr_t) noexcept
+            : ptr_(nullptr)
+            , refCount_(nullptr)
+        {
+        }
 
-    /// Perform a dynamic cast from one weak pointer type to another.
-    template <class T, class U> RefPtr<T> DynamicCast(const RefPtr<U>& ptr)
-    {
-        RefPtr<T> ret;
-        ret.DynamicCast(ptr);
-        return ret;
-    }
+        /// Copy-construct from another weak pointer.
+        WeakPtr(const WeakPtr<T>& rhs) noexcept
+            : ptr_(rhs.ptr_)
+            , refCount_(rhs.refCount_)
+        {
+            AddRef();
+        }
+
+        /// Move-construct from another weak pointer.
+        WeakPtr(WeakPtr<T>&& rhs) noexcept
+            : ptr_(rhs.ptr_)
+            , refCount_(rhs.refCount_)
+        {
+            rhs.ptr_ = nullptr;
+            rhs.refCount_ = nullptr;
+        }
+
+        /// Copy-construct from another weak pointer allowing implicit upcasting.
+        template <class U> WeakPtr(const WeakPtr<U>& rhs) noexcept
+            : ptr_(rhs.ptr_)
+            , refCount_(rhs.refCount_)
+        {
+            AddRef();
+        }
+
+        /// Construct from a shared pointer.
+        WeakPtr(const SharedPtr<T>& rhs) noexcept
+            : ptr_(rhs.Get())
+            , refCount_(rhs.RefCountPtr())
+        {
+            AddRef();
+        }
+
+        /// Construct from a raw pointer.
+        explicit WeakPtr(T* ptr) noexcept
+            : ptr_(ptr)
+            , refCount_(ptr ? ptr->RefCountPtr() : nullptr)
+        {
+            AddRef();
+        }
+
+        /// Destruct. Release the weak reference to the object.
+        ~WeakPtr() noexcept
+        {
+            ReleaseRef();
+        }
+
+        /// Assign from a shared pointer.
+        WeakPtr<T>& operator =(const SharedPtr<T>& rhs)
+        {
+            if (ptr_ == rhs.Get() && refCount_ == rhs.RefCountPtr()) {
+                return *this;
+            }
+
+            WeakPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Assign from a weak pointer.
+        WeakPtr<T>& operator =(const WeakPtr<T>& rhs)
+        {
+            if (ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_)
+                return *this;
+
+            WeakPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Move-assign from another weak pointer.
+        WeakPtr<T>& operator =(WeakPtr<T>&& rhs)
+        {
+            WeakPtr<T> copy(std::move(rhs));
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Assign from another weak pointer allowing implicit upcasting.
+        template <class U> WeakPtr<T>& operator =(const WeakPtr<U>& rhs)
+        {
+            if (ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_)
+                return *this;
+
+            ReleaseRef();
+            ptr_ = rhs.ptr_;
+            refCount_ = rhs.refCount_;
+            AddRef();
+
+            return *this;
+        }
+
+        /// Assign from a raw pointer.
+        WeakPtr<T>& operator =(T* ptr)
+        {
+            RefCount* refCount = ptr ? ptr->RefCountPtr() : nullptr;
+
+            if (ptr_ == ptr && refCount_ == refCount)
+                return *this;
+
+            ReleaseRef();
+            ptr_ = ptr;
+            refCount_ = refCount;
+            AddRef();
+
+            return *this;
+        }
+
+        /// Convert to a shared pointer. If expired, return a null shared pointer.
+        SharedPtr<T> Lock() const
+        {
+            if (IsExpired())
+                return SharedPtr<T>();
+
+            return SharedPtr<T>(ptr_);
+        }
+
+        /// Return raw pointer. If expired, return null.
+        T* Get() const
+        {
+            return IsExpired() ? nullptr : ptr_;
+        }
+
+        /// Point to the object.
+        T* operator ->() const
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return rawPtr;
+        }
+
+        /// Dereference the object.
+        T& operator *() const
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return *rawPtr;
+        }
+
+        /// Subscript the object if applicable.
+        T& operator [](size_t index)
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return (*rawPtr)[index];
+        }
+
+        /// Test for equality with another weak pointer.
+        template <class U> bool operator ==(const WeakPtr<U>& rhs) const { return ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_; }
+
+        /// Test for inequality with another weak pointer.
+        template <class U> bool operator !=(const WeakPtr<U>& rhs) const { return ptr_ != rhs.ptr_ || refCount_ != rhs.refCount_; }
+
+        /// Test for less than with another weak pointer.
+        template <class U> bool operator <(const WeakPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+
+        /// Convert to a raw pointer, null if the object is expired.
+        operator T* () const { return Get(); }   // NOLINT(google-explicit-constructor)
+
+        /// Swap with another WeakPtr.
+        void Swap(WeakPtr<T>& rhs)
+        {
+            std::swap(ptr_, rhs.ptr_);
+            std::swap(refCount_, rhs.refCount_);
+        }
+
+        /// Reset with another pointer.
+        void Reset(T* ptr = nullptr)
+        {
+            WeakPtr<T> copy(ptr);
+            Swap(copy);
+        }
+
+        /// Perform a static cast from a weak pointer of another type.
+        template <class U> void StaticCast(const WeakPtr<U>& rhs)
+        {
+            ReleaseRef();
+            ptr_ = static_cast<T*>(rhs.Get());
+            refCount_ = rhs.refCount_;
+            AddRef();
+        }
+
+        /// Perform a dynamic cast from a weak pointer of another type.
+        template <class U> void DynamicCast(const WeakPtr<U>& rhs)
+        {
+            ReleaseRef();
+            ptr_ = dynamic_cast<T*>(rhs.Get());
+
+            if (ptr_)
+            {
+                refCount_ = rhs.refCount_;
+                AddRef();
+            }
+            else
+                refCount_ = 0;
+        }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return refCount_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return refCount_ != nullptr; }
+
+        /// Return the object's reference count, or 0 if null pointer or if object has expired.
+        int32_t Refs() const { return (refCount_ && refCount_->refs >= 0) ? refCount_->refs : 0; }
+
+        /// Return the object's weak reference count.
+        int WeakRefs() const
+        {
+            if (!IsExpired())
+                return ptr_->WeakRefs();
+
+            return refCount_ ? refCount_->weakRefs : 0;
+        }
+
+        /// Return whether the object has expired. If null pointer, always return true.
+        bool IsExpired() const { return refCount_ ? refCount_->refs < 0 : true; }
+
+        /// Return pointer to the RefCount structure.
+        RefCount* RefCountPtr() const { return refCount_; }
+
+    private:
+        template <class U> friend class WeakPtr;
+
+        /// Add a weak reference to the object pointed to.
+        void AddRef()
+        {
+            if (refCount_)
+            {
+                ALIMER_ASSERT(refCount_->weakRefs >= 0);
+                ++(refCount_->weakRefs);
+            }
+        }
+
+        /// Release the weak reference. Delete the Refcount structure if necessary.
+        void ReleaseRef()
+        {
+            if (refCount_)
+            {
+                ALIMER_ASSERT(refCount_->weakRefs > 0);
+                --(refCount_->weakRefs);
+
+                if (IsExpired() && !refCount_->weakRefs) {
+                    delete refCount_;
+                }
+            }
+
+            ptr_ = nullptr;
+            refCount_ = nullptr;
+        }
+
+        /// Pointer to the object.
+        T* ptr_;
+        /// Pointer to the RefCount structure.
+        RefCount* refCount_;
+    };
 
     /// Delete object of type T. T must be complete. See boost::checked_delete.
     template<class T> inline void CheckedDelete(T* x)
@@ -561,6 +821,44 @@ namespace alimer
         T* ptr_;
     };
 
+    /// Perform a static cast from one shared pointer type to another.
+    template <class T, class U> SharedPtr<T> StaticCast(const SharedPtr<U>& ptr)
+    {
+        SharedPtr<T> ret;
+        ret.StaticCast(ptr);
+        return ret;
+    }
+
+    /// Perform a dynamic cast from one weak pointer type to another.
+    template <class T, class U> SharedPtr<T> DynamicCast(const SharedPtr<U>& ptr)
+    {
+        SharedPtr<T> ret;
+        ret.DynamicCast(ptr);
+        return ret;
+    }
+
+
+    /// Perform a static cast from one weak pointer type to another.
+    template <class T, class U> WeakPtr<T> StaticCast(const WeakPtr<U>& ptr)
+    {
+        WeakPtr<T> ret;
+        ret.StaticCast(ptr);
+        return ret;
+    }
+
+    /// Perform a dynamic cast from one weak pointer type to another.
+    template <class T, class U> WeakPtr<T> DynamicCast(const WeakPtr<U>& ptr)
+    {
+        WeakPtr<T> ret;
+        ret.DynamicCast(ptr);
+        return ret;
+    }
+
+    template <typename T> inline void Swap(SharedPtr<T>& a, SharedPtr<T>& b)
+    {
+        a.Swap(b);
+    }
+
     /// Swap two UniquePtr-s.
     template <class T> void Swap(UniquePtr<T>& first, UniquePtr<T>& second)
     {
@@ -580,8 +878,8 @@ namespace alimer
     }
 
     /// Construct SharedPtr.
-    template <class T, class ... Args> RefPtr<T> MakeShared(Args&& ... args)
+    template <class T, class ... Args> SharedPtr<T> MakeShared(Args&& ... args)
     {
-        return RefPtr<T>(new T(std::forward<Args>(args)...));
+        return SharedPtr<T>(new T(std::forward<Args>(args)...));
     }
 }

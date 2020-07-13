@@ -20,9 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Window.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/SwapChain.h"
+#include "Core/Window.h"
+#include "Core/Input.h"
 #include "Core/Log.h"
 
 #define GLFW_INCLUDE_NONE
@@ -40,6 +39,50 @@ namespace alimer
 {
     namespace
     {
+        MouseButton FromGlfw(int button)
+        {
+            switch (button)
+            {
+            case GLFW_MOUSE_BUTTON_LEFT:
+                return MouseButton::Left;
+            case GLFW_MOUSE_BUTTON_RIGHT:
+                return MouseButton::Right;
+            case GLFW_MOUSE_BUTTON_MIDDLE:
+                return MouseButton::Middle;
+            default:
+                return MouseButton::None;
+            }
+        }
+
+        ModifierKeys ModifiersFromGlfw(int mods)
+        {
+            ModifierKeys modifiers = ModifierKeys::None;
+            if (mods & GLFW_MOD_ALT)
+                modifiers |= ModifierKeys::Alt;
+            if (mods & GLFW_MOD_CONTROL)
+                modifiers |= ModifierKeys::Control;
+            if (mods & GLFW_MOD_SHIFT)
+                modifiers |= ModifierKeys::Shift;
+            if (mods & GLFW_MOD_SUPER)
+                modifiers |= ModifierKeys::Meta;
+            return modifiers;
+        }
+
+        void Glfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+        {
+            //auto* engineWindow = static_cast<Window*>(glfwGetWindowUserPointer(window));
+            double x{};
+            double y{};
+            glfwGetCursorPos(window, &x, &y);
+
+            Object::GetInput()->PostMousePressEvent(
+                static_cast<int32_t>(x),
+                static_cast<int32_t>(y),
+                FromGlfw(button),
+                ModifiersFromGlfw(mods),
+                action == GLFW_PRESS);
+        }
+
         uint32_t windowCount = 0;
     }
 
@@ -95,10 +138,9 @@ namespace alimer
 
         glfwDefaultWindowHints();
         glfwSetWindowUserPointer(handle, this);
+        glfwSetMouseButtonCallback(handle, Glfw_MouseButtonCallback);
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
-
-        swapChain = Graphics::CreateSwapChain(GetNativeHandle(), size.width, size.height, IsFullscreen());
 
         if (windowCount == 0) {
             _isMain = true;
@@ -111,7 +153,6 @@ namespace alimer
 
     void Window::Close()
     {
-        swapChain.Reset();
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
         windowCount--;
     }

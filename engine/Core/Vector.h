@@ -29,7 +29,8 @@
 #include <initializer_list>
 #include <algorithm>
 
-namespace alimer {
+namespace alimer
+{
     template<typename T>
     class Vector
     {
@@ -55,7 +56,7 @@ namespace alimer {
         Vector(IndexType size, const T& value)
         {
             Resize(size);
-            for (unsigned i = 0; i < size; ++i)
+            for (IndexType i = 0; i < size; ++i)
                 At(i) = value;
         }
 
@@ -657,4 +658,4 @@ namespace alimer {
         uint32_t size_ = 0;
         uint32_t capacity_ = 0;
     };
-} // namespace alimer
+}

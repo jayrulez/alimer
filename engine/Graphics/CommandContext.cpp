@@ -21,7 +21,7 @@
 //
 
 #include "Graphics/CommandContext.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "Core/Log.h"
 
 namespace alimer

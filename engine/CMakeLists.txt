@@ -36,7 +36,6 @@ define_engine_source_files(
     Core
     Math
     Graphics
-    Input
     Scene
     Application
 )
@@ -49,12 +48,9 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
-if (ALIMER_D3D11 OR ALIMER_D3D12)
+if (ALIMER_D3D12)
     define_engine_source_files(Graphics/D3D)
-endif()
-
-if (ALIMER_D3D11)
-    define_engine_source_files(Graphics/D3D11)
+    define_engine_source_files(Graphics/D3D12)
 endif()
 
 group_sources()
@@ -90,8 +86,8 @@ else()
     endif()
 endif()
 
-if (ALIMER_D3D11)
-    target_link_libraries(${TARGET_NAME} PRIVATE dxgi d3d11)
+if (ALIMER_D3D12)
+    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemAlloc dxgi d3d12)
 endif()
 
 if (MSVC)

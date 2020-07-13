@@ -22,7 +22,6 @@
 
 #pragma once
 
-
 #include "Graphics/CommandContext.h"
 #include "Graphics/SwapChain.h"
 #include "Graphics/Buffer.h"
@@ -41,56 +40,40 @@ namespace alimer
         ~GraphicsDeviceEvents() = default;
     };
 
-    /// Defines the logical graphics device class.
-    class ALIMER_API GraphicsDevice
+    class Window;
+    class GraphicsImpl;
+
+    /// Defines the logical graphics subsystem.
+    class ALIMER_API Graphics final : public Object
     {
+        ALIMER_OBJECT(Graphics, Object);
+
         friend class GraphicsResource;
 
     public:
-        static BackendType PreferredBackendType;
+        Graphics();
+        ~Graphics();
 
-        /// Get the singleton instance of GraphicsDevice.
-        static GraphicsDevice* Instance;
-
-        static std::set<BackendType> GetAvailableBackends();
-        static void Initialize();
-        static void Shutdown();
-
-        virtual void WaitForGPU() = 0;
+        bool Initialize(const SharedPtr<Window>& window);
+        void WaitForGPU();
         void BeginFrame();
         void EndFrame();
 
-        /**
-        * Get the default command context.
-        * The default context is managed completely by the device.
-        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
-        */
-        virtual CommandContext* GetDefaultContext() const = 0;
+        bool IsInitialized() const;
 
-        // Resource creation methods.
-        virtual RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) = 0;
-        virtual RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) = 0;
-
-        // CommandList
-        
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     private:
-        virtual void BackendShutdown() = 0;
-        virtual bool BeginFrameImpl() { return true; }
-        virtual void EndFrameImpl() = 0;
 
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice() = default;
-        virtual ~GraphicsDevice() = default;
-
         void ReleaseTrackedResources();
 
-        bool headless = false;
+        GraphicsImpl* impl;
+        SharedPtr<Window> window;
         GraphicsDeviceCaps caps{};
 
         std::mutex trackedResourcesMutex;
@@ -104,29 +87,6 @@ namespace alimer
         bool frameActive{ false };
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        ALIMER_DISABLE_COPY_MOVE(Graphics);
     };
-
-    namespace Graphics
-    {
-        ALIMER_FORCEINLINE void BeginFrame()
-        {
-            GraphicsDevice::Instance->BeginFrame();
-        }
-
-        ALIMER_FORCEINLINE void EndFrame()
-        {
-            GraphicsDevice::Instance->EndFrame();
-        }
-
-        ALIMER_FORCEINLINE CommandContext* GetDefaultContext()
-        {
-            return GraphicsDevice::Instance->GetDefaultContext();
-        }
-
-        ALIMER_FORCEINLINE RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat = PixelFormat::BGRA8Unorm, PixelFormat depthStencilFormat = PixelFormat::Invalid)
-        {
-            return GraphicsDevice::Instance->CreateSwapChain(windowHandle, width, height, isFullscreen, preferredColorFormat, depthStencilFormat);
-        }
-    }
 }
