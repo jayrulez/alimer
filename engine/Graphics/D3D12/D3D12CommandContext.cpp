@@ -20,11 +20,10 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D12GraphicsDevice.h"
-#include "D3D12CommandBuffer.h"
-#include "D3D12CommandQueue.h"
-#include "D3D12Texture.h"
+#include "D3D12CommandContext.h"
+#include "D3D12GraphicsImpl.h"
+//#include "D3D12CommandQueue.h"
+//#include "D3D12Texture.h"
 
 namespace alimer
 {
@@ -41,7 +40,7 @@ namespace alimer
             }
         }
 
-        D3D12_RENDER_PASS_ENDING_ACCESS_TYPE D3D12EndingAccessType(StoreAction action) {
+        /*D3D12_RENDER_PASS_ENDING_ACCESS_TYPE D3D12EndingAccessType(StoreAction action) {
             switch (action) {
             case StoreAction::Store:
                 return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
@@ -51,14 +50,13 @@ namespace alimer
             default:
                 ALIMER_UNREACHABLE();
             }
-        }
+        }*/
     }
 
-    D3D12CommandBuffer::D3D12CommandBuffer(D3D12CommandQueue* commandQueue)
-        : CommandBuffer(*commandQueue)
+    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsImpl* device_)
+        : device(device_)
     {
-        D3D12GraphicsDevice* device = static_cast<D3D12GraphicsDevice*>(commandQueue->GetDevice());
-        const D3D12_COMMAND_LIST_TYPE commandListType = GetD3D12CommandListType(commandQueue->GetQueueType());
+        /*const D3D12_COMMAND_LIST_TYPE commandListType = GetD3D12CommandListType(commandQueue->GetQueueType());
 
         VHR(device->GetD3DDevice()->CreateCommandAllocator(commandListType, IID_PPV_ARGS(&commandAllocator)));
         VHR(device->GetD3DDevice()->CreateCommandList(0, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
@@ -67,17 +65,18 @@ namespace alimer
         if (FAILED(commandList->QueryInterface(&commandList4))) {
             useRenderPass = false;
         }
-        //useRenderPass = true;
+        //useRenderPass = true;*/
     }
 
-    D3D12CommandBuffer::~D3D12CommandBuffer()
+    D3D12CommandContext::~D3D12CommandContext()
     {
-        SAFE_RELEASE(commandAllocator);
-        SAFE_RELEASE(commandList4);
-        SAFE_RELEASE(commandList);
+        //SAFE_RELEASE(commandAllocator);
+        //SAFE_RELEASE(commandList4);
+        //SAFE_RELEASE(commandList);
     }
 
 
+#ifdef TODO
     void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescriptor* descriptor)
     {
         if (useRenderPass)
@@ -159,8 +158,10 @@ namespace alimer
     {
         commandList->OMSetBlendFactor(&color.r);
     }
+#endif // TODO
 
-    void D3D12CommandBuffer::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
+
+    void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
     {
         D3D12_RESOURCE_STATES currentState = resource->GetState();
 
@@ -203,7 +204,7 @@ namespace alimer
             FlushResourceBarriers();
     }
 
-    void D3D12CommandBuffer::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
+    void D3D12CommandContext::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
     {
         ALIMER_ASSERT_MSG(numBarriersToFlush < kMaxResourceBarriers, "Exceeded arbitrary limit on buffered barriers");
         D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
@@ -215,7 +216,7 @@ namespace alimer
             FlushResourceBarriers();
     }
 
-    void D3D12CommandBuffer::FlushResourceBarriers(void)
+    void D3D12CommandContext::FlushResourceBarriers(void)
     {
         if (numBarriersToFlush > 0)
         {
@@ -224,6 +225,3 @@ namespace alimer
         }
     }
 }
-
-
-#endif // TODO

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Buffer.h"
 #include "D3D12GraphicsImpl.h"
 
@@ -83,7 +84,7 @@ namespace alimer
 
     void D3D12Buffer::Destroy()
     {
-        SafeRelease(allocation);
+        //SafeRelease(allocation);
     }
 
     void D3D12Buffer::BackendSetName()
@@ -92,3 +93,5 @@ namespace alimer
         resource->SetName(wideName.c_str());
     }
 }
+
+#endif // TODO

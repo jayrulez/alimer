@@ -30,15 +30,14 @@ namespace alimer
         : name{ name }
         , memoryUsage{ memoryUsage }
     {
-        graphics = GetSubsystem<Graphics>();
-        if (graphics)
-            graphics->TrackResource(this);
+        if (Graphics::Instance)
+            Graphics::Instance->TrackResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        if (graphics)
-            graphics->UntrackResource(this);
+        if (Graphics::Instance)
+            Graphics::Instance->UntrackResource(this);
     }
 }
 

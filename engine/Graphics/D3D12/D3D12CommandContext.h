@@ -22,22 +22,22 @@
 
 #pragma once
 
-#include "graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
     class D3D12CommandQueue;
 
-    class D3D12CommandBuffer final : public CommandBuffer
+    class D3D12CommandContext final : public CommandContext
     {
     public:
-        D3D12CommandBuffer(D3D12CommandQueue* commandQueue);
-        ~D3D12CommandBuffer() override;
+        D3D12CommandContext(D3D12GraphicsImpl* device_);
+        ~D3D12CommandContext() override;
 
-        void BeginRenderPass(const RenderPassDescriptor* descriptor) override;
-        void EndRenderPass() override;
-        void SetBlendColor(const Color& color) override;
+        //void BeginRenderPass(const RenderPassDescriptor* descriptor) override;
+        //void EndRenderPass() override;
+        //void SetBlendColor(const Color& color) override;
 
         /* Barriers */
         void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
@@ -45,14 +45,15 @@ namespace alimer
         void FlushResourceBarriers(void);
 
     private:
+        D3D12GraphicsImpl* device;
         bool useRenderPass;
         ID3D12CommandAllocator* commandAllocator;
         ID3D12GraphicsCommandList* commandList;
         ID3D12GraphicsCommandList4* commandList4 = nullptr;
 
         /* Barriers */
-        static constexpr u32 kMaxResourceBarriers = 16;
-        u32 numBarriersToFlush = 0;
+        static constexpr uint32_t kMaxResourceBarriers = 16;
+        uint32_t numBarriersToFlush = 0;
         D3D12_RESOURCE_BARRIER resourceBarriers[kMaxResourceBarriers];
 
         D3D12_RENDER_PASS_RENDER_TARGET_DESC colorRenderPassTargets[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};

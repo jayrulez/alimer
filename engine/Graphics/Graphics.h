@@ -27,6 +27,7 @@
 #include "Graphics/Buffer.h"
 #include <set>
 #include <mutex>
+#include <string_view>
 
 namespace alimer
 {
@@ -41,52 +42,69 @@ namespace alimer
     };
 
     class Window;
-    class GraphicsImpl;
 
     /// Defines the logical graphics subsystem.
-    class ALIMER_API Graphics final : public Object
+    class ALIMER_API Graphics 
     {
-        ALIMER_OBJECT(Graphics, Object);
-
         friend class GraphicsResource;
 
     public:
-        Graphics();
-        ~Graphics();
+        virtual ~Graphics() = default;
 
-        bool Initialize(const SharedPtr<Window>& window);
-        void WaitForGPU();
-        void BeginFrame();
-        void EndFrame();
+        static Graphics* Instance;
+        static bool Initialize(Window* window, bool enableDebugLayer = false, BackendType backendType = BackendType::Count);
+        static void Shutdown();
 
-        bool IsInitialized() const;
+        virtual void WaitForGPU() = 0;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+
+        /**
+        * Get the immediate command context.
+        * The default context is managed completely by the device.
+        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
+        */
+        virtual CommandContext* GetImmediateContext() const = 0;
 
         /// Get the device capabilities.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     private:
-
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
+        Graphics() = default;
         void ReleaseTrackedResources();
 
-        GraphicsImpl* impl;
-        SharedPtr<Window> window;
         GraphicsDeviceCaps caps{};
 
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
 
-        /// Current active frame index
-        uint32_t frameIndex{ 0 };
-
-        /// Whether a frame is active or not
-        bool frameActive{ false };
 
     private:
         ALIMER_DISABLE_COPY_MOVE(Graphics);
     };
+
+    ALIMER_FORCEINLINE void RHIShutdown()
+    {
+        Graphics::Shutdown();
+    }
+
+    ALIMER_FORCEINLINE bool RHIBeginFrame()
+    {
+        return Graphics::Instance->BeginFrame();
+    }
+
+    ALIMER_FORCEINLINE void RHIEndFrame()
+    {
+        Graphics::Instance->EndFrame();
+    }
+
+    ALIMER_FORCEINLINE CommandContext* RHIGetImmediateContext()
+    {
+        return Graphics::Instance->GetImmediateContext();
+    }
 }

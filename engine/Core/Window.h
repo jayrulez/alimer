@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Delegate.h"
 #include "Core/Object.h"
 #include "Math/Size.h"
 
@@ -64,6 +65,8 @@ namespace alimer
         void* GetNativeHandle() const;
         void* GetNativeDisplay() const;
         void* GetWindow() const { return window; }
+
+        Delegate<void()> SizeChanged;
 
     private:
         bool _isMain = false;

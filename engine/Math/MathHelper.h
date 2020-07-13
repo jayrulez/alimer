@@ -45,11 +45,7 @@ namespace Math
     template <typename T> inline bool Equals(T lhs, T rhs, T eps) { return lhs + eps >= rhs && lhs - eps <= rhs; }
     template <class T> inline bool Equals(T lhs, T rhs) { return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs; }
 
-    template <typename T> inline T Abs(T v) { return std::abs(v); }
-    template <typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
-    template <typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
-    template <typename T> inline T Clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
-    template <typename T> inline T sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
+    
     template <typename T> inline T sin(T v) { return std::sin(v); }
     template <typename T> inline T cos(T v) { return std::cos(v); }
     template <typename T> inline T tan(T v) { return std::tan(v); }

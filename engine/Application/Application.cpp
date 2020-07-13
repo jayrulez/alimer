@@ -30,11 +30,7 @@ namespace alimer
 {
     Application::Application()
     {
-        // Register self as a subsystem
-        RegisterSubsystem(this);
-
         RegisterSubsystem(new Input());
-        RegisterSubsystem(new Graphics());
 
         PlatformConstuct();
         LOG_INFO("Application started");
@@ -45,7 +41,7 @@ namespace alimer
         gameSystems.Clear();
         window.Close();
         gui.Reset();
-        RemoveSubsystem<Graphics>();
+        RHIShutdown();
         RemoveSubsystem<Input>();
         PlatformDestroy();
         LOG_INFO("Application destroyed correctly");
@@ -57,10 +53,21 @@ namespace alimer
         GetSubsystem<Input>()->Initialize();
 
         // Create main window.
-        if (!headless)
+        window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+
+        // Init graphics
+#ifdef _DEBUG
+        bool enableDebugLayer = true;
+#else
+        bool enableDebugLayer = false;
+#endif
+
+        if (!Graphics::Initialize(&window, enableDebugLayer, config.preferredGraphicsBackend))
         {
-            window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
-            //GetSubsystem<Graphics>()->Initialize();
+            headless = true;
+        }
+        else
+        {
             gui = new Gui(&window);
         }
 
@@ -95,7 +102,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        GetSubsystem<Graphics>()->BeginFrame();
+        RHIBeginFrame();
         gui->BeginFrame();
 
         for (auto& gameSystem : gameSystems)
@@ -138,7 +145,7 @@ namespace alimer
         }
 
         gui->Render();
-        GetSubsystem<Graphics>()->EndFrame();
+        RHIEndFrame();
     }
 
     int Application::Run()

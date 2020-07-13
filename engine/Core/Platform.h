@@ -394,8 +394,55 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #define _In_reads_(size)
 #endif
 
+//---------------------------------------------
+// Integer/float types and limits
+//---------------------------------------------
 #include <stddef.h>
 #include <stdint.h>
+#include <float.h>
+
+namespace alimer
+{
+    using int8 = int8_t;
+    using int16 = int16_t;
+    using int32 = int32_t;
+    using int64 = int64_t;
+    using uint8 = uint8_t;
+    using uint16 = uint16_t;
+    using uint32 = uint32_t;
+    using uint64 = uint64_t;
+
+    using intptr = intptr_t;
+    using uintptr = uintptr_t;
+    using wchar = wchar_t;
+    using bool32 = uint32_t;
+
+    //---------------------------------------------
+    // Limits
+    //---------------------------------------------
+    template <typename T> struct Limits;
+#define ALIMER_MAKE_LIMITS(type, lo, hi) template <> struct Limits<type> { static constexpr type Min = lo; static constexpr type Max = hi; }
+
+    ALIMER_MAKE_LIMITS(int8, INT8_MIN, INT8_MAX);
+    ALIMER_MAKE_LIMITS(int16, INT16_MIN, INT16_MAX);
+    ALIMER_MAKE_LIMITS(int32, INT32_MIN, INT32_MAX);
+    ALIMER_MAKE_LIMITS(int64, INT64_MIN, INT64_MAX);
+    ALIMER_MAKE_LIMITS(uint8, 0, UINT8_MAX);
+    ALIMER_MAKE_LIMITS(uint16, 0, UINT16_MAX);
+    ALIMER_MAKE_LIMITS(uint32, 0, UINT32_MAX);
+    ALIMER_MAKE_LIMITS(uint64, 0, UINT64_MAX);
+    ALIMER_MAKE_LIMITS(float, -FLT_MAX, FLT_MAX);
+    ALIMER_MAKE_LIMITS(double, -DBL_MAX, DBL_MAX);
+
+//---------------------------------------------
+// Basic comparisons
+//---------------------------------------------
+    template<typename T> inline T Abs(T v) { return (v >= 0) ? v : -v; }
+    template<typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
+    template<typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
+    template<typename T> inline T Clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
+    template<typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
+}
 
 #if !defined(ALIMER_DISABLE_COPY)
 #define ALIMER_DISABLE_COPY(ClassType) \

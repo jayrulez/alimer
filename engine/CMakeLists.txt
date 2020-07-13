@@ -87,7 +87,7 @@ else()
 endif()
 
 if (ALIMER_D3D12)
-    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemAlloc dxgi d3d12)
+    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemAlloc)
 endif()
 
 if (MSVC)

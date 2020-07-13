@@ -38,7 +38,16 @@
 
 namespace alimer
 {
-    class D3D12GraphicsDevice;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
+    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
+    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
+    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
+#endif
+
+    class D3D12GraphicsImpl;
 
     struct D3D12MapResult
     {
@@ -84,6 +93,26 @@ namespace alimer
         }
     }
 
+    class D3D12Fence
+    {
+    public:
+        D3D12Fence();
+        ~D3D12Fence();
+
+        void Init(ID3D12Device* device, uint64 initialValue = 0);
+        void Shutdown();
+
+        void Signal(ID3D12CommandQueue* queue, uint64 fenceValue);
+        void Wait(uint64 fenceValue);
+        bool IsSignaled(uint64 fenceValue);
+        void Clear(uint64 fenceValue);
+        ID3D12Fence* GetD3DFence() const { return d3dFence; }
+
+    private:
+        ID3D12Fence* d3dFence;
+        HANDLE fenceEvent;
+    };
+
     class D3D12GpuResource
     {
     public:
@@ -105,7 +134,6 @@ namespace alimer
 
         virtual void Destroy()
         {
-            SafeRelease(resource);
             gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
         }
 
@@ -115,17 +143,17 @@ namespace alimer
         D3D12_RESOURCE_STATES GetTransitioningState() const { return transitioningState; }
         void SetTransitioningState(D3D12_RESOURCE_STATES newState) { transitioningState = newState; }
 
-        ID3D12Resource* operator->() { return resource; }
-        const ID3D12Resource* operator->() const { return resource; }
+        ID3D12Resource* operator->() { return resource.Get(); }
+        const ID3D12Resource* operator->() const { return resource.Get(); }
 
-        ID3D12Resource* GetResource() { return resource; }
-        const ID3D12Resource* GetResource() const { return resource; }
+        ID3D12Resource* GetResource() { return resource.Get(); }
+        const ID3D12Resource* GetResource() const { return resource.Get(); }
 
         
         D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
 
     protected:
-        ID3D12Resource* resource;
+        ComPtr<ID3D12Resource> resource;
         D3D12_RESOURCE_STATES state;
         D3D12_RESOURCE_STATES transitioningState;
         D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;

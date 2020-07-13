@@ -36,7 +36,6 @@ namespace alimer
             std::unordered_map<StringId32, UniquePtr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
-            WeakPtr<Graphics> graphics;
 
             void RegisterSubsystem(Object* subsystem)
             {
@@ -46,12 +45,6 @@ namespace alimer
             void RegisterSubsystem(Input* subsystem)
             {
                 input = subsystem;
-                RegisterSubsystem((Object*)subsystem);
-            }
-
-            void RegisterSubsystem(Graphics* subsystem)
-            {
-                graphics = subsystem;
                 RegisterSubsystem((Object*)subsystem);
             }
 
@@ -147,11 +140,6 @@ namespace alimer
         details::context().RegisterSubsystem(subsystem);
     }
 
-    void Object::RegisterSubsystem(Graphics* subsystem)
-    {
-        details::context().RegisterSubsystem(subsystem);
-    }
-
     void Object::RemoveSubsystem(Object* subsystem)
     {
         if (!subsystem)
@@ -173,11 +161,6 @@ namespace alimer
     Input* Object::GetInput()
     {
         return details::context().input;
-    }
-
-    Graphics* Object::GetGraphics()
-    {
-        return details::context().graphics;
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

@@ -40,12 +40,12 @@ namespace alimer
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Math::Max(1u, _desc.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1u, _desc.width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Math::Max(1u, _desc.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1u, _desc.height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
@@ -53,13 +53,13 @@ namespace alimer
         if (_desc.type == TextureType::Texture3D)
             return 1u;
 
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Math::Max(1U, _desc.depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1U, _desc.depth >> mipLevel) : 0;
     }
 
     uint32_t Texture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
     {
         uint32_t mipLevels = 0;
-        uint32_t size = Math::Max(Math::Max(width, height), depth);
+        uint32_t size = Max(Max(width, height), depth);
         while (1u << mipLevels <= size) {
             ++mipLevels;
         }

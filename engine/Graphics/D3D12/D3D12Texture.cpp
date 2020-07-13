@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsImpl.h"
 
@@ -177,8 +178,8 @@ namespace alimer
 
     void D3D12Texture::Destroy()
     {
-        SafeRelease(allocation);
-        SafeRelease(resource);
+        //SafeRelease(allocation);
+        //SafeRelease(resource);
     }
 
     void D3D12Texture::BackendSetName()
@@ -259,3 +260,5 @@ namespace alimer
         }*/
     }
 }
+
+#endif // TODO

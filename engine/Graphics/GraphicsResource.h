@@ -60,8 +60,6 @@ namespace alimer
         virtual void BackendSetName() {}
 
     protected:
-        /// Graphics subsystem pointer.
-        WeakPtr<Graphics> graphics;
         String name;
         MemoryUsage memoryUsage;
     };

@@ -26,6 +26,7 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
+#include "Graphics/Types.h"
 #include "Graphics/Gui.h"
 #include "Math/Size.h"
 
@@ -33,6 +34,8 @@ namespace alimer
 {
     struct Configuration
     {
+        BackendType preferredGraphicsBackend = BackendType::Count;
+
         /// Name of the application.
         String applicationName = "Alimer";
 

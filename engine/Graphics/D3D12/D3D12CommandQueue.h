@@ -20,39 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/SwapChain.h"
-#include "Graphics/Graphics.h"
-#include "Core/Log.h"
+#pragma once
+
+#include "Graphics/CommandContext.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain()
-        : GraphicsResource()
+    class D3D12CommandQueue final
     {
-        currentRenderPassDescription.colorAttachments[0].slice = 0;
-    }
+    public:
+        D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
+        ~D3D12CommandQueue();
 
-    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
-        {
-            depthStencilTexture.Reset();
-            backbufferTextures.Clear();
+    private:
+        D3D12GraphicsImpl* device;
+        const D3D12_COMMAND_LIST_TYPE type;
 
-            width = Max(newWidth, 1u);
-            height = Max(newHeight, 1u);
-            Recreate();
-        }
-    }
+        ID3D12CommandQueue* commandQueue;
 
-    Texture* SwapChain::GetBackbufferTexture() const
-    {
-        return backbufferTextures[backbufferIndex].Get();
-    }
-
-    Texture* SwapChain::GetDepthStencilTexture() const
-    {
-        return depthStencilTexture.Get();
-    }
+        // Lifetime of these objects is managed by the descriptor cache
+        D3D12Fence fence;
+        uint64_t nextFenceValue;
+        uint64_t lastCompletedFenceValue;
+    };
 }
-

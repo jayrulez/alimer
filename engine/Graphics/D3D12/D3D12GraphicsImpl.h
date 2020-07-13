@@ -39,13 +39,17 @@ namespace alimer
         void* Submission = nullptr;
     };
 
-    class GraphicsImpl final 
+    class D3D12CommandQueue;
+    class D3D12CommandContext;
+
+    class D3D12GraphicsImpl final : public Graphics
     {
     public:
-        GraphicsImpl();
-        ~GraphicsImpl();
+        static bool IsAvailable();
+        D3D12GraphicsImpl(Window* window, bool enableDebugLayer);
+        ~D3D12GraphicsImpl();
 
-        bool IsInitialized() const { return device != nullptr; }
+        CommandContext* GetImmediateContext() const override;
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
@@ -56,15 +60,16 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
-        void WaitForGPU();
+        void WaitForGPU() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
         void HandleDeviceLost();
 
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
-        ID3D12Device* GetD3DDevice() const { return device; }
+        ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
-        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
         bool SupportsRenderPass() const { return supportsRenderPass; }
 
     private:
@@ -83,32 +88,36 @@ namespace alimer
        // RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
         //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) override;
 
-        void CreateUIObjects();
-        void CreateFontsTexture();
-        void DestroyUIObjects();
-        //void SetupRenderState(ImDrawData* drawData, CommandList commandList);
-        //void RenderDrawData(ImDrawData* drawData, CommandList commandList);
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
         static constexpr uint64_t kRenderLatency = 2;
 
-        bool supportsRenderPass = false;
-
         DWORD dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
-        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent;
+        ComPtr<IDXGIFactory4> dxgiFactory = nullptr;
+        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent | DXGIFactoryCaps::HDR;
 
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
-        ID3D12Device* device = nullptr;
+        ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         /// Current supported feature level.
         D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
         /// Root signature version
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+        bool supportsRenderPass = false;
+
+        /// Current active frame index
+        uint32_t frameIndex;
+
+        /// Whether a frame is active or not
+        bool frameActive;
 
         /* Command queues */
-        ID3D12CommandQueue* graphicsQueue = nullptr;
+        UniquePtr<D3D12CommandQueue> graphicsQueue;
+        UniquePtr<D3D12CommandQueue> computeQueue;
+        UniquePtr<D3D12CommandQueue> copyQueue;
+
+        UniquePtr<D3D12CommandContext> immediateContext;
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};
@@ -123,20 +132,6 @@ namespace alimer
         IDXGISwapChain3* swapChain = nullptr;
         ID3D12Resource* swapChainRenderTargets[3] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
-
-        //std::atomic<uint8_t> commandlistCount{ 0 };
-        //ThreadSafeRingBuffer<CommandList, kMaxCommandLists> freeCommandLists;
-        //ThreadSafeRingBuffer<CommandList, kMaxCommandLists> activeCommandLists;
-
-        //struct Frame
-        //{
-        //    ID3D12CommandAllocator* commandAllocators[kMaxCommandLists] = {};
-        //};
-        //Frame frames[kRenderLatency];
-        //Frame& frame() { return frames[frameIndex]; }
-
-        //ID3D12GraphicsCommandList* commandLists[kMaxCommandLists] = {};
-        //inline ID3D12GraphicsCommandList* GetCommandList(CommandList cmd) { return commandLists[cmd]; }
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;
@@ -162,7 +157,6 @@ namespace alimer
             }
         };
 
-
         UploadSubmission* AllocUploadSubmission(uint64_t size);
 
         ID3D12CommandQueue* uploadCommandQueue = nullptr;
@@ -187,16 +181,10 @@ namespace alimer
         SRWLOCK uploadSubmissionLock = SRWLOCK_INIT;
         SRWLOCK uploadQueueLock = SRWLOCK_INIT;
 
-        
         D3D12MA::Allocation* tempBufferAllocations[kRenderLatency] = { };
         ID3D12Resource* tempFrameBuffers[kRenderLatency] = { };
         uint8_t* tempFrameCPUMem[kRenderLatency] = { };
         uint64_t tempFrameGPUMem[kRenderLatency] = { };
         volatile int64_t tempFrameUsed = 0;
-
-        // Imgui objects.
-        //ID3D12RootSignature* uiRootSignature = nullptr;
-        //ID3D12PipelineState* uiPipelineState = nullptr;
-        //RefPtr<Texture> fontTexture;
     };
 }

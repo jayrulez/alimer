@@ -53,12 +53,17 @@
 
 #include <wrl/client.h>
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void** _factory);
+typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
+#endif
 
 namespace alimer
 {
-    // Type alias for ComPtr template
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
 
     template<typename T> void SafeRelease(T*& resource)
     {
@@ -67,6 +72,10 @@ namespace alimer
             resource = nullptr;
         }
     }
+
+    // Type alias for ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 #ifdef _DEBUG
     // Declare Guids to avoid linking with "dxguid.lib"

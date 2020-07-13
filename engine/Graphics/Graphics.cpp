@@ -37,69 +37,30 @@
 
 namespace alimer
 {
-    Graphics::Graphics()
-        : impl(new GraphicsImpl())
-    {
-        RegisterSubsystem(this);
-    }
+    Graphics* Graphics::Instance = nullptr;
 
-    Graphics::~Graphics()
+    bool Graphics::Initialize(Window* window, bool enableDebugLayer, BackendType backendType)
     {
-        //Close();
-        RemoveSubsystem(this);
-    }
+        ALIMER_ASSERT(window);
 
-    bool Graphics::Initialize(const SharedPtr<Window>& window)
-    {
-        if (impl->IsInitialized()) {
+        if (Instance != nullptr) {
+            LOG_WARN("Cannot create more than one Graphics instance");
             return true;
         }
 
+        Instance = new D3D12GraphicsImpl(window, enableDebugLayer);
         return true;
     }
 
-    void Graphics::WaitForGPU()
+    void Graphics::Shutdown()
     {
-
-    }
-
-    void Graphics::BeginFrame()
-    {
-        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
-
-        //if (!BeginFrameImpl()) {
-        //    return;
-        //}
-
-        /*ImGuiIO& io = ImGui::GetIO();
-        IM_ASSERT(io.Fonts->IsBuilt());
-
-        // Start the Dear ImGui frame
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();*/
-
-        // Now the frame is active again.
-        frameActive = true;
-    }
-
-    void Graphics::EndFrame()
-    {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
-
-        //ImGui::Render();
-        //EndFrameImpl();
-
-        // Update and Render additional Platform Windows
-        /*ImGuiIO& io = ImGui::GetIO();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        if (Instance != nullptr)
         {
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault(nullptr, nullptr);
-        }*/
-
-        // Frame is not active anymore
-        frameActive = false;
+            delete Instance;
+            Instance = nullptr;
+        }
     }
+
 
     void Graphics::TrackResource(GraphicsResource* resource)
     {
@@ -126,10 +87,5 @@ namespace alimer
 
             trackedResources.Clear();
         }
-    }
-
-    bool Graphics::IsInitialized() const
-    {
-        return impl->IsInitialized();
     }
 }
