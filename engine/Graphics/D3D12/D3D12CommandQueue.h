@@ -24,24 +24,64 @@
 
 #include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
+#include <vector>
+#include <queue>
+#include <mutex>
 
 namespace alimer
 {
+    class D3D12CommandAllocatorPool final
+    {
+    public:
+        D3D12CommandAllocatorPool(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
+        ~D3D12CommandAllocatorPool();
+
+        void Shutdown();
+
+        ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
+        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* allocator);
+
+        ALIMER_FORCEINLINE size_t Size() { return allocatorPool.size(); }
+
+    private:
+        const D3D12_COMMAND_LIST_TYPE type;
+
+        D3D12GraphicsImpl* device;
+        std::vector<ID3D12CommandAllocator*> allocatorPool;
+        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
+        std::mutex allocatorMutex;
+    };
+
     class D3D12CommandQueue final
     {
     public:
         D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandQueue();
 
+        uint64 IncrementFence(void);
+        bool IsFenceComplete(uint64_t fenceValue);
+        void WaitForFence(uint64_t fenceValue);
+        void WaitForIdle(void) { WaitForFence(IncrementFence()); }
+
+        uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
+        ID3D12CommandAllocator* RequestAllocator(void);
+
+        ALIMER_FORCEINLINE ID3D12CommandQueue* GetCommandQueue() { return commandQueue; }
+        ALIMER_FORCEINLINE uint64_t GetNextFenceValue() { return nextFenceValue; }
+
     private:
         D3D12GraphicsImpl* device;
         const D3D12_COMMAND_LIST_TYPE type;
-
         ID3D12CommandQueue* commandQueue;
 
+        D3D12CommandAllocatorPool allocatorPool;
+        std::mutex fenceMutex;
+        std::mutex eventMutex;
+
         // Lifetime of these objects is managed by the descriptor cache
-        D3D12Fence fence;
-        uint64_t nextFenceValue;
-        uint64_t lastCompletedFenceValue;
+        ID3D12Fence* fence;
+        HANDLE fenceEvent;
+        uint64 nextFenceValue;
+        uint64 lastCompletedFenceValue;
     };
 }

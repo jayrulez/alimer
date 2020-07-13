@@ -26,7 +26,7 @@
 //#include "D3D12Buffer.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
-#include "Core/String.h"
+#include "Core/Window.h"
 #include "Math/Matrix4x4.h"
 
 namespace alimer
@@ -66,7 +66,8 @@ namespace alimer
     }
 
     D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, bool enableDebugLayer)
-        : frameIndex(0)
+        : Graphics(window)
+        , frameIndex(0)
         , frameActive(false)
     {
         ALIMER_VERIFY(IsAvailable());
@@ -204,7 +205,36 @@ namespace alimer
         copyQueue.Reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
 
         // Create immediate default contexts
-        //immediateContext.Reset(new D3D12CommandContext(this));
+        immediateContext.Reset(new D3D12CommandContext(this));
+
+        // Create main swapchain.
+        {
+            IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+                dxgiFactory.Get(),
+                dxgiFactoryCaps,
+                graphicsQueue->GetCommandQueue(),
+                window->GetNativeHandle(),
+                backbufferWidth, backbufferHeight,
+                PixelFormat::BGRA8Unorm,
+                kRenderLatency,
+                window->IsFullscreen()
+            );
+
+            ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
+            SafeRelease(tempSwapChain);
+        }
+
+        // Create a fence for tracking GPU execution progress.
+        {
+            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+            frameFence->SetName(L"Frame Fence");
+
+            frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+            if (!frameFenceEvent)
+            {
+                LOG_ERROR("Direct3D12: CreateEventEx failed.");
+            }
+        }
     }
 
     D3D12GraphicsImpl::~D3D12GraphicsImpl()
@@ -219,9 +249,21 @@ namespace alimer
 
         SafeRelease(allocator);
 
+        // Release Swapchain resources
+        {
+            SafeRelease(swapChain);
+        }
+
         copyQueue.Reset();
         computeQueue.Reset();
         graphicsQueue.Reset();
+
+        {
+            CloseHandle(frameFenceEvent);
+            SafeRelease(frameFence);
+        }
+
+        immediateContext.Reset();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -496,26 +538,55 @@ namespace alimer
         *ppAdapter = adapter.Detach();
     }
 
+    void D3D12GraphicsImpl::CreateNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** commandList, ID3D12CommandAllocator** commandAllocator)
+    {
+        ALIMER_ASSERT_MSG(type != D3D12_COMMAND_LIST_TYPE_BUNDLE, "Bundles are not yet supported");
+        switch (type)
+        {
+        case D3D12_COMMAND_LIST_TYPE_DIRECT: *commandAllocator = graphicsQueue->RequestAllocator(); break;
+        case D3D12_COMMAND_LIST_TYPE_BUNDLE: break;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: *commandAllocator = computeQueue->RequestAllocator(); break;
+        case D3D12_COMMAND_LIST_TYPE_COPY: *commandAllocator = copyQueue->RequestAllocator(); break;
+        }
+
+        ThrowIfFailed(d3dDevice->CreateCommandList(1, type, *commandAllocator, nullptr, IID_PPV_ARGS(commandList)));
+    }
+
+    void D3D12GraphicsImpl::ExecuteCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList* commandList, bool waitForCompletion)
+    {
+        ALIMER_ASSERT_MSG(type != D3D12_COMMAND_LIST_TYPE_BUNDLE, "Bundles are not yet supported");
+
+        D3D12CommandQueue* commandQueue = nullptr;
+        switch (type)
+        {
+        case D3D12_COMMAND_LIST_TYPE_DIRECT: commandQueue = graphicsQueue.Get(); break;
+        case D3D12_COMMAND_LIST_TYPE_BUNDLE: break;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: commandQueue = computeQueue.Get(); break;
+        case D3D12_COMMAND_LIST_TYPE_COPY: commandQueue = copyQueue.Get(); break;
+        }
+
+        uint64_t fenceValue = commandQueue->ExecuteCommandList(commandList);
+
+        if (waitForCompletion)
+            WaitForFence(fenceValue);
+    }
 
     void D3D12GraphicsImpl::WaitForGPU()
     {
+        graphicsQueue->WaitForIdle();
+        computeQueue->WaitForIdle();
+        copyQueue->WaitForIdle();
+    }
 
+    void D3D12GraphicsImpl::WaitForFence(uint64_t fenceValue)
+    {
+        //CommandQueue& Producer = Graphics::g_CommandManager.GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
+        //Producer.WaitForFence(FenceValue);
     }
 
     bool D3D12GraphicsImpl::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
-
-        //if (!BeginFrameImpl()) {
-        //    return;
-        //}
-
-        /*ImGuiIO& io = ImGui::GetIO();
-        IM_ASSERT(io.Fonts->IsBuilt());
-
-        // Start the Dear ImGui frame
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();*/
 
         // Now the frame is active again.
         frameActive = true;
@@ -527,19 +598,63 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
-        //ImGui::Render();
-        //EndFrameImpl();
+        immediateContext->Flush(false);
 
-        // Update and Render additional Platform Windows
-        /*ImGuiIO& io = ImGui::GetIO();
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        uint32 syncInterval = 1;
+        uint32 presentFlags = 0;
+        if (!vSync) {
+            syncInterval = 0;
+            if (any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing)) {
+                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+            }
+        }
+
+        // Recommended to always use tearing if supported when using a sync interval of 0.
+        // Note this will fail if in true 'fullscreen' mode.
+        HRESULT hr = swapChain->Present(syncInterval, presentFlags);
+
+        // If the device was reset we must completely reinitialize the renderer.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault(nullptr, nullptr);
-        }*/
+#ifdef _DEBUG
+            char buff[64] = {};
+            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+            OutputDebugStringA(buff);
+#endif
+            HandleDeviceLost();
+        }
+        else
+        {
+            ThrowIfFailed(hr);
+
+            graphicsQueue->GetCommandQueue()->Signal(frameFence, ++frameCount);
+
+            uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+
+            if ((frameCount - GPUFrameCount) >= kRenderLatency)
+            {
+                frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
+                WaitForSingleObject(frameFenceEvent, INFINITE);
+            }
+
+            frameIndex = (frameIndex + 1) % kRenderLatency;
+
+            if (!dxgiFactory->IsCurrent())
+            {
+                // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+                ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+            }
+        }
 
         // Frame is not active anymore
         frameActive = false;
+    }
+
+
+    void D3D12GraphicsImpl::HandleDeviceLost()
+    {
+
     }
 
     CommandContext* D3D12GraphicsImpl::GetImmediateContext() const

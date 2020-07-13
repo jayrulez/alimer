@@ -74,7 +74,7 @@ namespace alimer
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        Graphics() = default;
+        Graphics(Window* window);
         void ReleaseTrackedResources();
 
         GraphicsDeviceCaps caps{};
@@ -82,7 +82,9 @@ namespace alimer
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
-
+        bool vSync = true;
+        int32 backbufferWidth = 0;
+        int32 backbufferHeight = 0;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(Graphics);

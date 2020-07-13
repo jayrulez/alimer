@@ -56,10 +56,7 @@ namespace alimer
     D3D12CommandContext::D3D12CommandContext(D3D12GraphicsImpl* device_)
         : device(device_)
     {
-        /*const D3D12_COMMAND_LIST_TYPE commandListType = GetD3D12CommandListType(commandQueue->GetQueueType());
-
-        VHR(device->GetD3DDevice()->CreateCommandAllocator(commandListType, IID_PPV_ARGS(&commandAllocator)));
-        VHR(device->GetD3DDevice()->CreateCommandList(0, commandListType, commandAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+        device->CreateNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &currentAllocator);
 
         useRenderPass = device->SupportsRenderPass();
         if (FAILED(commandList->QueryInterface(&commandList4))) {
@@ -70,11 +67,102 @@ namespace alimer
 
     D3D12CommandContext::~D3D12CommandContext()
     {
-        //SAFE_RELEASE(commandAllocator);
-        //SAFE_RELEASE(commandList4);
-        //SAFE_RELEASE(commandList);
+        SafeRelease(commandList4);
+        SafeRelease(commandList);
     }
 
+    void D3D12CommandContext::Flush(bool wait)
+    {
+        FlushResourceBarriers();
+
+        ALIMER_ASSERT(currentAllocator != nullptr);
+        device->ExecuteCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, commandList, wait);
+
+        // Reset the command list and restore previous state
+        commandList->Reset(currentAllocator, nullptr);
+    }
+
+    void D3D12CommandContext::PushDebugGroup(const String& name)
+    {
+        auto wideName = ToUtf16(name);
+        PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
+    }
+
+    void D3D12CommandContext::PopDebugGroup()
+    {
+        commandList->EndEvent();
+    }
+
+    void D3D12CommandContext::InsertDebugMarker(const String& name)
+    {
+        auto wideName = ToUtf16(name);
+        PIXSetMarker(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
+    }
+
+    void D3D12CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)
+    {
+    }
+
+    void D3D12CommandContext::EndRenderPass()
+    {
+
+    }
+
+    void D3D12CommandContext::SetScissorRect(const Rect& scissorRect)
+    {
+        D3D12_RECT d3dScissorRect;
+        d3dScissorRect.left = LONG(scissorRect.x);
+        d3dScissorRect.top = LONG(scissorRect.y);
+        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        commandList->RSSetScissorRects(1, &d3dScissorRect);
+    }
+
+    void D3D12CommandContext::SetScissorRects(const Rect* scissorRects, uint32_t count)
+    {
+        D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dScissorRects[i].left = LONG(scissorRects[i].x);
+            d3dScissorRects[i].top = LONG(scissorRects[i].y);
+            d3dScissorRects[i].right = LONG(scissorRects[i].x + scissorRects[i].width);
+            d3dScissorRects[i].bottom = LONG(scissorRects[i].y + scissorRects[i].height);
+        }
+        commandList->RSSetScissorRects(count, d3dScissorRects);
+    }
+
+    void D3D12CommandContext::SetViewport(const Viewport& viewport)
+    {
+        commandList->RSSetViewports(1, reinterpret_cast<const D3D12_VIEWPORT*>(&viewport));
+    }
+
+    void D3D12CommandContext::SetViewports(const Viewport* viewports, uint32_t count)
+    {
+        D3D12_VIEWPORT d3dViewports[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dViewports[i].TopLeftX = viewports[i].x;
+            d3dViewports[i].TopLeftY = viewports[i].y;
+            d3dViewports[i].Width = viewports[i].width;
+            d3dViewports[i].Height = viewports[i].height;
+            d3dViewports[i].MinDepth = viewports[i].minDepth;
+            d3dViewports[i].MaxDepth = viewports[i].maxDepth;
+        }
+        commandList->RSSetViewports(count, d3dViewports);
+    }
+
+    void D3D12CommandContext::SetBlendColor(const Color& color)
+    {
+        commandList->OMSetBlendFactor(&color.r);
+    }
+
+    void D3D12CommandContext::BindBuffer(uint32_t slot, Buffer* buffer)
+    {
+    }
+
+    void D3D12CommandContext::BindBufferData(uint32_t slot, const void* data, uint32_t size)
+    {
+    }
 
 #ifdef TODO
     void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescriptor* descriptor)

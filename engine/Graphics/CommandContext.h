@@ -36,6 +36,8 @@ namespace alimer
         CommandContext();
         virtual ~CommandContext() = default;
 
+        virtual void Flush(bool wait = false) = 0;
+
         virtual void PushDebugGroup(const String& name) = 0;
         virtual void PopDebugGroup() = 0;
         virtual void InsertDebugMarker(const String& name) = 0;

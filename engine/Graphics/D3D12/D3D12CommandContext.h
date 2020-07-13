@@ -35,9 +35,23 @@ namespace alimer
         D3D12CommandContext(D3D12GraphicsImpl* device_);
         ~D3D12CommandContext() override;
 
-        //void BeginRenderPass(const RenderPassDescriptor* descriptor) override;
-        //void EndRenderPass() override;
-        //void SetBlendColor(const Color& color) override;
+        void Flush(bool wait) override;
+
+        void PushDebugGroup(const String& name) override;
+        void PopDebugGroup() override;
+        void InsertDebugMarker(const String& name) override;
+
+        void BeginRenderPass(const RenderPassDescription& renderPass) override;
+        void EndRenderPass() override;
+
+        void SetScissorRect(const Rect& scissorRect) override;
+        void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
+        void SetViewport(const Viewport& viewport) override;
+        void SetViewports(const Viewport* viewports, uint32_t count) override;
+        void SetBlendColor(const Color& color) override;
+
+        void BindBuffer(uint32_t slot, Buffer* buffer) override;
+        void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
         /* Barriers */
         void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
@@ -47,7 +61,7 @@ namespace alimer
     private:
         D3D12GraphicsImpl* device;
         bool useRenderPass;
-        ID3D12CommandAllocator* commandAllocator;
+        ID3D12CommandAllocator* currentAllocator;
         ID3D12GraphicsCommandList* commandList;
         ID3D12GraphicsCommandList4* commandList4 = nullptr;
 

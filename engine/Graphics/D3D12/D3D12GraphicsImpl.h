@@ -51,6 +51,9 @@ namespace alimer
 
         CommandContext* GetImmediateContext() const override;
 
+        void CreateNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** commandList, ID3D12CommandAllocator** commandAllocator);
+        void ExecuteCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList* commandList, bool wait);
+
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
         // Temporary CPU-writable buffer memory
@@ -61,6 +64,8 @@ namespace alimer
         void ResourceUploadEnd(UploadContext& context);
 
         void WaitForGPU() override;
+        // The CPU will wait for a fence to reach a specified value.
+        void WaitForFence(uint64_t fenceValue);
         bool BeginFrame() override;
         void EndFrame() override;
         void HandleDeviceLost();
@@ -91,6 +96,7 @@ namespace alimer
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
         static constexpr uint64_t kRenderLatency = 2;
+        static constexpr uint64_t kMaxBackbufferCount = 3;
 
         DWORD dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory = nullptr;
@@ -126,11 +132,8 @@ namespace alimer
         DescriptorHeap GPUDescriptorHeaps[kRenderLatency];
 
         /* Main swap chain */
-        DXGI_FORMAT backBufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
-        uint32_t maxInflightFrames = 2u;
-        uint32_t backBufferCount = 2u;
         IDXGISwapChain3* swapChain = nullptr;
-        ID3D12Resource* swapChainRenderTargets[3] = {};
+        ID3D12Resource* swapChainRenderTargets[kMaxBackbufferCount] = {};
         D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
 
         // Presentation fence objects.

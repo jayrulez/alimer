@@ -39,6 +39,12 @@ namespace alimer
 {
     Graphics* Graphics::Instance = nullptr;
 
+    Graphics::Graphics(Window* window)
+    {
+        backbufferWidth = Max(window->GetSize().width, 1);
+        backbufferHeight = Max(window->GetSize().height, 1);
+    }
+
     bool Graphics::Initialize(Window* window, bool enableDebugLayer, BackendType backendType)
     {
         ALIMER_ASSERT(window);

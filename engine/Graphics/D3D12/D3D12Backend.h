@@ -93,26 +93,6 @@ namespace alimer
         }
     }
 
-    class D3D12Fence
-    {
-    public:
-        D3D12Fence();
-        ~D3D12Fence();
-
-        void Init(ID3D12Device* device, uint64 initialValue = 0);
-        void Shutdown();
-
-        void Signal(ID3D12CommandQueue* queue, uint64 fenceValue);
-        void Wait(uint64 fenceValue);
-        bool IsSignaled(uint64 fenceValue);
-        void Clear(uint64 fenceValue);
-        ID3D12Fence* GetD3DFence() const { return d3dFence; }
-
-    private:
-        ID3D12Fence* d3dFence;
-        HANDLE fenceEvent;
-    };
-
     class D3D12GpuResource
     {
     public:

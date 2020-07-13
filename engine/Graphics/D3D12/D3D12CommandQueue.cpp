@@ -25,11 +25,70 @@
 
 namespace alimer
 {
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_)
+        : device(device_)
+        , type(type_)
+    {
+    }
+
+    D3D12CommandAllocatorPool::~D3D12CommandAllocatorPool()
+    {
+        Shutdown();
+    }
+
+    void D3D12CommandAllocatorPool::Shutdown()
+    {
+        for (size_t i = 0; i < allocatorPool.size(); ++i)
+            allocatorPool[i]->Release();
+
+        allocatorPool.clear();
+    }
+
+    ID3D12CommandAllocator* D3D12CommandAllocatorPool::RequestAllocator(uint64_t completedFenceValue)
+    {
+        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
+
+        ID3D12CommandAllocator* allocator = nullptr;
+
+        if (!readyAllocators.empty())
+        {
+            std::pair<uint64_t, ID3D12CommandAllocator*>& allocatorPair = readyAllocators.front();
+
+            if (allocatorPair.first <= completedFenceValue)
+            {
+                allocator = allocatorPair.second;
+                ThrowIfFailed(allocator->Reset());
+                readyAllocators.pop();
+            }
+        }
+
+        // If no allocator's were ready to be reused, create a new one
+        if (allocator == nullptr)
+        {
+            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(type, IID_PPV_ARGS(&allocator)));
+            wchar_t AllocatorName[32];
+            swprintf(AllocatorName, 32, L"CommandAllocator %zu", allocatorPool.size());
+            allocator->SetName(AllocatorName);
+            allocatorPool.push_back(allocator);
+        }
+
+        return allocator;
+    }
+
+    void D3D12CommandAllocatorPool::DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* allocator)
+    {
+        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
+
+        // That fence value indicates we are free to reset the allocator
+        readyAllocators.push(std::make_pair(fenceValue, allocator));
+    }
+
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_)
         : device(device_)
         , type(type_)
         , nextFenceValue((uint64_t)type_ << 56 | 1)
         , lastCompletedFenceValue((uint64_t)type_ << 56)
+        , allocatorPool(device_, type_)
     {
         D3D12_COMMAND_QUEUE_DESC desc = {};
         desc.Type = type;
@@ -38,22 +97,26 @@ namespace alimer
         ThrowIfFailed(device->GetD3DDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
 
         // Create fence and event
-        fence.Init(device->GetD3DDevice(), 0);
-        fence.Clear((uint64_t)type << 56);
+        ThrowIfFailed(device->GetD3DDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+        fence->SetName(L"CommandListManager::m_pFence");
+        fence->Signal((uint64_t)type << 56);
+
+        fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fenceEvent != 0);
 
         switch (type_)
         {
         case D3D12_COMMAND_LIST_TYPE_DIRECT:
             commandQueue->SetName(L"Direct Command Queue");
-            fence.GetD3DFence()->SetName(L"Direct Command Queue Fence");
+            fence->SetName(L"Direct Command Queue Fence");
             break;
         case D3D12_COMMAND_LIST_TYPE_COMPUTE:
             commandQueue->SetName(L"Compute Command Queue");
-            fence.GetD3DFence()->SetName(L"Compute Command Queue Fence");
+            fence->SetName(L"Compute Command Queue Fence");
             break;
         case D3D12_COMMAND_LIST_TYPE_COPY:
             commandQueue->SetName(L"Copy Command Queue");
-            fence.GetD3DFence()->SetName(L"Copy Command Queue Fence");
+            fence->SetName(L"Copy Command Queue Fence");
             break;
         }
 
@@ -61,7 +124,70 @@ namespace alimer
 
     D3D12CommandQueue::~D3D12CommandQueue()
     {
-        fence.Shutdown();
+        allocatorPool.Shutdown();
+        CloseHandle(fenceEvent);
+        SafeRelease(fence);
         SafeRelease(commandQueue);
+    }
+
+    uint64 D3D12CommandQueue::IncrementFence(void)
+    {
+        std::lock_guard<std::mutex> LockGuard(fenceMutex);
+        commandQueue->Signal(fence, nextFenceValue);
+        return nextFenceValue++;
+    }
+
+    bool D3D12CommandQueue::IsFenceComplete(uint64_t fenceValue)
+    {
+        // Avoid querying the fence value by testing against the last one seen.
+        // The max() is to protect against an unlikely race condition that could cause the last
+        // completed fence value to regress.
+        if (fenceValue > lastCompletedFenceValue)
+        {
+            lastCompletedFenceValue = Max(lastCompletedFenceValue, fence->GetCompletedValue());
+        }
+
+        return fenceValue <= lastCompletedFenceValue;
+    }
+
+    void D3D12CommandQueue::WaitForFence(uint64_t fenceValue)
+    {
+        if (IsFenceComplete(fenceValue))
+            return;
+
+        // TODO:  Think about how this might affect a multi-threaded situation.  Suppose thread A
+        // wants to wait for fence 100, then thread B comes along and wants to wait for 99.  If
+        // the fence can only have one event set on completion, then thread B has to wait for 
+        // 100 before it knows 99 is ready.  Maybe insert sequential events?
+        {
+            std::lock_guard<std::mutex> LockGuard(eventMutex);
+
+            fence->SetEventOnCompletion(fenceValue, fenceEvent);
+            WaitForSingleObject(fenceEvent, INFINITE);
+            lastCompletedFenceValue = fenceValue;
+        }
+    }
+
+    uint64_t D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
+    {
+        std::lock_guard<std::mutex> LockGuard(fenceMutex);
+
+        ThrowIfFailed(commandList->Close());
+
+        // Kickoff the command list.
+        ID3D12CommandList* commandLists[] = { commandList };
+        commandQueue->ExecuteCommandLists(1, commandLists);
+
+        // Signal the next fence value (with the GPU)
+        commandQueue->Signal(fence, nextFenceValue);
+
+        // And increment the fence value.  
+        return nextFenceValue++;
+    }
+
+    ID3D12CommandAllocator* D3D12CommandQueue::RequestAllocator(void)
+    {
+        uint64_t completedFenceValue = fence->GetCompletedValue();
+        return allocatorPool.RequestAllocator(completedFenceValue);
     }
 }
