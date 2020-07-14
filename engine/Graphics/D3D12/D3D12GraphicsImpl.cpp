@@ -22,7 +22,7 @@
 
 #include "D3D12GraphicsImpl.h"
 //#include "D3D12SwapChain.h"
-//#include "D3D12Texture.h"
+#include "D3D12Texture.h"
 //#include "D3D12Buffer.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
@@ -219,12 +219,14 @@ namespace alimer
                 window->GetNativeHandle(),
                 backbufferWidth, backbufferHeight,
                 PixelFormat::BGRA8Unorm,
-                kRenderLatency,
+                backbufferCount,
                 window->IsFullscreen()
             );
 
             ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
             SafeRelease(tempSwapChain);
+
+            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
         }
 
         // Create a fence for tracking GPU execution progress.
@@ -305,24 +307,24 @@ namespace alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
 
-        caps.backendType = BackendType::Direct3D12;
-        caps.vendorId = static_cast<GPUVendorId>(desc.VendorId);
+        caps.backendType = GPU::BackendType::Direct3D12;
+        caps.vendorId = desc.VendorId;
         caps.deviceId = desc.DeviceId;
 
         std::wstring deviceName(desc.Description);
         caps.adapterName = alimer::ToUtf8(deviceName);
 
         // Detect adapter type.
-        /*if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         {
-            caps.adapterType = GPUAdapterType::CPU;
+            caps.adapterType = GPU::AdapterType::CPU;
         }
         else {
             D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            VHR(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
 
-            caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
-        }*/
+            caps.adapterType = arch.UMA ? GPU::AdapterType::IntegratedGPU : GPU::AdapterType::DiscreteGPU;
+        }
 
         // Determine maximum supported feature level for this device
         static const D3D_FEATURE_LEVEL s_featureLevels[] =
@@ -391,7 +393,7 @@ namespace alimer
 
         supportsRenderPass = false;
         if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
-            static_cast<GPUVendorId>(caps.vendorId) != GPUVendorId::Intel)
+            static_cast<GPU::KnownVendorId>(caps.vendorId) != GPU::KnownVendorId::Intel)
         {
             supportsRenderPass = true;
         }
@@ -591,6 +593,8 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
+        backbufferIndex = swapChain->GetCurrentBackBufferIndex();
+
         // Now the frame is active again.
         frameActive = true;
 
@@ -635,13 +639,13 @@ namespace alimer
 
             uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
-            if ((frameCount - GPUFrameCount) >= kRenderLatency)
+            if ((frameCount - GPUFrameCount) >= backbufferCount)
             {
                 frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
                 WaitForSingleObject(frameFenceEvent, INFINITE);
             }
 
-            frameIndex = (frameIndex + 1) % kRenderLatency;
+            frameIndex = (frameIndex + 1) % backbufferCount;
 
             if (!dxgiFactory->IsCurrent())
             {
@@ -660,8 +664,8 @@ namespace alimer
 
     }
 
-    CommandContext* D3D12GraphicsImpl::GetImmediateContext() const
+    Texture* D3D12GraphicsImpl::GetBackbufferTexture() const
     {
-        return immediateContext.get();
+        return backbufferTextures[backbufferIndex].Get();
     }
 }

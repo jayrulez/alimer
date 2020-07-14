@@ -49,8 +49,12 @@ namespace alimer
                 return MouseButton::Right;
             case GLFW_MOUSE_BUTTON_MIDDLE:
                 return MouseButton::Middle;
+            case GLFW_MOUSE_BUTTON_4:
+                return MouseButton::XButton1;
+            case GLFW_MOUSE_BUTTON_5:
+                return MouseButton::XButton2;
             default:
-                return MouseButton::None;
+                return MouseButton::Count;
             }
         }
 

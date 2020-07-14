@@ -37,17 +37,33 @@
 
 #include "imgui_impl_glfw.h"
 
+namespace GPU
+{
+#if defined(ALIMER_D3D12)
+    static BackendType s_BackendType = BackendType::Direct3D12;
+#elif defined(ALIMER_VULKAN)
+    static BackendType s_BackendType = BackendType::Vulkan;
+#else
+    static BackendType s_BackendType = BackendType::Null;
+#endif
+
+    void SetPreferredBackend(BackendType backend)
+    {
+        s_BackendType = backend;
+    }
+}
+
 namespace alimer
 {
     Graphics* GPU = nullptr;
 
     Graphics::Graphics(Window* window)
     {
-        backbufferWidth = Max(window->GetSize().width, 1);
-        backbufferHeight = Max(window->GetSize().height, 1);
+        backbufferWidth = Max((uint32_t)window->GetSize().width, 1u);
+        backbufferHeight = Max((uint32_t)window->GetSize().height, 1u);
     }
 
-    bool Graphics::Initialize(Window* window, GPUFlags flags, BackendType backendType)
+    bool Graphics::Initialize(Window* window, GPUFlags flags)
     {
         ALIMER_ASSERT(window);
 
@@ -56,25 +72,27 @@ namespace alimer
             return true;
         }
 
-        if (backendType == BackendType::Count)
+        GPU::BackendType backend = GPU::s_BackendType;
+
+        if (backend == GPU::BackendType::Count)
         {
 #if defined(ALIMER_D3D12)
             if (D3D12GraphicsImpl::IsAvailable()) {
-                backendType = BackendType::Direct3D12;
+                backend = GPU::BackendType::Direct3D12;
             }
 #endif
 
 #if defined(ALIMER_VULKAN)
-            if (backendType == BackendType::Count && VulkanGraphicsImpl::IsAvailable()) {
-                backendType = BackendType::Vulkan;
+            if (backend == GPU::BackendType::Count && VulkanGraphicsImpl::IsAvailable()) {
+                backend = GPU::BackendType::Vulkan;
             }
 #endif
         }
 
-        switch (backendType)
+        switch (backend)
         {
 #if defined(ALIMER_VULKAN)
-        case BackendType::Vulkan:
+        case GPU::BackendType::Vulkan:
             if (VulkanGraphicsImpl::IsAvailable()) {
                 GPU = new VulkanGraphicsImpl(window, flags);
             }
@@ -82,7 +100,7 @@ namespace alimer
 #endif
 
 #if defined(ALIMER_D3D12)
-        case BackendType::Direct3D12:
+        case GPU::BackendType::Direct3D12:
             if (D3D12GraphicsImpl::IsAvailable()) {
                 GPU = new D3D12GraphicsImpl(window, flags);
             }

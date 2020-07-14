@@ -43,10 +43,11 @@ namespace alimer
     /// Defines input mouse buttons.
     enum class MouseButton
     {
-        None = 0,
         Left,
         Right,
         Middle,
+        XButton1,
+        XButton2,
         Count
     };
 

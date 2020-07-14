@@ -35,19 +35,6 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
 
-    /// Enum describing the Device backend.
-    enum class BackendType : uint32_t
-    {
-        /// Vulkan backend.
-        Vulkan,
-        /// Direct3D 12 backend.
-        Direct3D12,
-        /// Null renderer.
-        Null,
-        /// Default best platform supported backend.
-        Count
-    };
-
     enum class GPUFlags : uint32_t
     {
         None = 0,
@@ -56,17 +43,6 @@ namespace alimer
         RenderDoc = (1 << 2),
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUFlags, uint32_t);
-
-    enum class GPUVendorId : uint32_t
-    {
-        None = 0,
-        AMD = 0x1002,
-        Intel = 0x8086,
-        Nvidia = 0x10DE,
-        ARM = 0x13B5,
-        ImgTec = 0x1010,
-        Qualcomm = 0x5143
-    };
 
     enum class MemoryUsage : uint32_t
     {
@@ -121,75 +97,6 @@ namespace alimer
         Clear,
         Load,
         Discard
-    };
-
-    /**
-    * Describes GraphicsDevice capabilities.
-    */
-    struct GraphicsDeviceCaps
-    {
-        BackendType backendType;
-        GPUVendorId vendorId;
-        uint32_t deviceId;
-        std::string adapterName;
-
-        struct Features
-        {
-            bool independentBlend = false;
-            bool computeShader = false;
-            bool geometryShader = false;
-            bool tessellationShader = false;
-            bool logicOp = false;
-            bool multiViewport = false;
-            bool fullDrawIndexUint32 = false;
-            bool multiDrawIndirect = false;
-            bool fillModeNonSolid = false;
-            bool samplerAnisotropy = false;
-            bool textureCompressionETC2 = false;
-            bool textureCompressionASTC_LDR = false;
-            bool textureCompressionBC = false;
-            /// Specifies whether cube array textures are supported.
-            bool textureCubeArray = false;
-            /// Specifies whether raytracing is supported.
-            bool raytracing = false;
-        };
-
-        struct Limits
-        {
-            uint32_t maxVertexAttributes;
-            uint32_t maxVertexBindings;
-            uint32_t maxVertexAttributeOffset;
-            uint32_t maxVertexBindingStride;
-            uint32_t maxTextureDimension2D;
-            uint32_t maxTextureDimension3D;
-            uint32_t maxTextureDimensionCube;
-            uint32_t maxTextureArrayLayers;
-            uint32_t maxColorAttachments;
-            uint32_t maxUniformBufferSize;
-            uint32_t minUniformBufferOffsetAlignment;
-            uint32_t maxStorageBufferSize;
-            uint32_t minStorageBufferOffsetAlignment;
-            uint32_t maxSamplerAnisotropy;
-            uint32_t maxViewports;
-            uint32_t maxViewportWidth;
-            uint32_t maxViewportHeight;
-            uint32_t maxTessellationPatchSize;
-            float pointSizeRangeMin;
-            float pointSizeRangeMax;
-            float lineWidthRangeMin;
-            float lineWidthRangeMax;
-            uint32_t maxComputeSharedMemorySize;
-            uint32_t maxComputeWorkGroupCountX;
-            uint32_t maxComputeWorkGroupCountY;
-            uint32_t maxComputeWorkGroupCountZ;
-            uint32_t maxComputeWorkGroupInvocations;
-            uint32_t maxComputeWorkGroupSizeX;
-            uint32_t maxComputeWorkGroupSizeY;
-            uint32_t maxComputeWorkGroupSizeZ;
-        };
-
-        Features features;
-        Limits limits;
     };
 
     struct TextureDescription
@@ -251,5 +158,105 @@ namespace alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
+    };
+}
+
+namespace GPU
+{
+    /// Enum describing the Device backend.
+    enum class BackendType : uint32_t {
+        /// Null renderer.
+        Null,
+        /// Vulkan backend.
+        Vulkan,
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Default best platform supported backend.
+        Count
+    };
+
+    enum class KnownVendorId : uint32_t {
+        None = 0,
+        AMD = 0x1002,
+        Intel = 0x8086,
+        Nvidia = 0x10DE,
+        ARM = 0x13B5,
+        ImgTec = 0x1010,
+        Qualcomm = 0x5143
+    };
+
+    enum class AdapterType : uint32_t {
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
+    };
+
+    /// Describes GPU capabilities.
+    struct Capabilities
+    {
+        BackendType backendType;
+        uint32_t vendorId;
+        uint32_t deviceId;
+        std::string adapterName;
+        AdapterType adapterType;
+
+        struct Features
+        {
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint32_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint32_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
     };
 }

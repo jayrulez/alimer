@@ -27,6 +27,8 @@
 
 namespace alimer
 {
+    class VulkanTexture;
+
     class VulkanGraphicsImpl final : public Graphics
     {
     public:
@@ -35,36 +37,31 @@ namespace alimer
         VulkanGraphicsImpl(Window* window, GPUFlags flags);
         ~VulkanGraphicsImpl() override;
 
+        void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
+
+        VkInstance GetVkInstance() const { return instance; }
+        VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
+        VkDevice GetVkDevice() const { return device; }
         const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
-        CommandContext* GetImmediateContext() const override { return nullptr; }
+        VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
 
     private:
-        //bool BackendInitialize(const PresentationParameters& presentationParameters) override;
         void Shutdown();
+        void InitCapabilities();
+        bool UpdateSwapchain();
+
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
-
-        // Resource creation methods.
-        /*RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
-        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
-
-        CommandList BeginCommandList(const char* name) override;
-        void InsertDebugMarker(CommandList commandList, const char* name) override;
-        void PushDebugGroup(CommandList commandList, const char* namet) override;
-        void PopDebugGroup(CommandList commandList) override;
-
-        void SetScissorRect(CommandList commandList, const Rect& scissorRect) override;
-        void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(CommandList commandList, const Viewport& viewport) override;
-        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
-        void SetBlendColor(CommandList commandList, const Color& color) override;*/
+        Texture* GetBackbufferTexture() const override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
 
         /// Debug utils messenger callback for VK_EXT_Debug_Utils
         VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
+
+        VkSurfaceKHR surface{ VK_NULL_HANDLE };
 
         VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
         VkPhysicalDeviceProperties2 physicalDeviceProperties{};
@@ -79,8 +76,10 @@ namespace alimer
         VkQueue copyQueue{ VK_NULL_HANDLE };
 
         /* Memory allocator */
-        VmaAllocator allocator{ VK_NULL_HANDLE };
+        VmaAllocator memoryAllocator{ VK_NULL_HANDLE };
 
-        //VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
+        VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
+        uint32_t backbufferIndex = 0;
+        SharedPtr<VulkanTexture> backbufferTextures[kMaxBackbufferCount] = {};
     };
 }

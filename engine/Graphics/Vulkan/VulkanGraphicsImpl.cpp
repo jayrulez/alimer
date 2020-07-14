@@ -22,11 +22,13 @@
 
 #include "config.h"
 #include "VulkanGraphicsImpl.h"
+#include "VulkanTexture.h"
+#include "Core/Window.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #endif
@@ -115,14 +117,13 @@ namespace alimer
 
         bool QueryPresentationSupport(VkInstance instance, VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex)
         {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-            return vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, queueFamilyIndex);
-#elif defined(__linux__) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
             return glfwGetPhysicalDevicePresentationSupport(instance, physicalDevice, queueFamilyIndex);
 #else
             return true;
 #endif
         }
+
 
         QueueFamilyIndices QueryQueueFamilies(VkInstance instance, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
@@ -237,8 +238,8 @@ namespace alimer
                 else if (strcmp(extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0) {
                     result.image_format_list = true;
                 }
-                else if (strcmp(extensions[i].extensionName, VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
-                    result.debug_marker = true;
+                else if (strcmp(extensions[i].extensionName, VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME) == 0) {
+                    result.sampler_mirror_clamp_to_edge = true;
                 }
                 else if (strcmp(extensions[i].extensionName, VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME) == 0) {
                     result.win32_full_screen_exclusive = true;
@@ -281,7 +282,7 @@ namespace alimer
             return result;
         }
 
-        bool IsDeviceSuitable(VkInstance instance, const InstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool headless)
+        bool IsDeviceSuitable(VkInstance instance, const InstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
             QueueFamilyIndices indices = QueryQueueFamilies(instance, physicalDevice, surface);
 
@@ -299,6 +300,110 @@ namespace alimer
             }
 
             return true;
+        }
+
+        struct SurfaceCapsVk {
+            bool success;
+            VkSurfaceCapabilitiesKHR capabilities;
+            Vector<VkSurfaceFormatKHR> formats;
+            Vector<VkPresentModeKHR> presentModes;
+        };
+
+        SurfaceCapsVk QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
+        {
+            SurfaceCapsVk caps;
+            memset(&caps, 0, sizeof(SurfaceCapsVk));
+
+            VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR };
+            surfaceInfo.surface = surface;
+
+            if (getSurfaceCapabilities2)
+            {
+                VkSurfaceCapabilities2KHR surfaceCaps2 = { VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR };
+
+                if (vkGetPhysicalDeviceSurfaceCapabilities2KHR(physicalDevice, &surfaceInfo, &surfaceCaps2) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+                caps.capabilities = surfaceCaps2.surfaceCapabilities;
+
+                uint32_t formatCount;
+                if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, nullptr) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                Vector<VkSurfaceFormat2KHR> formats2(formatCount);
+
+                for (auto& format2 : formats2)
+                {
+                    format2 = {};
+                    format2.sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR;
+                }
+
+                if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, formats2.Data()) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                caps.formats.Reserve(formatCount);
+                for (auto& format2 : formats2)
+                {
+                    caps.formats.Push(format2.surfaceFormat);
+                }
+            }
+            else
+            {
+                if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &caps.capabilities) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                uint32_t formatCount;
+                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                caps.formats.Resize(formatCount);
+                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, caps.formats.Data()) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+            }
+
+            uint32_t presentModeCount = 0;
+#ifdef _WIN32
+            if (getSurfaceCapabilities2 && win32_full_screen_exclusive)
+            {
+                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, nullptr) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                caps.presentModes.Resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, caps.presentModes.Data()) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+            }
+            else
+#endif
+            {
+                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+
+                caps.presentModes.Resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, caps.presentModes.Data()) != VK_SUCCESS)
+                {
+                    return caps;
+                }
+            }
+
+            caps.success = true;
+            return caps;
         }
     }
 
@@ -348,7 +453,7 @@ namespace alimer
 
         // Create instance
         {
-            std::vector<const char*> enabledInstanceExtensions;
+            Vector<const char*> enabledInstanceExtensions;
             std::vector<const char*> enabledInstanceLayers;
 
             uint32_t instanceExtensionCount;
@@ -373,18 +478,22 @@ namespace alimer
 
             if (window == nullptr)
             {
-                enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.Push(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
             else
             {
-                enabledInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#if defined(VK_USE_PLATFORM_WIN32_KHR)
-                enabledInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+                uint32_t count;
+                const char** ext = glfwGetRequiredInstanceExtensions(&count);
+                for (uint32_t i = 0; i < count; i++)
+                {
+                    enabledInstanceExtensions.Push(ext[i]);
+                }
 #endif
 
                 if (instanceExts.getSurfaceCapabilities2) {
-                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                    enabledInstanceExtensions.Push(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                 }
             }
 
@@ -392,7 +501,7 @@ namespace alimer
             {
                 if (instanceExts.debugUtils)
                 {
-                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                    enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 }
 
                 // Layers
@@ -433,8 +542,8 @@ namespace alimer
             createInfo.pApplicationInfo = &appInfo;
             createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
             createInfo.ppEnabledLayerNames = enabledInstanceLayers.data();
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
-            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
+            createInfo.enabledExtensionCount = enabledInstanceExtensions.Size();
+            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.Data();
 
             // Create the Vulkan instance.
             VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -468,44 +577,11 @@ namespace alimer
                 LOG_INFO("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
-    }
 
-    VulkanGraphicsImpl::~VulkanGraphicsImpl()
-    {
-        WaitForGPU();
-        Shutdown();
-    }
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+        VK_CHECK(glfwCreateWindowSurface(instance, (GLFWwindow*)window->GetWindow(), nullptr, &surface));
+#endif
 
-    void VulkanGraphicsImpl::Shutdown()
-    {
-        if (allocator != VK_NULL_HANDLE)
-        {
-            VmaStats stats;
-            vmaCalculateStats(allocator, &stats);
-
-            if (stats.total.usedBytes > 0) {
-                LOG_ERROR("Total device memory leaked: %llx bytes.", stats.total.usedBytes);
-            }
-
-            vmaDestroyAllocator(allocator);
-        }
-
-        deviceTable.vkDestroyDevice(device, nullptr);
-
-        if (debugUtilsMessenger != VK_NULL_HANDLE)
-        {
-            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
-        }
-
-        if (instance != VK_NULL_HANDLE)
-        {
-            vkDestroyInstance(instance, nullptr);
-        }
-    }
-
-#if TODO
-    bool VulkanGraphicsImpl::BackendInitialize(const PresentationParameters& presentationParameters)
-    {
         // Enumerating and creating devices:
         {
             uint32_t physicalDevicesCount = 0;
@@ -519,12 +595,11 @@ namespace alimer
             Vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
             vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.Data());
 
-            VkSurfaceKHR surface = VK_NULL_HANDLE;
-            uint32_t bestDeviceScore = 0U;
+            uint32_t bestDeviceScore = 0u;
             uint32_t bestDeviceIndex = VK_QUEUE_FAMILY_IGNORED;
             for (uint32_t i = 0; i < physicalDevicesCount; ++i)
             {
-                if (!IsDeviceSuitable(instance, instanceExts, physicalDevices[i], surface, headless)) {
+                if (!IsDeviceSuitable(instance, instanceExts, physicalDevices[i], surface)) {
                     continue;
                 }
 
@@ -561,19 +636,12 @@ namespace alimer
 
             if (bestDeviceIndex == VK_QUEUE_FAMILY_IGNORED) {
                 LOG_ERROR("Vulkan: Cannot find suitable physical device.");
-                return false;
+                return;
             }
 
             physicalDevice = physicalDevices[bestDeviceIndex];
-            if (instanceExts.get_physical_device_properties2)
-            {
-                physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-                vkGetPhysicalDeviceProperties2(physicalDevice, &physicalDeviceProperties);
-            }
-            else
-            {
-                vkGetPhysicalDeviceProperties(physicalDevice, &physicalDeviceProperties.properties);
-            }
+            physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+            vkGetPhysicalDeviceProperties2(physicalDevice, &physicalDeviceProperties);
             queueFamilies = QueryQueueFamilies(instance, physicalDevice, surface);
             physicalDeviceExts = QueryPhysicalDeviceExtensions(instanceExts, physicalDevice);
         }
@@ -592,19 +660,19 @@ namespace alimer
             if (queueFamilies.computeQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
                 queueFamilies.computeQueueFamily = queueFamilies.graphicsQueueFamily;
-                compute_queue_index = min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                compute_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
 
             if (queueFamilies.copyQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
                 queueFamilies.copyQueueFamily = queueFamilies.graphicsQueueFamily;
-                copy_queue_index = min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                copy_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
             else if (queueFamilies.copyQueueFamily == queueFamilies.computeQueueFamily)
             {
-                copy_queue_index = min(queue_families[queueFamilies.computeQueueFamily].queueCount - 1, 1u);
+                copy_queue_index = Min(queue_families[queueFamilies.computeQueueFamily].queueCount - 1, 1u);
             }
 
             static const float graphics_queue_prio = 0.5f;
@@ -616,7 +684,7 @@ namespace alimer
             VkDeviceQueueCreateInfo queue_info[3] = { };
             queue_info[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queue_info[queueCreateCount].queueFamilyIndex = queueFamilies.graphicsQueueFamily;
-            queue_info[queueCreateCount].queueCount = min(universal_queue_index, queue_families[queueFamilies.graphicsQueueFamily].queueCount);
+            queue_info[queueCreateCount].queueCount = Min(universal_queue_index, queue_families[queueFamilies.graphicsQueueFamily].queueCount);
             queue_info[queueCreateCount].pQueuePriorities = prio;
             queueCreateCount++;
 
@@ -624,7 +692,7 @@ namespace alimer
             {
                 queue_info[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                 queue_info[queueCreateCount].queueFamilyIndex = queueFamilies.computeQueueFamily;
-                queue_info[queueCreateCount].queueCount = min(queueFamilies.copyQueueFamily == queueFamilies.computeQueueFamily ? 2u : 1u,
+                queue_info[queueCreateCount].queueCount = Min(queueFamilies.copyQueueFamily == queueFamilies.computeQueueFamily ? 2u : 1u,
                     queue_families[queueFamilies.computeQueueFamily].queueCount);
                 queue_info[queueCreateCount].pQueuePriorities = prio + 1;
                 queueCreateCount++;
@@ -645,7 +713,7 @@ namespace alimer
             const bool deviceApiVersion11 = physicalDeviceProperties.properties.apiVersion >= VK_API_VERSION_1_1;
             Vector<const char*> enabledDeviceExtensions;
 
-            if (!headless) {
+            if (surface != VK_NULL_HANDLE) {
                 enabledDeviceExtensions.Push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
 
@@ -664,14 +732,20 @@ namespace alimer
                 }
             }
 
-            /*
-
-            if (vk.physical_device_features.get_memory_requirements2 &&
-                vk.physical_device_features.dedicated_allocation)
+            if (physicalDeviceExts.image_format_list)
             {
-                enabled_device_exts[enabled_device_ext_count++] = VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME;
-                enabled_device_exts[enabled_device_ext_count++] = VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME;
-            }*/
+                enabledDeviceExtensions.Push(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
+            }
+
+            if (physicalDeviceExts.sampler_mirror_clamp_to_edge)
+            {
+                enabledDeviceExtensions.Push(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+            }
+
+            if (physicalDeviceExts.depth_clip_enable)
+            {
+                enabledDeviceExtensions.Push(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
+            }
 
             /*if (vk.physical_device_features.buffer_device_address)
             {
@@ -679,10 +753,10 @@ namespace alimer
             }*/
 
 #ifdef _WIN32
-            /*if (vk.get_surface_capabilities2 && vk.physical_device_features.win32_full_screen_exclusive)
+            if (instanceExts.getSurfaceCapabilities2 && physicalDeviceExts.win32_full_screen_exclusive)
             {
-                enabledDeviceExtensions.push_back(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
-            }*/
+                enabledDeviceExtensions.Push(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
+            }
 #endif
 
             VkPhysicalDeviceFeatures2 features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
@@ -699,12 +773,7 @@ namespace alimer
                 ppNext = &multiview_features.pNext;
             }
 
-            if (deviceApiVersion11 && instanceExts.apiVersion11)
-                vkGetPhysicalDeviceFeatures2(physicalDevice, &features);
-            else if (instanceExts.get_physical_device_properties2)
-                vkGetPhysicalDeviceFeatures2KHR(physicalDevice, &features);
-            else
-                vkGetPhysicalDeviceFeatures(physicalDevice, &features.features);
+            vkGetPhysicalDeviceFeatures2(physicalDevice, &features);
 
             // Enable device features we might care about.
             {
@@ -742,7 +811,8 @@ namespace alimer
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
             if (result != VK_SUCCESS) {
-                return false;
+                VK_LOG_ERROR(result, "Failed to create device");
+                return;
             }
 
             volkLoadDeviceTable(&deviceTable, device);
@@ -751,20 +821,293 @@ namespace alimer
             deviceTable.vkGetDeviceQueue(device, queueFamilies.computeQueueFamily, compute_queue_index, &computeQueue);
             deviceTable.vkGetDeviceQueue(device, queueFamilies.copyQueueFamily, copy_queue_index, &copyQueue);
 
-            LOG_INFO("Created VkDevice using '%s' adapter with API version: %u.%u.%u",
+            LOG_INFO("Created VkDevice using '{}' adapter with API version: {}.{}.{}",
                 physicalDeviceProperties.properties.deviceName,
                 VK_VERSION_MAJOR(physicalDeviceProperties.properties.apiVersion),
                 VK_VERSION_MINOR(physicalDeviceProperties.properties.apiVersion),
                 VK_VERSION_PATCH(physicalDeviceProperties.properties.apiVersion));
             for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i) {
-                LOG_INFO("Device extension '%s'", createInfo.ppEnabledExtensionNames[i]);
+                LOG_INFO("Device extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
 
-        return true;
-}
-#endif // TODO
+        // Create vma allocator.
+        {
+            VmaAllocatorCreateInfo allocatorInfo = {};
+            allocatorInfo.physicalDevice = physicalDevice;
+            allocatorInfo.device = device;
+            allocatorInfo.instance = instance;
 
+            if (physicalDeviceExts.get_memory_requirements2 && physicalDeviceExts.dedicated_allocation)
+            {
+                allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+            }
+
+            /* if (is_extension_supported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) && is_enabled(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
+             {
+                 allocator_info.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+             }*/
+
+
+            VkResult result = vmaCreateAllocator(&allocatorInfo, &memoryAllocator);
+            if (result != VK_SUCCESS)
+            {
+                VK_LOG_ERROR(result, "Cannot create allocator");
+                return;
+            }
+        }
+
+        InitCapabilities();
+        UpdateSwapchain();
+    }
+
+    VulkanGraphicsImpl::~VulkanGraphicsImpl()
+    {
+        WaitForGPU();
+        Shutdown();
+    }
+
+    void VulkanGraphicsImpl::Shutdown()
+    {
+        deviceTable.vkDestroySwapchainKHR(device, swapchain, nullptr);
+
+        if (memoryAllocator != VK_NULL_HANDLE)
+        {
+            VmaStats stats;
+            vmaCalculateStats(memoryAllocator, &stats);
+
+            if (stats.total.usedBytes > 0) {
+                LOG_ERROR("Total device memory leaked: {} bytes.", stats.total.usedBytes);
+            }
+
+            vmaDestroyAllocator(memoryAllocator);
+        }
+
+        deviceTable.vkDestroyDevice(device, nullptr);
+
+        if (debugUtilsMessenger != VK_NULL_HANDLE)
+        {
+            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
+        }
+
+        if (instance != VK_NULL_HANDLE)
+        {
+            vkDestroyInstance(instance, nullptr);
+        }
+    }
+
+    void VulkanGraphicsImpl::InitCapabilities()
+    {
+        caps.backendType = GPU::BackendType::Vulkan;
+        caps.vendorId = physicalDeviceProperties.properties.vendorID;
+        caps.deviceId = physicalDeviceProperties.properties.deviceID;
+        caps.adapterName = physicalDeviceProperties.properties.deviceName;
+
+        switch (physicalDeviceProperties.properties.deviceType) {
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            caps.adapterType = GPU::AdapterType::IntegratedGPU;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            caps.adapterType = GPU::AdapterType::DiscreteGPU;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:
+            caps.adapterType = GPU::AdapterType::CPU;
+            break;
+        default:
+            caps.adapterType = GPU::AdapterType::Unknown;
+            break;
+        }
+    }
+
+    bool VulkanGraphicsImpl::UpdateSwapchain()
+    {
+        WaitForGPU();
+
+        SurfaceCapsVk surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
+
+        /* Detect image count. */
+        uint32_t imageCount = backbufferCount;
+        if (imageCount == 0)
+        {
+            imageCount = surfaceCaps.capabilities.minImageCount + 1;
+            if ((surfaceCaps.capabilities.maxImageCount > 0) &&
+                (imageCount > surfaceCaps.capabilities.maxImageCount))
+            {
+                imageCount = surfaceCaps.capabilities.maxImageCount;
+            }
+        }
+        else
+        {
+            if (surfaceCaps.capabilities.maxImageCount != 0)
+                imageCount = Min(imageCount, surfaceCaps.capabilities.maxImageCount);
+            imageCount = Max(imageCount, surfaceCaps.capabilities.minImageCount);
+        }
+
+        /* Surface format. */
+        VkSurfaceFormatKHR format;
+        if (surfaceCaps.formats.Size() == 1 &&
+            surfaceCaps.formats[0].format == VK_FORMAT_UNDEFINED)
+        {
+            format = surfaceCaps.formats[0];
+            format.format = VK_FORMAT_B8G8R8A8_UNORM;
+        }
+        else
+        {
+            if (surfaceCaps.formats.Size() == 0)
+            {
+                //vgpu_log(VGPU_LOG_LEVEL_ERROR, "Vulkan: Surface has no formats.");
+                return false;
+            }
+
+            const bool srgb = false;
+            bool found = false;
+            for (uint32_t i = 0; i < surfaceCaps.formats.Size(); i++)
+            {
+                if (srgb)
+                {
+                    if (surfaceCaps.formats[i].format == VK_FORMAT_R8G8B8A8_SRGB ||
+                        surfaceCaps.formats[i].format == VK_FORMAT_B8G8R8A8_SRGB ||
+                        surfaceCaps.formats[i].format == VK_FORMAT_A8B8G8R8_SRGB_PACK32)
+                    {
+                        format = surfaceCaps.formats[i];
+                        found = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (surfaceCaps.formats[i].format == VK_FORMAT_R8G8B8A8_UNORM ||
+                        surfaceCaps.formats[i].format == VK_FORMAT_B8G8R8A8_UNORM ||
+                        surfaceCaps.formats[i].format == VK_FORMAT_A8B8G8R8_UNORM_PACK32)
+                    {
+                        format = surfaceCaps.formats[i];
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found)
+            {
+                format = surfaceCaps.formats[0];
+            }
+        }
+
+        /* Extent */
+        VkExtent2D swapchainSize = { backbufferWidth, backbufferHeight };
+        if (swapchainSize.width < 1 || swapchainSize.height < 1)
+        {
+            swapchainSize = surfaceCaps.capabilities.currentExtent;
+        }
+        else
+        {
+            swapchainSize.width = Max(swapchainSize.width, surfaceCaps.capabilities.minImageExtent.width);
+            swapchainSize.width = Min(swapchainSize.width, surfaceCaps.capabilities.maxImageExtent.width);
+            swapchainSize.height = Max(swapchainSize.height, surfaceCaps.capabilities.minImageExtent.height);
+            swapchainSize.height = Min(swapchainSize.height, surfaceCaps.capabilities.maxImageExtent.height);
+        }
+
+        VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+        // Enable transfer source on swap chain images if supported
+        if (surfaceCaps.capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+            //textureUsage |= VGPUTextureUsage_CopySrc;
+        }
+
+        // Enable transfer destination on swap chain images if supported
+        if (surfaceCaps.capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
+            imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+            //textureUsage |= VGPUTextureUsage_CopyDst;
+        }
+
+        VkSurfaceTransformFlagBitsKHR pre_transform;
+        if ((surfaceCaps.capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) != 0)
+            pre_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        else
+            pre_transform = surfaceCaps.capabilities.currentTransform;
+
+        VkCompositeAlphaFlagBitsKHR composite_mode = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        if (surfaceCaps.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR)
+            composite_mode = VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR;
+        if (surfaceCaps.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
+            composite_mode = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        if (surfaceCaps.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR)
+            composite_mode = VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+        if (surfaceCaps.capabilities.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR)
+            composite_mode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
+
+        VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+        if (!vSync)
+        {
+            // The immediate present mode is not necessarily supported:
+            for (auto& presentMode : surfaceCaps.presentModes)
+            {
+                if (presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+                {
+                    presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+                    break;
+                }
+            }
+        }
+
+        VkSwapchainKHR oldSwapchain = swapchain;
+
+        /* We use same family for graphics and present so no sharing is necessary. */
+        VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+        createInfo.surface = surface;
+        createInfo.minImageCount = imageCount;
+        createInfo.imageFormat = format.format;
+        createInfo.imageColorSpace = format.colorSpace;
+        createInfo.imageExtent = swapchainSize;
+        createInfo.imageArrayLayers = 1;
+        createInfo.imageUsage = imageUsage;
+        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.queueFamilyIndexCount = 0;
+        createInfo.pQueueFamilyIndices = NULL;
+        createInfo.preTransform = pre_transform;
+        createInfo.compositeAlpha = composite_mode;
+        createInfo.presentMode = presentMode;
+        createInfo.clipped = VK_TRUE;
+        createInfo.oldSwapchain = oldSwapchain;
+
+        VkResult result = deviceTable.vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
+        if (result != VK_SUCCESS) {
+            return false;
+        }
+
+        if (oldSwapchain != VK_NULL_HANDLE)
+        {
+            deviceTable.vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+        }
+
+        deviceTable.vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+        Vector<VkImage> swapChainImages(imageCount);
+        deviceTable.vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.Data());
+
+        SetObjectName(VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t)swapchain, "Swapchain");
+
+        for (uint32 i = 0; i < imageCount; i++)
+        {
+            backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
+            backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
+            //SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapChainImages[i], fmt::format("Back Buffer {}", i));
+        }
+
+        return true;
+    }
+
+    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const std::string& name)
+    {
+        if (!instanceExts.debugUtils)
+            return;
+
+        VkDebugUtilsObjectNameInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        info.objectType = type;
+        info.objectHandle = handle;
+        info.pObjectName = name.c_str();
+        VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
+    }
 
     void VulkanGraphicsImpl::WaitForGPU()
     {
@@ -793,4 +1136,9 @@ namespace alimer
             handle_surface_changes();
         }*/
     }
+
+    Texture* VulkanGraphicsImpl::GetBackbufferTexture() const
+    {
+        return backbufferTextures[backbufferIndex].Get();
     }
+}

@@ -23,30 +23,23 @@
 #pragma once
 
 #include "Graphics/Texture.h"
-#include "D3D12Backend.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class D3D12Texture final : public Texture
+    class VulkanTexture final : public Texture
     {
     public:
-        D3D12Texture(D3D12GraphicsImpl* device_, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_);
-        D3D12Texture(D3D12GraphicsImpl* device_, const TextureDescription& desc, const void* initialData);
-        ~D3D12Texture() override;
+        VulkanTexture(VulkanGraphicsImpl* device_, VkImage resource_);
+        VulkanTexture(VulkanGraphicsImpl* device_, const TextureDescription& desc, const void* initialData);
+        ~VulkanTexture() override;
         void Destroy() override;
-
-        void UploadTextureData(const void* initData);
-        void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
 
     private:
         void BackendSetName() override;
 
-        D3D12GraphicsImpl* device;
-        ID3D12Resource* resource = nullptr;
-        D3D12MA::Allocation* allocation = nullptr;
-        D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
-        D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
-        UINT64 sizeInBytes{ 0 };
+        VulkanGraphicsImpl* device;
+        VkImage handle{ VK_NULL_HANDLE };
+        VmaAllocation memory{ VK_NULL_HANDLE };
     };
 }

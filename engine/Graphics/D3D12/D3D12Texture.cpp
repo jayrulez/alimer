@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsImpl.h"
 
@@ -51,19 +50,20 @@ namespace alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state)
+    D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_)
         : Texture(ConvertResourceDesc(resource->GetDesc()))
-        , _device(device)
-        , state{ state }
+        , device(device_)
+        , resource(resource_)
+        , state(state_)
     {
 
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
+    D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, const TextureDescription& desc, const void* initialData)
         : Texture(desc)
-        , _device(device)
+        , device(device_)
     {
-        format = ToDXGIFormatWitUsage(desc.format, desc.usage);
+        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
 
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
@@ -87,7 +87,7 @@ namespace alimer
         }
 
         resourceDesc.MipLevels = desc.mipLevels;
-        resourceDesc.Format = format;
+        resourceDesc.Format = dxgiFormat;
         resourceDesc.SampleDesc.Count = desc.sampleCount;
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -260,5 +260,3 @@ namespace alimer
         }*/
     }
 }
-
-#endif // TODO

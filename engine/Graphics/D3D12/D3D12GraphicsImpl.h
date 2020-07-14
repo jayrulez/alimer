@@ -39,6 +39,7 @@ namespace alimer
         void* Submission = nullptr;
     };
 
+    class D3D12Texture;
     class D3D12CommandQueue;
     class D3D12CommandContext;
 
@@ -48,8 +49,6 @@ namespace alimer
         static bool IsAvailable();
         D3D12GraphicsImpl(Window* window, GPUFlags flags);
         ~D3D12GraphicsImpl();
-
-        CommandContext* GetImmediateContext() const override;
 
         void CreateNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** commandList, ID3D12CommandAllocator** commandAllocator);
         void ExecuteCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList* commandList, bool wait);
@@ -80,9 +79,7 @@ namespace alimer
     private:
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        //void BackendShutdown() override;
-        //bool BeginFrameImpl() override;
-        //void EndFrameImpl() override;
+        Texture* GetBackbufferTexture() const override;
 
         void InitializeUpload();
         void ShutdownUpload();
@@ -94,9 +91,6 @@ namespace alimer
         //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) override;
 
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
-
-        static constexpr uint64_t kRenderLatency = 2;
-        static constexpr uint64_t kMaxBackbufferCount = 3;
 
         DWORD dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory = nullptr;
@@ -128,12 +122,12 @@ namespace alimer
         DescriptorHeap RTVHeap{};
         DescriptorHeap DSVHeap{};
         DescriptorHeap CPUDescriptorHeap;
-        DescriptorHeap GPUDescriptorHeaps[kRenderLatency];
+        DescriptorHeap GPUDescriptorHeaps[kMaxBackbufferCount];
 
         /* Main swap chain */
         IDXGISwapChain3* swapChain = nullptr;
-        ID3D12Resource* swapChainRenderTargets[kMaxBackbufferCount] = {};
-        D3D12_CPU_DESCRIPTOR_HANDLE swapChainRenderTargetDescriptor[3] = {};
+        uint32_t backbufferIndex = 0;
+        SharedPtr<D3D12Texture> backbufferTextures[kMaxBackbufferCount] = {};
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;
@@ -183,10 +177,10 @@ namespace alimer
         SRWLOCK uploadSubmissionLock = SRWLOCK_INIT;
         SRWLOCK uploadQueueLock = SRWLOCK_INIT;
 
-        D3D12MA::Allocation* tempBufferAllocations[kRenderLatency] = { };
-        ID3D12Resource* tempFrameBuffers[kRenderLatency] = { };
-        uint8_t* tempFrameCPUMem[kRenderLatency] = { };
-        uint64_t tempFrameGPUMem[kRenderLatency] = { };
+        D3D12MA::Allocation* tempBufferAllocations[kMaxBackbufferCount] = { };
+        ID3D12Resource* tempFrameBuffers[kMaxBackbufferCount] = { };
+        uint8_t* tempFrameCPUMem[kMaxBackbufferCount] = { };
+        uint64_t tempFrameGPUMem[kMaxBackbufferCount] = { };
         volatile int64_t tempFrameUsed = 0;
     };
 }

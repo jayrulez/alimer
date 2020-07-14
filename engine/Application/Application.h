@@ -34,8 +34,6 @@ namespace alimer
 {
     struct Configuration
     {
-        BackendType preferredGraphicsBackend = BackendType::Count;
-
         /// Name of the application.
         String applicationName = "Alimer";
 

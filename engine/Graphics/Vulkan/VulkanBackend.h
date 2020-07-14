@@ -31,7 +31,7 @@
 
 namespace alimer
 {
-    class VulkanGraphicsDevice;
+    class VulkanGraphicsImpl;
 
     const char* ToString(VkResult result);
 
@@ -58,7 +58,7 @@ namespace alimer
         bool bind_memory2;
         bool memory_budget;
         bool image_format_list;
-        bool debug_marker;
+        bool sampler_mirror_clamp_to_edge;
         bool win32_full_screen_exclusive;
         bool raytracing;
         bool buffer_device_address;
@@ -76,8 +76,8 @@ namespace alimer
 		VkResult err = x;                                           \
 		if (err)                                                    \
 		{                                                           \
-			LOG_ERROR("Detected Vulkan error: %s", alimer::ToString(err)); \
+			LOG_ERROR("Detected Vulkan error: {}", alimer::ToString(err)); \
 		}                                                           \
 	} while (0)
 
-#define VK_LOG_ERROR(result, message) LOG_ERROR("%s - Vulkan error: %s", message, alimer::ToString(result));
+#define VK_LOG_ERROR(result, message) LOG_ERROR("{} - Vulkan error: {}", message, alimer::ToString(result));

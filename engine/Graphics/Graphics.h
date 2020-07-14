@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include "Core/Vector.h"
 #include "Graphics/CommandContext.h"
-#include "Graphics/SwapChain.h"
+#include "Graphics/Texture.h"
 #include "Graphics/Buffer.h"
-#include <set>
 #include <mutex>
 
 namespace alimer
@@ -43,29 +43,25 @@ namespace alimer
     class Window;
 
     /// Defines the logical graphics subsystem.
-    class ALIMER_API Graphics 
+    class ALIMER_API Graphics
     {
         friend class GraphicsResource;
 
     public:
         virtual ~Graphics() = default;
 
-        static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None, BackendType backendType = BackendType::Count);
+        static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None);
         static void Shutdown();
 
         virtual void WaitForGPU() = 0;
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        /**
-        * Get the immediate command context.
-        * The default context is managed completely by the device.
-        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
-        */
-        virtual CommandContext* GetImmediateContext() const = 0;
+        /// Get the current backbuffer texture.
+        virtual Texture* GetBackbufferTexture() const = 0;
 
         /// Get the device capabilities.
-        const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        const GPU::Capabilities& GetCaps() const { return caps; }
 
     private:
         void TrackResource(GraphicsResource* resource);
@@ -75,14 +71,18 @@ namespace alimer
         Graphics(Window* window);
         void ReleaseTrackedResources();
 
-        GraphicsDeviceCaps caps{};
+        static constexpr uint64_t kBackbufferCount = 2u;
+        static constexpr uint64_t kMaxBackbufferCount = 3u;
+
+        GPU::Capabilities caps{};
 
         std::mutex trackedResourcesMutex;
         Vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
+        uint32 backbufferWidth = 0;
+        uint32 backbufferHeight = 0;
+        uint32 backbufferCount = kBackbufferCount;
         bool vSync = true;
-        int32 backbufferWidth = 0;
-        int32 backbufferHeight = 0;
 
     private:
         ALIMER_DISABLE_COPY_MOVE(Graphics);
@@ -90,23 +90,29 @@ namespace alimer
 
     extern ALIMER_API Graphics* GPU;
 
-    ALIMER_FORCEINLINE void GPUShutdown()
+}
+
+namespace GPU
+{
+    ALIMER_API void SetPreferredBackend(BackendType backend);
+
+    ALIMER_FORCEINLINE void Shutdown()
     {
-        GPU->Shutdown();
+        alimer::GPU->Shutdown();
     }
 
-    ALIMER_FORCEINLINE bool GPUBeginFrame()
+    ALIMER_FORCEINLINE bool BeginFrame()
     {
-        return GPU->BeginFrame();
+        return alimer::GPU->BeginFrame();
     }
 
-    ALIMER_FORCEINLINE void GPUEndFrame()
+    ALIMER_FORCEINLINE void EndFrame()
     {
-        GPU->EndFrame();
+        alimer::GPU->EndFrame();
     }
 
-    ALIMER_FORCEINLINE CommandContext* GPUGetImmediateContext()
+    ALIMER_FORCEINLINE const GPU::Capabilities& GetCaps()
     {
-        return GPU->GetImmediateContext();
+        return alimer::GPU->GetCaps();
     }
 }
