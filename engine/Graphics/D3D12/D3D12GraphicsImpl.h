@@ -46,7 +46,7 @@ namespace alimer
     {
     public:
         static bool IsAvailable();
-        D3D12GraphicsImpl(Window* window, bool enableDebugLayer);
+        D3D12GraphicsImpl(Window* window, GPUFlags flags);
         ~D3D12GraphicsImpl();
 
         CommandContext* GetImmediateContext() const override;
@@ -119,11 +119,10 @@ namespace alimer
         bool frameActive;
 
         /* Command queues */
-        UniquePtr<D3D12CommandQueue> graphicsQueue;
-        UniquePtr<D3D12CommandQueue> computeQueue;
-        UniquePtr<D3D12CommandQueue> copyQueue;
-
-        UniquePtr<D3D12CommandContext> immediateContext;
+        std::unique_ptr<D3D12CommandQueue> graphicsQueue;
+        std::unique_ptr<D3D12CommandQueue> computeQueue;
+        std::unique_ptr<D3D12CommandQueue> copyQueue;
+        std::unique_ptr<D3D12CommandContext> immediateContext;
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};

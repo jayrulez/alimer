@@ -33,7 +33,7 @@ namespace alimer
         {
             /// Object factories.
             std::unordered_map<StringId32, SharedPtr<Object>> subsystems;
-            std::unordered_map<StringId32, UniquePtr<ObjectFactory>> factories;
+            std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
 
@@ -61,7 +61,7 @@ namespace alimer
 
             void RegisterFactory(ObjectFactory* factory)
             {
-                factories[factory->GetType()].Reset(factory);
+                factories[factory->GetType()].reset(factory);
             }
 
             SharedPtr<Object> CreateObject(StringId32 type)

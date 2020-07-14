@@ -48,6 +48,10 @@ if (WIN32)
     define_engine_source_files(Platform/Windows)
 endif ()
 
+if (ALIMER_VULKAN)
+    define_engine_source_files(Graphics/Vulkan)
+endif()
+
 if (ALIMER_D3D12)
     define_engine_source_files(Graphics/D3D)
     define_engine_source_files(Graphics/D3D12)
@@ -85,6 +89,10 @@ else()
         target_link_libraries(${TARGET_NAME} PRIVATE glfw)
     endif()
 endif()
+
+if (ALIMER_VULKAN)
+    target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
+endif ()
 
 if (ALIMER_D3D12)
     target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemAlloc)

@@ -39,9 +39,9 @@ namespace alimer
     Application::~Application()
     {
         gameSystems.Clear();
-        window.Close();
-        gui.Reset();
-        RHIShutdown();
+        window.reset();
+        gui.reset();
+        GPUShutdown();
         RemoveSubsystem<Input>();
         PlatformDestroy();
         LOG_INFO("Application destroyed correctly");
@@ -53,22 +53,23 @@ namespace alimer
         GetSubsystem<Input>()->Initialize();
 
         // Create main window.
-        window.Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+        window.reset(new Window());
+        window->Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
         // Init graphics
+        GPUFlags flags = GPUFlags::None;
 #ifdef _DEBUG
-        bool enableDebugLayer = true;
-#else
-        bool enableDebugLayer = false;
+        flags |= GPUFlags::DebugRuntime;
 #endif
+        config.preferredGraphicsBackend = BackendType::Vulkan;
 
-        if (!Graphics::Initialize(&window, enableDebugLayer, config.preferredGraphicsBackend))
+        if (!Graphics::Initialize(window.get(), flags, config.preferredGraphicsBackend))
         {
             headless = true;
         }
         else
         {
-            gui = new Gui(&window);
+            gui.reset(new Gui(window.get()));
         }
 
         Initialize();
@@ -102,7 +103,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        RHIBeginFrame();
+        GPUBeginFrame();
         gui->BeginFrame();
 
         for (auto& gameSystem : gameSystems)
@@ -145,7 +146,7 @@ namespace alimer
         }
 
         gui->Render();
-        RHIEndFrame();
+        GPUEndFrame();
     }
 
     int Application::Run()
@@ -184,7 +185,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !window.IsMinimized()
+            && !window->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

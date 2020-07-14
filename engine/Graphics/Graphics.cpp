@@ -27,17 +27,19 @@
 #include "Graphics/Graphics.h"
 #include "Graphics/Texture.h"
 
+#if defined(ALIMER_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
+#endif
+
 #if defined(ALIMER_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsImpl.h"
-#elif defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
 
 #include "imgui_impl_glfw.h"
 
 namespace alimer
 {
-    Graphics* Graphics::Instance = nullptr;
+    Graphics* GPU = nullptr;
 
     Graphics::Graphics(Window* window)
     {
@@ -45,25 +47,61 @@ namespace alimer
         backbufferHeight = Max(window->GetSize().height, 1);
     }
 
-    bool Graphics::Initialize(Window* window, bool enableDebugLayer, BackendType backendType)
+    bool Graphics::Initialize(Window* window, GPUFlags flags, BackendType backendType)
     {
         ALIMER_ASSERT(window);
 
-        if (Instance != nullptr) {
+        if (GPU != nullptr) {
             LOG_WARN("Cannot create more than one Graphics instance");
             return true;
         }
 
-        Instance = new D3D12GraphicsImpl(window, enableDebugLayer);
-        return true;
+        if (backendType == BackendType::Count)
+        {
+#if defined(ALIMER_D3D12)
+            if (D3D12GraphicsImpl::IsAvailable()) {
+                backendType = BackendType::Direct3D12;
+            }
+#endif
+
+#if defined(ALIMER_VULKAN)
+            if (backendType == BackendType::Count && VulkanGraphicsImpl::IsAvailable()) {
+                backendType = BackendType::Vulkan;
+            }
+#endif
+        }
+
+        switch (backendType)
+        {
+#if defined(ALIMER_VULKAN)
+        case BackendType::Vulkan:
+            if (VulkanGraphicsImpl::IsAvailable()) {
+                GPU = new VulkanGraphicsImpl(window, flags);
+            }
+            break;
+#endif
+
+#if defined(ALIMER_D3D12)
+        case BackendType::Direct3D12:
+            if (D3D12GraphicsImpl::IsAvailable()) {
+                GPU = new D3D12GraphicsImpl(window, flags);
+            }
+            break;
+#endif
+
+        default:
+            break;
+        }
+
+        return GPU != nullptr;
     }
 
     void Graphics::Shutdown()
     {
-        if (Instance != nullptr)
+        if (GPU != nullptr)
         {
-            delete Instance;
-            Instance = nullptr;
+            delete GPU;
+            GPU = nullptr;
         }
     }
 

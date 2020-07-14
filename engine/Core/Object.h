@@ -24,6 +24,7 @@
 
 #include "Core/Ptr.h"
 #include "Core/StringId.h"
+#include <memory>
 
 namespace alimer
 {

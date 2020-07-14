@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "core/Utils.h"
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
@@ -43,10 +42,6 @@ namespace alimer
     };
 
     struct InstanceExtensions {
-        bool apiVersion11 = false;
-        bool get_physical_device_properties2 = false;
-        bool external_memory_capabilities = false;
-        bool external_semaphore_capabilities = false;
         bool debugUtils = false;
         bool headless = false;
         bool getSurfaceCapabilities2 = false;

@@ -27,7 +27,6 @@
 #include "Graphics/Buffer.h"
 #include <set>
 #include <mutex>
-#include <string_view>
 
 namespace alimer
 {
@@ -51,8 +50,7 @@ namespace alimer
     public:
         virtual ~Graphics() = default;
 
-        static Graphics* Instance;
-        static bool Initialize(Window* window, bool enableDebugLayer = false, BackendType backendType = BackendType::Count);
+        static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None, BackendType backendType = BackendType::Count);
         static void Shutdown();
 
         virtual void WaitForGPU() = 0;
@@ -90,23 +88,25 @@ namespace alimer
         ALIMER_DISABLE_COPY_MOVE(Graphics);
     };
 
-    ALIMER_FORCEINLINE void RHIShutdown()
+    extern ALIMER_API Graphics* GPU;
+
+    ALIMER_FORCEINLINE void GPUShutdown()
     {
-        Graphics::Shutdown();
+        GPU->Shutdown();
     }
 
-    ALIMER_FORCEINLINE bool RHIBeginFrame()
+    ALIMER_FORCEINLINE bool GPUBeginFrame()
     {
-        return Graphics::Instance->BeginFrame();
+        return GPU->BeginFrame();
     }
 
-    ALIMER_FORCEINLINE void RHIEndFrame()
+    ALIMER_FORCEINLINE void GPUEndFrame()
     {
-        Graphics::Instance->EndFrame();
+        GPU->EndFrame();
     }
 
-    ALIMER_FORCEINLINE CommandContext* RHIGetImmediateContext()
+    ALIMER_FORCEINLINE CommandContext* GPUGetImmediateContext()
     {
-        return Graphics::Instance->GetImmediateContext();
+        return GPU->GetImmediateContext();
     }
 }

@@ -128,14 +128,14 @@ namespace alimer
         if (bufferSize == 0)
             return;
 
-        UniqueArrayPtr<WCHAR> buffer(new WCHAR[bufferSize + 1]); // +1 for the newline
-        if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.Get(), bufferSize) == 0)
+        auto buffer = std::make_unique<WCHAR[]>(bufferSize + 1); // +1 for the newline
+        if (MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, buffer.get(), bufferSize) == 0)
             return;
 
-        if (FAILED(StringCchCatW(buffer.Get(), static_cast<size_t>(bufferSize+1), L"\n")))
+        if (FAILED(StringCchCatW(buffer.get(), static_cast<size_t>(bufferSize+1), L"\n")))
             return;
 
-        OutputDebugStringW(buffer.Get());
+        OutputDebugStringW(buffer.get());
 #   ifdef _DEBUG
         HANDLE handle;
         switch (level)
@@ -150,7 +150,7 @@ namespace alimer
         }
 
         DWORD bytesWritten;
-        WriteConsoleW(handle, buffer.Get(), static_cast<DWORD>(wcslen(buffer.Get())), &bytesWritten, nullptr);
+        WriteConsoleW(handle, buffer.get(), static_cast<DWORD>(wcslen(buffer.get())), &bytesWritten, nullptr);
 #   endif
 #elif defined(__EMSCRIPTEN__)
         int flags = EM_LOG_NO_PATHS;

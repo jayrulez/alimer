@@ -22,30 +22,31 @@
 
 #pragma once
 
-#include "graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
-    class VulkanGraphicsDevice final : public GraphicsDevice
+    class VulkanGraphicsImpl final : public Graphics
     {
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsDevice();
-        ~VulkanGraphicsDevice() override;
+        VulkanGraphicsImpl(Window* window, GPUFlags flags);
+        ~VulkanGraphicsImpl() override;
 
         const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
+        CommandContext* GetImmediateContext() const override { return nullptr; }
 
     private:
         //bool BackendInitialize(const PresentationParameters& presentationParameters) override;
-        void BackendShutdown() override;
+        void Shutdown();
         void WaitForGPU() override;
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
 
         // Resource creation methods.
-        RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
+        /*RefPtr<SwapChain> CreateSwapChain(const SwapChainDescription& desc) override;
         RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         CommandList BeginCommandList(const char* name) override;
@@ -57,7 +58,7 @@ namespace alimer
         void SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count) override;
         void SetViewport(CommandList commandList, const Viewport& viewport) override;
         void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
-        void SetBlendColor(CommandList commandList, const Color& color) override;
+        void SetBlendColor(CommandList commandList, const Color& color) override;*/
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -80,6 +81,6 @@ namespace alimer
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
 
-        VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
+        //VkCommandBuffer commandBuffers[kMaxCommandLists] = {};
     };
 }

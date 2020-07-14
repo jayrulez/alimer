@@ -26,15 +26,8 @@
 #include "Math/Rect.h"
 #include "graphics/PixelFormat.h"
 
-#if !defined(GRAPHICS_DEBUG)
-#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-#       define GRAPHICS_DEBUG
-#   endif
-#endif /* !defined(GRAPHICS_DEBUG) */
-
 namespace alimer
 {
-    static constexpr uint32_t kInvalidId = 0;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -49,13 +42,20 @@ namespace alimer
         Vulkan,
         /// Direct3D 12 backend.
         Direct3D12,
-        /// Direct3D 11.1 or higher backend.
-        Direct3D11,
         /// Null renderer.
         Null,
         /// Default best platform supported backend.
         Count
     };
+
+    enum class GPUFlags : uint32_t
+    {
+        None = 0,
+        DebugRuntime = (1 << 0),
+        GPUBaseValidation = (1 << 1),
+        RenderDoc = (1 << 2),
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUFlags, uint32_t);
 
     enum class GPUVendorId : uint32_t
     {

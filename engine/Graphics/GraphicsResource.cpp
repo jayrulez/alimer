@@ -30,14 +30,14 @@ namespace alimer
         : name{ name }
         , memoryUsage{ memoryUsage }
     {
-        if (Graphics::Instance)
-            Graphics::Instance->TrackResource(this);
+        if (GPU != nullptr)
+            GPU->TrackResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        if (Graphics::Instance)
-            Graphics::Instance->UntrackResource(this);
+        if (GPU != nullptr)
+            GPU->UntrackResource(this);
     }
 }
 

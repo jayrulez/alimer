@@ -65,7 +65,7 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, bool enableDebugLayer)
+    D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, GPUFlags flags)
         : Graphics(window)
         , frameIndex(0)
         , frameActive(false)
@@ -75,18 +75,21 @@ namespace alimer
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (enableDebugLayer)
+        if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
         {
             ComPtr<ID3D12Debug> debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
             {
                 debugController->EnableDebugLayer();
 
-                ComPtr<ID3D12Debug1> d3d12Debug1;
-                if (SUCCEEDED(debugController.As(&d3d12Debug1)))
+                if (any(flags & GPUFlags::GPUBaseValidation))
                 {
-                    d3d12Debug1->SetEnableGPUBasedValidation(true);
-                    //d3d12Debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
+                    ComPtr<ID3D12Debug1> d3d12Debug1;
+                    if (SUCCEEDED(debugController.As(&d3d12Debug1)))
+                    {
+                        d3d12Debug1->SetEnableGPUBasedValidation(true);
+                        //d3d12Debug1->SetEnableSynchronizedCommandQueueValidation(TRUE);
+                    }
                 }
             }
             else
@@ -200,12 +203,12 @@ namespace alimer
         InitCapabilities(adapter.Get());
 
         // Create command queue's
-        graphicsQueue.Reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
-        computeQueue.Reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
-        copyQueue.Reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
+        graphicsQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
+        computeQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
+        copyQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
 
         // Create immediate default contexts
-        immediateContext.Reset(new D3D12CommandContext(this));
+        immediateContext.reset(new D3D12CommandContext(this));
 
         // Create main swapchain.
         {
@@ -254,16 +257,16 @@ namespace alimer
             SafeRelease(swapChain);
         }
 
-        copyQueue.Reset();
-        computeQueue.Reset();
-        graphicsQueue.Reset();
+        copyQueue.reset();
+        computeQueue.reset();
+        graphicsQueue.reset();
 
         {
             CloseHandle(frameFenceEvent);
             SafeRelease(frameFence);
         }
 
-        immediateContext.Reset();
+        immediateContext.reset();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -559,10 +562,10 @@ namespace alimer
         D3D12CommandQueue* commandQueue = nullptr;
         switch (type)
         {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT: commandQueue = graphicsQueue.Get(); break;
+        case D3D12_COMMAND_LIST_TYPE_DIRECT: commandQueue = graphicsQueue.get(); break;
         case D3D12_COMMAND_LIST_TYPE_BUNDLE: break;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: commandQueue = computeQueue.Get(); break;
-        case D3D12_COMMAND_LIST_TYPE_COPY: commandQueue = copyQueue.Get(); break;
+        case D3D12_COMMAND_LIST_TYPE_COMPUTE: commandQueue = computeQueue.get(); break;
+        case D3D12_COMMAND_LIST_TYPE_COPY: commandQueue = copyQueue.get(); break;
         }
 
         uint64_t fenceValue = commandQueue->ExecuteCommandList(commandList);
@@ -659,6 +662,6 @@ namespace alimer
 
     CommandContext* D3D12GraphicsImpl::GetImmediateContext() const
     {
-        return immediateContext.Get();
+        return immediateContext.get();
     }
 }

@@ -69,8 +69,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        Window& GetWindow() { return window; }
-        const Window& GetWindow() const { return window; }
+        Window& GetWindow() { return *window; }
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -105,12 +104,11 @@ namespace alimer
         // Rendering loop timer.
         GameTime time;
 
-        Window window;
-        Vector<UniquePtr<GameSystem>> gameSystems;
-
         bool headless{ false };
+        std::unique_ptr<Window> window{ nullptr };
+        std::unique_ptr<Gui> gui{ nullptr };
 
-        UniquePtr<Gui> gui;
+        Vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 
 

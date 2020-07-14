@@ -21,7 +21,7 @@
 //
 
 #include "config.h"
-#include "VulkanGraphicsDevice.h"
+#include "VulkanGraphicsImpl.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -53,7 +53,7 @@ namespace alimer
             return VK_FALSE;
         }
 
-        bool ValidateLayers(const Vector<const char*>& required, const Vector<VkLayerProperties>& available)
+        bool ValidateLayers(const std::vector<const char*>& required, const std::vector<VkLayerProperties>& available)
         {
             for (auto layer : required)
             {
@@ -77,9 +77,9 @@ namespace alimer
             return true;
         }
 
-        Vector<const char*> GetOptimalValidationLayers(const Vector<VkLayerProperties>& supportedInstanceLayers)
+        std::vector<const char*> GetOptimalValidationLayers(const std::vector<VkLayerProperties>& supportedInstanceLayers)
         {
-            Vector<Vector<const char*>> validation_layer_priority_list =
+            std::vector<std::vector<const char*>> validation_layer_priority_list =
             {
                 // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
                 {"VK_LAYER_KHRONOS_validation"},
@@ -275,7 +275,7 @@ namespace alimer
                 result.maintenance_3 = true;
                 result.get_memory_requirements2 = true;
                 result.bind_memory2 = true;
-                result.multiview = instanceExts.get_physical_device_properties2;
+                result.multiview = true;
             }
 
             return result;
@@ -302,7 +302,7 @@ namespace alimer
         }
     }
 
-    bool VulkanGraphicsDevice::IsAvailable()
+    bool VulkanGraphicsImpl::IsAvailable()
     {
         static bool available_initialized = false;
         static bool available = false;
@@ -317,27 +317,39 @@ namespace alimer
             return false;
         }
 
+        // We require Vulkan 1.1 at least
+        uint32_t apiVersion = volkGetInstanceVersion();
+        if (apiVersion <= VK_API_VERSION_1_1) {
+            return false;
+        }
+
+        VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+        appInfo.apiVersion = volkGetInstanceVersion();
+
+        VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+        createInfo.pApplicationInfo = &appInfo;
+
+        VkInstance instance;
+        result = vkCreateInstance(&createInfo, nullptr, &instance);
+        if (result != VK_SUCCESS) {
+            return false;
+        }
+
+        vkDestroyInstance = (PFN_vkDestroyInstance)vkGetInstanceProcAddr(instance, "vkDestroyInstance");
+        vkDestroyInstance(instance, nullptr);
         available = true;
         return true;
     }
 
-    VulkanGraphicsDevice::VulkanGraphicsDevice()
-        : GraphicsDevice()
+    VulkanGraphicsImpl::VulkanGraphicsImpl(Window* window, GPUFlags flags)
+        : Graphics(window)
     {
         ALIMER_VERIFY(IsAvailable());
 
-        uint32_t apiVersion = volkGetInstanceVersion();
-        if (apiVersion >= VK_API_VERSION_1_1) {
-            instanceExts.apiVersion11 = true;
-            instanceExts.get_physical_device_properties2 = true;
-            instanceExts.external_memory_capabilities = true;
-            instanceExts.external_semaphore_capabilities = true;
-        }
-
         // Create instance
         {
-            Vector<const char*> enabledInstanceExtensions;
-            Vector<const char*> enabledInstanceLayers;
+            std::vector<const char*> enabledInstanceExtensions;
+            std::vector<const char*> enabledInstanceLayers;
 
             uint32_t instanceExtensionCount;
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
@@ -346,20 +358,7 @@ namespace alimer
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.Data()));
             for (auto& availableExtension : availableInstanceExtensions)
             {
-                if (strcmp(availableExtension.extensionName, "VK_KHR_get_physical_device_properties2") == 0) {
-                    instanceExts.get_physical_device_properties2 = true;
-                }
-                else if (strcmp(availableExtension.extensionName, "VK_KHR_external_memory_capabilities") == 0)
-                {
-                    instanceExts.external_memory_capabilities = true;
-                    //enabled_exts[enabled_exts_count++] = VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME;
-                }
-                else if (strcmp(availableExtension.extensionName, "VK_KHR_external_semaphore_capabilities") == 0)
-                {
-                    instanceExts.external_semaphore_capabilities = true;
-                    //enabled_exts[enabled_exts_count++] = VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME;
-                }
-                else if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+                if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
                     instanceExts.debugUtils = true;
                 }
                 else if (strcmp(availableExtension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
@@ -372,76 +371,70 @@ namespace alimer
                 }
             }
 
-            if (!instanceExts.apiVersion11)
+            if (window == nullptr)
             {
-                enabledInstanceExtensions.Push("VK_KHR_get_physical_device_properties2");
-                enabledInstanceExtensions.Push("VK_KHR_external_memory_capabilities");
-                enabledInstanceExtensions.Push("VK_KHR_external_semaphore_capabilities");
-            }
-
-            if (headless)
-            {
-                enabledInstanceExtensions.Push(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
             else
             {
-                enabledInstanceExtensions.Push(VK_KHR_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#if defined(_WIN32)
-                enabledInstanceExtensions.Push(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+                enabledInstanceExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 
                 if (instanceExts.getSurfaceCapabilities2) {
-                    enabledInstanceExtensions.Push(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                 }
             }
 
-#if defined(GRAPHICS_DEBUG)
-            if (instanceExts.debugUtils)
+            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
             {
-                enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                if (instanceExts.debugUtils)
+                {
+                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                }
+
+                // Layers
+                uint32_t instanceLayerCount;
+                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
+
+                std::vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
+                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.data()));
+
+                // Determine the optimal validation layers to enable that are necessary for useful debugging
+                std::vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
+                enabledInstanceLayers.insert(enabledInstanceLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
             }
 
-            // Layers
-            uint32_t instanceLayerCount;
-            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
-
-            Vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
-            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.Data()));
-
-            // Determine the optimal validation layers to enable that are necessary for useful debugging
-            Vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
-            enabledInstanceLayers.Push(optimalValidationLayers);
-#endif
-
-            VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
+            VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
             appInfo.pApplicationName = "Alimer";
             appInfo.applicationVersion = 0;
             appInfo.pEngineName = "Alimer";
             appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
-            appInfo.apiVersion = apiVersion;
+            appInfo.apiVersion = volkGetInstanceVersion();
 
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-#if defined(GRAPHICS_DEBUG)
-            if (instanceExts.debugUtils)
+            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
             {
-                debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-                debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-                debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
-                debugUtilsCreateInfo.pUserData = this;
+                if (instanceExts.debugUtils)
+                {
+                    debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                    debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                    debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
+                    debugUtilsCreateInfo.pUserData = this;
 
-                createInfo.pNext = &debugUtilsCreateInfo;
+                    createInfo.pNext = &debugUtilsCreateInfo;
+                }
             }
-#endif
 
             createInfo.pApplicationInfo = &appInfo;
-
-            createInfo.enabledLayerCount = enabledInstanceLayers.Size();
-            createInfo.ppEnabledLayerNames = enabledInstanceLayers.Data();
-            createInfo.enabledExtensionCount = enabledInstanceExtensions.Size();
-            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.Data();
+            createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
+            createInfo.ppEnabledLayerNames = enabledInstanceLayers.data();
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
+            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
 
             // Create the Vulkan instance.
             VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -453,36 +446,37 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-#if defined(GRAPHICS_DEBUG)
-            if (instanceExts.debugUtils)
+            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
             {
-                result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
-                if (result != VK_SUCCESS)
+                if (instanceExts.debugUtils)
                 {
-                    VK_LOG_ERROR(result, "Could not create debug utils messenger");
+                    result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
+                    if (result != VK_SUCCESS)
+                    {
+                        VK_LOG_ERROR(result, "Could not create debug utils messenger");
+                    }
                 }
             }
-#endif
 
-            LOG_INFO("Created VkInstance with version: %u.%u.%u", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
+            LOG_INFO("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
             if (createInfo.enabledLayerCount) {
                 for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i)
-                    LOG_INFO("Instance layer '%s'", createInfo.ppEnabledLayerNames[i]);
+                    LOG_INFO("Instance layer '{}'", createInfo.ppEnabledLayerNames[i]);
             }
 
             for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i) {
-                LOG_INFO("Instance extension '%s'", createInfo.ppEnabledExtensionNames[i]);
+                LOG_INFO("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
     }
 
-    VulkanGraphicsDevice::~VulkanGraphicsDevice()
+    VulkanGraphicsImpl::~VulkanGraphicsImpl()
     {
         WaitForGPU();
         Shutdown();
     }
 
-    void VulkanGraphicsDevice::BackendShutdown()
+    void VulkanGraphicsImpl::Shutdown()
     {
         if (allocator != VK_NULL_HANDLE)
         {
@@ -510,7 +504,7 @@ namespace alimer
     }
 
 #if TODO
-    bool VulkanGraphicsDevice::BackendInitialize(const PresentationParameters& presentationParameters)
+    bool VulkanGraphicsImpl::BackendInitialize(const PresentationParameters& presentationParameters)
     {
         // Enumerating and creating devices:
         {
@@ -768,21 +762,21 @@ namespace alimer
         }
 
         return true;
-    }
+}
 #endif // TODO
 
 
-    void VulkanGraphicsDevice::WaitForGPU()
+    void VulkanGraphicsImpl::WaitForGPU()
     {
         VK_CHECK(deviceTable.vkDeviceWaitIdle(device));
     }
 
-    bool VulkanGraphicsDevice::BeginFrameImpl()
+    bool VulkanGraphicsImpl::BeginFrame()
     {
         return true;
     }
 
-    void VulkanGraphicsDevice::EndFrameImpl()
+    void VulkanGraphicsImpl::EndFrame()
     {
         /*VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
@@ -799,122 +793,4 @@ namespace alimer
             handle_surface_changes();
         }*/
     }
-
-    RefPtr<SwapChain> VulkanGraphicsDevice::CreateSwapChain(const SwapChainDescription& desc)
-    {
-        return nullptr;
     }
-
-    RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
-    {
-        return nullptr;
-    }
-
-    /*RefPtr<Texture> VulkanGraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
-    {
-        return nullptr;
-    }
-
-    /*void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
-    {
-        if (name && enableValidationLayer && instanceExts.debugUtils)
-        {
-            VkDebugUtilsObjectNameInfoEXT info = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
-            info.objectType = VK_OBJECT_TYPE_BUFFER;
-            info.objectHandle = (uint64_t)buffers[handle.id].handle;
-            info.pObjectName = name;
-
-            VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
-        }
-    }*/
-
-    CommandList VulkanGraphicsDevice::BeginCommandList(const char* name)
-    {
-        return 0;
-    }
-
-    void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
-    {
-        if (name && instanceExts.debugUtils)
-        {
-            VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
-            label.pLabelName = name;
-            label.color[0] = 0.0f;
-            label.color[1] = 0.0f;
-            label.color[2] = 0.0f;
-            label.color[3] = 1.0f;
-            vkCmdInsertDebugUtilsLabelEXT(commandBuffers[commandList], &label);
-        }
-    }
-
-    void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
-    {
-        if (name && instanceExts.debugUtils)
-        {
-            VkDebugUtilsLabelEXT label = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
-            label.pLabelName = name;
-            label.color[0] = 0.0f;
-            label.color[1] = 0.0f;
-            label.color[2] = 0.0f;
-            label.color[3] = 1.0f;
-            vkCmdBeginDebugUtilsLabelEXT(commandBuffers[commandList], &label);
-        }
-    }
-
-    void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
-    {
-        if (instanceExts.debugUtils)
-        {
-            vkCmdEndDebugUtilsLabelEXT(commandBuffers[commandList]);
-        }
-    }
-
-    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const Rect& scissorRect)
-    {
-        VkRect2D vkScissorRect;
-        vkScissorRect.offset.x = static_cast<int32_t>(scissorRect.x);
-        vkScissorRect.offset.y = static_cast<int32_t>(scissorRect.y);
-        vkScissorRect.extent.width = static_cast<uint32_t>(scissorRect.width);
-        vkScissorRect.extent.height = static_cast<uint32_t>(scissorRect.height);
-        deviceTable.vkCmdSetScissor(commandBuffers[commandList], 0, 1, &vkScissorRect);
-    }
-
-    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const Rect* scissorRects, uint32_t count)
-    {
-        VkRect2D vkScissorRects[kMaxViewportAndScissorRects];
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            vkScissorRects[i].offset.x = static_cast<int32_t>(scissorRects[i].x);
-            vkScissorRects[i].offset.y = static_cast<int32_t>(scissorRects[i].y);
-            vkScissorRects[i].extent.width = static_cast<uint32_t>(scissorRects[i].width);
-            vkScissorRects[i].extent.height = static_cast<uint32_t>(scissorRects[i].height);
-        }
-        deviceTable.vkCmdSetScissor(commandBuffers[commandList], 0, count, vkScissorRects);
-    }
-
-    void VulkanGraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
-    {
-        deviceTable.vkCmdSetViewport(commandBuffers[commandList], 0, 1, reinterpret_cast<const VkViewport*>(&viewport));
-    }
-
-    void VulkanGraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
-    {
-        VkViewport vkViewports[kMaxViewportAndScissorRects];
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            vkViewports[i].x = viewports[i].x;
-            vkViewports[i].y = viewports[i].y;
-            vkViewports[i].width = viewports[i].width;
-            vkViewports[i].height = viewports[i].height;
-            vkViewports[i].minDepth = viewports[i].minDepth;
-            vkViewports[i].maxDepth = viewports[i].maxDepth;
-        }
-
-        deviceTable.vkCmdSetViewport(commandBuffers[commandList], 0, count, vkViewports);
-    }
-
-    void VulkanGraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
-    {
-        deviceTable.vkCmdSetBlendConstants(commandBuffers[commandList], color.Data());
-    }
-}

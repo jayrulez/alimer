@@ -103,7 +103,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (window.ShouldClose())
+                if (window->ShouldClose())
                 {
                     running = false;
                     break;
