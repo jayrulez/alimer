@@ -23,46 +23,25 @@
 #include "Core/StringId.h"
 #include "Core/String.h"
 #include "Core/Hash.h"
-#include <inttypes.h> // PRIx64
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
     const StringId32 StringId32::Zero;
-    const StringId64 StringId64::Zero;
 
     /* StringId32 */
     StringId32::StringId32(const char* str) noexcept
     {
-        value = murmur32(str, (uint32_t)strlen(str), 0);
+        value = Murmur32(str, (uint32_t)strlen(str), 0);
     }
 
     StringId32::StringId32(const String& str) noexcept
     {
-        value = murmur32(str.c_str(), (uint32_t)str.length(), 0);
+        value = Murmur32(str.c_str(), (uint32_t)str.length(), 0);
     }
 
     String StringId32::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%08X", value);
-        return String(tempBuffer);
-    }
-
-    /* StringId64 */
-    StringId64::StringId64(const char* str) noexcept
-    {
-        value = murmur64(str, (uint64_t)strlen(str), 0);
-    }
-
-    StringId64::StringId64(const String& str) noexcept
-    {
-        value = murmur64(str.c_str(), (uint64_t)str.length(), 0);
-    }
-
-    String StringId64::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%16" PRIx64, value);
-        return String(tempBuffer);
+        return fmt::format("{:#08x}", value);
     }
 }

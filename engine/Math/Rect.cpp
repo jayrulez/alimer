@@ -21,6 +21,7 @@
 //
 
 #include "Math/Rect.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
@@ -33,8 +34,6 @@ namespace alimer
 
     String Rect::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, width, height);
-        return String(tempBuffer);
+        return fmt::format("{} {} {} {}", x, y, width, height);
     }
 }

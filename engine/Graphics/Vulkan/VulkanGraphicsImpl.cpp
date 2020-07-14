@@ -33,6 +33,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
+using namespace std;
+
 namespace alimer
 {
     namespace
@@ -46,16 +48,17 @@ namespace alimer
             // Log debug messge
             if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
             {
-                LOG_WARN("%u - %s: %s", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                LOGW("{} - {}: {}", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
             }
             else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
             {
-                LOG_ERROR("%u - %s: %s", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
+                LOGE("{} - {}: {}", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
             }
+
             return VK_FALSE;
         }
 
-        bool ValidateLayers(const std::vector<const char*>& required, const std::vector<VkLayerProperties>& available)
+        bool ValidateLayers(const vector<const char*>& required, const vector<VkLayerProperties>& available)
         {
             for (auto layer : required)
             {
@@ -71,7 +74,7 @@ namespace alimer
 
                 if (!found)
                 {
-                    LOG_ERROR("Validation Layer '%s' not found", layer);
+                    LOGE("Validation Layer '%s' not found", layer);
                     return false;
                 }
             }
@@ -79,9 +82,9 @@ namespace alimer
             return true;
         }
 
-        std::vector<const char*> GetOptimalValidationLayers(const std::vector<VkLayerProperties>& supportedInstanceLayers)
+        vector<const char*> GetOptimalValidationLayers(const vector<VkLayerProperties>& supportedInstanceLayers)
         {
-            std::vector<std::vector<const char*>> validation_layer_priority_list =
+            vector<vector<const char*>> validation_layer_priority_list =
             {
                 // The preferred validation layer is "VK_LAYER_KHRONOS_validation"
                 {"VK_LAYER_KHRONOS_validation"},
@@ -108,7 +111,7 @@ namespace alimer
                     return validation_layers;
                 }
 
-                LOG_WARN("Couldn't enable validation layers (see log for error) - falling back");
+                LOGW("Couldn't enable validation layers (see log for error) - falling back");
             }
 
             // Else return nothing
@@ -130,11 +133,11 @@ namespace alimer
             uint32_t queueCount = 0u;
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, nullptr);
 
-            Vector<VkQueueFamilyProperties> queue_families(queueCount);
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queue_families.Data());
+            vector<VkQueueFamilyProperties> queue_families(queueCount);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queue_families.data());
 
             QueueFamilyIndices result;
-            result.graphicsQueueFamily = VK_QUEUE_FAMILY_IGNORED;
+            result.graphicsQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             result.computeQueueFamily = VK_QUEUE_FAMILY_IGNORED;
             result.copyQueueFamily = VK_QUEUE_FAMILY_IGNORED;
 
@@ -151,7 +154,7 @@ namespace alimer
                 static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT;
                 if (present_support && ((queue_families[i].queueFlags & required) == required))
                 {
-                    result.graphicsQueueFamily = i;
+                    result.graphicsQueueFamilyIndex = i;
                     break;
                 }
             }
@@ -160,7 +163,7 @@ namespace alimer
             for (uint32_t i = 0; i < queueCount; i++)
             {
                 static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT;
-                if (i != result.graphicsQueueFamily &&
+                if (i != result.graphicsQueueFamilyIndex &&
                     (queue_families[i].queueFlags & required) == required)
                 {
                     result.computeQueueFamily = i;
@@ -172,7 +175,7 @@ namespace alimer
             for (uint32_t i = 0; i < queueCount; i++)
             {
                 static const VkQueueFlags required = VK_QUEUE_TRANSFER_BIT;
-                if (i != result.graphicsQueueFamily &&
+                if (i != result.graphicsQueueFamilyIndex &&
                     i != result.computeQueueFamily &&
                     (queue_families[i].queueFlags & required) == required)
                 {
@@ -186,7 +189,7 @@ namespace alimer
                 for (uint32_t i = 0; i < queueCount; i++)
                 {
                     static const VkQueueFlags required = VK_QUEUE_TRANSFER_BIT;
-                    if (i != result.graphicsQueueFamily &&
+                    if (i != result.graphicsQueueFamilyIndex &&
                         (queue_families[i].queueFlags & required) == required)
                     {
                         result.copyQueueFamily = i;
@@ -203,8 +206,8 @@ namespace alimer
             uint32_t count = 0;
             VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr));
 
-            Vector<VkExtensionProperties> extensions(count);
-            VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, extensions.Data()));
+            vector<VkExtensionProperties> extensions(count);
+            VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, extensions.data()));
 
             PhysicalDeviceExtensions result = {};
             for (uint32_t i = 0; i < count; ++i) {
@@ -286,7 +289,7 @@ namespace alimer
         {
             QueueFamilyIndices indices = QueryQueueFamilies(instance, physicalDevice, surface);
 
-            if (indices.graphicsQueueFamily == VK_QUEUE_FAMILY_IGNORED)
+            if (indices.graphicsQueueFamilyIndex == VK_QUEUE_FAMILY_IGNORED)
                 return false;
 
             PhysicalDeviceExtensions features = QueryPhysicalDeviceExtensions(instanceExts, physicalDevice);
@@ -305,8 +308,8 @@ namespace alimer
         struct SurfaceCapsVk {
             bool success;
             VkSurfaceCapabilitiesKHR capabilities;
-            Vector<VkSurfaceFormatKHR> formats;
-            Vector<VkPresentModeKHR> presentModes;
+            std::vector<VkSurfaceFormatKHR> formats;
+            std::vector<VkPresentModeKHR> presentModes;
         };
 
         SurfaceCapsVk QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
@@ -333,7 +336,7 @@ namespace alimer
                     return caps;
                 }
 
-                Vector<VkSurfaceFormat2KHR> formats2(formatCount);
+                vector<VkSurfaceFormat2KHR> formats2(formatCount);
 
                 for (auto& format2 : formats2)
                 {
@@ -341,15 +344,15 @@ namespace alimer
                     format2.sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR;
                 }
 
-                if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, formats2.Data()) != VK_SUCCESS)
+                if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, formats2.data()) != VK_SUCCESS)
                 {
                     return caps;
                 }
 
-                caps.formats.Reserve(formatCount);
+                caps.formats.reserve(formatCount);
                 for (auto& format2 : formats2)
                 {
-                    caps.formats.Push(format2.surfaceFormat);
+                    caps.formats.push_back(format2.surfaceFormat);
                 }
             }
             else
@@ -365,8 +368,8 @@ namespace alimer
                     return caps;
                 }
 
-                caps.formats.Resize(formatCount);
-                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, caps.formats.Data()) != VK_SUCCESS)
+                caps.formats.resize(formatCount);
+                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, caps.formats.data()) != VK_SUCCESS)
                 {
                     return caps;
                 }
@@ -381,8 +384,8 @@ namespace alimer
                     return caps;
                 }
 
-                caps.presentModes.Resize(presentModeCount);
-                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, caps.presentModes.Data()) != VK_SUCCESS)
+                caps.presentModes.resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, caps.presentModes.data()) != VK_SUCCESS)
                 {
                     return caps;
                 }
@@ -395,8 +398,8 @@ namespace alimer
                     return caps;
                 }
 
-                caps.presentModes.Resize(presentModeCount);
-                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, caps.presentModes.Data()) != VK_SUCCESS)
+                caps.presentModes.resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, caps.presentModes.data()) != VK_SUCCESS)
                 {
                     return caps;
                 }
@@ -453,14 +456,14 @@ namespace alimer
 
         // Create instance
         {
-            Vector<const char*> enabledInstanceExtensions;
-            std::vector<const char*> enabledInstanceLayers;
+            vector<const char*> enabledInstanceExtensions;
+            vector<const char*> enabledInstanceLayers;
 
             uint32_t instanceExtensionCount;
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
 
-            Vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
-            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.Data()));
+            vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
             for (auto& availableExtension : availableInstanceExtensions)
             {
                 if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
@@ -478,7 +481,7 @@ namespace alimer
 
             if (window == nullptr)
             {
-                enabledInstanceExtensions.Push(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
             else
             {
@@ -488,12 +491,12 @@ namespace alimer
                 const char** ext = glfwGetRequiredInstanceExtensions(&count);
                 for (uint32_t i = 0; i < count; i++)
                 {
-                    enabledInstanceExtensions.Push(ext[i]);
+                    enabledInstanceExtensions.push_back(ext[i]);
                 }
 #endif
 
                 if (instanceExts.getSurfaceCapabilities2) {
-                    enabledInstanceExtensions.Push(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                 }
             }
 
@@ -501,7 +504,7 @@ namespace alimer
             {
                 if (instanceExts.debugUtils)
                 {
-                    enabledInstanceExtensions.Push(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
                 }
 
                 // Layers
@@ -542,8 +545,8 @@ namespace alimer
             createInfo.pApplicationInfo = &appInfo;
             createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
             createInfo.ppEnabledLayerNames = enabledInstanceLayers.data();
-            createInfo.enabledExtensionCount = enabledInstanceExtensions.Size();
-            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.Data();
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
+            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
 
             // Create the Vulkan instance.
             VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -567,14 +570,14 @@ namespace alimer
                 }
             }
 
-            LOG_INFO("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
+            LOGI("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
             if (createInfo.enabledLayerCount) {
                 for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i)
-                    LOG_INFO("Instance layer '{}'", createInfo.ppEnabledLayerNames[i]);
+                    LOGI("Instance layer '{}'", createInfo.ppEnabledLayerNames[i]);
             }
 
             for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i) {
-                LOG_INFO("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
+                LOGI("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
 
@@ -588,12 +591,12 @@ namespace alimer
             VK_CHECK(vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, nullptr));
 
             if (physicalDevicesCount == 0) {
-                LOG_ERROR("failed to find GPUs with Vulkan support!");
+                LOGE("failed to find GPUs with Vulkan support!");
                 assert(0);
             }
 
-            Vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
-            vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.Data());
+            std::vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
+            vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.data());
 
             uint32_t bestDeviceScore = 0u;
             uint32_t bestDeviceIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -635,7 +638,7 @@ namespace alimer
             }
 
             if (bestDeviceIndex == VK_QUEUE_FAMILY_IGNORED) {
-                LOG_ERROR("Vulkan: Cannot find suitable physical device.");
+                LOGE("Vulkan: Cannot find suitable physical device.");
                 return;
             }
 
@@ -650,8 +653,8 @@ namespace alimer
         {
             uint32_t queue_count;
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, nullptr);
-            Vector<VkQueueFamilyProperties> queue_families(queue_count);
-            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_families.Data());
+            vector<VkQueueFamilyProperties> queue_families(queue_count);
+            vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_families.data());
 
             uint32_t universal_queue_index = 1;
             uint32_t compute_queue_index = 0;
@@ -659,15 +662,15 @@ namespace alimer
 
             if (queueFamilies.computeQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
-                queueFamilies.computeQueueFamily = queueFamilies.graphicsQueueFamily;
-                compute_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                queueFamilies.computeQueueFamily = queueFamilies.graphicsQueueFamilyIndex;
+                compute_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamilyIndex].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
 
             if (queueFamilies.copyQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
-                queueFamilies.copyQueueFamily = queueFamilies.graphicsQueueFamily;
-                copy_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamily].queueCount - 1, universal_queue_index);
+                queueFamilies.copyQueueFamily = queueFamilies.graphicsQueueFamilyIndex;
+                copy_queue_index = Min(queue_families[queueFamilies.graphicsQueueFamilyIndex].queueCount - 1, universal_queue_index);
                 universal_queue_index++;
             }
             else if (queueFamilies.copyQueueFamily == queueFamilies.computeQueueFamily)
@@ -683,12 +686,12 @@ namespace alimer
             uint32_t queueCreateCount = 0;
             VkDeviceQueueCreateInfo queue_info[3] = { };
             queue_info[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-            queue_info[queueCreateCount].queueFamilyIndex = queueFamilies.graphicsQueueFamily;
-            queue_info[queueCreateCount].queueCount = Min(universal_queue_index, queue_families[queueFamilies.graphicsQueueFamily].queueCount);
+            queue_info[queueCreateCount].queueFamilyIndex = queueFamilies.graphicsQueueFamilyIndex;
+            queue_info[queueCreateCount].queueCount = Min(universal_queue_index, queue_families[queueFamilies.graphicsQueueFamilyIndex].queueCount);
             queue_info[queueCreateCount].pQueuePriorities = prio;
             queueCreateCount++;
 
-            if (queueFamilies.computeQueueFamily != queueFamilies.graphicsQueueFamily)
+            if (queueFamilies.computeQueueFamily != queueFamilies.graphicsQueueFamilyIndex)
             {
                 queue_info[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                 queue_info[queueCreateCount].queueFamilyIndex = queueFamilies.computeQueueFamily;
@@ -699,7 +702,7 @@ namespace alimer
             }
 
             // Dedicated copy queue
-            if (queueFamilies.copyQueueFamily != queueFamilies.graphicsQueueFamily
+            if (queueFamilies.copyQueueFamily != queueFamilies.graphicsQueueFamilyIndex
                 && queueFamilies.copyQueueFamily != queueFamilies.computeQueueFamily)
             {
                 queue_info[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -711,40 +714,40 @@ namespace alimer
 
             /* Setup device extensions now. */
             const bool deviceApiVersion11 = physicalDeviceProperties.properties.apiVersion >= VK_API_VERSION_1_1;
-            Vector<const char*> enabledDeviceExtensions;
+            vector<const char*> enabledDeviceExtensions;
 
             if (surface != VK_NULL_HANDLE) {
-                enabledDeviceExtensions.Push(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+                enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             }
 
             if (!deviceApiVersion11) {
                 if (physicalDeviceExts.maintenance_1)
                 {
-                    enabledDeviceExtensions.Push("VK_KHR_maintenance1");
+                    enabledDeviceExtensions.push_back("VK_KHR_maintenance1");
                 }
 
                 if (physicalDeviceExts.maintenance_2) {
-                    enabledDeviceExtensions.Push("VK_KHR_maintenance2");
+                    enabledDeviceExtensions.push_back("VK_KHR_maintenance2");
                 }
 
                 if (physicalDeviceExts.maintenance_3) {
-                    enabledDeviceExtensions.Push("VK_KHR_maintenance3");
+                    enabledDeviceExtensions.push_back("VK_KHR_maintenance3");
                 }
             }
 
             if (physicalDeviceExts.image_format_list)
             {
-                enabledDeviceExtensions.Push(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
+                enabledDeviceExtensions.push_back(VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME);
             }
 
             if (physicalDeviceExts.sampler_mirror_clamp_to_edge)
             {
-                enabledDeviceExtensions.Push(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+                enabledDeviceExtensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
             }
 
             if (physicalDeviceExts.depth_clip_enable)
             {
-                enabledDeviceExtensions.Push(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
+                enabledDeviceExtensions.push_back(VK_EXT_DEPTH_CLIP_ENABLE_EXTENSION_NAME);
             }
 
             /*if (vk.physical_device_features.buffer_device_address)
@@ -755,7 +758,7 @@ namespace alimer
 #ifdef _WIN32
             if (instanceExts.getSurfaceCapabilities2 && physicalDeviceExts.win32_full_screen_exclusive)
             {
-                enabledDeviceExtensions.Push(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
+                enabledDeviceExtensions.push_back(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
             }
 #endif
 
@@ -766,7 +769,7 @@ namespace alimer
             if (physicalDeviceExts.multiview)
             {
                 if (!deviceApiVersion11) {
-                    enabledDeviceExtensions.Push("VK_KHR_multiview");
+                    enabledDeviceExtensions.push_back("VK_KHR_multiview");
                 }
 
                 *ppNext = &multiview_features;
@@ -806,8 +809,8 @@ namespace alimer
             createInfo.pNext = &features;
             createInfo.queueCreateInfoCount = queueCreateCount;
             createInfo.pQueueCreateInfos = queue_info;
-            createInfo.enabledExtensionCount = enabledDeviceExtensions.Size();
-            createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.Data();
+            createInfo.enabledExtensionCount = (uint32)enabledDeviceExtensions.size();
+            createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
             if (result != VK_SUCCESS) {
@@ -815,19 +818,17 @@ namespace alimer
                 return;
             }
 
-            volkLoadDeviceTable(&deviceTable, device);
+            vkGetDeviceQueue(device, queueFamilies.graphicsQueueFamilyIndex, 0, &graphicsQueue);
+            vkGetDeviceQueue(device, queueFamilies.computeQueueFamily, compute_queue_index, &computeQueue);
+            vkGetDeviceQueue(device, queueFamilies.copyQueueFamily, copy_queue_index, &copyQueue);
 
-            deviceTable.vkGetDeviceQueue(device, queueFamilies.graphicsQueueFamily, 0, &graphicsQueue);
-            deviceTable.vkGetDeviceQueue(device, queueFamilies.computeQueueFamily, compute_queue_index, &computeQueue);
-            deviceTable.vkGetDeviceQueue(device, queueFamilies.copyQueueFamily, copy_queue_index, &copyQueue);
-
-            LOG_INFO("Created VkDevice using '{}' adapter with API version: {}.{}.{}",
+            LOGI("Created VkDevice using '{}' adapter with API version: {}.{}.{}",
                 physicalDeviceProperties.properties.deviceName,
                 VK_VERSION_MAJOR(physicalDeviceProperties.properties.apiVersion),
                 VK_VERSION_MINOR(physicalDeviceProperties.properties.apiVersion),
                 VK_VERSION_PATCH(physicalDeviceProperties.properties.apiVersion));
             for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i) {
-                LOG_INFO("Device extension '{}'", createInfo.ppEnabledExtensionNames[i]);
+                LOGI("Device extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
 
@@ -859,6 +860,25 @@ namespace alimer
 
         InitCapabilities();
         UpdateSwapchain();
+
+        // Create frame data.
+        for (size_t i = 0, count = perFrame.size(); i < count; i++)
+        {
+            VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            VK_CHECK(vkCreateFence(device, &fenceInfo, nullptr, &perFrame[i].queueSubmitFence));
+
+            VkCommandPoolCreateInfo commandPoolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+            commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+            commandPoolInfo.queueFamilyIndex = queueFamilies.graphicsQueueFamilyIndex;
+            VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &perFrame[i].primaryCommandPool));
+
+            VkCommandBufferAllocateInfo cmdAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            cmdAllocateInfo.commandPool = perFrame[i].primaryCommandPool;
+            cmdAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            cmdAllocateInfo.commandBufferCount = 1;
+            VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocateInfo, &perFrame[i].primaryCommandBuffer));
+        }
     }
 
     VulkanGraphicsImpl::~VulkanGraphicsImpl()
@@ -869,7 +889,7 @@ namespace alimer
 
     void VulkanGraphicsImpl::Shutdown()
     {
-        deviceTable.vkDestroySwapchainKHR(device, swapchain, nullptr);
+        vkDestroySwapchainKHR(device, swapchain, nullptr);
 
         if (memoryAllocator != VK_NULL_HANDLE)
         {
@@ -877,13 +897,13 @@ namespace alimer
             vmaCalculateStats(memoryAllocator, &stats);
 
             if (stats.total.usedBytes > 0) {
-                LOG_ERROR("Total device memory leaked: {} bytes.", stats.total.usedBytes);
+                LOGE("Total device memory leaked: {} bytes.", stats.total.usedBytes);
             }
 
             vmaDestroyAllocator(memoryAllocator);
         }
 
-        deviceTable.vkDestroyDevice(device, nullptr);
+        vkDestroyDevice(device, nullptr);
 
         if (debugUtilsMessenger != VK_NULL_HANDLE)
         {
@@ -926,26 +946,16 @@ namespace alimer
         SurfaceCapsVk surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
 
         /* Detect image count. */
-        uint32_t imageCount = backbufferCount;
-        if (imageCount == 0)
+        uint32_t desired_swapchain_images = surfaceCaps.capabilities.minImageCount + 1;
+        if ((surfaceCaps.capabilities.maxImageCount > 0) && (desired_swapchain_images > surfaceCaps.capabilities.maxImageCount))
         {
-            imageCount = surfaceCaps.capabilities.minImageCount + 1;
-            if ((surfaceCaps.capabilities.maxImageCount > 0) &&
-                (imageCount > surfaceCaps.capabilities.maxImageCount))
-            {
-                imageCount = surfaceCaps.capabilities.maxImageCount;
-            }
-        }
-        else
-        {
-            if (surfaceCaps.capabilities.maxImageCount != 0)
-                imageCount = Min(imageCount, surfaceCaps.capabilities.maxImageCount);
-            imageCount = Max(imageCount, surfaceCaps.capabilities.minImageCount);
+            // Application must settle for fewer images than desired.
+            desired_swapchain_images = surfaceCaps.capabilities.maxImageCount;
         }
 
         /* Surface format. */
         VkSurfaceFormatKHR format;
-        if (surfaceCaps.formats.Size() == 1 &&
+        if (surfaceCaps.formats.size() == 1 &&
             surfaceCaps.formats[0].format == VK_FORMAT_UNDEFINED)
         {
             format = surfaceCaps.formats[0];
@@ -953,7 +963,7 @@ namespace alimer
         }
         else
         {
-            if (surfaceCaps.formats.Size() == 0)
+            if (surfaceCaps.formats.size() == 0)
             {
                 //vgpu_log(VGPU_LOG_LEVEL_ERROR, "Vulkan: Surface has no formats.");
                 return false;
@@ -961,7 +971,7 @@ namespace alimer
 
             const bool srgb = false;
             bool found = false;
-            for (uint32_t i = 0; i < surfaceCaps.formats.Size(); i++)
+            for (uint32_t i = 0; i < surfaceCaps.formats.size(); i++)
             {
                 if (srgb)
                 {
@@ -1056,7 +1066,7 @@ namespace alimer
         /* We use same family for graphics and present so no sharing is necessary. */
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = surface;
-        createInfo.minImageCount = imageCount;
+        createInfo.minImageCount = desired_swapchain_images;
         createInfo.imageFormat = format.format;
         createInfo.imageColorSpace = format.colorSpace;
         createInfo.imageExtent = swapchainSize;
@@ -1071,21 +1081,23 @@ namespace alimer
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = oldSwapchain;
 
-        VkResult result = deviceTable.vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
+        VkResult result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain);
         if (result != VK_SUCCESS) {
             return false;
         }
 
         if (oldSwapchain != VK_NULL_HANDLE)
         {
-            deviceTable.vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
+            vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
         }
 
-        deviceTable.vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
-        Vector<VkImage> swapChainImages(imageCount);
-        deviceTable.vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.Data());
+        uint32 imageCount;
+        vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+        std::vector<VkImage> swapChainImages(imageCount);
+        vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.data());
 
-        SetObjectName(VK_OBJECT_TYPE_SWAPCHAIN_KHR, (uint64_t)swapchain, "Swapchain");
+        perFrame.clear();
+        perFrame.resize(imageCount);
 
         for (uint32 i = 0; i < imageCount; i++)
         {
@@ -1111,30 +1123,104 @@ namespace alimer
 
     void VulkanGraphicsImpl::WaitForGPU()
     {
-        VK_CHECK(deviceTable.vkDeviceWaitIdle(device));
+        VK_CHECK(vkDeviceWaitIdle(device));
     }
 
     bool VulkanGraphicsImpl::BeginFrame()
     {
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
+
+        VkSemaphore acquireSemaphore;
+        if (recycledSemaphores.empty())
+        {
+            VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &acquireSemaphore));
+        }
+        else
+        {
+            acquireSemaphore = recycledSemaphores.back();
+            recycledSemaphores.pop_back();
+        }
+
+        VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE, &backbufferIndex);
+
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            recycledSemaphores.push_back(acquireSemaphore);
+            //handle_surface_changes();
+            //result = swapchain->acquire_next_image(active_frame_index, aquired_semaphore, fence);
+        }
+
+        if (perFrame[backbufferIndex].queueSubmitFence != VK_NULL_HANDLE)
+        {
+            vkWaitForFences(device, 1, &perFrame[backbufferIndex].queueSubmitFence, VK_TRUE, UINT64_MAX);
+            vkResetFences(device, 1, &perFrame[backbufferIndex].queueSubmitFence);
+        }
+
+        if (perFrame[backbufferIndex].primaryCommandPool != VK_NULL_HANDLE)
+        {
+            vkResetCommandPool(device, perFrame[backbufferIndex].primaryCommandPool, 0);
+        }
+
+        // Recycle the old semaphore back into the semaphore manager.
+        VkSemaphore oldSemaphore = perFrame[backbufferIndex].swapchainAcquireSemaphore;
+        if (oldSemaphore != VK_NULL_HANDLE)
+        {
+            recycledSemaphores.push_back(oldSemaphore);
+        }
+
+        perFrame[backbufferIndex].swapchainAcquireSemaphore = acquireSemaphore;
+
+
+        /* TODO: Lazy release resources */
+
+        // Now the frame is active again.
+        frameActive = true;
+
         return true;
     }
 
     void VulkanGraphicsImpl::EndFrame()
     {
-        /*VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
+        // Submit it to the queue with a release semaphore.
+        if (perFrame[backbufferIndex].swapchainReleaseSemaphore == VK_NULL_HANDLE)
+        {
+            VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &perFrame[backbufferIndex].swapchainReleaseSemaphore));
+        }
+
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+        VkSubmitInfo submitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &perFrame[backbufferIndex].swapchainAcquireSemaphore;
+        submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.commandBufferCount = 0;
+        submitInfo.pCommandBuffers = nullptr;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &perFrame[backbufferIndex].swapchainReleaseSemaphore;
+
+        VkResult result = vkQueueSubmit(graphicsQueue, 1, &submitInfo, perFrame[backbufferIndex].queueSubmitFence);
+        VK_CHECK(result);
+
+        VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &semaphore;
+        presentInfo.pWaitSemaphores = &perFrame[backbufferIndex].swapchainReleaseSemaphore;
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = &vk_swapchain;
-        presentInfo.pImageIndices = &active_frame_index;
+        presentInfo.pSwapchains = &swapchain;
+        presentInfo.pImageIndices = &backbufferIndex;
 
-        VkResult result = queue.present(present_info);
+        result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
 
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            handle_surface_changes();
-        }*/
+            //handle_surface_changes();
+        }
+
+        // Frame is not active anymore
+        frameActive = false;
     }
 
     Texture* VulkanGraphicsImpl::GetBackbufferTexture() const

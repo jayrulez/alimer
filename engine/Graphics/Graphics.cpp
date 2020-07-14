@@ -68,7 +68,7 @@ namespace alimer
         ALIMER_ASSERT(window);
 
         if (GPU != nullptr) {
-            LOG_WARN("Cannot create more than one Graphics instance");
+            LOGW("Cannot create more than one Graphics instance");
             return true;
         }
 
@@ -127,13 +127,13 @@ namespace alimer
     void Graphics::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.Push(resource);
+        trackedResources.push_back(resource);
     }
 
     void Graphics::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.Remove(resource);
+        //trackedResources.Remove(resource);
     }
 
     void Graphics::ReleaseTrackedResources()
@@ -147,7 +147,7 @@ namespace alimer
                 resource->Release();
             }
 
-            trackedResources.Clear();
+            trackedResources.clear();
         }
     }
 }

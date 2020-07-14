@@ -22,8 +22,9 @@
 /// MurmurHash2, by Austin Appleby
 #include "Core/Hash.h"
 
-namespace alimer {
-    uint32_t murmur32(const void* key, uint32_t len, uint32_t seed)
+namespace alimer
+{
+    uint32_t Murmur32(const void* key, uint32_t len, uint32_t seed)
     {
         // 'm' and 'r' are mixing constants generated offline.
         // They're not really 'magic', they just happen to work well.
@@ -69,7 +70,7 @@ namespace alimer {
         return h;
     }
 
-    uint64_t murmur64(const void* key, uint64_t len, uint64_t seed)
+    uint64_t Murmur64(const void* key, uint64_t len, uint64_t seed)
     {
         const uint64_t m = 0xc6a4a7935bd1e995ull;
         const int r = 47;
@@ -111,4 +112,4 @@ namespace alimer {
 
         return h;
     }
-} // namespace alimer
+}

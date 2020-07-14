@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(Alimer LANGUAGES C CXX)
 set(TARGET_NAME Alimer)
 
 macro (define_engine_source_files)
@@ -74,8 +76,8 @@ target_include_directories(${TARGET_NAME} PUBLIC
 
 target_link_libraries(${TARGET_NAME} PUBLIC
     stb
-    fmt
     imgui
+    spdlog
 )
 
 # Link platform specific libraries
@@ -119,7 +121,7 @@ endif()
 
 if (MSVC)
     # Set warning level 3 and treat all other warnings as errors
-    set(ALIMER_WARNINGS /W3 /WX)
+    set(ALIMER_WARNINGS)
 else()
     set(ALIMER_WARNINGS
         -Wall -Wextra -Wno-unused-parameter
@@ -136,6 +138,22 @@ target_compile_options(${TARGET_NAME} PRIVATE
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
         $<$<PLATFORM_ID:Linux>:-fPIC>
 )
+
+if(ALIMER_WARNINGS_AS_ERRORS)
+    message(STATUS "Warnings as Errors Enabled")
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
+    endif()
+endif()
+
+# compiler flags based on compiler type
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /MP)
+else ()
+    target_compile_options(${PROJECT_NAME} PUBLIC -fexceptions)
+endif()
 
 if (WIN32)
     # Enable unicode strings

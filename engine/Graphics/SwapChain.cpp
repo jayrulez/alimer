@@ -37,7 +37,7 @@ namespace alimer
         if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
         {
             depthStencilTexture.Reset();
-            backbufferTextures.Clear();
+            backbufferTextures.clear();
 
             width = Max(newWidth, 1u);
             height = Max(newHeight, 1u);

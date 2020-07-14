@@ -136,7 +136,7 @@ namespace alimer
         GLFWwindow* handle = glfwCreateWindow(static_cast<int>(size.width), static_cast<int>(size.height), title.c_str(), monitor, NULL);
         if (!handle)
         {
-            LOG_ERROR("GLFW: Failed to create window.");
+            LOGE("GLFW: Failed to create window.");
             return false;
         }
 

@@ -22,49 +22,9 @@
 
 #include "Core/String.h"
 #include "Core/Hash.h"
-#include "Core/Vector.h"
-
-#if defined(_WIN32)
-#   define WIN32_LEAN_AND_MEAN
-#   include <windows.h>
-#endif
 
 namespace alimer
 {
     const String EMPTY_STRING{};
-    const  WString EMPTY_WSTRING{};
-
-#ifdef _WIN32
-    String ToUtf8(const wchar_t* wstr, size_t len)
-    {
-        Vector<char> char_buffer;
-        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
-        if (ret < 0)
-            return EMPTY_STRING;
-        char_buffer.Resize(ret);
-        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.Data(), static_cast<int>(char_buffer.Size()), nullptr, nullptr);
-        return String(char_buffer.Data(), char_buffer.Size());
-    }
-
-    String ToUtf8(const WString& wstr)
-    {
-        return ToUtf8(wstr.data(), wstr.size());
-    }
-
-    WString ToUtf16(const char* str, size_t len)
-    {
-        Vector<wchar_t> wchar_buffer;
-        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
-        if (ret < 0)
-            return L"";
-        wchar_buffer.Resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.Data(), static_cast<int>(wchar_buffer.Size()));
-        return WString(wchar_buffer.Data(), wchar_buffer.Size());
-    }
-
-    WString ToUtf16(const String& str)
-    {
-        return ToUtf16(str.data(), str.size());
-    }
-#endif
-} // namespace alimer
+    const WString EMPTY_WSTRING{};
+}

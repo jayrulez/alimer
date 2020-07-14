@@ -25,6 +25,9 @@
 #include "Core/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/spdlog.h>
 #include <shellapi.h>
 
 namespace alimer
@@ -48,11 +51,11 @@ namespace alimer
         }
 
         static void OnGLFWError(int code, const char* description) {
-            LOG_ERROR("GLFW  Error (code %d): %s", code, description);
+            LOGE("GLFW  Error (code %d): %s", code, description);
         }
     }
 
-    void Application::PlatformConstuct()
+    void Application::PlatformConstruct()
     {
         LPWSTR* argv;
         int     argc;
@@ -61,7 +64,7 @@ namespace alimer
         // Ignore the first argument containing the application full path.
         for (int i = 0; i < argc; i++)
         {
-            args.Push(WStringToString(argv[i]));
+            args.push_back(WStringToString(argv[i]));
         }
 
         if (argv) {
@@ -78,7 +81,7 @@ namespace alimer
         glfwSetErrorCallback(OnGLFWError);
         if (!glfwInit())
         {
-            LOG_ERROR("GLFW couldn't be initialized.");
+            LOGE("GLFW couldn't be initialized.");
         }
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -89,7 +92,7 @@ namespace alimer
         glfwTerminate();
     }
 
-    void Application::PlatformRun()
+    int Application::PlatformRun()
     {
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         try
@@ -111,6 +114,8 @@ namespace alimer
 
                 Tick();
             }
+
+            return EXIT_SUCCESS;
         }
 #if !defined(__GNUC__) && _HAS_EXCEPTIONS
         catch (std::bad_alloc&)
@@ -119,5 +124,13 @@ namespace alimer
             return EXIT_FAILURE;
         }
 #endif
+    }
+
+    std::vector<spdlog::sink_ptr> Application::GetPlatformLogSinks()
+    {
+        std::vector<spdlog::sink_ptr> sinks;
+        sinks.push_back(std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>());
+        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("Log.txt"));
+        return sinks;
     }
 }

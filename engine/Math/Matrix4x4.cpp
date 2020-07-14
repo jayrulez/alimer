@@ -21,6 +21,7 @@
 //
 
 #include "Math/Matrix4x4.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
@@ -141,12 +142,10 @@ namespace alimer
 
     String Matrix4x4::ToString() const
     {
-        char tempBuffer[MATRIX_CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
+        return fmt::format("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
             m11, m12, m13, m14,
             m21, m22, m23, m24,
             m31, m32, m33, m34,
             m41, m42, m43, m44);
-        return String(tempBuffer);
     }
 }

@@ -21,6 +21,7 @@
 //
 
 #include "Math/Quaternion.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
@@ -29,8 +30,6 @@ namespace alimer
 
     String Quaternion::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return std::string(tempBuffer);
+        return fmt::format("{} {} {} {}", x, y, z, w);
     }
 }

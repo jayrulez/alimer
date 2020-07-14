@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include "Core/Vector.h"
+#include "Core/Platform.h"
+#include <vector>
 
 namespace alimer
 {
@@ -149,6 +150,6 @@ namespace alimer
         }
 
     private:
-        Vector<Function<R(Args...)>> delegates;
+        std::vector<Function<R(Args...)>> delegates;
     };
 }

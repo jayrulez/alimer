@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Graphics/Texture.h"
-#include "Core/Vector.h"
 #include "Math/Size.h"
+#include <vector>
 
 namespace alimer
 {
@@ -53,7 +53,7 @@ namespace alimer
         PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
 
         uint32_t backbufferIndex = 0;
-        Vector<SharedPtr<Texture>> backbufferTextures;
+        std::vector<SharedPtr<Texture>> backbufferTextures;
         SharedPtr<Texture> depthStencilTexture;
         RenderPassDescription currentRenderPassDescription;
     };

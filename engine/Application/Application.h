@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Vector.h"
+#include "Core/Log.h"
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
@@ -69,6 +69,8 @@ namespace alimer
         /// Get the main (primary window)
         Window& GetWindow() { return *window; }
 
+        virtual std::vector<spdlog::sink_ptr> GetPlatformLogSinks();
+
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
         virtual void Initialize();
@@ -83,9 +85,9 @@ namespace alimer
         virtual void EndDraw();
 
     private:
-        void PlatformConstuct();
+        void PlatformConstruct();
         void PlatformDestroy();
-        void PlatformRun();
+        int PlatformRun();
 
         /// Called by platform backend.
         void InitBeforeRun();
@@ -93,7 +95,7 @@ namespace alimer
         void Render();
 
     protected:
-        Vector<String> args;
+        std::vector<std::string> args;
 
         int exitCode = 0;
         Configuration config;
@@ -106,7 +108,7 @@ namespace alimer
         std::unique_ptr<Window> window{ nullptr };
         std::unique_ptr<Gui> gui{ nullptr };
 
-        Vector<std::unique_ptr<GameSystem>> gameSystems;
+        std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 
 

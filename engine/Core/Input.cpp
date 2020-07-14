@@ -81,7 +81,7 @@ namespace alimer
     /* Input::ActionState */
     void Input::ActionState::Initialize(uint32_t buttonCount)
     {
-        actionSlots.Resize(buttonCount);
+        actionSlots.resize(buttonCount);
     }
 
     void Input::ActionState::Update()

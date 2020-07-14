@@ -30,21 +30,36 @@ namespace alimer
 {
     Application::Application()
     {
-        RegisterSubsystem(new Input());
+        // Construct platform logic first.
+        PlatformConstruct();
 
-        PlatformConstuct();
-        LOG_INFO("Application started");
+        auto sinks = GetPlatformLogSinks();
+
+        auto logger = std::make_shared<spdlog::logger>("logger", sinks.begin(), sinks.end());
+#ifdef _DEBUG
+        logger->set_level(spdlog::level::debug);
+#else
+        logger->set_level(spdlog::level::info);
+#endif
+
+        logger->set_pattern(LOGGER_FORMAT);
+        spdlog::set_default_logger(logger);
+
+        LOGI("Logger initialized");
+
+        RegisterSubsystem(new Input());
+        LOGI("Application started");
     }
 
     Application::~Application()
     {
-        gameSystems.Clear();
+        gameSystems.clear();
         window.reset();
         gui.reset();
         GPU::Shutdown();
         RemoveSubsystem<Input>();
         PlatformDestroy();
-        LOG_INFO("Application destroyed correctly");
+        LOGI("Application destroyed correctly");
     }
 
     void Application::InitBeforeRun()
@@ -123,11 +138,11 @@ namespace alimer
         }
 
         if (GetInput()->IsMouseButtonDown(MouseButton::Right)) {
-            LOG_INFO("Right pressed");
+            LOGI("Right pressed");
         }
 
         if (GetInput()->IsMouseButtonHeld(MouseButton::Right)) {
-            LOG_INFO("Right held");
+            LOGI("Right held");
         }
 
         /*auto commandContext = Graphics::GetDefaultContext();
@@ -153,7 +168,7 @@ namespace alimer
     int Application::Run()
     {
         if (running) {
-            LOG_ERROR("Application is already running");
+            LOGE("Application is already running");
             return EXIT_FAILURE;
         }
 

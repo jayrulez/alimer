@@ -21,20 +21,17 @@
 //
 
 #include "Math/Size.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
     String Size::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return String(tempBuffer);
+        return fmt::format("{} {}", width, height);
     }
 
     String SizeI::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
-        return String(tempBuffer);
+        return fmt::format("{} {}", width, height);
     }
 }

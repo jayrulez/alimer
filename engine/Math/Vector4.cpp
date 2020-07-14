@@ -21,13 +21,12 @@
 //
 
 #include "Math/Vector4.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
     String Vector4::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return std::string(tempBuffer);
+        return fmt::format("{} {} {} {}", x, y, z, w);
     }
 }

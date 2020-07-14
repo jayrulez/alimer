@@ -190,10 +190,10 @@ namespace alimer
             switch (allocator->GetD3D12Options().ResourceHeapTier)
             {
             case D3D12_RESOURCE_HEAP_TIER_1:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
+                LOGD("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
                 break;
             case D3D12_RESOURCE_HEAP_TIER_2:
-                LOG_DEBUG("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
+                LOGD("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
                 break;
             default:
                 break;
@@ -237,7 +237,7 @@ namespace alimer
             frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
             if (!frameFenceEvent)
             {
-                LOG_ERROR("Direct3D12: CreateEventEx failed.");
+                LOGE("Direct3D12: CreateEventEx failed.");
             }
         }
     }
@@ -249,7 +249,7 @@ namespace alimer
         allocator->CalculateStats(&stats);
 
         if (stats.Total.UsedBytes > 0) {
-            LOG_ERROR("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
+            LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
         }
 
         SafeRelease(allocator);
@@ -274,7 +274,7 @@ namespace alimer
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
-            LOG_DEBUG("Direct3D12: There are {} unreleased references left on the device", refCount);
+            LOGD("Direct3D12: There are {} unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
             if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
@@ -312,7 +312,7 @@ namespace alimer
         caps.deviceId = desc.DeviceId;
 
         std::wstring deviceName(desc.Description);
-        caps.adapterName = alimer::ToUtf8(deviceName);
+        caps.adapterName = ToUtf8(deviceName);
 
         // Detect adapter type.
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
@@ -528,7 +528,7 @@ namespace alimer
             // Try WARP12 instead
             if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf()))))
             {
-                LOG_ERROR("WARP12 not available. Enable the 'Graphics Tools' optional feature");
+                LOGE("WARP12 not available. Enable the 'Graphics Tools' optional feature");
             }
 
             OutputDebugStringA("Direct3D Adapter - WARP12\n");
@@ -537,7 +537,7 @@ namespace alimer
 
         if (!adapter)
         {
-            LOG_ERROR("No Direct3D 12 device found");
+            LOGE("No Direct3D 12 device found");
         }
 
         *ppAdapter = adapter.Detach();

@@ -15,6 +15,7 @@ project (
 )
 
 # Options
+set(ALIMER_WARNINGS_AS_ERRORS ON CACHE BOOL "Enable Warnings as Errors")
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 

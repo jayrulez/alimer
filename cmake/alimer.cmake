@@ -49,16 +49,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEV "${CMAKE_SHARED_LINKER_FLAGS_RELEASE}")
 set(CMAKE_MODULE_LINKER_FLAGS_DEV "${CMAKE_MODULE_LINKER_FLAGS_RELEASE}")
 set(CMAKE_EXE_LINKER_FLAGS_DEV "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
-# Set global defines
-add_compile_options(-D_SCL_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE)
-add_compile_options($<$<CONFIG:DEBUG>:-D_SECURE_SCL_THROWS=0> $<$<CONFIG:DEBUG>:-D_SILENCE_DEPRECATION_OF_SECURE_SCL_THROWS>)
-add_compile_options(-D_HAS_ITERATOR_DEBUGGING=$<CONFIG:DEBUG> -D_SECURE_SCL=$<CONFIG:DEBUG>)
-add_compile_options(-D_HAS_EXCEPTIONS=0)
-
 if (WIN32 OR WINDOWS_STORE)
-    # Disable C++ exceptions
-    replace_compile_flags("/EHsc" "")
-
     # Select static/dynamic runtime library
 	#if (WIN32)
     #    replace_compile_flags("/MDd" "/MTd" Debug)
@@ -80,9 +71,6 @@ if (WIN32 OR WINDOWS_STORE)
 
 	# Disable run-time type information (RTTI)
 	replace_compile_flags("/GR" "/GR-")
-
-    # Enable multi-processor compilation for Visual Studio 2012 and above
-    add_compile_options(/MP)
 endif()
 
 # Add colors to ninja builds

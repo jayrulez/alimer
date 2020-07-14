@@ -34,7 +34,7 @@ namespace alimer
 #if defined(_DEBUG)
         if (handle == nullptr)
         {
-            LOG_WARN("LibraryOpen - Windows Error: %d", GetLastError());
+            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
         }
 #endif
 
@@ -53,7 +53,7 @@ namespace alimer
 #if defined(_DEBUG)
         if (proc == nullptr)
         {
-            LOG_WARN("LibrarySymbol - Windows Error: {}", GetLastError());
+            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
         }
 #endif
         return proc;

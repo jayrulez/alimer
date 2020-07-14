@@ -23,47 +23,14 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include "Core/String.h"
-#include <fmt/format.h>
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
-namespace alimer
-{
-    enum class LogLevel : uint32_t
-    {
-        Trace,
-        Debug,
-        Info,
-        Warning,
-        Error,
-        Off
-    };
+#define LOGGER_FORMAT "[%^%l%$] %v"
 
-    class ALIMER_API Log final
-    {
-    public:
-        static bool IsEnabled() { return _enabled; }
-        static void SetEnabled(bool value);
-        static bool IsLevelEnabled(LogLevel level);
-
-        static void Write(LogLevel level, const char* str);
-        static void Write(LogLevel level, const String& str);
-
-    private:
-        Log() = delete;
-        ~Log() = delete;
-
-        static bool _enabled;
-        static LogLevel _level;
-    };
-} 
-
-#define LOG_TRACE(...) alimer::Log::Write(alimer::LogLevel::Trace, fmt::format(__VA_ARGS__))
-#define LOG_DEBUG(...) alimer::Log::Write(alimer::LogLevel::Debug, fmt::format(__VA_ARGS__))
-#define LOG_INFO(...) alimer::Log::Write(alimer::LogLevel::Info, fmt::format(__VA_ARGS__))
-#define LOG_WARN(...) alimer::Log::Write(alimer::LogLevel::Warning, fmt::format(__VA_ARGS__))
-
-#define LOG_ERROR(...) do \
-    { \
-        alimer::Log::Write(alimer::LogLevel::Error, fmt::format("{}:{}] {}", __FILE__, __LINE__,  fmt::format(__VA_ARGS__))); \
-        ALIMER_FORCE_CRASH(); \
-    } while (0)
+#define LOGT(...) spdlog::trace(__VA_ARGS__);
+#define LOGD(...) spdlog::debug(__VA_ARGS__);
+#define LOGI(...) spdlog::info(__VA_ARGS__);
+#define LOGW(...) spdlog::warn(__VA_ARGS__);
+#define LOGE(...) spdlog::error("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__));
+#define LOGF(...) spdlog::critical("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)); 

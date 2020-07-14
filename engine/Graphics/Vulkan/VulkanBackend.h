@@ -36,7 +36,7 @@ namespace alimer
     const char* ToString(VkResult result);
 
     struct QueueFamilyIndices {
-        uint32_t graphicsQueueFamily;
+        uint32_t graphicsQueueFamilyIndex;
         uint32_t computeQueueFamily;
         uint32_t copyQueueFamily;
     };
@@ -76,8 +76,8 @@ namespace alimer
 		VkResult err = x;                                           \
 		if (err)                                                    \
 		{                                                           \
-			LOG_ERROR("Detected Vulkan error: {}", alimer::ToString(err)); \
+			LOGE("Detected Vulkan error: {}", alimer::ToString(err)); \
 		}                                                           \
 	} while (0)
 
-#define VK_LOG_ERROR(result, message) LOG_ERROR("{} - Vulkan error: {}", message, alimer::ToString(result));
+#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, alimer::ToString(result));

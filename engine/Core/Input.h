@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Core/Vector.h"
 #include "Core/Object.h"
+#include <vector>
 #include <bitset>
 
 namespace alimer
@@ -96,7 +96,7 @@ namespace alimer
 
             bool Test(uint32_t slot, ModifierKeys modifiers, ActionSlot::Bits bit) const;
             bool dirty{ false };
-            Vector<ActionSlot> actionSlots{};
+            std::vector<ActionSlot> actionSlots;
         };
 
         int32_t mousePositionX;

@@ -42,7 +42,6 @@ namespace alimer
         VkInstance GetVkInstance() const { return instance; }
         VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
         VkDevice GetVkDevice() const { return device; }
-        const VolkDeviceTable& GetDeviceTable() const { return deviceTable; }
         VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
 
     private:
@@ -70,7 +69,6 @@ namespace alimer
 
         /* Device + queue's  */
         VkDevice device{ VK_NULL_HANDLE };
-        VolkDeviceTable deviceTable = {};
         VkQueue graphicsQueue{ VK_NULL_HANDLE };
         VkQueue computeQueue{ VK_NULL_HANDLE };
         VkQueue copyQueue{ VK_NULL_HANDLE };
@@ -79,7 +77,26 @@ namespace alimer
         VmaAllocator memoryAllocator{ VK_NULL_HANDLE };
 
         VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
-        uint32_t backbufferIndex = 0;
+        uint32_t backbufferIndex{ 0 };
         SharedPtr<VulkanTexture> backbufferTextures[kMaxBackbufferCount] = {};
+
+        /// A set of semaphores that can be reused.
+        std::vector<VkSemaphore> recycledSemaphores;
+
+        /* Frame data */
+        uint32 maxInflightFrames = 3u;
+
+        bool frameActive{ false };
+
+        struct PerFrame
+        {
+            VkFence queueSubmitFence = VK_NULL_HANDLE;
+            VkCommandPool primaryCommandPool = VK_NULL_HANDLE;
+            VkCommandBuffer primaryCommandBuffer = VK_NULL_HANDLE;
+
+            VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
+            VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
+        };
+        std::vector<PerFrame> perFrame;
     };
 }

@@ -96,77 +96,6 @@ namespace alimer
         /// Hash value.
         uint32_t value;
     };
-
-    /// 64-bit hash value for a string.
-    class ALIMER_API StringId64
-    {
-    public:
-        /// Construct with zero value.
-        StringId64() noexcept
-            : value(0)
-        {
-        }
-
-        /// Copy-construct from another hash.
-        StringId64(const StringId64& rhs) noexcept = default;
-
-        /// Construct with an initial value.
-        explicit StringId64(uint64_t value_) noexcept
-            : value(value_)
-        {
-        }
-
-        /// Construct from a C string.
-        StringId64(const char* str) noexcept;
-        /// Construct from a string.
-        StringId64(const String& str) noexcept;
-
-        /// Assign from another hash.
-        StringId64& operator =(const StringId64& rhs) noexcept = default;
-
-        /// Add a hash.
-        StringId64 operator +(const StringId64& rhs) const
-        {
-            StringId64 ret;
-            ret.value = value + rhs.value;
-            return ret;
-        }
-
-        /// Add-assign a hash.
-        StringId64& operator +=(const StringId64& rhs)
-        {
-            value += rhs.value;
-            return *this;
-        }
-
-        /// Test for equality with another hash.
-        bool operator ==(const StringId64& rhs) const { return value == rhs.value; }
-
-        /// Test for inequality with another hash.
-        bool operator !=(const StringId64& rhs) const { return value != rhs.value; }
-
-        /// Test if less than another hash.
-        bool operator <(const StringId64& rhs) const { return value < rhs.value; }
-
-        /// Test if greater than another hash.
-        bool operator >(const StringId64& rhs) const { return value > rhs.value; }
-
-        /// Return true if nonzero hash value.
-        explicit operator bool() const { return value != 0; }
-
-        /// Return hash value.
-        uint64_t Value() const { return value; }
-
-        /// Return as string.
-        String ToString() const;
-
-        /// Zero hash.
-        static const StringId64 Zero;
-
-    private:
-        /// Hash value.
-        uint64_t value;
-    };
 }
 
 namespace std {
@@ -174,15 +103,6 @@ namespace std {
     class hash<alimer::StringId32> {
     public:
         size_t operator()(const alimer::StringId32& value) const
-        {
-            return value.Value();
-        }
-    };
-
-    template<>
-    class hash<alimer::StringId64> {
-    public:
-        size_t operator()(const alimer::StringId64& value) const
         {
             return value.Value();
         }

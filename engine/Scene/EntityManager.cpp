@@ -31,7 +31,7 @@ namespace alimer
 
         if (entity->parent != nullptr)
         {
-            LOG_ERROR("Entity has already a parent");
+            LOGE("Entity has already a parent");
         }
 
         Add(entity);
@@ -50,7 +50,7 @@ namespace alimer
 
         if (entity->manager != nullptr)
         {
-            LOG_ERROR("This entity is already used by another entity manager.");
+            LOGE("This entity is already used by another entity manager.");
         }
 
         entity->SetEntityManager(this);

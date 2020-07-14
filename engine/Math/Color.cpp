@@ -21,13 +21,12 @@
 //
 
 #include "Math/Color.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
     String Color::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", r, g, b, a);
-        return String(tempBuffer);
+        return fmt::format("{} {} {} {}", r, g, b, a);
     }
 }

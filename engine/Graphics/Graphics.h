@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "Core/Vector.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Buffer.h"
+#include <vector>
 #include <mutex>
 
 namespace alimer
@@ -77,7 +77,7 @@ namespace alimer
         GPU::Capabilities caps{};
 
         std::mutex trackedResourcesMutex;
-        Vector<GraphicsResource*> trackedResources;
+        std::vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
         uint32 backbufferWidth = 0;
         uint32 backbufferHeight = 0;
