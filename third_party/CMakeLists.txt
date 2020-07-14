@@ -2,7 +2,6 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
-add_subdirectory(fmt)
 add_subdirectory(imgui)
 
 # GLFW
@@ -23,6 +22,7 @@ if (ALIMER_VULKAN)
     target_sources(vulkan INTERFACE ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h)
     target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
     target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
+    target_compile_definitions(vulkan INTERFACE VK_ENABLE_BETA_EXTENSIONS)
 
     if(ANDROID)
         target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
@@ -64,3 +64,9 @@ endif()
 if (ALIMER_D3D12)
     add_subdirectory(D3D12MemoryAllocator)
 endif()
+
+# spdlog
+set(SPDLOG_NO_EXCEPTIONS ON CACHE BOOL "" FORCE)
+set(SPDLOG_ENABLE_PCH ON CACHE BOOL "" FORCE)
+add_subdirectory(spdlog)
+set_property(TARGET spdlog PROPERTY FOLDER "ThirdParty")
