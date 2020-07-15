@@ -20,38 +20,15 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Buffer.h"
-#include "Graphics/Texture.h"
-#include "Math/Viewport.h"
-#include "Math/Color.h"
+#include "Graphics/CommandBuffer.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    class ALIMER_API CommandContext 
+    CommandBuffer::CommandBuffer()
     {
-    public:
-        /// Constructor.
-        CommandContext();
-        virtual ~CommandContext() = default;
 
-        virtual void Flush(bool wait = false) = 0;
-
-        virtual void PushDebugGroup(const String& name) = 0;
-        virtual void PopDebugGroup() = 0;
-        virtual void InsertDebugMarker(const String& name) = 0;
-
-        virtual void BeginRenderPass(const RenderPassDescription& renderPass) = 0;
-        virtual void EndRenderPass() = 0;
-
-        virtual void SetScissorRect(const Rect& scissorRect) = 0;
-        virtual void SetScissorRects(const Rect* scissorRects, uint32_t count) = 0;
-        virtual void SetViewport(const Viewport& viewport) = 0;
-        virtual void SetViewports(const Viewport* viewports, uint32_t count) = 0;
-        virtual void SetBlendColor(const Color& color) = 0;
-
-        virtual void BindBuffer(uint32_t slot, Buffer* buffer) = 0;
-        virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
-    };
+    }
 }
+

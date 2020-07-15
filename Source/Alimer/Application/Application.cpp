@@ -23,7 +23,9 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/CommandQueue.h"
+#include "Graphics/CommandBuffer.h"
 #include "Core/Log.h"
 
 namespace alimer
@@ -41,7 +43,7 @@ namespace alimer
         gameSystems.clear();
         window.reset();
         gui.reset();
-        GraphicsDevice::Shutdown();
+        delete GPU;
         RemoveSubsystem<Input>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -70,8 +72,6 @@ namespace alimer
         }
         else
         {
-            graphicsQueue = GPU->CreateCommandQueue(CommandQueueType::Graphics);
-
             gui.reset(new Gui(window.get()));
         }
 
@@ -106,7 +106,6 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        GPU->BeginFrame();
         gui->BeginFrame();
 
         for (auto& gameSystem : gameSystems)
@@ -132,13 +131,14 @@ namespace alimer
             LOGI("Right held");
         }
 
-        /*auto commandContext = Graphics::GetDefaultContext();
-        commandContext->PushDebugGroup("Clear");
+        CommandBuffer& commandBuffer = GPU->GetCommandQueue()->GetCommandBuffer("Clear");
+        /*commandContext->PushDebugGroup("Clear");
         RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         commandContext->BeginRenderPass(renderPass);
         commandContext->EndRenderPass();
         commandContext->PopDebugGroup();*/
+        commandBuffer.Commit();
     }
 
     void Application::EndDraw()
@@ -149,7 +149,7 @@ namespace alimer
         }
 
         gui->Render();
-        GPU->EndFrame();
+        GPU->Frame();
     }
 
     int Application::Run()

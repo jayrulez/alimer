@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12CommandContext.h"
+#include "D3D12CommandBuffer.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsImpl.h"
-//#include "D3D12CommandQueue.h"
 //#include "D3D12Texture.h"
 
 namespace alimer
@@ -53,62 +53,90 @@ namespace alimer
         }*/
     }
 
-    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsImpl* device_)
+    D3D12CommandBuffer::D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12CommandQueue* queue_)
         : device(device_)
+        , queue(queue_)
     {
-        device->CreateNewCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, &commandList, &currentAllocator);
+        useRenderPass = device_->SupportsRenderPass();
 
-        useRenderPass = device->SupportsRenderPass();
+        currentAllocator = queue->RequestAllocator();
+        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(1, D3D12GetCommandListType(queue->GetType()), currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
         if (FAILED(commandList->QueryInterface(&commandList4))) {
             useRenderPass = false;
         }
-        //useRenderPass = true;*/
+        //useRenderPass = true;
     }
 
-    D3D12CommandContext::~D3D12CommandContext()
+    D3D12CommandBuffer::~D3D12CommandBuffer()
     {
         SafeRelease(commandList4);
         SafeRelease(commandList);
     }
 
-    void D3D12CommandContext::Flush(bool wait)
+    void D3D12CommandBuffer::Reset()
+    {
+        // We only call Reset() on previously freed contexts.  The command list persists, but we must
+        // request a new allocator.
+        ALIMER_ASSERT(commandList != nullptr && currentAllocator == nullptr);
+        currentAllocator = queue->RequestAllocator();
+        commandList->Reset(currentAllocator, nullptr);
+
+        //currentGraphicsRootSignature = nullptr;
+        //currentPipelineState = nullptr;
+        //currentComputeRootSignature = nullptr;
+        numBarriersToFlush = 0;
+
+        //BindDescriptorHeaps();
+    }
+
+    void D3D12CommandBuffer::Commit(bool waitForCompletion)
     {
         FlushResourceBarriers();
 
-        ALIMER_ASSERT(currentAllocator != nullptr);
-        device->ExecuteCommandList(D3D12_COMMAND_LIST_TYPE_DIRECT, commandList, wait);
+        //if (m_ID.length() > 0)
+        //    EngineProfiling::EndBlock(this);
 
-        // Reset the command list and restore previous state
-        commandList->Reset(currentAllocator, nullptr);
+        ALIMER_ASSERT(currentAllocator != nullptr);
+        ThrowIfFailed(commandList->Close());
+
+        uint64_t fenceValue = queue->ExecuteCommandList(commandList);
+        queue->DiscardAllocator(fenceValue, currentAllocator);
+        currentAllocator = nullptr;
+
+        if (waitForCompletion) {
+            device->WaitForFence(fenceValue);
+        }
+
+        queue->DiscardCommandBuffer(this);
     }
 
-    void D3D12CommandContext::PushDebugGroup(const String& name)
+    void D3D12CommandBuffer::PushDebugGroup(const String& name)
     {
         auto wideName = ToUtf16(name);
         PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
     }
 
-    void D3D12CommandContext::PopDebugGroup()
+    void D3D12CommandBuffer::PopDebugGroup()
     {
         commandList->EndEvent();
     }
 
-    void D3D12CommandContext::InsertDebugMarker(const String& name)
+    void D3D12CommandBuffer::InsertDebugMarker(const String& name)
     {
         auto wideName = ToUtf16(name);
         PIXSetMarker(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
     }
 
-    void D3D12CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)
+    void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescription& renderPass)
     {
     }
 
-    void D3D12CommandContext::EndRenderPass()
+    void D3D12CommandBuffer::EndRenderPass()
     {
 
     }
 
-    void D3D12CommandContext::SetScissorRect(const Rect& scissorRect)
+    void D3D12CommandBuffer::SetScissorRect(const Rect& scissorRect)
     {
         D3D12_RECT d3dScissorRect;
         d3dScissorRect.left = LONG(scissorRect.x);
@@ -118,7 +146,7 @@ namespace alimer
         commandList->RSSetScissorRects(1, &d3dScissorRect);
     }
 
-    void D3D12CommandContext::SetScissorRects(const Rect* scissorRects, uint32_t count)
+    void D3D12CommandBuffer::SetScissorRects(const Rect* scissorRects, uint32_t count)
     {
         D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
         for (uint32_t i = 0; i < count; ++i)
@@ -131,12 +159,12 @@ namespace alimer
         commandList->RSSetScissorRects(count, d3dScissorRects);
     }
 
-    void D3D12CommandContext::SetViewport(const Viewport& viewport)
+    void D3D12CommandBuffer::SetViewport(const Viewport& viewport)
     {
         commandList->RSSetViewports(1, reinterpret_cast<const D3D12_VIEWPORT*>(&viewport));
     }
 
-    void D3D12CommandContext::SetViewports(const Viewport* viewports, uint32_t count)
+    void D3D12CommandBuffer::SetViewports(const Viewport* viewports, uint32_t count)
     {
         D3D12_VIEWPORT d3dViewports[kMaxViewportAndScissorRects];
         for (uint32_t i = 0; i < count; ++i)
@@ -151,16 +179,16 @@ namespace alimer
         commandList->RSSetViewports(count, d3dViewports);
     }
 
-    void D3D12CommandContext::SetBlendColor(const Color& color)
+    void D3D12CommandBuffer::SetBlendColor(const Color& color)
     {
         commandList->OMSetBlendFactor(&color.r);
     }
 
-    void D3D12CommandContext::BindBuffer(uint32_t slot, Buffer* buffer)
+    void D3D12CommandBuffer::BindBuffer(uint32_t slot, Buffer* buffer)
     {
     }
 
-    void D3D12CommandContext::BindBufferData(uint32_t slot, const void* data, uint32_t size)
+    void D3D12CommandBuffer::BindBufferData(uint32_t slot, const void* data, uint32_t size)
     {
     }
 
@@ -249,7 +277,7 @@ namespace alimer
 #endif // TODO
 
 
-    void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
+    void D3D12CommandBuffer::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
     {
         D3D12_RESOURCE_STATES currentState = resource->GetState();
 
@@ -292,7 +320,7 @@ namespace alimer
             FlushResourceBarriers();
     }
 
-    void D3D12CommandContext::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
+    void D3D12CommandBuffer::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
     {
         ALIMER_ASSERT_MSG(numBarriersToFlush < kMaxResourceBarriers, "Exceeded arbitrary limit on buffered barriers");
         D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
@@ -304,7 +332,7 @@ namespace alimer
             FlushResourceBarriers();
     }
 
-    void D3D12CommandContext::FlushResourceBarriers(void)
+    void D3D12CommandBuffer::FlushResourceBarriers(void)
     {
         if (numBarriersToFlush > 0)
         {

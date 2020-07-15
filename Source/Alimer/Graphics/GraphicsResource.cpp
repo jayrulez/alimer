@@ -22,7 +22,7 @@
 
 #include "Core/Assert.h"
 #include "Graphics/GraphicsResource.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {

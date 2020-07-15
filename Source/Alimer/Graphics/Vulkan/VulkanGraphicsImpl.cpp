@@ -1123,6 +1123,7 @@ namespace alimer
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
+#if TODO_VK
     bool VulkanGraphicsImpl::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
@@ -1182,10 +1183,12 @@ namespace alimer
 
         return true;
     }
+#endif // TODO_VK
 
-    void VulkanGraphicsImpl::EndFrame()
+
+    void VulkanGraphicsImpl::Frame()
     {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
+        //ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
         // Complete the command buffer.
         VK_CHECK(vkEndCommandBuffer(perFrame[backbufferIndex].primaryCommandBuffer));

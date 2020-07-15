@@ -25,7 +25,6 @@
 #include "D3D12Texture.h"
 //#include "D3D12Buffer.h"
 #include "D3D12CommandQueue.h"
-#include "D3D12CommandContext.h"
 #include "Core/Window.h"
 #include "Math/Matrix4x4.h"
 
@@ -68,7 +67,6 @@ namespace alimer
     D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, GPUFlags flags)
         : GraphicsDevice(window)
         , frameIndex(0)
-        , frameActive(false)
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -203,19 +201,16 @@ namespace alimer
         InitCapabilities(adapter.Get());
 
         // Create command queue's
-        //graphicsQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
-        //computeQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
-        //copyQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
-
-        // Create immediate default contexts
-        //immediateContext.reset(new D3D12CommandContext(this));
+        graphicsQueue = CreateCommandQueue(CommandQueueType::Graphics, "");
+        computeQueue = CreateCommandQueue(CommandQueueType::Compute, "");
+        copyQueue = CreateCommandQueue(CommandQueueType::Copy, "");
 
         // Create main swapchain.
         {
-            /*IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+            IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
                 dxgiFactory.Get(),
                 dxgiFactoryCaps,
-                graphicsQueue->GetCommandQueue(),
+                std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue)->GetCommandQueue(),
                 window->GetNativeHandle(),
                 backbufferWidth, backbufferHeight,
                 PixelFormat::BGRA8Unorm,
@@ -226,7 +221,7 @@ namespace alimer
             ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
             SafeRelease(tempSwapChain);
 
-            backbufferIndex = swapChain->GetCurrentBackBufferIndex();*/
+            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
         }
 
         // Create a fence for tracking GPU execution progress.
@@ -259,16 +254,12 @@ namespace alimer
             SafeRelease(swapChain);
         }
 
-        copyQueue.reset();
-        computeQueue.reset();
-        graphicsQueue.reset();
-
         {
             CloseHandle(frameFenceEvent);
             SafeRelease(frameFence);
         }
 
-        immediateContext.reset();
+        Shutdown();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -543,70 +534,22 @@ namespace alimer
         *ppAdapter = adapter.Detach();
     }
 
-    void D3D12GraphicsImpl::CreateNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** commandList, ID3D12CommandAllocator** commandAllocator)
-    {
-        ALIMER_ASSERT_MSG(type != D3D12_COMMAND_LIST_TYPE_BUNDLE, "Bundles are not yet supported");
-        switch (type)
-        {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT: *commandAllocator = graphicsQueue->RequestAllocator(); break;
-        case D3D12_COMMAND_LIST_TYPE_BUNDLE: break;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: *commandAllocator = computeQueue->RequestAllocator(); break;
-        case D3D12_COMMAND_LIST_TYPE_COPY: *commandAllocator = copyQueue->RequestAllocator(); break;
-        }
-
-        ThrowIfFailed(d3dDevice->CreateCommandList(1, type, *commandAllocator, nullptr, IID_PPV_ARGS(commandList)));
-    }
-
-    void D3D12GraphicsImpl::ExecuteCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList* commandList, bool waitForCompletion)
-    {
-        ALIMER_ASSERT_MSG(type != D3D12_COMMAND_LIST_TYPE_BUNDLE, "Bundles are not yet supported");
-
-        D3D12CommandQueue* commandQueue = nullptr;
-        switch (type)
-        {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT: commandQueue = graphicsQueue.get(); break;
-        case D3D12_COMMAND_LIST_TYPE_BUNDLE: break;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE: commandQueue = computeQueue.get(); break;
-        case D3D12_COMMAND_LIST_TYPE_COPY: commandQueue = copyQueue.get(); break;
-        }
-
-        uint64_t fenceValue = commandQueue->ExecuteCommandList(commandList);
-
-        if (waitForCompletion)
-            WaitForFence(fenceValue);
-    }
-
     void D3D12GraphicsImpl::WaitForGPU()
     {
-        graphicsQueue->WaitForIdle();
+        /*graphicsQueue->WaitForIdle();
         computeQueue->WaitForIdle();
-        copyQueue->WaitForIdle();
+        copyQueue->WaitForIdle();*/
     }
 
     void D3D12GraphicsImpl::WaitForFence(uint64_t fenceValue)
     {
-        //CommandQueue& Producer = Graphics::g_CommandManager.GetQueue((D3D12_COMMAND_LIST_TYPE)(FenceValue >> 56));
-        //Producer.WaitForFence(FenceValue);
+        CommandQueueType commandQueueType = D3D12GetCommandQueueType((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
+        CommandQueue* producer = GetCommandQueue(commandQueueType);
+        static_cast<D3D12CommandQueue*>(producer)->WaitForFence(fenceValue);
     }
 
-    bool D3D12GraphicsImpl::BeginFrame()
+    void D3D12GraphicsImpl::Frame()
     {
-        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
-
-        //backbufferIndex = swapChain->GetCurrentBackBufferIndex();
-
-        // Now the frame is active again.
-        frameActive = true;
-
-        return true;
-    }
-
-    void D3D12GraphicsImpl::EndFrame()
-    {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
-
-        /*immediateContext->Flush(false);
-
         uint32_t syncInterval = 1;
         uint32_t presentFlags = 0;
         if (!vSync) {
@@ -635,7 +578,13 @@ namespace alimer
         {
             ThrowIfFailed(hr);
 
-            graphicsQueue->GetCommandQueue()->Signal(frameFence, ++frameCount);
+            /*auto d3dGraphicsQueue = std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue);
+            auto nextFenceValue = d3dGraphicsQueue->GetNextFenceValue();
+            if (nextFrameIndex == nextFenceValue) {
+                nextFrameIndex = d3dGraphicsQueue->Signal();
+            }*/
+
+            std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue)->GetCommandQueue()->Signal(frameFence, ++frameCount);
 
             uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
@@ -652,10 +601,7 @@ namespace alimer
                 // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
                 ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
             }
-        }*/
-
-        // Frame is not active anymore
-        frameActive = false;
+        }
     }
 
 

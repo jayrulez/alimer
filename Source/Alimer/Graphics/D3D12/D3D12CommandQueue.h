@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Graphics/CommandQueue.h"
-#include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 #include <vector>
 #include <queue>
@@ -31,6 +30,8 @@
 
 namespace alimer
 {
+    class D3D12CommandBuffer;
+
     class D3D12CommandAllocatorPool final
     {
     public:
@@ -59,13 +60,17 @@ namespace alimer
         D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name);
         ~D3D12CommandQueue();
 
-        uint64_t IncrementFence(void);
+        CommandBuffer& GetCommandBuffer(const std::string_view id) override;
+        void WaitIdle() override;
+
+        uint64_t Signal();
         bool IsFenceComplete(uint64_t fenceValue);
         void WaitForFence(uint64_t fenceValue);
-        void WaitForIdle(void) { WaitForFence(IncrementFence()); }
 
         uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
-        ID3D12CommandAllocator* RequestAllocator(void);
+        ID3D12CommandAllocator* RequestAllocator();
+        void DiscardAllocator(uint64_t fenceValueForReset, ID3D12CommandAllocator* commandAllocator);
+        void DiscardCommandBuffer(D3D12CommandBuffer* commandBuffer);
 
         GraphicsDevice* GetDevice() const override;
         ALIMER_FORCEINLINE ID3D12CommandQueue* GetCommandQueue() { return commandQueue; }
@@ -85,5 +90,9 @@ namespace alimer
         HANDLE fenceEvent;
         uint64_t nextFenceValue;
         uint64_t lastCompletedFenceValue;
+
+        std::queue<D3D12CommandBuffer*> queue;
+        std::mutex commandBufferAllocationMutex;
+        std::vector<std::unique_ptr<D3D12CommandBuffer>> pool;
     };
 }

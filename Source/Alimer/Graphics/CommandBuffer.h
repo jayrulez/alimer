@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
 #include "Graphics/Buffer.h"
 #include "Graphics/Texture.h"
 #include "Math/Viewport.h"
@@ -30,25 +29,30 @@
 
 namespace alimer
 {
-    class GraphicsDevice;
-
-    /// A queue that organizes command buffers for the GPU to execute.
-    class ALIMER_API CommandQueue
+    /// A container that stores commands for the GPU to execute.
+    class ALIMER_API CommandBuffer
     {
     public:
         /// Constructor.
-        CommandQueue(CommandQueueType queueType);
-        virtual ~CommandQueue() = default;
+        CommandBuffer();
+        virtual ~CommandBuffer() = default;
 
-        /// Request command buffer.
-        virtual CommandBuffer& GetCommandBuffer(const std::string_view id = "") = 0;
-        virtual void WaitIdle() = 0;
+        virtual void Commit(bool waitForCompletion = false) = 0;
 
-        /// Return the device from which the command queue was created.
-        virtual GraphicsDevice* GetDevice() const = 0;
-        CommandQueueType GetType() const { return queueType; }
+        virtual void PushDebugGroup(const String& name) = 0;
+        virtual void PopDebugGroup() = 0;
+        virtual void InsertDebugMarker(const String& name) = 0;
 
-    private:
-        CommandQueueType queueType;
+        virtual void BeginRenderPass(const RenderPassDescription& renderPass) = 0;
+        virtual void EndRenderPass() = 0;
+
+        virtual void SetScissorRect(const Rect& scissorRect) = 0;
+        virtual void SetScissorRects(const Rect* scissorRects, uint32_t count) = 0;
+        virtual void SetViewport(const Viewport& viewport) = 0;
+        virtual void SetViewports(const Viewport* viewports, uint32_t count) = 0;
+        virtual void SetBlendColor(const Color& color) = 0;
+
+        virtual void BindBuffer(uint32_t slot, Buffer* buffer) = 0;
+        virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
     };
 }

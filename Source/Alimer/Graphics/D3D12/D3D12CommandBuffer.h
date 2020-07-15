@@ -22,20 +22,21 @@
 
 #pragma once
 
-#include "Graphics/CommandContext.h"
+#include "Graphics/CommandBuffer.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
     class D3D12CommandQueue;
 
-    class D3D12CommandContext final : public CommandContext
+    class D3D12CommandBuffer final : public CommandBuffer
     {
     public:
-        D3D12CommandContext(D3D12GraphicsImpl* device_);
-        ~D3D12CommandContext() override;
+        D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12CommandQueue* queue_);
+        ~D3D12CommandBuffer() override;
+        void Reset();
 
-        void Flush(bool wait) override;
+        void Commit(bool waitForCompletion) override;
 
         void PushDebugGroup(const String& name) override;
         void PopDebugGroup() override;
@@ -60,6 +61,7 @@ namespace alimer
 
     private:
         D3D12GraphicsImpl* device;
+        D3D12CommandQueue* queue;
         bool useRenderPass;
         ID3D12CommandAllocator* currentAllocator;
         ID3D12GraphicsCommandList* commandList;

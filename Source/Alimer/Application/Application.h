@@ -48,7 +48,6 @@ namespace alimer
     };
 
     class GraphicsDevice;
-    class CommandQueue;
 
     class ALIMER_API Application : public Object
     {
@@ -107,7 +106,6 @@ namespace alimer
         std::unique_ptr<Window> window{ nullptr };
         std::unique_ptr<Gui> gui{ nullptr };
 
-        std::shared_ptr<CommandQueue> graphicsQueue;
         std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 

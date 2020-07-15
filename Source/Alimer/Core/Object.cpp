@@ -22,7 +22,6 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
-#include "Graphics/Graphics.h"
 #include <unordered_map>
 
 namespace alimer

@@ -24,7 +24,7 @@
 #include "Core/Log.h"
 #include "Core/Assert.h"
 #include "Core/Window.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
 #if defined(ALIMER_VULKAN)
@@ -113,13 +113,26 @@ namespace alimer
 
     void GraphicsDevice::Shutdown()
     {
-        if (GPU != nullptr)
-        {
-            delete GPU;
-            GPU = nullptr;
-        }
+        ReleaseTrackedResources();
+
+        copyQueue.reset();
+        computeQueue.reset();
+        graphicsQueue.reset();
+
     }
 
+    CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType queueType)
+    {
+        switch (queueType)
+        {
+        case CommandQueueType::Compute:
+            return computeQueue.get();
+        case CommandQueueType::Copy:
+            return copyQueue.get();
+        default:
+            return graphicsQueue.get();
+        }
+    }
 
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {

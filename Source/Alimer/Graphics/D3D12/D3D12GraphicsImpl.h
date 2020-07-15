@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
 #include <queue>
 #include <mutex>
@@ -41,7 +41,6 @@ namespace alimer
 
     class D3D12Texture;
     class D3D12CommandQueue;
-    class D3D12CommandContext;
 
     class D3D12GraphicsImpl final : public GraphicsDevice
     {
@@ -49,9 +48,6 @@ namespace alimer
         static bool IsAvailable();
         D3D12GraphicsImpl(Window* window, GPUFlags flags);
         ~D3D12GraphicsImpl();
-
-        void CreateNewCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList** commandList, ID3D12CommandAllocator** commandAllocator);
-        void ExecuteCommandList(D3D12_COMMAND_LIST_TYPE type, ID3D12GraphicsCommandList* commandList, bool wait);
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
@@ -65,8 +61,7 @@ namespace alimer
         void WaitForGPU() override;
         // The CPU will wait for a fence to reach a specified value.
         void WaitForFence(uint64_t fenceValue);
-        bool BeginFrame() override;
-        void EndFrame() override;
+        void Frame() override;
         void HandleDeviceLost();
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
@@ -109,15 +104,7 @@ namespace alimer
 
         /// Current active frame index
         uint32_t frameIndex;
-
-        /// Whether a frame is active or not
-        bool frameActive;
-
-        /* Command queues */
-        std::unique_ptr<D3D12CommandQueue> graphicsQueue;
-        std::unique_ptr<D3D12CommandQueue> computeQueue;
-        std::unique_ptr<D3D12CommandQueue> copyQueue;
-        std::unique_ptr<D3D12CommandContext> immediateContext;
+        uint64_t nextFrameIndex{ 1 };
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};

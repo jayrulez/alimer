@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
 
 namespace alimer
@@ -50,8 +50,7 @@ namespace alimer
         bool UpdateSwapchain();
 
         void WaitForGPU() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
+        void Frame() override;
         Texture* GetBackbufferTexture() const override;
         std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name) override;
 
