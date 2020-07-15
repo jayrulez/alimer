@@ -84,7 +84,7 @@ namespace alimer
         std::vector<VkSemaphore> recycledSemaphores;
 
         /* Frame data */
-        uint32 maxInflightFrames = 3u;
+        u32 maxInflightFrames = 3u;
 
         bool frameActive{ false };
 

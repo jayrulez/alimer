@@ -2,6 +2,7 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
+add_subdirectory(fmt)
 add_subdirectory(imgui)
 
 # GLFW
@@ -64,9 +65,3 @@ endif()
 if (ALIMER_D3D12)
     add_subdirectory(D3D12MemoryAllocator)
 endif()
-
-# spdlog
-set(SPDLOG_NO_EXCEPTIONS ON CACHE BOOL "" FORCE)
-set(SPDLOG_ENABLE_PCH ON CACHE BOOL "" FORCE)
-add_subdirectory(spdlog)
-set_property(TARGET spdlog PROPERTY FOLDER "ThirdParty")

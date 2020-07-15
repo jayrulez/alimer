@@ -21,7 +21,7 @@
 //
 
 #include "Math/Vector4.h"
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 namespace alimer
 {

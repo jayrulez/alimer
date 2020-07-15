@@ -79,9 +79,9 @@ namespace alimer
         std::mutex trackedResourcesMutex;
         std::vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
-        uint32 backbufferWidth = 0;
-        uint32 backbufferHeight = 0;
-        uint32 backbufferCount = kBackbufferCount;
+        u32 backbufferWidth = 0;
+        u32 backbufferHeight = 0;
+        u32 backbufferCount = kBackbufferCount;
         bool vSync = true;
 
     private:

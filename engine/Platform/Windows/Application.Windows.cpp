@@ -25,9 +25,6 @@
 #include "Core/Log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/spdlog.h>
 #include <shellapi.h>
 
 namespace alimer
@@ -124,13 +121,5 @@ namespace alimer
             return EXIT_FAILURE;
         }
 #endif
-    }
-
-    std::vector<spdlog::sink_ptr> Application::GetPlatformLogSinks()
-    {
-        std::vector<spdlog::sink_ptr> sinks;
-        sinks.push_back(std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>());
-        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("Log.txt"));
-        return sinks;
     }
 }

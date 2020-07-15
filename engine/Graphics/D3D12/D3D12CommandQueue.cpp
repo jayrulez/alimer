@@ -130,7 +130,7 @@ namespace alimer
         SafeRelease(commandQueue);
     }
 
-    uint64 D3D12CommandQueue::IncrementFence(void)
+    uint64_t D3D12CommandQueue::IncrementFence(void)
     {
         std::lock_guard<std::mutex> LockGuard(fenceMutex);
         commandQueue->Signal(fence, nextFenceValue);

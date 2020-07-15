@@ -23,7 +23,7 @@
 #include "Core/StringId.h"
 #include "Core/String.h"
 #include "Core/Hash.h"
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 namespace alimer
 {

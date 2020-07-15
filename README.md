@@ -27,7 +27,6 @@ Uses the following open-source and third-party libraries:
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 - [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
 - [Dear ImGui](https://github.com/ocornut/imgui)
-- [spdlog](https://github.com/gabime/spdlog)
 - [fmt 7.0.0](https://fmt.dev)
 
 Additional inspiration, research or code used:

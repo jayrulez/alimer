@@ -607,8 +607,8 @@ namespace alimer
 
         immediateContext->Flush(false);
 
-        uint32 syncInterval = 1;
-        uint32 presentFlags = 0;
+        uint32_t syncInterval = 1;
+        uint32_t presentFlags = 0;
         if (!vSync) {
             syncInterval = 0;
             if (any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing)) {

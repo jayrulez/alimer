@@ -32,21 +32,6 @@ namespace alimer
     {
         // Construct platform logic first.
         PlatformConstruct();
-
-        auto sinks = GetPlatformLogSinks();
-
-        auto logger = std::make_shared<spdlog::logger>("logger", sinks.begin(), sinks.end());
-#ifdef _DEBUG
-        logger->set_level(spdlog::level::debug);
-#else
-        logger->set_level(spdlog::level::info);
-#endif
-
-        logger->set_pattern(LOGGER_FORMAT);
-        spdlog::set_default_logger(logger);
-
-        LOGI("Logger initialized");
-
         RegisterSubsystem(new Input());
         LOGI("Application started");
     }

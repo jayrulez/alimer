@@ -23,14 +23,34 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <spdlog/fmt/fmt.h>
-#include <spdlog/spdlog.h>
+#include <fmt/format.h>
 
-#define LOGGER_FORMAT "[%^%l%$] %v"
+namespace alimer
+{
+    enum class LogLevel : u32
+    {
+        Verbose,
+        Debug,
+        Info,
+        Warn,
+        Error,
+        Critical,
+        Off,
+        Count
+    };
 
-#define LOGT(...) spdlog::trace(__VA_ARGS__);
-#define LOGD(...) spdlog::debug(__VA_ARGS__);
-#define LOGI(...) spdlog::info(__VA_ARGS__);
-#define LOGW(...) spdlog::warn(__VA_ARGS__);
-#define LOGE(...) spdlog::error("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__));
-#define LOGF(...) spdlog::critical("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)); 
+    ALIMER_API void Log(LogLevel level, const std::string& message);
+    ALIMER_API void Verbose(const std::string& message);
+    ALIMER_API void Debug(const std::string& message);
+    ALIMER_API void Info(const std::string& message);
+    ALIMER_API void Warn(const std::string& message);
+    ALIMER_API void Error(const std::string& message);
+    ALIMER_API void Critical(const std::string& message);
+}
+
+#define LOGV(...) alimer::Verbose(fmt::format(__VA_ARGS__));
+#define LOGD(...) alimer::Debug(fmt::format(__VA_ARGS__));
+#define LOGI(...) alimer::Info(fmt::format(__VA_ARGS__));
+#define LOGW(...) alimer::Warn(fmt::format(__VA_ARGS__));
+#define LOGE(...) alimer::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
+#define LOGC(...) alimer::Critical(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));

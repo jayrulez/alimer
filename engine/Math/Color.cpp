@@ -21,7 +21,7 @@
 //
 
 #include "Math/Color.h"
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 namespace alimer
 {

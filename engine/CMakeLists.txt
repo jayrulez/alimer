@@ -32,7 +32,6 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-set(SOURCE_FILES alimer.natvis)
 
 define_engine_source_files(
     Core
@@ -76,8 +75,8 @@ target_include_directories(${TARGET_NAME} PUBLIC
 
 target_link_libraries(${TARGET_NAME} PUBLIC
     stb
+    fmt
     imgui
-    spdlog
 )
 
 # Link platform specific libraries

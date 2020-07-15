@@ -305,17 +305,15 @@ namespace alimer
             return true;
         }
 
-        struct SurfaceCapsVk {
-            bool success;
+        struct SwapChainSupportDetails {
             VkSurfaceCapabilitiesKHR capabilities;
             std::vector<VkSurfaceFormatKHR> formats;
             std::vector<VkPresentModeKHR> presentModes;
         };
 
-        SurfaceCapsVk QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
+        SwapChainSupportDetails QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
         {
-            SurfaceCapsVk caps;
-            memset(&caps, 0, sizeof(SurfaceCapsVk));
+            SwapChainSupportDetails details;
 
             VkPhysicalDeviceSurfaceInfo2KHR surfaceInfo = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR };
             surfaceInfo.surface = surface;
@@ -326,14 +324,14 @@ namespace alimer
 
                 if (vkGetPhysicalDeviceSurfaceCapabilities2KHR(physicalDevice, &surfaceInfo, &surfaceCaps2) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
-                caps.capabilities = surfaceCaps2.surfaceCapabilities;
+                details.capabilities = surfaceCaps2.surfaceCapabilities;
 
                 uint32_t formatCount;
                 if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, nullptr) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
                 vector<VkSurfaceFormat2KHR> formats2(formatCount);
@@ -346,32 +344,32 @@ namespace alimer
 
                 if (vkGetPhysicalDeviceSurfaceFormats2KHR(physicalDevice, &surfaceInfo, &formatCount, formats2.data()) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
-                caps.formats.reserve(formatCount);
+                details.formats.reserve(formatCount);
                 for (auto& format2 : formats2)
                 {
-                    caps.formats.push_back(format2.surfaceFormat);
+                    details.formats.push_back(format2.surfaceFormat);
                 }
             }
             else
             {
-                if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &caps.capabilities) != VK_SUCCESS)
+                if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &details.capabilities) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
                 uint32_t formatCount;
                 if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
-                caps.formats.resize(formatCount);
-                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, caps.formats.data()) != VK_SUCCESS)
+                details.formats.resize(formatCount);
+                if (vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, details.formats.data()) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
             }
 
@@ -381,13 +379,13 @@ namespace alimer
             {
                 if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, nullptr) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
-                caps.presentModes.resize(presentModeCount);
-                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, caps.presentModes.data()) != VK_SUCCESS)
+                details.presentModes.resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModes2EXT(physicalDevice, &surfaceInfo, &presentModeCount, details.presentModes.data()) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
             }
             else
@@ -395,18 +393,17 @@ namespace alimer
             {
                 if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
 
-                caps.presentModes.resize(presentModeCount);
-                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, caps.presentModes.data()) != VK_SUCCESS)
+                details.presentModes.resize(presentModeCount);
+                if (vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, details.presentModes.data()) != VK_SUCCESS)
                 {
-                    return caps;
+                    return details;
                 }
             }
 
-            caps.success = true;
-            return caps;
+            return details;
         }
     }
 
@@ -809,7 +806,7 @@ namespace alimer
             createInfo.pNext = &features;
             createInfo.queueCreateInfoCount = queueCreateCount;
             createInfo.pQueueCreateInfos = queue_info;
-            createInfo.enabledExtensionCount = (uint32)enabledDeviceExtensions.size();
+            createInfo.enabledExtensionCount = (u32)enabledDeviceExtensions.size();
             createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -943,7 +940,7 @@ namespace alimer
     {
         WaitForGPU();
 
-        SurfaceCapsVk surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
+        SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
 
         /* Detect image count. */
         uint32_t desired_swapchain_images = surfaceCaps.capabilities.minImageCount + 1;
@@ -1091,7 +1088,7 @@ namespace alimer
             vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
         }
 
-        uint32 imageCount;
+        u32 imageCount;
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
         std::vector<VkImage> swapChainImages(imageCount);
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.data());
@@ -1099,7 +1096,7 @@ namespace alimer
         perFrame.clear();
         perFrame.resize(imageCount);
 
-        for (uint32 i = 0; i < imageCount; i++)
+        for (u32 i = 0; i < imageCount; i++)
         {
             backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
             backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
@@ -1174,6 +1171,12 @@ namespace alimer
 
         /* TODO: Lazy release resources */
 
+        // We will only submit this once before it's recycled.
+        VkCommandBufferBeginInfo begin_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        // Begin command recording
+        VK_CHECK(vkBeginCommandBuffer(perFrame[backbufferIndex].primaryCommandBuffer, &begin_info));
+
         // Now the frame is active again.
         frameActive = true;
 
@@ -1183,6 +1186,9 @@ namespace alimer
     void VulkanGraphicsImpl::EndFrame()
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
+
+        // Complete the command buffer.
+        VK_CHECK(vkEndCommandBuffer(perFrame[backbufferIndex].primaryCommandBuffer));
 
         // Submit it to the queue with a release semaphore.
         if (perFrame[backbufferIndex].swapchainReleaseSemaphore == VK_NULL_HANDLE)
@@ -1197,8 +1203,8 @@ namespace alimer
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = &perFrame[backbufferIndex].swapchainAcquireSemaphore;
         submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 0;
-        submitInfo.pCommandBuffers = nullptr;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &perFrame[backbufferIndex].primaryCommandBuffer;
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &perFrame[backbufferIndex].swapchainReleaseSemaphore;
 

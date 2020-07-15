@@ -58,7 +58,7 @@ namespace alimer
         D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandQueue();
 
-        uint64 IncrementFence(void);
+        uint64_t IncrementFence(void);
         bool IsFenceComplete(uint64_t fenceValue);
         void WaitForFence(uint64_t fenceValue);
         void WaitForIdle(void) { WaitForFence(IncrementFence()); }
@@ -81,7 +81,7 @@ namespace alimer
         // Lifetime of these objects is managed by the descriptor cache
         ID3D12Fence* fence;
         HANDLE fenceEvent;
-        uint64 nextFenceValue;
-        uint64 lastCompletedFenceValue;
+        uint64_t nextFenceValue;
+        uint64_t lastCompletedFenceValue;
     };
 }

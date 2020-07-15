@@ -69,8 +69,6 @@ namespace alimer
         /// Get the main (primary window)
         Window& GetWindow() { return *window; }
 
-        virtual std::vector<spdlog::sink_ptr> GetPlatformLogSinks();
-
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
         virtual void Initialize();
