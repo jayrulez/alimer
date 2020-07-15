@@ -5,5 +5,11 @@ namespace AlimerSharp
 {
     public static class Runtime
     {
+        private static bool s_test;
+
+        public static void Test()
+        {
+
+        }
     }
 }
