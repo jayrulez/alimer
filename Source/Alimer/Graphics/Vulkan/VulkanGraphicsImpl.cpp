@@ -447,7 +447,7 @@ namespace alimer
     }
 
     VulkanGraphicsImpl::VulkanGraphicsImpl(Window* window, GPUFlags flags)
-        : Graphics(window)
+        : GraphicsDevice(window)
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -915,23 +915,23 @@ namespace alimer
 
     void VulkanGraphicsImpl::InitCapabilities()
     {
-        caps.backendType = GPU::BackendType::Vulkan;
+        caps.backendType = GPUBackendType::Vulkan;
         caps.vendorId = physicalDeviceProperties.properties.vendorID;
         caps.deviceId = physicalDeviceProperties.properties.deviceID;
         caps.adapterName = physicalDeviceProperties.properties.deviceName;
 
         switch (physicalDeviceProperties.properties.deviceType) {
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            caps.adapterType = GPU::AdapterType::IntegratedGPU;
+            caps.adapterType = GPUAdapterType::IntegratedGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            caps.adapterType = GPU::AdapterType::DiscreteGPU;
+            caps.adapterType = GPUAdapterType::DiscreteGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            caps.adapterType = GPU::AdapterType::CPU;
+            caps.adapterType = GPUAdapterType::CPU;
             break;
         default:
-            caps.adapterType = GPU::AdapterType::Unknown;
+            caps.adapterType = GPUAdapterType::Unknown;
             break;
         }
     }
@@ -1232,5 +1232,10 @@ namespace alimer
     Texture* VulkanGraphicsImpl::GetBackbufferTexture() const
     {
         return backbufferTextures[backbufferIndex].Get();
+    }
+
+    std::shared_ptr<CommandQueue> VulkanGraphicsImpl::CreateCommandQueue(CommandQueueType queueType, const std::string_view& name)
+    {
+        return nullptr;
     }
 }

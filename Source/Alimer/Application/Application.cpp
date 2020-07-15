@@ -41,7 +41,7 @@ namespace alimer
         gameSystems.clear();
         window.reset();
         gui.reset();
-        GPU::Shutdown();
+        GraphicsDevice::Shutdown();
         RemoveSubsystem<Input>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -62,14 +62,16 @@ namespace alimer
         flags |= GPUFlags::DebugRuntime;
 #endif
 
-        GPU::SetPreferredBackend(GPU::BackendType::Vulkan);
+        //GraphicsDevice::SetPreferredBackend(GPUBackendType::Vulkan);
 
-        if (!Graphics::Initialize(window.get(), flags))
+        if (!GraphicsDevice::Initialize(window.get(), flags))
         {
             headless = true;
         }
         else
         {
+            graphicsQueue = GPU->CreateCommandQueue(CommandQueueType::Graphics);
+
             gui.reset(new Gui(window.get()));
         }
 
@@ -104,7 +106,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        GPU::BeginFrame();
+        GPU->BeginFrame();
         gui->BeginFrame();
 
         for (auto& gameSystem : gameSystems)
@@ -147,7 +149,7 @@ namespace alimer
         }
 
         gui->Render();
-        GPU::EndFrame();
+        GPU->EndFrame();
     }
 
     int Application::Run()

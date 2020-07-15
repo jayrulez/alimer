@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Graphics/CommandQueue.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Buffer.h"
@@ -43,13 +44,14 @@ namespace alimer
     class Window;
 
     /// Defines the logical graphics subsystem.
-    class ALIMER_API Graphics
+    class ALIMER_API GraphicsDevice
     {
         friend class GraphicsResource;
 
     public:
-        virtual ~Graphics() = default;
+        virtual ~GraphicsDevice() = default;
 
+        static void SetPreferredBackend(GPUBackendType backend);
         static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None);
         static void Shutdown();
 
@@ -61,20 +63,22 @@ namespace alimer
         virtual Texture* GetBackbufferTexture() const = 0;
 
         /// Get the device capabilities.
-        const GPU::Capabilities& GetCaps() const { return caps; }
+        const GraphicsDeviceCapabilities& GetCaps() const { return caps; }
+
+        virtual std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name = "") = 0;
 
     private:
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        Graphics(Window* window);
+        GraphicsDevice(Window* window);
         void ReleaseTrackedResources();
 
         static constexpr uint64_t kBackbufferCount = 2u;
         static constexpr uint64_t kMaxBackbufferCount = 3u;
 
-        GPU::Capabilities caps{};
+        GraphicsDeviceCapabilities caps{};
 
         std::mutex trackedResourcesMutex;
         std::vector<GraphicsResource*> trackedResources;
@@ -85,34 +89,10 @@ namespace alimer
         bool vSync = true;
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(Graphics);
+        static GPUBackendType preferredBackend;
+
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 
-    extern ALIMER_API Graphics* GPU;
-
-}
-
-namespace GPU
-{
-    ALIMER_API void SetPreferredBackend(BackendType backend);
-
-    ALIMER_FORCEINLINE void Shutdown()
-    {
-        alimer::GPU->Shutdown();
-    }
-
-    ALIMER_FORCEINLINE bool BeginFrame()
-    {
-        return alimer::GPU->BeginFrame();
-    }
-
-    ALIMER_FORCEINLINE void EndFrame()
-    {
-        alimer::GPU->EndFrame();
-    }
-
-    ALIMER_FORCEINLINE const GPU::Capabilities& GetCaps()
-    {
-        return alimer::GPU->GetCaps();
-    }
+    extern ALIMER_API GraphicsDevice* GPU;
 }

@@ -83,12 +83,13 @@ namespace alimer
         readyAllocators.push(std::make_pair(fenceValue, allocator));
     }
 
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_)
-        : device(device_)
-        , type(type_)
-        , nextFenceValue((uint64_t)type_ << 56 | 1)
-        , lastCompletedFenceValue((uint64_t)type_ << 56)
-        , allocatorPool(device_, type_)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name)
+        : CommandQueue(queueType)
+        , device(device_)
+        , type(GetD3D12CommandListType(queueType))
+        , nextFenceValue((uint64_t)type << 56 | 1)
+        , lastCompletedFenceValue((uint64_t)type << 56)
+        , allocatorPool(device_, type)
     {
         D3D12_COMMAND_QUEUE_DESC desc = {};
         desc.Type = type;
@@ -98,28 +99,29 @@ namespace alimer
 
         // Create fence and event
         ThrowIfFailed(device->GetD3DDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-        fence->SetName(L"CommandListManager::m_pFence");
         fence->Signal((uint64_t)type << 56);
 
         fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
         ALIMER_ASSERT(fenceEvent != 0);
 
-        switch (type_)
+        if (name.empty())
         {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:
-            commandQueue->SetName(L"Direct Command Queue");
-            fence->SetName(L"Direct Command Queue Fence");
-            break;
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-            commandQueue->SetName(L"Compute Command Queue");
-            fence->SetName(L"Compute Command Queue Fence");
-            break;
-        case D3D12_COMMAND_LIST_TYPE_COPY:
-            commandQueue->SetName(L"Copy Command Queue");
-            fence->SetName(L"Copy Command Queue Fence");
-            break;
+            switch (queueType)
+            {
+            case CommandQueueType::Graphics:
+                commandQueue->SetName(L"Graphics Command Queue");
+                fence->SetName(L"Graphics Command Queue Fence");
+                break;
+            case CommandQueueType::Compute:
+                commandQueue->SetName(L"Compute Command Queue");
+                fence->SetName(L"Compute Command Queue Fence");
+                break;
+            case CommandQueueType::Copy:
+                commandQueue->SetName(L"Copy Command Queue");
+                fence->SetName(L"Copy Command Queue Fence");
+                break;
+            }
         }
-
     }
 
     D3D12CommandQueue::~D3D12CommandQueue()
@@ -189,5 +191,10 @@ namespace alimer
     {
         uint64_t completedFenceValue = fence->GetCompletedValue();
         return allocatorPool.RequestAllocator(completedFenceValue);
+    }
+
+    GraphicsDevice* D3D12CommandQueue::GetDevice() const
+    {
+        return device;
     }
 }

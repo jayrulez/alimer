@@ -43,7 +43,7 @@ namespace alimer
     class D3D12CommandQueue;
     class D3D12CommandContext;
 
-    class D3D12GraphicsImpl final : public Graphics
+    class D3D12GraphicsImpl final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
@@ -80,6 +80,7 @@ namespace alimer
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         Texture* GetBackbufferTexture() const override;
+        std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name) override;
 
         void InitializeUpload();
         void ShutdownUpload();

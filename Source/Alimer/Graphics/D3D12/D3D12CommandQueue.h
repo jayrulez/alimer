@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Graphics/CommandQueue.h"
 #include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 #include <vector>
@@ -52,10 +53,10 @@ namespace alimer
         std::mutex allocatorMutex;
     };
 
-    class D3D12CommandQueue final
+    class D3D12CommandQueue final : public CommandQueue
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
+        D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name);
         ~D3D12CommandQueue();
 
         uint64_t IncrementFence(void);
@@ -66,6 +67,7 @@ namespace alimer
         uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
         ID3D12CommandAllocator* RequestAllocator(void);
 
+        GraphicsDevice* GetDevice() const override;
         ALIMER_FORCEINLINE ID3D12CommandQueue* GetCommandQueue() { return commandQueue; }
         ALIMER_FORCEINLINE uint64_t GetNextFenceValue() { return nextFenceValue; }
 

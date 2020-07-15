@@ -57,6 +57,24 @@ namespace alimer
         ID3D12Resource* Resource = nullptr;
     };
 
+    static inline D3D12_COMMAND_LIST_TYPE GetD3D12CommandListType(CommandQueueType queueType)
+    {
+        switch (queueType)
+        {
+        case CommandQueueType::Graphics:
+            return D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+        case CommandQueueType::Compute:
+            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+
+        case CommandQueueType::Copy:
+            return D3D12_COMMAND_LIST_TYPE_COPY;
+
+        default:
+            ALIMER_UNREACHABLE();
+        }
+    }
+
     static inline D3D12_HEAP_TYPE GetD3D12HeapType(MemoryUsage usage)
     {
         switch (usage)

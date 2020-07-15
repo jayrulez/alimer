@@ -20,47 +20,16 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Object.h"
-#include "Graphics/Types.h"
+#include "Graphics/CommandQueue.h"
+#include "Graphics/Graphics.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
-
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    CommandQueue::CommandQueue(CommandQueueType queueType)
+        : queueType{ queueType }
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
 
-    public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
-    private:
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-        MemoryUsage memoryUsage;
-    };
+    }
 }
+

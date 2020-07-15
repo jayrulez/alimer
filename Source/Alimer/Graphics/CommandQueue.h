@@ -22,45 +22,27 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
+#include "Graphics/Buffer.h"
+#include "Graphics/Texture.h"
+#include "Math/Viewport.h"
+#include "Math/Color.h"
 
 namespace alimer
 {
     class GraphicsDevice;
 
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    /// A queue that organizes command buffers for the GPU to execute.
+    class ALIMER_API CommandQueue
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
     public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
+        /// Constructor.
+        CommandQueue(CommandQueueType queueType);
+        virtual ~CommandQueue() = default;
 
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
+        /// Return the device from which the command queue was created.
+        virtual GraphicsDevice* GetDevice() const = 0;
 
     private:
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-        MemoryUsage memoryUsage;
+        CommandQueueType queueType;
     };
 }

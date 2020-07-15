@@ -66,7 +66,7 @@ namespace alimer
     }
 
     D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, GPUFlags flags)
-        : Graphics(window)
+        : GraphicsDevice(window)
         , frameIndex(0)
         , frameActive(false)
     {
@@ -203,16 +203,16 @@ namespace alimer
         InitCapabilities(adapter.Get());
 
         // Create command queue's
-        graphicsQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
-        computeQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
-        copyQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
+        //graphicsQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
+        //computeQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE));
+        //copyQueue.reset(new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY));
 
         // Create immediate default contexts
-        immediateContext.reset(new D3D12CommandContext(this));
+        //immediateContext.reset(new D3D12CommandContext(this));
 
         // Create main swapchain.
         {
-            IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
+            /*IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
                 dxgiFactory.Get(),
                 dxgiFactoryCaps,
                 graphicsQueue->GetCommandQueue(),
@@ -226,7 +226,7 @@ namespace alimer
             ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
             SafeRelease(tempSwapChain);
 
-            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
+            backbufferIndex = swapChain->GetCurrentBackBufferIndex();*/
         }
 
         // Create a fence for tracking GPU execution progress.
@@ -307,7 +307,7 @@ namespace alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
 
-        caps.backendType = GPU::BackendType::Direct3D12;
+        caps.backendType = GPUBackendType::Direct3D12;
         caps.vendorId = desc.VendorId;
         caps.deviceId = desc.DeviceId;
 
@@ -317,13 +317,13 @@ namespace alimer
         // Detect adapter type.
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         {
-            caps.adapterType = GPU::AdapterType::CPU;
+            caps.adapterType = GPUAdapterType::CPU;
         }
         else {
             D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
             ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
 
-            caps.adapterType = arch.UMA ? GPU::AdapterType::IntegratedGPU : GPU::AdapterType::DiscreteGPU;
+            caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
         }
 
         // Determine maximum supported feature level for this device
@@ -393,7 +393,7 @@ namespace alimer
 
         supportsRenderPass = false;
         if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
-            static_cast<GPU::KnownVendorId>(caps.vendorId) != GPU::KnownVendorId::Intel)
+            static_cast<GPUKnownVendorId>(caps.vendorId) != GPUKnownVendorId::Intel)
         {
             supportsRenderPass = true;
         }
@@ -593,7 +593,7 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
-        backbufferIndex = swapChain->GetCurrentBackBufferIndex();
+        //backbufferIndex = swapChain->GetCurrentBackBufferIndex();
 
         // Now the frame is active again.
         frameActive = true;
@@ -605,7 +605,7 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
-        immediateContext->Flush(false);
+        /*immediateContext->Flush(false);
 
         uint32_t syncInterval = 1;
         uint32_t presentFlags = 0;
@@ -652,7 +652,7 @@ namespace alimer
                 // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
                 ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
             }
-        }
+        }*/
 
         // Frame is not active anymore
         frameActive = false;
@@ -667,5 +667,10 @@ namespace alimer
     Texture* D3D12GraphicsImpl::GetBackbufferTexture() const
     {
         return backbufferTextures[backbufferIndex].Get();
+    }
+
+    std::shared_ptr<CommandQueue> D3D12GraphicsImpl::CreateCommandQueue(CommandQueueType queueType, const std::string_view& name)
+    {
+        return std::make_shared<D3D12CommandQueue>(this, queueType, name);
     }
 }

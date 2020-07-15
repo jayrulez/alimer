@@ -35,6 +35,35 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
 
+    /// Enum describing the Device backend.
+    enum class GPUBackendType : uint32_t {
+        /// Null renderer.
+        Null,
+        /// Vulkan backend.
+        Vulkan,
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Default best platform supported backend.
+        Count
+    };
+
+    enum class GPUKnownVendorId : uint32_t {
+        None = 0,
+        AMD = 0x1002,
+        Intel = 0x8086,
+        Nvidia = 0x10DE,
+        ARM = 0x13B5,
+        ImgTec = 0x1010,
+        Qualcomm = 0x5143
+    };
+
+    enum class GPUAdapterType : uint32_t {
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
+    };
+
     enum class GPUFlags : uint32_t
     {
         None = 0,
@@ -49,6 +78,13 @@ namespace alimer
         GpuOnly,
         CpuOnly,
         GpuToCpu
+    };
+
+    enum class CommandQueueType
+    {
+        Graphics,
+        Compute,
+        Copy
     };
 
     /// Describes texture type.
@@ -159,47 +195,15 @@ namespace alimer
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
-}
 
-namespace GPU
-{
-    /// Enum describing the Device backend.
-    enum class BackendType : uint32_t {
-        /// Null renderer.
-        Null,
-        /// Vulkan backend.
-        Vulkan,
-        /// Direct3D 12 backend.
-        Direct3D12,
-        /// Default best platform supported backend.
-        Count
-    };
-
-    enum class KnownVendorId : uint32_t {
-        None = 0,
-        AMD = 0x1002,
-        Intel = 0x8086,
-        Nvidia = 0x10DE,
-        ARM = 0x13B5,
-        ImgTec = 0x1010,
-        Qualcomm = 0x5143
-    };
-
-    enum class AdapterType : uint32_t {
-        DiscreteGPU,
-        IntegratedGPU,
-        CPU,
-        Unknown
-    };
-
-    /// Describes GPU capabilities.
-    struct Capabilities
+    /// Describes GraphicsDevice capabilities.
+    struct GraphicsDeviceCapabilities
     {
-        BackendType backendType;
+        GPUBackendType backendType;
         uint32_t vendorId;
         uint32_t deviceId;
         std::string adapterName;
-        AdapterType adapterType;
+        GPUAdapterType adapterType;
 
         struct Features
         {

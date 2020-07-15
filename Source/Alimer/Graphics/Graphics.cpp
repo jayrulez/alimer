@@ -37,33 +37,30 @@
 
 #include "imgui_impl_glfw.h"
 
-namespace GPU
-{
-#if defined(ALIMER_D3D12)
-    static BackendType s_BackendType = BackendType::Direct3D12;
-#elif defined(ALIMER_VULKAN)
-    static BackendType s_BackendType = BackendType::Vulkan;
-#else
-    static BackendType s_BackendType = BackendType::Null;
-#endif
-
-    void SetPreferredBackend(BackendType backend)
-    {
-        s_BackendType = backend;
-    }
-}
-
 namespace alimer
 {
-    Graphics* GPU = nullptr;
+    GraphicsDevice* GPU = nullptr;
 
-    Graphics::Graphics(Window* window)
+#if defined(ALIMER_D3D12)
+    GPUBackendType GraphicsDevice::preferredBackend = GPUBackendType::Direct3D12;
+#elif defined(ALIMER_VULKAN)
+    GPUBackendType GraphicsDevice::preferredBackend = GPUBackendType::Vulkan;
+#else
+    GPUBackendType GraphicsDevice::preferredBackend = GPUBackendType::Null;
+#endif
+
+    void GraphicsDevice::SetPreferredBackend(GPUBackendType backend)
+    {
+        preferredBackend = backend;
+    }
+
+    GraphicsDevice::GraphicsDevice(Window* window)
     {
         backbufferWidth = Max((uint32_t)window->GetSize().width, 1u);
         backbufferHeight = Max((uint32_t)window->GetSize().height, 1u);
     }
 
-    bool Graphics::Initialize(Window* window, GPUFlags flags)
+    bool GraphicsDevice::Initialize(Window* window, GPUFlags flags)
     {
         ALIMER_ASSERT(window);
 
@@ -72,19 +69,19 @@ namespace alimer
             return true;
         }
 
-        GPU::BackendType backend = GPU::s_BackendType;
+        GPUBackendType backend = preferredBackend;
 
-        if (backend == GPU::BackendType::Count)
+        if (backend == GPUBackendType::Count)
         {
 #if defined(ALIMER_D3D12)
             if (D3D12GraphicsImpl::IsAvailable()) {
-                backend = GPU::BackendType::Direct3D12;
+                backend = GPUBackendType::Direct3D12;
             }
 #endif
 
 #if defined(ALIMER_VULKAN)
-            if (backend == GPU::BackendType::Count && VulkanGraphicsImpl::IsAvailable()) {
-                backend = GPU::BackendType::Vulkan;
+            if (backend == GPUBackendType::Count && VulkanGraphicsImpl::IsAvailable()) {
+                backend = GPUBackendType::Vulkan;
             }
 #endif
         }
@@ -92,7 +89,7 @@ namespace alimer
         switch (backend)
         {
 #if defined(ALIMER_VULKAN)
-        case GPU::BackendType::Vulkan:
+        case GPUBackendType::Vulkan:
             if (VulkanGraphicsImpl::IsAvailable()) {
                 GPU = new VulkanGraphicsImpl(window, flags);
             }
@@ -100,7 +97,7 @@ namespace alimer
 #endif
 
 #if defined(ALIMER_D3D12)
-        case GPU::BackendType::Direct3D12:
+        case GPUBackendType::Direct3D12:
             if (D3D12GraphicsImpl::IsAvailable()) {
                 GPU = new D3D12GraphicsImpl(window, flags);
             }
@@ -114,7 +111,7 @@ namespace alimer
         return GPU != nullptr;
     }
 
-    void Graphics::Shutdown()
+    void GraphicsDevice::Shutdown()
     {
         if (GPU != nullptr)
         {
@@ -124,19 +121,23 @@ namespace alimer
     }
 
 
-    void Graphics::TrackResource(GraphicsResource* resource)
+    void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
         trackedResources.push_back(resource);
     }
 
-    void Graphics::UntrackResource(GraphicsResource* resource)
+    void GraphicsDevice::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        //trackedResources.Remove(resource);
+
+        auto it = std::find(trackedResources.begin(), trackedResources.end(), resource);
+        if (it != trackedResources.end()) {
+            trackedResources.erase(it);
+        }
     }
 
-    void Graphics::ReleaseTrackedResources()
+    void GraphicsDevice::ReleaseTrackedResources()
     {
         {
             std::lock_guard<std::mutex> lock(trackedResourcesMutex);

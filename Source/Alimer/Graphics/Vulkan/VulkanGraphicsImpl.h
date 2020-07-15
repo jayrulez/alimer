@@ -29,7 +29,7 @@ namespace alimer
 {
     class VulkanTexture;
 
-    class VulkanGraphicsImpl final : public Graphics
+    class VulkanGraphicsImpl final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
@@ -53,6 +53,7 @@ namespace alimer
         bool BeginFrame() override;
         void EndFrame() override;
         Texture* GetBackbufferTexture() const override;
+        std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
