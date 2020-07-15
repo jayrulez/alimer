@@ -190,7 +190,7 @@ namespace alimer
             offset += static_cast<std::size_t>(written);
         }
 #elif defined(_WIN32)
-        std::string fmt_str = fmt::format("[%s] %s\r\n", LogLevelPefixes[(uint32_t)level], message);
+        std::string fmt_str = fmt::format("[{}] {}\r\n", LogLevelPefixes[(uint32_t)level], message);
         OutputDebugStringA(fmt_str.c_str());
 
 #  ifdef _DEBUG

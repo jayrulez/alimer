@@ -67,8 +67,8 @@ include(alimer)
 # Third Party 
 add_subdirectory(third_party)
 
-# Engine
-add_subdirectory(engine)
+# Source
+add_subdirectory(Source)
 
 if (ALIMER_BUILD_TOOLS)
     add_subdirectory(tools)
