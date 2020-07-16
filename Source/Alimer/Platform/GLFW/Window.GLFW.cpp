@@ -34,6 +34,7 @@
 #   define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
+#include "imgui_impl_glfw.h"
 
 namespace alimer
 {
@@ -150,15 +151,22 @@ namespace alimer
             _isMain = true;
         }
 
-        windowCount++;
+        ImGui_ImplGlfw_InitForVulkan(handle, true);
 
+        windowCount++;
         return true;
     }
 
     void Window::Close()
     {
+        ImGui_ImplGlfw_Shutdown();
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
         windowCount--;
+    }
+
+    void Window::BeginFrame()
+    {
+        ImGui_ImplGlfw_NewFrame();
     }
 
     bool Window::ShouldClose() const

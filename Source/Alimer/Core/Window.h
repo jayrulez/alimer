@@ -54,6 +54,7 @@ namespace alimer
 
         bool Create(const String& title, const SizeI& size, WindowFlags flags);
         void Close();
+        void BeginFrame();
 
         const SizeI& GetSize() const { return size; }
         bool ShouldClose() const;

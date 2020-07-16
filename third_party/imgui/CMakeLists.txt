@@ -13,12 +13,6 @@ set(IMGUI_FILES
     imstb_truetype.h
 )
 
-set(IMGUI_IMPL_FILES
-    imgui_impl_glfw.h
-    imgui_impl_glfw.cpp
-)
-
-add_library(imgui STATIC ${IMGUI_FILES} ${IMGUI_IMPL_FILES})
+add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(imgui PRIVATE glfw)
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")

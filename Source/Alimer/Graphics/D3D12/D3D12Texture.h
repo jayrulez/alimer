@@ -37,7 +37,10 @@ namespace alimer
 
         void UploadTextureData(const void* initData);
         void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
+
+        ID3D12Resource* GetResource() const { return resource; }
         D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
+        D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return RTV; }
 
     private:
         void BackendSetName() override;
@@ -47,6 +50,7 @@ namespace alimer
         D3D12MA::Allocation* allocation = nullptr;
         D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
         D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
+        D3D12_CPU_DESCRIPTOR_HANDLE RTV{};
         UINT64 sizeInBytes{ 0 };
     };
 }

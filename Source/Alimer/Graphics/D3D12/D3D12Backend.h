@@ -178,10 +178,12 @@ namespace alimer
     struct DescriptorHeap
     {
         ID3D12DescriptorHeap* handle;
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
-        D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
+        D3D12_CPU_DESCRIPTOR_HANDLE CpuStart;
+        D3D12_GPU_DESCRIPTOR_HANDLE GpuStart;
         uint32_t Size;
         uint32_t Capacity;
         uint32_t DescriptorSize;
     };
+
+    DescriptorHeap D3D12CreateDescriptorHeap(ID3D12Device* device, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags);
 }

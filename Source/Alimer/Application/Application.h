@@ -27,7 +27,6 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Graphics/Types.h"
-#include "Graphics/Gui.h"
 #include "Math/Size.h"
 
 namespace alimer
@@ -104,7 +103,6 @@ namespace alimer
 
         bool headless{ false };
         std::unique_ptr<Window> window{ nullptr };
-        std::unique_ptr<Gui> gui{ nullptr };
 
         std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };

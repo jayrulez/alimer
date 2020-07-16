@@ -230,8 +230,7 @@ namespace alimer
         void* windowHandle,
         uint32_t width, uint32_t height,
         PixelFormat colorFormat,
-        uint32_t backbufferCount,
-        bool isFullscreen)
+        uint32_t backbufferCount)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = (HWND)windowHandle;
@@ -278,15 +277,12 @@ namespace alimer
 
         IDXGISwapChain1* result = NULL;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapchain_fullscreen_desc = {};
-        swapchain_fullscreen_desc.Windowed = !isFullscreen;
-
         // Create a SwapChain from a Win32 window.
         ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
             deviceOrCommandQueue,
             window,
             &swapchain_desc,
-            &swapchain_fullscreen_desc,
+            nullptr,
             nullptr,
             &result
         ));

@@ -27,6 +27,7 @@
 #include <atomic>
 #include <queue>
 #include <mutex>
+struct ImDrawData;
 
 namespace alimer
 {
@@ -49,9 +50,8 @@ namespace alimer
         D3D12GraphicsImpl(Window* window, GPUFlags flags);
         ~D3D12GraphicsImpl();
 
-        D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count, bool shaderVisible);
+        D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
-        // Temporary CPU-writable buffer memory
         D3D12MapResult AllocateGPUMemory(uint64_t size, uint64_t alignment);
 
         // Resource upload/init
@@ -62,7 +62,8 @@ namespace alimer
         void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
 
         void WaitForGPU() override;
-        void Frame() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
         void HandleDeviceLost();
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
@@ -77,15 +78,22 @@ namespace alimer
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         Texture* GetBackbufferTexture() const override;
         
-
         void InitializeUpload();
         void ShutdownUpload();
         void EndFrameUpload();
         void ClearFinishedUploads(uint64_t flushCount);
 
-        // Resource creation methods.
-       // RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
-        //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData = nullptr) override;
+        // ImGui
+        ID3D12RootSignature* imguiRootSignature = nullptr;
+        ID3D12PipelineState* imguiPipelineState = nullptr;
+        ID3D12Resource* imguiFontTextureResource = nullptr;
+        D3D12_CPU_DESCRIPTOR_HANDLE imguiFontTextureSRV;
+
+        void InitImGui();
+        void ShutdownImgui(bool all);
+        bool CreateImguiObjects();
+        void CreateImguiFontsTexture();
+        void RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* graphics_command_list);
 
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
@@ -117,12 +125,13 @@ namespace alimer
         uint32_t frameIndex;
 
         /* Descriptor heaps */
-        DescriptorHeap RTVHeap{};
-        DescriptorHeap DSVHeap{};
-        DescriptorHeap CPUDescriptorHeap;
-        DescriptorHeap GPUDescriptorHeaps[kInflightFrameCount];
+        DescriptorHeap RtvHeap{};
+        DescriptorHeap DsvHeap{};
+        DescriptorHeap CbvSrvUavCpuHeap;
+        DescriptorHeap CbvSrvUavGpuHeaps[kInflightFrameCount];
 
         /* Main swap chain */
+        DXGI_FORMAT backbufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
         IDXGISwapChain3* swapChain = nullptr;
         uint32_t backbufferIndex = 0;
         SharedPtr<D3D12Texture> backbufferTextures[kInflightFrameCount] = {};

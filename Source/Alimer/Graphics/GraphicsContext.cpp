@@ -20,41 +20,39 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Texture.h"
-#include "Math/Size.h"
-#include <vector>
+#include "Graphics/GraphicsContext.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    class ALIMER_API SwapChain : public GraphicsResource
+    GraphicsContext::GraphicsContext()
+        : GraphicsResource()
     {
-    public:
-        /// Constructor.
-        SwapChain();
+        currentRenderPassDescription.colorAttachments[0].slice = 0;
+    }
 
-        void Resize(uint32_t newWidth, uint32_t newHeight);
+    void GraphicsContext::Resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
+        {
+            depthStencilTexture.Reset();
+            backbufferTextures.clear();
 
-        /// Get the current backbuffer texture.
-        Texture* GetBackbufferTexture() const;
+            width = Max(newWidth, 1u);
+            height = Max(newHeight, 1u);
+            Recreate();
+        }
+    }
 
-        /// Get the depth stencil texture.
-        Texture* GetDepthStencilTexture() const;
+    Texture* GraphicsContext::GetBackbufferTexture() const
+    {
+        return backbufferTextures[backbufferIndex].Get();
+    }
 
-        const RenderPassDescription& GetCurrentRenderPassDescription() const { return currentRenderPassDescription; }
-
-    private:
-        virtual void Recreate() = 0;
-
-    protected:
-        uint32_t width = 0;
-        uint32_t height = 0;
-        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
-
-        uint32_t backbufferIndex = 0;
-        std::vector<SharedPtr<Texture>> backbufferTextures;
-        SharedPtr<Texture> depthStencilTexture;
-        RenderPassDescription currentRenderPassDescription;
-    };
+    Texture* GraphicsContext::GetDepthStencilTexture() const
+    {
+        return depthStencilTexture.Get();
+    }
 }
+

@@ -26,6 +26,8 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/CommandBuffer.h"
 #include "Core/Log.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace alimer
 {
@@ -41,17 +43,63 @@ namespace alimer
     {
         gameSystems.clear();
         window.reset();
-        gui.reset();
-        delete GPU;
+        GraphicsDevice::Shutdown();
         RemoveSubsystem<Input>();
+        ImGui::DestroyContext();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
 
     void Application::InitBeforeRun()
     {
-        // Init subsytems
+        // Init subsytems.
         GetSubsystem<Input>()->Initialize();
+
+        // Init ImGui
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.UserData = this;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+        //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+        //io.ConfigViewportsNoAutoMerge = true;
+        //io.ConfigViewportsNoTaskBarIcon = true;
+
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+        //ImGui::StyleColorsClassic();
+
+        io.Fonts->AddFontDefault();
+        //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
+
+        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+        ImGuiStyle& style = ImGui::GetStyle();
+        // Color scheme
+        /*style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+        style.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+        style.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_HeaderActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_HeaderHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_FrameBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
+        style.Colors[ImGuiCol_CheckMark] = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
+        style.Colors[ImGuiCol_SliderGrab] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+        style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
+        style.Colors[ImGuiCol_FrameBgActive] = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
+        style.Colors[ImGuiCol_Button] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
+        style.Colors[ImGuiCol_ButtonHovered] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+        style.Colors[ImGuiCol_ButtonActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);*/
+
+        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            style.WindowRounding = 0.0f;
+            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        }
 
         // Create main window.
         window.reset(new Window());
@@ -65,15 +113,13 @@ namespace alimer
 
         //GraphicsDevice::SetPreferredBackend(GPUBackendType::Vulkan);
 
-        if (!GraphicsDevice::Initialize(window.get(), flags))
+        if (!GraphicsDevice::Initialize(config.applicationName, window.get(), flags))
         {
             headless = true;
         }
         else
         {
             RegisterGraphicsLibrary();
-
-            gui.reset(new Gui(window.get()));
         }
 
         Initialize();
@@ -107,7 +153,12 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        gui->BeginFrame();
+        if (!GPU->BeginFrame()) {
+            return false;
+        }
+
+        window->BeginFrame();
+        ImGui::NewFrame();
 
         for (auto& gameSystem : gameSystems)
         {
@@ -132,14 +183,14 @@ namespace alimer
             LOGI("Right held");
         }
 
-        CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("Clear");
-        /*commandContext->PushDebugGroup("Clear");
+        /*CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("Clear");
+        commandContext->PushDebugGroup("Clear");
         RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         commandContext->BeginRenderPass(renderPass);
         commandContext->EndRenderPass();
-        commandContext->PopDebugGroup();*/
-        commandBuffer.Commit();
+        commandContext->PopDebugGroup();
+        commandBuffer.Commit();*/
     }
 
     void Application::EndDraw()
@@ -149,8 +200,9 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        gui->Render();
-        GPU->Frame();
+        ImGuiIO& io = ImGui::GetIO();
+        ImGui::Render();
+        GPU->EndFrame();
     }
 
     int Application::Run()

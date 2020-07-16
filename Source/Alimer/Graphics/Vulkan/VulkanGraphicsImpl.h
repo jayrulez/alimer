@@ -34,7 +34,7 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsImpl(Window* window, GPUFlags flags);
+        VulkanGraphicsImpl(const std::string& applicationName, GPUFlags flags);
         ~VulkanGraphicsImpl() override;
 
         void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
@@ -50,7 +50,8 @@ namespace alimer
         bool UpdateSwapchain();
 
         void WaitForGPU() override;
-        void Frame() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
         Texture* GetBackbufferTexture() const override;
         CommandBuffer& BeginCommandBuffer(const std::string_view id) override;
 

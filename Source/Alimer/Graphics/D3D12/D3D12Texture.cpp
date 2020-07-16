@@ -51,12 +51,13 @@ namespace alimer
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_)
-        : Texture(ConvertResourceDesc(resource->GetDesc()))
+        : Texture(ConvertResourceDesc(resource_->GetDesc()))
         , device(device_)
         , resource(resource_)
         , state(state_)
     {
-
+        RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
+        device->GetD3DDevice()->CreateRenderTargetView(resource_, nullptr, RTV);
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, const TextureDescription& desc, const void* initialData)

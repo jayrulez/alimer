@@ -51,10 +51,11 @@ namespace alimer
         virtual ~GraphicsDevice() = default;
 
         static void SetPreferredBackend(GPUBackendType backend);
-        static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None);
+        static bool Initialize(const std::string& applicationName, Window* window, GPUFlags flags = GPUFlags::None);
         static void Shutdown();
         virtual void WaitForGPU() = 0;
-        virtual void Frame() = 0;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
         /// Get the current backbuffer texture.
         virtual Texture* GetBackbufferTexture() const = 0;
@@ -69,7 +70,7 @@ namespace alimer
         void UntrackResource(GraphicsResource* resource);
 
     protected:
-        GraphicsDevice(Window* window);
+        GraphicsDevice() = default;
         void ReleaseTrackedResources();
 
         GraphicsDeviceCapabilities caps{};
@@ -78,9 +79,6 @@ namespace alimer
         std::vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
 
-        uint32_t backbufferWidth = 0;
-        uint32_t backbufferHeight = 0;
-        bool vSync = true;
 
     private:
         static GPUBackendType preferredBackend;

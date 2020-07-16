@@ -32,4 +32,28 @@ namespace alimer
     PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
     PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
 #endif
+
+    DescriptorHeap D3D12CreateDescriptorHeap(ID3D12Device* device, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+    {
+        ALIMER_ASSERT(device && capacity > 0);
+
+        DescriptorHeap descriptorHeap = {};
+        descriptorHeap.Size = 0;
+        descriptorHeap.Capacity = capacity;
+
+        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+        desc.NumDescriptors = capacity;
+        desc.Type = type;
+        desc.Flags = flags;
+        ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap.handle)));
+
+        descriptorHeap.CpuStart = descriptorHeap.handle->GetCPUDescriptorHandleForHeapStart();
+        if (flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
+        {
+            descriptorHeap.GpuStart = descriptorHeap.handle->GetGPUDescriptorHandleForHeapStart();
+        }
+
+        descriptorHeap.DescriptorSize = device->GetDescriptorHandleIncrementSize(type);
+        return descriptorHeap;
+    }
 }

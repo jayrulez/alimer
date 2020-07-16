@@ -446,8 +446,8 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsImpl::VulkanGraphicsImpl(Window* window, GPUFlags flags)
-        : GraphicsDevice(window)
+    VulkanGraphicsImpl::VulkanGraphicsImpl(const std::string& applicationName, GPUFlags flags)
+        : GraphicsDevice()
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -476,6 +476,7 @@ namespace alimer
                 }
             }
 
+            Window* window = nullptr;
             if (window == nullptr)
             {
                 enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
@@ -516,8 +517,8 @@ namespace alimer
                 enabledInstanceLayers.insert(enabledInstanceLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
             }
 
-            VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-            appInfo.pApplicationName = "Alimer";
+            VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
+            appInfo.pApplicationName = applicationName.c_str();
             appInfo.applicationVersion = 0;
             appInfo.pEngineName = "Alimer";
             appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
@@ -579,7 +580,7 @@ namespace alimer
         }
 
 #if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-        VK_CHECK(glfwCreateWindowSurface(instance, (GLFWwindow*)window->GetWindow(), nullptr, &surface));
+        //VK_CHECK(glfwCreateWindowSurface(instance, (GLFWwindow*)window->GetWindow(), nullptr, &surface));
 #endif
 
         // Enumerating and creating devices:
@@ -1000,7 +1001,7 @@ namespace alimer
         }
 
         /* Extent */
-        VkExtent2D swapchainSize = { backbufferWidth, backbufferHeight };
+        VkExtent2D swapchainSize{}; // = { backbufferWidth, backbufferHeight };
         if (swapchainSize.width < 1 || swapchainSize.height < 1)
         {
             swapchainSize = surfaceCaps.capabilities.currentExtent;
@@ -1044,7 +1045,7 @@ namespace alimer
             composite_mode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-        if (!vSync)
+        //if (!vSync)
         {
             // The immediate present mode is not necessarily supported:
             for (auto& presentMode : surfaceCaps.presentModes)
@@ -1121,7 +1122,6 @@ namespace alimer
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-#if TODO_VK
     bool VulkanGraphicsImpl::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
@@ -1181,10 +1181,8 @@ namespace alimer
 
         return true;
     }
-#endif // TODO_VK
 
-
-    void VulkanGraphicsImpl::Frame()
+    void VulkanGraphicsImpl::EndFrame()
     {
         //ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
@@ -1200,7 +1198,7 @@ namespace alimer
 
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
-        VkSubmitInfo submitInfo { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount = 1;
         submitInfo.pWaitSemaphores = &perFrame[backbufferIndex].swapchainAcquireSemaphore;
         submitInfo.pWaitDstStageMask = waitStages;

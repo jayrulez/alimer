@@ -20,32 +20,17 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D12SwapChain.h"
-#include "D3D12GraphicsDevice.h"
+#include "D3D12GraphicsContext.h"
+#include "D3D12GraphicsImpl.h"
 
 namespace alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
-        : SwapChain(desc)
-        , _device(device)
+    D3D12GraphicsContext::D3D12GraphicsContext(D3D12GraphicsImpl* device_)
+        : device(device_)
     {
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        window = (HWND)desc.windowHandle;
-        ALIMER_ASSERT(IsWindow(window));
-#else
-        window = (IUnknown*)desc.windowHandle;
-#endif
-
-        Recreate(false);
-        _syncInterval = 0;
-        if (any(device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing)) {
-            _presentFlags = DXGI_PRESENT_ALLOW_TEARING;
-        }
     }
 
-    D3D12SwapChain::~D3D12SwapChain()
+    D3D12GraphicsContext::~D3D12GraphicsContext()
     {
         Destroy();
     }
@@ -85,22 +70,20 @@ namespace alimer
         }
     }*/
 
-    void D3D12SwapChain::Destroy()
+    void D3D12GraphicsContext::Destroy()
     {
         SafeRelease(handle);
     }
 
-    void D3D12SwapChain::Present()
+    void D3D12GraphicsContext::Present()
     {
         HRESULT hr = handle->Present(_syncInterval, _presentFlags);
     }
 
-    void D3D12SwapChain::BackendSetName()
+    void D3D12GraphicsContext::BackendSetName()
     {
         //auto wideName = ToUtf16(name);
         //handle->SetName(wideName.c_str());
         DXGISetObjectName(handle, name.c_str());
     }
 }
-
-#endif // TODO

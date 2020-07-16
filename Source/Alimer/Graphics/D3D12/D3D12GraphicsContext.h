@@ -20,39 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Core/Log.h"
+#pragma once
+
+#include "Graphics/GraphicsContext.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    SwapChain::SwapChain()
-        : GraphicsResource()
+    class D3D12GraphicsContext final : public GraphicsContext
     {
-        currentRenderPassDescription.colorAttachments[0].slice = 0;
-    }
+    public:
+        D3D12GraphicsContext(D3D12GraphicsImpl* device_);
+        ~D3D12GraphicsContext() override;
+        void Destroy() override;
+        void Present();
 
-    void SwapChain::Resize(uint32_t newWidth, uint32_t newHeight)
-    {
-        if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
-        {
-            depthStencilTexture.Reset();
-            backbufferTextures.clear();
+    private:
+        void BackendSetName() override;
 
-            width = Max(newWidth, 1u);
-            height = Max(newHeight, 1u);
-            Recreate();
-        }
-    }
+        D3D12GraphicsImpl* device;
+        IDXGISwapChain3* handle;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window;
+#else
+        IUnknown* window;
+#endif
 
-    Texture* SwapChain::GetBackbufferTexture() const
-    {
-        return backbufferTextures[backbufferIndex].Get();
-    }
-
-    Texture* SwapChain::GetDepthStencilTexture() const
-    {
-        return depthStencilTexture.Get();
-    }
+        UINT _syncInterval;
+        UINT _presentFlags;
+    };
 }
-

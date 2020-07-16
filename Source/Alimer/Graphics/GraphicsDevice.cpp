@@ -35,8 +35,6 @@
 #include "Graphics/D3D12/D3D12GraphicsImpl.h"
 #endif
 
-#include "imgui_impl_glfw.h"
-
 namespace alimer
 {
     GraphicsDevice* GPU = nullptr;
@@ -54,16 +52,8 @@ namespace alimer
         preferredBackend = backend;
     }
 
-    GraphicsDevice::GraphicsDevice(Window* window)
+    bool GraphicsDevice::Initialize(const std::string& applicationName, Window* window, GPUFlags flags)
     {
-        backbufferWidth = Max((uint32_t)window->GetSize().width, 1u);
-        backbufferHeight = Max((uint32_t)window->GetSize().height, 1u);
-    }
-
-    bool GraphicsDevice::Initialize(Window* window, GPUFlags flags)
-    {
-        ALIMER_ASSERT(window);
-
         if (GPU != nullptr) {
             LOGW("Cannot create more than one Graphics instance");
             return true;
@@ -91,7 +81,7 @@ namespace alimer
 #if defined(ALIMER_VULKAN)
         case GPUBackendType::Vulkan:
             if (VulkanGraphicsImpl::IsAvailable()) {
-                GPU = new VulkanGraphicsImpl(window, flags);
+                GPU = new VulkanGraphicsImpl(applicationName, flags);
             }
             break;
 #endif

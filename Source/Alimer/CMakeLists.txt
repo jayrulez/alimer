@@ -81,13 +81,15 @@ target_link_libraries(${TARGET_NAME} PUBLIC
 
 # Link platform specific libraries
 if (WIN32)
-    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
-    target_link_libraries(${TARGET_NAME} PRIVATE glfw)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
 elseif(ANDROID)
-    target_link_libraries(${TARGET_NAME} PRIVATE log android native_app_glue)
+    target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
 else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
-        target_link_libraries(${TARGET_NAME} PRIVATE glfw)
+        target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
     endif()
 endif()
 
@@ -131,7 +133,7 @@ else()
     )
 endif()
 
-target_compile_options(${TARGET_NAME} PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
         ${ALIMER_WARNINGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
         $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
@@ -156,12 +158,12 @@ endif()
 
 if (WIN32)
     # Enable unicode strings
-    target_compile_definitions(${TARGET_NAME} PRIVATE _UNICODE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
 endif()
 
 # SDK installation
-install(TARGETS ${TARGET_NAME}
-    EXPORT ${TARGET_NAME}
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}
     LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
     RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}
     ARCHIVE DESTINATION ${DEST_ARCHIVE_DIR_CONFIG}
