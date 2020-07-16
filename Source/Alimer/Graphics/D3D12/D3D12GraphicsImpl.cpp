@@ -24,7 +24,7 @@
 //#include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
 //#include "D3D12Buffer.h"
-#include "D3D12CommandQueue.h"
+#include "D3D12CommandBuffer.h"
 #include "Core/Window.h"
 #include "Math/Matrix4x4.h"
 
@@ -201,20 +201,29 @@ namespace alimer
         InitCapabilities(adapter.Get());
 
         // Create command queue's
-        graphicsQueue = CreateCommandQueue(CommandQueueType::Graphics, "");
-        computeQueue = CreateCommandQueue(CommandQueueType::Compute, "");
-        copyQueue = CreateCommandQueue(CommandQueueType::Copy, "");
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 0;
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(graphicsQueue.ReleaseAndGetAddressOf())));
+            graphicsQueue->SetName(L"Graphics Command Queue");
+
+            //computeQueue = CreateCommandQueue(CommandQueueType::Compute, "");
+            //copyQueue = CreateCommandQueue(CommandQueueType::Copy, "");
+        }
 
         // Create main swapchain.
         {
             IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
                 dxgiFactory.Get(),
                 dxgiFactoryCaps,
-                std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue)->GetCommandQueue(),
+                graphicsQueue.Get(),
                 window->GetNativeHandle(),
                 backbufferWidth, backbufferHeight,
                 PixelFormat::BGRA8Unorm,
-                backbufferCount,
+                kInflightFrameCount,
                 window->IsFullscreen()
             );
 
@@ -259,7 +268,13 @@ namespace alimer
             SafeRelease(frameFence);
         }
 
-        Shutdown();
+        ReleaseTrackedResources();
+
+        // Command queues
+        {
+            commandBufferPool.clear();
+            graphicsQueue.Reset();
+        }
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -536,20 +551,27 @@ namespace alimer
 
     void D3D12GraphicsImpl::WaitForGPU()
     {
-        /*graphicsQueue->WaitForIdle();
-        computeQueue->WaitForIdle();
-        copyQueue->WaitForIdle();*/
-    }
+        graphicsQueue->Signal(frameFence, ++frameCount);
+        frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
+        WaitForSingleObject(frameFenceEvent, INFINITE);
 
-    void D3D12GraphicsImpl::WaitForFence(uint64_t fenceValue)
-    {
-        CommandQueueType commandQueueType = D3D12GetCommandQueueType((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
-        CommandQueue* producer = GetCommandQueue(commandQueueType);
-        static_cast<D3D12CommandQueue*>(producer)->WaitForFence(fenceValue);
+        GPUDescriptorHeaps[frameIndex].Size = 0;
+        //GPUUploadMemoryHeaps[Gfx->FrameIndex].Size = 0;
     }
 
     void D3D12GraphicsImpl::Frame()
     {
+        // TODO: Sync copy and compute here
+
+        // Execute prending command lists.
+        if (!pendingCommandLists.empty())
+        {
+            commandBufferAllocationMutex.lock();
+            graphicsQueue->ExecuteCommandLists(static_cast<UINT>(pendingCommandLists.size()), pendingCommandLists.data());
+            pendingCommandLists.clear();
+            commandBufferAllocationMutex.unlock();
+        }
+
         uint32_t syncInterval = 1;
         uint32_t presentFlags = 0;
         if (!vSync) {
@@ -578,23 +600,16 @@ namespace alimer
         {
             ThrowIfFailed(hr);
 
-            /*auto d3dGraphicsQueue = std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue);
-            auto nextFenceValue = d3dGraphicsQueue->GetNextFenceValue();
-            if (nextFrameIndex == nextFenceValue) {
-                nextFrameIndex = d3dGraphicsQueue->Signal();
-            }*/
-
-            std::static_pointer_cast<D3D12CommandQueue>(graphicsQueue)->GetCommandQueue()->Signal(frameFence, ++frameCount);
-
+            graphicsQueue->Signal(frameFence, ++frameCount);
             uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
-            if ((frameCount - GPUFrameCount) >= backbufferCount)
+            if ((frameCount - GPUFrameCount) >= kInflightFrameCount)
             {
                 frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
                 WaitForSingleObject(frameFenceEvent, INFINITE);
             }
 
-            frameIndex = (frameIndex + 1) % backbufferCount;
+            frameIndex = (frameIndex + 1) % kInflightFrameCount;
 
             if (!dxgiFactory->IsCurrent())
             {
@@ -615,8 +630,54 @@ namespace alimer
         return backbufferTextures[backbufferIndex].Get();
     }
 
-    std::shared_ptr<CommandQueue> D3D12GraphicsImpl::CreateCommandQueue(CommandQueueType queueType, const std::string_view& name)
+    CommandBuffer& D3D12GraphicsImpl::BeginCommandBuffer(const std::string_view id)
     {
-        return std::make_shared<D3D12CommandQueue>(this, queueType, name);
+        std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
+
+        D3D12CommandBuffer* commandBuffer = nullptr;
+        if (commandBufferQueue.empty())
+        {
+            commandBuffer = new D3D12CommandBuffer(this, D3D12_COMMAND_LIST_TYPE_DIRECT);
+            commandBufferPool.emplace_back(commandBuffer);
+        }
+        else
+        {
+            commandBuffer = commandBufferQueue.front();
+            commandBufferQueue.pop();
+            commandBuffer->Reset(frameIndex);
+        }
+
+        ALIMER_ASSERT(commandBuffer != nullptr);
+        return *commandBuffer;
+    }
+
+    void D3D12GraphicsImpl::CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion)
+    {
+        std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
+
+        auto commandList = commandBuffer->GetCommandList();
+        ThrowIfFailed(commandList->Close());
+
+        if (waitForCompletion)
+        {
+            ID3D12CommandList* commandLists[] = { commandList };
+            graphicsQueue->ExecuteCommandLists(1, commandLists);
+
+            ComPtr<ID3D12Fence> fence;
+            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf())));
+            HANDLE gpuCompletedEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+            if (!gpuCompletedEvent)
+                throw std::exception("CreateEventEx");
+
+            ThrowIfFailed(graphicsQueue->Signal(fence.Get(), 1ULL));
+            ThrowIfFailed(fence->SetEventOnCompletion(1ULL, gpuCompletedEvent));
+            WaitForSingleObject(gpuCompletedEvent, INFINITE);
+        }
+        else {
+            pendingCommandLists.push_back(commandList);
+        }
+
+        // Recycle command buffer.
+        commandBufferQueue.push(commandBuffer);
     }
 }

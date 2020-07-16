@@ -113,24 +113,9 @@ namespace alimer
 
     void GraphicsDevice::Shutdown()
     {
-        ReleaseTrackedResources();
-
-        copyQueue.reset();
-        computeQueue.reset();
-        graphicsQueue.reset();
-
-    }
-
-    CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType queueType)
-    {
-        switch (queueType)
+        if (GPU != nullptr)
         {
-        case CommandQueueType::Compute:
-            return computeQueue.get();
-        case CommandQueueType::Copy:
-            return copyQueue.get();
-        default:
-            return graphicsQueue.get();
+            delete GPU; GPU = nullptr;
         }
     }
 
@@ -163,5 +148,15 @@ namespace alimer
 
             trackedResources.clear();
         }
+    }
+
+    void RegisterGraphicsLibrary()
+    {
+        static bool registered = false;
+        if (registered)
+            return;
+        registered = true;
+
+        Texture::RegisterObject();
     }
 }

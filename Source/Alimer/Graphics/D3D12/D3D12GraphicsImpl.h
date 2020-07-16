@@ -24,9 +24,9 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
+#include <atomic>
 #include <queue>
 #include <mutex>
-struct ImDrawData;
 
 namespace alimer
 {
@@ -40,7 +40,7 @@ namespace alimer
     };
 
     class D3D12Texture;
-    class D3D12CommandQueue;
+    class D3D12CommandBuffer;
 
     class D3D12GraphicsImpl final : public GraphicsDevice
     {
@@ -58,9 +58,10 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
+        CommandBuffer& BeginCommandBuffer(const std::string_view id) override;
+        void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
+
         void WaitForGPU() override;
-        // The CPU will wait for a fence to reach a specified value.
-        void WaitForFence(uint64_t fenceValue);
         void Frame() override;
         void HandleDeviceLost();
 
@@ -75,7 +76,7 @@ namespace alimer
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         Texture* GetBackbufferTexture() const override;
-        std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name) override;
+        
 
         void InitializeUpload();
         void ShutdownUpload();
@@ -102,20 +103,29 @@ namespace alimer
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
         bool supportsRenderPass = false;
 
+        ComPtr<ID3D12CommandQueue> graphicsQueue;
+        ComPtr<ID3D12CommandQueue> computeQueue;
+        ComPtr<ID3D12CommandQueue> copyQueue;
+
+        std::atomic<uint32_t> commandBufferCount{ 0 };
+        std::mutex commandBufferAllocationMutex;
+        std::queue<D3D12CommandBuffer*> commandBufferQueue;
+        std::vector<std::unique_ptr<D3D12CommandBuffer>> commandBufferPool;
+        std::vector<ID3D12CommandList*> pendingCommandLists;
+
         /// Current active frame index
         uint32_t frameIndex;
-        uint64_t nextFrameIndex{ 1 };
 
         /* Descriptor heaps */
         DescriptorHeap RTVHeap{};
         DescriptorHeap DSVHeap{};
         DescriptorHeap CPUDescriptorHeap;
-        DescriptorHeap GPUDescriptorHeaps[kMaxBackbufferCount];
+        DescriptorHeap GPUDescriptorHeaps[kInflightFrameCount];
 
         /* Main swap chain */
         IDXGISwapChain3* swapChain = nullptr;
         uint32_t backbufferIndex = 0;
-        SharedPtr<D3D12Texture> backbufferTextures[kMaxBackbufferCount] = {};
+        SharedPtr<D3D12Texture> backbufferTextures[kInflightFrameCount] = {};
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;
@@ -165,10 +175,10 @@ namespace alimer
         SRWLOCK uploadSubmissionLock = SRWLOCK_INIT;
         SRWLOCK uploadQueueLock = SRWLOCK_INIT;
 
-        D3D12MA::Allocation* tempBufferAllocations[kMaxBackbufferCount] = { };
-        ID3D12Resource* tempFrameBuffers[kMaxBackbufferCount] = { };
-        uint8_t* tempFrameCPUMem[kMaxBackbufferCount] = { };
-        uint64_t tempFrameGPUMem[kMaxBackbufferCount] = { };
+        D3D12MA::Allocation* tempBufferAllocations[kInflightFrameCount] = { };
+        ID3D12Resource* tempFrameBuffers[kInflightFrameCount] = { };
+        uint8_t* tempFrameCPUMem[kInflightFrameCount] = { };
+        uint64_t tempFrameGPUMem[kInflightFrameCount] = { };
         volatile int64_t tempFrameUsed = 0;
     };
 }

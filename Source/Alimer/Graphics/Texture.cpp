@@ -21,11 +21,16 @@
 //
 
 #include "Graphics/Texture.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
+    void Texture::RegisterObject()
+    {
+        RegisterFactory<Texture>();
+    }
+
     Texture::Texture()
     {
 

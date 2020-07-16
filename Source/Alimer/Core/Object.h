@@ -109,7 +109,7 @@ namespace alimer
         /// Register an object factory.
         static void RegisterFactory(ObjectFactory* factory);
         /// Create an object by type hash. Return pointer to it or null if no factory found.
-        static SharedPtr<Object> Create(StringId32 objectType);
+        static SharedPtr<Object> CreateObject(StringId32 objectType);
 
         /// Return a subsystem, template version.
         template <class T> static T* GetSubsystem() { return static_cast<T*>(GetSubsystem(T::GetTypeStatic())); }
@@ -118,7 +118,7 @@ namespace alimer
         /// Register an object factory, template version.
         template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
         /// Create and return an object through a factory, template version.
-        template <class T> static inline SharedPtr<T> Create() { return StaticCast<T>(Create(T::GetTypeStatic())); }
+        template <class T> static inline SharedPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
 
         /// Return input subsystem.
         static Input* GetInput();

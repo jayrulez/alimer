@@ -28,6 +28,7 @@
 
 namespace alimer
 {
+    static constexpr uint32_t kInflightFrameCount = 2u;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;

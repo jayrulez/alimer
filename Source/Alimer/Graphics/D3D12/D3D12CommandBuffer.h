@@ -32,9 +32,9 @@ namespace alimer
     class D3D12CommandBuffer final : public CommandBuffer
     {
     public:
-        D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12CommandQueue* queue_);
+        D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandBuffer() override;
-        void Reset();
+        void Reset(uint32_t frameIndex);
 
         void Commit(bool waitForCompletion) override;
 
@@ -59,11 +59,15 @@ namespace alimer
         void InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate = false);
         void FlushResourceBarriers(void);
 
+        ALIMER_FORCEINLINE ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }
+
     private:
         D3D12GraphicsImpl* device;
-        D3D12CommandQueue* queue;
+        const D3D12_COMMAND_LIST_TYPE type;
+
         bool useRenderPass;
-        ID3D12CommandAllocator* currentAllocator;
+        ID3D12CommandAllocator* commandAllocators[kInflightFrameCount] = {};
+
         ID3D12GraphicsCommandList* commandList;
         ID3D12GraphicsCommandList4* commandList4 = nullptr;
 

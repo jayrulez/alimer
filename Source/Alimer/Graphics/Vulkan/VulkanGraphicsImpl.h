@@ -52,7 +52,7 @@ namespace alimer
         void WaitForGPU() override;
         void Frame() override;
         Texture* GetBackbufferTexture() const override;
-        std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name) override;
+        CommandBuffer& BeginCommandBuffer(const std::string_view id) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -78,7 +78,7 @@ namespace alimer
 
         VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
         uint32_t backbufferIndex{ 0 };
-        SharedPtr<VulkanTexture> backbufferTextures[kMaxBackbufferCount] = {};
+        SharedPtr<VulkanTexture> backbufferTextures[kInflightFrameCount] = {};
 
         /// A set of semaphores that can be reused.
         std::vector<VkSemaphore> recycledSemaphores;

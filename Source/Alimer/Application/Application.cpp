@@ -24,7 +24,6 @@
 #include "Core/Window.h"
 #include "Core/Input.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/CommandQueue.h"
 #include "Graphics/CommandBuffer.h"
 #include "Core/Log.h"
 
@@ -72,6 +71,8 @@ namespace alimer
         }
         else
         {
+            RegisterGraphicsLibrary();
+
             gui.reset(new Gui(window.get()));
         }
 
@@ -131,7 +132,7 @@ namespace alimer
             LOGI("Right held");
         }
 
-        CommandBuffer& commandBuffer = GPU->GetCommandQueue()->GetCommandBuffer("Clear");
+        CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("Clear");
         /*commandContext->PushDebugGroup("Clear");
         RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;

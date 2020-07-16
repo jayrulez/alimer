@@ -943,11 +943,10 @@ namespace alimer
         SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
 
         /* Detect image count. */
-        uint32_t desired_swapchain_images = surfaceCaps.capabilities.minImageCount + 1;
-        if ((surfaceCaps.capabilities.maxImageCount > 0) && (desired_swapchain_images > surfaceCaps.capabilities.maxImageCount))
+        uint32_t imageCount = surfaceCaps.capabilities.minImageCount + 1;
+        if ((surfaceCaps.capabilities.maxImageCount > 0) && (imageCount > surfaceCaps.capabilities.maxImageCount))
         {
-            // Application must settle for fewer images than desired.
-            desired_swapchain_images = surfaceCaps.capabilities.maxImageCount;
+            imageCount = surfaceCaps.capabilities.maxImageCount;
         }
 
         /* Surface format. */
@@ -1063,7 +1062,7 @@ namespace alimer
         /* We use same family for graphics and present so no sharing is necessary. */
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = surface;
-        createInfo.minImageCount = desired_swapchain_images;
+        createInfo.minImageCount = imageCount;
         createInfo.imageFormat = format.format;
         createInfo.imageColorSpace = format.colorSpace;
         createInfo.imageExtent = swapchainSize;
@@ -1088,7 +1087,6 @@ namespace alimer
             vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
         }
 
-        u32 imageCount;
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
         std::vector<VkImage> swapChainImages(imageCount);
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.data());
@@ -1237,8 +1235,9 @@ namespace alimer
         return backbufferTextures[backbufferIndex].Get();
     }
 
-    std::shared_ptr<CommandQueue> VulkanGraphicsImpl::CreateCommandQueue(CommandQueueType queueType, const std::string_view& name)
+    CommandBuffer& VulkanGraphicsImpl::BeginCommandBuffer(const std::string_view id)
     {
-        return nullptr;
+        CommandBuffer* cmd = nullptr;
+        return *cmd;
     }
 }

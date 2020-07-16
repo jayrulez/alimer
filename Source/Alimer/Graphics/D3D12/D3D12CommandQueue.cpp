@@ -88,8 +88,7 @@ namespace alimer
     }
 
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name)
-        : CommandQueue(queueType)
-        , device(device_)
+        : device(device_)
         , type(D3D12GetCommandListType(queueType))
         , nextFenceValue((uint64_t)type << 56 | 1)
         , lastCompletedFenceValue((uint64_t)type << 56)
@@ -131,7 +130,6 @@ namespace alimer
     D3D12CommandQueue::~D3D12CommandQueue()
     {
         allocatorPool.Shutdown();
-        pool.clear();
         CloseHandle(fenceEvent);
         SafeRelease(fence);
         SafeRelease(commandQueue);
@@ -175,27 +173,6 @@ namespace alimer
         }
     }
 
-    CommandBuffer& D3D12CommandQueue::GetCommandBuffer(const std::string_view id)
-    {
-        std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
-
-        D3D12CommandBuffer* commandBuffer = nullptr;
-        if (queue.empty())
-        {
-            commandBuffer = new D3D12CommandBuffer(device, this);
-            pool.emplace_back(commandBuffer);
-        }
-        else
-        {
-            commandBuffer = queue.front();
-            queue.pop();
-            commandBuffer->Reset();
-        }
-
-        ALIMER_ASSERT(commandBuffer != nullptr);
-        return *commandBuffer;
-    }
-
     void D3D12CommandQueue::WaitIdle()
     {
         WaitForFence(Signal());
@@ -225,17 +202,5 @@ namespace alimer
     void D3D12CommandQueue::DiscardAllocator(uint64_t fenceValueForReset, ID3D12CommandAllocator* commandAllocator)
     {
         allocatorPool.DiscardAllocator(fenceValueForReset, commandAllocator);
-    }
-
-    void D3D12CommandQueue::DiscardCommandBuffer(D3D12CommandBuffer* commandBuffer)
-    {
-        ALIMER_ASSERT(commandBuffer != nullptr);
-        std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
-        queue.push(commandBuffer);
-    }
-
-    GraphicsDevice* D3D12CommandQueue::GetDevice() const
-    {
-        return device;
     }
 }

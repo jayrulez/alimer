@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/CommandQueue.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Buffer.h"
 #include <vector>
@@ -52,7 +52,7 @@ namespace alimer
 
         static void SetPreferredBackend(GPUBackendType backend);
         static bool Initialize(Window* window, GPUFlags flags = GPUFlags::None);
-
+        static void Shutdown();
         virtual void WaitForGPU() = 0;
         virtual void Frame() = 0;
 
@@ -62,21 +62,15 @@ namespace alimer
         /// Get the device capabilities.
         const GraphicsDeviceCapabilities& GetCaps() const { return caps; }
 
-        CommandQueue* GetCommandQueue(CommandQueueType queueType = CommandQueueType::Graphics);
+        virtual CommandBuffer& BeginCommandBuffer(const std::string_view id) = 0;
 
     private:
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
-        void ReleaseTrackedResources();
 
     protected:
         GraphicsDevice(Window* window);
-
-        void Shutdown();
-        virtual std::shared_ptr<CommandQueue> CreateCommandQueue(CommandQueueType queueType, const std::string_view& name = "") = 0;
-
-        static constexpr uint64_t kBackbufferCount = 2u;
-        static constexpr uint64_t kMaxBackbufferCount = 3u;
+        void ReleaseTrackedResources();
 
         GraphicsDeviceCapabilities caps{};
 
@@ -84,13 +78,8 @@ namespace alimer
         std::vector<GraphicsResource*> trackedResources;
         GraphicsDeviceEvents* events = nullptr;
 
-        std::shared_ptr<CommandQueue> graphicsQueue;
-        std::shared_ptr<CommandQueue> computeQueue;
-        std::shared_ptr<CommandQueue> copyQueue;
-
-        u32 backbufferWidth = 0;
-        u32 backbufferHeight = 0;
-        u32 backbufferCount = kBackbufferCount;
+        uint32_t backbufferWidth = 0;
+        uint32_t backbufferHeight = 0;
         bool vSync = true;
 
     private:
@@ -100,4 +89,15 @@ namespace alimer
     };
 
     extern ALIMER_API GraphicsDevice* GPU;
+
+    /// Register Graphics related object factories and attributes.
+    ALIMER_API void RegisterGraphicsLibrary();
+
+
+    ALIMER_FORCEINLINE SharedPtr<Texture> GPUCreateTexture2D()
+    {
+        return nullptr;
+        //return GPU->CreateTexture();
+    }
 }
+

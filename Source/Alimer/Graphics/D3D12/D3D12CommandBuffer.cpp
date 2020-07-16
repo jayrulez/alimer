@@ -53,14 +53,18 @@ namespace alimer
         }*/
     }
 
-    D3D12CommandBuffer::D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12CommandQueue* queue_)
+    D3D12CommandBuffer::D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_)
         : device(device_)
-        , queue(queue_)
+        , type(type_)
     {
         useRenderPass = device_->SupportsRenderPass();
 
-        currentAllocator = queue->RequestAllocator();
-        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(1, D3D12GetCommandListType(queue->GetType()), currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
+        for (uint32_t i = 0; i < kInflightFrameCount; ++i)
+        {
+            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[i])));
+        }
+
+        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, type, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
         if (FAILED(commandList->QueryInterface(&commandList4))) {
             useRenderPass = false;
         }
@@ -69,17 +73,19 @@ namespace alimer
 
     D3D12CommandBuffer::~D3D12CommandBuffer()
     {
+        for (uint32_t i = 0; i < kInflightFrameCount; ++i)
+        {
+            SafeRelease(commandAllocators[i]);
+        }
+
         SafeRelease(commandList4);
         SafeRelease(commandList);
     }
 
-    void D3D12CommandBuffer::Reset()
+    void D3D12CommandBuffer::Reset(uint32_t frameIndex)
     {
-        // We only call Reset() on previously freed contexts.  The command list persists, but we must
-        // request a new allocator.
-        ALIMER_ASSERT(commandList != nullptr && currentAllocator == nullptr);
-        currentAllocator = queue->RequestAllocator();
-        commandList->Reset(currentAllocator, nullptr);
+        ThrowIfFailed(commandAllocators[frameIndex]->Reset());
+        ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
 
         //currentGraphicsRootSignature = nullptr;
         //currentPipelineState = nullptr;
@@ -96,18 +102,7 @@ namespace alimer
         //if (m_ID.length() > 0)
         //    EngineProfiling::EndBlock(this);
 
-        ALIMER_ASSERT(currentAllocator != nullptr);
-        ThrowIfFailed(commandList->Close());
-
-        uint64_t fenceValue = queue->ExecuteCommandList(commandList);
-        queue->DiscardAllocator(fenceValue, currentAllocator);
-        currentAllocator = nullptr;
-
-        if (waitForCompletion) {
-            device->WaitForFence(fenceValue);
-        }
-
-        queue->DiscardCommandBuffer(this);
+        device->CommitCommandBuffer(this, waitForCompletion);
     }
 
     void D3D12CommandBuffer::PushDebugGroup(const String& name)
@@ -318,7 +313,7 @@ namespace alimer
 
         if (flushImmediate || numBarriersToFlush == kMaxResourceBarriers)
             FlushResourceBarriers();
-    }
+            }
 
     void D3D12CommandBuffer::InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate)
     {
@@ -340,4 +335,4 @@ namespace alimer
             numBarriersToFlush = 0;
         }
     }
-}
+        }

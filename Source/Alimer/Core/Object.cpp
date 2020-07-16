@@ -170,7 +170,7 @@ namespace alimer
         details::context().RegisterFactory(factory);
     }
 
-    SharedPtr<Object> Object::Create(StringId32 objectType)
+    SharedPtr<Object> Object::CreateObject(StringId32 objectType)
     {
         return details::context().CreateObject(objectType);
     }
