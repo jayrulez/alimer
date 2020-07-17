@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Viewport.h"
-#include "Core/String.h"
-#include "Core/Assert.h"
+#if defined(VGPU_DRIVER_OPENGL)
 
-namespace alimer
+#include "vgpu_driver.h"
+
+namespace vgpu
 {
-    float Viewport::AspectRatio() const noexcept
-    {
-        if (width == 0.0f || height == 0.0f)
-            return 0.0f;
 
-        return (width / height);
-    }
 }
+
+#endif /* defined(VGPU_DRIVER_OPENGL) */

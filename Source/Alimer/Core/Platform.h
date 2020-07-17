@@ -403,17 +403,17 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 
 namespace alimer
 {
-    using s8 = int8_t;
-    using s16 = int16_t;
-    using s32 = int32_t;
-    using s64 = int64_t;
-    using u8 = uint8_t;
-    using u16 = uint16_t;
-    using u32 = uint32_t;
-    using u64 = uint64_t;
+    using int8 = int8_t;
+    using int16 = int16_t;
+    using int32 = int32_t;
+    using int64 = int64_t;
+    using uint8 = uint8_t;
+    using uint16 = uint16_t;
+    using uint32 = uint32_t;
+    using uint64 = uint64_t;
 
-    using sptr = intptr_t;
-    using uptr = uintptr_t;
+    using intptr = intptr_t;
+    using uintptr = uintptr_t;
     using wchar = wchar_t;
     using bool32 = uint32_t;
 
@@ -423,14 +423,14 @@ namespace alimer
     template <typename T> struct Limits;
 #define ALIMER_MAKE_LIMITS(type, lo, hi) template <> struct Limits<type> { static constexpr type Min = lo; static constexpr type Max = hi; }
 
-    ALIMER_MAKE_LIMITS(s8, INT8_MIN, INT8_MAX);
-    ALIMER_MAKE_LIMITS(s16, INT16_MIN, INT16_MAX);
-    ALIMER_MAKE_LIMITS(s32, INT32_MIN, INT32_MAX);
-    ALIMER_MAKE_LIMITS(s64, INT64_MIN, INT64_MAX);
-    ALIMER_MAKE_LIMITS(u8, 0, UINT8_MAX);
-    ALIMER_MAKE_LIMITS(u16, 0, UINT16_MAX);
-    ALIMER_MAKE_LIMITS(u32, 0, UINT32_MAX);
-    ALIMER_MAKE_LIMITS(u64, 0, UINT64_MAX);
+    ALIMER_MAKE_LIMITS(int8, INT8_MIN, INT8_MAX);
+    ALIMER_MAKE_LIMITS(int16, INT16_MIN, INT16_MAX);
+    ALIMER_MAKE_LIMITS(int32, INT32_MIN, INT32_MAX);
+    ALIMER_MAKE_LIMITS(int64, INT64_MIN, INT64_MAX);
+    ALIMER_MAKE_LIMITS(uint8, 0, UINT8_MAX);
+    ALIMER_MAKE_LIMITS(uint16, 0, UINT16_MAX);
+    ALIMER_MAKE_LIMITS(uint32, 0, UINT32_MAX);
+    ALIMER_MAKE_LIMITS(uint64, 0, UINT64_MAX);
     ALIMER_MAKE_LIMITS(float, -FLT_MAX, FLT_MAX);
     ALIMER_MAKE_LIMITS(double, -DBL_MAX, DBL_MAX);
 

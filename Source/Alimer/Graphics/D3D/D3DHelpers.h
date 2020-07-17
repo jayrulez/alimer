@@ -229,8 +229,9 @@ namespace alimer
         IUnknown* deviceOrCommandQueue,
         void* windowHandle,
         uint32_t width, uint32_t height,
-        PixelFormat colorFormat,
-        uint32_t backbufferCount)
+        DXGI_FORMAT format,
+        uint32_t bufferCount,
+        bool isFullscreen)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = (HWND)windowHandle;
@@ -262,27 +263,31 @@ namespace alimer
         DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 #endif
 
-        DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {};
-        swapchain_desc.Width = width;
-        swapchain_desc.Height = height;
-        swapchain_desc.Format = ToDXGISwapChainFormat(colorFormat);
-        swapchain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapchain_desc.BufferCount = backbufferCount;
-        swapchain_desc.SampleDesc.Count = 1;
-        swapchain_desc.SampleDesc.Quality = 0;
-        swapchain_desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        swapchain_desc.Scaling = scaling;
-        swapchain_desc.SwapEffect = swapEffect;
-        swapchain_desc.Flags = flags;
+        DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
+        swapchainDesc.Width = width;
+        swapchainDesc.Height = height;
+        swapchainDesc.Format = format;
+        swapchainDesc.Stereo = false;
+        swapchainDesc.SampleDesc.Count = 1;
+        swapchainDesc.SampleDesc.Quality = 0;
+        swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapchainDesc.BufferCount = bufferCount;
+        swapchainDesc.Scaling = scaling;
+        swapchainDesc.SwapEffect = swapEffect;
+        swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapchainDesc.Flags = flags;
 
         IDXGISwapChain1* result = NULL;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapchainDesc = {};
+        fsSwapchainDesc.Windowed = !isFullscreen;
+
         // Create a SwapChain from a Win32 window.
         ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
             deviceOrCommandQueue,
             window,
-            &swapchain_desc,
-            nullptr,
+            &swapchainDesc,
+            &fsSwapchainDesc,
             nullptr,
             &result
         ));
@@ -293,7 +298,7 @@ namespace alimer
         ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
             deviceOrCommandQueue,
             window,
-            &swapchain_desc,
+            &swapchainDesc,
             nullptr,
             &result
         ));

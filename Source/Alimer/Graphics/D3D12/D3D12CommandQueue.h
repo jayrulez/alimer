@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 #include <vector>
 #include <queue>
@@ -35,7 +35,7 @@ namespace alimer
     class D3D12CommandAllocatorPool final
     {
     public:
-        D3D12CommandAllocatorPool(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
+        D3D12CommandAllocatorPool(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_);
         ~D3D12CommandAllocatorPool();
 
         void Shutdown();
@@ -48,7 +48,7 @@ namespace alimer
     private:
         const D3D12_COMMAND_LIST_TYPE type;
 
-        D3D12GraphicsImpl* device;
+        D3D12GraphicsDevice* device;
         std::vector<ID3D12CommandAllocator*> allocatorPool;
         std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
         std::mutex allocatorMutex;
@@ -57,7 +57,7 @@ namespace alimer
     class D3D12CommandQueue final
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name);
+        D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType, const std::string_view& name);
         ~D3D12CommandQueue();
 
         void WaitIdle();
@@ -74,7 +74,7 @@ namespace alimer
         ALIMER_FORCEINLINE uint64_t GetNextFenceValue() { return nextFenceValue; }
 
     private:
-        D3D12GraphicsImpl* device;
+        D3D12GraphicsDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
         ID3D12CommandQueue* commandQueue;
 

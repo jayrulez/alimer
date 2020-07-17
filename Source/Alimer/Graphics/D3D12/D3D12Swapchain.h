@@ -22,40 +22,34 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
-#include "Math/Size.h"
-#include <vector>
+#include "Graphics/Swapchain.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    /// Defines a context for recording GPU commands and optionally presenting on screen.
-    class ALIMER_API GraphicsContext : public GraphicsResource
+    class D3D12Texture;
+
+    class D3D12Swapchain final : public Swapchain
     {
     public:
-        /// Constructor.
-        GraphicsContext();
-
-        void Resize(uint32_t newWidth, uint32_t newHeight);
-
-        /// Get the current backbuffer texture.
-        Texture* GetBackbufferTexture() const;
-
-        /// Get the depth stencil texture.
-        Texture* GetDepthStencilTexture() const;
-
-        const RenderPassDescription& GetCurrentRenderPassDescription() const { return currentRenderPassDescription; }
+        D3D12Swapchain(D3D12GraphicsDevice* device, const SwapchainDescription& description);
+        ~D3D12Swapchain() override;
+        void Destroy() override;
+        void Present();
 
     private:
-        virtual void Recreate() = 0;
+        void ResizeImpl() override;
+        void AfterReset();
+        void BackendSetName() override;
 
-    protected:
-        uint32_t width = 0;
-        uint32_t height = 0;
-        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        D3D12GraphicsDevice* device;
+        DXGI_FORMAT backbufferFormat;
+        IDXGISwapChain3* handle;
+        uint32 backbufferCount;
+        uint32 backbufferIndex = 0;
+        SharedPtr<D3D12Texture> backbufferTextures[kInflightFrameCount] = {};
 
-        uint32_t backbufferIndex = 0;
-        std::vector<SharedPtr<Texture>> backbufferTextures;
-        SharedPtr<Texture> depthStencilTexture;
-        RenderPassDescription currentRenderPassDescription;
+        uint32 syncInterval = 1;
+        uint32 presentFlags = 0;
     };
 }

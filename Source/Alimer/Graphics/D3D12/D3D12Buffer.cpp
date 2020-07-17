@@ -22,7 +22,7 @@
 
 #if TODO
 #include "D3D12Buffer.h"
-#include "D3D12GraphicsImpl.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {

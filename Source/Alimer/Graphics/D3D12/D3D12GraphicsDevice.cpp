@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GraphicsImpl.h"
-//#include "D3D12SwapChain.h"
+#include "D3D12GraphicsDevice.h"
+#include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
 //#include "D3D12Buffer.h"
-#include "D3D12CommandBuffer.h"
+#include "D3D12CommandContext.h"
 #include "Core/Window.h"
 #include "Math/Matrix4x4.h"
 #include <imgui.h>
@@ -121,7 +121,7 @@ namespace alimer
         };
     }
 
-    bool D3D12GraphicsImpl::IsAvailable()
+    bool D3D12GraphicsDevice::IsAvailable()
     {
         static bool available_initialized = false;
         static bool available = false;
@@ -155,7 +155,7 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsImpl::D3D12GraphicsImpl(Window* window, GPUFlags flags)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(Window* window, GPUFlags flags)
         : frameIndex(0)
     {
         ALIMER_VERIFY(IsAvailable());
@@ -297,7 +297,7 @@ namespace alimer
             queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
             queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
             queueDesc.NodeMask = 0;
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(graphicsQueue.ReleaseAndGetAddressOf())));
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
             graphicsQueue->SetName(L"Graphics Command Queue");
 
             //computeQueue = CreateCommandQueue(CommandQueueType::Compute, "");
@@ -316,32 +316,12 @@ namespace alimer
             }
         }
 
+        // Create immediate context.
+        immediateContext.reset(new D3D12CommandContext(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
+
         // Create main swapchain.
-        {
-            IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
-                dxgiFactory.Get(),
-                dxgiFactoryCaps,
-                graphicsQueue.Get(),
-                window->GetNativeHandle(),
-                0, 0,
-                PixelFormat::BGRA8Unorm,
-                kInflightFrameCount
-            );
-
-            ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
-            SafeRelease(tempSwapChain);
-
-            for (uint32_t Idx = 0; Idx < kInflightFrameCount; ++Idx)
-            {
-                {
-                    ID3D12Resource* backbufferResource;
-                    ThrowIfFailed(swapChain->GetBuffer(Idx, IID_PPV_ARGS(&backbufferResource)));
-                    backbufferTextures[Idx] = new D3D12Texture(this, backbufferResource, D3D12_RESOURCE_STATE_PRESENT);
-                }
-            }
-
-            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
-        }
+        SwapchainDescription swapchainDesc = {};
+        mainSwapchain.reset(new D3D12Swapchain(this, swapchainDesc));
 
         // Create a fence for tracking GPU execution progress.
         {
@@ -359,7 +339,7 @@ namespace alimer
         InitImGui();
     }
 
-    D3D12GraphicsImpl::~D3D12GraphicsImpl()
+    D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         // Allocator
         D3D12MA::Stats stats;
@@ -371,22 +351,16 @@ namespace alimer
 
         SafeRelease(allocator);
 
-        // Release Swapchain resources
-        {
-            SafeRelease(swapChain);
-        }
-
-        {
-            CloseHandle(frameFenceEvent);
-            SafeRelease(frameFence);
-        }
+        mainSwapchain.reset();
+        CloseHandle(frameFenceEvent);
+        SafeRelease(frameFence);
 
         ReleaseTrackedResources();
 
         // Command queues
         {
             commandBufferPool.clear();
-            graphicsQueue.Reset();
+            SafeRelease(graphicsQueue);
         }
 
         ShutdownImgui(true);
@@ -423,7 +397,7 @@ namespace alimer
 #endif
     }
 
-    void D3D12GraphicsImpl::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
+    void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
     {
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
@@ -571,7 +545,7 @@ namespace alimer
         }
     }
 
-    void D3D12GraphicsImpl::GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower)
+    void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower)
     {
         *ppAdapter = nullptr;
 
@@ -664,8 +638,7 @@ namespace alimer
         *ppAdapter = adapter.Detach();
     }
 
-
-    void D3D12GraphicsImpl::WaitForGPU()
+    void D3D12GraphicsDevice::WaitForGPU()
     {
         graphicsQueue->Signal(frameFence, ++frameCount);
         frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
@@ -675,7 +648,7 @@ namespace alimer
         //GPUUploadMemoryHeaps[Gfx->FrameIndex].Size = 0;
     }
 
-    bool D3D12GraphicsImpl::BeginFrame()
+    bool D3D12GraphicsDevice::BeginFrame()
     {
         if (!imguiPipelineState)
             CreateImguiObjects();
@@ -683,12 +656,10 @@ namespace alimer
         return true;
     }
 
-    void D3D12GraphicsImpl::EndFrame()
+    void D3D12GraphicsDevice::EndFrame()
     {
         // TODO: Sync copy and compute here
-        CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("imGui");
-        auto d3dCommandBuffer = static_cast<D3D12CommandBuffer*>(&commandBuffer);
-        d3dCommandBuffer->GetCommandList()->SetDescriptorHeaps(1, &CbvSrvUavGpuHeaps[frameIndex].handle);
+        /*immediateContext->GetCommandList()->SetDescriptorHeaps(1, &CbvSrvUavGpuHeaps[frameIndex].handle);
 
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -697,18 +668,18 @@ namespace alimer
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        d3dCommandBuffer->GetCommandList()->ResourceBarrier(1, &barrier);
+        immediateContext->GetCommandList()->ResourceBarrier(1, &barrier);
 
         auto RTV = backbufferTextures[backbufferIndex]->GetRTV();
         auto clearColor = Colors::CornflowerBlue;
-        d3dCommandBuffer->GetCommandList()->ClearRenderTargetView(RTV, &clearColor.r, 0, nullptr);
-        d3dCommandBuffer->GetCommandList()->OMSetRenderTargets(1, &RTV, FALSE, NULL);
+        immediateContext->GetCommandList()->ClearRenderTargetView(RTV, &clearColor.r, 0, nullptr);
+        immediateContext->GetCommandList()->OMSetRenderTargets(1, &RTV, FALSE, NULL);
 
-        RenderDrawData(ImGui::GetDrawData(), d3dCommandBuffer->GetCommandList());
+        RenderDrawData(ImGui::GetDrawData(), immediateContext->GetCommandList());
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        d3dCommandBuffer->GetCommandList()->ResourceBarrier(1, &barrier);
-        commandBuffer.Commit();
+        immediateContext->GetCommandList()->ResourceBarrier(1, &barrier);
+        immediateContext->Commit(false);*/
 
         // Execute prending command lists.
         if (!pendingCommandLists.empty())
@@ -738,7 +709,7 @@ namespace alimer
 
         // Recommended to always use tearing if supported when using a sync interval of 0.
         // Note this will fail if in true 'fullscreen' mode.
-        HRESULT hr = swapChain->Present(syncInterval, presentFlags);
+        HRESULT hr = S_OK;// swapChain->Present(syncInterval, presentFlags);
 
         // If the device was reset we must completely reinitialize the renderer.
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
@@ -765,7 +736,7 @@ namespace alimer
             }
 
             frameIndex = (frameIndex + 1) % kInflightFrameCount;
-            backbufferIndex = swapChain->GetCurrentBackBufferIndex();
+            //backbufferIndex = swapChain->GetCurrentBackBufferIndex();
             CbvSrvUavGpuHeaps[frameIndex].Size = 0;
 
             if (!dxgiFactory->IsCurrent())
@@ -777,17 +748,12 @@ namespace alimer
     }
 
 
-    void D3D12GraphicsImpl::HandleDeviceLost()
+    void D3D12GraphicsDevice::HandleDeviceLost()
     {
 
     }
 
-    Texture* D3D12GraphicsImpl::GetBackbufferTexture() const
-    {
-        return backbufferTextures[backbufferIndex].Get();
-    }
-
-    CommandBuffer& D3D12GraphicsImpl::BeginCommandBuffer(const std::string_view id)
+    /*CommandBuffer& D3D12GraphicsImpl::BeginCommandBuffer(const std::string_view id)
     {
         std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
 
@@ -806,9 +772,24 @@ namespace alimer
 
         ALIMER_ASSERT(commandBuffer != nullptr);
         return *commandBuffer;
+    }*/
+
+    Swapchain* D3D12GraphicsDevice::GetMainSwapchain() const
+    {
+        return mainSwapchain.get();
     }
 
-    void D3D12GraphicsImpl::CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion)
+    CommandContext* D3D12GraphicsDevice::GetImmediateContext() const
+    {
+        return immediateContext.get();
+    }
+
+    SharedPtr<Swapchain> D3D12GraphicsDevice::CreateSwapchain(const SwapchainDescription& description)
+    {
+        return new D3D12Swapchain(this, description);
+    }
+
+    /*void D3D12GraphicsImpl::CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion)
     {
         std::lock_guard<std::mutex> LockGuard(commandBufferAllocationMutex);
 
@@ -835,10 +816,10 @@ namespace alimer
         }
 
         // Recycle command buffer.
-        commandBufferQueue.push(commandBuffer);
-    }
+        commandBufferQueue.push(commandBuffer);*
+    }*/
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsImpl::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
     {
         DescriptorHeap* descriptorHeap;
 
@@ -864,7 +845,7 @@ namespace alimer
         return CPUHandle;
     }
 
-    void D3D12GraphicsImpl::AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle)
+    void D3D12GraphicsDevice::AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle)
     {
         ALIMER_ASSERT(OutCPUHandle && OutGPUHandle && count > 0);
 
@@ -872,13 +853,13 @@ namespace alimer
 
         assert((descriptorHeap->Size + count) < descriptorHeap->Capacity);
 
-        OutCPUHandle->ptr = descriptorHeap->CpuStart.ptr + (u64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
-        OutGPUHandle->ptr = descriptorHeap->GpuStart.ptr + (u64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+        OutCPUHandle->ptr = descriptorHeap->CpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+        OutGPUHandle->ptr = descriptorHeap->GpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
 
         descriptorHeap->Size += count;
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE D3D12GraphicsImpl::CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle)
+    D3D12_GPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle)
     {
         D3D12_CPU_DESCRIPTOR_HANDLE CPUBaseHandle;
         D3D12_GPU_DESCRIPTOR_HANDLE GPUBaseHandle;
@@ -888,7 +869,7 @@ namespace alimer
     }
 
     /* ImGui integration */
-    void D3D12GraphicsImpl::InitImGui()
+    void D3D12GraphicsDevice::InitImGui()
     {
         // Setup back-end capabilities flags
         ImGuiIO& io = ImGui::GetIO();
@@ -909,7 +890,7 @@ namespace alimer
         }
     }
 
-    void D3D12GraphicsImpl::ShutdownImgui(bool all)
+    void D3D12GraphicsDevice::ShutdownImgui(bool all)
     {
         if (all)
         {
@@ -934,7 +915,7 @@ namespace alimer
         io.Fonts->TexID = nullptr; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     }
 
-    bool D3D12GraphicsImpl::CreateImguiObjects()
+    bool D3D12GraphicsDevice::CreateImguiObjects()
     {
         if (imguiPipelineState)
             ShutdownImgui(false);
@@ -1138,7 +1119,7 @@ namespace alimer
         return true;
     }
 
-    void D3D12GraphicsImpl::CreateImguiFontsTexture()
+    void D3D12GraphicsDevice::CreateImguiFontsTexture()
     {
         // Build texture atlas
         ImGuiIO& io = ImGui::GetIO();
@@ -1340,7 +1321,7 @@ namespace alimer
         ctx->OMSetBlendFactor(blend_factor);
     }
 
-    void D3D12GraphicsImpl::RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* commandList)
+    void D3D12GraphicsDevice::RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* commandList)
     {
         // Avoid rendering when minimized
         if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)

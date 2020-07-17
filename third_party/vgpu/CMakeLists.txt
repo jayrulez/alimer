@@ -16,10 +16,13 @@ option(BUILD_SHARED_LIBS "Build shared library" ON)
 
 # Driver Options
 if (WIN32)
-    option(VGPU_DRIVER_D3D12 "Include Direct3D12 backend" ON)
-    option(VGPU_DRIVER_VULKAN "Include Vulkan backend" ON)
+    set(VGPU_DRIVER_D3D11 ON CACHE BOOL "Include Direct3D11 backend")
+    #set(VGPU_DRIVER_D3D12 ON CACHE BOOL "Include Direct3D12 backend")
+    #option(VGPU_DRIVER_VULKAN "Include Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-    option(VGPU_DRIVER_D3D12 "Include Direct3D12 backend" ON)
+    set(VGPU_DRIVER_D3D11 ON CACHE INTERNAL "Include Direct3D11 backend" FORCE)
+    #set(VGPU_DRIVER_D3D12 ON CACHE BOOL "Include Direct3D12 backend")
+    #option(VGPU_DRIVER_D3D12 "Include Direct3D12 backend" ON)
 else()
 endif ()
 
@@ -35,7 +38,7 @@ endif()
 # Third party
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-if (VGPU_DRIVER_VULKAN)
+if (VGPU_DRIVER_VULKAN AND TODO_VK)
     # vulkan
     add_library(vulkan INTERFACE)
     set(VULKAN_INCLUDE_DIR ${THIRD_PARTY_DIR}/vulkan/include)
@@ -89,6 +92,7 @@ add_library(vgpu
     src/vgpu_d3d_common.h
     # Source Files
 	src/vgpu.cpp
+    src/vgpu_driver_opengl.cpp
     src/vgpu_driver_d3d11.cpp
     src/vgpu_driver_d3d12.cpp
     src/vgpu_driver_vulkan.cpp

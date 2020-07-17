@@ -47,7 +47,7 @@ namespace alimer
     extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
 #endif
 
-    class D3D12GraphicsImpl;
+    class D3D12GraphicsDevice;
 
     struct D3D12MapResult
     {

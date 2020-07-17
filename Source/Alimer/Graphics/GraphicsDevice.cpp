@@ -32,12 +32,12 @@
 #endif
 
 #if defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsImpl.h"
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice* GPU = nullptr;
+    GraphicsDevice* Graphics = nullptr;
 
 #if defined(ALIMER_D3D12)
     GPUBackendType GraphicsDevice::preferredBackend = GPUBackendType::Direct3D12;
@@ -54,7 +54,7 @@ namespace alimer
 
     bool GraphicsDevice::Initialize(const std::string& applicationName, Window* window, GPUFlags flags)
     {
-        if (GPU != nullptr) {
+        if (Graphics != nullptr) {
             LOGW("Cannot create more than one Graphics instance");
             return true;
         }
@@ -64,7 +64,7 @@ namespace alimer
         if (backend == GPUBackendType::Count)
         {
 #if defined(ALIMER_D3D12)
-            if (D3D12GraphicsImpl::IsAvailable()) {
+            if (D3D12GraphicsDevice::IsAvailable()) {
                 backend = GPUBackendType::Direct3D12;
             }
 #endif
@@ -81,15 +81,15 @@ namespace alimer
 #if defined(ALIMER_VULKAN)
         case GPUBackendType::Vulkan:
             if (VulkanGraphicsImpl::IsAvailable()) {
-                GPU = new VulkanGraphicsImpl(applicationName, flags);
+                Graphics = new VulkanGraphicsImpl(applicationName, flags);
             }
             break;
 #endif
 
 #if defined(ALIMER_D3D12)
         case GPUBackendType::Direct3D12:
-            if (D3D12GraphicsImpl::IsAvailable()) {
-                GPU = new D3D12GraphicsImpl(window, flags);
+            if (D3D12GraphicsDevice::IsAvailable()) {
+                Graphics = new D3D12GraphicsDevice(window, flags);
             }
             break;
 #endif
@@ -98,14 +98,15 @@ namespace alimer
             break;
         }
 
-        return GPU != nullptr;
+        return Graphics != nullptr;
     }
 
     void GraphicsDevice::Shutdown()
     {
-        if (GPU != nullptr)
+        if (Graphics != nullptr)
         {
-            delete GPU; GPU = nullptr;
+            delete Graphics;
+            Graphics = nullptr;
         }
     }
 
@@ -138,15 +139,5 @@ namespace alimer
 
             trackedResources.clear();
         }
-    }
-
-    void RegisterGraphicsLibrary()
-    {
-        static bool registered = false;
-        if (registered)
-            return;
-        registered = true;
-
-        Texture::RegisterObject();
     }
 }

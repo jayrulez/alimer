@@ -27,6 +27,7 @@
 #include <atomic>
 #include <queue>
 #include <mutex>
+#include <memory>
 struct ImDrawData;
 
 namespace alimer
@@ -40,15 +41,15 @@ namespace alimer
         void* Submission = nullptr;
     };
 
-    class D3D12Texture;
-    class D3D12CommandBuffer;
+    class D3D12Swapchain;
+    class D3D12CommandContext;
 
-    class D3D12GraphicsImpl final : public GraphicsDevice
+    class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D12GraphicsImpl(Window* window, GPUFlags flags);
-        ~D3D12GraphicsImpl();
+        D3D12GraphicsDevice(Window* window, GPUFlags flags);
+        ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
@@ -58,8 +59,8 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
-        CommandBuffer& BeginCommandBuffer(const std::string_view id) override;
-        void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
+        
+        //void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
 
         void WaitForGPU() override;
         bool BeginFrame() override;
@@ -72,11 +73,17 @@ namespace alimer
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
         bool SupportsRenderPass() const { return supportsRenderPass; }
+        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
 
     private:
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        Texture* GetBackbufferTexture() const override;
+
+        Swapchain* GetMainSwapchain() const override;
+        CommandContext* GetImmediateContext() const override;
+
+        /* Resource creation methods */
+        SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description) override;
         
         void InitializeUpload();
         void ShutdownUpload();
@@ -111,14 +118,16 @@ namespace alimer
         D3D_ROOT_SIGNATURE_VERSION rootSignatureVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
         bool supportsRenderPass = false;
 
-        ComPtr<ID3D12CommandQueue> graphicsQueue;
-        ComPtr<ID3D12CommandQueue> computeQueue;
-        ComPtr<ID3D12CommandQueue> copyQueue;
+        ID3D12CommandQueue* graphicsQueue;
+        ID3D12CommandQueue* computeQueue;
+        ID3D12CommandQueue* copyQueue;
+        std::unique_ptr<D3D12CommandContext> immediateContext;
+        std::unique_ptr<D3D12Swapchain> mainSwapchain;
 
         std::atomic<uint32_t> commandBufferCount{ 0 };
         std::mutex commandBufferAllocationMutex;
-        std::queue<D3D12CommandBuffer*> commandBufferQueue;
-        std::vector<std::unique_ptr<D3D12CommandBuffer>> commandBufferPool;
+        std::queue<D3D12CommandContext*> commandBufferQueue;
+        std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool;
         std::vector<ID3D12CommandList*> pendingCommandLists;
 
         /// Current active frame index
@@ -132,9 +141,6 @@ namespace alimer
 
         /* Main swap chain */
         DXGI_FORMAT backbufferFormat = DXGI_FORMAT_B8G8R8A8_UNORM;
-        IDXGISwapChain3* swapChain = nullptr;
-        uint32_t backbufferIndex = 0;
-        SharedPtr<D3D12Texture> backbufferTextures[kInflightFrameCount] = {};
 
         // Presentation fence objects.
         ID3D12Fence* frameFence = nullptr;

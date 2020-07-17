@@ -21,7 +21,7 @@
 //
 
 #include "D3D12Texture.h"
-#include "D3D12GraphicsImpl.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
@@ -50,9 +50,9 @@ namespace alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_)
         : Texture(ConvertResourceDesc(resource_->GetDesc()))
-        , device(device_)
+        , device{ device }
         , resource(resource_)
         , state(state_)
     {
@@ -60,9 +60,9 @@ namespace alimer
         device->GetD3DDevice()->CreateRenderTargetView(resource_, nullptr, RTV);
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsImpl* device_, const TextureDescription& desc, const void* initialData)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
         : Texture(desc)
-        , device(device_)
+        , device{ device }
     {
         const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
 

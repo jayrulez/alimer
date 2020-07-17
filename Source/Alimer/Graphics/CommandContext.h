@@ -24,18 +24,17 @@
 
 #include "Graphics/Buffer.h"
 #include "Graphics/Texture.h"
-#include "Math/Viewport.h"
 #include "Math/Color.h"
 
 namespace alimer
 {
     /// A container that stores commands for the GPU to execute.
-    class ALIMER_API CommandBuffer
+    class ALIMER_API CommandContext
     {
     public:
         /// Constructor.
-        CommandBuffer();
-        virtual ~CommandBuffer() = default;
+        CommandContext();
+        virtual ~CommandContext() = default;
 
         virtual void Commit(bool waitForCompletion = false) = 0;
 
@@ -46,10 +45,9 @@ namespace alimer
         virtual void BeginRenderPass(const RenderPassDescription& renderPass) = 0;
         virtual void EndRenderPass() = 0;
 
-        virtual void SetScissorRect(const Rect& scissorRect) = 0;
+        virtual void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) = 0;
         virtual void SetScissorRects(const Rect* scissorRects, uint32_t count) = 0;
-        virtual void SetViewport(const Viewport& viewport) = 0;
-        virtual void SetViewports(const Viewport* viewports, uint32_t count) = 0;
+        virtual void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
         virtual void SetBlendColor(const Color& color) = 0;
 
         virtual void BindBuffer(uint32_t slot, Buffer* buffer) = 0;

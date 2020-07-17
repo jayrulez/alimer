@@ -26,6 +26,64 @@
 #include <stdarg.h>
 #include <string.h> /* memset */
 
+ /* Drivers */
+static const Driver* drivers[] = {
+#if defined(VGPU_DRIVER_D3D11)
+    &d3d11_driver,
+#endif
+#if defined(VGPU_DRIVER_D3D12) 
+    &d3d12_driver,
+#endif
+#if defined(VGPU_DRIVER_VULKAN) && defined(TODO_VK)
+    &vulkan_driver,
+#endif
+    nullptr
+};
+
+static vgpu::BackendType s_backendType = vgpu::BackendType::Count;
+static Renderer* s_renderer = nullptr;
+
+bool vgpu_init(const vgpu_config* config) {
+    VGPU_ASSERT(config);
+
+    if (s_renderer) {
+        return true;
+    }
+
+    if (s_backendType == vgpu::BackendType::Count) {
+        for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
+            if (drivers[i]->isSupported()) {
+                s_renderer = drivers[i]->initRenderer();
+                break;
+            }
+        }
+    }
+    else {
+        for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
+            if (drivers[i]->backendType == s_backendType && drivers[i]->isSupported()) {
+                s_renderer = drivers[i]->initRenderer();
+                break;
+            }
+        }
+    }
+
+    if (!s_renderer->init(config)) {
+        s_renderer = nullptr;
+        return false;
+    }
+
+    return true;
+}
+
+void vgpu_shutdown(void) {
+    if (s_renderer == nullptr) {
+        return;
+    }
+
+    s_renderer->shutdown();
+    s_renderer = nullptr;
+}
+
 namespace vgpu
 {
     /* Log */
@@ -72,62 +130,12 @@ namespace vgpu
     }
 
 
-    /* Drivers */
-    static const Driver* drivers[] = {
-    #if defined(VGPU_DRIVER_D3D11)
-        &d3d11_driver,
-    #endif
-    #if defined(VGPU_DRIVER_D3D12) 
-        &d3d12_driver,
-    #endif
-    #if defined(VGPU_DRIVER_VULKAN)
-        &vulkan_driver,
-    #endif
-        nullptr
-    };
-
-    static BackendType s_backendType = BackendType::Count;
-    static Renderer* s_renderer = nullptr;
-
-    bool init(InitFlags flags, const PresentationParameters& presentationParameters)
-    {
-        if (s_renderer) {
-            return true;
-        }
-
-        if (s_backendType == BackendType::Count) {
-            for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-                if (drivers[i]->isSupported()) {
-                    s_renderer = drivers[i]->initRenderer();
-                    break;
-                }
-            }
-        }
-        else {
-            for (uint32_t i = 0; _vgpu_count_of(drivers); i++) {
-                if (drivers[i]->backendType == s_backendType && drivers[i]->isSupported()) {
-                    s_renderer = drivers[i]->initRenderer();
-                    break;
-                }
-            }
-        }
-
-        if (!s_renderer->init(flags, presentationParameters)) {
-            s_renderer = nullptr;
-            return false;
-        }
-
-        return true;
+    bool init(const vgpu_config& config) {
+        return vgpu_init(&config);
     }
 
-    void shutdown(void)
-    {
-        if (s_renderer == nullptr) {
-            return;
-        }
-
-        s_renderer->shutdown();
-        s_renderer = nullptr;
+    void shutdown(void) {
+        return vgpu_shutdown();
     }
 
     void beginFrame(void)
@@ -146,15 +154,14 @@ namespace vgpu
     }
 
     /* Resource creation methods */
-    TextureHandle createTexture(const TextureDescription& desc, const void* initialData)
+    vgpu_texture createTexture(const TextureDescription& desc, const void* initialData)
     {
         return s_renderer->createTexture(desc, initialData);
     }
 
-    void destroyTexture(TextureHandle handle)
+    void destroyTexture(vgpu_texture handle)
     {
-        if (handle.isValid())
-            s_renderer->destroyTexture(handle);
+        s_renderer->destroyTexture(handle);
     }
 
     BufferHandle CreateBuffer(uint32_t size, BufferUsage usage, uint32_t stride, const void* initialData)
@@ -201,42 +208,42 @@ namespace vgpu
     /* Commands */
     void cmdSetViewport(CommandList commandList, float x, float y, float width, float height, float min_depth, float max_depth)
     {
-        s_renderer->cmdSetViewport(commandList, x, y, width, height, min_depth, max_depth);
+        s_renderer->cmdSetViewport(x, y, width, height, min_depth, max_depth);
     }
 
     void SetScissorRect(CommandList commandList, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
     {
-        s_renderer->cmdSetScissor(commandList, x, y, width, height);
+        s_renderer->cmdSetScissor(x, y, width, height);
     }
 
     void SetVertexBuffer(CommandList commandList, BufferHandle handle)
     {
-        s_renderer->cmdSetVertexBuffer(commandList, handle);
+        s_renderer->cmdSetVertexBuffer(handle);
     }
 
     void SetIndexBuffer(CommandList commandList, BufferHandle handle)
     {
-        s_renderer->cmdSetIndexBuffer(commandList, handle);
+        s_renderer->cmdSetIndexBuffer(handle);
     }
 
     void SetShader(CommandList commandList, ShaderHandle shader)
     {
-        s_renderer->cmdSetShader(commandList, shader);
+        s_renderer->cmdSetShader(shader);
     }
 
     void BindUniformBuffer(CommandList commandList, uint32_t slot, BufferHandle handle)
     {
-        s_renderer->cmdBindUniformBuffer(commandList, slot, handle);
+        s_renderer->cmdBindUniformBuffer(slot, handle);
     }
 
-    void BindTexture(CommandList commandList, uint32_t slot, TextureHandle handle)
+    void BindTexture(CommandList commandList, uint32_t slot, vgpu_texture handle)
     {
-        s_renderer->cmdBindTexture(commandList, slot, handle);
+        s_renderer->cmdBindTexture(slot, handle);
     }
 
     void DrawIndexed(CommandList commandList, uint32_t indexCount, uint32_t startIndex, int32_t baseVertex)
     {
-        s_renderer->cmdDrawIndexed(commandList, indexCount, startIndex, baseVertex);
+        s_renderer->cmdDrawIndexed(indexCount, startIndex, baseVertex);
     }
 
     /* Pixel format helpers */

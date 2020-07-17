@@ -22,8 +22,8 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
-#include "Graphics/Texture.h"
+#include "Graphics/CommandContext.h"
+#include "Graphics/Swapchain.h"
 #include "Graphics/Buffer.h"
 #include <vector>
 #include <mutex>
@@ -57,13 +57,21 @@ namespace alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        /// Get the current backbuffer texture.
-        virtual Texture* GetBackbufferTexture() const = 0;
-
         /// Get the device capabilities.
         const GraphicsDeviceCapabilities& GetCaps() const { return caps; }
 
-        virtual CommandBuffer& BeginCommandBuffer(const std::string_view id) = 0;
+        /// Get the main swapchain created from window.
+        virtual Swapchain* GetMainSwapchain() const = 0;
+
+        /**
+        * Get the immediate command context.
+        * The default context is managed completely by the device.
+        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
+        */
+        virtual CommandContext* GetImmediateContext() const = 0;
+
+        /* Resource creation methods */
+        virtual SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description) = 0;
 
     private:
         void TrackResource(GraphicsResource* resource);
@@ -86,11 +94,12 @@ namespace alimer
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 
-    extern ALIMER_API GraphicsDevice* GPU;
+    extern ALIMER_API GraphicsDevice* Graphics;
 
-    /// Register Graphics related object factories and attributes.
-    ALIMER_API void RegisterGraphicsLibrary();
-
+    ALIMER_FORCEINLINE SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description)
+    {
+        return Graphics->CreateSwapchain(description);
+    }
 
     ALIMER_FORCEINLINE SharedPtr<Texture> GPUCreateTexture2D()
     {

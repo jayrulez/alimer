@@ -20,13 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
-    CommandBuffer::CommandBuffer()
+    CommandContext::CommandContext()
     {
 
     }

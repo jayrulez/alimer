@@ -22,18 +22,16 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
-    class D3D12CommandQueue;
-
-    class D3D12CommandBuffer final : public CommandBuffer
+    class D3D12CommandContext final : public CommandContext
     {
     public:
-        D3D12CommandBuffer(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_);
-        ~D3D12CommandBuffer() override;
+        D3D12CommandContext(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type);
+        ~D3D12CommandContext() override;
         void Reset(uint32_t frameIndex);
 
         void Commit(bool waitForCompletion) override;
@@ -45,10 +43,9 @@ namespace alimer
         void BeginRenderPass(const RenderPassDescription& renderPass) override;
         void EndRenderPass() override;
 
-        void SetScissorRect(const Rect& scissorRect) override;
+        void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) override;
         void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(const Viewport& viewport) override;
-        void SetViewports(const Viewport* viewports, uint32_t count) override;
+        void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) override;
         void SetBlendColor(const Color& color) override;
 
         void BindBuffer(uint32_t slot, Buffer* buffer) override;
@@ -62,7 +59,7 @@ namespace alimer
         ALIMER_FORCEINLINE ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }
 
     private:
-        D3D12GraphicsImpl* device;
+        D3D12GraphicsDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
 
         bool useRenderPass;

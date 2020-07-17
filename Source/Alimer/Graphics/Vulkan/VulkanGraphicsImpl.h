@@ -52,8 +52,10 @@ namespace alimer
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
-        Texture* GetBackbufferTexture() const override;
-        CommandBuffer& BeginCommandBuffer(const std::string_view id) override;
+
+        Swapchain* GetMainSwapchain() const override;
+        CommandContext* GetImmediateContext() const override;
+        SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -85,7 +87,7 @@ namespace alimer
         std::vector<VkSemaphore> recycledSemaphores;
 
         /* Frame data */
-        u32 maxInflightFrames = 3u;
+        uint32 maxInflightFrames = 3u;
 
         bool frameActive{ false };
 

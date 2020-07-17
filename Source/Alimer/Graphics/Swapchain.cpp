@@ -20,19 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsContext.h"
+#include "Graphics/Swapchain.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
-    GraphicsContext::GraphicsContext()
-        : GraphicsResource()
+    Swapchain::Swapchain(const SwapchainDescription& description)
+        : width(description.width)
+        , height(description.height)
+        , colorFormat(description.preferredColorFormat)
     {
         currentRenderPassDescription.colorAttachments[0].slice = 0;
     }
 
-    void GraphicsContext::Resize(uint32_t newWidth, uint32_t newHeight)
+    void Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
     {
         if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
         {
@@ -41,16 +43,16 @@ namespace alimer
 
             width = Max(newWidth, 1u);
             height = Max(newHeight, 1u);
-            Recreate();
+            ResizeImpl();
         }
     }
 
-    Texture* GraphicsContext::GetBackbufferTexture() const
+    Texture* Swapchain::GetBackbufferTexture() const
     {
         return backbufferTextures[backbufferIndex].Get();
     }
 
-    Texture* GraphicsContext::GetDepthStencilTexture() const
+    Texture* Swapchain::GetDepthStencilTexture() const
     {
         return depthStencilTexture.Get();
     }

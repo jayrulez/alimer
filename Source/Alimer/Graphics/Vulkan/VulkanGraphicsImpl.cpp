@@ -807,7 +807,7 @@ namespace alimer
             createInfo.pNext = &features;
             createInfo.queueCreateInfoCount = queueCreateCount;
             createInfo.pQueueCreateInfos = queue_info;
-            createInfo.enabledExtensionCount = (u32)enabledDeviceExtensions.size();
+            createInfo.enabledExtensionCount = (uint32)enabledDeviceExtensions.size();
             createInfo.ppEnabledExtensionNames = enabledDeviceExtensions.data();
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -1095,7 +1095,7 @@ namespace alimer
         perFrame.clear();
         perFrame.resize(imageCount);
 
-        for (u32 i = 0; i < imageCount; i++)
+        for (uint32 i = 0; i < imageCount; i++)
         {
             backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
             backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
@@ -1228,14 +1228,18 @@ namespace alimer
         frameActive = false;
     }
 
-    Texture* VulkanGraphicsImpl::GetBackbufferTexture() const
+    Swapchain* VulkanGraphicsImpl::GetMainSwapchain() const
     {
-        return backbufferTextures[backbufferIndex].Get();
+        return nullptr;
     }
 
-    CommandBuffer& VulkanGraphicsImpl::BeginCommandBuffer(const std::string_view id)
+    CommandContext* VulkanGraphicsImpl::GetImmediateContext() const
     {
-        CommandBuffer* cmd = nullptr;
-        return *cmd;
+        return nullptr;
+    }
+
+    SharedPtr<Swapchain> VulkanGraphicsImpl::CreateSwapchain(const SwapchainDescription& description)
+    {
+        return nullptr;
     }
 }

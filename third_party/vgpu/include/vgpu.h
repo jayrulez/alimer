@@ -46,14 +46,48 @@
 #   define VGPU_CALL
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
-#include <string>
+#include <stddef.h>
+
+/* Constants */
+enum {
+    VGPU_INVALID_ID = 0,
+    VGPU_MAX_COLOR_ATTACHMENTS = 8u,
+    VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+    VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+    VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+    VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
+    VGPU_MAX_PHYSICAL_DEVICE_NAME_SIZE = 256,
+};
+
+/* Structs */
+typedef struct vgpu_buffer { uint32_t id; } vgpu_buffer;
+typedef struct vgpu_texture { uint32_t id; } vgpu_texture;
+
+typedef struct vgpu_color {
+    float r;
+    float g;
+    float b;
+    float a;
+} vgpu_color;
+
+typedef struct vgpu_config {
+    bool debug;
+    void (*callback)(void* context, const char* message, int level);
+    void* context;
+    void* (*get_proc_address)(const char*);
+} vgpu_config;
+
+VGPU_API bool vgpu_init(const vgpu_config* config);
+VGPU_API void vgpu_shutdown(void);
 
 #ifndef VGPU_ASSERT
 #   include <assert.h>
 #   define VGPU_ASSERT(c) assert(c)
 #endif
 
+#ifdef __cplusplus
 #if !defined(VGPU_DEFINE_ENUM_FLAG_OPERATORS)
 #define VGPU_DEFINE_ENUM_FLAG_OPERATORS(EnumType, UnderlyingEnumType) \
 inline constexpr EnumType operator | (EnumType a, EnumType b) { return (EnumType)((UnderlyingEnumType)(a) | (UnderlyingEnumType)(b)); } \
@@ -69,7 +103,7 @@ inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
 namespace vgpu
 {
     /* Constants */
-    static constexpr uint32_t kInvalidId = 0xFFffFFff;
+    static constexpr uint32_t kInvalidId = 0;
     static constexpr uint32_t kNumInflightFrames = 2u;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxCommandLists = 16u;
@@ -80,11 +114,10 @@ namespace vgpu
 
     /* Handles*/
     struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
-    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
+    
     struct ShaderHandle { uint32_t id; bool isValid() const { return id != kInvalidId; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidId };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidId };
     static constexpr ShaderHandle kInvalidShader = { kInvalidId };
     using CommandList = uint8_t;
 
@@ -243,15 +276,6 @@ namespace vgpu
         Immediate
     };
 
-
-    /* Structs */
-    typedef struct vgpu_color {
-        float r;
-        float g;
-        float b;
-        float a;
-    } vgpu_color;
-
     struct TextureDescription {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
@@ -277,13 +301,13 @@ namespace vgpu
     };
 
     typedef struct vgpu_attachment_info {
-        TextureHandle texture;
+        vgpu_texture texture;
         uint32_t level;
         uint32_t slice;
     } vgpu_attachment_info;
 
     typedef struct vgpu_color_attachment_info {
-        TextureHandle texture;
+        vgpu_texture texture;
         uint32_t level;
         uint32_t slice;
         LoadOp load_op;
@@ -375,8 +399,8 @@ namespace vgpu
     struct Caps {
         BackendType backendType;
         GPUVendorId vendorId;
-        uint32_t deviceId;
-        std::string adapterName;
+        uint32_t    deviceId;
+        char        deviceName[VGPU_MAX_PHYSICAL_DEVICE_NAME_SIZE];
         Features features;
         Limits limits;
     };
@@ -399,15 +423,15 @@ namespace vgpu
     VGPU_API void logError(const char* format, ...);
     VGPU_API void logInfo(const char* format, ...);
 
-    VGPU_API bool init(InitFlags flags, const PresentationParameters& presentationParameters);
+    VGPU_API bool init(const vgpu_config& config);
     VGPU_API void shutdown(void);
     VGPU_API void beginFrame(void);
     VGPU_API void endFrame(void);
     VGPU_API const Caps* queryCaps();
 
     /* Resource creation methods */
-    VGPU_API TextureHandle createTexture(const TextureDescription& desc, const void* initialData = nullptr);
-    VGPU_API void destroyTexture(TextureHandle handle);
+    VGPU_API vgpu_texture createTexture(const TextureDescription& desc, const void* initialData = nullptr);
+    VGPU_API void destroyTexture(vgpu_texture handle);
 
     VGPU_API BufferHandle CreateBuffer(uint32_t size, BufferUsage usage, uint32_t stride = 0, const void* initialData = nullptr);
     VGPU_API void DestroyBuffer(BufferHandle handle);
@@ -426,7 +450,7 @@ namespace vgpu
     VGPU_API void SetShader(CommandList commandList, ShaderHandle shader);
 
     VGPU_API void BindUniformBuffer(CommandList commandList, uint32_t slot, BufferHandle handle);
-    VGPU_API void BindTexture(CommandList commandList, uint32_t slot, TextureHandle handle);
+    VGPU_API void BindTexture(CommandList commandList, uint32_t slot, vgpu_texture handle);
     VGPU_API void DrawIndexed(CommandList commandList, uint32_t indexCount, uint32_t startIndex, int32_t baseVertex);
 
     /* pixel format helpers */
@@ -578,3 +602,4 @@ namespace vgpu
         }
     }
 }
+#endif

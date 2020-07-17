@@ -130,10 +130,17 @@ namespace alimer
         NegativeZ = 5, //!< -z face
     };
 
-    enum class LoadAction : uint32_t {
+    enum class LoadAction : uint32 {
         Clear,
         Load,
         Discard
+    };
+
+
+    enum class PresentMode : uint32 {
+        Immediate,
+        Mailbox,
+        Fifo
     };
 
     struct TextureDescription
@@ -150,7 +157,7 @@ namespace alimer
         uint32_t sampleCount = 1u;
     };
 
-    /// Describes a Graphics buffer.
+    /// Describes a buffer.
     struct BufferDescription
     {
         String name;
@@ -158,6 +165,18 @@ namespace alimer
         uint32_t size;
         uint32_t stride = 0;
         MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
+    };
+
+    /// Describes a Swapchain
+    struct SwapchainDescription
+    {
+        void* windowHandle;
+        uint32 width;
+        uint32 height;
+        PixelFormat preferredColorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat preferredDepthStencilFormat = PixelFormat::Depth32Float;
+        PresentMode presentMode = PresentMode::Fifo;
+        bool isFullscreen = false;
     };
 
     class Texture;

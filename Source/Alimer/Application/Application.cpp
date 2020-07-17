@@ -24,8 +24,9 @@
 #include "Core/Window.h"
 #include "Core/Input.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "Core/Log.h"
+#include <vgpu.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -106,20 +107,18 @@ namespace alimer
         window->Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
 
         // Init graphics
-        GPUFlags flags = GPUFlags::None;
+        vgpu_config config = {};
 #ifdef _DEBUG
-        flags |= GPUFlags::DebugRuntime;
+        config.debug = true;
 #endif
 
-        //GraphicsDevice::SetPreferredBackend(GPUBackendType::Vulkan);
-
-        if (!GraphicsDevice::Initialize(config.applicationName, window.get(), flags))
+        vgpu::PresentationParameters presentParams = {};
+        presentParams.backbufferWidth = window->GetSize().width;
+        presentParams.backbufferHeight = window->GetSize().height;
+        presentParams.windowHandle = window->GetNativeHandle();
+        if (!vgpu::init(config))
         {
             headless = true;
-        }
-        else
-        {
-            RegisterGraphicsLibrary();
         }
 
         Initialize();
@@ -153,7 +152,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GPU->BeginFrame()) {
+        if (!Graphics->BeginFrame()) {
             return false;
         }
 
@@ -202,7 +201,7 @@ namespace alimer
 
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Render();
-        GPU->EndFrame();
+        Graphics->EndFrame();
     }
 
     int Application::Run()

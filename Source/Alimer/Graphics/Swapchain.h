@@ -22,31 +22,39 @@
 
 #pragma once
 
-#include "Graphics/GraphicsContext.h"
-#include "D3D12Backend.h"
+#include "Graphics/Texture.h"
+#include "Math/Size.h"
+#include <vector>
 
 namespace alimer
 {
-    class D3D12GraphicsContext final : public GraphicsContext
+    class ALIMER_API Swapchain : public GraphicsResource
     {
     public:
-        D3D12GraphicsContext(D3D12GraphicsImpl* device_);
-        ~D3D12GraphicsContext() override;
-        void Destroy() override;
-        void Present();
+        /// Constructor.
+        Swapchain(const SwapchainDescription& description);
+
+        void Resize(uint32_t newWidth, uint32_t newHeight);
+
+        /// Get the current backbuffer texture.
+        Texture* GetBackbufferTexture() const;
+
+        /// Get the depth stencil texture.
+        Texture* GetDepthStencilTexture() const;
+
+        const RenderPassDescription& GetCurrentRenderPassDescription() const { return currentRenderPassDescription; }
 
     private:
-        void BackendSetName() override;
+        virtual void ResizeImpl() = 0;
 
-        D3D12GraphicsImpl* device;
-        IDXGISwapChain3* handle;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window;
-#else
-        IUnknown* window;
-#endif
+    protected:
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat;
 
-        UINT _syncInterval;
-        UINT _presentFlags;
+        uint32_t backbufferIndex = 0;
+        std::vector<SharedPtr<Texture>> backbufferTextures;
+        SharedPtr<Texture> depthStencilTexture;
+        RenderPassDescription currentRenderPassDescription;
     };
 }

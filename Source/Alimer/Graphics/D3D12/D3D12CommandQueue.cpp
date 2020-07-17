@@ -21,12 +21,11 @@
 //
 
 #include "D3D12CommandQueue.h"
-#include "D3D12CommandBuffer.h"
-#include "D3D12GraphicsImpl.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace alimer
 {
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsImpl* device_, D3D12_COMMAND_LIST_TYPE type_)
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_)
         : device(device_)
         , type(type_)
     {
@@ -87,12 +86,12 @@ namespace alimer
         readyAllocators.push(std::make_pair(fenceValue, allocator));
     }
 
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsImpl* device_, CommandQueueType queueType, const std::string_view& name)
-        : device(device_)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType, const std::string_view& name)
+        : device{ device }
         , type(D3D12GetCommandListType(queueType))
         , nextFenceValue((uint64_t)type << 56 | 1)
         , lastCompletedFenceValue((uint64_t)type << 56)
-        , allocatorPool(device_, type)
+        , allocatorPool(device, type)
     {
         D3D12_COMMAND_QUEUE_DESC desc = {};
         desc.Type = type;
