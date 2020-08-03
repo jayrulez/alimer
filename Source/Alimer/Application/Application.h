@@ -26,7 +26,6 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Graphics/Graphics.h"
 #include "Math/Size.h"
 
 namespace alimer
@@ -86,7 +85,6 @@ namespace alimer
 
         /// Called by platform backend.
         void InitBeforeRun();
-        
         void Render();
 
     protected:

@@ -1,17 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
-project(Alimer LANGUAGES C CXX)
-set(TARGET_NAME Alimer)
+
+project(alimer)
+set(TARGET_NAME alimer)
 
 macro (define_engine_source_files)
-    cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
-	foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
-		# Get header files
+  cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
+  foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
+	  # Get header files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.hpp ${path}/*.h ${path}/*.inl)
 
 		list (APPEND HEADER_FILES ${_files})
 
 		# Install them
-        install (FILES ${_files} DESTINATION ${DEST_INCLUDE_DIR}/${path})
+    install (FILES ${_files} DESTINATION ${DEST_INCLUDE_DIR}/${path})
 
 		# Get source files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.c ${path}/*.cpp)
@@ -47,7 +48,6 @@ endif()
 
 if (WIN32)
     define_engine_source_files(Platform/Windows)
-    define_engine_source_files(Graphics/OpenGL)
 endif ()
 
 if (ALIMER_VULKAN)
@@ -75,13 +75,10 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    stb
-    fmt
-    imgui
-)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    alimer_khronos_platform
+  agpu
+  stb
+  fmt
+  imgui
 )
 
 # Link platform specific libraries

@@ -11,7 +11,7 @@ function(add_sample sample_name)
     else ()
 	    add_executable(${sample_name} ${SOURCE_FILES})
     endif ()
-	target_link_libraries(${sample_name} Alimer)
+	target_link_libraries(${sample_name} alimer)
 
     install(TARGETS ${sample_name}
         LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}

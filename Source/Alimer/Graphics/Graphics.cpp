@@ -38,10 +38,6 @@
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_OPENGL)
-#include "Graphics/OpenGL/GLGraphics.h"
-#endif
-
 namespace alimer
 {
     Graphics::Graphics(Window& window)
@@ -88,9 +84,6 @@ namespace alimer
             availableDrivers.insert(RendererType::Direct3D11);
 #endif
 
-#if defined(ALIMER_OPENGL)
-            availableDrivers.insert(RendererType::OpenGL);
-#endif
         }
 
         return availableDrivers;
@@ -121,12 +114,6 @@ namespace alimer
             if (VulkanGraphicsImpl::IsAvailable()) {
                 //device = new VulkanGraphicsImpl(applicationName, flags);
             }
-            break;
-#endif
-
-#if defined(ALIMER_OPENGL)
-        case RendererType::OpenGL:
-            graphics = new GLGraphics(window, settings);
             break;
 #endif
 

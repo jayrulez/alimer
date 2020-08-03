@@ -63,7 +63,6 @@ namespace alimer
     class ObjectFactory;
     template <class T> class ObjectFactoryImpl;
 
-    class Graphics;
     class Input;
 
     /// Base class for objects with type identification, subsystem access
@@ -97,7 +96,6 @@ namespace alimer
 
         /// Register an object as a subsystem that can be accessed globally. Note that the subsystems container does not own the objects.
         static void RegisterSubsystem(Object* subsystem);
-        static void RegisterSubsystem(Graphics* subsystem);
         static void RegisterSubsystem(Input* subsystem);
 
         /// Remove a subsystem by object pointer.
@@ -115,16 +113,12 @@ namespace alimer
 
         /// Return a subsystem, template version.
         template <class T> static T* GetSubsystem() { return static_cast<T*>(GetSubsystem(T::GetTypeStatic())); }
-        template <> static Graphics* GetSubsystem<Graphics>() { return GetGraphics(); }
         template <> static Input* GetSubsystem<Input>() { return GetInput(); }
 
         /// Register an object factory, template version.
         template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
         /// Create and return an object through a factory, template version.
         template <class T> static inline SharedPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
-
-        /// Return graphics subsystem.
-        static Graphics* GetGraphics();
 
         /// Return input subsystem.
         static Input* GetInput();

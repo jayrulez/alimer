@@ -12,7 +12,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    Alimer
+    alimer
 )
 
 set_property(TARGET ${TARGET_NAME} PROPERTY FOLDER "Editor")

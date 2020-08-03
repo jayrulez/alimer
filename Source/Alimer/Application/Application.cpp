@@ -23,11 +23,31 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/Graphics.h"
 #include "Graphics/CommandContext.h"
 #include "Core/Log.h"
+#include <agpu.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+
+#if defined(ALIMER_GLFW)
+#   define GLFW_INCLUDE_NONE
+#   include <GLFW/glfw3.h>
+#endif
+
+namespace
+{
+    void* agpu_gl_get_proc_address(const char* name) {
+#if defined(ALIMER_GLFW)
+        return (void*)glfwGetProcAddress(name);
+#else
+        return nullptr;
+#endif
+    }
+
+    void agpu_callback(void* context, const char* message, int level) {
+
+    }
+}
 
 namespace alimer
 {
@@ -44,8 +64,8 @@ namespace alimer
         gameSystems.clear();
         window.reset();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<Graphics>();
         ImGui::DestroyContext();
+        agpu_shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -101,11 +121,11 @@ namespace alimer
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 
-        auto rendererType = Graphics::GetDefaultRenderer(RendererType::OpenGL);
+        auto rendererType = AGPU_BACKEND_OPENGL;
 
         // Create main window.
         WindowFlags windowFlags = WindowFlags::Resizable;
-        if (rendererType == RendererType::OpenGL) {
+        if (rendererType == AGPU_BACKEND_OPENGL) {
             windowFlags |= WindowFlags::OpenGL;
         }
 
@@ -113,9 +133,18 @@ namespace alimer
         window->Create(config.windowTitle, config.windowSize, windowFlags);
 
         // Init graphics.
-        GraphicsSettings graphicsSettings = {};
-        Graphics::Create(RendererType::OpenGL, *window, graphicsSettings);
-        if (GetGraphics() == nullptr)
+        agpu_config config = {};
+#ifdef _DEBUG
+        config.debug = true;
+#endif
+        config.callback = agpu_callback;
+        config.context = this;
+
+#if defined(ALIMER_GLFW)
+        config.gl_get_proc_address = agpu_gl_get_proc_address;
+#endif
+
+        if (agpu_init(&config) == false)
         {
             headless = true;
         }
@@ -151,9 +180,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame()) {
-            return false;
-        }
+        agpu_frame_begin();
 
         //window->BeginFrame();
         //ImGui::NewFrame();
@@ -200,7 +227,11 @@ namespace alimer
 
         //ImGuiIO& io = ImGui::GetIO();
         //ImGui::Render();
-        GetGraphics()->EndFrame();
+        agpu_frame_end();
+
+#if defined(ALIMER_GLFW)
+        glfwSwapBuffers((GLFWwindow*)window->GetWindow());
+#endif
     }
 
     int Application::Run()
