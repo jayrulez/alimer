@@ -34,23 +34,36 @@
 #   include <GLFW/glfw3.h>
 #endif
 
-namespace
-{
-    void* agpu_gl_get_proc_address(const char* name) {
-#if defined(ALIMER_GLFW)
-        return (void*)glfwGetProcAddress(name);
-#else
-        return nullptr;
-#endif
-    }
-
-    void agpu_callback(void* context, const char* message, int level) {
-
-    }
-}
-
 namespace alimer
 {
+    namespace
+    {
+        void* agpu_gl_get_proc_address(const char* name) {
+#if defined(ALIMER_GLFW)
+            return (void*)glfwGetProcAddress(name);
+#else
+            return nullptr;
+#endif
+        }
+
+        void agpu_callback(void* context, const char* message, agpu_log_level level) {
+            switch (level)
+            {
+            case AGPU_LOG_LEVEL_INFO:
+                Log(LogLevel::Info, message);
+                break;
+            case AGPU_LOG_LEVEL_WARN:
+                Log(LogLevel::Warn, message);
+                break;
+            case AGPU_LOG_LEVEL_ERROR:
+                Log(LogLevel::Error, message);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
     Application::Application()
     {
         // Construct platform logic first.

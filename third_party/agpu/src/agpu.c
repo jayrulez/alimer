@@ -21,6 +21,8 @@
 //
 
 #include "agpu_driver.h"
+#include <stdio.h>
+#include <stdarg.h>
 
  /* Drivers */
 static const agpu_driver* drivers[] = {
@@ -40,7 +42,7 @@ bool agpu_init(const agpu_config* config) {
     GPU_ASSERT(config);
 
     if (config->backend == AGPU_BACKEND_DEFAULT) {
-        for (uint32_t i = 0; GPU_COUNTOF(drivers); i++) {
+        for (uint32_t i = 0; _AGPU_COUNTOF(drivers); i++) {
             if (drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
                 break;
@@ -48,7 +50,7 @@ bool agpu_init(const agpu_config* config) {
         }
     }
     else {
-        for (uint32_t i = 0; GPU_COUNTOF(drivers); i++) {
+        for (uint32_t i = 0; _AGPU_COUNTOF(drivers); i++) {
             if (drivers[i]->backend == config->backend && drivers[i]->is_supported()) {
                 s_gpu_renderer = drivers[i]->init_renderer();
                 break;
@@ -81,4 +83,54 @@ void agpu_frame_begin(void) {
 
 void agpu_frame_end(void) {
     s_gpu_renderer->frame_end();
+}
+
+agpu_buffer agpu_create_buffer(const agpu_buffer_info* info) {
+    GPU_ASSERT(s_gpu_renderer);
+    GPU_ASSERT(info);
+
+    return s_gpu_renderer->create_buffer(info);
+}
+
+void agpu_destroy_buffer(agpu_buffer buffer) {
+    GPU_ASSERT(s_gpu_renderer);
+    GPU_ASSERT(buffer);
+
+    s_gpu_renderer->destroy_buffer(buffer);
+}
+
+/* Internal log functions */
+#define AGPU_LOG_MAX_MESSAGE_SIZE 1024
+
+void agpu_log_info(const char* fmt, ...) {
+    if (s_gpu_renderer->log) {
+        char msg[AGPU_LOG_MAX_MESSAGE_SIZE];
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(msg, sizeof(msg), fmt, ap);
+        va_end(ap);
+        s_gpu_renderer->log(AGPU_LOG_LEVEL_INFO, msg);
+    }
+}
+
+void agpu_log_warn(const char* fmt, ...) {
+    if (s_gpu_renderer->log) {
+        char msg[AGPU_LOG_MAX_MESSAGE_SIZE];
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(msg, sizeof(msg), fmt, ap);
+        va_end(ap);
+        s_gpu_renderer->log(AGPU_LOG_LEVEL_WARN, msg);
+    }
+}
+
+void agpu_log_error(const char* fmt, ...) {
+    if (s_gpu_renderer->log) {
+        char msg[AGPU_LOG_MAX_MESSAGE_SIZE];
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(msg, sizeof(msg), fmt, ap);
+        va_end(ap);
+        s_gpu_renderer->log(AGPU_LOG_LEVEL_ERROR, msg);
+    }
 }

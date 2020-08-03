@@ -30,19 +30,43 @@
 extern "C" {
 #endif
     /* Handles */
+    typedef struct agpu_buffer_t* agpu_buffer;
     typedef struct agpu_texture_t* agpu_texture;
+
+    typedef enum agpu_log_level {
+        AGPU_LOG_LEVEL_INFO = 0,
+        AGPU_LOG_LEVEL_WARN = 1,
+        AGPU_LOG_LEVEL_ERROR = 2,
+        _AGPU_LOG_LEVEL_ERROR_FORCE_U32 = 0x7FFFFFFF
+    } agpu_log_level;
 
     typedef enum agpu_backend {
         AGPU_BACKEND_DEFAULT = 0,
         AGPU_BACKEND_OPENGL = 1,
         AGPU_BACKEND_D3D11 = 2,
-        _AGPU_BACKEND_D3D11_FORCE_U32 = 0x7FFFFFFF
+        _AGPU_BACKEND_FORCE_U32 = 0x7FFFFFFF
     } agpu_backend;
+
+    typedef enum agpu_buffer_usage {
+        AGPU_BUFFER_USAGE_VERTEX = (1 << 0),
+        AGPU_BUFFER_USAGE_INDEX = (1 << 1),
+        AGPU_BUFFER_USAGE_UNIFORM = (1 << 2),
+        AGPU_BUFFER_USAGE_STORAGE = (1 << 3),
+        AGPU_BUFFER_USAGE_INDIRECT = (1 << 4),
+        _AGPU_BUFFER_USAGE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_buffer_usage;
+
+    typedef struct agpu_buffer_info {
+        uint64_t size;
+        uint32_t usage;
+        void* data;
+        const char* label;
+    } agpu_buffer_info;
 
     typedef struct agpu_config {
         agpu_backend backend;
         bool debug;
-        void (*callback)(void* context, const char* message, int level);
+        void (*callback)(void* context, const char* message, agpu_log_level level);
         void* context;
         void* (*gl_get_proc_address)(const char*);
     } agpu_config;
@@ -51,6 +75,9 @@ extern "C" {
     void agpu_shutdown(void);
     void agpu_frame_begin(void);
     void agpu_frame_end(void);
+
+    agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
+    void agpu_destroy_buffer(agpu_buffer buffer);
 
 #ifdef __cplusplus
 }

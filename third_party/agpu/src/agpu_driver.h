@@ -32,17 +32,24 @@
 #ifndef GPU_MALLOC
 #   include <stdlib.h>
 #   define GPU_MALLOC(s) malloc(s)
-#   define GPU_FREE(p) free(p)
+#   define _AGPU_FREE(p) free(p)
+#   define _AGPU_ALLOC_HANDLE(T) (T*)calloc(1, sizeof(T))
 #endif
 
-#define GPU_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
+#define _AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
+#define _AGPU_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
 typedef struct agpu_renderer {
     bool (*init)(const agpu_config* config);
     void (*shutdown)(void);
 
+    void (*log)(agpu_log_level level, const char* msg);
+
     void (*frame_begin)(void);
     void (*frame_end)(void);
+
+    agpu_buffer(*create_buffer)(const agpu_buffer_info* info);
+    void (*destroy_buffer)(agpu_buffer handle);
 } agpu_renderer;
 
 typedef struct agpu_driver {
@@ -50,5 +57,9 @@ typedef struct agpu_driver {
     bool (*is_supported)(void);
     agpu_renderer* (*init_renderer)(void);
 } agpu_driver;
+
+extern void agpu_log_info(const char* fmt, ...);
+extern void agpu_log_warn(const char* fmt, ...);
+extern void agpu_log_error(const char* fmt, ...);
 
 extern agpu_driver gl_driver;

@@ -68,6 +68,7 @@
 /* Loader */
 #define AGPU_GL_FOREACH(X)\
     X(glGetError, GLGETERROR)\
+    X(glGetString, GLGETSTRING)\
     X(glGetIntegerv, GLGETINTEGERV)\
     X(glEnable, GLENABLE)\
     X(glDisable, GLDISABLE)\
@@ -127,7 +128,7 @@
 
 AGPU_GL_FOREACH(AGPU_GL_DECLARE);
 
-#define _AGPU_GL_THROW(s) if (gl.config.callback) { gl.config.callback(gl.config.context, s, true); }
+#define _AGPU_GL_THROW(s) if (gl.config.callback) { gl.config.callback(gl.config.context, s, AGPU_LOG_LEVEL_ERROR); }
 #define _AGPU_GL_CHECK(c, s) if (!(c)) { _AGPU_GL_THROW(s); }
 #define _AGPU_GL_CHECK_ERROR() do { GLenum r = glGetError(); _AGPU_GL_CHECK(r == GL_NO_ERROR, _agpu_gl_get_error_string(r)); } while (0)
 
@@ -139,6 +140,13 @@ static struct {
     GLuint default_framebuffer;
     GLuint default_vao;
 } gl;
+
+typedef struct {
+    uint32_t id;
+    GLsizeiptr size;
+    //vgpu_gl_buffer_target target;
+    //void* data;
+} agpu_buffer_gl;
 
 /* Renderer functions */
 static bool agpu_gl_init(const agpu_config* config) {
@@ -158,6 +166,11 @@ static bool agpu_gl_init(const agpu_config* config) {
     glGenVertexArrays(1, &gl.default_vao);
     glBindVertexArray(gl.default_vao);
     _AGPU_GL_CHECK_ERROR();
+
+    agpu_log_info("agpu driver: OpenGL");
+    agpu_log_info("OpenGL Renderer: %s", (const char*)glGetString(GL_RENDERER));
+    agpu_log_info("OpenGL Driver: %s", (const char*)glGetString(GL_VERSION));
+    agpu_log_info("OpenGL Vendor: %s", (const char*)glGetString(GL_VENDOR));
     return true;
 }
 
@@ -165,6 +178,12 @@ static void agpu_gl_shutdown(void) {
     glDeleteVertexArrays(1, &gl.default_vao);
     _AGPU_GL_CHECK_ERROR();
     memset(&gl, 0, sizeof(gl));
+}
+
+static void agpu_gl_log(agpu_log_level level, const char* msg) {
+    if (gl.config.callback) {
+        gl.config.callback(gl.config.context, msg, level);
+    }
 }
 
 static void agpu_gl_frame_begin(void) {
@@ -175,6 +194,21 @@ static void agpu_gl_frame_begin(void) {
 
 static void agpu_gl_frame_end(void) {
 
+}
+
+static agpu_buffer agpu_gl_create_buffer(const agpu_buffer_info* info) {
+    agpu_buffer_gl* buffer = _AGPU_ALLOC_HANDLE(agpu_buffer_gl);
+    buffer->size = (GLsizeiptr)info->size;
+
+    _AGPU_GL_CHECK_ERROR();
+    return (agpu_buffer)buffer;
+}
+
+static void agpu_gl_destroy_buffer(agpu_buffer handle) {
+    agpu_buffer_gl* buffer = (agpu_buffer_gl*)handle;
+    glDeleteBuffers(1, &buffer->id);
+    _AGPU_GL_CHECK_ERROR();
+    _AGPU_FREE(buffer);
 }
 
 static const char* _agpu_gl_get_error_string(GLenum result) {
@@ -197,6 +231,7 @@ static agpu_renderer* agpu_gl_init_renderer(void) {
     static agpu_renderer renderer = { 0 };
     renderer.init = agpu_gl_init;
     renderer.shutdown = agpu_gl_shutdown;
+    renderer.log = agpu_gl_log;
     renderer.frame_begin = agpu_gl_frame_begin;
     renderer.frame_end = agpu_gl_frame_end;
     return &renderer;
