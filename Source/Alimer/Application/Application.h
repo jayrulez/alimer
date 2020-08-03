@@ -26,7 +26,7 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Graphics/Types.h"
+#include "Graphics/Graphics.h"
 #include "Math/Size.h"
 
 namespace alimer
@@ -45,8 +45,6 @@ namespace alimer
         /// Main window size.
         SizeI windowSize = { 1280, 720 };
     };
-
-    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -102,8 +100,7 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
-        std::unique_ptr<Window> window{ nullptr };
-
+        std::unique_ptr<Window> window;
         std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 

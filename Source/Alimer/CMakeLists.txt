@@ -47,15 +47,16 @@ endif()
 
 if (WIN32)
     define_engine_source_files(Platform/Windows)
+    define_engine_source_files(Graphics/OpenGL)
 endif ()
 
 if (ALIMER_VULKAN)
-    define_engine_source_files(Graphics/Vulkan)
+    #define_engine_source_files(Graphics/Vulkan)
 endif()
 
 if (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D12)
+    #define_engine_source_files(Graphics/D3D)
+    #define_engine_source_files(Graphics/D3D12)
 endif()
 
 group_sources()
@@ -74,10 +75,13 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    vgpu
     stb
     fmt
     imgui
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    alimer_khronos_platform
 )
 
 # Link platform specific libraries

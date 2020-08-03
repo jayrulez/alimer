@@ -80,8 +80,6 @@ namespace alimer
         {
             LOGE("GLFW couldn't be initialized.");
         }
-
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     }
 
     void Application::PlatformDestroy()

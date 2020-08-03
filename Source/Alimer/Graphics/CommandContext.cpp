@@ -21,10 +21,9 @@
 //
 
 #include "Graphics/CommandContext.h"
-#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
-namespace alimer
+namespace alimer::graphics
 {
     CommandContext::CommandContext()
     {

@@ -87,8 +87,6 @@ namespace alimer
                 ModifiersFromGlfw(mods),
                 action == GLFW_PRESS);
         }
-
-        uint32_t windowCount = 0;
     }
 
     bool Window::Create(const String& title, const SizeI& size, WindowFlags flags)
@@ -98,7 +96,18 @@ namespace alimer
         fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
         exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
 
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        if (any(flags & WindowFlags::OpenGL))
+        {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+            //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        }
+        else
+        {
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        }
+
         glfwWindowHint(GLFW_RESIZABLE, ((flags & WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
         if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -147,13 +156,16 @@ namespace alimer
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
 
-        if (windowCount == 0) {
-            _isMain = true;
+        if (any(flags & WindowFlags::OpenGL))
+        {
+            glfwMakeContextCurrent(handle);
+            ImGui_ImplGlfw_InitForOpenGL(handle, true);
+        }
+        else
+        {
+            ImGui_ImplGlfw_InitForVulkan(handle, true);
         }
 
-        ImGui_ImplGlfw_InitForVulkan(handle, true);
-
-        windowCount++;
         return true;
     }
 
@@ -161,7 +173,6 @@ namespace alimer
     {
         ImGui_ImplGlfw_Shutdown();
         glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
-        windowCount--;
     }
 
     void Window::BeginFrame()
@@ -192,11 +203,6 @@ namespace alimer
     bool Window::IsFullscreen() const
     {
         return fullscreen || exclusiveFullscreen;
-    }
-
-    bool Window::IsMain() const
-    {
-        return _isMain;
     }
 
     void* Window::GetNativeHandle() const

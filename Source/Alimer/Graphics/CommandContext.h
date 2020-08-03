@@ -26,7 +26,7 @@
 #include "Graphics/Texture.h"
 #include "Math/Color.h"
 
-namespace alimer
+namespace alimer::graphics
 {
     /// A container that stores commands for the GPU to execute.
     class ALIMER_API CommandContext

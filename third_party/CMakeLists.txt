@@ -2,11 +2,6 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
-# vgpu
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
-
 add_subdirectory(fmt)
 add_subdirectory(imgui)
 
@@ -20,6 +15,15 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     add_subdirectory(glfw)
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
+
+# Header-only library for khrplatform.h
+add_library(alimer_khronos_platform INTERFACE)
+target_sources(alimer_khronos_platform INTERFACE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/KHR/khrplatform.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/GL/glcorearb.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/GL/glext.h"
+)
+target_include_directories(alimer_khronos_platform INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos")
 
 if (ALIMER_VULKAN)
     # vulkan

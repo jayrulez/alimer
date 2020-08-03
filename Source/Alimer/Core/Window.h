@@ -42,8 +42,6 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
-    class SwapChain;
-
     /// Defines an OS window.
     class ALIMER_API Window final : public Object
     {
@@ -62,7 +60,6 @@ namespace alimer
         bool IsMaximized() const;
         bool IsMinimized() const;
         bool IsFullscreen() const;
-        bool IsMain() const;
         void* GetNativeHandle() const;
         void* GetNativeDisplay() const;
         void* GetWindow() const { return window; }
@@ -70,7 +67,6 @@ namespace alimer
         Delegate<void()> SizeChanged;
 
     private:
-        bool _isMain = false;
         String title;
         SizeI size;
         bool fullscreen = false;

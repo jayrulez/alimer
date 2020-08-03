@@ -21,10 +21,9 @@
 //
 
 #include "Graphics/Swapchain.h"
-#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
-namespace alimer
+namespace alimer::graphics
 {
     Swapchain::Swapchain(const SwapchainDescription& description)
         : width(description.width)

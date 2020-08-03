@@ -23,10 +23,9 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "Graphics/CommandContext.h"
 #include "Core/Log.h"
-#include <vgpu.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -44,8 +43,8 @@ namespace alimer
     {
         gameSystems.clear();
         window.reset();
-        GraphicsDevice::Shutdown();
         RemoveSubsystem<Input>();
+        RemoveSubsystem<Graphics>();
         ImGui::DestroyContext();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -102,21 +101,21 @@ namespace alimer
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 
+        auto rendererType = Graphics::GetDefaultRenderer(RendererType::OpenGL);
+
         // Create main window.
+        WindowFlags windowFlags = WindowFlags::Resizable;
+        if (rendererType == RendererType::OpenGL) {
+            windowFlags |= WindowFlags::OpenGL;
+        }
+
         window.reset(new Window());
-        window->Create(config.windowTitle, config.windowSize, WindowFlags::Resizable);
+        window->Create(config.windowTitle, config.windowSize, windowFlags);
 
-        // Init graphics
-        vgpu_config config = {};
-#ifdef _DEBUG
-        config.debug = true;
-#endif
-
-        vgpu::PresentationParameters presentParams = {};
-        presentParams.backbufferWidth = window->GetSize().width;
-        presentParams.backbufferHeight = window->GetSize().height;
-        presentParams.windowHandle = window->GetNativeHandle();
-        if (!vgpu::init(config))
+        // Init graphics.
+        GraphicsSettings graphicsSettings = {};
+        Graphics::Create(RendererType::OpenGL, *window, graphicsSettings);
+        if (GetGraphics() == nullptr)
         {
             headless = true;
         }
@@ -152,12 +151,12 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!Graphics->BeginFrame()) {
+        if (!GetGraphics()->BeginFrame()) {
             return false;
         }
 
-        window->BeginFrame();
-        ImGui::NewFrame();
+        //window->BeginFrame();
+        //ImGui::NewFrame();
 
         for (auto& gameSystem : gameSystems)
         {
@@ -199,9 +198,9 @@ namespace alimer
             gameSystem->EndDraw();
         }
 
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::Render();
-        Graphics->EndFrame();
+        //ImGuiIO& io = ImGui::GetIO();
+        //ImGui::Render();
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()

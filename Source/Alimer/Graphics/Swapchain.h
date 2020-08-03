@@ -26,7 +26,7 @@
 #include "Math/Size.h"
 #include <vector>
 
-namespace alimer
+namespace alimer::graphics
 {
     class ALIMER_API Swapchain : public GraphicsResource
     {

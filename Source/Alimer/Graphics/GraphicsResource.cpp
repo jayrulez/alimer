@@ -22,7 +22,6 @@
 
 #include "Core/Assert.h"
 #include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
@@ -30,14 +29,14 @@ namespace alimer
         : name{ name }
         , memoryUsage{ memoryUsage }
     {
-        if (Graphics != nullptr)
-            Graphics->TrackResource(this);
+        //if (Graphics != nullptr)
+        //    Graphics->TrackResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        if (Graphics != nullptr)
-            Graphics->UntrackResource(this);
+        //if (Graphics != nullptr)
+        //    Graphics->UntrackResource(this);
     }
 }
 
