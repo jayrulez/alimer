@@ -35,12 +35,10 @@ endif ()
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
     set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable editor" FORCE)
-    set(ALIMER_CSHARP OFF CACHE INTERNAL "Disable C#" FORCE)
 else ()
     
     option(ALIMER_BUILD_TOOLS "Build tools" ON)
     option(ALIMER_BUILD_EDITOR "Build Editor" ON)
-    set(ALIMER_CSHARP ON CACHE BOOL "Enable C#")
 endif ()
 
 # Enable folders in IDE (VisualStudio)

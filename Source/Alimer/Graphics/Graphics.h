@@ -152,7 +152,6 @@ namespace alimer
 
         static Graphics* Create(RendererType preferredBackend, Window& window, const GraphicsSettings& settings);
 
-        virtual void WaitForGPU() = 0;
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 

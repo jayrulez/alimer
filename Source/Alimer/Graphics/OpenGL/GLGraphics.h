@@ -76,7 +76,6 @@ namespace alimer
 
     private:
         void InitProc();
-        void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
 
@@ -95,6 +94,13 @@ namespace alimer
         PFNGLDISABLEPROC glDisable = nullptr;
         PFNGLVIEWPORTPROC glViewport = nullptr;
         PFNGLCLEARBUFFERFVPROC glClearBufferfv = nullptr;
+
+        PFNGLGENVERTEXARRAYSPROC glGenVertexArrays = nullptr;
+        PFNGLBINDVERTEXARRAYPROC glBindVertexArray = nullptr;
+        PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = nullptr;
+
+        GLuint defaultFramebuffer;
+        GLuint defaultVao;
     };
 }
 

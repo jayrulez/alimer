@@ -21,7 +21,8 @@
 //
 
 #include "GLGraphics.h"
-#include <assert.h>
+#include "Core/Window.h"
+
 #if defined(ALIMER_GLFW)
 #   define GLFW_INCLUDE_NONE
 #   include <GLFW/glfw3.h>
@@ -35,17 +36,24 @@ namespace alimer
         //glViewport(0, 0, width, height);
     }
 #endif
-#define GL_ASSERT() { assert(glGetError() == GL_NO_ERROR); }
+#define _GL_CHECK_ERROR() { ALIMER_ASSERT(glGetError() == GL_NO_ERROR); }
 
     GLGraphics::GLGraphics(Window& window, const GraphicsSettings& settings)
         : Graphics(window)
     {
         InitProc();
+
+        _GL_CHECK_ERROR();
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&defaultFramebuffer);
+        glGenVertexArrays(1, &defaultVao);
+        glBindVertexArray(defaultVao);
+        _GL_CHECK_ERROR();
     }
 
     GLGraphics::~GLGraphics()
     {
-
+        glDeleteVertexArrays(1, &defaultVao);
+        _GL_CHECK_ERROR();
     }
 
     void GLGraphics::InitProc()
@@ -59,6 +67,10 @@ namespace alimer
         LOAD_FUNCTION(glDisable);
         LOAD_FUNCTION(glViewport);
         LOAD_FUNCTION(glClearBufferfv);
+
+        LOAD_FUNCTION(glGenVertexArrays);
+        LOAD_FUNCTION(glBindVertexArray);
+        LOAD_FUNCTION(glDeleteVertexArrays);
 #undef LOAD_FUNCTION
     }
 
@@ -69,18 +81,19 @@ namespace alimer
 #endif
     }
 
-
-    void GLGraphics::WaitForGPU()
-    {
-
-    }
-
     bool GLGraphics::BeginFrame()
     {
+        float clearColor[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
+        glClearBufferfv(GL_COLOR, 0, clearColor);
+        _GL_CHECK_ERROR();
+
         return true;
     }
 
     void GLGraphics::EndFrame()
     {
+#if defined(ALIMER_GLFW)
+        glfwSwapBuffers((GLFWwindow*)window.GetWindow());
+#endif
     }
 }
