@@ -40,10 +40,8 @@
 #define _AGPU_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
 typedef struct agpu_renderer {
-    bool (*init)(const agpu_config* config);
+    bool (*init)(const char* app_name, const agpu_config* config);
     void (*shutdown)(void);
-
-    void (*log)(agpu_log_level level, const char* msg);
 
     void (*frame_begin)(void);
     void (*frame_end)(void);
@@ -58,8 +56,7 @@ typedef struct agpu_driver {
     agpu_renderer* (*init_renderer)(void);
 } agpu_driver;
 
-extern void agpu_log_info(const char* fmt, ...);
-extern void agpu_log_warn(const char* fmt, ...);
-extern void agpu_log_error(const char* fmt, ...);
 
+agpu_gl_get_proc_address agpu_get_gl_get_proc_address();
 extern agpu_driver gl_driver;
+extern agpu_driver d3d11_driver;

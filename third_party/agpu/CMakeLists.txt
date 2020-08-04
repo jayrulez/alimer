@@ -12,8 +12,10 @@ target_include_directories(khronos_platform INTERFACE "${AGPU_THIRD_PARTY_DIR}/k
 add_library(agpu
 	include/agpu.h
   src/agpu_driver.h
-  src/agpu.c
-  src/agpu_driver_gl.c
+  src/agpu.cpp
+  src/agpu_driver_gl.cpp
+  src/agpu_d3d_common.h
+  src/agpu_driver_d3d11.cpp
 )
 
 target_include_directories(agpu PUBLIC
@@ -21,10 +23,14 @@ target_include_directories(agpu PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
 
-if(WIN32)
+if(WIN32 OR ANDROID OR EMSCRIPTEN)
   target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
 
   target_link_libraries(agpu PRIVATE
       khronos_platform
   )
+endif()
+
+if(WIN32 OR WINDOWS_STORE)
+  target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
 endif()

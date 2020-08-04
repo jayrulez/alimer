@@ -124,19 +124,16 @@
     X(glClearBufferfi, GLCLEARBUFFERFI)\
 
 #define AGPU_GL_DECLARE(fn, upper) static PFN##upper##PROC fn;
-#define AGPU_GL_LOAD(fn, upper) fn = (PFN##upper##PROC) config->gl_get_proc_address(#fn);
+#define AGPU_GL_LOAD(fn, upper) fn = (PFN##upper##PROC) gl_get_proc_address(#fn);
 
 AGPU_GL_FOREACH(AGPU_GL_DECLARE);
 
-#define _AGPU_GL_THROW(s) if (gl.config.callback) { gl.config.callback(gl.config.context, s, AGPU_LOG_LEVEL_ERROR); }
-#define _AGPU_GL_CHECK(c, s) if (!(c)) { _AGPU_GL_THROW(s); }
+#define _AGPU_GL_CHECK(c, s) if (!(c)) { agpu_log_error("%s", s); }
 #define _AGPU_GL_CHECK_ERROR() do { GLenum r = glGetError(); _AGPU_GL_CHECK(r == GL_NO_ERROR, _agpu_gl_get_error_string(r)); } while (0)
 
 static const char* _agpu_gl_get_error_string(GLenum result);
 
 static struct {
-    agpu_config config;
-
     GLuint default_framebuffer;
     GLuint default_vao;
 } gl;
@@ -149,10 +146,14 @@ typedef struct {
 } agpu_buffer_gl;
 
 /* Renderer functions */
-static bool agpu_gl_init(const agpu_config* config) {
-    memcpy(&gl.config, config, sizeof(*config));
+static bool agpu_gl_init(const char* app_name, const agpu_config* config) {
+    _AGPU_UNUSED(app_name);
 
+    /* Load entry points */
+    agpu_gl_get_proc_address gl_get_proc_address = agpu_get_gl_get_proc_address();
     AGPU_GL_FOREACH(AGPU_GL_LOAD);
+
+    /* Set states */
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_FRAMEBUFFER_SRGB);
@@ -178,12 +179,6 @@ static void agpu_gl_shutdown(void) {
     glDeleteVertexArrays(1, &gl.default_vao);
     _AGPU_GL_CHECK_ERROR();
     memset(&gl, 0, sizeof(gl));
-}
-
-static void agpu_gl_log(agpu_log_level level, const char* msg) {
-    if (gl.config.callback) {
-        gl.config.callback(gl.config.context, msg, level);
-    }
 }
 
 static void agpu_gl_frame_begin(void) {
@@ -231,7 +226,6 @@ static agpu_renderer* agpu_gl_init_renderer(void) {
     static agpu_renderer renderer = { 0 };
     renderer.init = agpu_gl_init;
     renderer.shutdown = agpu_gl_shutdown;
-    renderer.log = agpu_gl_log;
     renderer.frame_begin = agpu_gl_frame_begin;
     renderer.frame_end = agpu_gl_frame_end;
     return &renderer;
