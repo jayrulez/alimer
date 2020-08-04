@@ -49,7 +49,7 @@ namespace alimer
     public:
         Window() = default;
 
-        bool Create(const String& title, const SizeI& size, WindowFlags flags);
+        bool Create(const eastl::string& title, const SizeI& size, WindowFlags flags);
         void Close();
         void BeginFrame();
 
@@ -63,7 +63,7 @@ namespace alimer
         void* GetNativeDisplay() const;
         void* GetWindow() const { return window; }
 
-        Delegate<void()> SizeChanged;
+        //Delegate<void()> SizeChanged;
 
     private:
         String title;

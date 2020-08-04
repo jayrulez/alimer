@@ -159,4 +159,4 @@ namespace alimer
         bool isFixedTimeStep = false;
         uint64_t targetElapsedTicks;
     };
-} // namespace alimer
+}

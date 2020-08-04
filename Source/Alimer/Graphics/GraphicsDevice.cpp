@@ -27,11 +27,6 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
-#if (ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE) && !defined(ALIMER_DISABLE_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#define ALIMER_D3D12_BACKEND
-#endif
-
 #if defined(ALIMER_VULKAN)
 #include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
@@ -77,30 +72,6 @@ namespace alimer
 
     SharedPtr<GraphicsDevice> GraphicsDevice::CreateSystemDefault(RendererType preferredBackend, GPUFlags flags)
     {
-        RendererType backend = GetDefaultRenderer(preferredBackend);
-
-        switch (backend)
-        {
-#if defined(ALIMER_D3D12_BACKEND)
-        case RendererType::Direct3D12:
-            if (D3D12GraphicsDevice::IsAvailable()) {
-                return new D3D12GraphicsDevice(flags);
-            }
-            break;
-#endif
-
-#if defined(ALIMER_VULKAN)
-        case RendererType::Vulkan:
-            if (VulkanGraphicsImpl::IsAvailable()) {
-                //device = new VulkanGraphicsImpl(applicationName, flags);
-            }
-            break;
-#endif
-
-        default:
-            break;
-        }
-
         return nullptr;
     }
 

@@ -22,7 +22,8 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
-#include <unordered_map>
+#include <EASTL/unordered_map.h>
+#include <EASTL/unique_ptr.h>
 
 namespace alimer
 {
@@ -31,8 +32,8 @@ namespace alimer
         struct Context
         {
             /// Object factories.
-            std::unordered_map<StringId32, SharedPtr<Object>> subsystems;
-            std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
+            eastl::unordered_map<StringId32, SharedPtr<Object>> subsystems;
+            eastl::unordered_map<StringId32, eastl::unique_ptr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
 

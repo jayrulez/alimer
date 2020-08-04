@@ -23,13 +23,17 @@
 #pragma once
 
 #include "Core/Platform.h"
-#include <string>
+#include <fmt/format.h>
+#include <EASTL/string.h>
 
 namespace alimer
 {
-    using String = std::string;
-    using WString = std::wstring;
+    using String = eastl::string;
 
-    extern const String EMPTY_STRING;
-    extern const WString EMPTY_WSTRING;
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
+    static constexpr uint32_t MATRIX_CONVERSION_BUFFER_LENGTH = 256;
+    extern const eastl::string EMPTY_STRING;
+
+    /// Return a formatted string.
+    ALIMER_API eastl::string ToString(const char* format, ...);
 }

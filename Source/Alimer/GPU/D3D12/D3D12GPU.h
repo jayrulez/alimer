@@ -36,6 +36,8 @@ namespace alimer
         bool Initialize();
 
     private:
+        void InitializeDebugLayerFilters();
+
         ComPtr<IDXGIAdapter1> adapter;
         ComPtr<ID3D12Device> d3dDevice;
     };

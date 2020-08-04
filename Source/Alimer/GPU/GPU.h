@@ -24,6 +24,7 @@
 
 #include "Core/Platform.h"
 #include "Graphics/Types.h"
+#include <EASTL/string.h>
 #include <EASTL/unique_ptr.h>
 
 namespace alimer
@@ -35,11 +36,35 @@ namespace alimer
         LowPower
     };
 
+    enum class GPUKnownVendorId : uint32_t {
+        None = 0,
+        AMD = 0x1002,
+        Intel = 0x8086,
+        Nvidia = 0x10DE,
+        ARM = 0x13B5,
+        ImgTec = 0x1010,
+        Qualcomm = 0x5143
+    };
+
+    enum class GPUAdapterType : uint32_t {
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
+    };
+
     class GPUAdapter
     {
     public:
-        GPUAdapter() = default;
+        GPUAdapter(RendererType backendType);
         virtual ~GPUAdapter() = default;
+
+    protected:
+        RendererType backendType;
+        eastl::string name;
+        uint32_t vendorId = 0;
+        uint32_t deviceId = 0;
+        GPUAdapterType adapterType = GPUAdapterType::Unknown;
     };
 
     class GPU final 

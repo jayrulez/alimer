@@ -31,7 +31,7 @@ namespace alimer
 {
     namespace
     {
-        std::string WStringToString(const std::wstring& wstr)
+        eastl::string WStringToString(const eastl::wstring& wstr)
         {
             if (wstr.empty())
             {
@@ -41,7 +41,7 @@ namespace alimer
             auto wstr_len = static_cast<int>(wstr.size());
             auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, NULL, 0, NULL, NULL);
 
-            std::string str(str_len, 0);
+            eastl::string str(str_len, 0);
             WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, &str[0], str_len, NULL, NULL);
 
             return str;

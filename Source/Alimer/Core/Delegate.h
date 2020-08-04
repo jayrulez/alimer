@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Platform.h"
-#include <vector>
+#include <EASTL/vector.h>
 
 namespace alimer
 {
@@ -150,6 +150,6 @@ namespace alimer
         }
 
     private:
-        std::vector<Function<R(Args...)>> delegates;
+        eastl::vector<Function<R(Args...)>> delegates;
     };
 }

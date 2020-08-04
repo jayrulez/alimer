@@ -58,7 +58,7 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Quaternion Zero;

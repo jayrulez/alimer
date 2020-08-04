@@ -29,11 +29,15 @@ namespace alimer
 
     String Size::ToString() const
     {
-        return fmt::format("{} {}", width, height);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g", width, height);
+        return eastl::string(tempBuffer);
     }
 
     String SizeI::ToString() const
     {
-        return fmt::format("{} {}", width, height);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%d %d", width, height);
+        return eastl::string(tempBuffer);
     }
 }

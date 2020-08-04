@@ -21,7 +21,6 @@
 //
 
 #include "Math/Rect.h"
-#include <fmt/format.h>
 
 namespace alimer
 {
@@ -34,6 +33,8 @@ namespace alimer
 
     String Rect::ToString() const
     {
-        return fmt::format("{} {} {} {}", x, y, width, height);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g %g", x, y, width, height);
+        return eastl::string(tempBuffer);
     }
 }

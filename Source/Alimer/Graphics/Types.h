@@ -49,23 +49,6 @@ namespace alimer
         Count
     };
 
-    enum class GPUKnownVendorId : uint32_t {
-        None = 0,
-        AMD = 0x1002,
-        Intel = 0x8086,
-        Nvidia = 0x10DE,
-        ARM = 0x13B5,
-        ImgTec = 0x1010,
-        Qualcomm = 0x5143
-    };
-
-    enum class GPUAdapterType : uint32_t {
-        DiscreteGPU,
-        IntegratedGPU,
-        CPU,
-        Unknown
-    };
-
     enum class GPUFlags : uint32_t
     {
         None = 0,
@@ -220,12 +203,6 @@ namespace alimer
     /// Describes GraphicsDevice capabilities.
     struct GraphicsDeviceCapabilities
     {
-        RendererType backendType;
-        uint32_t vendorId;
-        uint32_t deviceId;
-        std::string adapterName;
-        GPUAdapterType adapterType;
-
         struct Features
         {
             bool independentBlend = false;

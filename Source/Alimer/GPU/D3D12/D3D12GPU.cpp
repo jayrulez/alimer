@@ -26,7 +26,8 @@ namespace alimer
 {
     /* D3D12GPUAdapter */
     D3D12GPUAdapter::D3D12GPUAdapter(D3D12GPU* gpu, ComPtr<IDXGIAdapter1> adapter)
-        : adapter{ adapter }
+        : GPUAdapter(RendererType::Direct3D12)
+        , adapter{ adapter }
     {
 
     }
@@ -39,7 +40,56 @@ namespace alimer
             return false;
         }
 
+        InitializeDebugLayerFilters();
+
+        DXGI_ADAPTER_DESC1 adapterDesc;
+        ThrowIfFailed(adapter->GetDesc1(&adapterDesc));
+
+        eastl::wstring deviceName(adapterDesc.Description);
+        name = ToUtf8(deviceName);
+
+        deviceId = adapterDesc.DeviceId;
+        vendorId = adapterDesc.VendorId;
+
+        // Detect adapter type.
+        if (adapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            adapterType = GPUAdapterType::CPU;
+        }
+        else {
+            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+
+            adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
+        }
+
         return true;
+    }
+
+    void D3D12GPUAdapter::InitializeDebugLayerFilters()
+    {
+        // Configure debug device (if active).
+        ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+        if (SUCCEEDED(d3dDevice.As(&d3dInfoQueue)))
+        {
+#ifdef _DEBUG
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+            d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#endif
+            D3D12_MESSAGE_ID denyIds[] =
+            {
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                D3D12_MESSAGE_ID_COPY_DESCRIPTORS_INVALID_RANGES,
+                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+            };
+            D3D12_INFO_QUEUE_FILTER filter {};
+            filter.DenyList.NumIDs = _countof(denyIds);
+            filter.DenyList.pIDList = denyIds;
+            d3dInfoQueue->AddStorageFilterEntries(&filter);
+        }
     }
 
     /* D3D12GPU */
@@ -162,7 +212,6 @@ namespace alimer
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
             {
                 dxgiDebug->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-                dxgiDebug->Release();
             }
         }
 #endif

@@ -26,6 +26,19 @@
 #include "GPU/GPU.h"
 #include "Core/Log.h"
 
+/* Needed by EASTL. */
+#if !defined(ALIMER_EXPORTS)
+ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return ::operator new(size);
+}
+
+ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
+{
+    return ::operator new(size);
+}
+#endif
+
 namespace alimer
 {
     Application::Application()

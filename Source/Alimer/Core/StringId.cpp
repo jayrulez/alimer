@@ -23,7 +23,6 @@
 #include "Core/StringId.h"
 #include "Core/String.h"
 #include "Core/Hash.h"
-#include <fmt/format.h>
 
 namespace alimer
 {
@@ -40,8 +39,10 @@ namespace alimer
         value = Murmur32(str.c_str(), (uint32_t)str.length(), 0);
     }
 
-    String StringId32::ToString() const
+    eastl::string StringId32::ToString() const
     {
-        return fmt::format("{:#08x}", value);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%08X", value);
+        return eastl::string(tempBuffer);
     }
 }

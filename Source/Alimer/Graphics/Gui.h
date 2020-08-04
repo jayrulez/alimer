@@ -20,14 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Vector4.h"
+#pragma once
+
+#include "Core/Object.h"
+#include "Graphics/Types.h"
 
 namespace alimer
 {
-    String Vector4::ToString() const
+    class Gui final : public Object
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return eastl::string(tempBuffer);
-    }
+        ALIMER_OBJECT(Gui, Object);
+
+    public:
+        Gui();
+        ~Gui();
+    };
 }

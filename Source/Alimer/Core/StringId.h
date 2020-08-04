@@ -87,7 +87,7 @@ namespace alimer
         uint32_t Value() const { return value; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         /// Zero hash.
         static const StringId32 Zero;
@@ -96,9 +96,12 @@ namespace alimer
         /// Hash value.
         uint32_t value;
     };
+
+    static_assert(sizeof(StringId32) == sizeof(uint32_t), "Unexpected StringHash size.");
 }
 
-namespace std {
+namespace eastl
+{
     template<>
     class hash<alimer::StringId32> {
     public:

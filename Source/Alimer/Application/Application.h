@@ -27,19 +27,21 @@
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 #include "Math/Size.h"
+#include <EASTL/unique_ptr.h>
+#include <EASTL/vector.h>
 
 namespace alimer
 {
     struct Configuration
     {
         /// Name of the application.
-        String applicationName = "Alimer";
+        eastl::string applicationName = "Alimer";
 
         /// Run engine in headless mode.
         bool headless = false;
 
         /// Main window title.
-        String windowTitle = "Alimer";
+        eastl::string windowTitle = "Alimer";
 
         /// Main window size.
         SizeI windowSize = { 1280, 720 };
@@ -88,7 +90,7 @@ namespace alimer
         void Render();
 
     protected:
-        std::vector<std::string> args;
+        eastl::vector<eastl::string> args;
 
         int exitCode = 0;
         Configuration config;
@@ -98,8 +100,8 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
-        std::unique_ptr<Window> window;
-        std::vector<std::unique_ptr<GameSystem>> gameSystems;
+        eastl::unique_ptr<Window> window;
+        eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 
 

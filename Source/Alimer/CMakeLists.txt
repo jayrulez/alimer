@@ -166,8 +166,11 @@ else ()
 endif()
 
 if (WIN32)
-    # Enable unicode strings
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _UNICODE)
+    target_compile_definitions(${TARGET_NAME} PRIVATE
+      _CRT_SECURE_NO_WARNINGS
+      # Enable unicode strings
+      _UNICODE
+    )
 endif()
 
 # SDK installation

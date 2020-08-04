@@ -89,7 +89,7 @@ namespace alimer
         }
     }
 
-    bool Window::Create(const String& title, const SizeI& size, WindowFlags flags)
+    bool Window::Create(const eastl::string& title, const SizeI& size, WindowFlags flags)
     {
         this->title = title;
         this->size = size;

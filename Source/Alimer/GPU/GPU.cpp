@@ -32,6 +32,13 @@ namespace alimer
     static bool s_EnableBackendValidation = false;
     static bool s_EnableGPUBasedBackendValidation = false;
 
+    GPUAdapter::GPUAdapter(RendererType backendType)
+        : backendType{ backendType }
+    {
+
+    }
+
+    /* GPU */
     void GPU::EnableBackendValidation(bool enableBackendValidation)
     {
         s_EnableBackendValidation = enableBackendValidation;
