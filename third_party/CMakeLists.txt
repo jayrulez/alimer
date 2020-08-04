@@ -1,9 +1,11 @@
+# EASTL
+add_subdirectory(EABase)
+add_subdirectory(EASTL)
+set_property(TARGET EASTL PROPERTY FOLDER "ThirdParty")
+
 # stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
-
-add_subdirectory(agpu)
-set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
 
 add_subdirectory(fmt)
 add_subdirectory(imgui)
@@ -62,8 +64,4 @@ if (ALIMER_VULKAN)
     target_link_libraries(volk PUBLIC vulkan)
     target_include_directories(volk PUBLIC ${VOLK_DIR})
     set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
-endif()
-
-if (ALIMER_D3D12)
-    add_subdirectory(D3D12MemoryAllocator)
 endif()
