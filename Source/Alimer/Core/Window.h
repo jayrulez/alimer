@@ -22,8 +22,8 @@
 
 #pragma once
 
+#include "Core/Ptr.h"
 #include "Core/Delegate.h"
-#include "Core/Object.h"
 #include "Math/Size.h"
 
 namespace alimer
@@ -37,16 +37,15 @@ namespace alimer
         Hidden = (1 << 3),
         Borderless = (1 << 4),
         Minimized = (1 << 5),
-        Maximized = (1 << 6),
-        OpenGL = (1 << 7),
+        Maximized = (1 << 6)
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
-    /// Defines an OS window.
-    class ALIMER_API Window final : public Object
-    {
-        ALIMER_OBJECT(Window, Object);
+    //class SwapChain;
 
+    /// Defines an OS window.
+    class ALIMER_API Window final : public RefCounted
+    {
     public:
         Window() = default;
 
@@ -72,5 +71,6 @@ namespace alimer
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
         void* window = nullptr;
+        //SharedPtr<SwapChain> swapChain;
     };
 } 

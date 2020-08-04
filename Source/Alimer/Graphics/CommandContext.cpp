@@ -23,7 +23,7 @@
 #include "Graphics/CommandContext.h"
 #include "Core/Log.h"
 
-namespace alimer::graphics
+namespace alimer
 {
     CommandContext::CommandContext()
     {

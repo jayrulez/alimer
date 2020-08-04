@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,36 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Window.h"
-#include "Core/Log.h"
-//#include "Graphics/SwapChain.h"
+#pragma once
+
+#include "Core/Platform.h"
+#include "Graphics/Types.h"
+#include <EASTL/unique_ptr.h>
 
 namespace alimer
 {
-}
+    enum class PowerPreference
+    {
+        Default,
+        HighPerformance,
+        LowPower
+    };
 
+    class GPUAdapter
+    {
+    public:
+        GPUAdapter() = default;
+        virtual ~GPUAdapter() = default;
+    };
+
+    class GPU final 
+    {
+    public:
+        static void EnableBackendValidation(bool enableBackendValidation);
+        static bool IsBackendValidationEnabled();
+        static void EnableGPUBasedBackendValidation(bool enableGPUBasedBackendValidation);
+        static bool IsGPUBasedBackendValidationEnabled();
+
+        static eastl::unique_ptr<GPUAdapter> RequestAdapter(PowerPreference powerPreference, RendererType backendType = RendererType::Count);
+    };
+}

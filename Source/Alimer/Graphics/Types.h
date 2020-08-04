@@ -24,7 +24,7 @@
 
 #include "Math/Color.h"
 #include "Math/Rect.h"
-#include "graphics/PixelFormat.h"
+#include "Graphics/PixelFormat.h"
 
 namespace alimer
 {
@@ -35,6 +35,19 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
+
+    /// Enum describing the rendering backend.
+    enum class RendererType
+    {
+        /// Null renderer.
+        Null,
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Vulkan backend.
+        Vulkan,
+        /// Default best platform supported backend.
+        Count
+    };
 
     enum class GPUKnownVendorId : uint32_t {
         None = 0,
@@ -124,8 +137,8 @@ namespace alimer
         Discard
     };
 
-
-    enum class PresentMode : uint32 {
+    enum class PresentMode
+    {
         Immediate,
         Mailbox,
         Fifo
@@ -156,15 +169,14 @@ namespace alimer
     };
 
     /// Describes a Swapchain
-    struct SwapchainDescription
+    struct SwapChainDescriptor
     {
-        void* windowHandle;
+        PixelFormat format = PixelFormat::BGRA8Unorm;
         uint32 width;
         uint32 height;
-        PixelFormat preferredColorFormat = PixelFormat::BGRA8Unorm;
-        PixelFormat preferredDepthStencilFormat = PixelFormat::Depth32Float;
-        PresentMode presentMode = PresentMode::Fifo;
-        bool isFullscreen = false;
+        PresentMode presentMode = PresentMode::Immediate;
+        void* windowHandle;
+        const char* label;
     };
 
     class Texture;
@@ -202,5 +214,80 @@ namespace alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
+    };
+
+
+    /// Describes GraphicsDevice capabilities.
+    struct GraphicsDeviceCapabilities
+    {
+        RendererType backendType;
+        uint32_t vendorId;
+        uint32_t deviceId;
+        std::string adapterName;
+        GPUAdapterType adapterType;
+
+        struct Features
+        {
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint32_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint32_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
+    };
+
+    struct GraphicsDeviceDescriptor
+    {
+        GPUFlags flags = GPUFlags::None;
+        RendererType preferredBackend = RendererType::Count;
     };
 }

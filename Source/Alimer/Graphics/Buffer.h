@@ -24,7 +24,7 @@
 
 #include "Graphics/GraphicsResource.h"
 
-namespace alimer::graphics
+namespace alimer
 {
     /// 
     class Buffer : public GraphicsResource

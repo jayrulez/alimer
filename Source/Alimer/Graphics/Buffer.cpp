@@ -22,7 +22,7 @@
 
 #include "graphics/Buffer.h"
 
-namespace alimer::graphics
+namespace alimer
 {
     Buffer::Buffer(const BufferDescription& desc)
         : GraphicsResource(desc.name, desc.memoryUsage)

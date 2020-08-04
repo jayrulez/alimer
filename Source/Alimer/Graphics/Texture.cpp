@@ -23,18 +23,8 @@
 #include "Graphics/Texture.h"
 #include "Core/Log.h"
 
-namespace alimer::graphics
+namespace alimer
 {
-    void Texture::RegisterObject()
-    {
-        RegisterFactory<Texture>();
-    }
-
-    Texture::Texture()
-    {
-
-    }
-
     Texture::Texture(const TextureDescription& desc)
         : GraphicsResource(desc.name, MemoryUsage::GpuOnly)
         , _desc(desc)

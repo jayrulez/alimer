@@ -96,14 +96,14 @@ namespace alimer
         fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
         exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
 
-        if (any(flags & WindowFlags::OpenGL))
+        /*if (any(flags & WindowFlags::OpenGL))
         {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
             glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
             //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         }
-        else
+        else*/
         {
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }
@@ -156,7 +156,7 @@ namespace alimer
         //glfwSetKeyCallback(handle, glfw_key_callback);
         window = handle;
 
-        if (any(flags & WindowFlags::OpenGL))
+        /*if (any(flags & WindowFlags::OpenGL))
         {
             glfwMakeContextCurrent(handle);
             ImGui_ImplGlfw_InitForOpenGL(handle, true);
@@ -164,7 +164,7 @@ namespace alimer
         else
         {
             ImGui_ImplGlfw_InitForVulkan(handle, true);
-        }
+        }*/
 
         return true;
     }

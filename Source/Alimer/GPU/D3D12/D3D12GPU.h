@@ -22,39 +22,40 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
-#include "Math/Size.h"
-#include <vector>
+#include "GPU/GPU.h"
+#include "D3D12Backend.h"
 
-namespace alimer::graphics
+namespace alimer
 {
-    class ALIMER_API Swapchain : public GraphicsResource
+    class D3D12GPU;
+
+    class D3D12GPUAdapter : public GPUAdapter
     {
     public:
-        /// Constructor.
-        Swapchain(const SwapchainDescription& description);
-
-        void Resize(uint32_t newWidth, uint32_t newHeight);
-
-        /// Get the current backbuffer texture.
-        Texture* GetBackbufferTexture() const;
-
-        /// Get the depth stencil texture.
-        Texture* GetDepthStencilTexture() const;
-
-        const RenderPassDescription& GetCurrentRenderPassDescription() const { return currentRenderPassDescription; }
+        D3D12GPUAdapter(D3D12GPU* gpu, ComPtr<IDXGIAdapter1> adapter);
+        bool Initialize();
 
     private:
-        virtual void ResizeImpl() = 0;
+        ComPtr<IDXGIAdapter1> adapter;
+        ComPtr<ID3D12Device> d3dDevice;
+    };
 
-    protected:
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat;
+    class D3D12GPU final
+    {
+    public:
+        static bool IsAvailable();
+        static D3D12GPU* Get();
+        eastl::unique_ptr<GPUAdapter> RequestAdapter(PowerPreference powerPreference);
 
-        uint32_t backbufferIndex = 0;
-        std::vector<SharedPtr<Texture>> backbufferTextures;
-        SharedPtr<Texture> depthStencilTexture;
-        RenderPassDescription currentRenderPassDescription;
+        IDXGIFactory4* GetFactory() const;
+
+    private:
+        D3D12GPU();
+        ~D3D12GPU();
+
+        DWORD dxgiFactoryFlags = 0;
+        ComPtr<IDXGIFactory4> factory;
+        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent | DXGIFactoryCaps::HDR;
+        D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
     };
 }

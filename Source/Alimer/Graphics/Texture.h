@@ -25,17 +25,11 @@
 #include "Graphics/GraphicsResource.h"
 #include "Math/Size.h"
 
-namespace alimer::graphics
+namespace alimer
 {
     class ALIMER_API Texture : public GraphicsResource
     {
     public:
-        /// Register object factory.
-        static void RegisterObject();
-
-        /// Constructor.
-        Texture();
-
         /// Constructor.
         Texture(const TextureDescription& desc);
 

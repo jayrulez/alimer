@@ -41,14 +41,13 @@ namespace alimer
         void* Submission = nullptr;
     };
 
-    class D3D12Swapchain;
     class D3D12CommandContext;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D12GraphicsDevice(Window* window, GPUFlags flags);
+        D3D12GraphicsDevice(GPUFlags flags);
         ~D3D12GraphicsDevice();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
@@ -62,7 +61,7 @@ namespace alimer
         
         //void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
 
-        void WaitForGPU() override;
+        void WaitForGPU();
         bool BeginFrame() override;
         void EndFrame() override;
         void HandleDeviceLost();
@@ -79,11 +78,10 @@ namespace alimer
         void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
 
-        Swapchain* GetMainSwapchain() const override;
-        CommandContext* GetImmediateContext() const override;
+        //CommandContext* GetImmediateContext() const override;
 
         /* Resource creation methods */
-        SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description) override;
+        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor& descriptor) override;
         
         void InitializeUpload();
         void ShutdownUpload();
@@ -122,7 +120,6 @@ namespace alimer
         ID3D12CommandQueue* computeQueue;
         ID3D12CommandQueue* copyQueue;
         std::unique_ptr<D3D12CommandContext> immediateContext;
-        std::unique_ptr<D3D12Swapchain> mainSwapchain;
 
         std::atomic<uint32_t> commandBufferCount{ 0 };
         std::mutex commandBufferAllocationMutex;
@@ -131,7 +128,7 @@ namespace alimer
         std::vector<ID3D12CommandList*> pendingCommandLists;
 
         /// Current active frame index
-        uint32_t frameIndex;
+        uint32_t frameIndex{ 0 };
 
         /* Descriptor heaps */
         DescriptorHeap RtvHeap{};

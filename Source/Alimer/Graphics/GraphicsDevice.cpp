@@ -24,34 +24,21 @@
 #include "Core/Log.h"
 #include "Core/Assert.h"
 #include "Core/Window.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
-#if defined(ALIMER_D3D11)
+#if (ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE) && !defined(ALIMER_DISABLE_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#define ALIMER_D3D12_BACKEND
 #endif
 
 #if defined(ALIMER_VULKAN)
 #include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
 
-#if defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-
 namespace alimer
 {
-    Graphics::Graphics(Window& window)
-        : window{ window }
-    {
-        RegisterSubsystem(this);
-    }
-
-    Graphics::~Graphics()
-    {
-        RemoveSubsystem(this);
-    }
-
-    RendererType Graphics::GetDefaultRenderer(RendererType preferredBackend)
+    RendererType GraphicsDevice::GetDefaultRenderer(RendererType preferredBackend)
     {
         if (preferredBackend == RendererType::Count)
         {
@@ -61,10 +48,6 @@ namespace alimer
                 return RendererType::Direct3D12;
             else if (availableDrivers.find(RendererType::Vulkan) != availableDrivers.end())
                 return RendererType::Vulkan;
-            else if (availableDrivers.find(RendererType::Direct3D11) != availableDrivers.end())
-                return RendererType::Direct3D11;
-            else if (availableDrivers.find(RendererType::OpenGL) != availableDrivers.end())
-                return RendererType::OpenGL;
             else
                 return RendererType::Null;
         }
@@ -72,7 +55,7 @@ namespace alimer
         return preferredBackend;
     }
 
-    std::set<RendererType> Graphics::GetAvailableRenderDrivers()
+    std::set<RendererType> GraphicsDevice::GetAvailableRenderDrivers()
     {
         static std::set<RendererType> availableDrivers;
 
@@ -80,8 +63,11 @@ namespace alimer
         {
             availableDrivers.insert(RendererType::Null);
 
-#if defined(ALIMER_D3D11)
-            availableDrivers.insert(RendererType::Direct3D11);
+#if defined(ALIMER_D3D12_BACKEND)
+            if (D3D12GraphicsDevice::IsAvailable())
+            {
+                availableDrivers.insert(RendererType::Direct3D12);
+            }
 #endif
 
         }
@@ -89,22 +75,16 @@ namespace alimer
         return availableDrivers;
     }
 
-    Graphics* Graphics::Create(RendererType preferredBackend, Window& window, const GraphicsSettings& settings)
+    SharedPtr<GraphicsDevice> GraphicsDevice::CreateSystemDefault(RendererType preferredBackend, GPUFlags flags)
     {
         RendererType backend = GetDefaultRenderer(preferredBackend);
 
-        Graphics* graphics = nullptr;
         switch (backend)
         {
-#if defined(ALIMER_D3D11)
-        case RendererType::Direct3D11:
-            break;
-#endif
-
-#if defined(ALIMER_D3D12)
+#if defined(ALIMER_D3D12_BACKEND)
         case RendererType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable()) {
-                //Graphics = new D3D12GraphicsDevice(window, flags);
+                return new D3D12GraphicsDevice(flags);
             }
             break;
 #endif
@@ -121,16 +101,16 @@ namespace alimer
             break;
         }
 
-        return graphics;
+        return nullptr;
     }
 
-    void Graphics::TrackResource(GraphicsResource* resource)
+    void GraphicsDevice::TrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
         trackedResources.push_back(resource);
     }
 
-    void Graphics::UntrackResource(GraphicsResource* resource)
+    void GraphicsDevice::UntrackResource(GraphicsResource* resource)
     {
         std::lock_guard<std::mutex> lock(trackedResourcesMutex);
 
@@ -140,7 +120,7 @@ namespace alimer
         }
     }
 
-    void Graphics::ReleaseTrackedResources()
+    void GraphicsDevice::ReleaseTrackedResources()
     {
         {
             std::lock_guard<std::mutex> lock(trackedResourcesMutex);

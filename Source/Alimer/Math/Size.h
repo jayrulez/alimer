@@ -51,6 +51,9 @@ namespace alimer
 
         /// Return as string.
         String ToString() const;
+
+        // Constants
+        static const Size Empty;
     };
 
     /// Defines a two-dimensional integer size.

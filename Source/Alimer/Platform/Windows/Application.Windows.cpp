@@ -48,7 +48,7 @@ namespace alimer
         }
 
         static void OnGLFWError(int code, const char* description) {
-            LOGE("GLFW  Error (code %d): %s", code, description);
+            LOGE("GLFW  Error (code {}): {}", code, description);
         }
     }
 

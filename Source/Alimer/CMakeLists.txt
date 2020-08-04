@@ -38,6 +38,7 @@ define_engine_source_files(
     Core
     Math
     Graphics
+    GPU
     Scene
     Application
 )
@@ -48,6 +49,12 @@ endif()
 
 if (WIN32)
     define_engine_source_files(Platform/Windows)
+endif ()
+
+# Graphics modules
+if (WIN32 OR WINDOWS_STORE)
+  define_engine_source_files(GPU/D3D)
+  define_engine_source_files(GPU/D3D12)
 endif ()
 
 if (ALIMER_VULKAN)
@@ -75,7 +82,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-  agpu
+  EASTL
   stb
   fmt
   imgui

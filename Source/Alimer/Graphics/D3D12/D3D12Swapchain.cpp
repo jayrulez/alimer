@@ -26,15 +26,15 @@
 
 namespace alimer
 {
-    D3D12Swapchain::D3D12Swapchain(D3D12GraphicsDevice* device, const SwapchainDescription& description)
-        : Swapchain(description)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescriptor& descriptor)
+        : SwapChain(descriptor)
         , device{ device }
         , backbufferCount(kInflightFrameCount)
     {
-        colorFormat = SRGBToLinearFormat(description.preferredColorFormat);
+        colorFormat = SRGBToLinearFormat(descriptor.format);
         backbufferFormat = ToDXGIFormat(colorFormat);
 
-        switch (description.presentMode)
+        switch (descriptor.presentMode)
         {
         case PresentMode::Immediate:
             syncInterval = 0;
@@ -57,39 +57,38 @@ namespace alimer
         IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
             device->GetDXGIFactory(), device->GetDXGIFactoryCaps(),
             device->GetGraphicsQueue(),
-            description.windowHandle,
-            description.width, description.height,
+            descriptor.windowHandle,
+            descriptor.width, descriptor.height,
             backbufferFormat,
             backbufferCount,
-            description.isFullscreen
+            false
         );
 
         ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
         SafeRelease(tempSwapChain);
     }
 
-    D3D12Swapchain::~D3D12Swapchain()
+    D3D12SwapChain::~D3D12SwapChain()
     {
         Destroy();
     }
 
-    void D3D12Swapchain::Destroy()
+    void D3D12SwapChain::Destroy()
     {
         SafeRelease(handle);
     }
 
-    void D3D12Swapchain::Present()
+    void D3D12SwapChain::Present()
     {
         HRESULT hr = handle->Present(syncInterval, presentFlags);
     }
 
-    void D3D12Swapchain::ResizeImpl()
+    void D3D12SwapChain::ResizeImpl()
     {
         device->WaitForGPU();
 
     }
-
-    void D3D12Swapchain::AfterReset()
+    void D3D12SwapChain::AfterReset()
     {
         for (uint32_t index = 0; index < backbufferCount; ++index)
         {
@@ -103,10 +102,8 @@ namespace alimer
         backbufferIndex = handle->GetCurrentBackBufferIndex();
     }
 
-    void D3D12Swapchain::BackendSetName()
+    const GraphicsDevice* D3D12SwapChain::GetDevice() const
     {
-        //auto wideName = ToUtf16(name);
-        //handle->SetName(wideName.c_str());
-        DXGISetObjectName(handle, name.c_str());
+        return device;
     }
 }

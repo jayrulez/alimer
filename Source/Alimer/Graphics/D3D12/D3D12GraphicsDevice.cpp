@@ -155,8 +155,7 @@ namespace alimer
         return true;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(Window* window, GPUFlags flags)
-        : frameIndex(0)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(GPUFlags flags)
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -320,8 +319,8 @@ namespace alimer
         immediateContext.reset(new D3D12CommandContext(this, D3D12_COMMAND_LIST_TYPE_DIRECT));
 
         // Create main swapchain.
-        SwapchainDescription swapchainDesc = {};
-        mainSwapchain.reset(new D3D12Swapchain(this, swapchainDesc));
+        //SwapchainDescription swapchainDesc = {};
+        //mainSwapchain.reset(new D3D12Swapchain(this, swapchainDesc));
 
         // Create a fence for tracking GPU execution progress.
         {
@@ -336,7 +335,7 @@ namespace alimer
         }
 
         // Init imgui backend.
-        InitImGui();
+        //InitImGui();
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
@@ -351,7 +350,6 @@ namespace alimer
 
         SafeRelease(allocator);
 
-        mainSwapchain.reset();
         CloseHandle(frameFenceEvent);
         SafeRelease(frameFence);
 
@@ -363,7 +361,7 @@ namespace alimer
             SafeRelease(graphicsQueue);
         }
 
-        ShutdownImgui(true);
+        //ShutdownImgui(true);
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -402,7 +400,7 @@ namespace alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
 
-        caps.backendType = GPUBackendType::Direct3D12;
+        caps.backendType = RendererType::Direct3D12;
         caps.vendorId = desc.VendorId;
         caps.deviceId = desc.DeviceId;
 
@@ -774,7 +772,7 @@ namespace alimer
         return *commandBuffer;
     }*/
 
-    Swapchain* D3D12GraphicsDevice::GetMainSwapchain() const
+    /*Swapchain* D3D12GraphicsDevice::GetMainSwapchain() const
     {
         return mainSwapchain.get();
     }
@@ -782,11 +780,11 @@ namespace alimer
     CommandContext* D3D12GraphicsDevice::GetImmediateContext() const
     {
         return immediateContext.get();
-    }
+    }*/
 
-    SharedPtr<Swapchain> D3D12GraphicsDevice::CreateSwapchain(const SwapchainDescription& description)
+    SharedPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(const SwapChainDescriptor& descriptor)
     {
-        return new D3D12Swapchain(this, description);
+        return new D3D12SwapChain(this, descriptor);
     }
 
     /*void D3D12GraphicsImpl::CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion)

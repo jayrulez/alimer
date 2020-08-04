@@ -27,6 +27,8 @@
 
 namespace alimer
 {
+    class GraphicsDevice;
+
     /// Defines a Graphics Resource created by device.
     class ALIMER_API GraphicsResource : public Object
     {

@@ -20,40 +20,45 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Swapchain.h"
-#include "Core/Log.h"
+#include "GPU/GPU.h"
 
-namespace alimer::graphics
+#if (ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE) && !defined(ALIMER_DISABLE_D3D12)
+#include "GPU/D3D12/D3D12GPU.h"
+#define GPU_D3D12_BACKEND
+#endif
+
+namespace alimer
 {
-    Swapchain::Swapchain(const SwapchainDescription& description)
-        : width(description.width)
-        , height(description.height)
-        , colorFormat(description.preferredColorFormat)
+    static bool s_EnableBackendValidation = false;
+    static bool s_EnableGPUBasedBackendValidation = false;
+
+    void GPU::EnableBackendValidation(bool enableBackendValidation)
     {
-        currentRenderPassDescription.colorAttachments[0].slice = 0;
+        s_EnableBackendValidation = enableBackendValidation;
     }
 
-    void Swapchain::Resize(uint32_t newWidth, uint32_t newHeight)
+    bool GPU::IsBackendValidationEnabled()
     {
-        if ((newWidth != width || newHeight != height) && newWidth > 0 && newHeight > 0)
-        {
-            depthStencilTexture.Reset();
-            backbufferTextures.clear();
-
-            width = Max(newWidth, 1u);
-            height = Max(newHeight, 1u);
-            ResizeImpl();
-        }
+        return s_EnableBackendValidation;
     }
 
-    Texture* Swapchain::GetBackbufferTexture() const
+    void GPU::EnableGPUBasedBackendValidation(bool enableGPUBasedBackendValidation)
     {
-        return backbufferTextures[backbufferIndex].Get();
+        s_EnableGPUBasedBackendValidation = enableGPUBasedBackendValidation;
     }
 
-    Texture* Swapchain::GetDepthStencilTexture() const
+    bool GPU::IsGPUBasedBackendValidationEnabled()
     {
-        return depthStencilTexture.Get();
+        return s_EnableGPUBasedBackendValidation;
+    }
+
+    eastl::unique_ptr<GPUAdapter> GPU::RequestAdapter(PowerPreference powerPreference, RendererType backendType)
+    {
+        eastl::unique_ptr<GPUAdapter> adapter = nullptr;
+#if defined(GPU_D3D12_BACKEND)
+        adapter = D3D12GPU::Get()->RequestAdapter(powerPreference);
+#endif
+
+        return adapter;
     }
 }
-

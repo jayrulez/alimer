@@ -22,25 +22,26 @@
 
 #pragma once
 
-#include "Graphics/Swapchain.h"
+#include "Graphics/SwapChain.h"
 #include "D3D12Backend.h"
 
 namespace alimer
 {
     class D3D12Texture;
 
-    class D3D12Swapchain final : public Swapchain
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12Swapchain(D3D12GraphicsDevice* device, const SwapchainDescription& description);
-        ~D3D12Swapchain() override;
-        void Destroy() override;
+        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescriptor& descriptor);
+        ~D3D12SwapChain() override;
+        void Destroy();
         void Present();
+
+        const GraphicsDevice* GetDevice() const override;
 
     private:
         void ResizeImpl() override;
         void AfterReset();
-        void BackendSetName() override;
 
         D3D12GraphicsDevice* device;
         DXGI_FORMAT backbufferFormat;
