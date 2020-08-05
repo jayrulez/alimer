@@ -27,6 +27,9 @@
 
 namespace alimer
 {
+    class Window;
+    class GPUDevice;
+
     class Gui final : public Object
     {
         ALIMER_OBJECT(Gui, Object);
@@ -34,5 +37,8 @@ namespace alimer
     public:
         Gui();
         ~Gui();
+
+        void Initialize(GPUDevice* device, Window& window);
+        void BeginFrame(uint32_t width, uint32_t height, float deltaTime);
     };
 }

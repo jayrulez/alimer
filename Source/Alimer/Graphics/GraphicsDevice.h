@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Graphics/CommandContext.h"
-#include "Graphics/SwapChain.h"
 #include "Graphics/Buffer.h"
 #include <vector>
 #include <mutex>
@@ -62,18 +61,11 @@ namespace alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        /// Get the device capabilities.
-        const GraphicsDeviceCapabilities& GetCaps() const { return caps; }
-
-        virtual SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor& descriptor) = 0;
-
         void TrackResource(GraphicsResource* resource);
         void UntrackResource(GraphicsResource* resource);
 
     protected:
         void ReleaseTrackedResources();
-
-        GraphicsDeviceCapabilities caps{};
 
         std::mutex trackedResourcesMutex;
         std::vector<GraphicsResource*> trackedResources;

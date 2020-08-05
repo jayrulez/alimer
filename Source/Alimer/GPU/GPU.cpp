@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
+#include "config.h"
 #include "GPU/GPU.h"
 
-#if (ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE) && !defined(ALIMER_DISABLE_D3D12)
+#if defined(ALIMER_GPU_D3D12)
 #include "GPU/D3D12/D3D12GPU.h"
-#define GPU_D3D12_BACKEND
 #endif
 
 namespace alimer
@@ -32,13 +32,9 @@ namespace alimer
     static bool s_EnableBackendValidation = false;
     static bool s_EnableGPUBasedBackendValidation = false;
 
-    GPUAdapter::GPUAdapter(RendererType backendType)
-        : backendType{ backendType }
-    {
-
-    }
-
     /* GPU */
+    GPUDevice* GPU::Instance = nullptr;
+
     void GPU::EnableBackendValidation(bool enableBackendValidation)
     {
         s_EnableBackendValidation = enableBackendValidation;
@@ -59,13 +55,15 @@ namespace alimer
         return s_EnableGPUBasedBackendValidation;
     }
 
-    eastl::unique_ptr<GPUAdapter> GPU::RequestAdapter(PowerPreference powerPreference, RendererType backendType)
+    GPUDevice* GPU::CreateDevice(WindowHandle windowHandle, const GPUDevice::Desc& desc)
     {
-        eastl::unique_ptr<GPUAdapter> adapter = nullptr;
-#if defined(GPU_D3D12_BACKEND)
-        adapter = D3D12GPU::Get()->RequestAdapter(powerPreference);
+        if (Instance != nullptr)
+            return Instance;
+
+#if defined(ALIMER_GPU_D3D12)
+        Instance = D3D12GPU::Get()->CreateDevice(windowHandle, desc);
 #endif
 
-        return adapter;
+        return Instance;
     }
 }

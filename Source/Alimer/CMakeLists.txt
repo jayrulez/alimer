@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(alimer)
-set(TARGET_NAME alimer)
+project(Alimer)
+set(TARGET_NAME Alimer)
 
 macro (define_engine_source_files)
   cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
@@ -54,16 +54,15 @@ endif ()
 # Graphics modules
 if (WIN32 OR WINDOWS_STORE)
   define_engine_source_files(GPU/D3D)
-  define_engine_source_files(GPU/D3D12)
+  define_engine_source_files(GPU/D3D11)
 endif ()
 
-if (NOT ALIMER_DISABLE_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
+if (ALIMER_GPU_D3D12)
+    define_engine_source_files(GPU/D3D12)
 endif()
 
-if (ALIMER_D3D12)
-    #define_engine_source_files(Graphics/D3D)
-    #define_engine_source_files(Graphics/D3D12)
+if (ALIMER_GPU_VULKAN)
+    #define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()

@@ -288,7 +288,7 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL _Thread_local
 #   define ALIMER_DEPRECATED __attribute__(deprecated)
-#   define ALIMER_FORCEINLINE inline __attribute__(always_inline)
+#   define ALIMER_FORCE_INLINE inline __attribute__(always_inline)
 #   define ALIMER_NOINLINE __attribute__(noinline)
 #   define ALIMER_PURECALL __attribute__(pure)
 #   define ALIMER_CONSTCALL __attribute__(const)
@@ -301,7 +301,7 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL __thread
 #   define ALIMER_DEPRECATED __attribute__(deprecated)
-#   define ALIMER_FORCEINLINE inline __attribute__(always_inline)
+#   define ALIMER_FORCE_INLINE inline __attribute__(always_inline)
 #   define ALIMER_NOINLINE __attribute__(noinline)
 #   define ALIMER_PURECALL __attribute__(pure)
 #   define ALIMER_CONSTCALL __attribute__(const)
@@ -315,7 +315,7 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL __declspec(thread)
 #   define ALIMER_DEPRECATED __declspec(deprecated)
-#   define ALIMER_FORCEINLINE __forceinline
+#   define ALIMER_FORCE_INLINE __forceinline
 #   define ALIMER_NOINLINE __declspec(noinline)
 #   define ALIMER_PURECALL __declspec(noalias)
 #   define ALIMER_CONSTCALL __declspec(noalias)

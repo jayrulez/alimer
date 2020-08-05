@@ -120,13 +120,6 @@ namespace alimer
         Discard
     };
 
-    enum class PresentMode
-    {
-        Immediate,
-        Mailbox,
-        Fifo
-    };
-
     struct TextureDescription
     {
         String name;
@@ -149,17 +142,6 @@ namespace alimer
         uint32_t size;
         uint32_t stride = 0;
         MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
-    };
-
-    /// Describes a Swapchain
-    struct SwapChainDescriptor
-    {
-        PixelFormat format = PixelFormat::BGRA8Unorm;
-        uint32 width;
-        uint32 height;
-        PresentMode presentMode = PresentMode::Immediate;
-        void* windowHandle;
-        const char* label;
     };
 
     class Texture;
@@ -199,72 +181,4 @@ namespace alimer
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
-
-    /// Describes GraphicsDevice capabilities.
-    struct GraphicsDeviceCapabilities
-    {
-        struct Features
-        {
-            bool independentBlend = false;
-            bool computeShader = false;
-            bool geometryShader = false;
-            bool tessellationShader = false;
-            bool logicOp = false;
-            bool multiViewport = false;
-            bool fullDrawIndexUint32 = false;
-            bool multiDrawIndirect = false;
-            bool fillModeNonSolid = false;
-            bool samplerAnisotropy = false;
-            bool textureCompressionETC2 = false;
-            bool textureCompressionASTC_LDR = false;
-            bool textureCompressionBC = false;
-            /// Specifies whether cube array textures are supported.
-            bool textureCubeArray = false;
-            /// Specifies whether raytracing is supported.
-            bool raytracing = false;
-        };
-
-        struct Limits
-        {
-            uint32_t maxVertexAttributes;
-            uint32_t maxVertexBindings;
-            uint32_t maxVertexAttributeOffset;
-            uint32_t maxVertexBindingStride;
-            uint32_t maxTextureDimension2D;
-            uint32_t maxTextureDimension3D;
-            uint32_t maxTextureDimensionCube;
-            uint32_t maxTextureArrayLayers;
-            uint32_t maxColorAttachments;
-            uint32_t maxUniformBufferSize;
-            uint32_t minUniformBufferOffsetAlignment;
-            uint32_t maxStorageBufferSize;
-            uint32_t minStorageBufferOffsetAlignment;
-            uint32_t maxSamplerAnisotropy;
-            uint32_t maxViewports;
-            uint32_t maxViewportWidth;
-            uint32_t maxViewportHeight;
-            uint32_t maxTessellationPatchSize;
-            float pointSizeRangeMin;
-            float pointSizeRangeMax;
-            float lineWidthRangeMin;
-            float lineWidthRangeMax;
-            uint32_t maxComputeSharedMemorySize;
-            uint32_t maxComputeWorkGroupCountX;
-            uint32_t maxComputeWorkGroupCountY;
-            uint32_t maxComputeWorkGroupCountZ;
-            uint32_t maxComputeWorkGroupInvocations;
-            uint32_t maxComputeWorkGroupSizeX;
-            uint32_t maxComputeWorkGroupSizeY;
-            uint32_t maxComputeWorkGroupSizeZ;
-        };
-
-        Features features;
-        Limits limits;
-    };
-
-    struct GraphicsDeviceDescriptor
-    {
-        GPUFlags flags = GPUFlags::None;
-        RendererType preferredBackend = RendererType::Count;
-    };
 }

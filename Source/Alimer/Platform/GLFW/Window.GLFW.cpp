@@ -21,6 +21,7 @@
 //
 
 #include "Core/Window.h"
+#include "GPU/GPU.h"
 #include "Core/Input.h"
 #include "Core/Log.h"
 
@@ -40,6 +41,10 @@ namespace alimer
 {
     namespace
     {
+        void OnGLFWError(int code, const char* description) {
+            LOGE("GLFW  Error (code {}): {}", code, description);
+        }
+
         MouseButton FromGlfw(int button)
         {
             switch (button)
@@ -89,10 +94,23 @@ namespace alimer
         }
     }
 
-    bool Window::Create(const eastl::string& title, const SizeI& size, WindowFlags flags)
+    Window::Window(const eastl::string& title, uint32_t width, uint32_t height, WindowFlags flags)
+        : title{ title }
+        , width{ width }
+        , height{ height }
     {
-        this->title = title;
-        this->size = size;
+        static bool glfwInitialized = false;
+        if (!glfwInitialized)
+        {
+            glfwSetErrorCallback(OnGLFWError);
+            if (!glfwInit())
+            {
+                LOGE("GLFW couldn't be initialized.");
+            }
+
+            glfwInitialized = true;
+        }
+
         fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
         exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
 
@@ -108,7 +126,7 @@ namespace alimer
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }
 
-        glfwWindowHint(GLFW_RESIZABLE, ((flags & WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, ((flags& WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
         if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
             glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
         }
@@ -143,19 +161,30 @@ namespace alimer
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        GLFWwindow* handle = glfwCreateWindow(static_cast<int>(size.width), static_cast<int>(size.height), title.c_str(), monitor, NULL);
-        if (!handle)
+        GLFWwindow* glfwWindow = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title.c_str(), monitor, nullptr);
+        if (!glfwWindow)
         {
             LOGE("GLFW: Failed to create window.");
-            return false;
+            return;
         }
 
         glfwDefaultWindowHints();
-        glfwSetWindowUserPointer(handle, this);
-        glfwSetMouseButtonCallback(handle, Glfw_MouseButtonCallback);
-        //glfwSetKeyCallback(handle, glfw_key_callback);
-        window = handle;
+        glfwSetWindowUserPointer(glfwWindow, this);
+        glfwSetMouseButtonCallback(glfwWindow, Glfw_MouseButtonCallback);
+        //glfwSetKeyCallback(glfwWindow, glfw_key_callback);
+        window = glfwWindow;
 
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        handle = glfwGetWin32Window(glfwWindow);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        handle.display = glfwGetX11Display();
+        handle.window = glfwGetX11Window();
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        handle = glfwGetCocoaWindow(glfwWindow);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        glfwGetWaylandDisplay();
+        handle = glfwGetWaylandWindow(glfwWindow);
+#endif
         /*if (any(flags & WindowFlags::OpenGL))
         {
             glfwMakeContextCurrent(handle);
@@ -165,8 +194,6 @@ namespace alimer
         {
             ImGui_ImplGlfw_InitForVulkan(handle, true);
         }*/
-
-        return true;
     }
 
     void Window::Close()
@@ -203,35 +230,5 @@ namespace alimer
     bool Window::IsFullscreen() const
     {
         return fullscreen || exclusiveFullscreen;
-    }
-
-    void* Window::GetNativeHandle() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return glfwGetWin32Window((GLFWwindow*)window);
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Window((GLFWwindow*)window);
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return glfwGetCocoaWindow((GLFWwindow*)window);
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandWindow(window);
-#else
-        return nullptr;
-#endif
-    }
-
-    void* Window::GetNativeDisplay() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Display();
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandDisplay();
-#else
-        return nullptr;
-#endif
     }
 }

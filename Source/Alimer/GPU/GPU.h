@@ -22,13 +22,19 @@
 
 #pragma once
 
-#include "Core/Platform.h"
+#include "Core/Ptr.h"
+#include "Core/Window.h"
 #include "Graphics/Types.h"
 #include <EASTL/string.h>
-#include <EASTL/unique_ptr.h>
+#include <EASTL/intrusive_ptr.h>
+#include <EASTL/vector.h>
 
 namespace alimer
 {
+    static constexpr uint32_t kMaxCommandLists = 16u;
+    using CommandList = uint16_t;
+
+    /* Enums */
     enum class PowerPreference
     {
         Default,
@@ -36,7 +42,8 @@ namespace alimer
         LowPower
     };
 
-    enum class GPUKnownVendorId : uint32_t {
+    enum class GPUKnownVendorId
+    {
         None = 0,
         AMD = 0x1002,
         Intel = 0x8086,
@@ -46,35 +53,121 @@ namespace alimer
         Qualcomm = 0x5143
     };
 
-    enum class GPUAdapterType : uint32_t {
+    enum class GPUAdapterType
+    {
         DiscreteGPU,
         IntegratedGPU,
         CPU,
         Unknown
     };
 
-    class GPUAdapter
+    /* Structures */
+    /// Describes GPUDevice capabilities.
+    struct GPUDeviceCapabilities
     {
-    public:
-        GPUAdapter(RendererType backendType);
-        virtual ~GPUAdapter() = default;
-
-    protected:
         RendererType backendType;
-        eastl::string name;
+        eastl::string adapterName;
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;
         GPUAdapterType adapterType = GPUAdapterType::Unknown;
+
+        struct Features
+        {
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint32_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint32_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
+    };
+
+    /* Forward declaration */
+    class GPUDevice;
+
+    /* Classes */
+    class ALIMER_API GPUDevice : public RefCounted
+    {
+    public:
+        struct Desc
+        {
+            RendererType preferredBackendType = RendererType::Count;
+            PowerPreference powerPreference = PowerPreference::Default;
+            uint32 backbufferWidth;
+            uint32 backbufferHeight;
+            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+            bool enableVSync = true;
+            bool isFullscreen = false;
+        };
+
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+
+        /// Get the device capabilities.
+        ALIMER_FORCE_INLINE const GPUDeviceCapabilities& GetCaps() const { return caps; }
+
+    protected:
+        GPUDeviceCapabilities caps{};
     };
 
     class GPU final 
     {
     public:
+        static GPUDevice* Instance;
+
         static void EnableBackendValidation(bool enableBackendValidation);
         static bool IsBackendValidationEnabled();
         static void EnableGPUBasedBackendValidation(bool enableGPUBasedBackendValidation);
         static bool IsGPUBasedBackendValidationEnabled();
 
-        static eastl::unique_ptr<GPUAdapter> RequestAdapter(PowerPreference powerPreference, RendererType backendType = RendererType::Count);
+        static GPUDevice* CreateDevice(WindowHandle windowHandle, const GPUDevice::Desc& desc);
     };
 }

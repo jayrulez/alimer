@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Gui.h"
+#include "Graphics/Gui.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -78,5 +78,19 @@ namespace alimer
     Gui::~Gui()
     {
         ImGui::DestroyContext();
+    }
+
+    void Gui::Initialize(GPUDevice* device, Window& window)
+    {
+
+    }
+
+    void Gui::BeginFrame(uint32_t width, uint32_t height, float deltaTime)
+    {
+        //Assert_(CurrBeginFrame != DX12::CurrentCPUFrame);
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.DisplaySize = ImVec2(float(width), float(height));
+        io.DeltaTime = deltaTime;
     }
 }

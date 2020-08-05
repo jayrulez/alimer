@@ -47,9 +47,6 @@ namespace alimer
             return str;
         }
 
-        static void OnGLFWError(int code, const char* description) {
-            LOGE("GLFW  Error (code {}): {}", code, description);
-        }
     }
 
     void Application::PlatformConstruct()
@@ -74,12 +71,6 @@ namespace alimer
             freopen_s(&fp, "conout$", "w", stdout);
             freopen_s(&fp, "conout$", "w", stderr);
         }
-
-        glfwSetErrorCallback(OnGLFWError);
-        if (!glfwInit())
-        {
-            LOGE("GLFW couldn't be initialized.");
-        }
     }
 
     void Application::PlatformDestroy()
@@ -101,7 +92,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (window->ShouldClose())
+                if (window.ShouldClose())
                 {
                     running = false;
                     break;

@@ -50,35 +50,9 @@ namespace alimer
         bool operator != (const Size& rhs) const noexcept { return (width != rhs.width) || (height != rhs.height); }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Size Empty;
-    };
-
-    /// Defines a two-dimensional integer size.
-    class ALIMER_API SizeI
-    {
-    public:
-        /// Specifies the width of the size.
-        int width;
-        /// Specifies the height of the size.
-        int height;
-
-        SizeI() noexcept : width(0), height(0) {}
-        constexpr SizeI(int width_, int height_) noexcept : width(width_), height(height_) {}
-
-        SizeI(const SizeI&) = default;
-        SizeI& operator=(const SizeI&) = default;
-
-        SizeI(SizeI&&) = default;
-        SizeI& operator=(SizeI&&) = default;
-
-        // Comparison operators
-        bool operator == (const SizeI& rhs) const noexcept { return (width == rhs.width) && (height == rhs.height); }
-        bool operator != (const SizeI& rhs) const noexcept { return (width != rhs.width) || (height != rhs.height); }
-
-        /// Return as string.
-        String ToString() const;
     };
 }

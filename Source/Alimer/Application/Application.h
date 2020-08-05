@@ -26,6 +26,7 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
+#include "GPU/GPU.h"
 #include "Math/Size.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
@@ -44,7 +45,7 @@ namespace alimer
         eastl::string windowTitle = "Alimer";
 
         /// Main window size.
-        SizeI windowSize = { 1280, 720 };
+        Size windowSize = { 1280, 720 };
     };
 
     class ALIMER_API Application : public Object
@@ -65,7 +66,7 @@ namespace alimer
         void Tick();
 
         /// Get the main (primary window)
-        Window& GetWindow() { return *window; }
+        Window& GetWindow() { return window; }
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -100,7 +101,8 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
-        eastl::unique_ptr<Window> window;
+        Window window;
+        eastl::intrusive_ptr<GPUDevice> gpuDevice;
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 

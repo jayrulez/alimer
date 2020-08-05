@@ -27,17 +27,10 @@ namespace alimer
 {
     const Size Size::Empty = { 0.0f, 0.0f };
 
-    String Size::ToString() const
+    eastl::string Size::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g", width, height);
-        return eastl::string(tempBuffer);
-    }
-
-    String SizeI::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%d %d", width, height);
         return eastl::string(tempBuffer);
     }
 }

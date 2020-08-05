@@ -27,7 +27,7 @@
 #include "Graphics/Types.h"
 #include "GPU/D3D/D3DHelpers.h"
 
-#include "D3D12MemAlloc.h"
+#include <d3d12.h>
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.

@@ -25,13 +25,16 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "graphics/Types.h"
-#include "graphics/D3D/D3DHelpers.h"
+#include "GPU/D3D/D3DHelpers.h"
+
 #define D3D11_NO_HELPERS
 #include <d3d11_1.h>
 
 namespace alimer
 {
-    class D3D11GraphicsDevice;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
+#endif
 
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
 

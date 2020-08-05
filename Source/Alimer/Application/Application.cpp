@@ -23,6 +23,7 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
+#include "Graphics/Gui.h"
 #include "GPU/GPU.h"
 #include "Core/Log.h"
 
@@ -42,18 +43,21 @@ ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentO
 namespace alimer
 {
     Application::Application()
+        : window("Alimer")
     {
         // Construct platform logic first.
         PlatformConstruct();
         RegisterSubsystem(new Input());
+        RegisterSubsystem(new Gui());
         LOGI("Application started");
     }
 
     Application::~Application()
     {
         gameSystems.clear();
-        window.reset();
+        window.Close();
         RemoveSubsystem<Input>();
+        RemoveSubsystem<Gui>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -63,40 +67,17 @@ namespace alimer
         // Init subsytems.
         GetSubsystem<Input>()->Initialize();
 
-        // Init graphics device
+        // Init GPU.
         if (!headless)
         {
-            auto adapter = GPU::RequestAdapter(PowerPreference::Default);
-            if (adapter == nullptr) {
+            GPUDevice::Desc gpuDeviceDesc = {};
+            gpuDeviceDesc.backbufferWidth = static_cast<uint32_t>(window.GetWidth());
+            gpuDeviceDesc.backbufferHeight = static_cast<uint32_t>(window.GetHeight());
+            gpuDevice = GPU::CreateDevice(window.GetHandle(), gpuDeviceDesc);
+            if (gpuDevice == nullptr) {
                 headless = true;
             }
         }
-
-        // Create main window.
-        WindowFlags windowFlags = WindowFlags::Resizable;
-        /*if (gpu_backend_type == AGPU_BACKEND_OPENGL) {
-            windowFlags |= WindowFlags::OpenGL;
-        }*/
-
-        window.reset(new Window());
-        window->Create(config.windowTitle, config.windowSize, windowFlags);
-
-        // Init graphics.
-        /*agpu_swapchain_info swapchain_info = {};
-        swapchain_info.native_handle = window->GetNativeHandle();
-        swapchain_info.width = window->GetSize().width;
-        swapchain_info.height = window->GetSize().height;
-
-        agpu_config gpu_config = {};
-#ifdef _DEBUG
-        gpu_config.debug = true;
-#endif
-        gpu_config.swapchain = &swapchain_info;
-
-        if (agpu_init(config.applicationName.c_str(), &gpu_config) == false)
-        {
-            headless = true;
-        }*/
 
         Initialize();
         if (exitCode)
@@ -129,7 +110,9 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //agpu_frame_begin();
+        if (!gpuDevice->BeginFrame()) {
+            return false;
+        }
 
         //window->BeginFrame();
         //ImGui::NewFrame();
@@ -175,11 +158,7 @@ namespace alimer
 
         //ImGuiIO& io = ImGui::GetIO();
         //ImGui::Render();
-        //agpu_frame_end();
-
-#if defined(ALIMER_GLFW)
-        //glfwSwapBuffers((GLFWwindow*)window->GetWindow());
-#endif
+        gpuDevice->EndFrame();
     }
 
     int Application::Run()
@@ -218,7 +197,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !window->IsMinimized()
+            && !window.IsMinimized()
             && BeginDraw())
         {
             Draw(time);

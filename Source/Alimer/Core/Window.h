@@ -25,6 +25,7 @@
 #include "Core/Ptr.h"
 #include "Core/Delegate.h"
 #include "Math/Size.h"
+#include <EASTL/intrusive_ptr.h>
 
 namespace alimer
 {
@@ -41,35 +42,46 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
-    //class SwapChain;
+#ifdef _WIN32
+    using WindowHandle = HWND;
+#else
+    struct WindowHandle
+    {
+        Display* display;
+        Window window;
+    };
+#endif
 
     /// Defines an OS window.
     class ALIMER_API Window final : public RefCounted
     {
     public:
-        Window() = default;
-
-        bool Create(const eastl::string& title, const SizeI& size, WindowFlags flags);
+        Window(const eastl::string& title, uint32_t width = 1280, uint32_t height = 720, WindowFlags flags = WindowFlags::Resizable);
         void Close();
         void BeginFrame();
 
-        const SizeI& GetSize() const { return size; }
+        uint32_t GetWidth() const { return width; }
+        uint32_t GetHeight() const { return height; }
+
         bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
         bool IsFullscreen() const;
-        void* GetNativeHandle() const;
-        void* GetNativeDisplay() const;
+
+        /// Get the native window handle
+        const WindowHandle& GetHandle() const { return handle; }
         void* GetWindow() const { return window; }
 
         //Delegate<void()> SizeChanged;
 
     private:
         String title;
-        SizeI size;
+        uint32_t width;
+        uint32_t height;
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
+        WindowHandle handle{};
         void* window = nullptr;
         //SharedPtr<SwapChain> swapChain;
     };
