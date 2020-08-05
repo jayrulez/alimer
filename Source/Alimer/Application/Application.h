@@ -26,7 +26,6 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "GPU/GPU.h"
 #include "Math/Size.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
@@ -102,7 +101,6 @@ namespace alimer
 
         bool headless{ false };
         Window window;
-        eastl::intrusive_ptr<GPUDevice> gpuDevice;
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 

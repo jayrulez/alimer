@@ -34,131 +34,105 @@ namespace alimer
     static constexpr uint32_t kMaxCommandLists = 16u;
     using CommandList = uint16_t;
 
-    /* Enums */
-    enum class PowerPreference
-    {
-        Default,
-        HighPerformance,
-        LowPower
-    };
-
-    enum class GPUKnownVendorId
-    {
-        None = 0,
-        AMD = 0x1002,
-        Intel = 0x8086,
-        Nvidia = 0x10DE,
-        ARM = 0x13B5,
-        ImgTec = 0x1010,
-        Qualcomm = 0x5143
-    };
-
-    enum class GPUAdapterType
-    {
-        DiscreteGPU,
-        IntegratedGPU,
-        CPU,
-        Unknown
-    };
-
-    /* Structures */
-    /// Describes GPUDevice capabilities.
-    struct GPUDeviceCapabilities
-    {
-        RendererType backendType;
-        eastl::string adapterName;
-        uint32_t vendorId = 0;
-        uint32_t deviceId = 0;
-        GPUAdapterType adapterType = GPUAdapterType::Unknown;
-
-        struct Features
-        {
-            bool independentBlend = false;
-            bool computeShader = false;
-            bool geometryShader = false;
-            bool tessellationShader = false;
-            bool logicOp = false;
-            bool multiViewport = false;
-            bool fullDrawIndexUint32 = false;
-            bool multiDrawIndirect = false;
-            bool fillModeNonSolid = false;
-            bool samplerAnisotropy = false;
-            bool textureCompressionETC2 = false;
-            bool textureCompressionASTC_LDR = false;
-            bool textureCompressionBC = false;
-            /// Specifies whether cube array textures are supported.
-            bool textureCubeArray = false;
-            /// Specifies whether raytracing is supported.
-            bool raytracing = false;
-        };
-
-        struct Limits
-        {
-            uint32_t maxVertexAttributes;
-            uint32_t maxVertexBindings;
-            uint32_t maxVertexAttributeOffset;
-            uint32_t maxVertexBindingStride;
-            uint32_t maxTextureDimension2D;
-            uint32_t maxTextureDimension3D;
-            uint32_t maxTextureDimensionCube;
-            uint32_t maxTextureArrayLayers;
-            uint32_t maxColorAttachments;
-            uint32_t maxUniformBufferSize;
-            uint32_t minUniformBufferOffsetAlignment;
-            uint32_t maxStorageBufferSize;
-            uint32_t minStorageBufferOffsetAlignment;
-            uint32_t maxSamplerAnisotropy;
-            uint32_t maxViewports;
-            uint32_t maxViewportWidth;
-            uint32_t maxViewportHeight;
-            uint32_t maxTessellationPatchSize;
-            float pointSizeRangeMin;
-            float pointSizeRangeMax;
-            float lineWidthRangeMin;
-            float lineWidthRangeMax;
-            uint32_t maxComputeSharedMemorySize;
-            uint32_t maxComputeWorkGroupCountX;
-            uint32_t maxComputeWorkGroupCountY;
-            uint32_t maxComputeWorkGroupCountZ;
-            uint32_t maxComputeWorkGroupInvocations;
-            uint32_t maxComputeWorkGroupSizeX;
-            uint32_t maxComputeWorkGroupSizeY;
-            uint32_t maxComputeWorkGroupSizeZ;
-        };
-
-        Features features;
-        Limits limits;
-    };
-
     /* Forward declaration */
     class GPUDevice;
 
     /* Classes */
+    class ALIMER_API GPUResource : public RefCounted
+    {
+    public:
+        enum class Type
+        {
+            Unknown,
+            Buffer,
+            Texture
+        };
+
+        /// Get the type.
+        ALIMER_FORCE_INLINE Type GetType() const { return type; }
+
+    protected:
+        GPUResource(Type type_)
+            : type(type_)
+        {
+        }
+
+        Type type;
+    };
+
+    class ALIMER_API GPUTexture : public GPUResource
+    {
+    public:
+        using Parent = GPUResource;
+
+        struct Desc
+        {
+            TextureType type = TextureType::Texture2D;
+            PixelFormat format = PixelFormat::RGBA8Unorm;
+            TextureUsage usage = TextureUsage::Sampled;
+            uint32_t width = 1u;
+            uint32_t height = 1u;
+            uint32_t depth = 1u;
+            uint32_t arraySize = 1u;
+            uint32_t mipLevels = 1u;
+            uint32_t sampleCount = 1u;
+        };
+
+        /// Get the description of the texture.
+        ALIMER_FORCE_INLINE const Desc& GetDesc() const { return desc; }
+
+    protected:
+        GPUTexture(const Desc& desc_)
+            : Parent(Type::Texture)
+            , desc(desc_)
+        {
+        }
+
+        Desc desc;
+    };
+
+    class ALIMER_API GPUBuffer : public GPUResource
+    {
+    public:
+        using Parent = GPUResource;
+
+        struct Desc
+        {
+
+        };
+
+        /// Get the description of the buffer.
+        ALIMER_FORCE_INLINE const Desc& GetDesc() const { return desc; }
+
+    protected:
+        GPUBuffer(const Desc& desc_)
+            : Parent(Type::Buffer)
+            , desc(desc_)
+        {
+        }
+
+        Desc desc;
+    };
+
+    class ALIMER_API GPUContext : public RefCounted
+    {
+
+    };
+
     class ALIMER_API GPUDevice : public RefCounted
     {
     public:
-        struct Desc
-        {
-            RendererType preferredBackendType = RendererType::Count;
-            PowerPreference powerPreference = PowerPreference::Default;
-            uint32 backbufferWidth;
-            uint32 backbufferHeight;
-            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-            bool enableVSync = true;
-            bool isFullscreen = false;
-        };
-
+        
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        /// Get the device capabilities.
-        ALIMER_FORCE_INLINE const GPUDeviceCapabilities& GetCaps() const { return caps; }
 
-    protected:
-        GPUDeviceCapabilities caps{};
+        /// Gets the main GPU context.
+        virtual GPUContext* GetMainContext() const = 0;
+
     };
 
-    class GPU final 
+    class GPU final
     {
     public:
         static GPUDevice* Instance;
@@ -167,7 +141,5 @@ namespace alimer
         static bool IsBackendValidationEnabled();
         static void EnableGPUBasedBackendValidation(bool enableGPUBasedBackendValidation);
         static bool IsGPUBasedBackendValidationEnabled();
-
-        static GPUDevice* CreateDevice(WindowHandle windowHandle, const GPUDevice::Desc& desc);
     };
 }

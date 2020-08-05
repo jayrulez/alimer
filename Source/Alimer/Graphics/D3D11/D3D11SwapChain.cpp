@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODD
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
 #include "D3D11Texture.h"
@@ -115,3 +116,5 @@ namespace alimer
         currentRenderPassDescription.colorAttachments[0].texture = backbufferTextures.Back();
     }
 }
+
+#endif // TOD

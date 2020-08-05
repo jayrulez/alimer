@@ -30,38 +30,44 @@ namespace alimer
     class D3D11CommandContext;
     class D3D11SwapChain;
 
-    class D3D11GraphicsDevice final : public GraphicsDevice
+    class GraphicsImpl final
     {
     public:
-        static bool IsAvailable();
+        GraphicsImpl();
+        ~GraphicsImpl();
 
-        D3D11GraphicsDevice();
-        ~D3D11GraphicsDevice();
+        bool Initialize(Window& window, GPUDeviceFlags flags);
+        void Shutdown();
+        bool BeginFrame();
+        uint64_t EndFrame(uint64_t currentCPUFrame);
 
         void HandleDeviceLost(HRESULT hr);
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
-
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
-        CommandContext* GetDefaultContext() const override;
 
-        Vector<D3D11SwapChain*> viewports;
+        /// Get the device capabilities.
+        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
+
+        //CommandContext* GetDefaultContext() const override;
+
+        //Vector<D3D11SwapChain*> viewports;
 
     private:
         void CreateFactory();
-        void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        void BackendShutdown() override;
-        void WaitForGPU() override;
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
+        void WaitForGPU();
 
         // Resource creation methods.
-        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
-        RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
+        //RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
+        //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         static constexpr uint64_t kRenderLatency = 2;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HMODULE dxgiLib;
+#endif
 
         IDXGIFactory2* dxgiFactory = nullptr;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
@@ -69,8 +75,10 @@ namespace alimer
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D11Device1* d3dDevice = nullptr;
-        UniquePtr<D3D11CommandContext> defaultContext;
+        //UniquePtr<D3D11CommandContext> defaultContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
+
+        GraphicsCapabilities caps{};
     };
 }

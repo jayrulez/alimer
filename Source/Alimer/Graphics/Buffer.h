@@ -23,26 +23,40 @@
 #pragma once
 
 #include "Graphics/GraphicsResource.h"
+#include "Graphics/Backend.h"
+#include <EASTL/string_view.h>
 
 namespace alimer
 {
     /// 
-    class Buffer : public GraphicsResource
+    class Buffer final : public GraphicsResource
     {
     public:
         /// Constructor
-        Buffer(const BufferDescription& desc);
+        Buffer(const eastl::string_view& name = "");
+        ~Buffer() override;
+        void Destroy() override;
+
+        bool CreateStatic(const void* data, uint32_t count, uint32_t stride, BufferUsage usage);
 
         /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return _desc.size; }
+        uint32_t GetSize() const { return size; }
 
-        /// Gets buffer stride  in bytes.
-        uint32_t GetStride() const { return _desc.stride; }
+        /// Gets buffer elements count.
+        uint32_t GetElementCount() const { return elementCount; }
 
-        /// Gets buffer elements count (size divided by the stride).
-        uint32_t GetElementCount() const { return _desc.size / _desc.stride; }
+        /// Gets size of single element in the buffer.
+        uint32_t GetElementSize() const { return elementSize; }
 
-    protected:
-        BufferDescription _desc;
+    private:
+        bool Create(const void* data);
+        void BackendSetName() override;
+
+        BufferUsage usage{ BufferUsage::None };
+        uint32_t size{ 0 };
+        uint32_t elementCount{ 0 };
+        uint32_t elementSize{ 0 };
+
+        BufferHandle handle{};
     };
 }

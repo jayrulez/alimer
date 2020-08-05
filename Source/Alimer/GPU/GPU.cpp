@@ -24,7 +24,11 @@
 #include "GPU/GPU.h"
 
 #if defined(ALIMER_GPU_D3D12)
-#include "GPU/D3D12/D3D12GPU.h"
+#   include "GPU/D3D12/D3D12GPU.h"
+#endif
+
+#if defined(ALIMER_GPU_D3D11)
+#   include "GPU/D3D11/D3D11GPU.h"
 #endif
 
 namespace alimer
@@ -60,9 +64,26 @@ namespace alimer
         if (Instance != nullptr)
             return Instance;
 
+        RendererType rendererType = RendererType::Direct3D11;
+        if (desc.preferredBackendType == RendererType::Count)
+        {
+
+        }
+
+        switch (rendererType)
+        {
 #if defined(ALIMER_GPU_D3D12)
-        Instance = D3D12GPU::Get()->CreateDevice(windowHandle, desc);
+        case RendererType::Direct3D12:
+            Instance = D3D12GPU::Get()->CreateDevice(windowHandle, desc);
+            break;
 #endif
+
+#if defined(ALIMER_GPU_D3D11)
+        case RendererType::Direct3D11:
+            Instance = D3D11GPU::Get()->CreateDevice(windowHandle, desc);
+            break;
+#endif
+        }
 
         return Instance;
     }

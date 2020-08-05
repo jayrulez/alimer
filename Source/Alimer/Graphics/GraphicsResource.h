@@ -35,32 +35,50 @@ namespace alimer
         ALIMER_OBJECT(GraphicsResource, Object);
 
     public:
-        GraphicsResource(const String& name = "", MemoryUsage memoryUsage = MemoryUsage::GpuOnly);
-        virtual ~GraphicsResource();
+        enum class Type
+        {
+            Unknown,
+            Buffer,
+            Texture
+        };
+
+        enum class Usage
+        {
+            Default,
+            Immutable,
+            Dynamic,
+            Staging
+        };
+
+        virtual ~GraphicsResource() = default;
 
         /// Release the GPU resource.
         virtual void Destroy() {}
 
-        /**
-        * Set the resource name
-        */
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
+        /// Set the resource name.
+        void SetName(const eastl::string& newName) { name = newName; BackendSetName(); }
 
         /**
         * Get the resource name
         */
-        const String& GetName() const { return name; }
+        const eastl::string& GetName() const { return name; }
 
-        /**
-        * Get the memory type.
-        */
-        MemoryUsage GetMemoryUsage() const { return memoryUsage; }
+        /// Get the resource memory usage.
+        Usage GetResourceUsage() const { return resourceUsage; }
 
-    private:
+    protected:
+        GraphicsResource(const eastl::string_view& name, Type type_)
+            : name{ name }
+            , type(type_)
+        {
+        }
+
+        Type type;
+        void SetResourceUsage(Usage newUsage) { resourceUsage = newUsage; }
         virtual void BackendSetName() {}
 
     protected:
         String name;
-        MemoryUsage memoryUsage;
+        Usage resourceUsage = Usage::Default;
     };
 }

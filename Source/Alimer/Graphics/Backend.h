@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,29 +20,29 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11Backend.h"
+#pragma once
+
+#include "config.h"
+
+#if defined(ALIMER_D3D11)
+#   define D3D11_NO_HELPERS
+#   include <d3d11_1.h>
+#elif defined(ALIMER_D3D12)
+#elif defined(ALIMER_VULKAN)
+#else
+#   error "Invalid graphics backend"
+#endif
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
-    {
-#ifdef _DEBUG
-        if (obj != nullptr)
-        {
-            if (!name.empty())
-            {
-                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(name.length()), name.c_str());
-            }
-            else
-                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
-        }
+#if defined(ALIMER_D3D11)
+    using BufferHandle = ID3D11Buffer*;
+    using TextureHandle = ID3D11Resource*;
+#elif defined(ALIMER_D3D12)
+    using BufferHandle = ID3D12Resource*;
+    using TextureHandle = ID3D12Resource*;
+#elif defined(ALIMER_VULKAN)
 #else
-        ALIMER_UNUSED(obj);
-        ALIMER_UNUSED(name);
+#   error "Invalid graphics backend"
 #endif
-    }
 }

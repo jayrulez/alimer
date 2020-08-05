@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,25 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Buffer.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    class D3D11Buffer final : public Buffer
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
     {
-    public:
-        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D11Buffer() override;
-        void Destroy() override;
-
-        ID3D11Buffer* GetHandle() const { return _handle; }
-
-    private:
-        void Create(const void* data);
-        void BackendSetName() override;
-
-        D3D11GraphicsDevice* _device;
-        ID3D11Buffer* _handle = nullptr;
-    };
+#ifdef _DEBUG
+        if (obj != nullptr)
+        {
+            if (!name.empty())
+            {
+                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(name.length()), name.c_str());
+            }
+            else
+                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
+        }
+#else
+        ALIMER_UNUSED(obj);
+        ALIMER_UNUSED(name);
+#endif
+    }
 }

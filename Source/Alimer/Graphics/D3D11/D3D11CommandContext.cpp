@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D11CommandContext.h"
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
@@ -49,7 +50,7 @@ namespace alimer
 #else
         ALIMER_UNUSED(name);
 #endif
-    }
+}
 
     void D3D11CommandContext::PopDebugGroup()
     {
@@ -164,3 +165,5 @@ namespace alimer
         // TODO:
     }
 }
+
+#endif // TODO

@@ -23,6 +23,7 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Graphics/Gui.h"
 #include "GPU/GPU.h"
 #include "Core/Log.h"
@@ -48,7 +49,6 @@ namespace alimer
         // Construct platform logic first.
         PlatformConstruct();
         RegisterSubsystem(new Input());
-        RegisterSubsystem(new Gui());
         LOGI("Application started");
     }
 
@@ -57,6 +57,7 @@ namespace alimer
         gameSystems.clear();
         window.Close();
         RemoveSubsystem<Input>();
+        RemoveSubsystem<GraphicsDevice>();
         RemoveSubsystem<Gui>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -70,13 +71,29 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            GPUDevice::Desc gpuDeviceDesc = {};
-            gpuDeviceDesc.backbufferWidth = static_cast<uint32_t>(window.GetWidth());
-            gpuDeviceDesc.backbufferHeight = static_cast<uint32_t>(window.GetHeight());
-            gpuDevice = GPU::CreateDevice(window.GetHandle(), gpuDeviceDesc);
-            if (gpuDevice == nullptr) {
+            RegisterSubsystem(new GraphicsDevice());
+
+            GPUDeviceFlags gpuDeviceFlags = {};
+#ifdef _DEBUG
+            gpuDeviceFlags |= GPUDeviceFlags::DebugRuntime;
+#endif
+
+            if(!GetGraphics()->Initialize(window, gpuDeviceFlags))
+            {
                 headless = true;
             }
+
+            const float vertices[] = {
+                /* positions            colors */
+                 0.0f, 0.5f, 0.5f,      1.0f, 0.0f, 0.0f, 1.0f,
+                 0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
+                -0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f
+            };
+
+            Buffer vertexBuffer;
+            vertexBuffer.CreateStatic(vertices, 3, 28, BufferUsage::Vertex);
+
+            RegisterSubsystem(new Gui());
         }
 
         Initialize();
@@ -110,7 +127,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!gpuDevice->BeginFrame()) {
+        if (!GetGraphics()->BeginFrame()) {
             return false;
         }
 
@@ -158,7 +175,7 @@ namespace alimer
 
         //ImGuiIO& io = ImGui::GetIO();
         //ImGui::Render();
-        gpuDevice->EndFrame();
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()

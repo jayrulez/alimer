@@ -20,15 +20,45 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Buffer.h"
+#include "Graphics/Buffer.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    Buffer::Buffer(const BufferDescription& desc)
-        : GraphicsResource(desc.name, desc.memoryUsage)
-        , _desc(desc)
+    Buffer::Buffer(const eastl::string_view& name)
+        : GraphicsResource(name, Type::Buffer)
     {
 
+    }
+
+    Buffer::~Buffer()
+    {
+        Destroy();
+    }
+
+    bool Buffer::CreateStatic(const void* data, uint32_t count, uint32_t stride, BufferUsage usage_)
+    {
+        if (!data)
+        {
+            LOGE("Static buffer must define initial data");
+            return false;
+        }
+
+        if (!count || !stride)
+        {
+            LOGE("Can not define buffer with no elements or element size.");
+            return false;
+        }
+
+        Destroy();
+
+        SetResourceUsage(resourceUsage);
+        usage = usage_;
+        elementCount = count;
+        elementSize = stride;
+        size = count * stride;
+
+        return Create(data);
     }
 }
 

@@ -20,23 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Assert.h"
+#pragma once
+
+#include "core/Assert.h"
+#include "core/Log.h"
 #include "Graphics/GraphicsResource.h"
+#include "Graphics/Backend.h"
+#include "Graphics/D3D/D3DHelpers.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(const String& name, MemoryUsage memoryUsage)
-        : name{ name }
-        , memoryUsage{ memoryUsage }
-    {
-        //if (Graphics != nullptr)
-        //    Graphics->TrackResource(this);
-    }
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
 
-    GraphicsResource::~GraphicsResource()
+    static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
     {
-        //if (Graphics != nullptr)
-        //    Graphics->UntrackResource(this);
+        TextureUsage usage = TextureUsage::None;
+        if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
+            usage |= TextureUsage::Sampled;
+        }
+        if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
+            usage |= TextureUsage::Storage;
+        }
+        if (bindFlags & D3D11_BIND_RENDER_TARGET) {
+            usage |= TextureUsage::RenderTarget;
+        }
+        if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        return usage;
     }
 }
-

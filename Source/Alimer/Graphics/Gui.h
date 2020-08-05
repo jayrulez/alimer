@@ -24,6 +24,8 @@
 
 #include "Core/Object.h"
 #include "Graphics/Types.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace alimer
 {
@@ -40,5 +42,8 @@ namespace alimer
 
         void Initialize(GPUDevice* device, Window& window);
         void BeginFrame(uint32_t width, uint32_t height, float deltaTime);
+        void EndFrame();
+
+    private:
     };
 }

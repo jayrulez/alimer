@@ -20,67 +20,90 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11Buffer.h"
+#include "Graphics/Buffer.h"
 #include "D3D11GraphicsDevice.h"
 
 namespace alimer
 {
     namespace
     {
-        D3D11_BIND_FLAG D3D11GetBindFlags(BufferUsage usage)
+        UINT D3D11GetBindFlags(BufferUsage usage)
         {
-            if ((usage & BufferUsage::Uniform) != BufferUsage::None) {
+            if (any(usage & BufferUsage::Uniform))
+            {
                 // This cannot be combined with nothing else.
                 return D3D11_BIND_CONSTANT_BUFFER;
             }
 
-            uint32_t result = {};
-            if ((usage & BufferUsage::Vertex) != BufferUsage::None)
-                result |= D3D11_BIND_VERTEX_BUFFER;
-            if ((usage & BufferUsage::Index) != BufferUsage::None)
-                result |= D3D11_BIND_INDEX_BUFFER;
-            if ((usage & BufferUsage::Storage) != BufferUsage::None)
-                result |= D3D11_BIND_UNORDERED_ACCESS;
+            UINT flags = {};
+            if (any(usage & BufferUsage::Vertex))
+                flags |= D3D11_BIND_VERTEX_BUFFER;
+            if (any(usage & BufferUsage::Index))
+                flags |= D3D11_BIND_INDEX_BUFFER;
+            if (any(usage & BufferUsage::StorageReadOnly)
+                || any(usage & BufferUsage::StorageReadWrite))
+            {
+                flags |= D3D11_BIND_SHADER_RESOURCE;
+            }
 
-            return (D3D11_BIND_FLAG)result;
+            if (any(usage & BufferUsage::StorageReadWrite))
+                flags |= D3D11_BIND_UNORDERED_ACCESS;
+
+            return flags;
         }
     }
 
-    D3D11Buffer::D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
-        : Buffer(desc)
-        , _device(device)
+    void Buffer::Destroy()
     {
-        Create(initialData);
+        SafeRelease(handle);
     }
 
-    D3D11Buffer::~D3D11Buffer()
+    bool Buffer::Create(const void* data)
     {
-        Destroy();
-    }
+        static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
+        static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
 
-    void D3D11Buffer::Destroy()
-    {
-        SafeRelease(_handle);
-    }
-
-    void D3D11Buffer::Create(const void* data)
-    {
-        uint32_t size = _desc.size;
-        if ((_desc.usage & BufferUsage::Uniform) != BufferUsage::None) {
-            size = Math::AlignTo(_desc.size, _device->GetCaps().limits.minUniformBufferOffsetAlignment);
-        }
-
-        D3D11_BUFFER_DESC d3d11Desc = {};
-        d3d11Desc.ByteWidth = size;
-        d3d11Desc.Usage = D3D11GetUsage(_desc.memoryUsage);
-        d3d11Desc.BindFlags = D3D11GetBindFlags(_desc.usage);
-        d3d11Desc.CPUAccessFlags = D3D11GetCpuAccessFlags(_desc.memoryUsage);
-        if ((_desc.usage & BufferUsage::Indirect) != BufferUsage::None)
+        if (size > c_maxBytes)
         {
-            d3d11Desc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+            //DebugTrace("ERROR: Resource size too large for DirectX 11 (size %llu)\n", sizeInbytes);
+            return false;
         }
 
-        d3d11Desc.StructureByteStride = _desc.stride;
+        uint32_t bufferSize = size;
+        if ((usage & BufferUsage::Uniform) != BufferUsage::None)
+        {
+            bufferSize = Math::AlignTo(size, GetGraphics()->GetCaps().limits.minUniformBufferOffsetAlignment);
+        }
+
+        const bool needUav = any(usage & BufferUsage::StorageReadWrite) || any(usage & BufferUsage::Indirect);
+        const bool needSrv = any(usage & BufferUsage::StorageReadOnly);
+        const bool isDynamic = data == nullptr && !needUav;
+
+        D3D11_BUFFER_DESC desc = {};
+        desc.ByteWidth = bufferSize;
+        desc.BindFlags = D3D11GetBindFlags(usage);
+
+        if (needUav)
+        {
+            desc.Usage = D3D11_USAGE_DEFAULT;
+            desc.CPUAccessFlags = 0;
+            desc.StructureByteStride = elementSize;
+        }
+        else if (isDynamic)
+        {
+            desc.Usage = D3D11_USAGE_DYNAMIC;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        }
+        else
+        {
+            desc.Usage = D3D11_USAGE_IMMUTABLE;
+            desc.CPUAccessFlags = 0;
+        }
+
+        if ((usage & BufferUsage::Indirect) != BufferUsage::None)
+        {
+            desc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        }
 
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialData;
@@ -90,16 +113,17 @@ namespace alimer
             initialDataPtr = &initialData;
         }
 
-        HRESULT hr = _device->GetD3DDevice()->CreateBuffer(&d3d11Desc, initialDataPtr, &_handle);
+        HRESULT hr = GetGraphics()->GetImpl()->GetD3DDevice()->CreateBuffer(&desc, initialDataPtr, &handle);
         if (FAILED(hr)) {
-            LOG_ERROR("Direct3D11: Failed to create buffer");
+            LOGE("Direct3D11: Failed to create buffer");
+            return false;
         }
 
-        BackendSetName();
+        return true;
     }
 
-    void D3D11Buffer::BackendSetName()
+    void Buffer::BackendSetName()
     {
-        D3D11SetObjectName(_handle, name);
+        D3D11SetObjectName(handle, name);
     }
 }

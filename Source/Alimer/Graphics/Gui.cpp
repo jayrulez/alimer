@@ -21,8 +21,6 @@
 //
 
 #include "Graphics/Gui.h"
-#include <imgui.h>
-#include <imgui_internal.h>
 
 namespace alimer
 {
@@ -80,9 +78,8 @@ namespace alimer
         ImGui::DestroyContext();
     }
 
-    void Gui::Initialize(GPUDevice* device, Window& window)
+    void Gui::Initialize(GPUDevice* device, Window& window_)
     {
-
     }
 
     void Gui::BeginFrame(uint32_t width, uint32_t height, float deltaTime)
@@ -92,5 +89,21 @@ namespace alimer
         ImGuiIO& io = ImGui::GetIO();
         io.DisplaySize = ImVec2(float(width), float(height));
         io.DeltaTime = deltaTime;
+
+        ImGui::NewFrame();
+    }
+
+    void Gui::EndFrame()
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        ImGui::Render();
+
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
     }
 }

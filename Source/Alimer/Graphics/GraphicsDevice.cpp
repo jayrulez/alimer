@@ -27,52 +27,46 @@
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Texture.h"
 
-#if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
+#if defined(ALIMER_D3D11)
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#elif defined(ALIMER_D3D12)
+#elif defined(ALIMER_VULKAN)
+#else
 #endif
 
 namespace alimer
 {
-    RendererType GraphicsDevice::GetDefaultRenderer(RendererType preferredBackend)
+    GraphicsDevice::GraphicsDevice()
+        : impl(new GraphicsImpl())
     {
-        if (preferredBackend == RendererType::Count)
-        {
-            auto availableDrivers = GetAvailableRenderDrivers();
 
-            if (availableDrivers.find(RendererType::Direct3D12) != availableDrivers.end())
-                return RendererType::Direct3D12;
-            else if (availableDrivers.find(RendererType::Vulkan) != availableDrivers.end())
-                return RendererType::Vulkan;
-            else
-                return RendererType::Null;
-        }
-
-        return preferredBackend;
     }
 
-    std::set<RendererType> GraphicsDevice::GetAvailableRenderDrivers()
+    GraphicsDevice::~GraphicsDevice()
     {
-        static std::set<RendererType> availableDrivers;
-
-        if (availableDrivers.empty())
-        {
-            availableDrivers.insert(RendererType::Null);
-
-#if defined(ALIMER_D3D12_BACKEND)
-            if (D3D12GraphicsDevice::IsAvailable())
-            {
-                availableDrivers.insert(RendererType::Direct3D12);
-            }
-#endif
-
-        }
-
-        return availableDrivers;
+        delete impl;
+        impl = nullptr;
     }
 
-    SharedPtr<GraphicsDevice> GraphicsDevice::CreateSystemDefault(RendererType preferredBackend, GPUFlags flags)
+    bool GraphicsDevice::Initialize(Window& window, GPUDeviceFlags flags)
     {
-        return nullptr;
+        if (initialized) {
+            return true;
+        }
+
+        initialized = impl->Initialize(window, flags);
+        return true;
+    }
+
+    bool GraphicsDevice::BeginFrame()
+    {
+        return impl->BeginFrame();
+    }
+
+    void GraphicsDevice::EndFrame()
+    {
+        ++currentCPUFrame;
+        currentGPUFrame = impl->EndFrame(currentCPUFrame);
     }
 
     void GraphicsDevice::TrackResource(GraphicsResource* resource)
@@ -104,5 +98,15 @@ namespace alimer
 
             trackedResources.clear();
         }
+    }
+
+    const GraphicsCapabilities& GraphicsDevice::GetCaps() const
+    {
+        return impl->GetCaps();
+    }
+
+    GraphicsImpl* GraphicsDevice::GetImpl() const
+    {
+        return impl;
     }
 }

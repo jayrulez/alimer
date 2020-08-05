@@ -38,7 +38,6 @@ define_engine_source_files(
     Core
     Math
     Graphics
-    GPU
     Scene
     Application
 )
@@ -52,17 +51,14 @@ if (WIN32)
 endif ()
 
 # Graphics modules
-if (WIN32 OR WINDOWS_STORE)
-  define_engine_source_files(GPU/D3D)
-  define_engine_source_files(GPU/D3D11)
-endif ()
-
-if (ALIMER_GPU_D3D12)
-    define_engine_source_files(GPU/D3D12)
-endif()
-
-if (ALIMER_GPU_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
+if (ALIMER_D3D11)
+  define_engine_source_files(Graphics/D3D)
+  define_engine_source_files(Graphics/D3D11)
+elseif (ALIMER_D3D12)
+  define_engine_source_files(Graphics/D3D)
+  define_engine_source_files(Graphics/D3D12)
+elseif (ALIMER_GPU_VULKAN)
+  #define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()
@@ -101,12 +97,12 @@ else()
     endif()
 endif()
 
-if (ALIMER_VULKAN)
-    target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
-endif ()
-
-if (ALIMER_D3D12)
-    target_link_libraries(${TARGET_NAME} PRIVATE D3D12MemAlloc)
+if (ALIMER_D3D11)
+  target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
+elseif (ALIMER_D3D12)
+  target_link_libraries(${TARGET_NAME} PRIVATE d3d12 dxgi)
+elseif (ALIMER_GPU_VULKAN)
+  target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
 endif()
 
 if (MSVC)

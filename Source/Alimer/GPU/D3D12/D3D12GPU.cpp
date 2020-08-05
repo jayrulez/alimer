@@ -168,7 +168,7 @@ namespace alimer
             queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
             queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
             queueDesc.NodeMask = 0;
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(graphicsQueue.ReleaseAndGetAddressOf())));
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
             graphicsQueue->SetName(L"Graphics Command Queue");
 
             //computeQueue = CreateCommandQueue(CommandQueueType::Compute, "");
@@ -297,14 +297,17 @@ namespace alimer
 #endif
         }
 
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
 
         // Determines whether tearing support is available for fullscreen borderless windows.
+        dxgiFactoryCaps |= DXGIFactoryCaps::HDR;
+        dxgiFactoryCaps |= DXGIFactoryCaps::FlipPresent;
+
         {
             BOOL allowTearing = FALSE;
 
-            ComPtr<IDXGIFactory5> dxgiFactory5 = nullptr;
-            HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+            IDXGIFactory5* dxgiFactory5 = nullptr;
+            HRESULT hr = dxgiFactory->QueryInterface(_uuidof(IDXGIFactory5), (void**)&dxgiFactory5);
             if (SUCCEEDED(hr))
             {
                 hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -326,7 +329,7 @@ namespace alimer
     D3D12GPU::~D3D12GPU()
     {
         // Release factory at last.
-        dxgiFactory.Reset();
+        SafeRelease(dxgiFactory);
 
 #ifdef _DEBUG
         {
@@ -344,12 +347,13 @@ namespace alimer
         ComPtr<IDXGIAdapter1> dxgiAdapter;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> dxgiFactory6;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
+        IDXGIFactory6* dxgiFactory6 = nullptr;
+        HRESULT hr = dxgiFactory->QueryInterface(_uuidof(IDXGIFactory6), (void**)&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
             DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-            if (desc.powerPreference == PowerPreference::LowPower) {
+            if (any(desc.flags & GPUDeviceFlags::LowPowerPreference))
+            {
                 gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
             }
 
@@ -381,6 +385,7 @@ namespace alimer
                 }
             }
         }
+        SafeRelease(dxgiFactory6);
 #endif
 
         if (!dxgiAdapter)

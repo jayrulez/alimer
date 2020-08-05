@@ -37,43 +37,51 @@ namespace alimer
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
 
     /// Enum describing the rendering backend.
-    enum class RendererType
+    enum class BackendType
     {
         /// Null renderer.
         Null,
         /// Direct3D 12 backend.
         Direct3D12,
+        /// Direct3D 11 backend.
+        Direct3D11,
         /// Vulkan backend.
         Vulkan,
         /// Default best platform supported backend.
         Count
     };
 
-    enum class GPUFlags : uint32_t
+    enum class GPUDeviceFlags : uint32_t
     {
         None = 0,
-        DebugRuntime = (1 << 0),
-        GPUBaseValidation = (1 << 1),
-        RenderDoc = (1 << 2),
+        LowPowerPreference = (1 << 0),
+        DebugRuntime = (1 << 1),
+        GPUBaseValidation = (1 << 3),
+        RenderDoc = (1 << 4),
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUFlags, uint32_t);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUDeviceFlags, uint32_t);
 
-    enum class MemoryUsage : uint32_t
+    enum class GPUKnownVendorId
     {
-        GpuOnly,
-        CpuOnly,
-        GpuToCpu
+        None = 0,
+        AMD = 0x1002,
+        Intel = 0x8086,
+        Nvidia = 0x10DE,
+        ARM = 0x13B5,
+        ImgTec = 0x1010,
+        Qualcomm = 0x5143
     };
 
-    enum class CommandQueueType
+    enum class GPUAdapterType
     {
-        Graphics,
-        Compute,
-        Copy
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
     };
 
     /// Describes texture type.
-    enum class TextureType : uint32_t
+    enum class TextureType
     {
         /// Two dimensional texture.
         Texture2D,
@@ -100,8 +108,9 @@ namespace alimer
         Vertex = 1 << 0,
         Index = 1 << 1,
         Uniform = 1 << 2,
-        Storage = 1 << 3,
-        Indirect = 1 << 4,
+        StorageReadOnly = 1 << 3,
+        StorageReadWrite = 1 << 4,
+        Indirect = 1 << 5,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
@@ -132,16 +141,6 @@ namespace alimer
         uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
-    };
-
-    /// Describes a buffer.
-    struct BufferDescription
-    {
-        String name;
-        BufferUsage usage;
-        uint32_t size;
-        uint32_t stride = 0;
-        MemoryUsage memoryUsage = MemoryUsage::GpuOnly;
     };
 
     class Texture;
@@ -181,4 +180,71 @@ namespace alimer
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
+    /// Describes GPUDevice capabilities.
+    struct GraphicsCapabilities
+    {
+        BackendType backendType;
+        eastl::string adapterName;
+        uint32_t vendorId = 0;
+        uint32_t deviceId = 0;
+        GPUAdapterType adapterType = GPUAdapterType::Unknown;
+
+        struct Features
+        {
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint32_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint32_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
+    };
 }

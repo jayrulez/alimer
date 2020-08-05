@@ -74,7 +74,8 @@ namespace alimer
         ALIMER_FORCE_INLINE ID3D12Device* GetD3DDevice() const { return d3dDevice.Get(); }
         ALIMER_FORCE_INLINE D3D12MA::Allocator* GetAllocator() const { return allocator; }
         ALIMER_FORCE_INLINE bool SupportsRenderPass() const { return supportsRenderPass; }
-        ALIMER_FORCE_INLINE ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue.Get(); }
+        ALIMER_FORCE_INLINE ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
+        ALIMER_FORCE_INLINE GPUContext* GetMainContext() const { return nullptr; }
 
     private:
         D3D12GPU* gpu;
@@ -82,7 +83,7 @@ namespace alimer
         D3D12MA::Allocator* allocator;
         bool supportsRenderPass{ false };
 
-        ComPtr<ID3D12CommandQueue> graphicsQueue;
+        ID3D12CommandQueue* graphicsQueue = nullptr;
         eastl::unique_ptr<D3D12GPUSwapChain> swapChain;
     };
 
@@ -95,14 +96,14 @@ namespace alimer
         GPUDevice* CreateDevice(WindowHandle windowHandle, const GPUDevice::Desc& desc);
 
         ALIMER_FORCE_INLINE DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
-        ALIMER_FORCE_INLINE IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        ALIMER_FORCE_INLINE IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
 
     private:
         D3D12GPU();
         ~D3D12GPU();
 
         DWORD dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory;
+        IDXGIFactory4* dxgiFactory = nullptr;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent | DXGIFactoryCaps::HDR;
     };
 }
