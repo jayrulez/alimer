@@ -57,7 +57,7 @@ if (WIN32 OR WINDOWS_STORE)
   define_engine_source_files(GPU/D3D12)
 endif ()
 
-if (ALIMER_VULKAN)
+if (NOT ALIMER_DISABLE_VULKAN)
     #define_engine_source_files(Graphics/Vulkan)
 endif()
 

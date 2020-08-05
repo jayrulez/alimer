@@ -20,7 +20,8 @@ if(NOT (EMSCRIPTEN OR ANDROID))
     add_subdirectory(glfw)
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
-if (ALIMER_VULKAN)
+
+if (ALIMER_GPU_VULKAN)
     # vulkan
     add_library(vulkan INTERFACE)
     set(VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
