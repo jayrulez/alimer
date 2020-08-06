@@ -37,7 +37,19 @@ namespace alimer
         ~Buffer() override;
         void Destroy() override;
 
-        bool CreateStatic(const void* data, uint32_t count, uint32_t stride, BufferUsage usage);
+        bool Create(BufferUsage usage, uint32_t count, uint32_t stride, const void* data = nullptr);
+
+        template<typename T>
+        bool Create(BufferUsage usage, uint32_t count, const T* data)
+        {
+            return Create(usage, count, sizeof(T), data);
+        }
+
+        template<typename T>
+        bool Create(BufferUsage usage, const T& data)
+        {
+            return Create(usage, data.size(), sizeof(typename T::value_type), data.data());
+        }
 
         /// Gets buffer size in bytes.
         uint32_t GetSize() const { return size; }
@@ -49,7 +61,7 @@ namespace alimer
         uint32_t GetElementSize() const { return elementSize; }
 
     private:
-        bool Create(const void* data);
+        bool BackendCreate(const void* data);
         void BackendSetName() override;
 
         BufferUsage usage{ BufferUsage::None };

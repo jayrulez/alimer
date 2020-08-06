@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <Type Name="Alimer::Float2">
+        <DisplayString>{{x={x} y={y}}}</DisplayString>
+    </Type>
+
+    <Type Name="Alimer::Float3">
+        <DisplayString>{{x={x} y={y} z={z}}}</DisplayString>
+    </Type>
+
+    <Type Name="Alimer::Float4">
+        <DisplayString>{{x={x} y={y} z={z} w={w}}}</DisplayString>
+    </Type>
+</AutoVisualizer>

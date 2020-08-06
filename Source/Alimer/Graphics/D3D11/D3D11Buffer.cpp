@@ -36,18 +36,16 @@ namespace alimer
             }
 
             UINT flags = {};
-            if (any(usage & BufferUsage::Vertex))
-                flags |= D3D11_BIND_VERTEX_BUFFER;
             if (any(usage & BufferUsage::Index))
                 flags |= D3D11_BIND_INDEX_BUFFER;
-            if (any(usage & BufferUsage::StorageReadOnly)
-                || any(usage & BufferUsage::StorageReadWrite))
+            if (any(usage & BufferUsage::Vertex))
+                flags |= D3D11_BIND_VERTEX_BUFFER;
+            
+            if (any(usage & BufferUsage::Storage))
             {
                 flags |= D3D11_BIND_SHADER_RESOURCE;
-            }
-
-            if (any(usage & BufferUsage::StorageReadWrite))
                 flags |= D3D11_BIND_UNORDERED_ACCESS;
+            }
 
             return flags;
         }
@@ -58,7 +56,7 @@ namespace alimer
         SafeRelease(handle);
     }
 
-    bool Buffer::Create(const void* data)
+    bool Buffer::BackendCreate(const void* data)
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
@@ -75,32 +73,34 @@ namespace alimer
             bufferSize = Math::AlignTo(size, GetGraphics()->GetCaps().limits.minUniformBufferOffsetAlignment);
         }
 
-        const bool needUav = any(usage & BufferUsage::StorageReadWrite) || any(usage & BufferUsage::Indirect);
-        const bool needSrv = any(usage & BufferUsage::StorageReadOnly);
+        const bool needUav = any(usage & BufferUsage::Storage) || any(usage & BufferUsage::Indirect);
         const bool isDynamic = data == nullptr && !needUav;
 
         D3D11_BUFFER_DESC desc = {};
         desc.ByteWidth = bufferSize;
         desc.BindFlags = D3D11GetBindFlags(usage);
 
-        if (needUav)
-        {
-            desc.Usage = D3D11_USAGE_DEFAULT;
-            desc.CPUAccessFlags = 0;
-            desc.StructureByteStride = elementSize;
+        if (any(usage & BufferUsage::MapRead)) {
+            desc.Usage = D3D11_USAGE_STAGING;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
         }
-        else if (isDynamic)
+        else if (any(usage & BufferUsage::MapWrite))
         {
             desc.Usage = D3D11_USAGE_DYNAMIC;
             desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         }
         else
         {
-            desc.Usage = D3D11_USAGE_IMMUTABLE;
+            desc.Usage = D3D11_USAGE_DEFAULT;
             desc.CPUAccessFlags = 0;
         }
 
-        if ((usage & BufferUsage::Indirect) != BufferUsage::None)
+        if (needUav)
+        {
+            desc.StructureByteStride = elementSize;
+        }
+
+        if (any(usage & BufferUsage::Indirect))
         {
             desc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
         }

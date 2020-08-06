@@ -23,9 +23,10 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
+#include "Core/Math.h"
 #include "Graphics/GraphicsDevice.h"
 #include "Graphics/Gui.h"
-#include "GPU/GPU.h"
+#include "Math/Color.h"
 #include "Core/Log.h"
 
 /* Needed by EASTL. */
@@ -83,15 +84,21 @@ namespace alimer
                 headless = true;
             }
 
-            const float vertices[] = {
-                /* positions            colors */
-                 0.0f, 0.5f, 0.5f,      1.0f, 0.0f, 0.0f, 1.0f,
-                 0.5f, -0.5f, 0.5f,     0.0f, 1.0f, 0.0f, 1.0f,
-                -0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f, 1.0f
+            struct VertexPositionColor
+            {
+                Float3 position;
+                Color color;
             };
 
-            Buffer vertexBuffer;
-            vertexBuffer.CreateStatic(vertices, 3, 28, BufferUsage::Vertex);
+            const VertexPositionColor vertices[] = {
+                /* positions            colors */
+                {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
+                {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
+                {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
+            };
+
+            Buffer vertexBuffer("Triangle");
+            vertexBuffer.Create(BufferUsage::Vertex, 3, vertices);
 
             RegisterSubsystem(new Gui());
         }

@@ -10,6 +10,24 @@ target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 add_subdirectory(fmt)
 add_subdirectory(imgui)
 
+# DirectXMath
+add_library(DirectXMath INTERFACE)
+set(DIRECTX_MATH_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/DirectXMath/Inc)
+target_sources(DirectXMath INTERFACE 
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXCollision.h
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXCollision.inl
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXColors.h
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXMath.h
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXMathConvert.inl
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXMathMatrix.inl
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXMathMisc.inl
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXMathVector.inl
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXPackedVector.h
+    ${DIRECTX_MATH_INCLUDE_DIR}/DirectXPackedVector.inl
+)
+target_include_directories(DirectXMath INTERFACE ${DIRECTX_MATH_INCLUDE_DIR})
+#target_compile_definitions(DirectXMath INTERFACE VK_NO_PROTOTYPES)
+
 # GLFW
 if(NOT (EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

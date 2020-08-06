@@ -80,6 +80,15 @@ namespace alimer
         Unknown
     };
 
+    enum class GraphicsResourceDimension
+    {
+        Unknown,
+        Buffer,
+        Texture1D = 2,
+        Texture2D = 3,
+        Texture3D = 4
+    };
+
     /// Describes texture type.
     enum class TextureType
     {
@@ -104,13 +113,17 @@ namespace alimer
 
     enum class BufferUsage : uint32_t
     {
-        None = 0,
-        Vertex = 1 << 0,
-        Index = 1 << 1,
-        Uniform = 1 << 2,
-        StorageReadOnly = 1 << 3,
-        StorageReadWrite = 1 << 4,
-        Indirect = 1 << 5,
+        None = 0x00000000,
+        MapRead = 0x00000001,
+        MapWrite = 0x00000002,
+        CopySrc = 0x00000004,
+        CopyDst = 0x00000008,
+        Index = 0x00000010,
+        Vertex = 0x00000020,
+        Uniform = 0x00000040,
+        Storage = 0x00000080,
+        Indirect = 0x00000100,
+        QueryResolve = 0x00000200,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 

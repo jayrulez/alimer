@@ -26,7 +26,7 @@
 namespace alimer
 {
     Buffer::Buffer(const eastl::string_view& name)
-        : GraphicsResource(name, Type::Buffer)
+        : GraphicsResource(name, GraphicsResourceDimension::Buffer)
     {
 
     }
@@ -36,7 +36,7 @@ namespace alimer
         Destroy();
     }
 
-    bool Buffer::CreateStatic(const void* data, uint32_t count, uint32_t stride, BufferUsage usage_)
+    bool Buffer::Create(BufferUsage usage_, uint32_t count, uint32_t stride, const void* data)
     {
         if (!data)
         {
@@ -52,13 +52,12 @@ namespace alimer
 
         Destroy();
 
-        SetResourceUsage(resourceUsage);
         usage = usage_;
         elementCount = count;
         elementSize = stride;
         size = count * stride;
 
-        return Create(data);
+        return BackendCreate(data);
     }
 }
 

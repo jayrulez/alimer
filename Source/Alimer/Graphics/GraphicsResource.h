@@ -35,13 +35,6 @@ namespace alimer
         ALIMER_OBJECT(GraphicsResource, Object);
 
     public:
-        enum class Type
-        {
-            Unknown,
-            Buffer,
-            Texture
-        };
-
         enum class Usage
         {
             Default,
@@ -63,22 +56,17 @@ namespace alimer
         */
         const eastl::string& GetName() const { return name; }
 
-        /// Get the resource memory usage.
-        Usage GetResourceUsage() const { return resourceUsage; }
-
     protected:
-        GraphicsResource(const eastl::string_view& name, Type type_)
+        GraphicsResource(const eastl::string_view& name, GraphicsResourceDimension dimension_)
             : name{ name }
-            , type(type_)
+            , dimension(dimension_)
         {
         }
 
-        Type type;
-        void SetResourceUsage(Usage newUsage) { resourceUsage = newUsage; }
         virtual void BackendSetName() {}
 
     protected:
-        String name;
-        Usage resourceUsage = Usage::Default;
+        eastl::string name;
+        GraphicsResourceDimension dimension;
     };
 }
