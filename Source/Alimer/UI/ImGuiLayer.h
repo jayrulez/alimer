@@ -22,28 +22,12 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
-#include <imgui.h>
-#include <imgui_internal.h>
+#include "Core/Window.h"
 
-namespace alimer
+namespace alimer::ImGuiLayer
 {
-    class Window;
-    class GPUDevice;
-
-    class Gui final : public Object
-    {
-        ALIMER_OBJECT(Gui, Object);
-
-    public:
-        Gui();
-        ~Gui();
-
-        void Initialize(GPUDevice* device, Window& window);
-        void BeginFrame(uint32_t width, uint32_t height, float deltaTime);
-        void EndFrame();
-
-    private:
-    };
+    ALIMER_API void Initialize(Window& window);
+    ALIMER_API void Shutdown();
+    ALIMER_API void BeginFrame(uint32_t width, uint32_t height, float deltaTime);
+    ALIMER_API void EndFrame();
 }

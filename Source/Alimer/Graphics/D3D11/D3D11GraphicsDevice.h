@@ -33,10 +33,9 @@ namespace alimer
     class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
-        D3D11GraphicsDevice(Window* window, GPUDeviceFlags flags);
+        D3D11GraphicsDevice(Window* window, const Desc& desc);
         ~D3D11GraphicsDevice() override;
 
-        bool Initialize(Window& window, GPUDeviceFlags flags);
         void Shutdown();
         bool BeginFrame() override;
         uint64_t EndFrame() override;
@@ -57,11 +56,6 @@ namespace alimer
     private:
         void CreateFactory();
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
-        void WaitForGPU();
-
-        // Resource creation methods.
-        //RefPtr<SwapChain> CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat) override;
-        //RefPtr<Texture> CreateTexture(const TextureDescription& desc, const void* initialData) override;
 
         static constexpr uint64_t kRenderLatency = 2;
 
@@ -71,12 +65,12 @@ namespace alimer
 
         IDXGIFactory2* dxgiFactory = nullptr;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
-        uint32_t presentFlagsNoVSync = 0;
-        D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D11Device1* d3dDevice = nullptr;
         D3D11CommandContext* mainContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
+
+        D3D11SwapChain* swapChain = nullptr;
     };
 }

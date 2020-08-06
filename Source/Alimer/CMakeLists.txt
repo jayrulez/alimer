@@ -40,6 +40,7 @@ define_engine_source_files(
     Math
     Graphics
     Scene
+    UI
     Application
 )
 

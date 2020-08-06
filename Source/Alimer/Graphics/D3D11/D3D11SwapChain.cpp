@@ -20,46 +20,46 @@
 // THE SOFTWARE.
 //
 
-#if TODD
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
 #include "D3D11Texture.h"
+#include "Core/Window.h"
 
 namespace alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat)
-        : _device(device)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device_, Window* window_, PixelFormat colorFormat_, PixelFormat depthStencilFormat_, bool vSync)
+        : device(device_)
+        , window(window_)
+        , colorFormat(colorFormat_)
+        , depthStencilFormat(depthStencilFormat_)
+        , syncInterval(1)
+        , presentFlags(0)
     {
-        colorFormat = SRGBToLinearFormat(preferredColorFormat);
+        if (!vSync) {
+            syncInterval = 0;
+            if (any(device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing))
+            {
+                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+            }
+        }
+
+        auto swapChain = DXGICreateSwapchain(
+            device->GetDXGIFactory(), device->GetDXGIFactoryCaps(),
+            device->GetD3DDevice(),
+            window->GetHandle(),
+            window->GetWidth(), window->GetHeight(),
+            colorFormat,
+            kNumBackBuffers,
+            window->IsFullscreen()
+        );
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        _handle = DXGICreateSwapchain(
-            _device->GetDXGIFactory(),
-            _device->GetDXGIFactoryCaps(),
-            _device->GetD3DDevice(),
-            windowHandle,
-            width, height,
-            colorFormat,
-            kNumBackBuffers,
-            isFullscreen
-        );
+        handle = swapChain;
 #else
-        IDXGISwapChain1* tempSwapChain = DXGICreateSwapchain(
-            _device->GetDXGIFactory(),
-            _device->GetDXGIFactoryCaps(),
-            _device->GetD3DDevice(),
-            windowHandle,
-            width, height,
-            colorFormat,
-            kNumBackBuffers,
-            _desc.isFullscreen
-        );
-
-        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&_handle)));
-        SafeRelease(tempSwapChain);
+        ThrowIfFailed(swapChain->QueryInterface(IID_PPV_ARGS(&handle)));
+        SafeRelease(swapChain);
 #endif
 
-        _device->viewports.Push(this);
         AfterReset();
     }
 
@@ -70,15 +70,24 @@ namespace alimer
 
     void D3D11SwapChain::Destroy()
     {
-        SafeRelease(_handle);
+        colorTexture.Reset();
+        depthStencilTexture.Reset();
+        SafeRelease(handle);
     }
 
-    void D3D11SwapChain::Present()
+    bool D3D11SwapChain::Present()
     {
-        ThrowIfFailed(_handle->Present(1, 0));
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+            return false;
+        }
+
+        ThrowIfFailed(hr);
+        return true;
     }
 
-    void D3D11SwapChain::Recreate()
+    /*void D3D11SwapChain::Recreate()
     {
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
         memset(&swapChainDesc, 0, sizeof(swapChainDesc));
@@ -99,22 +108,20 @@ namespace alimer
             // and correctly set up the new device.
             return;
         }
-    }
-
-    void D3D11SwapChain::BackendSetName()
-    {
-        DXGISetObjectName(_handle, name);
-    }
+    }*/
 
     void D3D11SwapChain::AfterReset()
     {
-        ID3D11Texture2D* resource;
-        ThrowIfFailed(_handle->GetBuffer(0, IID_PPV_ARGS(&resource)));
-        backbufferTextures.Push(new D3D11Texture(_device, resource, colorFormat));
+        colorTexture.Reset();
+        depthStencilTexture.Reset();
 
-        // Update render pass description as well.
-        currentRenderPassDescription.colorAttachments[0].texture = backbufferTextures.Back();
+        ID3D11Texture2D* resource;
+        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&resource)));
+        colorTexture = new D3D11Texture(device, resource, colorFormat);
+
+        if (depthStencilFormat != PixelFormat::Invalid)
+        {
+
+        }
     }
 }
-
-#endif // TOD

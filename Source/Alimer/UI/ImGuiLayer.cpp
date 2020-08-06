@@ -20,19 +20,23 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Gui.h"
+#include "UI/ImGuiLayer.h"
 
-namespace alimer
+#include <imgui.h>
+#include <imgui_internal.h>
+
+namespace alimer::ImGuiLayer
 {
-    Gui::Gui()
+    void Initialize(Window& window)
     {
-        /*io.Fonts->AddFontDefault();
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->AddFontDefault();
         //io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
 
         // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
         ImGuiStyle& style = ImGui::GetStyle();
         // Color scheme
-        /*style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
+        style.Colors[ImGuiCol_TitleBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
         style.Colors[ImGuiCol_TitleBgActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
         style.Colors[ImGuiCol_MenuBarBg] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
         style.Colors[ImGuiCol_Header] = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
@@ -53,19 +57,15 @@ namespace alimer
         {
             style.WindowRounding = 0.0f;
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-        }*/
+        }
     }
 
-    Gui::~Gui()
+    void Shutdown()
     {
-        
+        ImGui::DestroyContext();
     }
 
-    void Gui::Initialize(GPUDevice* device, Window& window_)
-    {
-    }
-
-    void Gui::BeginFrame(uint32_t width, uint32_t height, float deltaTime)
+    void BeginFrame(uint32_t width, uint32_t height, float deltaTime)
     {
         //Assert_(CurrBeginFrame != DX12::CurrentCPUFrame);
 
@@ -76,10 +76,9 @@ namespace alimer
         ImGui::NewFrame();
     }
 
-    void Gui::EndFrame()
+    void EndFrame()
     {
         ImGuiIO& io = ImGui::GetIO();
-
         ImGui::Render();
 
         // Update and Render additional Platform Windows

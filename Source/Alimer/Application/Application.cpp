@@ -25,7 +25,7 @@
 #include "Core/Input.h"
 #include "Core/Math.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/Gui.h"
+#include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
 #include <imgui.h>
@@ -76,8 +76,7 @@ namespace alimer
         RemoveSubsystem<Input>();
         delete GraphicsDevice::Instance;
         GraphicsDevice::Instance = nullptr;
-        RemoveSubsystem<Gui>();
-        ImGui::DestroyContext();
+        ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -90,11 +89,11 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            GPUDeviceFlags gpuDeviceFlags = {};
+            GraphicsDevice::Desc graphicsDesc = {};
 #ifdef _DEBUG
-            gpuDeviceFlags |= GPUDeviceFlags::DebugRuntime;
+            graphicsDesc.flags |= GPUDeviceFlags::DebugRuntime;
 #endif
-            GraphicsDevice::Create(&window, BackendType::Count, gpuDeviceFlags);
+            GraphicsDevice::Create(&window, graphicsDesc);
 
             if (!GraphicsDevice::Instance)
             {
@@ -117,7 +116,7 @@ namespace alimer
             //Buffer vertexBuffer("Triangle");
             //vertexBuffer.Create(BufferUsage::Vertex, 3, vertices);
 
-            RegisterSubsystem(new Gui());
+            ImGuiLayer::Initialize(window);
         }
 
         Initialize();
@@ -196,8 +195,7 @@ namespace alimer
         {
             gameSystem->EndDraw();
         }
-
-        //ImGuiIO& io = ImGui::GetIO();
+        
         //ImGui::Render();
         GraphicsDevice::Instance->EndFrame();
     }

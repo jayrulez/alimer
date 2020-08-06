@@ -42,13 +42,13 @@ namespace alimer
 {
     GraphicsDevice* GraphicsDevice::Instance = nullptr;
 
-    GraphicsDevice* GraphicsDevice::Create(Window* window, BackendType backendType, GPUDeviceFlags flags)
+    GraphicsDevice* GraphicsDevice::Create(Window* window, const Desc& desc)
     {
         if (Instance != nullptr)
             return Instance;
 
 #if defined(ALIMER_D3D11)
-        Instance = new D3D11GraphicsDevice(window, flags);
+        Instance = new D3D11GraphicsDevice(window, desc);
 #endif
 
         return Instance;

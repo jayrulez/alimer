@@ -39,12 +39,20 @@ namespace alimer
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
+        struct Desc
+        {
+            BackendType preferredBackendType = BackendType::Count;
+            GPUDeviceFlags flags = GPUDeviceFlags::None;
+            PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+            PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+            bool enableVSync = false;
+        };
+
         static GraphicsDevice* Instance;
+        static GraphicsDevice* Create(Window* window, const Desc& desc);
 
         virtual bool BeginFrame() = 0;
         virtual uint64_t EndFrame() = 0;
-
-        static GraphicsDevice* Create(Window* window, BackendType backendType, GPUDeviceFlags flags = GPUDeviceFlags::None);
 
         /// Get the device capabilities.
         ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }

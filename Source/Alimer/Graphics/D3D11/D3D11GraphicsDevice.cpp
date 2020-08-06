@@ -22,7 +22,7 @@
 
 #include "D3D11GraphicsDevice.h"
 #include "D3D11CommandContext.h"
-//#include "D3D11SwapChain.h"
+#include "D3D11SwapChain.h"
 //#include "D3D11Texture.h"
 //#include "D3D11Buffer.h"
 #include "Core/String.h"
@@ -48,7 +48,7 @@ namespace alimer
         return SUCCEEDED(hr);
     }
 
-    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, GPUDeviceFlags flags)
+    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const Desc& desc)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         dxgiLib = LoadLibraryA("dxgi.dll");
@@ -68,7 +68,7 @@ namespace alimer
             if (SUCCEEDED(hr))
             {
                 DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-                if (any(flags & GPUDeviceFlags::LowPowerPreference))
+                if (any(desc.flags & GPUDeviceFlags::LowPowerPreference))
                 {
                     gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
                 }
@@ -124,8 +124,8 @@ namespace alimer
 
             UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-            if (any(flags & GPUDeviceFlags::DebugRuntime)
-                || any(flags & GPUDeviceFlags::GPUBaseValidation))
+            if (any(desc.flags & GPUDeviceFlags::DebugRuntime)
+                || any(desc.flags & GPUDeviceFlags::GPUBaseValidation))
             {
                 if (SdkLayersAvailable())
                 {
@@ -203,8 +203,8 @@ namespace alimer
 
             ThrowIfFailed(hr);
 
-            if (any(flags & GPUDeviceFlags::DebugRuntime)
-                || any(flags & GPUDeviceFlags::GPUBaseValidation))
+            if (any(desc.flags & GPUDeviceFlags::DebugRuntime)
+                || any(desc.flags & GPUDeviceFlags::GPUBaseValidation))
             {
                 ID3D11Debug* d3dDebug = nullptr;
                 if (SUCCEEDED(tempD3DDevice->QueryInterface(_uuidof(ID3D11Debug), (void**)&d3dDebug)))
@@ -235,6 +235,8 @@ namespace alimer
             mainContext = new D3D11CommandContext(this, immediateContext);
             SafeRelease(tempD3DDevice);
         }
+
+        swapChain = new D3D11SwapChain(this, window, desc.colorFormat, desc.depthStencilFormat, desc.enableVSync);
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
@@ -249,11 +251,13 @@ namespace alimer
     void D3D11GraphicsDevice::Shutdown()
     {
         delete mainContext;
+        delete swapChain;
+
         ULONG refCount = d3dDevice->Release();
 #ifdef _DEBUG
         if (refCount > 0)
         {
-            //LOG_DEBUG("Direct3D11: There are {} unreleased references left on the device", refCount);
+            LOGE("Direct3D11: There are {} unreleased references left on the device", refCount);
 
             ID3D11Debug* d3dDebug;
             if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
@@ -281,12 +285,6 @@ namespace alimer
             dxgiDebug1->Release();
         }
 #endif
-    }
-
-    bool D3D11GraphicsDevice::Initialize(Window& window, GPUDeviceFlags flags)
-    {
-        
-        return true;
     }
 
     void D3D11GraphicsDevice::CreateFactory()
@@ -319,8 +317,8 @@ namespace alimer
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
                 SafeRelease(dxgiInfoQueue);
+            }
         }
-    }
 
         if (!debugDXGI)
 #endif
@@ -348,7 +346,6 @@ namespace alimer
             else
             {
                 dxgiFactoryCaps |= DXGIFactoryCaps::Tearing;
-                presentFlagsNoVSync = DXGI_PRESENT_ALLOW_TEARING;
             }
 
             SafeRelease(factory5);
@@ -493,10 +490,6 @@ namespace alimer
         }
     }
 
-    void D3D11GraphicsDevice::WaitForGPU()
-    {
-    }
-
     bool D3D11GraphicsDevice::BeginFrame()
     {
         return true;
@@ -504,30 +497,17 @@ namespace alimer
 
     uint64_t D3D11GraphicsDevice::EndFrame()
     {
-        /*HRESULT hr = S_OK;
-        for (uint32_t i = 1; i < viewports.Size(); i++)
+        if (!swapChain->Present())
         {
-            hr = viewports[0]->GetHandle()->Present(0, presentFlagsNoVSync);
-
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-            {
-                // TODO: Handle device lost.
-                isLost = true;
-                break;
-            }
+            // TODO: Handle device lost.
+            isLost = true;
         }
 
-        if (viewports.Size() > 0)
+        if (!dxgiFactory->IsCurrent())
         {
-            // Main viewport is presented with vertical sync on
-            hr = viewports[0]->GetHandle()->Present(1, 0);
-
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-            {
-                // TODO: Handle device lost.
-                isLost = true;
-            }
-        }*/
+            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+            CreateFactory();
+        }
 
         return currentCPUFrame;
     }

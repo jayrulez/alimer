@@ -22,37 +22,46 @@
 
 #pragma once
 
-#include "Graphics/SwapChain.h"
+#include "Graphics/Types.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    class D3D11SwapChain final : public SwapChain
+    class D3D11Texture;
+
+    class D3D11SwapChain final 
     {
     public:
-        D3D11SwapChain(D3D11GraphicsDevice* device, void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat);
-        ~D3D11SwapChain() override;
-        void Destroy() override;
-        void Present();
+        D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, PixelFormat colorFormat, PixelFormat depthStencilFormat, bool vSync);
+        ~D3D11SwapChain();
+        void Destroy();
+        bool Present();
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        IDXGISwapChain1* GetHandle() const { return _handle; }
+        IDXGISwapChain1* GetHandle() const { return handle; }
 #else
-        IDXGISwapChain3* GetHandle() const { return _handle; }
+        IDXGISwapChain3* GetHandle() const { return handle; }
 #endif
 
     private:
         void AfterReset();
-        void Recreate() override;
-        void BackendSetName() override;
 
         static const uint32_t kNumBackBuffers = 2;
 
-        D3D11GraphicsDevice* _device;
+        Window* window;
+        PixelFormat colorFormat;
+        PixelFormat depthStencilFormat;
+        uint32_t syncInterval;
+        uint32_t presentFlags;
+
+        D3D11GraphicsDevice* device;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        IDXGISwapChain1* _handle = nullptr;
+        IDXGISwapChain1* handle = nullptr;
 #else
-        IDXGISwapChain3* _handle = nullptr;
+        IDXGISwapChain3* handle = nullptr;
 #endif
+
+        SharedPtr<D3D11Texture> colorTexture;
+        SharedPtr<D3D11Texture> depthStencilTexture;
     };
 }

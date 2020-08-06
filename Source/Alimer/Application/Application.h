@@ -44,7 +44,7 @@ namespace alimer
         eastl::string windowTitle = "Alimer";
 
         /// Main window size.
-        Size windowSize = { 1280, 720 };
+        Size windowSize = { 1280.0f, 720.0f };
     };
 
     class ALIMER_API Application : public Object
@@ -101,6 +101,7 @@ namespace alimer
 
         bool headless{ false };
         Window window;
+
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 

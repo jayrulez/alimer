@@ -187,32 +187,6 @@ namespace alimer
         return ToDXGIFormat(format);
     }
 
-    static inline DXGI_FORMAT ToDXGISwapChainFormat(PixelFormat format)
-    {
-        switch (format) {
-        case PixelFormat::RGBA16Float:
-            return DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-        case PixelFormat::BGRA8Unorm:
-        case PixelFormat::BGRA8UnormSrgb:
-            return DXGI_FORMAT_B8G8R8A8_UNORM;
-
-        case PixelFormat::RGBA8Unorm:
-        case PixelFormat::RGBA8UnormSrgb:
-            return DXGI_FORMAT_R8G8B8A8_UNORM;
-
-        case PixelFormat::RGB10A2Unorm:
-            return DXGI_FORMAT_R10G10B10A2_UNORM;
-        }
-
-        return DXGI_FORMAT_B8G8R8A8_UNORM;
-    }
-
-    static inline uint32_t CalcSubresource(uint32_t mipSlice, uint32_t arraySlice, uint32_t mipLevels)
-    {
-        return mipSlice + arraySlice * mipLevels;
-    }
-
     enum class DXGIFactoryCaps : uint8_t
     {
         None = 0,
@@ -228,7 +202,7 @@ namespace alimer
         IUnknown* deviceOrCommandQueue,
         void* windowHandle,
         uint32_t width, uint32_t height,
-        DXGI_FORMAT format,
+        PixelFormat colorFormat,
         uint32_t bufferCount,
         bool isFullscreen)
     {
@@ -265,7 +239,7 @@ namespace alimer
         DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
         swapchainDesc.Width = width;
         swapchainDesc.Height = height;
-        swapchainDesc.Format = format;
+        swapchainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
         swapchainDesc.Stereo = false;
         swapchainDesc.SampleDesc.Count = 1;
         swapchainDesc.SampleDesc.Quality = 0;
