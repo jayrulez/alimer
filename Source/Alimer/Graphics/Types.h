@@ -142,6 +142,14 @@ namespace alimer
         Discard
     };
 
+    struct BufferDescription
+    {
+        BufferUsage usage;
+        uint32_t size;
+        uint32_t stride;
+        eastl::string label;
+    };
+
     struct TextureDescription
     {
         String name;

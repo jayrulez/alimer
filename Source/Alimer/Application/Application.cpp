@@ -28,6 +28,7 @@
 #include "Graphics/Gui.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
+#include <imgui.h>
 
 /* Needed by EASTL. */
 #if !defined(ALIMER_EXPORTS)
@@ -50,6 +51,21 @@ namespace alimer
         // Construct platform logic first.
         PlatformConstruct();
         RegisterSubsystem(new Input());
+
+        // Init ImGui
+        ImGui::CreateContext();
+        ImGui::StyleColorsDark();
+
+        /*ImGuiIO& io = ImGui::GetIO();
+        io.UserData = this;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
+        //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+        //io.ConfigViewportsNoAutoMerge = true;
+        //io.ConfigViewportsNoTaskBarIcon = true;
+        */
+
         LOGI("Application started");
     }
 
@@ -58,8 +74,10 @@ namespace alimer
         gameSystems.clear();
         window.Close();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<GraphicsDevice>();
+        delete GraphicsDevice::Instance;
+        GraphicsDevice::Instance = nullptr;
         RemoveSubsystem<Gui>();
+        ImGui::DestroyContext();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -76,9 +94,9 @@ namespace alimer
 #ifdef _DEBUG
             gpuDeviceFlags |= GPUDeviceFlags::DebugRuntime;
 #endif
-            RegisterSubsystem(new GraphicsDevice(gpuDeviceFlags));
+            GraphicsDevice::Create(&window, BackendType::Count, gpuDeviceFlags);
 
-            if(!GetGraphics()->Initialize(window))
+            if (!GraphicsDevice::Instance)
             {
                 headless = true;
             }
@@ -96,8 +114,8 @@ namespace alimer
                 {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
             };
 
-            Buffer vertexBuffer("Triangle");
-            vertexBuffer.Create(BufferUsage::Vertex, 3, vertices);
+            //Buffer vertexBuffer("Triangle");
+            //vertexBuffer.Create(BufferUsage::Vertex, 3, vertices);
 
             RegisterSubsystem(new Gui());
         }
@@ -133,7 +151,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame()) {
+        if (!GraphicsDevice::Instance->BeginFrame()) {
             return false;
         }
 
@@ -181,7 +199,7 @@ namespace alimer
 
         //ImGuiIO& io = ImGui::GetIO();
         //ImGui::Render();
-        GetGraphics()->EndFrame();
+        GraphicsDevice::Instance->EndFrame();
     }
 
     int Application::Run()

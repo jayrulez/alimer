@@ -23,55 +23,28 @@
 #pragma once
 
 #include "Graphics/GraphicsResource.h"
-#include "Graphics/Backend.h"
 #include <EASTL/string_view.h>
 
 namespace alimer
 {
     /// 
-    class Buffer final : public GraphicsResource
+    class Buffer : public GraphicsResource
     {
     public:
         /// Constructor
-        Buffer(const eastl::string_view& name = "");
-        ~Buffer() override;
-        void Destroy() override;
-
-        bool Create(BufferUsage usage, uint32_t count, uint32_t stride, const void* data = nullptr);
-
-        template<typename T>
-        bool Create(BufferUsage usage, uint32_t count, const T* data)
-        {
-            return Create(usage, count, sizeof(T), data);
-        }
-
-        template<typename T>
-        bool Create(BufferUsage usage, const T& data)
-        {
-            return Create(usage, data.size(), sizeof(typename T::value_type), data.data());
-        }
+        Buffer(const BufferDescription& desc);
+        virtual ~Buffer() = 0;
 
         /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return size; }
+        uint32_t GetSize() const { return desc.size; }
 
         /// Gets buffer elements count.
-        uint32_t GetElementCount() const { return elementCount; }
+        uint32_t GetStride() const { return desc.stride; }
 
         /// Gets size of single element in the buffer.
-        uint32_t GetElementSize() const { return elementSize; }
+        uint32_t GetElementSize() const { return desc.size / desc.stride; }
 
-    private:
-        bool BackendCreate(const void* data);
-        void BackendSetName() override;
-
-        BufferUsage usage{ BufferUsage::None };
-        uint32_t size{ 0 };
-        uint32_t elementCount{ 0 };
-        uint32_t elementSize{ 0 };
-
-        BufferHandle handle{};
-#if defined(ALIMER_D3D12) || defined(ALIMER_VULKAN)
-        AllocationHandle allocation{};
-#endif
+    protected:
+        BufferDescription desc;
     };
 }

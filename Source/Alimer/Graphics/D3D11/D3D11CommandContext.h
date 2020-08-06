@@ -33,6 +33,8 @@ namespace alimer
         D3D11CommandContext(D3D11GraphicsDevice* device_, ID3D11DeviceContext* context_);
         ~D3D11CommandContext() override;
 
+        void Flush() override;
+
         void PushDebugGroup(const String& name) override;
         void PopDebugGroup() override;
         void InsertDebugMarker(const String& name) override;
@@ -40,10 +42,9 @@ namespace alimer
         void BeginRenderPass(const RenderPassDescription& renderPass) override;
         void EndRenderPass() override;
 
-        void SetScissorRect(const Rect& scissorRect) override;
+        void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) override;
         void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(const Viewport& viewport) override;
-        void SetViewports(const Viewport* viewports, uint32_t count) override;
+        void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) override;
         void SetBlendColor(const Color& color) override;
 
         void BindBuffer(uint32_t slot, Buffer* buffer) override;

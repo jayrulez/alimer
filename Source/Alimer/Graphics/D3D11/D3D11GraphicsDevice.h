@@ -30,16 +30,16 @@ namespace alimer
     class D3D11CommandContext;
     class D3D11SwapChain;
 
-    class GraphicsImpl final
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
-        GraphicsImpl();
-        ~GraphicsImpl();
+        D3D11GraphicsDevice(Window* window, GPUDeviceFlags flags);
+        ~D3D11GraphicsDevice() override;
 
         bool Initialize(Window& window, GPUDeviceFlags flags);
         void Shutdown();
-        bool BeginFrame();
-        uint64_t EndFrame(uint64_t currentCPUFrame);
+        bool BeginFrame() override;
+        uint64_t EndFrame() override;
 
         void HandleDeviceLost(HRESULT hr);
 
@@ -47,12 +47,12 @@ namespace alimer
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
 
-        /// Get the device capabilities.
-        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
+        CommandContext* GetMainContext() const override;
+
+        /* Resource creation methods */
+        Buffer* CreateBuffer(const BufferDescription& desc, const void* initialData) override;
 
         //CommandContext* GetDefaultContext() const override;
-
-        //Vector<D3D11SwapChain*> viewports;
 
     private:
         void CreateFactory();
@@ -75,10 +75,8 @@ namespace alimer
         D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
 
         ID3D11Device1* d3dDevice = nullptr;
-        //UniquePtr<D3D11CommandContext> defaultContext;
+        D3D11CommandContext* mainContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
-
-        GraphicsCapabilities caps{};
     };
 }

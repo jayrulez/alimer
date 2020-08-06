@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D11CommandContext.h"
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
@@ -40,6 +39,11 @@ namespace alimer
     {
         SafeRelease(annotation);
         SafeRelease(context);
+    }
+
+    void D3D11CommandContext::Flush()
+    {
+        context->Flush();
     }
 
     void D3D11CommandContext::PushDebugGroup(const String& name)
@@ -71,7 +75,7 @@ namespace alimer
 
     void D3D11CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)
     {
-        uint32_t colorRTVSCount = 0;
+        /*uint32_t colorRTVSCount = 0;
         for (uint32_t i = 0; i < kMaxColorAttachments; i++)
         {
             const RenderPassColorAttachment& attachment = renderPass.colorAttachments[i];
@@ -89,7 +93,7 @@ namespace alimer
             colorRTVSCount++;
         }
 
-        context->OMSetRenderTargets(colorRTVSCount, colorRTVS, nullptr);
+        context->OMSetRenderTargets(colorRTVSCount, colorRTVS, nullptr);*/
     }
 
     void D3D11CommandContext::EndRenderPass()
@@ -97,13 +101,13 @@ namespace alimer
 
     }
 
-    void D3D11CommandContext::SetScissorRect(const Rect& scissorRect)
+    void D3D11CommandContext::SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height)
     {
         D3D11_RECT d3dScissorRect;
-        d3dScissorRect.left = LONG(scissorRect.x);
-        d3dScissorRect.top = LONG(scissorRect.y);
-        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
-        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        d3dScissorRect.left = LONG(x);
+        d3dScissorRect.top = LONG(y);
+        d3dScissorRect.right = LONG(x + width);
+        d3dScissorRect.bottom = LONG(y + height);
         context->RSSetScissorRects(1, &d3dScissorRect);
     }
 
@@ -120,24 +124,17 @@ namespace alimer
         context->RSSetScissorRects(count, d3dScissorRects);
     }
 
-    void D3D11CommandContext::SetViewport(const Viewport& viewport)
+    void D3D11CommandContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
     {
-        context->RSSetViewports(1, reinterpret_cast<const D3D11_VIEWPORT*>(&viewport));
-    }
+        D3D11_VIEWPORT viewport;
+        viewport.TopLeftX = x;
+        viewport.TopLeftY = y;
+        viewport.Width = width;
+        viewport.Height = height;
+        viewport.MinDepth = minDepth;
+        viewport.MaxDepth = maxDepth;
 
-    void D3D11CommandContext::SetViewports(const Viewport* viewports, uint32_t count)
-    {
-        D3D11_VIEWPORT d3dViewports[kMaxViewportAndScissorRects];
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            d3dViewports[i].TopLeftX = viewports[i].x;
-            d3dViewports[i].TopLeftY = viewports[i].y;
-            d3dViewports[i].Width = viewports[i].width;
-            d3dViewports[i].Height = viewports[i].height;
-            d3dViewports[i].MinDepth = viewports[i].minDepth;
-            d3dViewports[i].MaxDepth = viewports[i].maxDepth;
-        }
-        context->RSSetViewports(count, d3dViewports);
+        context->RSSetViewports(1, &viewport);
     }
 
     void D3D11CommandContext::SetBlendColor(const Color& color)
@@ -147,7 +144,7 @@ namespace alimer
 
     void D3D11CommandContext::BindBuffer(uint32_t slot, Buffer* buffer)
     {
-        if (buffer != nullptr)
+        /*if (buffer != nullptr)
         {
             auto d3d11Buffer = static_cast<D3D11Buffer*>(buffer)->GetHandle();
             context->VSSetConstantBuffers(slot, 1, &d3d11Buffer);
@@ -157,7 +154,7 @@ namespace alimer
         {
             context->VSSetConstantBuffers(slot, 1, nullptr);
             context->PSSetConstantBuffers(slot, 1, nullptr);
-        }
+        }*/
     }
 
     void D3D11CommandContext::BindBufferData(uint32_t slot, const void* data, uint32_t size)
@@ -165,5 +162,3 @@ namespace alimer
         // TODO:
     }
 }
-
-#endif // TODO

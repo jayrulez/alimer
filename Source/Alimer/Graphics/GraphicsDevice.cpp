@@ -28,86 +28,29 @@
 #include "Graphics/Texture.h"
 
 #if defined(ALIMER_D3D11)
-#include "Graphics/D3D11/D3D11GraphicsDevice.h"
-#elif defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#elif defined(ALIMER_VULKAN)
-#else
+#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+
+#if defined(ALIMER_D3D12)
+//#   include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#endif
+
+#if defined(ALIMER_VULKAN)
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(GPUDeviceFlags flags)
-        : impl(new GraphicsImpl(flags))
+    GraphicsDevice* GraphicsDevice::Instance = nullptr;
+
+    GraphicsDevice* GraphicsDevice::Create(Window* window, BackendType backendType, GPUDeviceFlags flags)
     {
+        if (Instance != nullptr)
+            return Instance;
 
-    }
+#if defined(ALIMER_D3D11)
+        Instance = new D3D11GraphicsDevice(window, flags);
+#endif
 
-    GraphicsDevice::~GraphicsDevice()
-    {
-        delete impl;
-        impl = nullptr;
-    }
-
-    bool GraphicsDevice::Initialize(Window& window)
-    {
-        if (initialized) {
-            return true;
-        }
-
-        initialized = impl->Initialize(window);
-        return true;
-    }
-
-    bool GraphicsDevice::BeginFrame()
-    {
-        return impl->BeginFrame();
-    }
-
-    void GraphicsDevice::EndFrame()
-    {
-        ++currentCPUFrame;
-        currentGPUFrame = impl->EndFrame(currentCPUFrame);
-    }
-
-    void GraphicsDevice::TrackResource(GraphicsResource* resource)
-    {
-        std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-        trackedResources.push_back(resource);
-    }
-
-    void GraphicsDevice::UntrackResource(GraphicsResource* resource)
-    {
-        std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-
-        auto it = std::find(trackedResources.begin(), trackedResources.end(), resource);
-        if (it != trackedResources.end()) {
-            trackedResources.erase(it);
-        }
-    }
-
-    void GraphicsDevice::ReleaseTrackedResources()
-    {
-        {
-            std::lock_guard<std::mutex> lock(trackedResourcesMutex);
-
-            // Release all GPU objects that still exist
-            for (auto resource : trackedResources)
-            {
-                resource->Release();
-            }
-
-            trackedResources.clear();
-        }
-    }
-
-    const GraphicsCapabilities& GraphicsDevice::GetCaps() const
-    {
-        return impl->GetCaps();
-    }
-
-    GraphicsImpl* GraphicsDevice::GetImpl() const
-    {
-        return impl;
+        return Instance;
     }
 }

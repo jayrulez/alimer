@@ -22,38 +22,23 @@
 
 #pragma once
 
-#include "config.h"
-
-#if defined(ALIMER_D3D11)
-#   define D3D11_NO_HELPERS
-#   include <d3d11_1.h>
-#elif defined(ALIMER_D3D12)
-#include <d3d12.h>
-
-namespace D3D12MA
-{
-    class Allocator;
-    class Allocation;
-};
-
-#elif defined(ALIMER_VULKAN)
-#else
-#   error "Invalid graphics backend"
-#endif
+#include "Graphics/Buffer.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-#if defined(ALIMER_D3D11)
-    using BufferHandle = ID3D11Buffer*;
-    using TextureHandle = ID3D11Resource*;
-#elif defined(ALIMER_D3D12)
-    using AllocationHandle = D3D12MA::Allocation*;
-    using BufferHandle = ID3D12Resource*;
-    using TextureHandle = ID3D12Resource*;
-#elif defined(ALIMER_VULKAN)
-    using BufferHandle = VkBuffer;
-    using TextureHandle = VkImage;
-#else
-#   error "Invalid graphics backend"
-#endif
+    class D3D11Buffer final : public Buffer
+    {
+    public:
+        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
+        ~D3D11Buffer() override;
+        void Destroy() override;
+
+    private:
+        void Create(const void* data);
+        void BackendSetName() override;
+
+        D3D11GraphicsDevice* device;
+        ID3D11Buffer* handle = nullptr;
+    };
 }

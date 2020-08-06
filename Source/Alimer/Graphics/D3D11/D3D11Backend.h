@@ -25,11 +25,14 @@
 #include "core/Assert.h"
 #include "core/Log.h"
 #include "Graphics/GraphicsResource.h"
-#include "Graphics/Backend.h"
 #include "Graphics/D3D/D3DHelpers.h"
+#define D3D11_NO_HELPERS
+#include <d3d11_1.h>
 
 namespace alimer
 {
+    class D3D11GraphicsDevice;
+
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
 
     static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)

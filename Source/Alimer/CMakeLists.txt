@@ -55,10 +55,14 @@ endif ()
 if (ALIMER_D3D11)
   define_engine_source_files(Graphics/D3D)
   define_engine_source_files(Graphics/D3D11)
-elseif (ALIMER_D3D12)
+endif()
+
+if (ALIMER_D3D12)
   define_engine_source_files(Graphics/D3D)
   define_engine_source_files(Graphics/D3D12)
-elseif (ALIMER_GPU_VULKAN)
+endif()
+
+if (ALIMER_VULKAN)
   #define_engine_source_files(Graphics/Vulkan)
 endif()
 
@@ -101,9 +105,13 @@ endif()
 
 if (ALIMER_D3D11)
   target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
-elseif (ALIMER_D3D12)
-  target_link_libraries(${TARGET_NAME} PRIVATE d3d12 dxgi)
-elseif (ALIMER_GPU_VULKAN)
+endif()
+
+if (ALIMER_D3D12)
+  target_link_libraries(${TARGET_NAME} PRIVATE dxgi)
+endif()
+
+if (ALIMER_VULKAN)
   target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
 endif()
 

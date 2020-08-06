@@ -36,7 +36,7 @@ namespace alimer
         CommandContext();
         virtual ~CommandContext() = default;
 
-        virtual void Commit(bool waitForCompletion = false) = 0;
+        virtual void Flush() = 0;
 
         virtual void PushDebugGroup(const String& name) = 0;
         virtual void PopDebugGroup() = 0;

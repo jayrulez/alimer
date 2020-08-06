@@ -21,7 +21,7 @@
 //
 
 #include "D3D11GraphicsDevice.h"
-//#include "D3D11CommandContext.h"
+#include "D3D11CommandContext.h"
 //#include "D3D11SwapChain.h"
 //#include "D3D11Texture.h"
 //#include "D3D11Buffer.h"
@@ -48,83 +48,18 @@ namespace alimer
         return SUCCEEDED(hr);
     }
 
-    GraphicsImpl::GraphicsImpl()
+    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, GPUDeviceFlags flags)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         dxgiLib = LoadLibraryA("dxgi.dll");
         CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
         DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
 #endif
+
         CreateFactory();
-    }
 
-    GraphicsImpl::~GraphicsImpl()
-    {
-        Shutdown();
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        FreeLibrary(dxgiLib);
-#endif
-    }
-
-    void GraphicsImpl::Shutdown()
-    {
-        //defaultContext.Reset();
-        ULONG refCount = d3dDevice->Release();
-#ifdef _DEBUG
-        if (refCount > 0)
+        // Get adapter and create device.
         {
-            //LOG_DEBUG("Direct3D11: There are {} unreleased references left on the device", refCount);
-
-            ID3D11Debug* d3dDebug;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
-            {
-                d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY);
-                d3dDebug->Release();
-            }
-        }
-#else
-        (void)refCount; // avoid warning
-#endif
-
-        SafeRelease(dxgiFactory);
-
-
-#ifdef _DEBUG
-        IDXGIDebug1* dxgiDebug1;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (DXGIGetDebugInterface1 && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
-#else
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
-#endif
-        {
-            dxgiDebug1->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-            dxgiDebug1->Release();
-        }
-#endif
-    }
-
-    bool GraphicsImpl::Initialize(Window& window, GPUDeviceFlags flags)
-    {
-        UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-
-        if (any(flags & GPUDeviceFlags::DebugRuntime)
-            || any(flags & GPUDeviceFlags::GPUBaseValidation))
-        {
-            if (SdkLayersAvailable())
-            {
-                // If the project is in a debug build, enable debugging via SDK Layers with this flag.
-                creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-            }
-            else
-            {
-                OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
-            }
-        }
-
-        // Get adapter and create device
-        {
-
             IDXGIAdapter1* dxgiAdapter;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
@@ -184,7 +119,23 @@ namespace alimer
             if (!dxgiAdapter)
             {
                 LOGE("No Direct3D 11 device found");
-                return false;
+                return;
+            }
+
+            UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+
+            if (any(flags & GPUDeviceFlags::DebugRuntime)
+                || any(flags & GPUDeviceFlags::GPUBaseValidation))
+            {
+                if (SdkLayersAvailable())
+                {
+                    // If the project is in a debug build, enable debugging via SDK Layers with this flag.
+                    creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+                }
+                else
+                {
+                    OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
+                }
             }
 
             // Determine DirectX hardware feature levels this app will support.
@@ -281,14 +232,64 @@ namespace alimer
             }
 
             ThrowIfFailed(tempD3DDevice->QueryInterface(&d3dDevice));
-            //defaultContext.Reset(new D3D11CommandContext(this, immediateContext));
+            mainContext = new D3D11CommandContext(this, immediateContext);
             SafeRelease(tempD3DDevice);
         }
+    }
 
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
+    {
+        Shutdown();
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        FreeLibrary(dxgiLib);
+#endif
+    }
+
+    void D3D11GraphicsDevice::Shutdown()
+    {
+        delete mainContext;
+        ULONG refCount = d3dDevice->Release();
+#ifdef _DEBUG
+        if (refCount > 0)
+        {
+            //LOG_DEBUG("Direct3D11: There are {} unreleased references left on the device", refCount);
+
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dDebug)))
+            {
+                d3dDebug->ReportLiveDeviceObjects(D3D11_RLDO_SUMMARY);
+                d3dDebug->Release();
+            }
+        }
+#else
+        (void)refCount; // avoid warning
+#endif
+
+        SafeRelease(dxgiFactory);
+
+
+#ifdef _DEBUG
+        IDXGIDebug1* dxgiDebug1;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        if (DXGIGetDebugInterface1 && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#else
+        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#endif
+        {
+            dxgiDebug1->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            dxgiDebug1->Release();
+        }
+#endif
+    }
+
+    bool D3D11GraphicsDevice::Initialize(Window& window, GPUDeviceFlags flags)
+    {
+        
         return true;
     }
 
-    void GraphicsImpl::CreateFactory()
+    void D3D11GraphicsDevice::CreateFactory()
     {
         SafeRelease(dxgiFactory);
 
@@ -392,7 +393,7 @@ namespace alimer
 #endif
     }
 
-    void GraphicsImpl::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
+    void D3D11GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
     {
         // Init capabilities
         {
@@ -492,16 +493,16 @@ namespace alimer
         }
     }
 
-    void GraphicsImpl::WaitForGPU()
+    void D3D11GraphicsDevice::WaitForGPU()
     {
     }
 
-    bool GraphicsImpl::BeginFrame()
+    bool D3D11GraphicsDevice::BeginFrame()
     {
         return true;
     }
 
-    uint64_t GraphicsImpl::EndFrame(uint64_t currentCPUFrame)
+    uint64_t D3D11GraphicsDevice::EndFrame()
     {
         /*HRESULT hr = S_OK;
         for (uint32_t i = 1; i < viewports.Size(); i++)
@@ -531,6 +532,17 @@ namespace alimer
         return currentCPUFrame;
     }
 
+    CommandContext* D3D11GraphicsDevice::GetMainContext() const
+    {
+        return mainContext;
+    }
+
+    /* Resource creation methods */
+    Buffer* D3D11GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
+    {
+        return nullptr;
+    }
+
     /*RefPtr<SwapChain> D3D11GraphicsDevice::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat)
     {
         return new D3D11SwapChain(this, windowHandle, width, height, isFullscreen, preferredColorFormat, depthStencilFormat);
@@ -541,7 +553,7 @@ namespace alimer
         return new D3D11Texture(this, desc, initialData);
     }*/
 
-    void GraphicsImpl::HandleDeviceLost(HRESULT hr)
+    void D3D11GraphicsDevice::HandleDeviceLost(HRESULT hr)
     {
 #ifdef _DEBUG
         char buff[64] = {};

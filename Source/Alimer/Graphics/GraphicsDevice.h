@@ -26,51 +26,45 @@
 #include "Graphics/Buffer.h"
 #include <EASTL/intrusive_ptr.h>
 #include <EASTL/vector.h>
-#include <mutex>
 
 namespace alimer
 {
     class Window;
-    class GraphicsImpl;
 
     /// Defines the logical graphics subsystem.
-    class ALIMER_API GraphicsDevice final : public Object
+    class ALIMER_API GraphicsDevice : public Object
     {
         friend class GraphicsResource;
 
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
-        GraphicsDevice(GPUDeviceFlags flags = GPUDeviceFlags::None);
-        ~GraphicsDevice();
+        static GraphicsDevice* Instance;
 
-        bool Initialize(Window& window);
-        bool BeginFrame();
-        void EndFrame();
+        virtual bool BeginFrame() = 0;
+        virtual uint64_t EndFrame() = 0;
 
-        void TrackResource(GraphicsResource* resource);
-        void UntrackResource(GraphicsResource* resource);
+        static GraphicsDevice* Create(Window* window, BackendType backendType, GPUDeviceFlags flags = GPUDeviceFlags::None);
 
         /// Get the device capabilities.
-        const GraphicsCapabilities& GetCaps() const;
+        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
 
-        /// Get the backend implementation.
-        GraphicsImpl* GetImpl() const;
+        /// Gets the main GPU context.
+        virtual CommandContext* GetMainContext() const = 0;
+
+        /* Resource creation methods */
+        virtual Buffer* CreateBuffer(const BufferDescription& desc, const void* initialData) = 0;
 
         /// Total number of CPU frames completed (completed means all command buffers submitted to the GPU)
         ALIMER_FORCE_INLINE uint64_t CurrentCPUFrame() const { return currentCPUFrame; }
-        /// Total number of GPU frames completed (completed means that the GPU signals the fence)
-        ALIMER_FORCE_INLINE uint64_t CurrentGPUFrame() const { return currentGPUFrame; }
+
+    protected:
+        GraphicsDevice() = default;
+
+        GraphicsCapabilities caps{};
+        uint64_t currentCPUFrame{ 0 };
 
     private:
-        void ReleaseTrackedResources();
-
-        GraphicsImpl* impl;
-        bool initialized{ false };
-        std::mutex trackedResourcesMutex;
-        std::vector<GraphicsResource*> trackedResources;
-        uint64_t currentCPUFrame{ 0 };
-        uint64_t currentGPUFrame{ 0 };
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

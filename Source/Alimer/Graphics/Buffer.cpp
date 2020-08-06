@@ -21,43 +21,16 @@
 //
 
 #include "Graphics/Buffer.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
-    Buffer::Buffer(const eastl::string_view& name)
-        : GraphicsResource(name, GraphicsResourceDimension::Buffer)
+    Buffer::Buffer(const BufferDescription& desc_)
+        : GraphicsResource(desc.label, GraphicsResourceDimension::Buffer)
+        , desc(desc_)
     {
 
-    }
-
-    Buffer::~Buffer()
-    {
-        Destroy();
-    }
-
-    bool Buffer::Create(BufferUsage usage_, uint32_t count, uint32_t stride, const void* data)
-    {
-        if (!data)
-        {
-            LOGE("Static buffer must define initial data");
-            return false;
-        }
-
-        if (!count || !stride)
-        {
-            LOGE("Can not define buffer with no elements or element size.");
-            return false;
-        }
-
-        Destroy();
-
-        usage = usage_;
-        elementCount = count;
-        elementSize = stride;
-        size = count * stride;
-
-        return BackendCreate(data);
     }
 }
 

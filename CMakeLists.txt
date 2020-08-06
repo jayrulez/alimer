@@ -21,16 +21,15 @@ option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
 # Graphics module backend
 if (WIN32)
-  set(ALIMER_GRAPHICS_API D3D12 CACHE STRING  "Select Graphics API [D3D12 | D3D11 | Vulkan]") 
-  set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 D3D11 Vulkan)
+  option(ALIMER_D3D11 "Include Direct3D11 GPU backend" ON)
+  #option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
+  option(ALIMER_VULKAN "Include Vulkan GPU backend" ON)
 elseif (WINDOWS_STORE)
-  set(ALIMER_GRAPHICS_API D3D12 CACHE STRING  "Select Graphics API [D3D12 | D3D11]") 
-	set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 D3D11)
+  set(ALIMER_D3D11 ON CACHE BOOL "Use Direct3D11 backend")
+  #option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
 else ()
-  set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Use Vulkan Graphics API" FORCE)
+  set(ALIMER_VULKAN ON CACHE BOOL "Use Vulkan backend")
 endif ()
-string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
-set (ALIMER_${ALIMER_GRAPHICS_API_UPPER} ON)
 
 if (ANDROID OR IOS OR EMSCRIPTEN)
     set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
@@ -91,7 +90,6 @@ if (ALIMER_BUILD_SHARED)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
-message (STATUS "  Graphics API:   ${ALIMER_GRAPHICS_API} (ALIMER_${ALIMER_GRAPHICS_API_UPPER})")
 
 # Install files
 # README.md and license

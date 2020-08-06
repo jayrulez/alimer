@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Buffer.h"
+#include "D3D11Buffer.h"
 #include "D3D11GraphicsDevice.h"
 
 namespace alimer
@@ -51,58 +51,70 @@ namespace alimer
         }
     }
 
-    void Buffer::Destroy()
+    D3D11Buffer::D3D11Buffer(D3D11GraphicsDevice* device_, const BufferDescription& desc, const void* initialData)
+        : Buffer(desc)
+        , device(device_)
+    {
+        Create(initialData);
+    }
+
+    D3D11Buffer::~D3D11Buffer()
+    {
+        Destroy();
+    }
+
+    void D3D11Buffer::Destroy()
     {
         SafeRelease(handle);
     }
 
-    bool Buffer::BackendCreate(const void* data)
+    void D3D11Buffer::Create(const void* data)
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
 
-        if (size > c_maxBytes)
+        if (desc.size > c_maxBytes)
         {
             //DebugTrace("ERROR: Resource size too large for DirectX 11 (size %llu)\n", sizeInbytes);
-            return false;
+            return;
         }
 
-        uint32_t bufferSize = size;
-        if ((usage & BufferUsage::Uniform) != BufferUsage::None)
+        uint32_t bufferSize = desc.size;
+        if ((desc.usage & BufferUsage::Uniform) != BufferUsage::None)
         {
-            bufferSize = Math::AlignTo(size, GetGraphics()->GetCaps().limits.minUniformBufferOffsetAlignment);
+            bufferSize = Math::AlignTo(desc.size, device->GetCaps().limits.minUniformBufferOffsetAlignment);
         }
 
-        const bool needUav = any(usage & BufferUsage::Storage) || any(usage & BufferUsage::Indirect);
+        const bool needUav = any(desc.usage & BufferUsage::Storage) || any(desc.usage & BufferUsage::Indirect);
         const bool isDynamic = data == nullptr && !needUav;
 
-        D3D11_BUFFER_DESC desc = {};
-        desc.ByteWidth = bufferSize;
-        desc.BindFlags = D3D11GetBindFlags(usage);
+        D3D11_BUFFER_DESC d3dDesc = {};
+        d3dDesc.ByteWidth = bufferSize;
+        d3dDesc.BindFlags = D3D11GetBindFlags(desc.usage);
 
-        if (any(usage & BufferUsage::MapRead)) {
-            desc.Usage = D3D11_USAGE_STAGING;
-            desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+        if (any(desc.usage & BufferUsage::MapRead)) {
+            d3dDesc.Usage = D3D11_USAGE_STAGING;
+            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
         }
-        else if (any(usage & BufferUsage::MapWrite))
+        else if (any(desc.usage & BufferUsage::MapWrite))
         {
-            desc.Usage = D3D11_USAGE_DYNAMIC;
-            desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+            d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
+            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         }
         else
         {
-            desc.Usage = D3D11_USAGE_DEFAULT;
-            desc.CPUAccessFlags = 0;
+            d3dDesc.Usage = D3D11_USAGE_DEFAULT;
+            d3dDesc.CPUAccessFlags = 0;
         }
 
         if (needUav)
         {
-            desc.StructureByteStride = elementSize;
+            d3dDesc.StructureByteStride = desc.stride;
         }
 
-        if (any(usage & BufferUsage::Indirect))
+        if (any(desc.usage & BufferUsage::Indirect))
         {
-            desc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
         }
 
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
@@ -113,16 +125,13 @@ namespace alimer
             initialDataPtr = &initialData;
         }
 
-        HRESULT hr = GetGraphics()->GetImpl()->GetD3DDevice()->CreateBuffer(&desc, initialDataPtr, &handle);
+        HRESULT hr = device->GetD3DDevice()->CreateBuffer(&d3dDesc, initialDataPtr, &handle);
         if (FAILED(hr)) {
             LOGE("Direct3D11: Failed to create buffer");
-            return false;
         }
-
-        return true;
     }
 
-    void Buffer::BackendSetName()
+    void D3D11Buffer::BackendSetName()
     {
         D3D11SetObjectName(handle, name);
     }

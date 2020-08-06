@@ -24,6 +24,7 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D12Backend.h"
+#include "D3D12MemAlloc.h"
 #include <atomic>
 #include <queue>
 #include <mutex>
@@ -43,17 +44,17 @@ namespace alimer
 
     class D3D12CommandContext;
 
-    class GraphicsImpl final
+    class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        GraphicsImpl(GPUDeviceFlags flags, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
-        ~GraphicsImpl();
+        D3D12GraphicsDevice(GPUDeviceFlags flags, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
+        ~D3D12GraphicsDevice();
 
         bool Initialize(Window& window);
         void Shutdown();
         void WaitForGPU();
         bool BeginFrame();
-        uint64_t EndFrame(uint64_t currentCPUFrame);
+        uint64_t EndFrame() override;
         void HandleDeviceLost();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
@@ -64,8 +65,8 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
-        //void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
-
+        /* Resource creation methods */
+        Buffer* CreateBuffer(const eastl::string_view& name) override;
 
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
@@ -74,9 +75,6 @@ namespace alimer
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
         bool SupportsRenderPass() const { return supportsRenderPass; }
         ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
-
-        /// Get the device capabilities.
-        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
 
     private:
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
@@ -125,7 +123,6 @@ namespace alimer
         //std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool;
         //std::vector<ID3D12CommandList*> pendingCommandLists;
 
-        GraphicsCapabilities caps{};
 
         /// Current active frame index
         uint32_t frameIndex{ 0 };
