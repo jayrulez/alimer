@@ -41,10 +41,10 @@ namespace alimer
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
-        GraphicsDevice();
+        GraphicsDevice(GPUDeviceFlags flags = GPUDeviceFlags::None);
         ~GraphicsDevice();
 
-        bool Initialize(Window& window, GPUDeviceFlags flags = GPUDeviceFlags::None);
+        bool Initialize(Window& window);
         bool BeginFrame();
         void EndFrame();
 

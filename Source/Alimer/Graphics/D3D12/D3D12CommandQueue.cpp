@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -203,3 +204,5 @@ namespace alimer
         allocatorPool.DiscardAllocator(fenceValueForReset, commandAllocator);
     }
 }
+#endif // TODO
+

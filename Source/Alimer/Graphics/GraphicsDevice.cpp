@@ -30,14 +30,15 @@
 #if defined(ALIMER_D3D11)
 #include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #elif defined(ALIMER_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #elif defined(ALIMER_VULKAN)
 #else
 #endif
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice()
-        : impl(new GraphicsImpl())
+    GraphicsDevice::GraphicsDevice(GPUDeviceFlags flags)
+        : impl(new GraphicsImpl(flags))
     {
 
     }
@@ -48,13 +49,13 @@ namespace alimer
         impl = nullptr;
     }
 
-    bool GraphicsDevice::Initialize(Window& window, GPUDeviceFlags flags)
+    bool GraphicsDevice::Initialize(Window& window)
     {
         if (initialized) {
             return true;
         }
 
-        initialized = impl->Initialize(window, flags);
+        initialized = impl->Initialize(window);
         return true;
     }
 

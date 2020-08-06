@@ -72,14 +72,13 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            RegisterSubsystem(new GraphicsDevice());
-
             GPUDeviceFlags gpuDeviceFlags = {};
 #ifdef _DEBUG
             gpuDeviceFlags |= GPUDeviceFlags::DebugRuntime;
 #endif
+            RegisterSubsystem(new GraphicsDevice(gpuDeviceFlags));
 
-            if(!GetGraphics()->Initialize(window, gpuDeviceFlags))
+            if(!GetGraphics()->Initialize(window))
             {
                 headless = true;
             }

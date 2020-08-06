@@ -23,13 +23,15 @@
 #pragma once
 
 #include "Core/Assert.h"
+#include <EASTL/string.h>
 #include "DirectXMath.h"
 #include "DirectXPackedVector.h"
 #include "DirectXCollision.h"
-using namespace DirectX;
 
 namespace alimer
 {
+    using namespace DirectX;
+
     struct Float2;
     struct Float3;
     struct Float4;
@@ -56,6 +58,9 @@ namespace alimer
 
         operator XMVECTOR() const noexcept { return XMLoadFloat2(this); }
 
+        /// Return as string.
+        eastl::string ToString() const;
+
         // Constants
         static const Float2 Zero;
         static const Float2 One;
@@ -80,6 +85,9 @@ namespace alimer
         Float3& operator=(Float3&&) = default;
 
         operator XMVECTOR() const noexcept { return XMLoadFloat3(this); }
+
+        /// Return as string.
+        eastl::string ToString() const;
 
         // Constants
         static const Float3 Zero;
@@ -112,6 +120,9 @@ namespace alimer
         Float4& operator=(Float4&&) = default;
 
         operator XMVECTOR() const noexcept { return XMLoadFloat4(this); }
+
+        /// Return as string.
+        eastl::string ToString() const;
 
         // Constants
         static const Float4 Zero;

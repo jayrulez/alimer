@@ -28,6 +28,14 @@
 #   define D3D11_NO_HELPERS
 #   include <d3d11_1.h>
 #elif defined(ALIMER_D3D12)
+#include <d3d12.h>
+
+namespace D3D12MA
+{
+    class Allocator;
+    class Allocation;
+};
+
 #elif defined(ALIMER_VULKAN)
 #else
 #   error "Invalid graphics backend"
@@ -39,9 +47,12 @@ namespace alimer
     using BufferHandle = ID3D11Buffer*;
     using TextureHandle = ID3D11Resource*;
 #elif defined(ALIMER_D3D12)
+    using AllocationHandle = D3D12MA::Allocation*;
     using BufferHandle = ID3D12Resource*;
     using TextureHandle = ID3D12Resource*;
 #elif defined(ALIMER_VULKAN)
+    using BufferHandle = VkBuffer;
+    using TextureHandle = VkImage;
 #else
 #   error "Invalid graphics backend"
 #endif

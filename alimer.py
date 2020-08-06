@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     if args.graphics is None:
         if target == "windows":
-            graphics_api = "d3d11"
+            graphics_api = "d3d12"
         else:
             graphics_api = "vulkan"
     else:

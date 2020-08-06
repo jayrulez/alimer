@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12CommandContext.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
@@ -259,7 +260,7 @@ namespace alimer
     void D3D12CommandBuffer::SetBlendColor(const Color& color)
     {
         commandList->OMSetBlendFactor(&color.r);
-    }
+}
 #endif // TODO
 
 
@@ -327,3 +328,5 @@ namespace alimer
         }
     }
 }
+
+#endif // TODO

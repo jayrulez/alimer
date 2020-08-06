@@ -21,15 +21,24 @@
 //
 
 #include "Core/Math.h"
+#include "Core/String.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
+    /* Float2 */
     const Float2 Float2::Zero = { 0.0f, 0.0f };
     const Float2 Float2::One = { 1.0f, 1.0f };
     const Float2 Float2::UnitX = { 1.0f, 0.0f };
     const Float2 Float2::UnitY = { 0.0f, 1.0f };
+    eastl::string Float2::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g", x, y);
+        return eastl::string(tempBuffer);
+    }
 
+    /* Float3 */
     const Float3 Float3::Zero = { 0.0f, 0.0f, 0.0f };
     const Float3 Float3::One = { 1.0f, 1.0f, 1.0f };
     const Float3 Float3::UnitX = { 1.0f, 0.0f, 0.0f };
@@ -42,10 +51,25 @@ namespace alimer
     const Float3 Float3::Forward = { 0.0f, 0.0f, -1.0f };
     const Float3 Float3::Backward = { 0.0f, 0.0f, 1.0f };
 
+    eastl::string Float3::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g", x, y, z);
+        return eastl::string(tempBuffer);
+    }
+
+    /* Float4 */
     const Float4 Float4::Zero = { 0.f, 0.f, 0.f, 0.f };
     const Float4 Float4::One = { 1.f, 1.f, 1.f, 1.f };
     const Float4 Float4::UnitX = { 1.f, 0.f, 0.f, 0.f };
     const Float4 Float4::UnitY = { 0.f, 1.f, 0.f, 0.f };
     const Float4 Float4::UnitZ = { 0.f, 0.f, 1.f, 0.f };
     const Float4 Float4::UnitW = { 0.f, 0.f, 0.f, 1.f };
+
+    eastl::string Float4::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
+        return eastl::string(tempBuffer);
+    }
 }

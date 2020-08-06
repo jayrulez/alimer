@@ -24,10 +24,9 @@
 
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/Types.h"
-#include "GPU/D3D/D3DHelpers.h"
-
-#include <d3d12.h>
+#include "Graphics/GraphicsResource.h"
+#include "Graphics/Backend.h"
+#include "Graphics/D3D/D3DHelpers.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
@@ -38,15 +37,6 @@
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-#endif
-
     class D3D12GraphicsDevice;
 
     struct D3D12MapResult
@@ -56,78 +46,6 @@ namespace alimer
         uint64_t ResourceOffset = 0;
         ID3D12Resource* Resource = nullptr;
     };
-
-    static inline D3D12_COMMAND_LIST_TYPE D3D12GetCommandListType(CommandQueueType queueType)
-    {
-        switch (queueType)
-        {
-        case CommandQueueType::Graphics:
-            return D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-        case CommandQueueType::Compute:
-            return D3D12_COMMAND_LIST_TYPE_COMPUTE;
-
-        case CommandQueueType::Copy:
-            return D3D12_COMMAND_LIST_TYPE_COPY;
-
-        default:
-            ALIMER_UNREACHABLE();
-        }
-    }
-
-    static inline CommandQueueType D3D12GetCommandQueueType(D3D12_COMMAND_LIST_TYPE type)
-    {
-        switch (type)
-        {
-        case D3D12_COMMAND_LIST_TYPE_DIRECT:
-            return CommandQueueType::Graphics;
-
-        case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-            return CommandQueueType::Compute;
-
-        case D3D12_COMMAND_LIST_TYPE_COPY:
-            return CommandQueueType::Copy;
-
-        default:
-            ALIMER_UNREACHABLE();
-        }
-    }
-
-    static inline D3D12_HEAP_TYPE GetD3D12HeapType(MemoryUsage usage)
-    {
-        switch (usage)
-        {
-        case MemoryUsage::GpuOnly:
-            return D3D12_HEAP_TYPE_DEFAULT;
-
-        case MemoryUsage::CpuOnly:
-            return D3D12_HEAP_TYPE_UPLOAD;
-
-        case MemoryUsage::GpuToCpu:
-            return D3D12_HEAP_TYPE_READBACK;
-
-        default:
-            ALIMER_UNREACHABLE();
-        }
-    }
-
-    static inline D3D12_RESOURCE_STATES GetD3D12ResourceState(MemoryUsage usage)
-    {
-        switch (usage)
-        {
-        case MemoryUsage::GpuOnly:
-            return D3D12_RESOURCE_STATE_COMMON;
-
-        case MemoryUsage::CpuOnly:
-            return D3D12_RESOURCE_STATE_GENERIC_READ;
-
-        case MemoryUsage::GpuToCpu:
-            return D3D12_RESOURCE_STATE_COPY_DEST;
-
-        default:
-            ALIMER_UNREACHABLE();
-        }
-    }
 
     class D3D12GpuResource
     {
@@ -159,17 +77,17 @@ namespace alimer
         D3D12_RESOURCE_STATES GetTransitioningState() const { return transitioningState; }
         void SetTransitioningState(D3D12_RESOURCE_STATES newState) { transitioningState = newState; }
 
-        ID3D12Resource* operator->() { return resource.Get(); }
-        const ID3D12Resource* operator->() const { return resource.Get(); }
+        //ID3D12Resource* operator->() { return resource.Get(); }
+        //const ID3D12Resource* operator->() const { return resource.Get(); }
 
-        ID3D12Resource* GetResource() { return resource.Get(); }
-        const ID3D12Resource* GetResource() const { return resource.Get(); }
+        //ID3D12Resource* GetResource() { return resource.Get(); }
+        //const ID3D12Resource* GetResource() const { return resource.Get(); }
 
         
         D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
 
     protected:
-        ComPtr<ID3D12Resource> resource;
+        ID3D12Resource* resource = nullptr;
         D3D12_RESOURCE_STATES state;
         D3D12_RESOURCE_STATES transitioningState;
         D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;

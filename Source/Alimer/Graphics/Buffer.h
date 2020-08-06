@@ -70,5 +70,8 @@ namespace alimer
         uint32_t elementSize{ 0 };
 
         BufferHandle handle{};
+#if defined(ALIMER_D3D12) || defined(ALIMER_VULKAN)
+        AllocationHandle allocation{};
+#endif
     };
 }

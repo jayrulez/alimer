@@ -24,10 +24,5 @@
 
 namespace alimer
 {
-    String Vector4::ToString() const
-    {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, z, w);
-        return eastl::string(tempBuffer);
-    }
+    
 }

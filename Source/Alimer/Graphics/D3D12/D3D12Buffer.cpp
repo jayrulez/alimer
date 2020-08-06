@@ -20,23 +20,41 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D12Buffer.h"
+#include "Graphics/Buffer.h"
 #include "D3D12GraphicsDevice.h"
+#include "D3D12MemAlloc.h"
 
 namespace alimer
 {
-    D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
-        : Buffer(desc)
-        , _device(device)
-        , state(D3D12_RESOURCE_STATE_COMMON)
+    namespace
+    {
+        D3D12_HEAP_TYPE D3D12HeapType(BufferUsage usage)
+        {
+            if (any(usage & BufferUsage::MapRead)) {
+                return D3D12_HEAP_TYPE_READBACK;
+            }
+            else if (any(usage & BufferUsage::MapWrite)) {
+                return D3D12_HEAP_TYPE_UPLOAD;
+            }
+            else {
+                return D3D12_HEAP_TYPE_DEFAULT;
+            }
+        }
+    }
+
+    void Buffer::Destroy()
+    {
+        SafeRelease(allocation);
+    }
+
+    bool Buffer::BackendCreate(const void* data)
     {
         uint32_t alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-        if (any(desc.usage & BufferUsage::Uniform))
+        if (any(usage & BufferUsage::Uniform))
         {
             alignment = D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT;
         }
-        uint32_t alignedSize = Math::AlignTo(desc.size, alignment);
+        uint32_t alignedSize = Math::AlignTo(size, alignment);
 
         D3D12_RESOURCE_DESC resourceDesc;
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -51,15 +69,15 @@ namespace alimer
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        if (any(desc.usage & BufferUsage::Storage))
+        if (any(usage & BufferUsage::Storage))
         {
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
         D3D12MA::ALLOCATION_DESC allocDesc = {};
-        allocDesc.HeapType = GetD3D12HeapType(desc.memoryUsage);
+        allocDesc.HeapType = D3D12HeapType(usage);
 
-        state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
+        //state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : GetD3D12ResourceState(desc.memoryUsage);
 
         /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocDesc,
@@ -75,23 +93,14 @@ namespace alimer
         }
 
         gpuVirtualAddress = resource->GetGPUVirtualAddress();*/
+        return true;
     }
 
-    D3D12Buffer::~D3D12Buffer()
+    void Buffer::BackendSetName()
     {
-        Destroy();
-    }
-
-    void D3D12Buffer::Destroy()
-    {
-        //SafeRelease(allocation);
-    }
-
-    void D3D12Buffer::BackendSetName()
-    {
+#ifndef NDEBUG
         auto wideName = ToUtf16(name);
-        resource->SetName(wideName.c_str());
+        handle->SetName(wideName.c_str());
+#endif
     }
 }
-
-#endif // TODO

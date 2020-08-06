@@ -43,12 +43,18 @@ namespace alimer
 
     class D3D12CommandContext;
 
-    class D3D12GraphicsDevice final : public GraphicsDevice
+    class GraphicsImpl final
     {
     public:
-        static bool IsAvailable();
-        D3D12GraphicsDevice(GPUFlags flags);
-        ~D3D12GraphicsDevice();
+        GraphicsImpl(GPUDeviceFlags flags, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
+        ~GraphicsImpl();
+
+        bool Initialize(Window& window);
+        void Shutdown();
+        void WaitForGPU();
+        bool BeginFrame();
+        uint64_t EndFrame(uint64_t currentCPUFrame);
+        void HandleDeviceLost();
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
         void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
@@ -58,15 +64,10 @@ namespace alimer
         UploadContext ResourceUploadBegin(uint64_t size);
         void ResourceUploadEnd(UploadContext& context);
 
-        
         //void CommitCommandBuffer(D3D12CommandBuffer* commandBuffer, bool waitForCompletion);
 
-        void WaitForGPU();
-        bool BeginFrame() override;
-        void EndFrame() override;
-        void HandleDeviceLost();
 
-        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
 
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
@@ -74,15 +75,14 @@ namespace alimer
         bool SupportsRenderPass() const { return supportsRenderPass; }
         ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
 
+        /// Get the device capabilities.
+        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
+
     private:
-        void GetAdapter(IDXGIAdapter1** ppAdapter, bool lowPower = false);
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
 
         //CommandContext* GetImmediateContext() const override;
 
-        /* Resource creation methods */
-        SharedPtr<SwapChain> CreateSwapChain(const SwapChainDescriptor& descriptor) override;
-        
         void InitializeUpload();
         void ShutdownUpload();
         void EndFrameUpload();
@@ -103,10 +103,8 @@ namespace alimer
         D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
 
         DWORD dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory = nullptr;
-        DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::FlipPresent | DXGIFactoryCaps::HDR;
-
-        D3D_FEATURE_LEVEL minFeatureLevel{ D3D_FEATURE_LEVEL_11_0 };
+        IDXGIFactory4* dxgiFactory = nullptr;
+        DXGIFactoryCaps dxgiFactoryCaps;
 
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
@@ -119,13 +117,15 @@ namespace alimer
         ID3D12CommandQueue* graphicsQueue;
         ID3D12CommandQueue* computeQueue;
         ID3D12CommandQueue* copyQueue;
-        std::unique_ptr<D3D12CommandContext> immediateContext;
+        //std::unique_ptr<D3D12CommandContext> immediateContext;
 
         std::atomic<uint32_t> commandBufferCount{ 0 };
         std::mutex commandBufferAllocationMutex;
-        std::queue<D3D12CommandContext*> commandBufferQueue;
-        std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool;
-        std::vector<ID3D12CommandList*> pendingCommandLists;
+        //std::queue<D3D12CommandContext*> commandBufferQueue;
+        //std::vector<std::unique_ptr<D3D12CommandContext>> commandBufferPool;
+        //std::vector<ID3D12CommandList*> pendingCommandLists;
+
+        GraphicsCapabilities caps{};
 
         /// Current active frame index
         uint32_t frameIndex{ 0 };

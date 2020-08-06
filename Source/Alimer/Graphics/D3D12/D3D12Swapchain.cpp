@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Swapchain.h"
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
@@ -107,3 +108,5 @@ namespace alimer
         return device;
     }
 }
+
+#endif // TODO
