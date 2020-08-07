@@ -28,12 +28,14 @@
 
 #include "Core/Window.h"
 #include "Math/Matrix4x4.h"
-#include <imgui.h>
-#include <imgui_internal.h>
-#include <d3dcompiler.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
-#endif
+#include <atomic>
+
+//#include <imgui.h>
+//#include <imgui_internal.h>
+//#include <d3dcompiler.h>
+//#ifdef _MSC_VER
+//#pragma comment(lib, "d3dcompiler") // Automatically link with d3dcompiler.lib as we are using D3DCompile() below.
+//#endif
 
 using Microsoft::WRL::ComPtr;
 
@@ -49,6 +51,7 @@ namespace alimer::Graphics
     {
         IDXGISwapChain3* Handle;
         ID3D12Resource* Backbuffers[3];
+        D3D12_CPU_DESCRIPTOR_HANDLE BackbuffersHandles[3];
         uint32_t BackBufferIndex;
     };
 
@@ -78,7 +81,26 @@ namespace alimer::Graphics
     uint64 NumFrames = 0;
     uint32 FrameIndex = 0;
 
+    /* CommandLists */
+    struct CommandListD3D12
+    {
+        ID3D12CommandAllocator* commandAllocators[kInflightFrameCount];
+        ID3D12GraphicsCommandList* handle;
+    };
+
+    std::atomic<CommandList> CommandListCount{ 0 };
+    CommandListD3D12 CommandLists[kMaxCommandLists] = {};
+    static ID3D12CommandAllocator* GetCommandAllocator(CommandList cmd);
+    static ID3D12GraphicsCommandList* GetCommandList(CommandList cmd);
+
     static void InitCapabilities();
+
+    /* Heaps */
+    static D3D12_CPU_DESCRIPTOR_HANDLE AllocateCPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count);
+    static void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle);
+    static D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle);
+
+    /* SwapChain */
     static SwapChain CreateSwapChain(WindowHandle handle, uint32_t width, uint32_t height, bool fullscreen);
     static void DestroySwapChain(SwapChain* swapChain);
 
@@ -284,7 +306,6 @@ namespace alimer::Graphics
         ThrowIfFailed(Device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&GraphicsQueue)));
         GraphicsQueue->SetName(L"Graphics Command Queue");
 
-
         // Create a fence for tracking GPU execution progress.
         {
             ThrowIfFailed(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&FrameFence)));
@@ -476,6 +497,19 @@ namespace alimer::Graphics
             //SafeRelease(GPUUploadMemoryHeaps[Idx].Heap);
         }
 
+        for (CommandList cmd = 0; cmd < kMaxCommandLists; cmd++)
+        {
+            if (!CommandLists[cmd].handle)
+                continue;
+
+            for (uint32_t index = 0; index < kInflightFrameCount; ++index)
+            {
+                SafeRelease(CommandLists[cmd].commandAllocators[index]);
+            }
+
+            SafeRelease(CommandLists[cmd].handle);
+        }
+
         DestroySwapChain(&MainSwapChain);
         SafeRelease(GraphicsQueue);
         CloseHandle(FrameFenceEvent);
@@ -518,8 +552,43 @@ namespace alimer::Graphics
         return true;
     }
 
+    void SubmitCommandLists()
+    {
+        uint32_t numCommandLists = 0;
+        ID3D12CommandList* commandLists[kMaxCommandLists];
+
+        CommandList cmd_last = CommandListCount.load();
+        CommandListCount.store(0);
+        for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+        {
+            // TODO: Perform query resolves (must be outside of render pass)
+
+            /* Hack: Until we add render pass support. */
+            D3D12_RESOURCE_BARRIER barrier = {};
+            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource = MainSwapChain.Backbuffers[MainSwapChain.BackBufferIndex];
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            GetCommandList(cmd)->ResourceBarrier(1, &barrier);
+
+            // Close the command list.
+            ThrowIfFailed(GetCommandList(cmd)->Close());
+            commandLists[numCommandLists] = GetCommandList(cmd);
+            numCommandLists++;
+        }
+
+        GraphicsQueue->ExecuteCommandLists(numCommandLists, commandLists);
+    }
+
     void EndFrame(bool vsync)
     {
+        /* TODO: Sync compute and copy queue */
+
+        // Submit all command lists.
+        SubmitCommandLists();
+
         HRESULT hr;
         if (vsync)
             hr = MainSwapChain.Handle->Present(1, 0);
@@ -585,7 +654,110 @@ namespace alimer::Graphics
         return FrameIndex;
     }
 
+    static ID3D12CommandAllocator* GetCommandAllocator(CommandList cmd)
+    {
+        return CommandLists[cmd].commandAllocators[FrameIndex];
+    }
+
+    static ID3D12GraphicsCommandList* GetCommandList(CommandList cmd)
+    {
+        return CommandLists[cmd].handle;
+    }
+
+    CommandList BeginCommandList(void)
+    {
+        CommandList commandList = CommandListCount.fetch_add(1);
+        if (GetCommandList(commandList) == nullptr)
+        {
+            // need to create one more command list:
+            ALIMER_ASSERT(commandList < kMaxCommandLists);
+
+            for (uint32_t i = 0; i < kInflightFrameCount; ++i)
+            {
+                ThrowIfFailed(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandLists[commandList].commandAllocators[i])));
+            }
+
+            ThrowIfFailed(Device->CreateCommandList(0,
+                D3D12_COMMAND_LIST_TYPE_DIRECT,
+                CommandLists[commandList].commandAllocators[0],
+                nullptr,
+                IID_PPV_ARGS(&CommandLists[commandList].handle)
+            ));
+            ThrowIfFailed(GetCommandList(commandList)->Close());
+        }
+
+        ThrowIfFailed(GetCommandAllocator(commandList)->Reset());
+        ThrowIfFailed(GetCommandList(commandList)->Reset(GetCommandAllocator(commandList), nullptr));
+
+        /* Until we move to render pass logic. */
+        auto clearColor = Colors::CornflowerBlue;
+        auto rtvDescriptor = MainSwapChain.BackbuffersHandles[MainSwapChain.BackBufferIndex];
+        //auto dsvDescriptor = m_deviceResources->GetDepthStencilView();
+
+        D3D12_RESOURCE_BARRIER barrier = {};
+        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.Transition.pResource = MainSwapChain.Backbuffers[MainSwapChain.BackBufferIndex];
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+
+        GetCommandList(commandList)->ResourceBarrier(1, &barrier);
+        GetCommandList(commandList)->OMSetRenderTargets(1, &rtvDescriptor, FALSE, nullptr);
+        GetCommandList(commandList)->ClearRenderTargetView(rtvDescriptor, &clearColor.r, 0, nullptr);
+        //GetCommandList(commandList)->ClearDepthStencilView(dsvDescriptor, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+        return commandList;
+    }
+
     /* Helper methods */
+    static D3D12_CPU_DESCRIPTOR_HANDLE AllocateCPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+    {
+        DescriptorHeap* descriptorHeap;
+
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+        {
+            descriptorHeap = &RtvHeap;
+        }
+        else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+        {
+            descriptorHeap = &DsvHeap;
+        }
+        else
+        {
+            descriptorHeap = &CbvSrvUavCpuHeap;
+        }
+
+        ALIMER_ASSERT((descriptorHeap->Size + count) < descriptorHeap->Capacity);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE Handle;
+        Handle.ptr = descriptorHeap->CpuStart.ptr + (size_t)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+        descriptorHeap->Size += count;
+        return Handle;
+    }
+
+    static void AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle)
+    {
+        ALIMER_ASSERT(OutCPUHandle && OutGPUHandle && count > 0);
+
+        DescriptorHeap* descriptorHeap = &CbvSrvUavGpuHeaps[FrameIndex];
+        ALIMER_ASSERT((descriptorHeap->Size + count) < descriptorHeap->Capacity);
+
+        OutCPUHandle->ptr = descriptorHeap->CpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+        OutGPUHandle->ptr = descriptorHeap->GpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+
+        descriptorHeap->Size += count;
+    }
+
+    static D3D12_GPU_DESCRIPTOR_HANDLE CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle)
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUBaseHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE GPUBaseHandle;
+        AllocateGPUDescriptors(count, &CPUBaseHandle, &GPUBaseHandle);
+        Device->CopyDescriptorsSimple(count, CPUBaseHandle, srcBaseHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        return GPUBaseHandle;
+    }
+
     SwapChain CreateSwapChain(WindowHandle window, uint32_t width, uint32_t height, bool fullscreen)
     {
         UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
@@ -647,13 +819,15 @@ namespace alimer::Graphics
         for (uint32_t i = 0; i < kInflightFrameCount; i++)
         {
             ThrowIfFailed(swapChain.Handle->GetBuffer(i, IID_PPV_ARGS(&swapChain.Backbuffers[i])));
-            //Gfx.SwapBuffers[Idx] = mz_AddDX12Resource(&Gfx, Buffer, D3D12_RESOURCE_STATE_PRESENT, SwapChainDesc.BufferDesc.Format);
+
+            swapChain.BackbuffersHandles[i] = AllocateCPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+            Device->CreateRenderTargetView(swapChain.Backbuffers[i], nullptr, swapChain.BackbuffersHandles[i]);
         }
 
         swapChain.BackBufferIndex = swapChain.Handle->GetCurrentBackBufferIndex();
 
         return swapChain;
-}
+    }
 
     static void DestroySwapChain(SwapChain* swapChain)
     {
@@ -664,58 +838,4 @@ namespace alimer::Graphics
 
         SafeRelease(swapChain->Handle);
     }
-}
-
-namespace alimer
-{
-#if TODO
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
-    {
-        DescriptorHeap* descriptorHeap;
-
-        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
-        {
-            descriptorHeap = &RtvHeap;
-        }
-        else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
-        {
-            descriptorHeap = &DsvHeap;
-        }
-        else
-        {
-            descriptorHeap = &CbvSrvUavCpuHeap;
-        }
-
-        ALIMER_ASSERT(descriptorHeap != nullptr && (descriptorHeap->Size + count) < descriptorHeap->Capacity);
-
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
-        CPUHandle.ptr = descriptorHeap->CpuStart.ptr + (size_t)descriptorHeap->Size * descriptorHeap->DescriptorSize;
-        descriptorHeap->Size += count;
-
-        return CPUHandle;
-    }
-
-    void D3D12GraphicsDevice::AllocateGPUDescriptors(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE* OutCPUHandle, D3D12_GPU_DESCRIPTOR_HANDLE* OutGPUHandle)
-    {
-        ALIMER_ASSERT(OutCPUHandle && OutGPUHandle && count > 0);
-
-        DescriptorHeap* descriptorHeap = &CbvSrvUavGpuHeaps[currentFrameIndex];
-
-        assert((descriptorHeap->Size + count) < descriptorHeap->Capacity);
-
-        OutCPUHandle->ptr = descriptorHeap->CpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
-        OutGPUHandle->ptr = descriptorHeap->GpuStart.ptr + (uint64)descriptorHeap->Size * descriptorHeap->DescriptorSize;
-
-        descriptorHeap->Size += count;
-    }
-
-    D3D12_GPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::CopyDescriptorsToGPUHeap(uint32_t count, D3D12_CPU_DESCRIPTOR_HANDLE srcBaseHandle)
-    {
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUBaseHandle;
-        D3D12_GPU_DESCRIPTOR_HANDLE GPUBaseHandle;
-        AllocateGPUDescriptors(count, &CPUBaseHandle, &GPUBaseHandle);
-        d3dDevice->CopyDescriptorsSimple(count, CPUBaseHandle, srcBaseHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        return GPUBaseHandle;
-    }
-#endif // TODO
 }

@@ -172,6 +172,9 @@ namespace alimer
         if (GetInput()->IsMouseButtonHeld(MouseButton::Right)) {
             LOGI("Right held");
         }
+
+        CommandList commandList = Graphics::BeginCommandList();
+
         /*CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("Clear");
         commandContext->PushDebugGroup("Clear");
         RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();

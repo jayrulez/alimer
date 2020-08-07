@@ -47,6 +47,9 @@ namespace alimer::Graphics
     // Returns the total number of CPU frames completed.
     ALIMER_API uint64 GetFrameCount(void);
     ALIMER_API uint32 GetFrameIndex(void);
+
+    /* CommandList */
+    ALIMER_API CommandList BeginCommandList(void);
 }
 
 namespace alimer
