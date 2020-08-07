@@ -24,7 +24,7 @@
 #include "Core/Window.h"
 #include "Core/Input.h"
 #include "Core/Math.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
@@ -74,8 +74,7 @@ namespace alimer
         gameSystems.clear();
         window.Close();
         RemoveSubsystem<Input>();
-        delete GraphicsDevice::Instance;
-        GraphicsDevice::Instance = nullptr;
+        Graphics::Shutdown();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -89,13 +88,7 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            GraphicsDevice::Desc graphicsDesc = {};
-#ifdef _DEBUG
-            graphicsDesc.flags |= GPUDeviceFlags::DebugRuntime;
-#endif
-            GraphicsDevice::Create(&window, graphicsDesc);
-
-            if (!GraphicsDevice::Instance)
+            if (!Graphics::Initialize(window))
             {
                 headless = true;
             }
@@ -150,7 +143,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GraphicsDevice::Instance->BeginFrame()) {
+        if (!Graphics::BeginFrame()) {
             return false;
         }
 
@@ -197,7 +190,7 @@ namespace alimer
         }
         
         //ImGui::Render();
-        GraphicsDevice::Instance->EndFrame();
+        Graphics::EndFrame(true);
     }
 
     int Application::Run()

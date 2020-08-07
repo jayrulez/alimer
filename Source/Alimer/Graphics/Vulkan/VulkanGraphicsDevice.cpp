@@ -21,7 +21,7 @@
 //
 
 #include "config.h"
-#include "VulkanGraphicsImpl.h"
+#include "VulkanGraphicsDevice.h"
 #include "VulkanTexture.h"
 #include "Core/Window.h"
 
@@ -446,7 +446,7 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsImpl::VulkanGraphicsImpl(const std::string& applicationName, GPUFlags flags)
+    VulkanGraphicsImpl::VulkanGraphicsImpl(const eastl::string& applicationName, GPUDeviceFlags flags)
         : GraphicsDevice()
     {
         ALIMER_VERIFY(IsAvailable());
@@ -498,7 +498,7 @@ namespace alimer
                 }
             }
 
-            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
+            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
             {
                 if (instanceExts.debugUtils)
                 {
@@ -527,7 +527,7 @@ namespace alimer
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
+            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
             {
                 if (instanceExts.debugUtils)
                 {
@@ -556,7 +556,7 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (any(flags & GPUFlags::DebugRuntime | GPUFlags::GPUBaseValidation))
+            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
             {
                 if (instanceExts.debugUtils)
                 {
@@ -916,7 +916,7 @@ namespace alimer
 
     void VulkanGraphicsImpl::InitCapabilities()
     {
-        caps.backendType = GPUBackendType::Vulkan;
+        caps.backendType = BackendType::Vulkan;
         caps.vendorId = physicalDeviceProperties.properties.vendorID;
         caps.deviceId = physicalDeviceProperties.properties.deviceID;
         caps.adapterName = physicalDeviceProperties.properties.deviceName;
@@ -1098,14 +1098,14 @@ namespace alimer
         for (uint32 i = 0; i < imageCount; i++)
         {
             backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
-            backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
+            //backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
             //SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapChainImages[i], fmt::format("Back Buffer {}", i));
         }
 
         return true;
     }
 
-    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const std::string& name)
+    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name)
     {
         if (!instanceExts.debugUtils)
             return;
@@ -1182,7 +1182,7 @@ namespace alimer
         return true;
     }
 
-    void VulkanGraphicsImpl::EndFrame()
+    void VulkanGraphicsImpl::PresentFrame(bool vsync)
     {
         //ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
@@ -1226,20 +1226,5 @@ namespace alimer
 
         // Frame is not active anymore
         frameActive = false;
-    }
-
-    Swapchain* VulkanGraphicsImpl::GetMainSwapchain() const
-    {
-        return nullptr;
-    }
-
-    CommandContext* VulkanGraphicsImpl::GetImmediateContext() const
-    {
-        return nullptr;
-    }
-
-    SharedPtr<Swapchain> VulkanGraphicsImpl::CreateSwapchain(const SwapchainDescription& description)
-    {
-        return nullptr;
     }
 }

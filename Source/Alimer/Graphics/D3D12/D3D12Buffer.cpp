@@ -21,14 +21,16 @@
 //
 
 #include "D3D12Buffer.h"
-#include "D3D12GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 
 namespace alimer
 {
-    D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const eastl::string_view& name)
-        : Buffer(name)
+    D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const eastl::string_view& name, const BufferDescription& desc, const void* initialData)
+        : Buffer(desc)
     {
-
+        if (name.empty()) {
+            SetName(name);
+        }
     }
 
     D3D12Buffer::~D3D12Buffer()
@@ -39,5 +41,16 @@ namespace alimer
     void D3D12Buffer::Destroy()
     {
 
+    }
+
+    void D3D12Buffer::SetName(const eastl::string_view& name)
+    {
+        if (name.empty()) {
+            resource->SetName(nullptr);
+        }
+        else {
+            auto wideName = ToUtf16(name);
+            resource->SetName(wideName.data());
+        }
     }
 }

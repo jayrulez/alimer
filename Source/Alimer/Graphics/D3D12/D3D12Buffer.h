@@ -30,14 +30,14 @@ namespace alimer
     class D3D12Buffer final : public Buffer
     {
     public:
-        D3D12Buffer(D3D12GraphicsDevice* device, const eastl::string_view& name);
+        D3D12Buffer(D3D12GraphicsDevice* device, const eastl::string_view& name, const BufferDescription& desc, const void* initialData);
         ~D3D12Buffer() override;
-        void Destroy() override;
+        void Destroy();
 
         D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
 
     private:
-        void BackendSetName() override;
+        void SetName(const eastl::string_view& name);
 
         D3D12GraphicsDevice* device;
         ID3D12Resource* resource = nullptr;

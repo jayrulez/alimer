@@ -25,8 +25,10 @@
 #include "Core/Assert.h"
 #include "Core/Log.h"
 #include "Graphics/GraphicsResource.h"
-#include "Graphics/Backend.h"
 #include "Graphics/D3D/D3DHelpers.h"
+
+#include <wrl/client.h>
+#include "D3D12MemAlloc.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
 // then add the NuGet package WinPixEventRuntime to the project.
@@ -37,6 +39,10 @@
 
 namespace alimer
 {
+    // Type alias for Win32 ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
+
     class D3D12GraphicsDevice;
 
     struct D3D12MapResult

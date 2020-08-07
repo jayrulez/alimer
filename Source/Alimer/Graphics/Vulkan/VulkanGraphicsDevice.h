@@ -34,10 +34,10 @@ namespace alimer
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsImpl(const std::string& applicationName, GPUFlags flags);
+        VulkanGraphicsImpl(const eastl::string& applicationName, GPUDeviceFlags flags);
         ~VulkanGraphicsImpl() override;
 
-        void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
+        void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
 
         VkInstance GetVkInstance() const { return instance; }
         VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
@@ -51,11 +51,7 @@ namespace alimer
 
         void WaitForGPU() override;
         bool BeginFrame() override;
-        void EndFrame() override;
-
-        Swapchain* GetMainSwapchain() const override;
-        CommandContext* GetImmediateContext() const override;
-        SharedPtr<Swapchain> CreateSwapchain(const SwapchainDescription& description) override;
+        void PresentFrame(bool vsync) override;
 
         InstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };

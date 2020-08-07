@@ -22,9 +22,31 @@
 
 #pragma once
 
+#include "config.h"
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+
+#if defined(ALIMER_D3D12)
+#   include <d3d12.h>
+
+#   if defined(NTDDI_WIN10_RS2)
+#       include <dxgi1_6.h>
+#   else
+#       include <dxgi1_5.h>
+#   endif
+
+#elif defined(ALIMER_D3D12)
+#   ifndef VK_NO_PROTOTYPES
+#	    define VK_NO_PROTOTYPES
+#   endif
+
+#   ifdef ALIMER_PLATFORM_WINDOWS
+#       define VK_USE_PLATFORM_WIN32_KHR
+#   endif
+
+#	include <vulkan/vulkan.h>
+#endif
 
 namespace alimer
 {
@@ -36,6 +58,9 @@ namespace alimer
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
 
+    using CommandList = uint8_t;
+    static constexpr CommandList kMaxCommandLists = 16u;
+
     /// Enum describing the rendering backend.
     enum class BackendType
     {
@@ -43,8 +68,6 @@ namespace alimer
         Null,
         /// Direct3D 12 backend.
         Direct3D12,
-        /// Direct3D 11 backend.
-        Direct3D11,
         /// Vulkan backend.
         Vulkan,
         /// Default best platform supported backend.
@@ -113,17 +136,14 @@ namespace alimer
 
     enum class BufferUsage : uint32_t
     {
-        None = 0x00000000,
-        MapRead = 0x00000001,
-        MapWrite = 0x00000002,
-        CopySrc = 0x00000004,
-        CopyDst = 0x00000008,
-        Index = 0x00000010,
-        Vertex = 0x00000020,
-        Uniform = 0x00000040,
-        Storage = 0x00000080,
-        Indirect = 0x00000100,
-        QueryResolve = 0x00000200,
+        None = 0,
+        Vertex = 1 << 0,
+        Index = 1 << 1,
+        Uniform = 1 << 2,
+        Storage = 1 << 3,
+        Indirect = 1 << 4,
+        Dynamic = 1 << 5,
+        Staging = 1 << 6,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
@@ -147,7 +167,6 @@ namespace alimer
         BufferUsage usage;
         uint32_t size;
         uint32_t stride;
-        eastl::string label;
     };
 
     struct TextureDescription

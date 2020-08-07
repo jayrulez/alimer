@@ -434,6 +434,49 @@ namespace alimer
     ALIMER_MAKE_LIMITS(float, -FLT_MAX, FLT_MAX);
     ALIMER_MAKE_LIMITS(double, -DBL_MAX, DBL_MAX);
 
+    template <typename T, unsigned int N>
+    void SafeRelease(T(&resourceBlock)[N])
+    {
+        for (unsigned int i = 0; i < N; i++)
+        {
+            SafeRelease(resourceBlock[i]);
+        }
+    }
+
+    template <typename T>
+    void SafeRelease(T& resource)
+    {
+        if (resource)
+        {
+            resource->Release();
+            resource = nullptr;
+        }
+    }
+
+    template <typename T>
+    void SafeDelete(T*& resource)
+    {
+        delete resource;
+        resource = nullptr;
+    }
+
+    template <typename T>
+    void SafeDeleteContainer(T& resource)
+    {
+        for (auto& element : resource)
+        {
+            SafeDelete(element);
+        }
+        resource.clear();
+    }
+
+    template <typename T>
+    void SafeDeleteArray(T*& resource)
+    {
+        delete[] resource;
+        resource = nullptr;
+    }
+
 //---------------------------------------------
 // Basic comparisons
 //---------------------------------------------

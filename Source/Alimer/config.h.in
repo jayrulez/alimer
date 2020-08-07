@@ -42,14 +42,4 @@
 #cmakedefine ALIMER_D3D12
 #cmakedefine ALIMER_VULKAN
 
-/* Audio */
-#cmakedefine ALIMER_ENABLE_AUDIO
-#cmakedefine ALIMER_AUDIO_XAUDIO2
-#cmakedefine ALIMER_AUDIO_OPENAL
-
-/* Physics */
-#cmakedefine ALIMER_ENABLE_PHYSICS
-#cmakedefine ALIMER_PHYSICS_PHYSX
-#cmakedefine ALIMER_PHYSICS_BULLET
-
 #endif

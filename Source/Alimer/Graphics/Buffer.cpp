@@ -21,14 +21,14 @@
 //
 
 #include "Graphics/Buffer.h"
-#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
-    Buffer::Buffer(const BufferDescription& desc_)
-        : GraphicsResource(desc.label, GraphicsResourceDimension::Buffer)
-        , desc(desc_)
+    Buffer::Buffer(const BufferDescription& desc)
+        : usage(desc.usage)
+        , size(desc.size)
+        , stride(desc.stride)
     {
 
     }

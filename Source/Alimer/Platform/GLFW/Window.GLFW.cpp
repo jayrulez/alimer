@@ -21,7 +21,6 @@
 //
 
 #include "Core/Window.h"
-#include "GPU/GPU.h"
 #include "Core/Input.h"
 #include "Core/Log.h"
 

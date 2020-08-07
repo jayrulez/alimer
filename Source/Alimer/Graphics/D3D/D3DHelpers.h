@@ -54,20 +54,11 @@
 
 #include <wrl/client.h>
 #include <EASTL/string.h>
+#include <EASTL/string_view.h>
 #include <EASTL/vector.h>
-
-#if !defined(ALIMER_D3D12) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, _COM_Outptr_ void** _factory);
-typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
-#endif
 
 namespace alimer
 {
-#if !defined(ALIMER_D3D12) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-
     template<typename T> void SafeRelease(T*& resource)
     {
         if (resource != nullptr) {
@@ -145,6 +136,17 @@ namespace alimer
         return eastl::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
+    static inline eastl::wstring_view ToUtf16(const eastl::string_view& str)
+    {
+        eastl::vector<wchar_t> wchar_buffer;
+        auto ret = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), nullptr, 0);
+        if (ret < 0)
+            return L"";
+        wchar_buffer.resize(ret);
+        MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
+        return eastl::wstring_view(wchar_buffer.data(), wchar_buffer.size());
+    }
+
     struct DxgiFormatDesc
     {
         PixelFormat format;
@@ -195,90 +197,6 @@ namespace alimer
         HDR = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8_t);
-
-    static inline IDXGISwapChain1* DXGICreateSwapchain(
-        IDXGIFactory2* dxgiFactory,
-        DXGIFactoryCaps factoryCaps,
-        IUnknown* deviceOrCommandQueue,
-        void* windowHandle,
-        uint32_t width, uint32_t height,
-        PixelFormat colorFormat,
-        uint32_t bufferCount,
-        bool isFullscreen)
-    {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = (HWND)windowHandle;
-        if (!IsWindow(window)) {
-            LOGE("Invalid HWND handle");
-            return nullptr;
-        }
-#else
-        IUnknown* window = (IUnknown*)windowHandle;
-#endif
-
-        UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-
-        if ((factoryCaps & DXGIFactoryCaps::Tearing) != DXGIFactoryCaps::None)
-        {
-            flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
-        DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-        if ((factoryCaps & DXGIFactoryCaps::FlipPresent) == DXGIFactoryCaps::None)
-        {
-            swapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        }
-#else
-        DXGI_SCALING scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-        DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-#endif
-
-        DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
-        swapchainDesc.Width = width;
-        swapchainDesc.Height = height;
-        swapchainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
-        swapchainDesc.Stereo = false;
-        swapchainDesc.SampleDesc.Count = 1;
-        swapchainDesc.SampleDesc.Quality = 0;
-        swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapchainDesc.BufferCount = bufferCount;
-        swapchainDesc.Scaling = scaling;
-        swapchainDesc.SwapEffect = swapEffect;
-        swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-        swapchainDesc.Flags = flags;
-
-        IDXGISwapChain1* result = NULL;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapchainDesc = {};
-        fsSwapchainDesc.Windowed = !isFullscreen;
-
-        // Create a SwapChain from a Win32 window.
-        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-            deviceOrCommandQueue,
-            window,
-            &swapchainDesc,
-            &fsSwapchainDesc,
-            nullptr,
-            &result
-        ));
-
-        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
-#else
-        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
-            deviceOrCommandQueue,
-            window,
-            &swapchainDesc,
-            nullptr,
-            &result
-        ));
-#endif
-
-        return result;
-    }
 
     void DXGISetObjectName(IDXGIObject* obj, const String& name);
 }

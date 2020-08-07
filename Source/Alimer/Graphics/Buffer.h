@@ -28,23 +28,28 @@
 namespace alimer
 {
     /// 
-    class Buffer : public GraphicsResource
+    class Buffer : public RefCounted
     {
     public:
         /// Constructor
         Buffer(const BufferDescription& desc);
-        virtual ~Buffer() = 0;
+        virtual ~Buffer() = default;
+
+        /// Gets buffer usage.
+        BufferUsage GetUsage() const { return usage; }
 
         /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return desc.size; }
+        uint32_t GetSize() const { return size; }
 
         /// Gets buffer elements count.
-        uint32_t GetStride() const { return desc.stride; }
+        uint32_t GetStride() const { return stride; }
 
         /// Gets size of single element in the buffer.
-        uint32_t GetElementSize() const { return desc.size / desc.stride; }
+        uint32_t GetElementSize() const { return size / stride; }
 
     protected:
-        BufferDescription desc;
+        BufferUsage usage;
+        uint32_t size;
+        uint32_t stride;
     };
 }

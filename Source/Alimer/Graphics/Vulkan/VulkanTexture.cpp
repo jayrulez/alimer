@@ -21,7 +21,7 @@
 //
 
 #include "VulkanTexture.h"
-#include "VulkanGraphicsImpl.h"
+#include "VulkanGraphicsDevice.h"
 
 namespace alimer
 {
@@ -30,7 +30,7 @@ namespace alimer
     }
 
     VulkanTexture::VulkanTexture(VulkanGraphicsImpl* device_, VkImage resource_)
-        : Texture()
+        : Texture({})
         , device(device_)
         , handle(resource_)
     {
