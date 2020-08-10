@@ -35,30 +35,8 @@ namespace alimer
         , syncInterval(1)
         , presentFlags(0)
     {
-        if (!vSync) {
-            syncInterval = 0;
-            if (any(device->GetDXGIFactoryCaps() & DXGIFactoryCaps::Tearing))
-            {
-                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
-            }
-        }
 
-        auto swapChain = DXGICreateSwapchain(
-            device->GetDXGIFactory(), device->GetDXGIFactoryCaps(),
-            device->GetD3DDevice(),
-            window->GetHandle(),
-            window->GetWidth(), window->GetHeight(),
-            colorFormat,
-            kNumBackBuffers,
-            window->IsFullscreen()
-        );
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        handle = swapChain;
-#else
-        ThrowIfFailed(swapChain->QueryInterface(IID_PPV_ARGS(&handle)));
-        SafeRelease(swapChain);
-#endif
+        
 
         AfterReset();
     }
@@ -70,8 +48,6 @@ namespace alimer
 
     void D3D11SwapChain::Destroy()
     {
-        colorTexture.Reset();
-        depthStencilTexture.Reset();
         SafeRelease(handle);
     }
 
@@ -112,7 +88,7 @@ namespace alimer
 
     void D3D11SwapChain::AfterReset()
     {
-        colorTexture.Reset();
+        /*colorTexture.Reset();
         depthStencilTexture.Reset();
 
         ID3D11Texture2D* resource;
@@ -122,6 +98,6 @@ namespace alimer
         if (depthStencilFormat != PixelFormat::Invalid)
         {
 
-        }
+        }*/
     }
 }

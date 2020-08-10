@@ -27,27 +27,6 @@
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
 
-#if defined(ALIMER_D3D12)
-#   include <d3d12.h>
-
-#   if defined(NTDDI_WIN10_RS2)
-#       include <dxgi1_6.h>
-#   else
-#       include <dxgi1_5.h>
-#   endif
-
-#elif defined(ALIMER_D3D12)
-#   ifndef VK_NO_PROTOTYPES
-#	    define VK_NO_PROTOTYPES
-#   endif
-
-#   ifdef ALIMER_PLATFORM_WINDOWS
-#       define VK_USE_PLATFORM_WIN32_KHR
-#   endif
-
-#	include <vulkan/vulkan.h>
-#endif
-
 namespace alimer
 {
     static constexpr uint32_t kInflightFrameCount = 2u;
@@ -57,15 +36,23 @@ namespace alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
+    static constexpr uint32_t kInvalidHandleId = 0xFFffFFff;
 
-    using CommandList = uint8_t;
-    static constexpr CommandList kMaxCommandLists = 16u;
+    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct SwapChainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
+
+    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
+    static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
+    static constexpr SwapChainHandle kInvalidSwapChain = { kInvalidHandleId };
 
     /// Enum describing the rendering backend.
     enum class BackendType
     {
         /// Null renderer.
         Null,
+        /// Direct3D 11 backend.
+        Direct3D11,
         /// Direct3D 12 backend.
         Direct3D12,
         /// Vulkan backend.
@@ -101,15 +88,6 @@ namespace alimer
         IntegratedGPU,
         CPU,
         Unknown
-    };
-
-    enum class GraphicsResourceDimension
-    {
-        Unknown,
-        Buffer,
-        Texture1D = 2,
-        Texture2D = 3,
-        Texture3D = 4
     };
 
     /// Describes texture type.
@@ -220,6 +198,61 @@ namespace alimer
         RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
+    struct GPUFeatures
+    {
+        bool independentBlend = false;
+        bool computeShader = false;
+        bool geometryShader = false;
+        bool tessellationShader = false;
+        bool logicOp = false;
+        bool multiViewport = false;
+        bool fullDrawIndexUint32 = false;
+        bool multiDrawIndirect = false;
+        bool fillModeNonSolid = false;
+        bool samplerAnisotropy = false;
+        bool textureCompressionETC2 = false;
+        bool textureCompressionASTC_LDR = false;
+        bool textureCompressionBC = false;
+        /// Specifies whether cube array textures are supported.
+        bool textureCubeArray = false;
+        /// Specifies whether raytracing is supported.
+        bool raytracing = false;
+    };
+
+    struct GPULimits
+    {
+        uint32_t maxVertexAttributes;
+        uint32_t maxVertexBindings;
+        uint32_t maxVertexAttributeOffset;
+        uint32_t maxVertexBindingStride;
+        uint32_t maxTextureDimension2D;
+        uint32_t maxTextureDimension3D;
+        uint32_t maxTextureDimensionCube;
+        uint32_t maxTextureArrayLayers;
+        uint32_t maxColorAttachments;
+        uint32_t maxUniformBufferSize;
+        uint32_t minUniformBufferOffsetAlignment;
+        uint32_t maxStorageBufferSize;
+        uint32_t minStorageBufferOffsetAlignment;
+        uint32_t maxSamplerAnisotropy;
+        uint32_t maxViewports;
+        uint32_t maxViewportWidth;
+        uint32_t maxViewportHeight;
+        uint32_t maxTessellationPatchSize;
+        float pointSizeRangeMin;
+        float pointSizeRangeMax;
+        float lineWidthRangeMin;
+        float lineWidthRangeMax;
+        uint32_t maxComputeSharedMemorySize;
+        uint32_t maxComputeWorkGroupCountX;
+        uint32_t maxComputeWorkGroupCountY;
+        uint32_t maxComputeWorkGroupCountZ;
+        uint32_t maxComputeWorkGroupInvocations;
+        uint32_t maxComputeWorkGroupSizeX;
+        uint32_t maxComputeWorkGroupSizeY;
+        uint32_t maxComputeWorkGroupSizeZ;
+    };
+
     /// Describes GPUDevice capabilities.
     struct GraphicsCapabilities
     {
@@ -228,63 +261,7 @@ namespace alimer
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;
         GPUAdapterType adapterType = GPUAdapterType::Unknown;
-
-        struct Features
-        {
-            bool independentBlend = false;
-            bool computeShader = false;
-            bool geometryShader = false;
-            bool tessellationShader = false;
-            bool logicOp = false;
-            bool multiViewport = false;
-            bool fullDrawIndexUint32 = false;
-            bool multiDrawIndirect = false;
-            bool fillModeNonSolid = false;
-            bool samplerAnisotropy = false;
-            bool textureCompressionETC2 = false;
-            bool textureCompressionASTC_LDR = false;
-            bool textureCompressionBC = false;
-            /// Specifies whether cube array textures are supported.
-            bool textureCubeArray = false;
-            /// Specifies whether raytracing is supported.
-            bool raytracing = false;
-        };
-
-        struct Limits
-        {
-            uint32_t maxVertexAttributes;
-            uint32_t maxVertexBindings;
-            uint32_t maxVertexAttributeOffset;
-            uint32_t maxVertexBindingStride;
-            uint32_t maxTextureDimension2D;
-            uint32_t maxTextureDimension3D;
-            uint32_t maxTextureDimensionCube;
-            uint32_t maxTextureArrayLayers;
-            uint32_t maxColorAttachments;
-            uint32_t maxUniformBufferSize;
-            uint32_t minUniformBufferOffsetAlignment;
-            uint32_t maxStorageBufferSize;
-            uint32_t minStorageBufferOffsetAlignment;
-            uint32_t maxSamplerAnisotropy;
-            uint32_t maxViewports;
-            uint32_t maxViewportWidth;
-            uint32_t maxViewportHeight;
-            uint32_t maxTessellationPatchSize;
-            float pointSizeRangeMin;
-            float pointSizeRangeMax;
-            float lineWidthRangeMin;
-            float lineWidthRangeMax;
-            uint32_t maxComputeSharedMemorySize;
-            uint32_t maxComputeWorkGroupCountX;
-            uint32_t maxComputeWorkGroupCountY;
-            uint32_t maxComputeWorkGroupCountZ;
-            uint32_t maxComputeWorkGroupInvocations;
-            uint32_t maxComputeWorkGroupSizeX;
-            uint32_t maxComputeWorkGroupSizeY;
-            uint32_t maxComputeWorkGroupSizeZ;
-        };
-
-        Features features;
-        Limits limits;
+        GPUFeatures features;
+        GPULimits limits;
     };
 }

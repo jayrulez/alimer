@@ -21,16 +21,34 @@
 //
 
 #include "Graphics/Buffer.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Core/Log.h"
 
 namespace alimer
 {
-    Buffer::Buffer(const BufferDescription& desc)
-        : usage(desc.usage)
-        , size(desc.size)
-        , stride(desc.stride)
+    Buffer::Buffer()
+        : GraphicsResource(ResourceDimension::Buffer)
     {
 
+    }
+
+    Buffer::~Buffer()
+    {
+        Destroy();
+    }
+
+    void Buffer::Create(BufferUsage usage, uint32_t size, uint32_t stride, const void* initialData)
+    {
+        Destroy();
+    }
+
+    void Buffer::Destroy()
+    {
+        if (handle.isValid())
+        {
+            GetGraphics()->Destroy(handle);
+            handle.id = kInvalidHandleId;
+        }
     }
 }
 

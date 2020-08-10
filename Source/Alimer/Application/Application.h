@@ -47,6 +47,8 @@ namespace alimer
         Size windowSize = { 1280.0f, 720.0f };
     };
 
+    class SwapChain;
+
     class ALIMER_API Application : public Object
     {
         ALIMER_OBJECT(Application, Object);
@@ -101,7 +103,7 @@ namespace alimer
 
         bool headless{ false };
         Window window;
-
+        SharedPtr<SwapChain> windowSwapChain;
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 

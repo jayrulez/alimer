@@ -26,7 +26,7 @@
 namespace alimer
 {
     Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(desc.name, GraphicsResourceDimension::Texture2D)
+        : GraphicsResource(ResourceDimension::Texture2D)
         , _desc(desc)
     {
 

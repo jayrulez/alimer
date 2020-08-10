@@ -29,31 +29,95 @@
 
 namespace alimer
 {
-    // Check for SDK Layer support.
-    inline bool SdkLayersAvailable() noexcept
+    namespace
     {
-        HRESULT hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
-            nullptr,
-            D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
-            nullptr,                    // Any feature level will do.
-            0,
-            D3D11_SDK_VERSION,
-            nullptr,                    // No need to keep the D3D device reference.
-            nullptr,                    // No need to know the feature level.
-            nullptr                     // No need to keep the D3D device context reference.
-        );
+        // Check for SDK Layer support.
+        inline bool SdkLayersAvailable() noexcept
+        {
+            HRESULT hr = D3D11CreateDevice(
+                nullptr,
+                D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+                nullptr,
+                D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
+                nullptr,                    // Any feature level will do.
+                0,
+                D3D11_SDK_VERSION,
+                nullptr,                    // No need to keep the D3D device reference.
+                nullptr,                    // No need to know the feature level.
+                nullptr                     // No need to keep the D3D device context reference.
+            );
 
-        return SUCCEEDED(hr);
+            return SUCCEEDED(hr);
+        }
+
+        UINT D3D11GetBindFlags(BufferUsage usage)
+        {
+            if (any(usage & BufferUsage::Uniform))
+            {
+                // This cannot be combined with nothing else.
+                return D3D11_BIND_CONSTANT_BUFFER;
+            }
+
+            UINT flags = {};
+            if (any(usage & BufferUsage::Index))
+                flags |= D3D11_BIND_INDEX_BUFFER;
+            if (any(usage & BufferUsage::Vertex))
+                flags |= D3D11_BIND_VERTEX_BUFFER;
+
+            if (any(usage & BufferUsage::Storage))
+            {
+                flags |= D3D11_BIND_SHADER_RESOURCE;
+                flags |= D3D11_BIND_UNORDERED_ACCESS;
+            }
+
+            return flags;
+        }
+    }
+
+    bool D3D11GraphicsDevice::IsAvailable()
+    {
+        static bool available_initialized = false;
+        static bool available = false;
+        if (available_initialized) {
+            return available;
+        }
+
+        available_initialized = true;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        static HMODULE dxgiLib = LoadLibraryA("dxgi.dll");
+
+        CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY1)GetProcAddress(dxgiLib, "CreateDXGIFactory1");
+        if (CreateDXGIFactory1 == nullptr)
+        {
+            return false;
+        }
+
+        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
+        DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
+
+        static HMODULE d3d11Lib = LoadLibraryA("d3d11.dll");
+        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(d3d11Lib, "D3D11CreateDevice");
+        if (D3D11CreateDevice == nullptr)
+        {
+            return false;
+        }
+#endif
+
+        available = true;
+        return true;
     }
 
     D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const Desc& desc)
     {
+        ALIMER_VERIFY(IsAvailable());
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         dxgiLib = LoadLibraryA("dxgi.dll");
+        CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY1)GetProcAddress(dxgiLib, "CreateDXGIFactory1");
         CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
         DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
+        d3d11Lib = LoadLibraryA("d3d11.dll");
+        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(d3d11Lib, "D3D11CreateDevice");
 #endif
 
         CreateFactory();
@@ -235,8 +299,6 @@ namespace alimer
             mainContext = new D3D11CommandContext(this, immediateContext);
             SafeRelease(tempD3DDevice);
         }
-
-        swapChain = new D3D11SwapChain(this, window, desc.colorFormat, desc.depthStencilFormat, desc.enableVSync);
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
@@ -251,7 +313,6 @@ namespace alimer
     void D3D11GraphicsDevice::Shutdown()
     {
         delete mainContext;
-        delete swapChain;
 
         ULONG refCount = d3dDevice->Release();
 #ifdef _DEBUG
@@ -495,12 +556,24 @@ namespace alimer
         return true;
     }
 
-    uint64_t D3D11GraphicsDevice::EndFrame()
+    void D3D11GraphicsDevice::EndFrame()
     {
-        if (!swapChain->Present())
+        if (isLost) {
+            return;
+        }
+
+        HRESULT hr = S_OK;
+        for (auto& swapChain : createdSwapChains)
         {
-            // TODO: Handle device lost.
-            isLost = true;
+            hr = swapChain.handle->Present(swapChain.syncInterval, swapChain.presentFlags);
+
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                // TODO: Handle device lost.
+                isLost = true;
+                return;
+            }
+
         }
 
         if (!dxgiFactory->IsCurrent())
@@ -508,8 +581,6 @@ namespace alimer
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             CreateFactory();
         }
-
-        return currentCPUFrame;
     }
 
     CommandContext* D3D11GraphicsDevice::GetMainContext() const
@@ -518,20 +589,245 @@ namespace alimer
     }
 
     /* Resource creation methods */
-    Buffer* D3D11GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
+    BufferHandle D3D11GraphicsDevice::AllocBufferHandle()
     {
-        return nullptr;
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+
+        if (buffers.isFull()) {
+            LOGE("Direct3D11: Not enough free buffer slots.");
+            return kInvalidBuffer;
+        }
+
+        const int id = buffers.Alloc();
+        if (id < 0) {
+            return kInvalidBuffer;
+        }
+
+        Buffer& buffer = buffers[id];
+        buffer.handle = nullptr;
+        return { (uint32_t)id };
     }
 
-    /*RefPtr<SwapChain> D3D11GraphicsDevice::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, PixelFormat preferredColorFormat, PixelFormat depthStencilFormat)
+    BufferHandle D3D11GraphicsDevice::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
     {
-        return new D3D11SwapChain(this, windowHandle, width, height, isFullscreen, preferredColorFormat, depthStencilFormat);
+        static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
+        static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
+
+        if (size > c_maxBytes)
+        {
+            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", size);
+            return kInvalidBuffer;
+        }
+
+        uint32_t bufferSize = size;
+        if ((usage & BufferUsage::Uniform) != BufferUsage::None)
+        {
+            bufferSize = Math::AlignTo(size, caps.limits.minUniformBufferOffsetAlignment);
+        }
+
+        const bool needUav = any(usage & BufferUsage::Storage) || any(usage & BufferUsage::Indirect);
+
+        D3D11_BUFFER_DESC d3dDesc = {};
+        d3dDesc.ByteWidth = bufferSize;
+        d3dDesc.BindFlags = D3D11GetBindFlags(usage);
+        d3dDesc.Usage = D3D11_USAGE_DEFAULT;
+        d3dDesc.CPUAccessFlags = 0;
+
+        if (any(usage & BufferUsage::Dynamic))
+        {
+            d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
+            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+        }
+        else if (any(usage & BufferUsage::Staging)) {
+            d3dDesc.Usage = D3D11_USAGE_STAGING;
+            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
+        }
+
+        if (needUav)
+        {
+            const bool rawBuffer = false;
+            if (rawBuffer)
+            {
+                d3dDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+            }
+            else
+            {
+                d3dDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+            }
+        }
+
+        if (any(usage & BufferUsage::Indirect))
+        {
+            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        }
+
+        d3dDesc.StructureByteStride = stride;
+
+        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
+        D3D11_SUBRESOURCE_DATA initialData;
+        memset(&initialData, 0, sizeof(initialData));
+        if (data != nullptr) {
+            initialData.pSysMem = data;
+            initialDataPtr = &initialData;
+        }
+
+        ID3D11Buffer* d3dBuffer;
+        HRESULT hr = d3dDevice->CreateBuffer(&d3dDesc, initialDataPtr, &d3dBuffer);
+        if (FAILED(hr)) {
+            LOGE("Direct3D11: Failed to create buffer");
+            return kInvalidBuffer;
+        }
+
+        BufferHandle handle = AllocBufferHandle();
+        buffers[handle.id].handle = d3dBuffer;
+        return handle;
     }
 
-    RefPtr<Texture> D3D11GraphicsDevice::CreateTexture(const TextureDescription& desc, const void* initialData)
+    void D3D11GraphicsDevice::Destroy(BufferHandle handle)
     {
-        return new D3D11Texture(this, desc, initialData);
-    }*/
+        if (!handle.isValid())
+            return;
+
+        Buffer& buffer = buffers[handle.id];
+        SafeRelease(buffer.handle);
+
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+        buffers.Dealloc(handle.id);
+    }
+
+    void D3D11GraphicsDevice::SetName(BufferHandle handle, const char* name)
+    {
+        if (!handle.isValid())
+            return;
+
+        D3D11SetObjectName(buffers[handle.id].handle, name);
+    }
+
+    SwapChainHandle D3D11GraphicsDevice::AllocSwapChainHandle()
+    {
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+
+        if (swapChains.isFull()) {
+            LOGE("Direct3D11: Not enough free SwapChain slots.");
+            return kInvalidSwapChain;
+        }
+
+        const int id = swapChains.Alloc();
+        if (id < 0) {
+            return kInvalidSwapChain;
+        }
+
+        SwapChain& swapChain = swapChains[id];
+        swapChain.handle = nullptr;
+        return { (uint32_t)id };
+    }
+
+    SwapChainHandle D3D11GraphicsDevice::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, bool enableVSync, PixelFormat preferredColorFormat)
+    {
+        UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        uint32 syncInterval = 1;
+        uint32_t presentFlags = 0;
+
+        if (!enableVSync)
+        {
+            syncInterval = 0;
+            if (any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing))
+            {
+                flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+                presentFlags = DXGI_PRESENT_ALLOW_TEARING;
+            }
+        }
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        const DXGI_SCALING dxgiScaling = DXGI_SCALING_STRETCH;
+#else
+        const DXGI_SCALING dxgiScaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+#endif
+
+        DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
+        swapchainDesc.Width = 0;
+        swapchainDesc.Height = 0;
+        swapchainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        swapchainDesc.Stereo = false;
+        swapchainDesc.SampleDesc.Count = 1;
+        swapchainDesc.SampleDesc.Quality = 0;
+        swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapchainDesc.BufferCount = kInflightFrameCount;
+        swapchainDesc.Scaling = dxgiScaling;
+        swapchainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapchainDesc.Flags = flags;
+
+        IDXGISwapChain1* swapChain;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND hwnd = (HWND)windowHandle;
+        if (!IsWindow(hwnd)) {
+            LOGE("Direct3D11: Invalid window handle.");
+            return kInvalidSwapChain;
+        }
+
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapchainDesc = {};
+        fsSwapchainDesc.Windowed = !isFullscreen;
+
+        // Create a SwapChain from a Win32 window.
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+            d3dDevice,
+            hwnd,
+            &swapchainDesc,
+            &fsSwapchainDesc,
+            nullptr,
+            &swapChain
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER));
+#else
+        IUnknown* window = (IUnknown*)windowHandle;
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
+            d3dDevice,
+            window,
+            &swapchainDesc,
+            nullptr,
+            &swapChain
+        ));
+#endif
+
+        SwapChainHandle handle = AllocSwapChainHandle();
+        swapChains[handle.id].handle = swapChain;
+        swapChains[handle.id].syncInterval = syncInterval;
+        swapChains[handle.id].presentFlags = presentFlags;
+        createdSwapChains.push_back(swapChains[handle.id]);
+        return handle;
+    }
+
+    void D3D11GraphicsDevice::Destroy(SwapChainHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        SwapChain& swapChain = swapChains[handle.id];
+        SafeRelease(swapChain.handle);
+
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+        swapChains.Dealloc(handle.id);
+    }
+
+    void D3D11GraphicsDevice::Present(SwapChainHandle handle)
+    {
+        HRESULT hr = swapChains[handle.id].handle->Present(swapChains[handle.id].syncInterval, swapChains[handle.id].presentFlags);
+
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+            // TODO: Handle device lost.
+            isLost = true;
+            return;
+        }
+    }
+
+    uint32_t D3D11GraphicsDevice::GetImageCount(SwapChainHandle handle) const
+    {
+        return 1;
+    }
 
     void D3D11GraphicsDevice::HandleDeviceLost(HRESULT hr)
     {

@@ -22,57 +22,25 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
+#include "Graphics/GraphicsResource.h"
+#include <EASTL/vector.h>
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    class ALIMER_API SwapChain : public GraphicsResource
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
     public:
-        enum class ResourceDimension
-        {
-            Unknown,
-            Buffer,
-            Texture1D = 2,
-            Texture2D = 3,
-            Texture3D = 4
-        };
+        /// Constructor.
+        SwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen,
+            bool enableVSync = true,
+            PixelFormat preferredColorFormat = PixelFormat::BGRA8Unorm,
+            PixelFormat preferredDepthStencilFormat = PixelFormat::Depth32Float);
+        ~SwapChain() override;
+        void Destroy() override;
 
-        enum class Usage
-        {
-            Default,
-            Immutable,
-            Dynamic,
-            Staging
-        };
-
-        virtual ~GraphicsResource() = default;
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /// Set the resource name.
-        void SetName(const eastl::string& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const eastl::string& GetName() const { return name; }
-
-    protected:
-        GraphicsResource(ResourceDimension dimension_)
-            : dimension(dimension_)
-        {
-        }
-
-        virtual void BackendSetName() {}
-
-    protected:
-        eastl::string name;
-        ResourceDimension dimension;
+    private:
+        SwapChainHandle handle{ kInvalidHandleId };
+        eastl::vector<SharedPtr<Texture>> colorTextures;
+        SharedPtr<Texture> depthStencilTexture;
     };
 }

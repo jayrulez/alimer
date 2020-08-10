@@ -25,7 +25,6 @@
 #include "Core/Ptr.h"
 #include "Core/Delegate.h"
 #include "Math/Size.h"
-#include <EASTL/intrusive_ptr.h>
 
 namespace alimer
 {

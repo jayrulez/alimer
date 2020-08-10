@@ -20,59 +20,37 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "Graphics/GraphicsDevice.h"
+#include "Core/Log.h"
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
+#if defined(ALIMER_D3D11)
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    GraphicsDevice* GraphicsDevice::Create(Window* window, const Desc& desc)
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
-    public:
-        enum class ResourceDimension
+        BackendType backendType = desc.preferredBackendType;
+        if (backendType == BackendType::Count)
         {
-            Unknown,
-            Buffer,
-            Texture1D = 2,
-            Texture2D = 3,
-            Texture3D = 4
-        };
-
-        enum class Usage
-        {
-            Default,
-            Immutable,
-            Dynamic,
-            Staging
-        };
-
-        virtual ~GraphicsResource() = default;
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /// Set the resource name.
-        void SetName(const eastl::string& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const eastl::string& GetName() const { return name; }
-
-    protected:
-        GraphicsResource(ResourceDimension dimension_)
-            : dimension(dimension_)
-        {
+#if defined(ALIMER_D3D11)
+            backendType = BackendType::Direct3D11;
+#endif
         }
 
-        virtual void BackendSetName() {}
+        switch (backendType)
+        {
+#if defined(ALIMER_D3D11)
+        case BackendType::Direct3D11:
+            return new D3D11GraphicsDevice(window, desc);
+#endif
 
-    protected:
-        eastl::string name;
-        ResourceDimension dimension;
-    };
+        default:
+            break;
+        }
+
+        return nullptr;
+    }
 }
+

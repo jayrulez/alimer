@@ -22,6 +22,7 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
+#include "Graphics/GraphicsDevice.h"
 #include <EASTL/unordered_map.h>
 #include <EASTL/unique_ptr.h>
 
@@ -36,6 +37,7 @@ namespace alimer
             eastl::unordered_map<StringId32, eastl::unique_ptr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
+            WeakPtr<GraphicsDevice> graphics;
 
             void RegisterSubsystem(Object* subsystem)
             {
@@ -45,6 +47,12 @@ namespace alimer
             void RegisterSubsystem(Input* subsystem)
             {
                 input = subsystem;
+                RegisterSubsystem((Object*)subsystem);
+            }
+
+            void RegisterSubsystem(GraphicsDevice* subsystem)
+            {
+                graphics = subsystem;
                 RegisterSubsystem((Object*)subsystem);
             }
 
@@ -140,6 +148,11 @@ namespace alimer
         details::context().RegisterSubsystem(subsystem);
     }
 
+    void Object::RegisterSubsystem(GraphicsDevice* subsystem)
+    {
+        details::context().RegisterSubsystem(subsystem);
+    }
+
     void Object::RemoveSubsystem(Object* subsystem)
     {
         if (!subsystem)
@@ -161,6 +174,11 @@ namespace alimer
     Input* Object::GetInput()
     {
         return details::context().input;
+    }
+
+    GraphicsDevice* Object::GetGraphics()
+    {
+        return details::context().graphics;
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

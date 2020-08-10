@@ -37,11 +37,7 @@ namespace alimer
         void Destroy();
         bool Present();
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         IDXGISwapChain1* GetHandle() const { return handle; }
-#else
-        IDXGISwapChain3* GetHandle() const { return handle; }
-#endif
 
     private:
         void AfterReset();
@@ -55,13 +51,7 @@ namespace alimer
         uint32_t presentFlags;
 
         D3D11GraphicsDevice* device;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         IDXGISwapChain1* handle = nullptr;
-#else
-        IDXGISwapChain3* handle = nullptr;
-#endif
-
-        SharedPtr<D3D11Texture> colorTexture;
-        SharedPtr<D3D11Texture> depthStencilTexture;
+        
     };
 }

@@ -21,7 +21,6 @@
 //
 
 #include "D3D11CommandContext.h"
-#include "D3D11Buffer.h"
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
 
@@ -48,29 +47,19 @@ namespace alimer
 
     void D3D11CommandContext::PushDebugGroup(const String& name)
     {
-#if defined(GRAPHICS_DEBUG)
         auto wideName = ToUtf16(name);
         annotation->BeginEvent(wideName.c_str());
-#else
-        ALIMER_UNUSED(name);
-#endif
-}
+    }
 
     void D3D11CommandContext::PopDebugGroup()
     {
-#if defined(GRAPHICS_DEBUG)
         annotation->EndEvent();
-#endif
     }
 
     void D3D11CommandContext::InsertDebugMarker(const String& name)
     {
-#if defined(GRAPHICS_DEBUG)
         auto wideName = ToUtf16(name);
         annotation->SetMarker(wideName.c_str());
-#else
-        ALIMER_UNUSED(name);
-#endif
     }
 
     void D3D11CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)

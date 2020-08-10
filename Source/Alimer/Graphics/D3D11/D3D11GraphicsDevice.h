@@ -24,21 +24,23 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
+#include <EASTL/fixed_vector.h>
+#include <mutex>
 
 namespace alimer
 {
     class D3D11CommandContext;
-    class D3D11SwapChain;
 
     class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
         D3D11GraphicsDevice(Window* window, const Desc& desc);
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
         bool BeginFrame() override;
-        uint64_t EndFrame() override;
+        void EndFrame() override;
 
         void HandleDeviceLost(HRESULT hr);
 
@@ -49,9 +51,16 @@ namespace alimer
         CommandContext* GetMainContext() const override;
 
         /* Resource creation methods */
-        Buffer* CreateBuffer(const BufferDescription& desc, const void* initialData) override;
+        BufferHandle AllocBufferHandle();
+        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data) override;
+        void Destroy(BufferHandle handle) override;
+        void SetName(BufferHandle handle, const char* name) override;
 
-        //CommandContext* GetDefaultContext() const override;
+        SwapChainHandle AllocSwapChainHandle();
+        SwapChainHandle CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, bool enableVSync, PixelFormat preferredColorFormat) override;
+        void Destroy(SwapChainHandle handle) override;
+        void Present(SwapChainHandle handle) override;
+        uint32_t GetImageCount(SwapChainHandle handle) const override;
 
     private:
         void CreateFactory();
@@ -61,6 +70,7 @@ namespace alimer
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HMODULE dxgiLib;
+        HMODULE d3d11Lib;
 #endif
 
         IDXGIFactory2* dxgiFactory = nullptr;
@@ -71,6 +81,27 @@ namespace alimer
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
-        D3D11SwapChain* swapChain = nullptr;
+        /* Resource pools */
+        std::mutex handle_mutex;
+
+        struct Buffer
+        {
+            enum { MAX_COUNT = 8192 };
+
+            ID3D11Buffer* handle;
+        };
+
+        struct SwapChain
+        {
+            enum { MAX_COUNT = 16 };
+
+            IDXGISwapChain1* handle;
+            uint32 syncInterval;
+            uint32_t presentFlags;
+        };
+
+        GPUResourcePool<Buffer, Buffer::MAX_COUNT> buffers;
+        GPUResourcePool<SwapChain, SwapChain::MAX_COUNT> swapChains;
+        eastl::fixed_vector<SwapChain, SwapChain::MAX_COUNT> createdSwapChains;
     };
 }

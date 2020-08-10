@@ -25,32 +25,7 @@
 #include "Core/Window.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Buffer.h"
-#include <EASTL/intrusive_ptr.h>
 #include <EASTL/vector.h>
-
-namespace alimer::Graphics
-{
-#if defined(ALIMER_D3D12)
-    ALIMER_API extern IDXGIFactory4* Factory;
-    ALIMER_API extern IDXGIAdapter1* Adapter;
-    ALIMER_API extern ID3D12Device* Device;
-    ALIMER_API extern D3D_FEATURE_LEVEL FeatureLevel;
-#endif
-
-    ALIMER_API bool Initialize(alimer::Window& window);
-    ALIMER_API void Shutdown();
-    ALIMER_API bool BeginFrame();
-    ALIMER_API void EndFrame(bool vsync = true);
-    ALIMER_API void WaitForGPU(void);
-    ALIMER_API const GraphicsCapabilities& GetCapabilities(void);
-
-    // Returns the total number of CPU frames completed.
-    ALIMER_API uint64 GetFrameCount(void);
-    ALIMER_API uint32 GetFrameIndex(void);
-
-    /* CommandList */
-    ALIMER_API CommandList BeginCommandList(void);
-}
 
 namespace alimer
 {
@@ -64,6 +39,8 @@ namespace alimer
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
+        virtual ~GraphicsDevice() = default;
+
         struct Desc
         {
             BackendType preferredBackendType = BackendType::Count;
@@ -73,25 +50,80 @@ namespace alimer
             bool enableVSync = false;
         };
 
-        static GraphicsDevice* GetInstance();
-        bool Initialize(Window* window, const Desc& desc);
+        static GraphicsDevice* Create(Window* window, const Desc& desc);
+
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
         /// Get the device capabilities.
         ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const { return caps; }
 
-        /* Resource creation methods */
-        //virtual eastl::intrusive_ptr<Buffer> CreateBuffer(const eastl::string_view& name, const BufferDescription& desc, const void* initialData) = 0;
+        /**
+        * Get the default main command context.
+        * The default render-context is managed completely by the device.
+        * The user should just queue commands into it, the device will take care of allocation, submission and synchronization.
+        */
+        virtual CommandContext* GetMainContext() const = 0;
 
         /// Total number of CPU frames completed (completed means all command buffers submitted to the GPU)
         ALIMER_FORCE_INLINE uint64_t GetFrameCount() const { return frameCount; }
+
+        /* Resource creation methods */
+        virtual BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data = nullptr) = 0;
+        virtual void Destroy(BufferHandle handle) = 0;
+        virtual void SetName(BufferHandle handle, const char* name) = 0;
+
+        virtual SwapChainHandle CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, bool enableVSync, PixelFormat preferredColorFormat) = 0;
+        virtual void Destroy(SwapChainHandle handle) = 0;
+        virtual void Present(SwapChainHandle handle) = 0;
+        virtual uint32_t GetImageCount(SwapChainHandle handle) const = 0;
 
     protected:
         GraphicsCapabilities caps{};
         uint64_t frameCount{ 0 };
 
-    private:
+    protected:
         GraphicsDevice() = default;
-        ~GraphicsDevice();
+
+    protected:
+        template <typename T, uint32_t MAX_COUNT>
+        class GPUResourcePool
+        {
+        public:
+            GPUResourcePool()
+            {
+                values = (T*)mem;
+                for (int i = 0; i < MAX_COUNT; ++i) {
+                    new (&values[i]) int(i + 1);
+                }
+                new (&values[MAX_COUNT - 1]) int(-1);
+                first_free = 0;
+            }
+
+            int Alloc()
+            {
+                if (first_free == -1) return -1;
+
+                const int id = first_free;
+                first_free = *((int*)&values[id]);
+                new ( &values[id]) T;
+                return id;
+            }
+
+            void Dealloc(uint32_t index)
+            {
+                values[index].~T();
+                new ( &values[index]) int(first_free);
+                first_free = index;
+            }
+
+            alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
+            T* values;
+            int first_free;
+
+            T& operator[](int index) { return values[index]; }
+            bool isFull() const { return first_free == -1; }
+        };
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

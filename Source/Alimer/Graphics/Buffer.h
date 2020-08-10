@@ -28,28 +28,51 @@
 namespace alimer
 {
     /// 
-    class Buffer : public RefCounted
+    class Buffer : public GraphicsResource
     {
+        ALIMER_OBJECT(Buffer, GraphicsResource);
+
     public:
         /// Constructor
-        Buffer(const BufferDescription& desc);
-        virtual ~Buffer() = default;
+        Buffer();
+        ~Buffer() override;
+
+        void Create(BufferUsage usage, uint32_t size, uint32_t stride, const void* initialData = nullptr);
+        void Destroy() override;
+
+        /// Gets a value indicating whether this buffer has been allocated. 
+        ALIMER_FORCE_INLINE bool IsAllocated() const
+        {
+            return handle.isValid();
+        }
 
         /// Gets buffer usage.
-        BufferUsage GetUsage() const { return usage; }
+        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
+        {
+            return desc.usage;
+        }
 
         /// Gets buffer size in bytes.
-        uint32_t GetSize() const { return size; }
+        ALIMER_FORCE_INLINE uint32_t GetSize() const
+        {
+            return desc.size;
+        }
 
         /// Gets buffer elements count.
-        uint32_t GetStride() const { return stride; }
+        ALIMER_FORCE_INLINE uint32_t GetStride() const
+        {
+            return desc.stride;
+        }
 
-        /// Gets size of single element in the buffer.
-        uint32_t GetElementSize() const { return size / stride; }
+        /// Gets the number of elements.
+        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
+        {
+            ALIMER_ASSERT(desc.stride > 0);
+            return desc.size / desc.stride;
+        }
 
-    protected:
-        BufferUsage usage;
-        uint32_t size;
-        uint32_t stride;
+    private:
+        BufferHandle handle{ kInvalidHandleId };
+        BufferDescription desc;
     };
 }

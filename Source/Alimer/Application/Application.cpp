@@ -23,8 +23,9 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
+#include "Graphics/SwapChain.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Core/Math.h"
-#include "Graphics/Graphics.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include "Core/Log.h"
@@ -74,7 +75,8 @@ namespace alimer
         gameSystems.clear();
         window.Close();
         RemoveSubsystem<Input>();
-        Graphics::Shutdown();
+        windowSwapChain.Reset();
+        RemoveSubsystem<GraphicsDevice>();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -88,10 +90,11 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            if (!Graphics::Initialize(window))
-            {
-                headless = true;
-            }
+            GraphicsDevice::Desc graphicsDesc = {};
+            RegisterSubsystem(GraphicsDevice::Create(&window, graphicsDesc));
+
+            // Create main window SwapChain
+            windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
 
             struct VertexPositionColor
             {
@@ -106,8 +109,8 @@ namespace alimer
                 {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
             };
 
-            //Buffer vertexBuffer("Triangle");
-            //vertexBuffer.Create(BufferUsage::Vertex, 3, vertices);
+            Buffer vertexBuffer;
+            vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
 
             ImGuiLayer::Initialize(window);
         }
@@ -143,7 +146,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!Graphics::BeginFrame()) {
+        if (!GetGraphics()->BeginFrame()) {
             return false;
         }
 
@@ -173,16 +176,15 @@ namespace alimer
             LOGI("Right held");
         }
 
-        CommandList commandList = Graphics::BeginCommandList();
-
-        /*CommandBuffer& commandBuffer = GPU->BeginCommandBuffer("Clear");
-        commandContext->PushDebugGroup("Clear");
-        RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
+        auto context = GetGraphics()->GetMainContext();
+        context->PushDebugGroup("Clear");
+        /*context->BeginRenderPass();
+        /*RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         commandContext->BeginRenderPass(renderPass);
-        commandContext->EndRenderPass();
-        commandContext->PopDebugGroup();
-        commandBuffer.Commit();*/
+        commandContext->EndRenderPass();*/
+        context->PopDebugGroup();
+        context->Flush();
     }
 
     void Application::EndDraw()
@@ -193,7 +195,7 @@ namespace alimer
         }
         
         //ImGui::Render();
-        Graphics::EndFrame(true);
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()

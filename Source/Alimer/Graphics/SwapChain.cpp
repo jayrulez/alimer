@@ -20,25 +20,39 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/Buffer.h"
-#include "D3D11Backend.h"
+#include "Graphics/SwapChain.h"
+#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Texture.h"
+#include "Core/Log.h"
 
 namespace alimer
 {
-    class D3D11Buffer final : public Buffer
+    SwapChain::SwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, bool enableVSync, PixelFormat preferredColorFormat, PixelFormat preferredDepthStencilFormat)
+        : GraphicsResource(ResourceDimension::Texture2D)
     {
-    public:
-        D3D11Buffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D11Buffer() override;
-        void Destroy() override;
+        handle = GetGraphics()->CreateSwapChain(windowHandle, width, height, isFullscreen, enableVSync, preferredColorFormat);
+        colorTextures.resize(GetGraphics()->GetImageCount(handle));
+        for (eastl_size_t i = 0; i < colorTextures.size(); i++)
+        {
+            //colorTextures[i] = new Texture();
+        }
+    }
 
-    private:
-        void Create(const void* data);
-        void BackendSetName() override;
+    SwapChain::~SwapChain()
+    {
+        Destroy();
+    }
 
-        D3D11GraphicsDevice* device;
-        ID3D11Buffer* handle = nullptr;
-    };
+    void SwapChain::Destroy()
+    {
+        colorTextures.clear();
+        depthStencilTexture.Reset();
+
+        if (handle.isValid())
+        {
+            GetGraphics()->Destroy(handle);
+            handle.id = kInvalidHandleId;
+        }
+    }
 }
+
