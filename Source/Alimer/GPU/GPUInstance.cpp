@@ -24,43 +24,67 @@
 #include "GPU/GPUInstance.h"
 #include "Core/Log.h"
 
+#if defined(ALIMER_D3D12)
+#   include "GPU/D3D12/D3D12GPUInstance.h"
+#endif
+
 #if defined(ALIMER_VULKAN)
 #   include "GPU/Vulkan/VulkanGPUInstance.h"
 #endif
 
-eastl::unique_ptr<GPUInstance> GPUInstance::Create(GPUBackendType preferredBackend)
+namespace alimer
 {
-    if (preferredBackend == GPUBackendType::Count)
+    RefPtr<GPUInstance> GPUInstance::Create(GPUBackendType preferredBackend)
     {
-#if defined(ALIMER_VULKAN)
-        if (VulkanGPUInstance::IsAvailable())
+        if (preferredBackend == GPUBackendType::Count)
         {
-            preferredBackend = GPUBackendType::Vulkan;
-        }
-#endif
-    }
-
-    switch (preferredBackend)
-    {
-    case GPUBackendType::Null:
-        break;
-#if defined(ALIMER_VULKAN)
-    case GPUBackendType::Vulkan:
-        if (VulkanGPUInstance::IsAvailable())
-        {
-            return eastl::make_unique<VulkanGPUInstance>("Alimer");
-        }
-        break;
+#if defined(ALIMER_D3D12)
+            if (D3D12GPUInstance::IsAvailable())
+            {
+                preferredBackend = GPUBackendType::Direct3D12;
+            }
 #endif
 
-    case GPUBackendType::Metal:
-        break;
-    case GPUBackendType::Direct3D12:
-        break;
-    default:
-        break;
-    }
+#if defined(ALIMER_VULKAN)
+            if (preferredBackend == GPUBackendType::Count
+                && VulkanGPUInstance::IsAvailable())
+            {
+                preferredBackend = GPUBackendType::Vulkan;
+            }
+#endif
+        }
 
-    return nullptr;
+        switch (preferredBackend)
+        {
+        case GPUBackendType::Null:
+            break;
+#if defined(ALIMER_VULKAN)
+        case GPUBackendType::Vulkan:
+            if (VulkanGPUInstance::IsAvailable())
+            {
+                return MakeRefPtr<VulkanGPUInstance>("Alimer");
+            }
+            break;
+#endif
+
+#if defined(ALIMER_METAL)
+        case GPUBackendType::Metal:
+            break;
+#endif
+
+#if defined(ALIMER_D3D12)
+        case GPUBackendType::Direct3D12:
+            if (D3D12GPUInstance::IsAvailable())
+            {
+                return MakeRefPtr<D3D12GPUInstance>();
+            }
+            break;
+#endif
+
+        default:
+            break;
+        }
+
+        return nullptr;
+    }
 }
-

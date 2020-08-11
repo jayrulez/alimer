@@ -22,20 +22,27 @@
 
 #pragma once
 
-#include "Scene/EntityManager.h"
+#include "Core/Ptr.h"
+#include "GPU/Types.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    class GPUDevice;
+
+    class ALIMER_API GPUAdapter : public RefCounted
     {
     public:
-        SceneSystem();
-        ~SceneSystem();
+        virtual ~GPUAdapter() = default;
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        virtual RefPtr<GPUDevice> CreateDevice(const GPUDeviceDescriptor* descriptor) = 0;
 
-    private:
-        RefPtr<Entity> rootEntity;
+    protected:
+        GPUAdapter(GPUBackendType backend)
+            : backend{ backend }
+        {
+
+        }
+
+        GPUBackendType backend;
     };
 }

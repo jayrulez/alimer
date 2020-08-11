@@ -20,31 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12Backend.h"
+#include "config.h"
+#include "D3D12GPUAdapter.h"
+#include "D3D12GPUDevice.h"
 
 namespace alimer
 {
-    DescriptorHeap D3D12CreateDescriptorHeap(ID3D12Device* device, uint32_t capacity, D3D12_DESCRIPTOR_HEAP_TYPE type, D3D12_DESCRIPTOR_HEAP_FLAGS flags)
+    D3D12GPUAdapter::D3D12GPUAdapter(const ComPtr<IDXGIAdapter1>& dxgiAdapter)
+        : GPUAdapter(GPUBackendType::Direct3D12)
     {
-        ALIMER_ASSERT(device && capacity > 0);
+        ThrowIfFailed(dxgiAdapter.As(&handle));
+    }
 
-        DescriptorHeap descriptorHeap = {};
-        descriptorHeap.Size = 0;
-        descriptorHeap.Capacity = capacity;
+    D3D12GPUAdapter::~D3D12GPUAdapter()
+    {
 
-        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-        desc.NumDescriptors = capacity;
-        desc.Type = type;
-        desc.Flags = flags;
-        ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap.handle)));
+    }
 
-        descriptorHeap.CpuStart = descriptorHeap.handle->GetCPUDescriptorHandleForHeapStart();
-        if (flags & D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
+    bool D3D12GPUAdapter::Initialize()
+    {
+        if (FAILED(D3D12CreateDevice(handle.Get(), kMinFeatureLevel, _uuidof(ID3D12Device), &d3dDevice)))
         {
-            descriptorHeap.GpuStart = descriptorHeap.handle->GetGPUDescriptorHandleForHeapStart();
+            return false;
         }
 
-        descriptorHeap.DescriptorSize = device->GetDescriptorHandleIncrementSize(type);
-        return descriptorHeap;
+        DXGI_ADAPTER_DESC1 adapterDesc;
+        handle->GetDesc1(&adapterDesc);
+
+        return true;
+    }
+
+    RefPtr<GPUDevice> D3D12GPUAdapter::CreateDevice(const GPUDeviceDescriptor* descriptor)
+    {
+        return MakeRefPtr<D3D12GPUDevice>(this, d3dDevice);
     }
 }

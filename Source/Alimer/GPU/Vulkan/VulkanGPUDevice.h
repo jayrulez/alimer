@@ -22,20 +22,20 @@
 
 #pragma once
 
-#include "Scene/EntityManager.h"
+#include "GPU/GPUDevice.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    class VulkanGPUAdapter;
+
+    class VulkanGPUDevice final : public GPUDevice
     {
     public:
-        SceneSystem();
-        ~SceneSystem();
-
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        VulkanGPUDevice(VulkanGPUAdapter* adapter);
+        ~VulkanGPUDevice() override;
 
     private:
-        RefPtr<Entity> rootEntity;
+        VkDevice handle{ VK_NULL_HANDLE };
     };
 }

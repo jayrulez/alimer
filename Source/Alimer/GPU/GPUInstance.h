@@ -22,16 +22,21 @@
 
 #pragma once
 
-#include "GPU/Types.h"
-#include <EASTL/unique_ptr.h>
+#include "GPU/GPUAdapter.h"
 
-class ALIMER_API GPUInstance
+namespace alimer
 {
-public:
-    virtual ~GPUInstance() = default;
+    class ALIMER_API GPUInstance : public RefCounted
+    {
+    public:
+        virtual ~GPUInstance() = default;
 
-    static eastl::unique_ptr<GPUInstance> Create(GPUBackendType preferredBackend = GPUBackendType::Count);
+        static RefPtr<GPUInstance> Create(GPUBackendType preferredBackend = GPUBackendType::Count);
+        virtual GPUSurface* CreateSurfaceWin32(void* hinstance, void* hwnd) = 0;
 
-protected:
-    GPUInstance() = default;
-};
+        virtual RefPtr<GPUAdapter> RequestAdapter(const GPURequestAdapterOptions* options) = 0;
+
+    protected:
+        GPUInstance() = default;
+    };
+}

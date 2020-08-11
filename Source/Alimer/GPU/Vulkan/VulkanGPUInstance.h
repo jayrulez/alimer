@@ -25,21 +25,28 @@
 #include "GPU/GPUInstance.h"
 #include "VulkanBackend.h"
 
-class VulkanGPUInstance final : public GPUInstance
+namespace alimer
 {
-public:
-    static bool IsAvailable();
+    class VulkanGPUInstance final : public GPUInstance
+    {
+    public:
+        static bool IsAvailable();
 
-    VulkanGPUInstance(const eastl::string& applicationName);
-    ~VulkanGPUInstance() override;
+        VulkanGPUInstance(const eastl::string& applicationName);
+        ~VulkanGPUInstance() override;
 
-    VkInstance GetHandle() const { return handle; }
+        VkInstance GetHandle() const { return handle; }
 
-private:
-    VkInstance handle;
-    VulkanGPUInstanceExtensions extensions{};
+    private:
+        GPUSurface* CreateSurfaceWin32(void* hinstance, void* hwnd) override;
+        RefPtr<GPUAdapter> RequestAdapter(const GPURequestAdapterOptions* options) override;
+
+    private:
+        VkInstance handle;
+        VulkanGPUInstanceExtensions extensions{};
 
 #if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-    VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
+        VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
 #endif
-};
+    };
+}

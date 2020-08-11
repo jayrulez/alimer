@@ -21,14 +21,15 @@
 //
 
 #include "Application/Application.h"
+#include "Core/Log.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-//#include "Graphics/SwapChain.h"
 #include "GPU/GPUInstance.h"
+#include "GPU/GPUDevice.h"
+//#include "Graphics/SwapChain.h"
 #include "Core/Math.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
-#include "Core/Log.h"
 #include <imgui.h>
 
 /* Needed by EASTL. */
@@ -76,6 +77,8 @@ namespace alimer
         window.Close();
         RemoveSubsystem<Input>();
         //windowSwapChain.Reset();
+        device.Reset();
+        instance.Reset();
         //RemoveSubsystem<GraphicsDevice>();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
@@ -90,7 +93,16 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            auto instance = GPUInstance::Create();
+            instance = GPUInstance::Create(GPUBackendType::Vulkan);
+            GPUSurface* surface = nullptr;
+
+#if ALIMER_PLATFORM_WINDOWS
+            surface = instance->CreateSurfaceWin32(GetModuleHandle(NULL), window.GetHandle());
+#endif
+            GPURequestAdapterOptions adapterOptions = {};
+            RefPtr<GPUAdapter> adapter = instance->RequestAdapter(&adapterOptions);
+
+            device = adapter->CreateDevice(nullptr);
             //RegisterSubsystem(GraphicsDevice::Create(&window, graphicsDesc));
 
             // Create main window SwapChain
@@ -146,10 +158,6 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //if (!GetGraphics()->BeginFrame()) {
-        //    return false;
-        //}
-
         //window->BeginFrame();
         //ImGui::NewFrame();
 

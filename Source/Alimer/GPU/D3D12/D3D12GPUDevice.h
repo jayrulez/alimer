@@ -22,20 +22,20 @@
 
 #pragma once
 
-#include "Scene/EntityManager.h"
+#include "GPU/GPUDevice.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    class D3D12GPUAdapter;
+
+    class D3D12GPUDevice final : public GPUDevice
     {
     public:
-        SceneSystem();
-        ~SceneSystem();
-
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        D3D12GPUDevice(D3D12GPUAdapter* adapter, const ComPtr<ID3D12Device>& d3dDevice);
+        ~D3D12GPUDevice() override;
 
     private:
-        RefPtr<Entity> rootEntity;
+        ComPtr<ID3D12Device> handle;
     };
 }

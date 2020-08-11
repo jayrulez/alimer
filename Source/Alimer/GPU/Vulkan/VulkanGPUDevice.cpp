@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,22 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Scene/EntityManager.h"
+#include "VulkanGPUAdapter.h"
+#include "VulkanGPUDevice.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    VulkanGPUDevice::VulkanGPUDevice(VulkanGPUAdapter* adapter)
+        : GPUDevice(adapter)
     {
-    public:
-        SceneSystem();
-        ~SceneSystem();
+        VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    }
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
-
-    private:
-        RefPtr<Entity> rootEntity;
-    };
+    VulkanGPUDevice::~VulkanGPUDevice()
+    {
+        if (handle != VK_NULL_HANDLE)
+        {
+            vkDestroyDevice(handle, nullptr);
+        }
+    }
 }

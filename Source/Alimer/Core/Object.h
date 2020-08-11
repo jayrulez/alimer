@@ -63,7 +63,6 @@ namespace alimer
     template <class T> class ObjectFactoryImpl;
 
     class Input;
-    class GraphicsDevice;
 
     /// Base class for objects with type identification, subsystem access
     class ALIMER_API Object : public RefCounted
@@ -97,7 +96,6 @@ namespace alimer
         /// Register an object as a subsystem that can be accessed globally. Note that the subsystems container does not own the objects.
         static void RegisterSubsystem(Object* subsystem);
         static void RegisterSubsystem(Input* subsystem);
-        static void RegisterSubsystem(GraphicsDevice* subsystem);
 
         /// Remove a subsystem by object pointer.
         static void RemoveSubsystem(Object* subsystem);
@@ -110,23 +108,19 @@ namespace alimer
         /// Register an object factory.
         static void RegisterFactory(ObjectFactory* factory);
         /// Create an object by type hash. Return pointer to it or null if no factory found.
-        static SharedPtr<Object> CreateObject(StringId32 objectType);
+        static RefPtr<Object> CreateObject(StringId32 objectType);
 
         /// Return a subsystem, template version.
         template <class T> static T* GetSubsystem() { return static_cast<T*>(GetSubsystem(T::GetTypeStatic())); }
         template <> static Input* GetSubsystem<Input>() { return GetInput(); }
-        template <> static GraphicsDevice* GetSubsystem<GraphicsDevice>() { return GetGraphics(); }
 
         /// Register an object factory, template version.
         template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
         /// Create and return an object through a factory, template version.
-        template <class T> static inline SharedPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
+        template <class T> static inline RefPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
 
         /// Return input subsystem.
         static Input* GetInput();
-
-        /// Return graphics subsystem.
-        static GraphicsDevice* GetGraphics();
     };
 
     /// Base class for object factories.
@@ -137,7 +131,7 @@ namespace alimer
         virtual ~ObjectFactory() = default;
 
         /// /// Create an object.
-        virtual SharedPtr<Object> Create() = 0;
+        virtual RefPtr<Object> Create() = 0;
 
         /// Return type info of objects created by this factory.
         const TypeInfo* GetTypeInfo() const { return typeInfo; }
@@ -164,7 +158,7 @@ namespace alimer
         }
 
         /// Create an object of the specific type.
-        SharedPtr<Object> Create() override { return SharedPtr<Object>(new T()); }
+        RefPtr<Object> Create() override { return RefPtr<Object>(new T()); }
     };
 }
 

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,33 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Scene/EntityManager.h"
+#include "config.h"
+#include "VulkanGPUAdapter.h"
+#include "VulkanGPUDevice.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    VulkanGPUAdapter::VulkanGPUAdapter(VkPhysicalDevice handle)
+        : GPUAdapter(GPUBackendType::Vulkan)
+        , handle{ handle }
     {
-    public:
-        SceneSystem();
-        ~SceneSystem();
+        vkGetPhysicalDeviceFeatures(handle, &features);
+        vkGetPhysicalDeviceProperties(handle, &properties);
+        vkGetPhysicalDeviceMemoryProperties(handle, &memoryProperties);
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        uint32_t queueFamilyPropertiesCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(handle, &queueFamilyPropertiesCount, nullptr);
+        queueFamilyProperties.resize(queueFamilyPropertiesCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(handle, &queueFamilyPropertiesCount, queueFamilyProperties.data());
+    }
 
-    private:
-        RefPtr<Entity> rootEntity;
-    };
+    VulkanGPUAdapter::~VulkanGPUAdapter()
+    {
+
+    }
+
+    RefPtr<GPUDevice> VulkanGPUAdapter::CreateDevice(const GPUDeviceDescriptor* descriptor)
+    {
+        return MakeRefPtr<VulkanGPUDevice>(this);
+    }
 }

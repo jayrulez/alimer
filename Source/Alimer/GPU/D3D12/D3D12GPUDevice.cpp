@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,22 +20,20 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Scene/EntityManager.h"
+#include "D3D12GPUAdapter.h"
+#include "D3D12GPUDevice.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    D3D12GPUDevice::D3D12GPUDevice(D3D12GPUAdapter* adapter, const ComPtr<ID3D12Device>& d3dDevice)
+        : GPUDevice(adapter)
+        , handle{ d3dDevice }
     {
-    public:
-        SceneSystem();
-        ~SceneSystem();
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+    }
 
-    private:
-        RefPtr<Entity> rootEntity;
-    };
+    D3D12GPUDevice::~D3D12GPUDevice()
+    {
+
+    }
 }

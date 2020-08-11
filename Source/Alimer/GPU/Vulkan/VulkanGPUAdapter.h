@@ -22,20 +22,34 @@
 
 #pragma once
 
-#include "Scene/EntityManager.h"
+#include "GPU/GPUAdapter.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    class VulkanGPUAdapter final : public GPUAdapter
     {
     public:
-        SceneSystem();
-        ~SceneSystem();
+        VulkanGPUAdapter(VkPhysicalDevice handle);
+        ~VulkanGPUAdapter() override;
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        VkPhysicalDevice Gethandle() const { return handle; }
 
     private:
-        RefPtr<Entity> rootEntity;
+        RefPtr<GPUDevice> CreateDevice(const GPUDeviceDescriptor* descriptor) override;
+
+        VkPhysicalDevice handle;
+
+        // The features that this GPU supports
+        VkPhysicalDeviceFeatures features{};
+
+        // The GPU properties
+        VkPhysicalDeviceProperties properties;
+
+        // The GPU memory properties
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+
+        // The GPU queue family properties
+        eastl::vector<VkQueueFamilyProperties> queueFamilyProperties;
     };
 }

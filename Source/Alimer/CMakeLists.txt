@@ -54,8 +54,7 @@ endif ()
 
 # Graphics modules
 if (ALIMER_D3D12)
-  #define_engine_source_files(Graphics/D3D)
-  #define_engine_source_files(Graphics/D3D12)
+  define_engine_source_files(GPU/D3D12)
 endif()
 
 if (ALIMER_VULKAN)

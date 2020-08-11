@@ -22,7 +22,6 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
-#include "Graphics/GraphicsDevice.h"
 #include <EASTL/unordered_map.h>
 #include <EASTL/unique_ptr.h>
 
@@ -33,11 +32,10 @@ namespace alimer
         struct Context
         {
             /// Object factories.
-            eastl::unordered_map<StringId32, SharedPtr<Object>> subsystems;
+            eastl::unordered_map<StringId32, RefPtr<Object>> subsystems;
             eastl::unordered_map<StringId32, eastl::unique_ptr<ObjectFactory>> factories;
 
-            WeakPtr<Input> input;
-            WeakPtr<GraphicsDevice> graphics;
+            RefPtr<Input> input;
 
             void RegisterSubsystem(Object* subsystem)
             {
@@ -47,12 +45,6 @@ namespace alimer
             void RegisterSubsystem(Input* subsystem)
             {
                 input = subsystem;
-                RegisterSubsystem((Object*)subsystem);
-            }
-
-            void RegisterSubsystem(GraphicsDevice* subsystem)
-            {
-                graphics = subsystem;
                 RegisterSubsystem((Object*)subsystem);
             }
 
@@ -72,7 +64,7 @@ namespace alimer
                 factories[factory->GetType()].reset(factory);
             }
 
-            SharedPtr<Object> CreateObject(StringId32 type)
+            RefPtr<Object> CreateObject(StringId32 type)
             {
                 auto it = factories.find(type);
                 return it != factories.end() ? it->second->Create() : nullptr;
@@ -148,11 +140,6 @@ namespace alimer
         details::context().RegisterSubsystem(subsystem);
     }
 
-    void Object::RegisterSubsystem(GraphicsDevice* subsystem)
-    {
-        details::context().RegisterSubsystem(subsystem);
-    }
-
     void Object::RemoveSubsystem(Object* subsystem)
     {
         if (!subsystem)
@@ -176,11 +163,6 @@ namespace alimer
         return details::context().input;
     }
 
-    GraphicsDevice* Object::GetGraphics()
-    {
-        return details::context().graphics;
-    }
-
     void Object::RegisterFactory(ObjectFactory* factory)
     {
         if (!factory)
@@ -189,7 +171,7 @@ namespace alimer
         details::context().RegisterFactory(factory);
     }
 
-    SharedPtr<Object> Object::CreateObject(StringId32 objectType)
+    RefPtr<Object> Object::CreateObject(StringId32 objectType)
     {
         return details::context().CreateObject(objectType);
     }

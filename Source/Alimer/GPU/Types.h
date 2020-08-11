@@ -58,23 +58,13 @@ namespace alimer
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
     static constexpr uint32_t kInvalidHandleId = 0xFFffFFff;
 
-    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct SwapChainHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
 
-    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
-    static constexpr SwapChainHandle kInvalidSwapChain = { kInvalidHandleId };
-
-    enum class GPUDeviceFlags : uint32_t
+    enum class GPUPowerPreference : uint32_t
     {
-        None = 0,
-        LowPowerPreference = (1 << 0),
-        DebugRuntime = (1 << 1),
-        GPUBaseValidation = (1 << 3),
-        RenderDoc = (1 << 4),
+        Default,
+        LowPower,
+        HighPerformance
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUDeviceFlags, uint32_t);
 
     enum class GPUKnownVendorId
     {
@@ -143,6 +133,19 @@ namespace alimer
         Clear,
         Load,
         Discard
+    };
+
+    struct GPUSurface;
+
+    struct GPURequestAdapterOptions
+    {
+        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+        GPUSurface* compatibleSurface;
+    };
+
+    struct GPUDeviceDescriptor
+    {
+
     };
 
     struct BufferDescription

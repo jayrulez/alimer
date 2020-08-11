@@ -22,20 +22,33 @@
 
 #pragma once
 
-#include "Scene/EntityManager.h"
+#include "GPU/GPUInstance.h"
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    class ALIMER_API SceneSystem final : public EntityManager
+    class D3D12GPUInstance final : public GPUInstance
     {
     public:
-        SceneSystem();
-        ~SceneSystem();
+        static bool IsAvailable();
 
-        void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        D3D12GPUInstance();
+        ~D3D12GPUInstance() override;
+
+        IDXGIFactory4* GetDXGIFactory() const { return factory.Get(); }
 
     private:
-        RefPtr<Entity> rootEntity;
+        GPUSurface* CreateSurfaceWin32(void* hinstance, void* hwnd) override;
+        RefPtr<GPUAdapter> RequestAdapter(const GPURequestAdapterOptions* options) override;
+
+    private:
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HMODULE dxgiLib;
+        HMODULE d3d12Lib;
+#endif
+
+        DWORD factoryFlags{ 0 };
+        Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
+        bool isTearingSupported{ false };
     };
 }

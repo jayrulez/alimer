@@ -48,6 +48,8 @@ namespace alimer
     };
 
     //class SwapChain;
+    class GPUInstance;
+    class GPUDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -103,6 +105,8 @@ namespace alimer
 
         bool headless{ false };
         Window window;
+        RefPtr<GPUInstance> instance;
+        RefPtr<GPUDevice> device;
         //SharedPtr<SwapChain> windowSwapChain;
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
