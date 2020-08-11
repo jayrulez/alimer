@@ -20,37 +20,4 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsDevice.h"
-#include "Core/Log.h"
-
-#if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
-#endif
-
-namespace alimer
-{
-    GraphicsDevice* GraphicsDevice::Create(Window* window, const Desc& desc)
-    {
-        BackendType backendType = desc.preferredBackendType;
-        if (backendType == BackendType::Count)
-        {
-#if defined(ALIMER_D3D11)
-            backendType = BackendType::Direct3D11;
-#endif
-        }
-
-        switch (backendType)
-        {
-#if defined(ALIMER_D3D11)
-        case BackendType::Direct3D11:
-            return new D3D11GraphicsDevice(window, desc);
-#endif
-
-        default:
-            break;
-        }
-
-        return nullptr;
-    }
-}
-
+#include "GPU/Types.h"

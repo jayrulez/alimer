@@ -23,8 +23,8 @@
 #include "Application/Application.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+//#include "Graphics/SwapChain.h"
+#include "GPU/GPUInstance.h"
 #include "Core/Math.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
@@ -75,8 +75,8 @@ namespace alimer
         gameSystems.clear();
         window.Close();
         RemoveSubsystem<Input>();
-        windowSwapChain.Reset();
-        RemoveSubsystem<GraphicsDevice>();
+        //windowSwapChain.Reset();
+        //RemoveSubsystem<GraphicsDevice>();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -90,11 +90,11 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            GraphicsDevice::Desc graphicsDesc = {};
-            RegisterSubsystem(GraphicsDevice::Create(&window, graphicsDesc));
+            auto instance = GPUInstance::Create();
+            //RegisterSubsystem(GraphicsDevice::Create(&window, graphicsDesc));
 
             // Create main window SwapChain
-            windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
+            /*windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
 
             struct VertexPositionColor
             {
@@ -103,7 +103,7 @@ namespace alimer
             };
 
             const VertexPositionColor vertices[] = {
-                /* positions            colors */
+                // positions            colors 
                 {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
                 {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
                 {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
@@ -111,7 +111,7 @@ namespace alimer
 
             Buffer vertexBuffer;
             vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
-
+            */
             ImGuiLayer::Initialize(window);
         }
 
@@ -146,9 +146,9 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame()) {
-            return false;
-        }
+        //if (!GetGraphics()->BeginFrame()) {
+        //    return false;
+        //}
 
         //window->BeginFrame();
         //ImGui::NewFrame();
@@ -176,15 +176,15 @@ namespace alimer
             LOGI("Right held");
         }
 
-        auto context = GetGraphics()->GetMainContext();
+        /*auto context = GetGraphics()->GetMainContext();
         context->PushDebugGroup("Clear");
-        /*context->BeginRenderPass();
+        context->BeginRenderPass();
         /*RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         commandContext->BeginRenderPass(renderPass);
-        commandContext->EndRenderPass();*/
+        commandContext->EndRenderPass();
         context->PopDebugGroup();
-        context->Flush();
+        context->Flush();*/
     }
 
     void Application::EndDraw()
@@ -195,7 +195,7 @@ namespace alimer
         }
         
         //ImGui::Render();
-        GetGraphics()->EndFrame();
+        //GetGraphics()->EndFrame();
     }
 
     int Application::Run()

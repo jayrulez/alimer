@@ -38,7 +38,7 @@ set(SOURCE_FILES Alimer.natvis)
 define_engine_source_files(
     Core
     Math
-    Graphics
+    GPU
     Scene
     UI
     Application
@@ -53,18 +53,13 @@ if (WIN32)
 endif ()
 
 # Graphics modules
-if (ALIMER_D3D11)
-  define_engine_source_files(Graphics/D3D)
-  define_engine_source_files(Graphics/D3D11)
-endif()
-
 if (ALIMER_D3D12)
-  define_engine_source_files(Graphics/D3D)
-  define_engine_source_files(Graphics/D3D12)
+  #define_engine_source_files(Graphics/D3D)
+  #define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_VULKAN)
-  #define_engine_source_files(Graphics/Vulkan)
+  define_engine_source_files(GPU/Vulkan)
 endif()
 
 group_sources()

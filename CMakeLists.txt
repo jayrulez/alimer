@@ -21,12 +21,10 @@ option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
 # Graphics module backend
 if (WIN32)
-  option(ALIMER_D3D11 "Include Direct3D11 GPU backend" ON)
-  #option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
+  option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
   option(ALIMER_VULKAN "Include Vulkan GPU backend" ON)
 elseif (WINDOWS_STORE)
-  set(ALIMER_D3D11 ON CACHE BOOL "Use Direct3D11 backend")
-  #option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
+  set(ALIMER_D3D12 ON CACHE BOOL "Use Direct3D12 backend")
 else ()
   set(ALIMER_VULKAN ON CACHE BOOL "Use Vulkan backend")
 endif ()
@@ -90,6 +88,14 @@ if (ALIMER_BUILD_SHARED)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
+
+if(ALIMER_D3D12)
+    message(STATUS "Build Renderer: Direct3D 12")
+endif()
+
+if(ALIMER_VULKAN)
+    message(STATUS "Build Renderer: Vulkan")
+endif()
 
 # Install files
 # README.md and license

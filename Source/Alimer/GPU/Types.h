@@ -22,10 +22,30 @@
 
 #pragma once
 
-#include "config.h"
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+
+#if !defined(GPU_DEBUG)
+#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
+#	    define GPU_DEBUG
+#   endif
+#endif
+
+/// Enum describing the rendering backend.
+enum class GPUBackendType
+{
+    /// Null renderer.
+    Null,
+    /// Vulkan backend.
+    Vulkan,
+    /// Metal backend.
+    Metal,
+    /// Direct3D 12 backend.
+    Direct3D12,
+    /// Default best platform supported backend.
+    Count
+};
 
 namespace alimer
 {
@@ -45,21 +65,6 @@ namespace alimer
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
     static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
     static constexpr SwapChainHandle kInvalidSwapChain = { kInvalidHandleId };
-
-    /// Enum describing the rendering backend.
-    enum class BackendType
-    {
-        /// Null renderer.
-        Null,
-        /// Direct3D 11 backend.
-        Direct3D11,
-        /// Direct3D 12 backend.
-        Direct3D12,
-        /// Vulkan backend.
-        Vulkan,
-        /// Default best platform supported backend.
-        Count
-    };
 
     enum class GPUDeviceFlags : uint32_t
     {
@@ -256,7 +261,7 @@ namespace alimer
     /// Describes GPUDevice capabilities.
     struct GraphicsCapabilities
     {
-        BackendType backendType;
+        GPUBackendType backendType;
         eastl::string adapterName;
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;

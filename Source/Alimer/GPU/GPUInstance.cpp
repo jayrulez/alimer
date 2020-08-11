@@ -20,37 +20,47 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsDevice.h"
+#include "config.h"
+#include "GPU/GPUInstance.h"
 #include "Core/Log.h"
 
 #if defined(ALIMER_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#   include "GPU/Vulkan/VulkanGPUInstance.h"
 #endif
 
-namespace alimer
+eastl::unique_ptr<GPUInstance> GPUInstance::Create(GPUBackendType preferredBackend)
 {
-    GraphicsDevice* GraphicsDevice::Create(Window* window, const Desc& desc)
+    if (preferredBackend == GPUBackendType::Count)
     {
-        BackendType backendType = desc.preferredBackendType;
-        if (backendType == BackendType::Count)
+#if defined(ALIMER_VULKAN)
+        if (VulkanGPUInstance::IsAvailable())
         {
-#if defined(ALIMER_D3D11)
-            backendType = BackendType::Direct3D11;
-#endif
+            preferredBackend = GPUBackendType::Vulkan;
         }
-
-        switch (backendType)
-        {
-#if defined(ALIMER_D3D11)
-        case BackendType::Direct3D11:
-            return new D3D11GraphicsDevice(window, desc);
 #endif
-
-        default:
-            break;
-        }
-
-        return nullptr;
     }
+
+    switch (preferredBackend)
+    {
+    case GPUBackendType::Null:
+        break;
+#if defined(ALIMER_VULKAN)
+    case GPUBackendType::Vulkan:
+        if (VulkanGPUInstance::IsAvailable())
+        {
+            return eastl::make_unique<VulkanGPUInstance>("Alimer");
+        }
+        break;
+#endif
+
+    case GPUBackendType::Metal:
+        break;
+    case GPUBackendType::Direct3D12:
+        break;
+    default:
+        break;
+    }
+
+    return nullptr;
 }
 

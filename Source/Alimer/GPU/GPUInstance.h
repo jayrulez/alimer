@@ -20,4 +20,18 @@
 // THE SOFTWARE.
 //
 
-#include "graphics/Types.h"
+#pragma once
+
+#include "GPU/Types.h"
+#include <EASTL/unique_ptr.h>
+
+class ALIMER_API GPUInstance
+{
+public:
+    virtual ~GPUInstance() = default;
+
+    static eastl::unique_ptr<GPUInstance> Create(GPUBackendType preferredBackend = GPUBackendType::Count);
+
+protected:
+    GPUInstance() = default;
+};
