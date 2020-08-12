@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsImpl.h"
 #include "D3D11Backend.h"
 #include <EASTL/fixed_vector.h>
 #include <mutex>
@@ -31,24 +31,31 @@ namespace alimer
 {
     class D3D11CommandContext;
 
-    class D3D11GraphicsDevice final : public GraphicsDevice
+    struct D3D11Buffer
+    {
+        ID3D11Buffer* handle;
+    };
+
+    class D3D11GraphicsImpl final : public GraphicsImpl
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsDevice(Window* window, const Desc& desc);
-        ~D3D11GraphicsDevice() override;
+        D3D11GraphicsImpl();
+        ~D3D11GraphicsImpl() override;
 
         void Shutdown();
+
+        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
         bool BeginFrame() override;
-        void EndFrame() override;
+        void EndFrame(uint64_t frameIndex) override;
 
         void HandleDeviceLost(HRESULT hr);
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
-        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
+        ID3D11Device1* GetD3DDevice() const { return d3dDevice.Get(); }
 
-        CommandContext* GetMainContext() const override;
+        //CommandContext* GetMainContext() const override;
 
         /* Resource creation methods */
         BufferHandle AllocBufferHandle();
@@ -56,52 +63,39 @@ namespace alimer
         void Destroy(BufferHandle handle) override;
         void SetName(BufferHandle handle, const char* name) override;
 
-        SwapChainHandle AllocSwapChainHandle();
-        SwapChainHandle CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool isFullscreen, bool enableVSync, PixelFormat preferredColorFormat) override;
-        void Destroy(SwapChainHandle handle) override;
-        void Present(SwapChainHandle handle) override;
-        uint32_t GetImageCount(SwapChainHandle handle) const override;
-
     private:
         void CreateFactory();
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
+        void UpdateSwapChain();
 
         static constexpr uint64_t kRenderLatency = 2;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HMODULE dxgiLib;
-        HMODULE d3d11Lib;
 #endif
 
-        IDXGIFactory2* dxgiFactory = nullptr;
+        ComPtr<IDXGIFactory2> dxgiFactory;
+        bool isTearingSupported = false;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
-        ID3D11Device1* d3dDevice = nullptr;
+        ComPtr<ID3D11Device1> d3dDevice;
         D3D11CommandContext* mainContext;
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        bool isFullscreen = false;
+        HWND window;
+        ComPtr<IDXGISwapChain1> swapChain;
+#else
+        IUnknown* window;
+        ComPtr<IDXGISwapChain3> swapChain;
+#endif
+        UInt2 backbufferSize = UInt2::Zero;
+        DXGI_MODE_ROTATION rotation{ DXGI_MODE_ROTATION_IDENTITY };
+
         /* Resource pools */
         std::mutex handle_mutex;
-
-        struct Buffer
-        {
-            enum { MAX_COUNT = 8192 };
-
-            ID3D11Buffer* handle;
-        };
-
-        struct SwapChain
-        {
-            enum { MAX_COUNT = 16 };
-
-            IDXGISwapChain1* handle;
-            uint32 syncInterval;
-            uint32_t presentFlags;
-        };
-
-        GPUResourcePool<Buffer, Buffer::MAX_COUNT> buffers;
-        GPUResourcePool<SwapChain, SwapChain::MAX_COUNT> swapChains;
-        eastl::fixed_vector<SwapChain, SwapChain::MAX_COUNT> createdSwapChains;
+        eastl::fixed_vector<D3D11Buffer, 16> buffers;
     };
 }

@@ -38,7 +38,7 @@ set(SOURCE_FILES Alimer.natvis)
 define_engine_source_files(
     Core
     Math
-    GPU
+    Graphics
     Scene
     UI
     Application
@@ -53,12 +53,13 @@ if (WIN32)
 endif ()
 
 # Graphics modules
-if (ALIMER_D3D12)
-  define_engine_source_files(GPU/D3D12)
+if (ALIMER_D3D11)
+  define_engine_source_files(Graphics/D3D)
+  define_engine_source_files(Graphics/D3D11)
 endif()
 
 if (ALIMER_VULKAN)
-  define_engine_source_files(GPU/Vulkan)
+  #define_engine_source_files(GPU/Vulkan)
 endif()
 
 group_sources()
@@ -87,18 +88,20 @@ target_link_libraries(${TARGET_NAME} PUBLIC
 if (WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
 elseif(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
 else()
     if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
         target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_GLFW)
     endif()
 endif()
 
+if (ALIMER_D3D11)
+  target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi dxguid)
+endif ()
+
 if (ALIMER_VULKAN)
-  target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
+#target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
 endif()
 
 if (MSVC)

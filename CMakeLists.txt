@@ -19,11 +19,19 @@ set(ALIMER_WARNINGS_AS_ERRORS ON CACHE BOOL "Enable Warnings as Errors")
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
+# Platfofm backend.
+if(NOT (EMSCRIPTEN OR ANDROID))
+  set(ALIMER_GLFW ON CACHE BOOL "Use GLFW platform backend")
+endif()
+
 # Graphics module backend
 if (WIN32)
-  option(ALIMER_D3D12 "Include Direct3D12 GPU backend" ON)
-  option(ALIMER_VULKAN "Include Vulkan GPU backend" ON)
+  option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
+  option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
+  option(ALIMER_VULKAN "Include Vulkan backend" ON)
+  
 elseif (WINDOWS_STORE)
+  set(ALIMER_D3D11 ON CACHE BOOL "Use Direct3D12 backend")
   set(ALIMER_D3D12 ON CACHE BOOL "Use Direct3D12 backend")
 else ()
   set(ALIMER_VULKAN ON CACHE BOOL "Use Vulkan backend")
@@ -88,6 +96,10 @@ if (ALIMER_BUILD_SHARED)
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
+
+if(ALIMER_D3D11)
+    message(STATUS "Build Renderer: Direct3D 11")
+endif()
 
 if(ALIMER_D3D12)
     message(STATUS "Build Renderer: Direct3D 12")

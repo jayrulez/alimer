@@ -24,11 +24,9 @@
 #include "Core/Log.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "GPU/GPUInstance.h"
-#include "GPU/GPUDevice.h"
-//#include "Graphics/SwapChain.h"
-#include "Core/Math.h"
+#include "Graphics/Graphics.h"
 #include "UI/ImGuiLayer.h"
+#include "Math/Vector4.h"
 #include "Math/Color.h"
 #include <imgui.h>
 
@@ -48,7 +46,6 @@ ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentO
 namespace alimer
 {
     Application::Application()
-        : window("Alimer")
     {
         // Construct platform logic first.
         PlatformConstruct();
@@ -74,12 +71,8 @@ namespace alimer
     Application::~Application()
     {
         gameSystems.clear();
-        window.Close();
         RemoveSubsystem<Input>();
-        //windowSwapChain.Reset();
-        device.Reset();
-        instance.Reset();
-        //RemoveSubsystem<GraphicsDevice>();
+        RemoveSubsystem<Graphics>();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -93,38 +86,36 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            instance = GPUInstance::Create(GPUBackendType::Vulkan);
-            GPUSurface* surface = nullptr;
+            auto graphics = Graphics::Create(RendererType::Count);
 
-#if ALIMER_PLATFORM_WINDOWS
-            surface = instance->CreateSurfaceWin32(GetModuleHandle(NULL), window.GetHandle());
-#endif
-            GPURequestAdapterOptions adapterOptions = {};
-            RefPtr<GPUAdapter> adapter = instance->RequestAdapter(&adapterOptions);
-
-            device = adapter->CreateDevice(nullptr);
-            //RegisterSubsystem(GraphicsDevice::Create(&window, graphicsDesc));
-
-            // Create main window SwapChain
-            /*windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
-
-            struct VertexPositionColor
+            graphics->GetRenderWindow()->SetTitle(config.windowTitle);
+            if (!graphics->SetMode(config.windowSize, WindowFlags::Resizable))
             {
-                Float3 position;
-                Color color;
-            };
+                headless = true;
+            }
+            else
+            {
+                // Create main window SwapChain
+                /*windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
 
-            const VertexPositionColor vertices[] = {
-                // positions            colors 
-                {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
-                {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
-                {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
-            };
+                struct VertexPositionColor
+                {
+                    Vector3 position;
+                    Color color;
+                };
 
-            Buffer vertexBuffer;
-            vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
-            */
-            ImGuiLayer::Initialize(window);
+                const VertexPositionColor vertices[] = {
+                    // positions            colors
+                    {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
+                    {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
+                    {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
+                };
+
+                Buffer vertexBuffer;
+                vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
+                */
+                ImGuiLayer::Initialize();
+            }
         }
 
         Initialize();
@@ -158,8 +149,10 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        //window->BeginFrame();
-        //ImGui::NewFrame();
+        if (!graphics->BeginFrame()) {
+            return false;
+        }
+        ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
         for (auto& gameSystem : gameSystems)
         {
@@ -202,8 +195,8 @@ namespace alimer
             gameSystem->EndDraw();
         }
         
-        //ImGui::Render();
-        //GetGraphics()->EndFrame();
+        ImGuiLayer::EndFrame();
+        graphics->EndFrame();
     }
 
     int Application::Run()
@@ -242,7 +235,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !window.IsMinimized()
+            && !graphics->GetRenderWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

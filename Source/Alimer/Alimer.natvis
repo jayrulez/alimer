@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-    <Type Name="Alimer::Float2">
+    <Type Name="Alimer::Vector2">
+        <DisplayString>{{x={x} y={y}}}</DisplayString>
+    </Type>
+    
+    <Type Name="Alimer::UInt2">
         <DisplayString>{{x={x} y={y}}}</DisplayString>
     </Type>
 
-    <Type Name="Alimer::Float3">
+    <Type Name="Alimer::Vector3">
         <DisplayString>{{x={x} y={y} z={z}}}</DisplayString>
     </Type>
 
-    <Type Name="Alimer::Float4">
+    <Type Name="Alimer::Vector4">
+        <DisplayString>{{x={x} y={y} z={z} w={w}}}</DisplayString>
+    </Type>
+
+    <Type Name="Alimer::Quaternion">
         <DisplayString>{{x={x} y={y} z={z} w={w}}}</DisplayString>
     </Type>
 </AutoVisualizer>

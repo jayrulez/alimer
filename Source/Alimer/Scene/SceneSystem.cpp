@@ -36,11 +36,11 @@ namespace alimer
 
     void SceneSystem::SetRootEntity(Entity* entity)
     {
-        if (rootEntity.Get() == entity) return;
+        if (rootEntity.get() == entity) return;
 
         if (rootEntity != nullptr)
         {
-            RemoveRoot(rootEntity);
+            RemoveRoot(rootEntity.get());
         }
 
         if (entity != nullptr)

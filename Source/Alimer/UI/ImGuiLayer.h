@@ -26,8 +26,8 @@
 
 namespace alimer::ImGuiLayer
 {
-    ALIMER_API void Initialize(Window& window);
-    ALIMER_API void Shutdown();
-    ALIMER_API void BeginFrame(uint32_t width, uint32_t height, float deltaTime);
-    ALIMER_API void EndFrame();
+    ALIMER_API void Initialize(void);
+    ALIMER_API void Shutdown(void);
+    ALIMER_API void BeginFrame(Window* window, float deltaTime);
+    ALIMER_API void EndFrame(void);
 }

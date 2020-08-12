@@ -32,15 +32,18 @@
 #endif 
 
 #if defined(_WIN32)
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#   define NODRAWTEXT
+#   define NOGDI
+#   define NOBITMAP
+#   define NOMCX
+#   define NOSERVICE
+#   define NOHELP
+#   define WIN32_LEAN_AND_MEAN
+#   include <Windows.h>
 #endif
+
+#include <wrl/client.h>
+#include <wrl/event.h>
 
 #if defined(NTDDI_WIN10_RS2)
 #   include <dxgi1_6.h>
@@ -56,7 +59,7 @@
 #include <EASTL/string_view.h>
 #include <EASTL/vector.h>
 
-#if !defined(ALIMER_D3D12) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID _riid, _COM_Outptr_ void** _factory);
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, _COM_Outptr_ void** _factory);
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
@@ -65,10 +68,13 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
+
+    // Type alias for ComPtr template
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     template<typename T> void SafeRelease(T*& resource)
     {
@@ -204,7 +210,6 @@ namespace alimer
     {
         None = 0,
         FlipPresent = (1 << 0),
-        Tearing = (1 << 1),
         HDR = (1 << 2)
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8_t);

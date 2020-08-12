@@ -20,8 +20,9 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "Graphics/Texture.h"
 #include "Core/Log.h"
 
@@ -56,3 +57,5 @@ namespace alimer
     }
 }
 
+
+#endif // TODO

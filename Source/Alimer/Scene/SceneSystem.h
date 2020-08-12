@@ -33,7 +33,7 @@ namespace alimer
         ~SceneSystem();
 
         void SetRootEntity(Entity* entity);
-        Entity* GetRootEntity() const { return rootEntity.Get(); }
+        Entity* GetRootEntity() const { return rootEntity.get(); }
 
     private:
         RefPtr<Entity> rootEntity;

@@ -23,10 +23,9 @@
 #pragma once
 
 #include "Core/Log.h"
-#include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Math/Size.h"
+#include "Math/Vector2.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 
@@ -44,12 +43,8 @@ namespace alimer
         eastl::string windowTitle = "Alimer";
 
         /// Main window size.
-        Size windowSize = { 1280.0f, 720.0f };
+        UInt2 windowSize = { 1280u, 720u };
     };
-
-    //class SwapChain;
-    class GPUInstance;
-    class GPUDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -67,9 +62,6 @@ namespace alimer
 
         /// Tick one frame.
         void Tick();
-
-        /// Get the main (primary window)
-        Window& GetWindow() { return window; }
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -104,10 +96,6 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
-        Window window;
-        RefPtr<GPUInstance> instance;
-        RefPtr<GPUDevice> device;
-        //SharedPtr<SwapChain> windowSwapChain;
         eastl::vector<eastl::unique_ptr<GameSystem>> gameSystems;
     };
 } 

@@ -27,11 +27,17 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GraphicsResource
+    class ALIMER_API Texture final : public GraphicsResource
     {
     public:
         /// Constructor.
+        Texture();
+
+        /// Constructor.
         Texture(const TextureDescription& desc);
+
+        /// Register object factory.
+        static void RegisterObject();
 
         /**
         * Get the texture pixel format.

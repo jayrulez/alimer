@@ -21,7 +21,7 @@
 //
 
 #include "Graphics/Buffer.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "Core/Log.h"
 
 namespace alimer
@@ -46,7 +46,7 @@ namespace alimer
     {
         if (handle.isValid())
         {
-            GetGraphics()->Destroy(handle);
+            //GetGraphics()->Destroy(handle);
             handle.id = kInvalidHandleId;
         }
     }

@@ -76,7 +76,8 @@ namespace alimer
         return version;
     }
 
-    ProcessId GetCurrentProcessId() {
+    ProcessId GetCurrentProcessId()
+    {
         return static_cast<ProcessId>(::GetCurrentProcessId());
     }
 }

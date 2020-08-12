@@ -117,7 +117,7 @@ namespace alimer
         /// Register an object factory, template version.
         template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
         /// Create and return an object through a factory, template version.
-        template <class T> static inline RefPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
+        template <class T> static inline RefPtr<T> CreateObject() { return eastl::static_pointer_cast<T>(CreateObject(T::GetTypeStatic())); }
 
         /// Return input subsystem.
         static Input* GetInput();

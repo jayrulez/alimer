@@ -27,7 +27,7 @@
 
 namespace alimer::ImGuiLayer
 {
-    void Initialize(Window& window)
+    void Initialize(void)
     {
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
@@ -64,24 +64,28 @@ namespace alimer::ImGuiLayer
         }
     }
 
-    void Shutdown()
+    void Shutdown(void)
     {
         ImGui::DestroyContext();
     }
 
-    void BeginFrame(uint32_t width, uint32_t height, float deltaTime)
+    void BeginFrame(Window* window, float deltaTime)
     {
+        return;
         //Assert_(CurrBeginFrame != DX12::CurrentCPUFrame);
 
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2(float(width), float(height));
+        io.DisplaySize = ImVec2(float(window->GetWidth()), float(window->GetHeight()));
         io.DeltaTime = deltaTime;
 
+        window->BeginFrame();
         ImGui::NewFrame();
     }
 
-    void EndFrame()
+    void EndFrame(void)
     {
+        return;
+
         ImGuiIO& io = ImGui::GetIO();
         ImGui::Render();
 

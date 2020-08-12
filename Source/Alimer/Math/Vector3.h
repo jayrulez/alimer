@@ -22,40 +22,36 @@
 
 #pragma once
 
-#include "Math/Vector3.h"
+#include "Math/Vector2.h"
 
 namespace alimer
 {
-    /// Class specifying a four-dimensional vector.
-    class ALIMER_API Vector4
+    /// Class specifying a three-dimensional vector.
+    struct ALIMER_API Vector3
     {
-    public:
         /// Specifies the x-component of the vector.
         float x;
         /// Specifies the y-component of the vector.
         float y;
         /// Specifies the z-component of the vector.
         float z;
-        /// Specifies the w-component of the vector.
-        float w;
 
         /// Constructor.
-        Vector4() noexcept : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
-        constexpr explicit Vector4(float value) noexcept : x(value), y(value), z(value), w(value) {}
-        constexpr Vector4(float x_, float y_, float z_, float w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
-        explicit Vector4(_In_reads_(4) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]), w(data[3]) {}
-        constexpr Vector4(const Vector2& vector, float z_, float w_) noexcept : x(vector.x), y(vector.y), z(z_), w(w_) {}
-        constexpr Vector4(const Vector3& vector, float w_) noexcept : x(vector.x), y(vector.y), z(vector.z), w(w_) {}
+        Vector3() noexcept : x(0.0f), y(0.0f), z(0.0f) {}
+        constexpr explicit Vector3(float value) noexcept : x(value), y(value), z(value) {}
+        constexpr Vector3(float x_, float y_, float z_) noexcept : x(x_), y(y_), z(z_) {}
+        explicit Vector3(_In_reads_(3) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]) {}
+        constexpr Vector3(const Vector2& xy, float z_) noexcept : x(xy.x), y(xy.y), z(z_) {}
 
-        Vector4(const Vector4&) = default;
-        Vector4& operator=(const Vector4&) = default;
+        Vector3(const Vector3&) = default;
+        Vector3& operator=(const Vector3&) = default;
 
-        Vector4(Vector4&&) = default;
-        Vector4& operator=(Vector4&&) = default;
+        Vector3(Vector3&&) = default;
+        Vector3& operator=(Vector3&&) = default;
 
         // Comparison operators
-        bool operator == (const Vector4& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
-        bool operator != (const Vector4& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
+        bool operator == (const Vector3& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
+        bool operator != (const Vector3& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z; }
 
         /// Return float data.
         const float* Data() const { return &x; }
@@ -64,11 +60,16 @@ namespace alimer
         String ToString() const;
 
         // Constants
-        static const Vector4 Zero;
-        static const Vector4 One;
-        static const Vector4 UnitX;
-        static const Vector4 UnitY;
-        static const Vector4 UnitZ;
-        static const Vector4 UnitW;
+        static const Vector3 Zero;
+        static const Vector3 One;
+        static const Vector3 UnitX;
+        static const Vector3 UnitY;
+        static const Vector3 UnitZ;
+        static const Vector3 Up;
+        static const Vector3 Down;
+        static const Vector3 Right;
+        static const Vector3 Left;
+        static const Vector3 Forward;
+        static const Vector3 Backward;
     };
 }

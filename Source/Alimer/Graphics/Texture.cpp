@@ -25,11 +25,22 @@
 
 namespace alimer
 {
+    Texture::Texture()
+        : GraphicsResource(ResourceDimension::Texture2D)
+    {
+
+    }
+
     Texture::Texture(const TextureDescription& desc)
         : GraphicsResource(ResourceDimension::Texture2D)
         , _desc(desc)
     {
 
+    }
+
+    void Texture::RegisterObject()
+    {
+        RegisterFactory<Texture>();
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const

@@ -61,7 +61,11 @@ namespace Math
     template <typename T> inline T ToRadians(T degrees) { return degrees * (Pi / 180.0f); }
     template <typename T> inline T ToDegrees(T radians) { return radians * (180.0f / Pi); }
 
-
+    // Clamp value to be between minimum and maximum values, inclusive
+    template<class T> inline T Clamp(T value, T min, T max)
+    {
+        return value < min ? min : value < max ? value : max;
+    }
 
     /// Linear interpolation between two values.
     template <typename T, typename U> inline T lerp(T lhs, T rhs, U t) { return lhs * (1.0 - t) + rhs * t; }

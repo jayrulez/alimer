@@ -56,7 +56,7 @@ namespace alimer
             Object* GetSubsystem(StringId32 type)
             {
                 auto it = subsystems.find(type);
-                return it != subsystems.end() ? it->second : nullptr;
+                return it != subsystems.end() ? it->second.get() : nullptr;
             }
 
             void RegisterFactory(ObjectFactory* factory)
@@ -160,7 +160,7 @@ namespace alimer
 
     Input* Object::GetInput()
     {
-        return details::context().input;
+        return details::context().input.get();
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

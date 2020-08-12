@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <string>
 
 namespace alimer
 {
@@ -98,4 +97,4 @@ namespace alimer
 
     /// Returns the current process id (pid)
     ALIMER_API ProcessId GetCurrentProcessId();
-} // namespace alimer
+}

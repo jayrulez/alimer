@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,11 +20,24 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Window.h"
-#include "Core/Log.h"
-//#include "Graphics/SwapChain.h"
+#include "Math/Vector2.h"
 
 namespace alimer
 {
-}
+    const Vector2 Vector2::Zero = { 0.0f, 0.0f };
+    const Vector2 Vector2::One = { 1.0f, 1.0f };
+    const Vector2 Vector2::UnitX = { 1.0f, 0.0f };
+    const Vector2 Vector2::UnitY = { 0.0f, 1.0f };
 
+    String Vector2::ToString() const
+    {
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g", x, y);
+        return String(tempBuffer);
+    }
+
+    const UInt2 UInt2::Zero = { 0, 0 };
+    const UInt2 UInt2::One = { 1, 1 };
+    const UInt2 UInt2::UnitX = { 1, 0 };
+    const UInt2 UInt2::UnitY = { 0, 1 };
+}

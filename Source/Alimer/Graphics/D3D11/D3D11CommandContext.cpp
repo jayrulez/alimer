@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D11CommandContext.h"
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
@@ -151,3 +152,5 @@ namespace alimer
         // TODO:
     }
 }
+
+#endif // TODO

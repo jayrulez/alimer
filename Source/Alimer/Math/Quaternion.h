@@ -27,9 +27,8 @@
 namespace alimer
 {
     /// Class specifying a four-dimensional quaternion.
-    class ALIMER_API Quaternion
+    struct ALIMER_API Quaternion
     {
-    public:
         /// Specifies the x-component of the quaternion.
         float x;
         /// Specifies the y-component of the quaternion.
@@ -58,7 +57,7 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        eastl::string ToString() const;
+        String ToString() const;
 
         // Constants
         static const Quaternion Zero;

@@ -32,21 +32,6 @@
 #   endif
 #endif
 
-/// Enum describing the rendering backend.
-enum class GPUBackendType
-{
-    /// Null renderer.
-    Null,
-    /// Vulkan backend.
-    Vulkan,
-    /// Metal backend.
-    Metal,
-    /// Direct3D 12 backend.
-    Direct3D12,
-    /// Default best platform supported backend.
-    Count
-};
-
 namespace alimer
 {
     static constexpr uint32_t kInflightFrameCount = 2u;
@@ -58,6 +43,28 @@ namespace alimer
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
     static constexpr uint32_t kInvalidHandleId = 0xFFffFFff;
 
+    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
+
+    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
+    static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
+
+    /// Enum describing the rendering backend.
+    enum class RendererType
+    {
+        /// Null renderer.
+        Null,
+        /// Vulkan backend.
+        Vulkan,
+        /// Metal backend.
+        Metal,
+        /// Direct3D 11 backend.
+        Direct3D11,
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Default best platform supported backend.
+        Count
+    };
 
     enum class GPUPowerPreference : uint32_t
     {
@@ -264,7 +271,7 @@ namespace alimer
     /// Describes GPUDevice capabilities.
     struct GraphicsCapabilities
     {
-        GPUBackendType backendType;
+        RendererType rendererType;
         eastl::string adapterName;
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;
@@ -272,4 +279,6 @@ namespace alimer
         GPUFeatures features;
         GPULimits limits;
     };
+
+    ALIMER_API const char* ToString(RendererType value);
 }

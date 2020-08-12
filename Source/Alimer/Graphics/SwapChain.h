@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/Texture.h"
 #include <EASTL/vector.h>
 
 namespace alimer
@@ -40,7 +40,7 @@ namespace alimer
 
     private:
         SwapChainHandle handle{ kInvalidHandleId };
-        eastl::vector<SharedPtr<Texture>> colorTextures;
-        SharedPtr<Texture> depthStencilTexture;
+        eastl::vector<RefPtr<Texture>> colorTextures;
+        RefPtr<Texture> depthStencilTexture;
     };
 }

@@ -20,9 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
-#include "Core/Window.h"
 #include "Core/Log.h"
+#include "Core/Window.h"
+#include "Graphics/Graphics.h"
+#include "Application/Application.h"
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <shellapi.h>
@@ -75,7 +77,6 @@ namespace alimer
 
     void Application::PlatformDestroy()
     {
-        glfwTerminate();
     }
 
     int Application::PlatformRun()
@@ -92,7 +93,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (window.ShouldClose())
+                if (graphics->GetRenderWindow()->ShouldClose())
                 {
                     running = false;
                     break;

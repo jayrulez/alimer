@@ -44,6 +44,25 @@ namespace alimer
             LOGE("GLFW  Error (code {}): {}", code, description);
         }
 
+        struct GLFWInitializer
+        {
+            GLFWInitializer()
+            {
+                glfwSetErrorCallback(OnGLFWError);
+                if (!glfwInit())
+                {
+                    LOGE("GLFW couldn't be initialized.");
+                }
+            }
+
+            ~GLFWInitializer()
+            {
+                glfwTerminate();
+            }
+        };
+
+        GLFWInitializer s_glfw_Initializer;
+
         MouseButton FromGlfw(int button)
         {
             switch (button)
@@ -93,112 +112,19 @@ namespace alimer
         }
     }
 
-    Window::Window(const eastl::string& title, uint32_t width, uint32_t height, WindowFlags flags)
-        : title{ title }
-        , width{ width }
-        , height{ height }
+    Window::~Window()
     {
-        static bool glfwInitialized = false;
-        if (!glfwInitialized)
-        {
-            glfwSetErrorCallback(OnGLFWError);
-            if (!glfwInit())
-            {
-                LOGE("GLFW couldn't be initialized.");
-            }
-
-            glfwInitialized = true;
-        }
-
-        fullscreen = (flags & WindowFlags::Fullscreen) != WindowFlags::None;
-        exclusiveFullscreen = (flags & WindowFlags::ExclusiveFullscreen) != WindowFlags::None;
-
-        /*if (any(flags & WindowFlags::OpenGL))
-        {
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-            //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        }
-        else*/
-        {
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        }
-
-        glfwWindowHint(GLFW_RESIZABLE, ((flags& WindowFlags::Resizable) != WindowFlags::None) ? GLFW_TRUE : GLFW_FALSE);
-        if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
-            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        }
-        else
-        {
-            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-        }
-
-        //glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_FLAG_BORDERLESS) ? GLFW_FALSE : GLFW_TRUE);
-
-        if ((flags & WindowFlags::Minimized) != WindowFlags::None)
-        {
-            glfwWindowHint(GLFW_ICONIFIED, GLFW_TRUE);
-        }
-        else if ((flags & WindowFlags::Maximized) != WindowFlags::None)
-        {
-            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-        }
-
-        GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
-
-        if (exclusiveFullscreen)
-        {
-            monitor = glfwGetPrimaryMonitor();
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-
-            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-        }
-
-        GLFWwindow* glfwWindow = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title.c_str(), monitor, nullptr);
-        if (!glfwWindow)
-        {
-            LOGE("GLFW: Failed to create window.");
-            return;
-        }
-
-        glfwDefaultWindowHints();
-        glfwSetWindowUserPointer(glfwWindow, this);
-        glfwSetMouseButtonCallback(glfwWindow, Glfw_MouseButtonCallback);
-        //glfwSetKeyCallback(glfwWindow, glfw_key_callback);
-        window = glfwWindow;
-
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        handle = glfwGetWin32Window(glfwWindow);
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        handle.display = glfwGetX11Display();
-        handle.window = glfwGetX11Window();
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        handle = glfwGetCocoaWindow(glfwWindow);
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        glfwGetWaylandDisplay();
-        handle = glfwGetWaylandWindow(glfwWindow);
-#endif
-        /*if (any(flags & WindowFlags::OpenGL))
-        {
-            glfwMakeContextCurrent(handle);
-            ImGui_ImplGlfw_InitForOpenGL(handle, true);
-        }
-        else
-        {
-            ImGui_ImplGlfw_InitForVulkan(handle, true);
-        }*/
+        Close();
     }
 
     void Window::Close()
     {
-        ImGui_ImplGlfw_Shutdown();
-        glfwSetWindowShouldClose((GLFWwindow*)window, GLFW_TRUE);
+        if (window != nullptr)
+        {
+            ImGui_ImplGlfw_Shutdown();
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            window = nullptr;
+        }
     }
 
     void Window::BeginFrame()
@@ -208,26 +134,167 @@ namespace alimer
 
     bool Window::ShouldClose() const
     {
-        return glfwWindowShouldClose((GLFWwindow*)window) == GLFW_TRUE;
+        if (window == nullptr) {
+            return true;
+        }
+
+        return glfwWindowShouldClose(window) == GLFW_TRUE;
     }
 
     bool Window::IsVisible() const
     {
-        return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_VISIBLE) == GLFW_TRUE;
+        if (window == nullptr) {
+            return false;
+        }
+
+        return glfwGetWindowAttrib(window, GLFW_VISIBLE) == GLFW_TRUE;
     }
 
     bool Window::IsMaximized() const
     {
-        return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_ICONIFIED) == GLFW_TRUE;
+        if (window == nullptr) {
+            return false;
+        }
+
+        return glfwGetWindowAttrib(window, GLFW_ICONIFIED) == GLFW_TRUE;
     }
 
     bool Window::IsMinimized() const
     {
-        return glfwGetWindowAttrib((GLFWwindow*)window, GLFW_MAXIMIZED) == GLFW_TRUE;
+        if (window == nullptr) {
+            return false;
+        }
+
+        return glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE;
     }
 
     bool Window::IsFullscreen() const
     {
         return fullscreen || exclusiveFullscreen;
+    }
+
+    bool Window::SetSize(const UInt2& size_, WindowFlags flags)
+    {
+        resizable = any(flags & WindowFlags::Resizable);
+        fullscreen = any(flags & WindowFlags::Fullscreen);
+        exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
+
+        if (window == nullptr)
+        {
+            /*if (any(flags & WindowFlags::OpenGL))
+            {
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+                //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+            }
+            else*/
+            {
+                glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+            }
+
+            glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
+            if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
+                glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+            }
+            else
+            {
+                glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+            }
+
+            //glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_FLAG_BORDERLESS) ? GLFW_FALSE : GLFW_TRUE);
+
+            if (any(flags & WindowFlags::Minimized))
+            {
+                glfwWindowHint(GLFW_ICONIFIED, GLFW_TRUE);
+            }
+            else if (any(flags & WindowFlags::Maximized))
+            {
+                glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+            }
+
+            GLFWmonitor* monitor = nullptr;
+            if (fullscreen)
+            {
+                monitor = glfwGetPrimaryMonitor();
+            }
+
+            if (exclusiveFullscreen)
+            {
+                monitor = glfwGetPrimaryMonitor();
+                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+                glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+                glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+                glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+                glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+                glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+            }
+
+            window = glfwCreateWindow(static_cast<int>(size_.x), static_cast<int>(size_.x), title.c_str(), monitor, nullptr);
+            if (window == nullptr)
+            {
+                LOGE("GLFW: Failed to create window.");
+                return false;
+            }
+
+            glfwDefaultWindowHints();
+            glfwSetWindowUserPointer(window, this);
+            glfwSetMouseButtonCallback(window, Glfw_MouseButtonCallback);
+            //glfwSetKeyCallback(glfwWindow, glfw_key_callback);
+
+        }
+        else
+        {
+            glfwSetWindowSize(window, static_cast<int>(size_.x), static_cast<int>(size_.y));
+            glfwSetWindowAttrib(window, GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
+        }
+
+        // Update size from GLFW
+        int w;
+        int h;
+        glfwGetWindowSize(window, &w, &h);
+        size.x = static_cast<uint32_t>(w);
+        size.y = static_cast<uint32_t>(h);
+
+        /*if (any(flags & WindowFlags::OpenGL))
+        {
+            glfwMakeContextCurrent(handle);
+            ImGui_ImplGlfw_InitForOpenGL(handle, true);
+        }
+        else
+        {
+            ImGui_ImplGlfw_InitForVulkan(handle, true);
+        }*/
+
+        return true;
+    }
+
+    void Window::SetTitle(const String& newTitle)
+    {
+        title = newTitle;
+        if (window)
+        {
+            glfwSetWindowTitle(window, newTitle.c_str());
+        }
+    }
+
+    WindowHandle Window::GetHandle() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return glfwGetWin32Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        WindowHandle handle{};
+        handle.display = glfwGetX11Display();
+        handle.window = glfwGetX11Window();
+        return handle;
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return glfwGetCocoaWindow(window);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        WindowHandle handle{};
+        handle.display = glfwGetWaylandDisplay();
+        handle.window = = glfwGetWaylandWindow(window);
+        return handle;
+#endif
     }
 }

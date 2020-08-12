@@ -22,9 +22,14 @@
 
 #pragma once
 
+#include "config.h"
 #include "Core/Ptr.h"
 #include "Core/Delegate.h"
-#include "Math/Size.h"
+#include "Math/Vector2.h"
+
+#if defined(ALIMER_GLFW)
+struct GLFWwindow;
+#endif
 
 namespace alimer
 {
@@ -41,9 +46,11 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
-#ifdef _WIN32
+#if ALIMER_PLATFORM_WINDOWS
     using WindowHandle = HWND;
-#else
+#elif ALIMER_PLATFORM_UWP
+    using WindowHandle = IUnknown*;
+#elif ALIMER_PLATFORM_LINUX
     struct WindowHandle
     {
         Display* display;
@@ -55,12 +62,25 @@ namespace alimer
     class ALIMER_API Window final : public RefCounted
     {
     public:
-        Window(const eastl::string& title, uint32_t width = 1280, uint32_t height = 720, WindowFlags flags = WindowFlags::Resizable);
+        Window() = default;
+        ~Window() override;
         void Close();
         void BeginFrame();
 
-        uint32_t GetWidth() const { return width; }
-        uint32_t GetHeight() const { return height; }
+        /// Set window size. Creates the window if not created yet. Return true on success.
+        bool SetSize(const UInt2& size, WindowFlags flags = WindowFlags::None);
+
+        /// Set window title.
+        void SetTitle(const String& newTitle);
+
+        /// Return window title.
+        const String& GetTitle() const { return title; }
+        /// Return window client size.
+        const UInt2& GetSize() const { return size; }
+        /// Return window client area width.
+        uint32_t GetWidth() const { return size.x; }
+        /// Return window client area height.
+        uint32_t GetHeight() const { return size.y; }
 
         bool ShouldClose() const;
         bool IsVisible() const;
@@ -69,19 +89,27 @@ namespace alimer
         bool IsFullscreen() const;
 
         /// Get the native window handle
-        const WindowHandle& GetHandle() const { return handle; }
-        void* GetWindow() const { return window; }
+        WindowHandle GetHandle() const;
 
         //Delegate<void()> SizeChanged;
 
     private:
-        String title;
-        uint32_t width;
-        uint32_t height;
+        String title = "Alimer";
+        UInt2 size = UInt2::Zero;
+        /// Resizable flag.
+        bool resizable = false;
+        /// Fullscreen flag.
         bool fullscreen = false;
         bool exclusiveFullscreen = false;
-        WindowHandle handle{};
+
+#if defined(ALIMER_GLFW)
+    //public:
+        //GLFWwindow* GetWindow() const { return window; }
+
+    private:
+        GLFWwindow* window = nullptr;
+#else
         void* window = nullptr;
-        //SharedPtr<SwapChain> swapChain;
+#endif
     };
-} 
+}

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
 #include "D3D11Texture.h"
@@ -36,7 +37,7 @@ namespace alimer
         , presentFlags(0)
     {
 
-        
+
 
         AfterReset();
     }
@@ -101,3 +102,5 @@ namespace alimer
         }*/
     }
 }
+
+#endif // TODO
