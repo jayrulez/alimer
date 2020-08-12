@@ -50,20 +50,23 @@ namespace alimer
         /// Set vertical sync on/off.
         void SetVerticalSync(bool value);
 
+        /// Return whether is using vertical sync.
+        bool GetVerticalSync() const;
+
         bool BeginFrame();
         void EndFrame();
 
         /// Return the rendering window.
-        ALIMER_FORCE_INLINE Window* GetRenderWindow() const { return window.get(); }
+        Window* GetRenderWindow() const { return window.get(); }
+
+        GraphicsImpl* GetImpl() const;
 
         /// Get the device capabilities.
         const GraphicsCapabilities& GetCaps() const;
 
-        /// Return whether is using vertical sync.
-        bool GetVerticalSync() const;
-
         /// Total number of CPU frames completed (completed means all command buffers submitted to the GPU)
-        ALIMER_FORCE_INLINE uint64_t GetFrameCount() const { return frameCount; }
+        uint64_t GetFrameCount() const { return frameCount; }
+
 
     private:
         Graphics(RendererType rendererType);

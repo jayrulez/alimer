@@ -35,7 +35,11 @@ namespace alimer
     public:
         /// Constructor
         Buffer();
+        /// Destructor
         ~Buffer() override;
+
+        /// Register object factory/properties.
+        static void RegisterObject();
 
         void Create(BufferUsage usage, uint32_t size, uint32_t stride, const void* initialData = nullptr);
         void Destroy() override;

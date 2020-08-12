@@ -92,15 +92,21 @@ namespace alimer
         Unknown
     };
 
-    /// Describes texture type.
-    enum class TextureType
+    /// Describes the texture dimension.
+    enum class TextureDimension
     {
-        /// Two dimensional texture.
+        /// A two-dimensional texture image.
         Texture2D,
-        /// Three dimensional texture.
+        /// An array of two-dimensional texture images.
+        Texture2DArray,
+        /// A two-dimensional texture image that uses more than one sample for each pixel.
+        Texture2DMultisample,
+        /// A cube texture with six two-dimensional images.
+        TextureCube,
+        /// An array of cube textures, each with six two-dimensional images.
+        TextureCubeArray,
+        /// A three-dimensional texture image.
         Texture3D,
-        /// A cubemap texture.
-        TextureCube
     };
 
     /// Defines the usage of texture resource.
@@ -164,8 +170,7 @@ namespace alimer
 
     struct TextureDescription
     {
-        String name;
-        TextureType type = TextureType::Texture2D;
+        TextureDimension type = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32_t width = 1u;
@@ -174,6 +179,7 @@ namespace alimer
         uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
+        const char* label;
     };
 
     class Texture;

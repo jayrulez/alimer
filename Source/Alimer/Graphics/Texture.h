@@ -27,71 +27,49 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture final : public GraphicsResource
+    class ALIMER_API Texture : public GraphicsResource
     {
     public:
         /// Constructor.
         Texture();
 
-        /// Constructor.
-        Texture(const TextureDescription& desc);
+        /// Destructor
+        ~Texture() override;
 
-        /// Register object factory.
-        static void RegisterObject();
+        bool DefineExternal(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
+        void Destroy() override;
 
-        /**
-        * Get the texture pixel format.
-        */
-        PixelFormat GetFormat() const { return _desc.format; }
+        /// Get the texture pixel format.
+        PixelFormat GetFormat() const { return format; }
 
-        /**
-        * Get a mip-level width.
-        */
+        /// Get a mip-level width.
         uint32_t GetWidth(uint32_t mipLevel = 0) const;
 
-        /**
-        * Get a mip-level height.
-        */
+        /// Get a mip-level height.
         uint32_t GetHeight(uint32_t mipLevel = 0) const;
 
-        /**
-        * Get a mip-level depth.
-        */
+        /// Get a mip-level depth.
         uint32_t GetDepth(uint32_t mipLevel = 0) const;
 
-        /**
-        * Gets number of mipmap levels of the texture.
-        */
-        uint32_t GetMipLevels() const { return _desc.mipLevels; }
+        /// Gets number of mipmap levels of the texture.
+        uint32_t GetMipLevels() const { return mipLevels; }
 
-        /**
-        * Get the array size of the texture.
-        */
-        uint32_t GetArraySize() const { return _desc.arraySize; }
+        /// Get the array size of the texture.
+        uint32_t GetArraySize() const { return arraySize; }
 
-        /**
-        * Get the texture usage.
-        */
-        TextureUsage GetUsage() const { return _desc.usage; }
+        /// Get the texture usage.
+        TextureUsage GetUsage() const { return usage; }
 
-        /**
-        * Get the array index of a subresource.
-        */
-        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / _desc.mipLevels; }
+        /// Get the array index of a subresource.
+        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
 
-        /**
-        * Get the mip-level of a subresource.
-        */
-        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % _desc.mipLevels; }
+        /// Get the mip-level of a subresource.
+        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % mipLevels; }
 
-        /**
-        * Get the subresource index.
-        */
-        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * _desc.mipLevels; }
+        /// Get the subresource index.
+        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * mipLevels; }
 
-        /**
-        * Calculates the resulting size at a single level for an original size.
-        */
+        /// Calculates the resulting size at a single level for an original size.
         static uint32_t CalculateMipSize(uint32_t mipLevel, uint32_t baseSize)
         {
             baseSize = baseSize >> mipLevel;
@@ -101,6 +79,26 @@ namespace alimer
         uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 
     protected:
-        TextureDescription _desc;
+        TextureHandle handle{ kInvalidHandleId };
+
+        TextureDimension dimension = TextureDimension::Texture2D;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
+        TextureUsage usage = TextureUsage::Sampled;
+        uint32_t width = 1u;
+        uint32_t height = 1u;
+        uint32_t depth = 1u;
+        uint32_t arraySize = 1u;
+        uint32_t mipLevels = 1u;
+        uint32_t sampleCount = 1u;
+    };
+
+    class ALIMER_API Texture2D final : public Texture
+    {
+    public:
+        /// Constructor.
+        Texture2D(uint32_t width, uint32_t height, bool mipMap = false, PixelFormat format = PixelFormat::RGBA8Unorm, TextureUsage usage = TextureUsage::Sampled);
+
+        /// Register object factory/properties.
+        static void RegisterObject();
     };
 }

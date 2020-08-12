@@ -546,7 +546,7 @@ namespace alimer
             DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
             swapchainDesc.Width = 0;
             swapchainDesc.Height = 0;
-            swapchainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            swapchainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             swapchainDesc.Stereo = false;
             swapchainDesc.SampleDesc.Count = 1;
             swapchainDesc.SampleDesc.Quality = 0;
@@ -588,6 +588,10 @@ namespace alimer
             ));
 #endif
         }
+
+        // Create a render target view of the swap chain back buffer.
+        //ID3D11Texture2D* backbufferTexture;
+        //ThrowIfFailed(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTexture));
     }
 
     bool D3D11GraphicsImpl::BeginFrame()

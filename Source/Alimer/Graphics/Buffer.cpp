@@ -37,6 +37,12 @@ namespace alimer
         Destroy();
     }
 
+
+    void Buffer::RegisterObject()
+    {
+        RegisterFactory<Buffer>();
+    }
+
     void Buffer::Create(BufferUsage usage, uint32_t size, uint32_t stride, const void* initialData)
     {
         Destroy();

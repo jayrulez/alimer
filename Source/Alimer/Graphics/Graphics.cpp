@@ -75,7 +75,7 @@ namespace alimer
         }
 
         RegisterSubsystem(this);
-        Texture::RegisterObject();
+        Texture2D::RegisterObject();
     }
 
     Graphics::~Graphics()
@@ -123,6 +123,11 @@ namespace alimer
         impl->SetVerticalSync(value);
     }
 
+    bool Graphics::GetVerticalSync() const
+    {
+        return impl->GetVerticalSync();
+    }
+
     bool Graphics::BeginFrame()
     {
         return impl->BeginFrame();
@@ -132,6 +137,11 @@ namespace alimer
     {
         ++frameCount;
         impl->EndFrame(frameCount);
+    }
+
+    GraphicsImpl* Graphics::GetImpl() const
+    {
+        return impl;
     }
 
     const GraphicsCapabilities& Graphics::GetCaps() const

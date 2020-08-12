@@ -20,8 +20,10 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
 #include "Core/Log.h"
+#include "Graphics/Texture.h"
+#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsImpl.h"
 
 namespace alimer
 {
@@ -31,34 +33,52 @@ namespace alimer
 
     }
 
-    Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(ResourceDimension::Texture2D)
-        , _desc(desc)
+    Texture::~Texture()
     {
-
+        Destroy();
     }
 
-    void Texture::RegisterObject()
+    void Texture::Destroy()
     {
-        RegisterFactory<Texture>();
+        if (handle.isValid())
+        {
+            //graphics->GetImpl()->Destroy(handle);
+            handle.id = kInvalidHandleId;
+        }
+    }
+
+    bool Texture::DefineExternal(void* externalHandle, uint32_t width_, uint32_t height_, PixelFormat format_, bool mipMap)
+    {
+        Destroy();
+
+        dimension = TextureDimension::Texture2D;
+        format = format_;
+        usage = TextureUsage::Sampled;
+        width = width_;
+        height = height_;
+        uint32_t depth = 1u;
+        arraySize = 1u;
+        mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
+        sampleCount = 1u;
+        return true;
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1u, _desc.width >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, width >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetHeight(uint32_t mipLevel) const
     {
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1u, _desc.height >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> mipLevel) : 0;
     }
 
     uint32_t Texture::GetDepth(uint32_t mipLevel) const
     {
-        if (_desc.type == TextureType::Texture3D)
+        if (dimension == TextureDimension::Texture3D)
             return 1u;
 
-        return (mipLevel == 0) || (mipLevel < _desc.mipLevels) ? Max(1U, _desc.depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }
 
     uint32_t Texture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
@@ -75,5 +95,24 @@ namespace alimer
 
         return mipLevels;
     }
+
+    Texture2D::Texture2D(uint32_t width_, uint32_t height_, bool mipMap, PixelFormat format_, TextureUsage usage_)
+    {
+        dimension = TextureDimension::Texture2D;
+        format = format_;
+        usage = usage_;
+        width = width_;
+        height = height_;
+        uint32_t depth = 1u;
+        arraySize = 1u;
+        mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
+        sampleCount = 1u;
+    }
+
+    void Texture2D::RegisterObject()
+    {
+        //RegisterFactory<Texture2D>();
+    }
+
 }
 
