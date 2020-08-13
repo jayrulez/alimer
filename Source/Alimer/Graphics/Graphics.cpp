@@ -27,11 +27,11 @@
 #include "Graphics/GraphicsImpl.h"
 
 #if defined(ALIMER_D3D11)
-#include "Graphics/D3D11/D3D11GraphicsImpl.h"
+#   include "Graphics/D3D11/D3D11GraphicsImpl.h"
 #endif
 
 #if defined(ALIMER_VULKAN)
-//#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#   include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
 
 namespace alimer
@@ -51,6 +51,7 @@ namespace alimer
 
 #if defined(ALIMER_VULKAN)
         case RendererType::Vulkan:
+            impl = new VulkanGraphicsImpl();
             break;
 #endif
 

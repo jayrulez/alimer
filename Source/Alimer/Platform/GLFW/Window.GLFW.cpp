@@ -231,7 +231,7 @@ namespace alimer
                 glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
             }
 
-            window = glfwCreateWindow(static_cast<int>(size_.x), static_cast<int>(size_.x), title.c_str(), monitor, nullptr);
+            window = glfwCreateWindow(static_cast<int>(size_.x), static_cast<int>(size_.y), title.c_str(), monitor, nullptr);
             if (window == nullptr)
             {
                 LOGE("GLFW: Failed to create window.");

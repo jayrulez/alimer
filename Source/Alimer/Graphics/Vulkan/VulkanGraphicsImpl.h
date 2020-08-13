@@ -24,10 +24,27 @@
 
 #include "Graphics/GraphicsImpl.h"
 #include "VulkanBackend.h"
+#include <mutex>
+#include <queue>
+#include <unordered_map>
 
 namespace alimer
 {
-    class VulkanTexture;
+    struct VulkanTexture
+    {
+        enum { MAX_COUNT = 4096 };
+
+        VkImage handle;
+        VmaAllocation memory;
+    };
+
+    struct VulkanBuffer
+    {
+        enum { MAX_COUNT = 4096 };
+
+        VkBuffer handle;
+        VmaAllocation memory;
+    };
 
     class VulkanGraphicsImpl final : public GraphicsImpl
     {
@@ -37,22 +54,53 @@ namespace alimer
         VulkanGraphicsImpl();
         ~VulkanGraphicsImpl() override;
 
-        void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
+        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
+        void WaitForGPU();
+        bool BeginFrame() override;
+        void EndFrame(uint64_t frameIndex) override;
+
+        void SetVerticalSync(bool value) override;
+
+        /* Resource creation methods */
+        TextureHandle AllocTextureHandle();
+        TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) override;
+        void Destroy(TextureHandle handle) override;
+        void SetName(TextureHandle handle, const char* name) override;
+
+        BufferHandle AllocBufferHandle();
+        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data) override;
+        void Destroy(BufferHandle handle) override;
+        void SetName(BufferHandle handle, const char* name) override;
+
+        /* Commands */
+        void PushDebugGroup(const String& name, CommandList commandList) override;
+        void PopDebugGroup(CommandList commandList) override;
+        void InsertDebugMarker(const String& name, CommandList commandList) override;
+
+        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) override;
+        void EndRenderPass(CommandList commandList) override;
+
+        void TextureBarrier(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+        void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
 
         VkInstance GetVkInstance() const { return instance; }
         VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
         VkDevice GetVkDevice() const { return device; }
-        VmaAllocator GetMemoryAllocator() const { return memoryAllocator; }
 
     private:
         void Shutdown();
+        bool InitInstance();
+        bool InitSurface(WindowHandle windowHandle);
+        bool InitPhysicalDevice();
+        bool InitLogicalDevice();
         void InitCapabilities();
         bool UpdateSwapchain();
+        VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
+        VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
 
-        void WaitForGPU();
-        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
-        bool BeginFrame() override;
-        void EndFrame(uint64_t frameIndex) override;
+        VkResult AcquireNextImage(uint32_t* imageIndex);
+        VkResult PresentImage(uint32_t imageIndex);
 
         VulkanInstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
@@ -74,29 +122,56 @@ namespace alimer
         VkQueue copyQueue{ VK_NULL_HANDLE };
 
         /* Memory allocator */
-        VmaAllocator memoryAllocator{ VK_NULL_HANDLE };
+        VmaAllocator allocator{ VK_NULL_HANDLE };
 
         VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
-        uint32_t backbufferIndex{ 0 };
-        //SharedPtr<VulkanTexture> backbufferTextures[kInflightFrameCount] = {};
+        uint32_t backbufferIndex = 0;
 
-        /// A set of semaphores that can be reused.
-        std::vector<VkSemaphore> recycledSemaphores;
+        std::vector<VkImageLayout> swapChainImageLayouts;
+        std::vector<VkImage> swapChainImages;
+
+        /// The image view for each swapchain image.
+        std::vector<VkImageView> swapchainImageViews;
+
+        /// The framebuffer for each swapchain image view.
+        std::vector<VkFramebuffer> swapchain_framebuffers;
 
         /* Frame data */
-        uint32 maxInflightFrames = 3u;
-
         bool frameActive{ false };
+
+        struct ResourceRelease
+        {
+            VkObjectType type;
+            void* handle;
+            VmaAllocation memory;
+        };
 
         struct PerFrame
         {
-            VkFence queueSubmitFence = VK_NULL_HANDLE;
+            VkFence fence = VK_NULL_HANDLE;
+
             VkCommandPool primaryCommandPool = VK_NULL_HANDLE;
             VkCommandBuffer primaryCommandBuffer = VK_NULL_HANDLE;
 
             VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
             VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
+
+            std::queue<ResourceRelease> deferredReleases;
         };
-        std::vector<PerFrame> perFrame;
+
+        /// A set of semaphores that can be reused.
+        std::vector<VkSemaphore> recycledSemaphores;
+        std::vector<PerFrame> frame;
+
+        void TeardownPerFrame(PerFrame& frame);
+        void Purge(PerFrame& frame);
+
+        /* Resource pools */
+        std::mutex handle_mutex;
+        GPUResourcePool<VulkanTexture, 1024> textures;
+        GPUResourcePool<VulkanBuffer, 1024> buffers;
+
+        std::unordered_map<Hash, VkRenderPass> renderPasses;
+        std::unordered_map<Hash, VkFramebuffer> framebuffers;
     };
 }

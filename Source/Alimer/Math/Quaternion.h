@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Math/Vector4.h"
+#include "Core/Math.h"
 
 namespace alimer
 {
@@ -57,7 +57,7 @@ namespace alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        String ToString() const;
+        std::string ToString() const;
 
         // Constants
         static const Quaternion Zero;

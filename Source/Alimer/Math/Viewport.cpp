@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,49 +20,16 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "VulkanTexture.h"
-#include "VulkanGraphicsDevice.h"
+#include "Math/Viewport.h"
+#include <fmt/format.h>
 
 namespace alimer
 {
-    namespace
+    float Viewport::AspectRatio() const
     {
-    }
+        if (width == 0.f || height == 0.f)
+            return 0.f;
 
-    VulkanTexture::VulkanTexture(VulkanGraphicsImpl* device_, VkImage resource_)
-        : Texture({})
-        , device(device_)
-        , handle(resource_)
-    {
-
-    }
-
-    VulkanTexture::VulkanTexture(VulkanGraphicsImpl* device_, const TextureDescription& desc, const void* initialData)
-        : Texture(desc)
-        , device(device_)
-    {
-
-    }
-
-    VulkanTexture::~VulkanTexture()
-    {
-        Destroy();
-    }
-
-    void VulkanTexture::Destroy()
-    {
-        if (handle != VK_NULL_HANDLE && memory != VK_NULL_HANDLE)
-        {
-            //Unmap();
-            vmaDestroyImage(device->GetMemoryAllocator(), handle, memory);
-        }
-    }
-
-    void VulkanTexture::BackendSetName()
-    {
-        device->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
+        return (width / height);
     }
 }
-
-#endif // TODO

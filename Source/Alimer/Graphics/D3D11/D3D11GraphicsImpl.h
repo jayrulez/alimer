@@ -33,6 +33,8 @@ namespace alimer
 
     struct D3D11Texture
     {
+        enum { MAX_COUNT = 4096 };
+
         union {
             ID3D11Resource* handle;
             ID3D11Texture2D* tex2D;
@@ -44,6 +46,8 @@ namespace alimer
 
     struct D3D11Buffer
     {
+        enum { MAX_COUNT = 4096 };
+
         ID3D11Buffer* handle;
     };
 
@@ -115,7 +119,6 @@ namespace alimer
         IUnknown* window;
         IDXGISwapChain3* swapChain = nullptr;
 #endif
-        UInt2 backbufferSize = UInt2::Zero;
         DXGI_MODE_ROTATION rotation{ DXGI_MODE_ROTATION_IDENTITY };
         RefPtr<Texture> backbufferTexture;
 

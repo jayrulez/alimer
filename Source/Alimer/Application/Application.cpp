@@ -85,7 +85,7 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            auto graphics = Graphics::Create(RendererType::Count);
+            auto graphics = Graphics::Create(RendererType::Vulkan);
 
             graphics->GetRenderWindow()->SetTitle(config.windowTitle);
             if (!graphics->SetMode(config.windowSize, WindowFlags::Resizable))
@@ -179,7 +179,7 @@ namespace alimer
         graphics->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
         colorAttachment.clearColor = Colors::CornflowerBlue;
-        colorAttachment.loadAction = LoadAction::DontCare;
+        //colorAttachment.loadAction = LoadAction::DontCare;
         graphics->BeginRenderPass(1, &colorAttachment, nullptr);
         graphics->EndRenderPass();
         graphics->PopDebugGroup();

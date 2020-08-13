@@ -29,8 +29,6 @@
 #include <vk_mem_alloc.h>
 #include <volk.h>
 
-#include <EASTL/vector.h>
-
 namespace alimer
 {
     const char* ToString(VkResult result);
@@ -50,7 +48,6 @@ namespace alimer
     };
 
     struct PhysicalDeviceExtensions {
-        bool swapchain;
         bool depth_clip_enable;
         bool maintenance_1;
         bool maintenance_2;
