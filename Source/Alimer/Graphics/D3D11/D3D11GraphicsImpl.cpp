@@ -625,7 +625,7 @@ namespace alimer
 
         // Create a render target view of the swap chain back buffer.
         ID3D11Texture2D* backbufferTextureHandle;
-        ThrowIfFailed(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTextureHandle));
+        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTextureHandle)));
         backbufferTexture = new Texture();
         ALIMER_VERIFY(backbufferTexture->DefineExternal(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false));
         backbufferTextureHandle->Release();
@@ -684,14 +684,17 @@ namespace alimer
 
         D3D11Texture& texture = textures.push_back();
         texture.handle = nullptr;
+        texture.rtv = nullptr;
         return { (uint32_t)(textures.size() - 1) };
     }
 
     TextureHandle D3D11GraphicsImpl::CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle)
     {
+        TextureHandle handle = kInvalidTexture;
+
         if (externalHandle != nullptr)
         {
-            TextureHandle handle = AllocTextureHandle();
+            handle = AllocTextureHandle();
             switch (dimension)
             {
             case TextureDimension::Texture2D:
@@ -706,22 +709,26 @@ namespace alimer
             default:
                 break;
             }
-
-            return handle;
         }
         else
         {
             switch (dimension)
             {
             case TextureDimension::Texture2D:
-                return CreateTexture2D(width, height, data);
+                handle = CreateTexture2D(width, height, data);
+                break;
 
             default:
                 break;
             }
         }
 
-        return kInvalidTexture;
+        if (handle.isValid())
+        {
+            ThrowIfFailed(d3dDevice->CreateRenderTargetView(textures[handle.id].handle, nullptr, &textures[handle.id].rtv));
+        }
+
+        return handle;
     }
 
     TextureHandle D3D11GraphicsImpl::CreateTexture2D(uint32_t width, uint32_t height, const void* data)
@@ -898,27 +905,33 @@ namespace alimer
         d3dAnnotations[commandList]->SetMarker(wideName.c_str());
     }
 
-    void D3D11GraphicsImpl::BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList)
+    void D3D11GraphicsImpl::BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
-        /*uint32_t colorRTVSCount = 0;
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
+        ID3D11RenderTargetView* renderTargetViews[kMaxColorAttachments];
+
+        for (uint32_t i = 0; i < numColorAttachments; i++)
         {
-            const RenderPassColorAttachment& attachment = renderPass.colorAttachments[i];
-            if (attachment.texture == nullptr)
+            D3D11Texture& texture = colorAttachments[i].texture == nullptr ? textures[backbufferTexture->GetHandle().id] : textures[colorAttachments[i].texture->GetHandle().id];
+            //colorRTVS[i] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+
+            switch (colorAttachments[i].loadAction)
+            {
+            case LoadAction::DontCare:
+                d3dContexts[commandList]->DiscardView(texture.rtv);
                 break;
 
-            D3D11Texture* texture = static_cast<D3D11Texture*>(attachment.texture);
-            colorRTVS[i] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+            case LoadAction::Clear:
+                d3dContexts[commandList]->ClearRenderTargetView(texture.rtv, &colorAttachments[i].clearColor.r);
+                break;
 
-            if (attachment.loadAction == LoadAction::Clear)
-            {
-                context->ClearRenderTargetView(colorRTVS[i], &attachment.clearColor.r);
+            default:
+                break;
             }
 
-            colorRTVSCount++;
+            renderTargetViews[i] = texture.rtv;
         }
 
-        d3dContexts[commandList]->OMSetRenderTargets(colorRTVSCount, colorRTVS, nullptr);*/
+        d3dContexts[commandList]->OMSetRenderTargets(numColorAttachments, renderTargetViews, nullptr);
     }
 
     void D3D11GraphicsImpl::EndRenderPass(CommandList commandList)

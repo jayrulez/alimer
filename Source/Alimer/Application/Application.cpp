@@ -176,15 +176,13 @@ namespace alimer
             LOGI("Right held");
         }
 
-        /*auto context = GetGraphics()->GetMainContext();
-        context->PushDebugGroup("Clear");
-        context->BeginRenderPass();
-        /*RenderPassDescription renderPass = window.GetSwapChain()->GetCurrentRenderPassDescription();
-        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
-        commandContext->BeginRenderPass(renderPass);
-        commandContext->EndRenderPass();
-        context->PopDebugGroup();
-        context->Flush();*/
+        graphics->PushDebugGroup("Clear");
+        RenderPassColorAttachment colorAttachment = {};
+        colorAttachment.clearColor = Colors::CornflowerBlue;
+        colorAttachment.loadAction = LoadAction::DontCare;
+        graphics->BeginRenderPass(1, &colorAttachment, nullptr);
+        graphics->EndRenderPass();
+        graphics->PopDebugGroup();
     }
 
     void Application::EndDraw()

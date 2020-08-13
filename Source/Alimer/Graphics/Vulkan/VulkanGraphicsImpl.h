@@ -22,19 +22,19 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsImpl.h"
 #include "VulkanBackend.h"
 
 namespace alimer
 {
     class VulkanTexture;
 
-    class VulkanGraphicsImpl final : public GraphicsDevice
+    class VulkanGraphicsImpl final : public GraphicsImpl
     {
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsImpl(const eastl::string& applicationName, GPUDeviceFlags flags);
+        VulkanGraphicsImpl();
         ~VulkanGraphicsImpl() override;
 
         void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
@@ -49,11 +49,12 @@ namespace alimer
         void InitCapabilities();
         bool UpdateSwapchain();
 
-        void WaitForGPU() override;
+        void WaitForGPU();
+        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
         bool BeginFrame() override;
-        void PresentFrame(bool vsync) override;
+        void EndFrame(uint64_t frameIndex) override;
 
-        InstanceExtensions instanceExts{};
+        VulkanInstanceExtensions instanceExts{};
         VkInstance instance{ VK_NULL_HANDLE };
 
         /// Debug utils messenger callback for VK_EXT_Debug_Utils
@@ -77,7 +78,7 @@ namespace alimer
 
         VkSwapchainKHR swapchain{ VK_NULL_HANDLE };
         uint32_t backbufferIndex{ 0 };
-        SharedPtr<VulkanTexture> backbufferTextures[kInflightFrameCount] = {};
+        //SharedPtr<VulkanTexture> backbufferTextures[kInflightFrameCount] = {};
 
         /// A set of semaphores that can be reused.
         std::vector<VkSemaphore> recycledSemaphores;

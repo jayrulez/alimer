@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "VulkanTexture.h"
 #include "VulkanGraphicsDevice.h"
 
@@ -63,3 +64,5 @@ namespace alimer
         device->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
     }
 }
+
+#endif // TODO

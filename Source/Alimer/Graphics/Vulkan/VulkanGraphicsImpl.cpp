@@ -21,24 +21,18 @@
 //
 
 #include "config.h"
-#include "VulkanGraphicsDevice.h"
-#include "VulkanTexture.h"
-#include "Core/Window.h"
+#include "VulkanGraphicsImpl.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#endif
-
-using namespace std;
+using namespace eastl;
 
 namespace alimer
 {
     namespace
     {
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
         VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsMessengerCallback(
             VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
             VkDebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -117,16 +111,7 @@ namespace alimer
             // Else return nothing
             return {};
         }
-
-        bool QueryPresentationSupport(VkInstance instance, VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex)
-        {
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-            return glfwGetPhysicalDevicePresentationSupport(instance, physicalDevice, queueFamilyIndex);
-#else
-            return true;
 #endif
-        }
-
 
         QueueFamilyIndices QueryQueueFamilies(VkInstance instance, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
@@ -143,16 +128,13 @@ namespace alimer
 
             for (uint32_t i = 0; i < queueCount; i++)
             {
-                VkBool32 present_support = VK_TRUE;
+                VkBool32 presentSupport = VK_TRUE;
                 if (surface != VK_NULL_HANDLE) {
-                    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &present_support);
-                }
-                else {
-                    present_support = QueryPresentationSupport(instance, physicalDevice, i);
+                    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
                 }
 
                 static const VkQueueFlags required = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_GRAPHICS_BIT;
-                if (present_support && ((queue_families[i].queueFlags & required) == required))
+                if (presentSupport && ((queue_families[i].queueFlags & required) == required))
                 {
                     result.graphicsQueueFamilyIndex = i;
                     break;
@@ -201,7 +183,7 @@ namespace alimer
             return result;
         }
 
-        PhysicalDeviceExtensions QueryPhysicalDeviceExtensions(const InstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice)
+        PhysicalDeviceExtensions QueryPhysicalDeviceExtensions(const VulkanInstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice)
         {
             uint32_t count = 0;
             VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &count, nullptr));
@@ -285,7 +267,7 @@ namespace alimer
             return result;
         }
 
-        bool IsDeviceSuitable(VkInstance instance, const InstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+        bool IsDeviceSuitable(VkInstance instance, const VulkanInstanceExtensions& instanceExts, VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
         {
             QueueFamilyIndices indices = QueryQueueFamilies(instance, physicalDevice, surface);
 
@@ -446,15 +428,14 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsImpl::VulkanGraphicsImpl(const eastl::string& applicationName, GPUDeviceFlags flags)
-        : GraphicsDevice()
+    VulkanGraphicsImpl::VulkanGraphicsImpl()
     {
         ALIMER_VERIFY(IsAvailable());
 
         // Create instance
         {
-            vector<const char*> enabledInstanceExtensions;
-            vector<const char*> enabledInstanceLayers;
+            vector<const char*> enabledExtensions;
+            vector<const char*> enabledLayers;
 
             uint32_t instanceExtensionCount;
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
@@ -463,88 +444,86 @@ namespace alimer
             VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
             for (auto& availableExtension : availableInstanceExtensions)
             {
-                if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0) {
+                if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+                {
                     instanceExts.debugUtils = true;
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+                    enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
                 }
                 else if (strcmp(availableExtension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
                 {
                     instanceExts.headless = true;
                 }
+                else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+                {
+                    // VK_KHR_get_physical_device_properties2 is a prerequisite of VK_KHR_performance_query
+                    // which will be used for stats gathering where available.
+                    instanceExts.get_physical_device_properties2 = true;
+                    enabledExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+                }
                 else if (strcmp(availableExtension.extensionName, VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) == 0)
                 {
-                    instanceExts.getSurfaceCapabilities2 = true;
+                    instanceExts.get_surface_capabilities2 = true;
                 }
             }
 
-            Window* window = nullptr;
-            if (window == nullptr)
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+            uint32_t instanceLayerCount;
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
+
+            vector<VkLayerProperties> supportedInstanceLayers(instanceLayerCount);
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, supportedInstanceLayers.data()));
+
+            vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(supportedInstanceLayers);
+            enabledLayers.insert(enabledLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
+#endif
+
+            const bool headless = false;
+            if (headless)
             {
-                enabledInstanceExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+                enabledExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
             }
             else
             {
+                enabledExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
-                uint32_t count;
-                const char** ext = glfwGetRequiredInstanceExtensions(&count);
-                for (uint32_t i = 0; i < count; i++)
+                if (instanceExts.get_surface_capabilities2)
                 {
-                    enabledInstanceExtensions.push_back(ext[i]);
+                    enabledExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
                 }
-#endif
-
-                if (instanceExts.getSurfaceCapabilities2) {
-                    enabledInstanceExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-                }
-            }
-
-            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
-            {
-                if (instanceExts.debugUtils)
-                {
-                    enabledInstanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-                }
-
-                // Layers
-                uint32_t instanceLayerCount;
-                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
-
-                std::vector<VkLayerProperties> availableInstanceLayers(instanceLayerCount);
-                VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, availableInstanceLayers.data()));
-
-                // Determine the optimal validation layers to enable that are necessary for useful debugging
-                std::vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(availableInstanceLayers);
-                enabledInstanceLayers.insert(enabledInstanceLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
             }
 
             VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-            appInfo.pApplicationName = applicationName.c_str();
+            appInfo.pApplicationName = "Alimer";
             appInfo.applicationVersion = 0;
             appInfo.pEngineName = "Alimer";
             appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
             appInfo.apiVersion = volkGetInstanceVersion();
 
             VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
             VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
 
-            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
+            if (instanceExts.debugUtils)
             {
-                if (instanceExts.debugUtils)
-                {
-                    debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-                    debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-                    debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
-                    debugUtilsCreateInfo.pUserData = this;
+                debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
+                debugUtilsCreateInfo.pUserData = this;
 
-                    createInfo.pNext = &debugUtilsCreateInfo;
-                }
+                createInfo.pNext = &debugUtilsCreateInfo;
             }
+#endif
+
 
             createInfo.pApplicationInfo = &appInfo;
-            createInfo.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
-            createInfo.ppEnabledLayerNames = enabledInstanceLayers.data();
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
-            createInfo.ppEnabledExtensionNames = enabledInstanceExtensions.data();
+            createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
+            createInfo.ppEnabledLayerNames = enabledLayers.data();
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+            createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
             // Create the Vulkan instance.
             VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
@@ -556,17 +535,16 @@ namespace alimer
 
             volkLoadInstance(instance);
 
-            if (any(flags & GPUDeviceFlags::DebugRuntime | GPUDeviceFlags::GPUBaseValidation))
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+            if (instanceExts.debugUtils)
             {
-                if (instanceExts.debugUtils)
+                result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
+                if (result != VK_SUCCESS)
                 {
-                    result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
-                    if (result != VK_SUCCESS)
-                    {
-                        VK_LOG_ERROR(result, "Could not create debug utils messenger");
-                    }
+                    VK_LOG_ERROR(result, "Could not create debug utils messenger");
                 }
             }
+#endif
 
             LOGI("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
             if (createInfo.enabledLayerCount) {
@@ -754,7 +732,7 @@ namespace alimer
             }*/
 
 #ifdef _WIN32
-            if (instanceExts.getSurfaceCapabilities2 && physicalDeviceExts.win32_full_screen_exclusive)
+            if (instanceExts.get_surface_capabilities2 && physicalDeviceExts.win32_full_screen_exclusive)
             {
                 enabledDeviceExtensions.push_back(VK_EXT_FULL_SCREEN_EXCLUSIVE_EXTENSION_NAME);
             }
@@ -903,10 +881,12 @@ namespace alimer
 
         vkDestroyDevice(device, nullptr);
 
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
         if (debugUtilsMessenger != VK_NULL_HANDLE)
         {
             vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
         }
+#endif
 
         if (instance != VK_NULL_HANDLE)
         {
@@ -916,7 +896,7 @@ namespace alimer
 
     void VulkanGraphicsImpl::InitCapabilities()
     {
-        caps.backendType = BackendType::Vulkan;
+        caps.rendererType = RendererType::Vulkan;
         caps.vendorId = physicalDeviceProperties.properties.vendorID;
         caps.deviceId = physicalDeviceProperties.properties.deviceID;
         caps.adapterName = physicalDeviceProperties.properties.deviceName;
@@ -941,7 +921,7 @@ namespace alimer
     {
         WaitForGPU();
 
-        SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.getSurfaceCapabilities2, physicalDeviceExts.win32_full_screen_exclusive);
+        SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.get_surface_capabilities2, physicalDeviceExts.win32_full_screen_exclusive);
 
         /* Detect image count. */
         uint32_t imageCount = surfaceCaps.capabilities.minImageCount + 1;
@@ -1097,9 +1077,34 @@ namespace alimer
 
         for (uint32 i = 0; i < imageCount; i++)
         {
-            backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
+            //backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
             //backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
             //SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapChainImages[i], fmt::format("Back Buffer {}", i));
+        }
+
+        return true;
+    }
+
+    bool VulkanGraphicsImpl::Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen)
+    {
+        VkResult result = VK_SUCCESS;
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+        VkWin32SurfaceCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
+        createInfo.hinstance = GetModuleHandle(NULL);
+        createInfo.hwnd = (HWND)windowHandle;
+
+        result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
+
+#else
+        LOGE("Cannot create Win32 surfare on non windows platform");
+        return nullptr;
+#endif
+
+        if (result != VK_SUCCESS)
+        {
+            VK_LOG_ERROR(result, "Vulkan: Failed to create surface");
+            return false;
         }
 
         return true;
@@ -1182,7 +1187,7 @@ namespace alimer
         return true;
     }
 
-    void VulkanGraphicsImpl::PresentFrame(bool vsync)
+    void VulkanGraphicsImpl::EndFrame(uint64_t frameIndex)
     {
         //ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 

@@ -38,6 +38,8 @@ namespace alimer
             ID3D11Texture2D* tex2D;
             ID3D11Texture3D* tex3D;
         };
+
+        ID3D11RenderTargetView* rtv;
     };
 
     struct D3D11Buffer
@@ -80,7 +82,7 @@ namespace alimer
         void PopDebugGroup(CommandList commandList) override;
         void InsertDebugMarker(const String& name, CommandList commandList) override;
 
-        void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList) override;
+        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) override;
         void EndRenderPass(CommandList commandList) override;
 
     private:

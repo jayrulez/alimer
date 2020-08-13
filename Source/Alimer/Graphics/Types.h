@@ -139,18 +139,11 @@ namespace alimer
         NegativeZ = 5, //!< -z face
     };
 
-    enum class LoadAction : uint32 {
-        Clear,
-        Load,
-        Discard
-    };
-
-    struct ScissorRect
+    enum class LoadAction : uint32
     {
-        int x;
-        int y;
-        int width;
-        int height;
+        DontCare,
+        Load,
+        Clear
     };
 
     struct BufferDescription
@@ -197,7 +190,7 @@ namespace alimer
             uint32_t slice;
         };
         LoadAction depthLoadAction = LoadAction::Clear;
-        LoadAction stencilLoadOp = LoadAction::Discard;
+        LoadAction stencilLoadOp = LoadAction::DontCare;
         float clearDepth = 1.0f;
         uint8_t clearStencil = 0;
     };

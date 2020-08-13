@@ -165,9 +165,12 @@ namespace alimer
         impl->InsertDebugMarker(name, commandList);
     }
 
-    void Graphics::BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList)
+    void Graphics::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil, CommandList commandList)
     {
-        impl->BeginRenderPass(renderPass, commandList);
+        ALIMER_ASSERT(numColorAttachments < kMaxColorAttachments);
+        ALIMER_ASSERT(numColorAttachments || depthStencil);
+
+        impl->BeginRenderPass(commandList, numColorAttachments, colorAttachments, depthStencil);
     }
 
     void Graphics::EndRenderPass(CommandList commandList)

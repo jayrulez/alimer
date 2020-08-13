@@ -74,12 +74,12 @@ namespace alimer
         bool IsInitialized() const { return initialized; }
         const GraphicsCapabilities& GetCaps() const { return caps; }
 
-        virtual void SetVerticalSync(bool value) { verticalSync = value; }
-        bool GetVerticalSync() const { return verticalSync; }
-
         virtual bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) = 0;
         virtual bool BeginFrame() = 0;
         virtual void EndFrame(uint64_t frameIndex) = 0;
+
+        virtual void SetVerticalSync(bool value) { verticalSync = value; }
+        bool GetVerticalSync() const { return verticalSync; }
 
         /* Resource creation methods */
         virtual TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) = 0;
@@ -95,7 +95,7 @@ namespace alimer
         virtual void PopDebugGroup(CommandList commandList) = 0;
         virtual void InsertDebugMarker(const String& name, CommandList commandList) = 0;
 
-        virtual void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList) = 0;
+        virtual void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) = 0;
         virtual void EndRenderPass(CommandList commandList) = 0;
 
     protected:

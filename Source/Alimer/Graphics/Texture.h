@@ -43,6 +43,9 @@ namespace alimer
         bool DefineExternal(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
         void Destroy() override;
 
+        /// Get the texture handle.
+        TextureHandle GetHandle() const { return handle; }
+
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }
 

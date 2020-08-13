@@ -59,7 +59,7 @@ if (ALIMER_D3D11)
 endif()
 
 if (ALIMER_VULKAN)
-  #define_engine_source_files(GPU/Vulkan)
+  define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()
@@ -101,7 +101,7 @@ if (ALIMER_D3D11)
 endif ()
 
 if (ALIMER_VULKAN)
-#target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
+  target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
 endif()
 
 if (MSVC)

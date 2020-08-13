@@ -24,22 +24,52 @@
 
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "GPU/Types.h"
+#include "Graphics/Types.h"
 
 #include <vk_mem_alloc.h>
 #include <volk.h>
 
 #include <EASTL/vector.h>
 
-const char* ToString(VkResult result);
-
-struct VulkanGPUInstanceExtensions
+namespace alimer
 {
-    bool debugUtils;
-    bool headless;
-    bool get_physical_device_properties2;
-    bool get_surface_capabilities2;
-};
+    const char* ToString(VkResult result);
+
+    struct VulkanInstanceExtensions
+    {
+        bool debugUtils;
+        bool headless;
+        bool get_physical_device_properties2;
+        bool get_surface_capabilities2;
+    };
+
+    struct QueueFamilyIndices {
+        uint32_t graphicsQueueFamilyIndex;
+        uint32_t computeQueueFamily;
+        uint32_t copyQueueFamily;
+    };
+
+    struct PhysicalDeviceExtensions {
+        bool swapchain;
+        bool depth_clip_enable;
+        bool maintenance_1;
+        bool maintenance_2;
+        bool maintenance_3;
+        bool get_memory_requirements2;
+        bool dedicated_allocation;
+        bool bind_memory2;
+        bool memory_budget;
+        bool image_format_list;
+        bool sampler_mirror_clamp_to_edge;
+        bool win32_full_screen_exclusive;
+        bool raytracing;
+        bool buffer_device_address;
+        bool deferred_host_operations;
+        bool descriptor_indexing;
+        bool pipeline_library;
+        bool multiview;
+    };
+}
 
 
 /// Helper macro to test the result of Vulkan calls which can return an error.
@@ -49,8 +79,8 @@ struct VulkanGPUInstanceExtensions
 		VkResult err = x;                                           \
 		if (err)                                                    \
 		{                                                           \
-			LOGE("Detected Vulkan error: {}", ToString(err)); \
+			LOGE("Detected Vulkan error: {}", alimer::ToString(err)); \
 		}                                                           \
 	} while (0)
 
-#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, ToString(result));
+#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, alimer::ToString(result));

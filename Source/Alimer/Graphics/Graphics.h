@@ -69,7 +69,7 @@ namespace alimer
         void PopDebugGroup(CommandList commandList = 0);
         void InsertDebugMarker(const String& name, CommandList commandList = 0);
 
-        void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList = 0);
+        void BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil = nullptr, CommandList commandList = 0);
         void EndRenderPass(CommandList commandList = 0);
 
         /// Total number of CPU frames completed.
