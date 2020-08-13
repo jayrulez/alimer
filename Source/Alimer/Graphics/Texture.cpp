@@ -38,13 +38,41 @@ namespace alimer
         Destroy();
     }
 
+
+    void Texture::RegisterObject()
+    {
+        RegisterFactory<Texture>();
+    }
+
     void Texture::Destroy()
     {
         if (handle.isValid())
         {
-            //graphics->GetImpl()->Destroy(handle);
+            graphics->GetImpl()->Destroy(handle);
             handle.id = kInvalidHandleId;
         }
+    }
+
+    bool Texture::Define2D(uint32_t width_, uint32_t height_, bool mipMap, PixelFormat format_, TextureUsage usage_)
+    {
+        ALIMER_VERIFY_MSG(width_ > 0, "Width must be greather than zero");
+        ALIMER_VERIFY_MSG(height_ > 0, "Height must be greather than zero");
+        ALIMER_VERIFY_MSG(format_ != PixelFormat::Invalid, "Formate must be valid");
+
+        Destroy();
+
+        dimension = TextureDimension::Texture2D;
+        format = format_;
+        usage = usage_;
+        width = width_;
+        height = height_;
+        uint32_t depth = 1u;
+        arraySize = 1u;
+        mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
+        sampleCount = 1u;
+
+
+        return true;
     }
 
     bool Texture::DefineExternal(void* externalHandle, uint32_t width_, uint32_t height_, PixelFormat format_, bool mipMap)
@@ -60,7 +88,9 @@ namespace alimer
         arraySize = 1u;
         mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
         sampleCount = 1u;
-        return true;
+
+        handle = graphics->GetImpl()->CreateTexture(dimension, width, height, nullptr, externalHandle);
+        return handle.isValid();
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const
@@ -95,24 +125,5 @@ namespace alimer
 
         return mipLevels;
     }
-
-    Texture2D::Texture2D(uint32_t width_, uint32_t height_, bool mipMap, PixelFormat format_, TextureUsage usage_)
-    {
-        dimension = TextureDimension::Texture2D;
-        format = format_;
-        usage = usage_;
-        width = width_;
-        height = height_;
-        uint32_t depth = 1u;
-        arraySize = 1u;
-        mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
-        sampleCount = 1u;
-    }
-
-    void Texture2D::RegisterObject()
-    {
-        //RegisterFactory<Texture2D>();
-    }
-
 }
 

@@ -35,13 +35,6 @@ namespace alimer
 
         void Flush() override;
 
-        void PushDebugGroup(const String& name) override;
-        void PopDebugGroup() override;
-        void InsertDebugMarker(const String& name) override;
-
-        void BeginRenderPass(const RenderPassDescription& renderPass) override;
-        void EndRenderPass() override;
-
         void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) override;
         void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
         void SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth) override;

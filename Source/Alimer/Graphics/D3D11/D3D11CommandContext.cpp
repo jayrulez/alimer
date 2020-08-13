@@ -65,25 +65,7 @@ namespace alimer
 
     void D3D11CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)
     {
-        /*uint32_t colorRTVSCount = 0;
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
-        {
-            const RenderPassColorAttachment& attachment = renderPass.colorAttachments[i];
-            if (attachment.texture == nullptr)
-                break;
-
-            D3D11Texture* texture = static_cast<D3D11Texture*>(attachment.texture);
-            colorRTVS[i] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
-
-            if (attachment.loadAction == LoadAction::Clear)
-            {
-                context->ClearRenderTargetView(colorRTVS[i], &attachment.clearColor.r);
-            }
-
-            colorRTVSCount++;
-        }
-
-        context->OMSetRenderTargets(colorRTVSCount, colorRTVS, nullptr);*/
+        
     }
 
     void D3D11CommandContext::EndRenderPass()

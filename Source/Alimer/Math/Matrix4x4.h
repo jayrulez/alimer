@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Math/Vector4.h"
+#include "Core/Math.h"
 
 namespace alimer
 {
@@ -74,10 +74,10 @@ namespace alimer
         float& operator() (size_t row, size_t column) noexcept { return m[row][column]; }
 
         /// Return matrix row.
-        Vector4 Row(size_t i) const { return Vector4(m[i][0], m[i][1], m[i][2], m[i][3]); }
+        Float4 Row(size_t i) const { return Float4(m[i][0], m[i][1], m[i][2], m[i][3]); }
 
         /// Return matrix column.
-        Vector4 Column(size_t j) const { return Vector4(m[0][j], m[1][j], m[2][j], m[3][j]); }
+        Float4 Column(size_t j) const { return Float4(m[0][j], m[1][j], m[2][j], m[3][j]); }
 
         // Comparison operators
         bool operator == (const Matrix4x4& rhs) const noexcept

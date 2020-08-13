@@ -31,6 +31,15 @@ namespace alimer
 {
     class D3D11CommandContext;
 
+    struct D3D11Texture
+    {
+        union {
+            ID3D11Resource* handle;
+            ID3D11Texture2D* tex2D;
+            ID3D11Texture3D* tex3D;
+        };
+    };
+
     struct D3D11Buffer
     {
         ID3D11Buffer* handle;
@@ -48,20 +57,31 @@ namespace alimer
         bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
         bool BeginFrame() override;
         void EndFrame(uint64_t frameIndex) override;
-
-        void HandleDeviceLost(HRESULT hr);
+        void HandleDeviceLost();
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
-        ID3D11Device1* GetD3DDevice() const { return d3dDevice.Get(); }
-
-        //CommandContext* GetMainContext() const override;
+        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
 
         /* Resource creation methods */
+        TextureHandle AllocTextureHandle();
+        TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) override;
+        TextureHandle CreateTexture2D(uint32_t width, uint32_t height, const void* data);
+        void Destroy(TextureHandle handle) override;
+        void SetName(TextureHandle handle, const char* name) override;
+
         BufferHandle AllocBufferHandle();
         BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data) override;
         void Destroy(BufferHandle handle) override;
         void SetName(BufferHandle handle, const char* name) override;
+
+        /* Commands */
+        void PushDebugGroup(const String& name, CommandList commandList) override;
+        void PopDebugGroup(CommandList commandList) override;
+        void InsertDebugMarker(const String& name, CommandList commandList) override;
+
+        void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList) override;
+        void EndRenderPass(CommandList commandList) override;
 
     private:
         void CreateFactory();
@@ -78,24 +98,30 @@ namespace alimer
         bool isTearingSupported = false;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
-        ComPtr<ID3D11Device1> d3dDevice;
-        D3D11CommandContext* mainContext;
+        ID3D11Device1*              d3dDevice = nullptr;
+        ID3D11DeviceContext1*       d3dContexts[kMaxCommandLists + 1] = {};
+        ID3DUserDefinedAnnotation*  d3dAnnotations[kMaxCommandLists + 1] = {};
+
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         bool isFullscreen = false;
         HWND window;
-        ComPtr<IDXGISwapChain1> swapChain;
+        IDXGISwapChain1* swapChain = nullptr;
 #else
         IUnknown* window;
-        ComPtr<IDXGISwapChain3> swapChain;
+        IDXGISwapChain3* swapChain = nullptr;
 #endif
         UInt2 backbufferSize = UInt2::Zero;
         DXGI_MODE_ROTATION rotation{ DXGI_MODE_ROTATION_IDENTITY };
+        RefPtr<Texture> backbufferTexture;
 
         /* Resource pools */
         std::mutex handle_mutex;
-        eastl::fixed_vector<D3D11Buffer, 16> buffers;
+        eastl::fixed_vector<D3D11Texture, 1024> textures;
+        eastl::fixed_vector<D3D11Buffer, 1024> buffers;
+
+        ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
     };
 }

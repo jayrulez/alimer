@@ -21,10 +21,8 @@
 //
 
 #include "D3D11GraphicsImpl.h"
-#include "D3D11CommandContext.h"
-//#include "D3D11SwapChain.h"
-//#include "D3D11Texture.h"
-//#include "D3D11Buffer.h"
+#include "Graphics/Texture.h"
+#include "Graphics/Buffer.h"
 #include "Core/String.h"
 
 namespace alimer
@@ -139,8 +137,32 @@ namespace alimer
     {
         //delete mainContext;
 
-        swapChain.Reset();
-        d3dDevice.Reset();
+        backbufferTexture.reset();
+        SafeRelease(swapChain);
+
+        for (uint32_t i = 0; i < _countof(d3dContexts); i++)
+        {
+            SafeRelease(d3dAnnotations[i]);
+            SafeRelease(d3dContexts[i]);
+        }
+
+        ULONG refCount = d3dDevice->Release();
+#if !defined(NDEBUG)
+        if (refCount > 0)
+        {
+            LOGD("Direct3D11: There are {} unreleased references left on the device", refCount);
+
+            ID3D11Debug* d3d11Debug;
+            if (SUCCEEDED(d3dDevice->QueryInterface(&d3d11Debug)))
+            {
+                d3d11Debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
+                d3d11Debug->Release();
+            }
+        }
+#else
+        (void)refCount; // avoid warning
+#endif
+
         dxgiFactory.Reset();
 
 #ifdef _DEBUG
@@ -437,8 +459,8 @@ namespace alimer
             };
 
             // Create the Direct3D 11 API device object and a corresponding context.
-            ComPtr<ID3D11Device> tempD3DDevice;
-            ComPtr<ID3D11DeviceContext> immediateContext;
+            ID3D11Device* device;
+            ID3D11DeviceContext* context;
 
             hr = E_FAIL;
             if (dxgiAdapter)
@@ -451,9 +473,9 @@ namespace alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    &tempD3DDevice,
+                    &device,
                     &d3dFeatureLevel,
-                    &immediateContext
+                    &context
                 );
             }
 #if defined(NDEBUG)
@@ -475,9 +497,9 @@ namespace alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    &tempD3DDevice,
+                    &device,
                     &d3dFeatureLevel,
-                    &immediateContext
+                    &context
                 );
 
                 if (SUCCEEDED(hr))
@@ -490,11 +512,11 @@ namespace alimer
             ThrowIfFailed(hr);
 
 #ifndef NDEBUG
-            ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(tempD3DDevice.As(&d3dDebug)))
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&d3dDebug))))
             {
-                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
+                ID3D11InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug->QueryInterface(IID_PPV_ARGS(&d3dInfoQueue))))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -508,12 +530,17 @@ namespace alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
                 }
+                d3dDebug->Release();
             }
 #endif
 
-            ThrowIfFailed(tempD3DDevice.As(&d3dDevice));
-            //mainContext = new D3D11CommandContext(this, immediateContext);
+            ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&d3dDevice)));
+            ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&d3dContexts[0])));
+            ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&d3dAnnotations[0])));
+            context->Release();
+            device->Release();
 
             // Init caps
             InitCapabilities(dxgiAdapter.Get());
@@ -531,6 +558,10 @@ namespace alimer
 
     void D3D11GraphicsImpl::UpdateSwapChain()
     {
+        d3dContexts[0]->OMSetRenderTargets(kMaxColorAttachments, zeroRTVS, nullptr);
+        backbufferTexture.reset();
+        d3dContexts[0]->Flush();
+
         if (swapChain)
         {
 
@@ -544,8 +575,8 @@ namespace alimer
 #endif
 
             DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
-            swapchainDesc.Width = 0;
-            swapchainDesc.Height = 0;
+            swapchainDesc.Width = backbufferSize.x;
+            swapchainDesc.Height = backbufferSize.y;
             swapchainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             swapchainDesc.Stereo = false;
             swapchainDesc.SampleDesc.Count = 1;
@@ -567,31 +598,37 @@ namespace alimer
 
             // Create a SwapChain from a Win32 window.
             ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
-                d3dDevice.Get(),
+                d3dDevice,
                 window,
                 &swapchainDesc,
                 &fsSwapchainDesc,
                 nullptr,
-                swapChain.ReleaseAndGetAddressOf()
+                &swapChain
             ));
 
             // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
             ThrowIfFailed(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
-            ComPtr<IDXGISwapChain1> swapChain;
+
+            IDXGISwapChain1* tempSwapChain;
             ThrowIfFailed(dxgiFactory->CreateSwapChainForCoreWindow(
                 d3dDevice,
                 window,
                 &swapchainDesc,
                 nullptr,
-                &swapChain
+                &tempSwapChain
             ));
+            ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
+            SafeRelease(tempSwapChain);
 #endif
         }
 
         // Create a render target view of the swap chain back buffer.
-        //ID3D11Texture2D* backbufferTexture;
-        //ThrowIfFailed(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTexture));
+        ID3D11Texture2D* backbufferTextureHandle;
+        ThrowIfFailed(swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTextureHandle));
+        backbufferTexture = new Texture();
+        ALIMER_VERIFY(backbufferTexture->DefineExternal(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false));
+        backbufferTextureHandle->Release();
     }
 
     bool D3D11GraphicsImpl::BeginFrame()
@@ -617,11 +654,17 @@ namespace alimer
 
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
+#ifdef _DEBUG
+            char buff[64] = {};
+            sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+            OutputDebugStringA(buff);
+#endif
+
             // TODO: Handle device lost.
+            HandleDeviceLost();
             isLost = true;
             return;
         }
-
 
         if (!dxgiFactory->IsCurrent())
         {
@@ -630,7 +673,112 @@ namespace alimer
         }
     }
 
+    void D3D11GraphicsImpl::HandleDeviceLost()
+    {
+    }
+
     /* Resource creation methods */
+    TextureHandle D3D11GraphicsImpl::AllocTextureHandle()
+    {
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+
+        D3D11Texture& texture = textures.push_back();
+        texture.handle = nullptr;
+        return { (uint32_t)(textures.size() - 1) };
+    }
+
+    TextureHandle D3D11GraphicsImpl::CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle)
+    {
+        if (externalHandle != nullptr)
+        {
+            TextureHandle handle = AllocTextureHandle();
+            switch (dimension)
+            {
+            case TextureDimension::Texture2D:
+            case TextureDimension::TextureCube:
+                textures[handle.id].tex2D = (ID3D11Texture2D*)externalHandle;
+                textures[handle.id].tex2D->AddRef();
+                break;
+            case TextureDimension::Texture3D:
+                textures[handle.id].tex3D = (ID3D11Texture3D*)externalHandle;
+                textures[handle.id].tex3D->AddRef();
+                break;
+            default:
+                break;
+            }
+
+            return handle;
+        }
+        else
+        {
+            switch (dimension)
+            {
+            case TextureDimension::Texture2D:
+                return CreateTexture2D(width, height, data);
+
+            default:
+                break;
+            }
+        }
+
+        return kInvalidTexture;
+    }
+
+    TextureHandle D3D11GraphicsImpl::CreateTexture2D(uint32_t width, uint32_t height, const void* data)
+    {
+        D3D11_TEXTURE2D_DESC d3dDesc;
+        d3dDesc.Width = width;
+        d3dDesc.Height = height;
+        d3dDesc.MipLevels = 1u;
+        d3dDesc.ArraySize = 1u;
+        d3dDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        d3dDesc.SampleDesc.Count = 1;
+        d3dDesc.SampleDesc.Quality = 0;
+        d3dDesc.Usage = D3D11_USAGE_DEFAULT;
+        d3dDesc.BindFlags = 0;
+        d3dDesc.CPUAccessFlags = 0;
+        d3dDesc.MiscFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
+        D3D11_SUBRESOURCE_DATA initialData;
+        memset(&initialData, 0, sizeof(initialData));
+        if (data != nullptr) {
+            initialData.pSysMem = data;
+            initialDataPtr = &initialData;
+        }
+
+        ID3D11Texture2D* resource;
+        HRESULT hr = d3dDevice->CreateTexture2D(&d3dDesc, initialDataPtr, &resource);
+        if (FAILED(hr)) {
+            LOGE("Direct3D11: Failed to create 2D texture");
+            return kInvalidTexture;
+        }
+
+        TextureHandle handle = AllocTextureHandle();
+        textures[handle.id].tex2D = resource;
+        return handle;
+    }
+
+    void D3D11GraphicsImpl::Destroy(TextureHandle handle)
+    {
+        if (!handle.isValid())
+            return;
+
+        D3D11Texture& texture = textures[handle.id];
+        SafeRelease(texture.handle);
+
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+        textures.erase(&texture);
+    }
+
+    void D3D11GraphicsImpl::SetName(TextureHandle handle, const char* name)
+    {
+        if (!handle.isValid())
+            return;
+
+        D3D11SetObjectName(textures[handle.id].handle, name);
+    }
+
     BufferHandle D3D11GraphicsImpl::AllocBufferHandle()
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
@@ -695,16 +843,13 @@ namespace alimer
 
         d3dDesc.StructureByteStride = stride;
 
-        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialData;
-        memset(&initialData, 0, sizeof(initialData));
-        if (data != nullptr) {
-            initialData.pSysMem = data;
-            initialDataPtr = &initialData;
-        }
+        initialData.pSysMem = data;
+        initialData.SysMemPitch = 0;
+        initialData.SysMemSlicePitch = 0;
 
         ID3D11Buffer* d3dBuffer;
-        HRESULT hr = d3dDevice->CreateBuffer(&d3dDesc, initialDataPtr, &d3dBuffer);
+        HRESULT hr = d3dDevice->CreateBuffer(&d3dDesc, data ? &initialData : nullptr, &d3dBuffer);
         if (FAILED(hr)) {
             LOGE("Direct3D11: Failed to create buffer");
             return kInvalidBuffer;
@@ -735,17 +880,49 @@ namespace alimer
         D3D11SetObjectName(buffers[handle.id].handle, name);
     }
 
-    void D3D11GraphicsImpl::HandleDeviceLost(HRESULT hr)
+    /* Commands */
+    void D3D11GraphicsImpl::PushDebugGroup(const String& name, CommandList commandList)
     {
-#ifdef _DEBUG
-        char buff[64] = {};
-        sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
-        OutputDebugStringA(buff);
-#endif
+        auto wideName = ToUtf16(name);
+        d3dAnnotations[commandList]->BeginEvent(wideName.c_str());
     }
 
-    /*CommandContext* D3D11GraphicsDevice::GetDefaultContext() const
+    void D3D11GraphicsImpl::PopDebugGroup(CommandList commandList)
     {
-        return defaultContext.Get();
-    }*/
+        d3dAnnotations[commandList]->EndEvent();
+    }
+
+    void D3D11GraphicsImpl::InsertDebugMarker(const String& name, CommandList commandList)
+    {
+        auto wideName = ToUtf16(name);
+        d3dAnnotations[commandList]->SetMarker(wideName.c_str());
+    }
+
+    void D3D11GraphicsImpl::BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList)
+    {
+        /*uint32_t colorRTVSCount = 0;
+        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
+        {
+            const RenderPassColorAttachment& attachment = renderPass.colorAttachments[i];
+            if (attachment.texture == nullptr)
+                break;
+
+            D3D11Texture* texture = static_cast<D3D11Texture*>(attachment.texture);
+            colorRTVS[i] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+
+            if (attachment.loadAction == LoadAction::Clear)
+            {
+                context->ClearRenderTargetView(colorRTVS[i], &attachment.clearColor.r);
+            }
+
+            colorRTVSCount++;
+        }
+
+        d3dContexts[commandList]->OMSetRenderTargets(colorRTVSCount, colorRTVS, nullptr);*/
+    }
+
+    void D3D11GraphicsImpl::EndRenderPass(CommandList commandList)
+    {
+        /* TODO: Resolve */
+    }
 }

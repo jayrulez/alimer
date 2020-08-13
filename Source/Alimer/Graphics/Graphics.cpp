@@ -75,7 +75,7 @@ namespace alimer
         }
 
         RegisterSubsystem(this);
-        Texture2D::RegisterObject();
+        Texture::RegisterObject();
     }
 
     Graphics::~Graphics()
@@ -147,6 +147,32 @@ namespace alimer
     const GraphicsCapabilities& Graphics::GetCaps() const
     {
         return impl->GetCaps();
+    }
+
+    /* Commands */
+    void Graphics::PushDebugGroup(const String& name, CommandList commandList)
+    {
+        impl->PushDebugGroup(name, commandList);
+    }
+
+    void Graphics::PopDebugGroup(CommandList commandList)
+    {
+        impl->PopDebugGroup(commandList);
+    }
+
+    void Graphics::InsertDebugMarker(const String& name, CommandList commandList)
+    {
+        impl->InsertDebugMarker(name, commandList);
+    }
+
+    void Graphics::BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList)
+    {
+        impl->BeginRenderPass(renderPass, commandList);
+    }
+
+    void Graphics::EndRenderPass(CommandList commandList)
+    {
+        impl->EndRenderPass(commandList);
     }
 }
 

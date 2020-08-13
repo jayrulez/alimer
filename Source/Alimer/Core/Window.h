@@ -24,8 +24,8 @@
 
 #include "config.h"
 #include "Core/Ptr.h"
+#include "Core/Math.h"
 #include "Core/Delegate.h"
-#include "Math/Vector2.h"
 
 #if defined(ALIMER_GLFW)
 struct GLFWwindow;

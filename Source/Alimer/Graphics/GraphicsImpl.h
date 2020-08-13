@@ -82,9 +82,21 @@ namespace alimer
         virtual void EndFrame(uint64_t frameIndex) = 0;
 
         /* Resource creation methods */
+        virtual TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) = 0;
+        virtual void Destroy(TextureHandle handle) = 0;
+        virtual void SetName(TextureHandle handle, const char* name) = 0;
+
         virtual BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data = nullptr) = 0;
         virtual void Destroy(BufferHandle handle) = 0;
         virtual void SetName(BufferHandle handle, const char* name) = 0;
+
+        /* Commands */
+        virtual void PushDebugGroup(const String& name, CommandList commandList) = 0;
+        virtual void PopDebugGroup(CommandList commandList) = 0;
+        virtual void InsertDebugMarker(const String& name, CommandList commandList) = 0;
+
+        virtual void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList) = 0;
+        virtual void EndRenderPass(CommandList commandList) = 0;
 
     protected:
         GraphicsImpl() = default;

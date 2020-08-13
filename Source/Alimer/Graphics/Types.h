@@ -49,6 +49,9 @@ namespace alimer
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
     static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
 
+    using CommandList = uint8_t;
+    static constexpr CommandList kMaxCommandLists = 16;
+
     /// Enum describing the rendering backend.
     enum class RendererType
     {
@@ -97,16 +100,10 @@ namespace alimer
     {
         /// A two-dimensional texture image.
         Texture2D,
-        /// An array of two-dimensional texture images.
-        Texture2DArray,
-        /// A two-dimensional texture image that uses more than one sample for each pixel.
-        Texture2DMultisample,
-        /// A cube texture with six two-dimensional images.
-        TextureCube,
-        /// An array of cube textures, each with six two-dimensional images.
-        TextureCubeArray,
         /// A three-dimensional texture image.
         Texture3D,
+        /// A cube texture with six two-dimensional images.
+        TextureCube
     };
 
     /// Defines the usage of texture resource.
@@ -148,17 +145,12 @@ namespace alimer
         Discard
     };
 
-    struct GPUSurface;
-
-    struct GPURequestAdapterOptions
+    struct ScissorRect
     {
-        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        GPUSurface* compatibleSurface;
-    };
-
-    struct GPUDeviceDescriptor
-    {
-
+        int x;
+        int y;
+        int width;
+        int height;
     };
 
     struct BufferDescription
@@ -210,7 +202,7 @@ namespace alimer
         uint8_t clearStencil = 0;
     };
 
-    struct RenderPassDescription
+    struct RenderPassDescriptor
     {
         // Render area will be clipped to the actual framebuffer.
         //RectU renderArea = { UINT32_MAX, UINT32_MAX };

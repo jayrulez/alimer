@@ -64,9 +64,16 @@ namespace alimer
         /// Get the device capabilities.
         const GraphicsCapabilities& GetCaps() const;
 
-        /// Total number of CPU frames completed (completed means all command buffers submitted to the GPU)
-        uint64_t GetFrameCount() const { return frameCount; }
+        /* Commands */
+        void PushDebugGroup(const String& name, CommandList commandList = 0);
+        void PopDebugGroup(CommandList commandList = 0);
+        void InsertDebugMarker(const String& name, CommandList commandList = 0);
 
+        void BeginRenderPass(const RenderPassDescriptor& renderPass, CommandList commandList = 0);
+        void EndRenderPass(CommandList commandList = 0);
+
+        /// Total number of CPU frames completed.
+        uint64_t GetFrameCount() const { return frameCount; }
 
     private:
         Graphics(RendererType rendererType);

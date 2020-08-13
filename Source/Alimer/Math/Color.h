@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Math/Vector4.h"
+#include "Core/Math.h"
 
 #if defined(__GNUC__) && !defined(__MINGW32__)
 #define ALIMER_SELECT_ANY __attribute__((weak))
@@ -49,9 +49,9 @@ namespace alimer
         Color() noexcept : r(0.0f), g(0.0f), b(0.0f), a(1.0f) {}
         constexpr Color(float r_, float g_, float b_) noexcept : r(r_), g(g_), b(b_), a(1.0f) {}
         constexpr Color(float r_, float g_, float b_, float a_) noexcept : r(r_), g(g_), b(b_), a(a_) {}
-        //explicit Color(const Vector3& clr) noexcept : XMFLOAT4(clr.x, clr.y, clr.z, 1.f) {}
-        explicit Color(const Vector4& vector) noexcept : r(vector.x), g(vector.y), b(vector.z), a(vector.w) {}
-        explicit Color(_In_reads_(4) const float* data) noexcept : r(data[0]), g(data[1]), b(data[2]), a(data[3]) {}
+        explicit Color(const Float3& vector) noexcept : r(vector.x), g(vector.y), b(vector.z), a(1.0f) {}
+        explicit Color(const Float4& vector) noexcept : r(vector.x), g(vector.y), b(vector.z), a(vector.w) {}
+        explicit Color(_In_reads_(4) const float* pArray) noexcept : r(pArray[0]), g(pArray[1]), b(pArray[2]), a(pArray[3]) {}
 
         Color(const Color&) = default;
         Color& operator=(const Color&) = default;

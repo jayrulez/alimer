@@ -25,7 +25,7 @@
 #include "Core/Log.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Math/Vector2.h"
+#include "Core/Math.h"
 #include <EASTL/unique_ptr.h>
 #include <EASTL/vector.h>
 

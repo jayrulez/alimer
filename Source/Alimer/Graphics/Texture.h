@@ -36,6 +36,10 @@ namespace alimer
         /// Destructor
         ~Texture() override;
 
+        /// Register object factory/properties.
+        static void RegisterObject();
+
+        bool Define2D(uint32_t width, uint32_t height, bool mipMap = false, PixelFormat format = PixelFormat::RGBA8Unorm, TextureUsage usage = TextureUsage::Sampled);
         bool DefineExternal(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
         void Destroy() override;
 
@@ -90,15 +94,5 @@ namespace alimer
         uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
         uint32_t sampleCount = 1u;
-    };
-
-    class ALIMER_API Texture2D final : public Texture
-    {
-    public:
-        /// Constructor.
-        Texture2D(uint32_t width, uint32_t height, bool mipMap = false, PixelFormat format = PixelFormat::RGBA8Unorm, TextureUsage usage = TextureUsage::Sampled);
-
-        /// Register object factory/properties.
-        static void RegisterObject();
     };
 }
