@@ -399,26 +399,9 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 //---------------------------------------------
 #include <stddef.h>
 #include <stdint.h>
-#include <float.h>
 
 namespace alimer
 {
-    using int32 = int32_t;
-    using int64 = int64_t;
-    using uint32 = uint32_t;
-    using uint64 = uint64_t;
-
-    //---------------------------------------------
-    // Limits
-    //---------------------------------------------
-    template <typename T> struct Limits;
-#define ALIMER_MAKE_LIMITS(type, lo, hi) template <> struct Limits<type> { static constexpr type Min = lo; static constexpr type Max = hi; }
-
-    ALIMER_MAKE_LIMITS(int32, INT32_MIN, INT32_MAX);
-    ALIMER_MAKE_LIMITS(int64, INT64_MIN, INT64_MAX);
-    ALIMER_MAKE_LIMITS(uint32, 0, UINT32_MAX);
-    ALIMER_MAKE_LIMITS(uint64, 0, UINT64_MAX);
-
     template <typename T, unsigned int N>
     void SafeRelease(T(&resourceBlock)[N])
     {
@@ -461,15 +444,6 @@ namespace alimer
         delete[] resource;
         resource = nullptr;
     }
-
-//---------------------------------------------
-// Basic comparisons
-//---------------------------------------------
-    template<typename T> inline T Abs(T v) { return (v >= 0) ? v : -v; }
-    template<typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
-    template<typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
-    template<typename T> inline T Clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
-    template<typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
 }
 
 #if !defined(ALIMER_DISABLE_COPY)

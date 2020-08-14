@@ -47,7 +47,7 @@
 
 namespace alimer
 {
-    static const char* LogLevelPefixes[uint32(LogLevel::Count)] = {
+    static const char* LogLevelPefixes[uint32_t(LogLevel::Count)] = {
         "VERBOSE",
         "DEBUG",
         "INFO",

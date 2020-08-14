@@ -55,9 +55,7 @@
 #include <dxgidebug.h>
 #endif
 
-#include <EASTL/string.h>
-#include <EASTL/string_view.h>
-#include <EASTL/vector.h>
+#include <vector>
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY1)(REFIID _riid, _COM_Outptr_ void** _factory);
@@ -94,23 +92,23 @@ namespace alimer
 #ifdef ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
-    inline eastl::wstring GetDXErrorString(HRESULT hr)
+    inline std::wstring GetDXErrorString(HRESULT hr)
     {
         const uint32_t errStringSize = 1024;
         wchar_t errorString[errStringSize];
         DXGetErrorDescriptionW(hr, errorString, errStringSize);
 
-        eastl::wstring message = L"DirectX Error: ";
+        std::wstring message = L"DirectX Error: ";
         message += errorString;
         return message;
     }
 
-    inline eastl::string GetDXErrorStringAnsi(HRESULT hr)
+    inline std::string GetDXErrorStringAnsi(HRESULT hr)
     {
-        eastl::wstring errorString = GetDXErrorString(hr);
+        std::wstring errorString = GetDXErrorString(hr);
 
-        eastl::string message;
-        for (eastl_size_t i = 0; i < errorString.length(); ++i)
+        std::string message;
+        for (std::string::size_type i = 0; i < errorString.length(); ++i)
         {
             message.append(1, static_cast<char>(errorString[i]));
         }
@@ -131,37 +129,37 @@ namespace alimer
     while(0)
 #endif
 
-    static inline eastl::string ToUtf8(const eastl::wstring& str)
+    static inline std::string ToUtf8(const std::wstring& str)
     {
-        eastl::vector<char> char_buffer;
+        std::vector<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
             return "";
         char_buffer.resize(ret);
         WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
-        return eastl::string(char_buffer.data(), char_buffer.size());
+        return std::string(char_buffer.data(), char_buffer.size());
     }
 
-    static inline eastl::wstring ToUtf16(const eastl::string& str)
+    static inline std::wstring ToUtf16(const std::string& str)
     {
-        eastl::vector<wchar_t> wchar_buffer;
+        std::vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return eastl::wstring(wchar_buffer.data(), wchar_buffer.size());
+        return std::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    static inline eastl::wstring_view ToUtf16(const eastl::string_view& str)
+    static inline std::wstring_view ToUtf16(const std::string_view& str)
     {
-        eastl::vector<wchar_t> wchar_buffer;
+        std::vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return eastl::wstring_view(wchar_buffer.data(), wchar_buffer.size());
+        return std::wstring_view(wchar_buffer.data(), wchar_buffer.size());
     }
 
     struct DxgiFormatDesc

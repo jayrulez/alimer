@@ -24,7 +24,6 @@
 
 #include "Graphics/GraphicsImpl.h"
 #include "D3D11Backend.h"
-#include <EASTL/fixed_vector.h>
 #include <mutex>
 
 namespace alimer
@@ -124,8 +123,8 @@ namespace alimer
 
         /* Resource pools */
         std::mutex handle_mutex;
-        eastl::fixed_vector<D3D11Texture, 1024> textures;
-        eastl::fixed_vector<D3D11Buffer, 1024> buffers;
+        GPUResourcePool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
+        GPUResourcePool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
 
         ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
     };

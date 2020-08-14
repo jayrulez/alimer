@@ -38,7 +38,7 @@ namespace alimer
 
         virtual void Flush() = 0;
 
-        virtual void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) = 0;
+        virtual void SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
         virtual void SetScissorRects(const Rect* scissorRects, uint32_t count) = 0;
         virtual void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
         virtual void SetBlendColor(const Color& color) = 0;

@@ -25,18 +25,15 @@
 #include "Core/Window.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Buffer.h"
-#include <EASTL/vector.h>
 
 namespace alimer
 {
     class GraphicsImpl;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API Graphics final : public Object
+    class ALIMER_API Graphics final : public RefCounted
     {
         friend class GraphicsResource;
-
-        ALIMER_OBJECT(Graphics, Object);
 
     public:
         /// Destructor.
@@ -57,7 +54,7 @@ namespace alimer
         void EndFrame();
 
         /// Return the rendering window.
-        Window* GetRenderWindow() const { return window.get(); }
+        Window* GetRenderWindow() const { return window.Get(); }
 
         GraphicsImpl* GetImpl() const;
 

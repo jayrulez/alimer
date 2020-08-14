@@ -22,8 +22,8 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
-#include <EASTL/unordered_map.h>
-#include <EASTL/unique_ptr.h>
+#include <unordered_map>
+#include <memory>
 
 namespace alimer
 {
@@ -32,8 +32,8 @@ namespace alimer
         struct Context
         {
             /// Object factories.
-            eastl::unordered_map<StringId32, RefPtr<Object>> subsystems;
-            eastl::unordered_map<StringId32, eastl::unique_ptr<ObjectFactory>> factories;
+            std::unordered_map<StringId32, RefPtr<Object>> subsystems;
+            std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
 
             RefPtr<Input> input;
 
@@ -56,7 +56,7 @@ namespace alimer
             Object* GetSubsystem(StringId32 type)
             {
                 auto it = subsystems.find(type);
-                return it != subsystems.end() ? it->second.get() : nullptr;
+                return it != subsystems.end() ? it->second.Get() : nullptr;
             }
 
             void RegisterFactory(ObjectFactory* factory)
@@ -160,7 +160,7 @@ namespace alimer
 
     Input* Object::GetInput()
     {
-        return details::context().input.get();
+        return details::context().input.Get();
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

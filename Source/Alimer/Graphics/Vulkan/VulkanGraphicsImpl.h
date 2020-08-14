@@ -82,7 +82,7 @@ namespace alimer
 
         void TextureBarrier(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 
-        void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
+        void SetObjectName(VkObjectType type, uint64_t handle, const String& name);
 
         VkInstance GetVkInstance() const { return instance; }
         VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
@@ -98,6 +98,8 @@ namespace alimer
         bool UpdateSwapchain();
         VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
         VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
+        void ClearRenderPassCache();
+        void ClearFramebufferCache();
 
         VkResult AcquireNextImage(uint32_t* imageIndex);
         VkResult PresentImage(uint32_t imageIndex);
@@ -168,8 +170,8 @@ namespace alimer
 
         /* Resource pools */
         std::mutex handle_mutex;
-        GPUResourcePool<VulkanTexture, 1024> textures;
-        GPUResourcePool<VulkanBuffer, 1024> buffers;
+        GPUResourcePool<VulkanTexture, VulkanTexture::MAX_COUNT> textures;
+        GPUResourcePool<VulkanBuffer, VulkanBuffer::MAX_COUNT> buffers;
 
         std::unordered_map<Hash, VkRenderPass> renderPasses;
         std::unordered_map<Hash, VkFramebuffer> framebuffers;

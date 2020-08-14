@@ -29,19 +29,6 @@
 #include "Math/Color.h"
 #include <imgui.h>
 
-/* Needed by EASTL. */
-#if !defined(ALIMER_EXPORTS)
-ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return ::operator new(size);
-}
-
-ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return ::operator new(size);
-}
-#endif
-
 namespace alimer
 {
     Application::Application()
@@ -69,9 +56,8 @@ namespace alimer
 
     Application::~Application()
     {
-        gameSystems.clear();
+        //gameSystems.clear();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<Graphics>();
         ImGuiLayer::Shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
@@ -130,10 +116,10 @@ namespace alimer
 
     void Application::Initialize()
     {
-        for (auto& gameSystem : gameSystems)
+        /*for (auto& gameSystem : gameSystems)
         {
             gameSystem->Initialize();
-        }
+        }*/
     }
 
     void Application::BeginRun()
@@ -153,20 +139,20 @@ namespace alimer
         }
         ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
-        for (auto& gameSystem : gameSystems)
+        /*for (auto& gameSystem : gameSystems)
         {
             gameSystem->BeginDraw();
-        }
+        }*/
 
         return true;
     }
 
     void Application::Draw(const GameTime& gameTime)
     {
-        for (auto& gameSystem : gameSystems)
+        /*for (auto& gameSystem : gameSystems)
         {
             gameSystem->Draw(time);
-        }
+        }*/
 
         if (GetInput()->IsMouseButtonDown(MouseButton::Right)) {
             LOGI("Right pressed");
@@ -187,10 +173,10 @@ namespace alimer
 
     void Application::EndDraw()
     {
-        for (auto& gameSystem : gameSystems)
+        /*for (auto& gameSystem : gameSystems)
         {
             gameSystem->EndDraw();
-        }
+        }*/
         
         ImGuiLayer::EndFrame();
         graphics->EndFrame();
@@ -221,10 +207,10 @@ namespace alimer
 
     void Application::Update(const GameTime& gameTime)
     {
-        for (auto& gameSystem : gameSystems)
+        /*for (auto& gameSystem : gameSystems)
         {
             gameSystem->Update(gameTime);
-        }
+        }*/
     }
 
     void Application::Render()

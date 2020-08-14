@@ -21,16 +21,13 @@
 //
 
 #include "Math/Size.h"
-#include <fmt/format.h>
 
 namespace alimer
 {
     const Size Size::Empty = { 0.0f, 0.0f };
 
-    eastl::string Size::ToString() const
+    String Size::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g", width, height);
-        return eastl::string(tempBuffer);
+        return fmt::format("{} {}", width, height);
     }
 }

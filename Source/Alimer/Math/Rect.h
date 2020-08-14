@@ -53,10 +53,10 @@ namespace alimer
 
         /// Test for equality with another rect with epsilon.
         bool Equals(const Rect& rhs) const {
-            return Math::Equals(x, rhs.x)
-                && Math::Equals(y, rhs.y)
-                && Math::Equals(width, rhs.width)
-                && Math::Equals(height, rhs.height);
+            return alimer::Equals(x, rhs.x)
+                && alimer::Equals(y, rhs.y)
+                && alimer::Equals(width, rhs.width)
+                && alimer::Equals(height, rhs.height);
         }
 
         /// Gets a value that indicates whether the rectangle is empty.

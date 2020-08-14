@@ -39,10 +39,10 @@ namespace alimer
         value = Murmur32(str.c_str(), (uint32_t)str.length(), 0);
     }
 
-    eastl::string StringId32::ToString() const
+    std::string StringId32::ToString() const
     {
         char tempBuffer[CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%08X", value);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 }

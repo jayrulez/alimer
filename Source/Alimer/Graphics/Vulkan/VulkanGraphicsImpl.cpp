@@ -215,7 +215,7 @@ namespace alimer
                 else if (strcmp(extensions[i].extensionName, "VK_KHR_bind_memory2") == 0) {
                     result.bind_memory2 = true;
                 }
-                else if (strcmp(extensions[i].extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) == 0) {
+                else if (strcmp(extensions[i].extensionName, "VK_EXT_memory_budget") == 0) {
                     result.memory_budget = true;
                 }
                 else if (strcmp(extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0) {
@@ -474,6 +474,10 @@ namespace alimer
             surface = VK_NULL_HANDLE;
         }
 
+        // Clear caches
+        ClearRenderPassCache();
+        ClearFramebufferCache();
+
         if (allocator != VK_NULL_HANDLE)
         {
             VmaStats stats;
@@ -704,7 +708,7 @@ namespace alimer
         frame.clear();
         frame.resize(imageCount);
 
-        for (uint32 i = 0; i < imageCount; i++)
+        for (uint32_t i = 0; i < imageCount; i++)
         {
             swapChainImageLayouts[i] = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -1244,7 +1248,7 @@ namespace alimer
         createInfo.pNext = &features;
         createInfo.queueCreateInfoCount = queueCreateCount;
         createInfo.pQueueCreateInfos = queue_info;
-        createInfo.enabledExtensionCount = (uint32)enabledExtensions.size();
+        createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
         createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
         result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -1288,7 +1292,7 @@ namespace alimer
         return true;
     }
 
-    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const std::string& name)
+    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const String& name)
     {
         if (!instanceExts.debugUtils)
             return;
@@ -1898,5 +1902,21 @@ namespace alimer
         }
 
         return it->second;
+    }
+
+    void VulkanGraphicsImpl::ClearRenderPassCache()
+    {
+        for (auto it : renderPasses) {
+            vkDestroyRenderPass(device, it.second, nullptr);
+        }
+        renderPasses.clear();
+    }
+
+    void VulkanGraphicsImpl::ClearFramebufferCache()
+    {
+        for (auto it : framebuffers) {
+            vkDestroyFramebuffer(device, it.second, nullptr);
+        }
+        framebuffers.clear();
     }
 }

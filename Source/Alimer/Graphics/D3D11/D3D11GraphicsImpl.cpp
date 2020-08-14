@@ -137,7 +137,7 @@ namespace alimer
     {
         //delete mainContext;
 
-        backbufferTexture.reset();
+        backbufferTexture.Reset();
         SafeRelease(swapChain);
 
         for (uint32_t i = 0; i < _countof(d3dContexts); i++)
@@ -284,7 +284,7 @@ namespace alimer
             caps.vendorId = desc.VendorId;
             caps.deviceId = desc.DeviceId;
 
-            eastl::wstring deviceName(desc.Description);
+            std::wstring deviceName(desc.Description);
             caps.adapterName = alimer::ToUtf8(deviceName);
 
             // Detect adapter type.
@@ -559,7 +559,7 @@ namespace alimer
     void D3D11GraphicsImpl::UpdateSwapChain()
     {
         d3dContexts[0]->OMSetRenderTargets(kMaxColorAttachments, zeroRTVS, nullptr);
-        backbufferTexture.reset();
+        backbufferTexture.Reset();
         d3dContexts[0]->Flush();
 
         if (swapChain)
@@ -682,10 +682,17 @@ namespace alimer
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
 
-        D3D11Texture& texture = textures.push_back();
+        if (textures.isFull()) {
+            LOGE("Not enough free texture slots.");
+            return kInvalidTexture;
+        }
+        const int id = textures.Alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        D3D11Texture& texture = textures[id];
         texture.handle = nullptr;
         texture.rtv = nullptr;
-        return { (uint32_t)(textures.size() - 1) };
+        return { (uint32_t)id };
     }
 
     TextureHandle D3D11GraphicsImpl::CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle)
@@ -775,7 +782,7 @@ namespace alimer
         SafeRelease(texture.handle);
 
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
-        textures.erase(&texture);
+        textures.Dealloc(handle.id);
     }
 
     void D3D11GraphicsImpl::SetName(TextureHandle handle, const char* name)
@@ -790,9 +797,16 @@ namespace alimer
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
 
-        D3D11Buffer& buffer = buffers.push_back();
+        if (buffers.isFull()) {
+            LOGE("Not enough free buffer slots.");
+            return kInvalidBuffer;
+        }
+        const int id = buffers.Alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        D3D11Buffer& buffer = buffers[id];
         buffer.handle = nullptr;
-        return { (uint32_t)(buffers.size() - 1) };
+        return { (uint32_t)id };
     }
 
     BufferHandle D3D11GraphicsImpl::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
@@ -809,7 +823,7 @@ namespace alimer
         uint32_t bufferSize = size;
         if ((usage & BufferUsage::Uniform) != BufferUsage::None)
         {
-            bufferSize = Math::AlignTo(size, caps.limits.minUniformBufferOffsetAlignment);
+            bufferSize = AlignTo(size, caps.limits.minUniformBufferOffsetAlignment);
         }
 
         const bool needUav = any(usage & BufferUsage::Storage) || any(usage & BufferUsage::Indirect);
@@ -876,7 +890,7 @@ namespace alimer
         SafeRelease(buffer.handle);
 
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
-        buffers.erase(&buffer);
+        buffers.Dealloc(handle.id);
     }
 
     void D3D11GraphicsImpl::SetName(BufferHandle handle, const char* name)

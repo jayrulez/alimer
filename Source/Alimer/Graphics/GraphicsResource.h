@@ -56,12 +56,12 @@ namespace alimer
         virtual void Destroy() {}
 
         /// Set the resource name.
-        void SetName(const eastl::string& newName) { name = newName; BackendSetName(); }
+        void SetName(const String& newName) { name = newName; BackendSetName(); }
 
         /**
         * Get the resource name
         */
-        const eastl::string& GetName() const { return name; }
+        const String& GetName() const { return name; }
 
     protected:
         GraphicsResource(ResourceDimension dimension_)
@@ -72,7 +72,7 @@ namespace alimer
         virtual void BackendSetName() {}
 
     protected:
-        eastl::string name;
+        String name;
         ResourceDimension dimension;
     };
 }

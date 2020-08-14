@@ -75,19 +75,17 @@ namespace alimer
             break;
         }
 
-        RegisterSubsystem(this);
         Texture::RegisterObject();
     }
 
     Graphics::~Graphics()
     {
         SafeDelete(impl);
-        //RemoveSubsystem(this);
     }
 
     Graphics* Graphics::Create(RendererType preferredRendererType)
     {
-        if (graphics != nullptr)
+        if (graphics)
         {
             LOGE("Cannot create more than one Graphics instance.");
             return nullptr;
@@ -99,7 +97,7 @@ namespace alimer
         }
 
         graphics = new Graphics(preferredRendererType);
-        return graphics.get();
+        return graphics.Get();
     }
 
     bool Graphics::SetMode(const UInt2& size, WindowFlags windowFlags, uint32_t sampleCount_)

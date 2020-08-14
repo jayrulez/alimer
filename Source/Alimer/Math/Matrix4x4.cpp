@@ -70,7 +70,7 @@ namespace alimer
 
         float yScale = 1.0f / tan(fieldOfView * 0.5f);
         float xScale = yScale / aspectRatio;
-        const float negFarRange = Math::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
+        const float negFarRange = alimer::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
 
         result->m11 = xScale;
         result->m12 = 0.0f;
@@ -139,7 +139,7 @@ namespace alimer
         result->m44 = 1.0f;
     }
 
-    eastl::string Matrix4x4::ToString() const
+    std::string Matrix4x4::ToString() const
     {
         char tempBuffer[MATRIX_CONVERSION_BUFFER_LENGTH];
         sprintf(tempBuffer, "%g %g %g %g %g %g %g %g %g %g %g %g %g %g %g %g",
@@ -147,6 +147,6 @@ namespace alimer
             m21, m22, m23, m24,
             m31, m32, m33, m34,
             m41, m42, m43, m44);
-        return eastl::string(tempBuffer);
+        return std::string(tempBuffer);
     }
 }

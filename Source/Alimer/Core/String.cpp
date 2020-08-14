@@ -25,15 +25,5 @@
 
 namespace alimer
 {
-    const eastl::string EMPTY_STRING{};
-
-    eastl::string ToString(const char* format, ...)
-    {
-        eastl::string ret;
-        va_list args;
-        va_start(args, format);
-        ret.append_sprintf_va_list(format, args);
-        va_end(args);
-        return ret;
-    }
+    const std::string EMPTY_STRING{};
 }

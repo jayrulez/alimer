@@ -33,8 +33,6 @@ namespace alimer
 
     String Rect::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", x, y, width, height);
-        return eastl::string(tempBuffer);
+        return fmt::format("{} {} {} {}", x, y, width, height);
     }
 }

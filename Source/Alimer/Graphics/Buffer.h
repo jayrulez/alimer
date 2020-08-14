@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Graphics/GraphicsResource.h"
-#include <EASTL/string_view.h>
 
 namespace alimer
 {

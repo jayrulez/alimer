@@ -100,7 +100,7 @@ namespace alimer
         const float* Data() const { return &m11; }
 
         /// Return as string.
-        eastl::string ToString() const;
+        std::string ToString() const;
 
         // Constants
         static const Matrix4x4 Zero;

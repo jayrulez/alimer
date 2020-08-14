@@ -33,7 +33,7 @@
 #   pragma warning(disable:4702) // unreachable code
 #endif
 
-namespace Math
+namespace alimer
 {
     static constexpr float Pi = 3.1415926535897932f;
     static constexpr float TwoPi = 6.28318530718f;
@@ -45,6 +45,12 @@ namespace Math
     template <typename T> inline bool Equals(T lhs, T rhs, T eps) { return lhs + eps >= rhs && lhs - eps <= rhs; }
     template <class T> inline bool Equals(T lhs, T rhs) { return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs; }
 
+
+    template<typename T> inline T Abs(T v) { return (v >= 0) ? v : -v; }
+    template<typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
+    template<typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
+    template<typename T> inline T Clamp(T value, T min, T max) { return (value < min) ? min : (value < max) ? value : max; }
+    template<typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
     
     template <typename T> inline T sin(T v) { return std::sin(v); }
     template <typename T> inline T cos(T v) { return std::cos(v); }
@@ -60,12 +66,6 @@ namespace Math
     template <typename T> inline T pow(T a, T b) { return std::pow(a, b); }
     template <typename T> inline T ToRadians(T degrees) { return degrees * (Pi / 180.0f); }
     template <typename T> inline T ToDegrees(T radians) { return radians * (180.0f / Pi); }
-
-    // Clamp value to be between minimum and maximum values, inclusive
-    template<class T> inline T Clamp(T value, T min, T max)
-    {
-        return value < min ? min : value < max ? value : max;
-    }
 
     /// Linear interpolation between two values.
     template <typename T, typename U> inline T lerp(T lhs, T rhs, U t) { return lhs * (1.0 - t) + rhs * t; }

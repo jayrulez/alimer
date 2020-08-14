@@ -24,16 +24,12 @@
 
 #include "Core/Platform.h"
 #include <fmt/format.h>
-#include <EASTL/string.h>
 
 namespace alimer
 {
-    using String = eastl::string;
+    using String = std::string;
 
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
     static constexpr uint32_t MATRIX_CONVERSION_BUFFER_LENGTH = 256;
-    extern const eastl::string EMPTY_STRING;
-
-    /// Return a formatted string.
-    ALIMER_API eastl::string ToString(const char* format, ...);
+    extern const std::string EMPTY_STRING;
 }

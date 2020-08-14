@@ -50,7 +50,7 @@ namespace alimer
         bool operator != (const Size& rhs) const noexcept { return (width != rhs.width) || (height != rhs.height); }
 
         /// Return as string.
-        eastl::string ToString() const;
+        String ToString() const;
 
         // Constants
         static const Size Empty;

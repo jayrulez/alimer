@@ -24,10 +24,8 @@
 
 namespace alimer
 {
-    eastl::string Color::ToString() const
+    String Color::ToString() const
     {
-        char tempBuffer[CONVERSION_BUFFER_LENGTH];
-        sprintf(tempBuffer, "%g %g %g %g", r, g, b, a);
-        return eastl::string(tempBuffer);
+        return fmt::format("{} {} {} {}", r, g, b, a);
     }
 }

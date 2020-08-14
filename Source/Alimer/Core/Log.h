@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    enum class LogLevel : uint32
+    enum class LogLevel : uint32_t
     {
         Verbose,
         Debug,

@@ -139,7 +139,7 @@ namespace alimer
         NegativeZ = 5, //!< -z face
     };
 
-    enum class LoadAction : uint32
+    enum class LoadAction : uint32_t
     {
         DontCare,
         Load,
@@ -263,7 +263,7 @@ namespace alimer
     struct GraphicsCapabilities
     {
         RendererType rendererType;
-        eastl::string adapterName;
+        String adapterName;
         uint32_t vendorId = 0;
         uint32_t deviceId = 0;
         GPUAdapterType adapterType = GPUAdapterType::Unknown;
