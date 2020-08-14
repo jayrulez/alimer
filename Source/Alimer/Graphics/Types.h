@@ -155,16 +155,17 @@ namespace alimer
 
     struct TextureDescription
     {
-        TextureDimension type = TextureDimension::Texture2D;
+        TextureDimension dimension = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32_t width = 1u;
         uint32_t height = 1u;
         uint32_t depth = 1u;
-        uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
+        uint32_t arrayLayers = 1u;
         uint32_t sampleCount = 1u;
         const char* label;
+        const void* externalHandle;
     };
 
     class Texture;

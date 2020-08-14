@@ -110,14 +110,14 @@ namespace alimer
         }
 
         /// Copy-construct from another shared pointer.
-        RefPtr(const RefPtr& rhs) noexcept
+        RefPtr(const RefPtr<T>& rhs) noexcept
             : ptr_(rhs.ptr_)
         {
             InternalAddRef();
         }
 
         /// Move-construct from another shared pointer.
-        RefPtr(RefPtr&& rhs) noexcept
+        RefPtr(RefPtr<T>&& rhs) noexcept
             : ptr_(rhs.ptr_)
         {
             rhs.ptr_ = nullptr;

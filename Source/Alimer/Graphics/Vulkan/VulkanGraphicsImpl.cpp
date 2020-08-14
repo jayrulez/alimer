@@ -22,6 +22,8 @@
 
 #include "config.h"
 #include "VulkanGraphicsImpl.h"
+#include "Graphics/Texture.h"
+#include "Graphics/Buffer.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -701,9 +703,9 @@ namespace alimer
         }
 
         vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
-        swapChainImages.resize(imageCount);
+        std::vector<VkImage> swapchainImages(imageCount);
         swapChainImageLayouts.resize(imageCount);
-        vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapChainImages.data());
+        vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchainImages.data());
 
         frame.clear();
         frame.resize(imageCount);
@@ -715,7 +717,7 @@ namespace alimer
             VkImageViewCreateInfo view_info{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
             view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
             view_info.format = format.format;
-            view_info.image = swapChainImages[i];
+            view_info.image = swapchainImages[i];
             view_info.subresourceRange.levelCount = 1;
             view_info.subresourceRange.layerCount = 1;
             view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -730,7 +732,7 @@ namespace alimer
 
             //backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
             //backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
-            SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapChainImages[i], fmt::format("Back Buffer {}", i));
+            SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapchainImages[i], fmt::format("Back Buffer {}", i));
         }
 
         return true;
@@ -1346,8 +1348,8 @@ namespace alimer
         VkResult result = VK_SUCCESS;
         VkCommandBuffer commandBuffer = frame[backbufferIndex].primaryCommandBuffer;
 
-        TextureBarrier(commandBuffer, swapChainImages[backbufferIndex], swapChainImageLayouts[backbufferIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        swapChainImageLayouts[backbufferIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        //TextureBarrier(commandBuffer, swapchainImages[backbufferIndex], swapChainImageLayouts[backbufferIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        //swapChainImageLayouts[backbufferIndex] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         // Complete the command buffer.
         VK_CHECK(vkEndCommandBuffer(commandBuffer));
@@ -1506,14 +1508,14 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    TextureHandle VulkanGraphicsImpl::CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle)
+    TextureHandle VulkanGraphicsImpl::CreateTexture(const TextureDescription* desc, const void* data)
     {
         TextureHandle handle = kInvalidTexture;
 
-        if (externalHandle != nullptr)
+        if (desc->externalHandle != nullptr)
         {
             handle = AllocTextureHandle();
-            textures[handle.id].handle = (VkImage)externalHandle;
+            textures[handle.id].handle = (VkImage)desc->externalHandle;
             textures[handle.id].memory = VK_NULL_HANDLE;
         }
         else
@@ -1522,11 +1524,11 @@ namespace alimer
             createInfo.flags = 0u;
             createInfo.imageType = VK_IMAGE_TYPE_2D;
             createInfo.format = VK_FORMAT_R8G8B8A8_UNORM; // GetVkFormat(desc->format);
-            createInfo.extent.width = width;
-            createInfo.extent.height = height;
-            createInfo.extent.depth = 1;
-            createInfo.mipLevels = 1;
-            createInfo.arrayLayers = 1;
+            createInfo.extent.width = desc->width;
+            createInfo.extent.height = desc->height;
+            createInfo.extent.depth = desc->depth;
+            createInfo.mipLevels = desc->mipLevels;
+            createInfo.arrayLayers = desc->arrayLayers;
             createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
             createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
             createInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT; // vgpu_vkGetImageUsage(desc->usage, desc->format);
@@ -1646,8 +1648,8 @@ namespace alimer
 
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
-            TextureBarrier(commandBuffer, swapChainImages[backbufferIndex], swapChainImageLayouts[backbufferIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            swapChainImageLayouts[backbufferIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            //TextureBarrier(commandBuffer, swapchainImages[backbufferIndex], swapChainImageLayouts[backbufferIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            //swapChainImageLayouts[backbufferIndex] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
             clearValues[clearValueCount].color.float32[0] = colorAttachments[i].clearColor.r;
             clearValues[clearValueCount].color.float32[1] = colorAttachments[i].clearColor.g;

@@ -33,6 +33,9 @@ namespace alimer
         /// Constructor.
         Texture();
 
+        /// Constructor.
+        Texture(const TextureDescription& desc);
+
         /// Destructor
         ~Texture() override;
 
@@ -40,8 +43,9 @@ namespace alimer
         static void RegisterObject();
 
         bool Define2D(uint32_t width, uint32_t height, bool mipMap = false, PixelFormat format = PixelFormat::RGBA8Unorm, TextureUsage usage = TextureUsage::Sampled);
-        bool DefineExternal(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
         void Destroy() override;
+
+        static RefPtr<Texture> CreateExternalTexture(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
 
         /// Get the texture handle.
         TextureHandle GetHandle() const { return handle; }
@@ -61,8 +65,8 @@ namespace alimer
         /// Gets number of mipmap levels of the texture.
         uint32_t GetMipLevels() const { return mipLevels; }
 
-        /// Get the array size of the texture.
-        uint32_t GetArraySize() const { return arraySize; }
+        /// Get the array layers of the texture.
+        uint32_t GetArrayLayers() const { return arrayLayers; }
 
         /// Get the texture usage.
         TextureUsage GetUsage() const { return usage; }
@@ -83,7 +87,7 @@ namespace alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
-        uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
+        static uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 
     protected:
         TextureHandle handle{ kInvalidHandleId };
@@ -94,8 +98,8 @@ namespace alimer
         uint32_t width = 1u;
         uint32_t height = 1u;
         uint32_t depth = 1u;
-        uint32_t arraySize = 1u;
         uint32_t mipLevels = 1u;
+        uint32_t arrayLayers = 1u;
         uint32_t sampleCount = 1u;
     };
 }

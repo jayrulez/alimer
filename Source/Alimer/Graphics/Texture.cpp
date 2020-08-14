@@ -33,6 +33,22 @@ namespace alimer
 
     }
 
+    Texture::Texture(const TextureDescription& desc)
+        : GraphicsResource(ResourceDimension::Texture2D)
+        , dimension(desc.dimension)
+        , format(desc.format)
+        , usage(desc.usage)
+        , width(desc.width)
+        , height(desc.height)
+        , depth(desc.depth)
+        , arrayLayers(desc.arrayLayers)
+        , mipLevels(desc.mipLevels)
+        , sampleCount(desc.sampleCount)
+    {
+        handle = graphics->GetImpl()->CreateTexture(&desc, nullptr);
+        ALIMER_ASSERT(handle.isValid());
+    }
+
     Texture::~Texture()
     {
         Destroy();
@@ -66,31 +82,28 @@ namespace alimer
         usage = usage_;
         width = width_;
         height = height_;
-        uint32_t depth = 1u;
-        arraySize = 1u;
+        depth = 1u;
+        arrayLayers = 1u;
         mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
         sampleCount = 1u;
-
-
         return true;
     }
 
-    bool Texture::DefineExternal(void* externalHandle, uint32_t width_, uint32_t height_, PixelFormat format_, bool mipMap)
+    RefPtr<Texture> Texture::CreateExternalTexture(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap)
     {
-        Destroy();
+        TextureDescription description;
+        description.dimension = TextureDimension::Texture2D;
+        description.format = format;
+        description.usage = TextureUsage::Sampled;
+        description.width = width;
+        description.height = height;
+        description.depth = 1u;
+        description.arrayLayers = 1u;
+        description.mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
+        description.sampleCount = 1u;
+        description.externalHandle = externalHandle;
 
-        dimension = TextureDimension::Texture2D;
-        format = format_;
-        usage = TextureUsage::Sampled;
-        width = width_;
-        height = height_;
-        uint32_t depth = 1u;
-        arraySize = 1u;
-        mipLevels = mipMap ? CalculateMipLevels(width, height, 1u) : 1u;
-        sampleCount = 1u;
-
-        handle = graphics->GetImpl()->CreateTexture(dimension, width, height, nullptr, externalHandle);
-        return handle.isValid();
+        return RefPtr<Texture>(new Texture(description));
     }
 
     uint32_t Texture::GetWidth(uint32_t mipLevel) const

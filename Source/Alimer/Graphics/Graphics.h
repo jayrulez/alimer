@@ -61,6 +61,12 @@ namespace alimer
         /// Get the device capabilities.
         const GraphicsCapabilities& GetCaps() const;
 
+        /// Get the current backbuffer texture.
+        Texture* GetBackbufferTexture() const;
+
+        /// Get the depth stencil texture.
+        //Texture* GetDepthStencilTexture() const;
+
         /* Commands */
         void PushDebugGroup(const String& name, CommandList commandList = 0);
         void PopDebugGroup(CommandList commandList = 0);
@@ -78,8 +84,6 @@ namespace alimer
         GraphicsImpl* impl;
         RefPtr<Window> window;
         UInt2 resolution = UInt2::Zero;
-        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         uint32_t sampleCount = 1;
         uint64_t frameCount = 0;
 

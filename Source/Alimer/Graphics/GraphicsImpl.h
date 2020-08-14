@@ -158,8 +158,10 @@ namespace alimer
         virtual void SetVerticalSync(bool value) { verticalSync = value; }
         bool GetVerticalSync() const { return verticalSync; }
 
+        virtual Texture* GetBackbufferTexture() const = 0;
+
         /* Resource creation methods */
-        virtual TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) = 0;
+        virtual TextureHandle CreateTexture(const TextureDescription* desc, const void* data) = 0;
         virtual void Destroy(TextureHandle handle) = 0;
         virtual void SetName(TextureHandle handle, const char* name) = 0;
 
@@ -183,5 +185,7 @@ namespace alimer
         bool verticalSync = false;
 
         UInt2 backbufferSize = UInt2::Zero;
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
     };
 }

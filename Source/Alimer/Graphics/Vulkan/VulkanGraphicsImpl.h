@@ -61,9 +61,11 @@ namespace alimer
 
         void SetVerticalSync(bool value) override;
 
+        Texture* GetBackbufferTexture() const override { return swapchainTextures[backbufferIndex].Get(); }
+
         /* Resource creation methods */
         TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) override;
+        TextureHandle CreateTexture(const TextureDescription* desc, const void* data) override;
         void Destroy(TextureHandle handle) override;
         void SetName(TextureHandle handle, const char* name) override;
 
@@ -130,7 +132,7 @@ namespace alimer
         uint32_t backbufferIndex = 0;
 
         std::vector<VkImageLayout> swapChainImageLayouts;
-        std::vector<VkImage> swapChainImages;
+        std::vector<RefPtr<Texture>> swapchainTextures;
 
         /// The image view for each swapchain image.
         std::vector<VkImageView> swapchainImageViews;

@@ -71,7 +71,7 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            auto graphics = Graphics::Create(RendererType::Vulkan);
+            auto graphics = Graphics::Create(RendererType::Direct3D11);
 
             graphics->GetRenderWindow()->SetTitle(config.windowTitle);
             if (!graphics->SetMode(config.windowSize, WindowFlags::Resizable))
@@ -81,8 +81,7 @@ namespace alimer
             else
             {
                 // Create main window SwapChain
-                /*windowSwapChain = new SwapChain(window.GetHandle(), window.GetWidth(), window.GetHeight(), window.IsFullscreen());
-
+                /*
                 struct VertexPositionColor
                 {
                     Vector3 position;
@@ -166,6 +165,7 @@ namespace alimer
         RenderPassColorAttachment colorAttachment = {};
         colorAttachment.clearColor = Colors::CornflowerBlue;
         //colorAttachment.loadAction = LoadAction::DontCare;
+        //colorAttachment.slice = 1;
         graphics->BeginRenderPass(1, &colorAttachment, nullptr);
         graphics->EndRenderPass();
         graphics->PopDebugGroup();

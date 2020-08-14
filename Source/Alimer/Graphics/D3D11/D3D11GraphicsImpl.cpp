@@ -118,6 +118,7 @@ namespace alimer
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         dxgiLib = LoadLibraryA("dxgi.dll");
+        ALIMER_ASSERT(dxgiLib != nullptr);
         CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
         DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
 #endif
@@ -166,14 +167,15 @@ namespace alimer
         dxgiFactory.Reset();
 
 #ifdef _DEBUG
-        ComPtr<IDXGIDebug1> dxgiDebug1;
+        IDXGIDebug1* dxgiDebug1;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (DXGIGetDebugInterface1 && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug1.GetAddressOf()))))
+        if (DXGIGetDebugInterface1 && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
 #else
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiDebug1.GetAddressOf()))))
+        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
 #endif
         {
             dxgiDebug1->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            dxgiDebug1->Release();
         }
 #endif
     }
@@ -624,11 +626,33 @@ namespace alimer
         }
 
         // Create a render target view of the swap chain back buffer.
-        ID3D11Texture2D* backbufferTextureHandle;
-        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTextureHandle)));
-        backbufferTexture = new Texture();
-        ALIMER_VERIFY(backbufferTexture->DefineExternal(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false));
-        backbufferTextureHandle->Release();
+        {
+            RefPtr<ID3D11Texture2D> backbufferTextureHandle;
+            ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(backbufferTextureHandle.GetAddressOf())));
+            backbufferTexture = Texture::CreateExternalTexture(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false);
+        }
+
+        if (depthStencilFormat != PixelFormat::Invalid)
+        {
+            // Create a depth stencil view for use with 3D rendering if needed.
+            D3D11_TEXTURE2D_DESC depthStencilDesc = {};
+            depthStencilDesc.Width = backbufferSize.x;
+            depthStencilDesc.Height = backbufferSize.y;
+            depthStencilDesc.MipLevels = 1;
+            depthStencilDesc.ArraySize = 1;
+            depthStencilDesc.Format = ToDXGIFormat(depthStencilFormat);
+            depthStencilDesc.SampleDesc.Count = 1;
+            depthStencilDesc.SampleDesc.Quality = 0;
+            depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+            depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+            RefPtr<ID3D11Texture2D> depthStencil;
+            ThrowIfFailed(d3dDevice->CreateTexture2D(
+                &depthStencilDesc,
+                nullptr,
+                depthStencil.GetAddressOf()
+            ));
+        }
     }
 
     bool D3D11GraphicsImpl::BeginFrame()
@@ -691,48 +715,30 @@ namespace alimer
 
         D3D11Texture& texture = textures[id];
         texture.handle = nullptr;
-        texture.rtv = nullptr;
         return { (uint32_t)id };
     }
 
-    TextureHandle D3D11GraphicsImpl::CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle)
+    TextureHandle D3D11GraphicsImpl::CreateTexture(const TextureDescription* desc, const void* data)
     {
         TextureHandle handle = kInvalidTexture;
 
-        if (externalHandle != nullptr)
+        if (desc->externalHandle != nullptr)
         {
             handle = AllocTextureHandle();
-            switch (dimension)
-            {
-            case TextureDimension::Texture2D:
-            case TextureDimension::TextureCube:
-                textures[handle.id].tex2D = (ID3D11Texture2D*)externalHandle;
-                textures[handle.id].tex2D->AddRef();
-                break;
-            case TextureDimension::Texture3D:
-                textures[handle.id].tex3D = (ID3D11Texture3D*)externalHandle;
-                textures[handle.id].tex3D->AddRef();
-                break;
-            default:
-                break;
-            }
+            textures[handle.id].handle = (ID3D11Resource*)desc->externalHandle;
+            textures[handle.id].handle->AddRef();
         }
         else
         {
-            switch (dimension)
+            switch (desc->dimension)
             {
             case TextureDimension::Texture2D:
-                handle = CreateTexture2D(width, height, data);
+                handle = CreateTexture2D(desc->width, desc->height, data);
                 break;
 
             default:
                 break;
             }
-        }
-
-        if (handle.isValid())
-        {
-            ThrowIfFailed(d3dDevice->CreateRenderTargetView(textures[handle.id].handle, nullptr, &textures[handle.id].rtv));
         }
 
         return handle;
@@ -769,7 +775,7 @@ namespace alimer
         }
 
         TextureHandle handle = AllocTextureHandle();
-        textures[handle.id].tex2D = resource;
+        textures[handle.id].handle = resource;
         return handle;
     }
 
@@ -781,6 +787,11 @@ namespace alimer
         D3D11Texture& texture = textures[handle.id];
         SafeRelease(texture.handle);
 
+        texture.srvs.clear();
+        texture.uavs.clear();
+        texture.rtvs.clear();
+        texture.dsvs.clear();
+
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
         textures.Dealloc(handle.id);
     }
@@ -791,6 +802,516 @@ namespace alimer
             return;
 
         D3D11SetObjectName(textures[handle.id].handle, name);
+    }
+
+    ID3D11ShaderResourceView* D3D11GraphicsImpl::GetSRV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    {
+        ALIMER_ASSERT(texture);
+
+        // For non-array textures force slice to 0.
+        if (texture->GetArrayLayers() <= 1)
+            slice = 0;
+
+        const uint32_t subresource = texture->GetSubresourceIndex(level, slice);
+
+        D3D11Texture& d3dTexture = textures[texture->GetHandle().id];
+
+        // Already created?
+        if (d3dTexture.srvs.size() > subresource) {
+            return d3dTexture.srvs[subresource].Get();
+        }
+
+        D3D11_RESOURCE_DIMENSION type;
+        d3dTexture.handle->GetType(&type);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc = {};
+        viewDesc.Format = format;
+
+        switch (type)
+        {
+        case D3D11_RESOURCE_DIMENSION_TEXTURE1D:
+        {
+            D3D11_TEXTURE1D_DESC desc = {};
+            ((ID3D11Texture1D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.ArraySize > 1)
+            {
+                viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
+                viewDesc.Texture1DArray.MostDetailedMip = level;
+                viewDesc.Texture1DArray.MipLevels = desc.MipLevels;
+
+                if (slice > 0)
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = slice;
+                    viewDesc.Texture1DArray.ArraySize = 1;
+                }
+                else
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = 0;
+                    viewDesc.Texture1DArray.ArraySize = desc.ArraySize;
+                }
+            }
+            else
+            {
+                viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE1D;
+                viewDesc.Texture1D.MostDetailedMip = level;
+                viewDesc.Texture1D.MipLevels = desc.MipLevels;
+            }
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
+        {
+            D3D11_TEXTURE2D_DESC desc = {};
+            ((ID3D11Texture2D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.SampleDesc.Count > 1)
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = slice;
+                        viewDesc.Texture2DMSArray.ArraySize = 1;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DMSArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+                }
+            }
+            else
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+                    viewDesc.Texture2DArray.MostDetailedMip = level;
+                    viewDesc.Texture2DArray.MipLevels = desc.MipLevels;
+
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DArray.ArraySize = 1;
+                        viewDesc.Texture2DArray.FirstArraySlice = slice;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+                    viewDesc.Texture2D.MostDetailedMip = level;
+                    viewDesc.Texture2D.MipLevels = desc.MipLevels;
+                }
+            }
+
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
+        {
+            D3D11_TEXTURE3D_DESC desc = {};
+            ((ID3D11Texture3D*)d3dTexture.handle)->GetDesc(&desc);
+
+            viewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+            viewDesc.Texture3D.MostDetailedMip = level;
+            viewDesc.Texture3D.MipLevels = desc.MipLevels;
+            break;
+        }
+
+        default:
+            break;
+        }
+
+        RefPtr<ID3D11ShaderResourceView> srv;
+        ThrowIfFailed(d3dDevice->CreateShaderResourceView(d3dTexture.handle, &viewDesc, srv.GetAddressOf()));
+        d3dTexture.srvs.push_back(srv);
+        return srv.Get();
+    }
+
+    ID3D11UnorderedAccessView* D3D11GraphicsImpl::GetUAV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    {
+        ALIMER_ASSERT(texture);
+
+        // For non-array textures force slice to 0.
+        if (texture->GetArrayLayers() <= 1)
+            slice = 0;
+
+        const uint32_t subresource = texture->GetSubresourceIndex(level, slice);
+
+        D3D11Texture& d3dTexture = textures[texture->GetHandle().id];
+
+        // Already created?
+        if (d3dTexture.uavs.size() > subresource) {
+            return d3dTexture.uavs[subresource].Get();
+        }
+
+        D3D11_RESOURCE_DIMENSION type;
+        d3dTexture.handle->GetType(&type);
+
+        D3D11_UNORDERED_ACCESS_VIEW_DESC viewDesc = {};
+        viewDesc.Format = format;
+
+        switch (type)
+        {
+        case D3D11_RESOURCE_DIMENSION_TEXTURE1D:
+        {
+            D3D11_TEXTURE1D_DESC desc = {};
+            ((ID3D11Texture1D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.ArraySize > 1)
+            {
+                viewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1DARRAY;
+                viewDesc.Texture1DArray.MipSlice = level;
+
+                if (slice > 0)
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = slice;
+                    viewDesc.Texture1DArray.ArraySize = 1;
+                }
+                else
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = 0;
+                    viewDesc.Texture1DArray.ArraySize = desc.ArraySize;
+                }
+            }
+            else
+            {
+                viewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE1D;
+                viewDesc.Texture1D.MipSlice = level;
+            }
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
+        {
+            D3D11_TEXTURE2D_DESC desc = {};
+            ((ID3D11Texture2D*)d3dTexture.handle)->GetDesc(&desc);
+
+            // UAV cannot be created from multisample texture.
+            ALIMER_ASSERT(desc.SampleDesc.Count == 1);
+
+            if (desc.ArraySize > 1)
+            {
+                viewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+                viewDesc.Texture2DArray.MipSlice = level;
+
+                if (slice > 0)
+                {
+                    viewDesc.Texture2DArray.ArraySize = 1;
+                    viewDesc.Texture2DArray.FirstArraySlice = slice;
+                }
+                else
+                {
+                    viewDesc.Texture2DArray.FirstArraySlice = 0;
+                    viewDesc.Texture2DArray.ArraySize = desc.ArraySize;
+                }
+            }
+            else
+            {
+                viewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+                viewDesc.Texture2D.MipSlice = level;
+            }
+
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
+        {
+            D3D11_TEXTURE3D_DESC desc = {};
+            ((ID3D11Texture3D*)d3dTexture.handle)->GetDesc(&desc);
+
+            viewDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE3D;
+            viewDesc.Texture3D.MipSlice = level;
+
+            if (slice > 0)
+            {
+                viewDesc.Texture3D.FirstWSlice = slice;
+                viewDesc.Texture3D.WSize = 1;
+            }
+            else
+            {
+                viewDesc.Texture3D.FirstWSlice = 0;
+                viewDesc.Texture3D.WSize = desc.Depth; /* A value of -1 indicates all of the slices along the w axis, starting from FirstWSlice. */
+            }
+            break;
+        }
+
+        default:
+            break;
+        }
+
+        RefPtr<ID3D11UnorderedAccessView> uav;
+        ThrowIfFailed(d3dDevice->CreateUnorderedAccessView(d3dTexture.handle, &viewDesc, uav.GetAddressOf()));
+        d3dTexture.uavs.push_back(uav);
+        return uav.Get();
+    }
+
+    ID3D11RenderTargetView* D3D11GraphicsImpl::GetRTV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    {
+        ALIMER_ASSERT(texture);
+
+        // For non-array textures force slice to 0.
+        if (texture->GetArrayLayers() <= 1)
+            slice = 0;
+
+        const uint32_t subresource = texture->GetSubresourceIndex(level, slice);
+
+        D3D11Texture& d3dTexture = textures[texture->GetHandle().id];
+
+        // Already created?
+        if (d3dTexture.rtvs.size() > subresource) {
+            return d3dTexture.rtvs[subresource].Get();
+        }
+
+        D3D11_RESOURCE_DIMENSION type;
+        d3dTexture.handle->GetType(&type);
+
+        D3D11_RENDER_TARGET_VIEW_DESC viewDesc = {};
+        viewDesc.Format = format;
+
+        switch (type)
+        {
+        case D3D11_RESOURCE_DIMENSION_TEXTURE1D:
+        {
+            D3D11_TEXTURE1D_DESC desc = {};
+            ((ID3D11Texture1D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.ArraySize > 1)
+            {
+                viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1DARRAY;
+                viewDesc.Texture1DArray.MipSlice = level;
+                if (slice > 0)
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = slice;
+                    viewDesc.Texture1DArray.ArraySize = 1;
+                }
+                else
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = 0;
+                    viewDesc.Texture1DArray.ArraySize = desc.ArraySize;
+                }
+            }
+            else
+            {
+                viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE1D;
+                viewDesc.Texture1D.MipSlice = level;
+            }
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
+        {
+            D3D11_TEXTURE2D_DESC desc = {};
+            ((ID3D11Texture2D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.SampleDesc.Count > 1)
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMSARRAY;
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = slice;
+                        viewDesc.Texture2DMSArray.ArraySize = 1;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DMSArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
+                }
+            }
+            else
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+                    viewDesc.Texture2DArray.MipSlice = level;
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DArray.ArraySize = 1;
+                        viewDesc.Texture2DArray.FirstArraySlice = slice;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+                    viewDesc.Texture2D.MipSlice = level;
+                }
+            }
+
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
+        {
+            D3D11_TEXTURE3D_DESC desc = {};
+            ((ID3D11Texture3D*)d3dTexture.handle)->GetDesc(&desc);
+
+            viewDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE3D;
+            viewDesc.Texture3D.MipSlice = level;
+
+            if (slice > 0)
+            {
+                viewDesc.Texture3D.FirstWSlice = slice;
+                viewDesc.Texture3D.WSize = 1;
+            }
+            else
+            {
+                viewDesc.Texture3D.FirstWSlice = 0;
+                viewDesc.Texture3D.WSize = desc.Depth; /* A value of -1 indicates all of the slices along the w axis, starting from FirstWSlice. */
+            }
+            break;
+        }
+
+        default:
+            break;
+        }
+
+        RefPtr<ID3D11RenderTargetView> rtv;
+        ThrowIfFailed(d3dDevice->CreateRenderTargetView(d3dTexture.handle, &viewDesc, rtv.GetAddressOf()));
+        d3dTexture.rtvs.push_back(rtv);
+        return rtv.Get();
+    }
+
+    ID3D11DepthStencilView* D3D11GraphicsImpl::GetDSV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    {
+        ALIMER_ASSERT(texture);
+
+        // For non-array textures force slice to 0.
+        if (texture->GetArrayLayers() <= 1)
+            slice = 0;
+
+        const uint32_t subresource = texture->GetSubresourceIndex(level, slice);
+
+        D3D11Texture& d3dTexture = textures[texture->GetHandle().id];
+
+        // Already created?
+        if (d3dTexture.dsvs.size() > subresource) {
+            return d3dTexture.dsvs[subresource].Get();
+        }
+
+        D3D11_RESOURCE_DIMENSION type;
+        d3dTexture.handle->GetType(&type);
+
+        D3D11_DEPTH_STENCIL_VIEW_DESC viewDesc = {};
+        viewDesc.Format = format;
+        viewDesc.Flags = 0; // TODO: Handle ReadOnlyDepth and ReadOnlyStencil D3D11_DSV_READ_ONLY_DEPTH
+
+        switch (type)
+        {
+        case D3D11_RESOURCE_DIMENSION_TEXTURE1D:
+        {
+            D3D11_TEXTURE1D_DESC desc = {};
+            ((ID3D11Texture1D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.ArraySize > 1)
+            {
+                viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE1DARRAY;
+                viewDesc.Texture1DArray.MipSlice = level;
+                if (slice > 0)
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = slice;
+                    viewDesc.Texture1DArray.ArraySize = 1;
+                }
+                else
+                {
+                    viewDesc.Texture1DArray.FirstArraySlice = 0;
+                    viewDesc.Texture1DArray.ArraySize = desc.ArraySize;
+                }
+            }
+            else
+            {
+                viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE1D;
+                viewDesc.Texture1D.MipSlice = level;
+            }
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE2D:
+        {
+            D3D11_TEXTURE2D_DESC desc = {};
+            ((ID3D11Texture2D*)d3dTexture.handle)->GetDesc(&desc);
+
+            if (desc.SampleDesc.Count > 1)
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMSARRAY;
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = slice;
+                        viewDesc.Texture2DMSArray.ArraySize = 1;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DMSArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DMSArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+                }
+            }
+            else
+            {
+                if (desc.ArraySize > 1)
+                {
+                    viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+                    viewDesc.Texture2DArray.MipSlice = level;
+                    if (slice > 0)
+                    {
+                        viewDesc.Texture2DArray.ArraySize = 1;
+                        viewDesc.Texture2DArray.FirstArraySlice = slice;
+                    }
+                    else
+                    {
+                        viewDesc.Texture2DArray.FirstArraySlice = 0;
+                        viewDesc.Texture2DArray.ArraySize = desc.ArraySize;
+                    }
+                }
+                else
+                {
+                    viewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+                    viewDesc.Texture2D.MipSlice = level;
+                }
+            }
+
+            break;
+        }
+
+        case D3D11_RESOURCE_DIMENSION_TEXTURE3D:
+            ALIMER_VERIFY_MSG(false, "Cannot create 3D Depth Stencil");
+            ALIMER_DEBUG_BREAK();
+            break;
+
+        default:
+            break;
+        }
+
+        RefPtr<ID3D11DepthStencilView> view;
+        ThrowIfFailed(d3dDevice->CreateDepthStencilView(d3dTexture.handle, &viewDesc, view.GetAddressOf()));
+        d3dTexture.dsvs.push_back(view);
+        return view.Get();
     }
 
     BufferHandle D3D11GraphicsImpl::AllocBufferHandle()
@@ -925,24 +1446,26 @@ namespace alimer
 
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
-            D3D11Texture& texture = colorAttachments[i].texture == nullptr ? textures[backbufferTexture->GetHandle().id] : textures[colorAttachments[i].texture->GetHandle().id];
-            //colorRTVS[i] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+            Texture* texture = colorAttachments[i].texture == nullptr ? backbufferTexture.Get() : colorAttachments[i].texture;
+
+            D3D11Texture& d3d11Texture = textures[texture->GetHandle().id];
+            ID3D11RenderTargetView* rtv = GetRTV(texture, DXGI_FORMAT_UNKNOWN, colorAttachments[i].mipLevel, colorAttachments[i].slice);
 
             switch (colorAttachments[i].loadAction)
             {
             case LoadAction::DontCare:
-                d3dContexts[commandList]->DiscardView(texture.rtv);
+                d3dContexts[commandList]->DiscardView(rtv);
                 break;
 
             case LoadAction::Clear:
-                d3dContexts[commandList]->ClearRenderTargetView(texture.rtv, &colorAttachments[i].clearColor.r);
+                d3dContexts[commandList]->ClearRenderTargetView(rtv, &colorAttachments[i].clearColor.r);
                 break;
 
             default:
                 break;
             }
 
-            renderTargetViews[i] = texture.rtv;
+            renderTargetViews[i] = rtv;
         }
 
         d3dContexts[commandList]->OMSetRenderTargets(numColorAttachments, renderTargetViews, nullptr);

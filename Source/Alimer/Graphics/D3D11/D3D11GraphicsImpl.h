@@ -34,13 +34,11 @@ namespace alimer
     {
         enum { MAX_COUNT = 4096 };
 
-        union {
-            ID3D11Resource* handle;
-            ID3D11Texture2D* tex2D;
-            ID3D11Texture3D* tex3D;
-        };
-
-        ID3D11RenderTargetView* rtv;
+        ID3D11Resource* handle;
+        std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
+        std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;
+        std::vector<RefPtr<ID3D11RenderTargetView>> rtvs;
+        std::vector<RefPtr<ID3D11DepthStencilView>> dsvs;
     };
 
     struct D3D11Buffer
@@ -68,9 +66,11 @@ namespace alimer
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
 
+        Texture* GetBackbufferTexture() const override { return backbufferTexture.Get(); }
+
         /* Resource creation methods */
         TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(TextureDimension dimension, uint32_t width, uint32_t height, const void* data, void* externalHandle) override;
+        TextureHandle CreateTexture(const TextureDescription* descriptor, const void* data) override;
         TextureHandle CreateTexture2D(uint32_t width, uint32_t height, const void* data);
         void Destroy(TextureHandle handle) override;
         void SetName(TextureHandle handle, const char* name) override;
@@ -92,6 +92,10 @@ namespace alimer
         void CreateFactory();
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void UpdateSwapChain();
+        ID3D11ShaderResourceView* GetSRV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11UnorderedAccessView* GetUAV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11RenderTargetView* GetRTV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11DepthStencilView* GetDSV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
         static constexpr uint64_t kRenderLatency = 2;
 
@@ -120,6 +124,7 @@ namespace alimer
 #endif
         DXGI_MODE_ROTATION rotation{ DXGI_MODE_ROTATION_IDENTITY };
         RefPtr<Texture> backbufferTexture;
+        RefPtr<Texture> depthStencilTexture;
 
         /* Resource pools */
         std::mutex handle_mutex;

@@ -76,6 +76,7 @@ namespace alimer
         }
 
         Texture::RegisterObject();
+        LOGI("Using {} driver", ToString(rendererType));
     }
 
     Graphics::~Graphics()
@@ -146,6 +147,11 @@ namespace alimer
     const GraphicsCapabilities& Graphics::GetCaps() const
     {
         return impl->GetCaps();
+    }
+
+    Texture* Graphics::GetBackbufferTexture() const
+    {
+        return impl->GetBackbufferTexture();
     }
 
     /* Commands */
