@@ -1,8 +1,3 @@
-# EASTL
-add_subdirectory(EABase)
-add_subdirectory(EASTL)
-set_property(TARGET EASTL PROPERTY FOLDER "ThirdParty")
-
 # stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
