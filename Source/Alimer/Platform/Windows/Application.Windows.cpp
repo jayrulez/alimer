@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "Core/Window.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Application/Application.h"
 
 #define GLFW_INCLUDE_NONE
@@ -93,7 +93,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (graphics->GetRenderWindow()->ShouldClose())
+                if (GetGraphics()->GetRenderWindow()->ShouldClose())
                 {
                     running = false;
                     break;

@@ -24,7 +24,7 @@
 #include "Core/Log.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include <imgui.h>
@@ -57,8 +57,9 @@ namespace alimer
     Application::~Application()
     {
         //gameSystems.clear();
-        RemoveSubsystem<Input>();
         ImGuiLayer::Shutdown();
+        RemoveSubsystem<Input>();
+        RemoveSubsystem<GraphicsDevice>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -71,7 +72,7 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            auto graphics = Graphics::Create(RendererType::Direct3D11);
+            GraphicsDevice* graphics = GraphicsDevice::Create(RendererType::Direct3D11);
 
             graphics->GetRenderWindow()->SetTitle(config.windowTitle);
             if (!graphics->SetMode(config.windowSize, WindowFlags::Resizable))
@@ -80,6 +81,8 @@ namespace alimer
             }
             else
             {
+                RegisterSubsystem(graphics);
+
                 // Create main window SwapChain
                 /*
                 struct VertexPositionColor
@@ -133,10 +136,10 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!graphics->BeginFrame()) {
+        if (!GetGraphics()->BeginFrame()) {
             return false;
         }
-        ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
+        //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
         /*for (auto& gameSystem : gameSystems)
         {
@@ -161,14 +164,14 @@ namespace alimer
             LOGI("Right held");
         }
 
-        graphics->PushDebugGroup("Clear");
+        /*graphics->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
         colorAttachment.clearColor = Colors::CornflowerBlue;
         //colorAttachment.loadAction = LoadAction::DontCare;
         //colorAttachment.slice = 1;
         graphics->BeginRenderPass(1, &colorAttachment, nullptr);
         graphics->EndRenderPass();
-        graphics->PopDebugGroup();
+        graphics->PopDebugGroup();*/
     }
 
     void Application::EndDraw()
@@ -179,7 +182,7 @@ namespace alimer
         }*/
         
         ImGuiLayer::EndFrame();
-        graphics->EndFrame();
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()
@@ -218,7 +221,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !graphics->GetRenderWindow()->IsMinimized()
+            && !GetGraphics()->GetRenderWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

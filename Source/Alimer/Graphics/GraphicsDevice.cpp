@@ -23,7 +23,7 @@
 #include "config.h"
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Graphics/GraphicsImpl.h"
 
 #if defined(ALIMER_D3D11)
@@ -36,9 +36,7 @@
 
 namespace alimer
 {
-    RefPtr<Graphics> graphics;
-
-    Graphics::Graphics(RendererType rendererType)
+    GraphicsDevice::GraphicsDevice(RendererType rendererType)
         : impl(nullptr)
         , frameCount(0)
     {
@@ -79,29 +77,22 @@ namespace alimer
         LOGI("Using {} driver", ToString(rendererType));
     }
 
-    Graphics::~Graphics()
+    GraphicsDevice::~GraphicsDevice()
     {
         SafeDelete(impl);
     }
 
-    Graphics* Graphics::Create(RendererType preferredRendererType)
+    GraphicsDevice* GraphicsDevice::Create(RendererType preferredRendererType)
     {
-        if (graphics)
-        {
-            LOGE("Cannot create more than one Graphics instance.");
-            return nullptr;
-        }
-
         if (preferredRendererType == RendererType::Count)
         {
             preferredRendererType = RendererType::Direct3D11;
         }
 
-        graphics = new Graphics(preferredRendererType);
-        return graphics.Get();
+        return new GraphicsDevice(preferredRendererType);
     }
 
-    bool Graphics::SetMode(const UInt2& size, WindowFlags windowFlags, uint32_t sampleCount_)
+    bool GraphicsDevice::SetMode(const UInt2& size, WindowFlags windowFlags, uint32_t sampleCount_)
     {
         sampleCount = Clamp(sampleCount_, 1u, 16u);
 
@@ -118,59 +109,59 @@ namespace alimer
         return impl->IsInitialized();
     }
 
-    void Graphics::SetVerticalSync(bool value)
+    void GraphicsDevice::SetVerticalSync(bool value)
     {
         impl->SetVerticalSync(value);
     }
 
-    bool Graphics::GetVerticalSync() const
+    bool GraphicsDevice::GetVerticalSync() const
     {
         return impl->GetVerticalSync();
     }
 
-    bool Graphics::BeginFrame()
+    bool GraphicsDevice::BeginFrame()
     {
         return impl->BeginFrame();
     }
 
-    void Graphics::EndFrame()
+    void GraphicsDevice::EndFrame()
     {
         ++frameCount;
         impl->EndFrame(frameCount);
     }
 
-    GraphicsImpl* Graphics::GetImpl() const
+    GraphicsImpl* GraphicsDevice::GetImpl() const
     {
         return impl;
     }
 
-    const GraphicsCapabilities& Graphics::GetCaps() const
+    const GraphicsCapabilities& GraphicsDevice::GetCaps() const
     {
         return impl->GetCaps();
     }
 
-    Texture* Graphics::GetBackbufferTexture() const
+    Texture* GraphicsDevice::GetBackbufferTexture() const
     {
         return impl->GetBackbufferTexture();
     }
 
     /* Commands */
-    void Graphics::PushDebugGroup(const String& name, CommandList commandList)
+    void GraphicsDevice::PushDebugGroup(const String& name, CommandList commandList)
     {
         impl->PushDebugGroup(name, commandList);
     }
 
-    void Graphics::PopDebugGroup(CommandList commandList)
+    void GraphicsDevice::PopDebugGroup(CommandList commandList)
     {
         impl->PopDebugGroup(commandList);
     }
 
-    void Graphics::InsertDebugMarker(const String& name, CommandList commandList)
+    void GraphicsDevice::InsertDebugMarker(const String& name, CommandList commandList)
     {
         impl->InsertDebugMarker(name, commandList);
     }
 
-    void Graphics::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil, CommandList commandList)
+    void GraphicsDevice::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil, CommandList commandList)
     {
         ALIMER_ASSERT(numColorAttachments < kMaxColorAttachments);
         ALIMER_ASSERT(numColorAttachments || depthStencil);
@@ -178,7 +169,7 @@ namespace alimer
         impl->BeginRenderPass(commandList, numColorAttachments, colorAttachments, depthStencil);
     }
 
-    void Graphics::EndRenderPass(CommandList commandList)
+    void GraphicsDevice::EndRenderPass(CommandList commandList)
     {
         impl->EndRenderPass(commandList);
     }

@@ -24,8 +24,10 @@
 
 #include "Core/Platform.h"
 
-namespace alimer {
-    class ALIMER_API Stopwatch final {
+namespace alimer
+{
+    class ALIMER_API Stopwatch final
+    {
     public:
         static constexpr uint64_t TicksPerMillisecond = 10000;
         static constexpr uint64_t TicksPerSecond = 10000000;
@@ -53,4 +55,4 @@ namespace alimer {
         uint64_t elapsed = 0;
         uint64_t startTimeStamp = 0;
     };
-} // namespace alimer
+}

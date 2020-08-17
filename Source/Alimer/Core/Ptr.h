@@ -23,53 +23,62 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <atomic>
+#include "Core/Concurrency.h"
+#include <utility>
 
 namespace alimer
 {
+    /// Reference count structure.
+    struct RefCount
+    {
+        /// Construct.
+        RefCount() = default;
+
+        /// Destruct.
+        ~RefCount()
+        {
+            // Set reference counts below zero to fire asserts if this object is still accessed
+            refs = -1;
+            weakRefs = -1;
+        }
+
+        /// Reference count. If below zero, the object has been destroyed.
+        int32_t refs = 0;
+        /// Weak reference count.
+        int32_t weakRefs = 0;
+    };
+
     /// Base class for intrusively reference counted objects that can be pointed to with RefPtr. These are noncopyable and non-assignable.
     class ALIMER_API RefCounted
     {
     public:
-        /// Constructor
-        RefCounted()
-        {
-            refs.store(0, std::memory_order_relaxed);
-        }
-
-        /// Destructor
-        virtual ~RefCounted() = default;
+        /// Construct. Allocate the reference count structure and set an initial self weak reference.
+        RefCounted();
+        /// Destruct. Mark as expired and also delete the reference count structure if no outside weak references exist.
+        virtual ~RefCounted();
 
         /// Prevent copy construction.
         RefCounted(const RefCounted& rhs) = delete;
         /// Prevent assignment.
         RefCounted& operator =(const RefCounted& rhs) = delete;
 
-        /// Add a strong reference.
-        void AddRef()
-        {
-            refs.fetch_add(1, std::memory_order_relaxed);
-        }
+        /// Increment reference count. Can also be called outside of a RefPtr for traditional reference counting. Returns new reference count value. Operation is atomic.
+        int32_t AddRef();
 
-        /// Release a strong reference.
-        void Release()
-        {
-            auto result = refs.fetch_sub(1, std::memory_order_acq_rel);
+        /// Decrement reference count and delete self if no more references. Can also be called outside of a RefPtr for traditional reference counting. Returns new reference count value. Operation is atomic.
+        int32_t Release();
 
-            if (result == 1)
-            {
-                delete this;
-            }
-        }
+        /// Return reference count.
+        int32_t Refs() const;
+        /// Return weak reference count.
+        int32_t WeakRefs() const;
 
-        /// Return the reference count.
-        int32_t Refs() const
-        {
-            return refs.load(std::memory_order_relaxed);
-        }
+        /// Return pointer to the reference count structure.
+        RefCount* RefCountPtr() { return refCount; }
 
     private:
-        std::atomic_uint32_t refs;
+        /// Pointer to the reference count structure.
+        RefCount* refCount;
     };
 
     // Type alias for intrusive_ptr template
@@ -89,7 +98,7 @@ namespace alimer
 
         void InternalRelease() noexcept
         {
-            if (ptr_ != nullptr)
+            if (ptr_)
             {
                 ptr_->Release();
                 ptr_ = nullptr;
@@ -98,41 +107,35 @@ namespace alimer
 
     public:
         /// Construct a null shared pointer.
-        RefPtr() noexcept
-            : ptr_(nullptr)
+        RefPtr() noexcept : ptr_(nullptr)
         {
         }
 
         /// Construct a null shared pointer.
-        RefPtr(std::nullptr_t) noexcept
-            : ptr_(nullptr)
+        RefPtr(std::nullptr_t) noexcept : ptr_(nullptr)
         {
         }
 
         /// Copy-construct from another shared pointer.
-        RefPtr(const RefPtr<T>& rhs) noexcept
-            : ptr_(rhs.ptr_)
+        RefPtr(const RefPtr<T>& rhs) noexcept : ptr_(rhs.ptr_)
         {
             InternalAddRef();
         }
 
         /// Move-construct from another shared pointer.
-        RefPtr(RefPtr<T>&& rhs) noexcept
-            : ptr_(rhs.ptr_)
+        RefPtr(RefPtr<T>&& rhs) noexcept : ptr_(rhs.ptr_)
         {
             rhs.ptr_ = nullptr;
         }
 
         /// Copy-construct from another shared pointer allowing implicit upcasting.
-        template <class U> RefPtr(const RefPtr<U>& rhs) noexcept
-            : ptr_(rhs.ptr_)
+        template <class U> RefPtr(const RefPtr<U>& rhs) noexcept : ptr_(rhs.ptr_)
         {
             InternalAddRef();
         }
 
         /// Construct from a raw pointer.
-        explicit RefPtr(T* ptr) noexcept
-            : ptr_(ptr)
+        explicit RefPtr(T* ptr) noexcept : ptr_(ptr)
         {
             InternalAddRef();
         }
@@ -141,12 +144,6 @@ namespace alimer
         ~RefPtr() noexcept
         {
             InternalRelease();
-        }
-
-        RefPtr<T>& operator=(std::nullptr_t) noexcept
-        {
-            InternalRelease();
-            return *this;
         }
 
         /// Assign from another shared pointer.
@@ -197,9 +194,7 @@ namespace alimer
         /// Swap with another SharedPtr.
         void Swap(_Inout_ RefPtr& rhs)
         {
-            T* tmp = ptr_;
-            ptr_ = rhs.ptr_;
-            rhs.ptr_ = tmp;
+            std::swap(ptr_, rhs.ptr_);
         }
 
         explicit operator bool() const { return ptr_ != nullptr; }
@@ -216,11 +211,27 @@ namespace alimer
         /// Convert to a raw pointer.
         operator T* () const { return ptr_; }
 
+        /// Subscript the object if applicable.
+        T& operator [](size_t index)
+        {
+            ALIMER_ASSERT(ptr_);
+            return ptr_[index];
+        }
+
+        /// Test for less than with another shared pointer.
+        template <class U> bool operator <(const RefPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+
         /// Test for equality with another shared pointer.
-        bool operator ==(const RefPtr& rhs) const { return ptr_ == rhs.ptr_; }
+        template <class U> bool operator ==(const RefPtr<U>& rhs) const { return ptr_ == rhs.ptr_; }
 
         /// Test for inequality with another shared pointer.
-        bool operator !=(const RefPtr& rhs) const { return ptr_ != rhs.ptr_; }
+        template <class U> bool operator !=(const RefPtr<U>& rhs) const { return ptr_ != rhs.ptr_; }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return ptr_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return ptr_ != nullptr; }
 
         T* const* GetAddressOf() const noexcept { return &ptr_; }
         T** GetAddressOf() noexcept { return &ptr_; }
@@ -260,6 +271,270 @@ namespace alimer
         }
     };
 
+    /// Weak pointer template class with intrusive reference counting. Does not keep the object pointed to alive.
+    template <class T> class WeakPtr
+    {
+    protected:
+        /// Pointer to the object.
+        T* ptr_;
+        /// Pointer to the RefCount structure.
+        RefCount* refCount_;
+
+        template <class U> friend class WeakPtr;
+
+        /// Add a weak reference to the object pointed to.
+        void InternalAddRef() const noexcept
+        {
+            if (refCount_)
+            {
+                ALIMER_ASSERT(refCount_->weakRefs >= 0);
+                AtomicIncrement(&refCount_->weakRefs);
+            }
+        }
+
+        /// Release the weak reference. Delete the Refcount structure if necessary.
+        void InternalRelease()
+        {
+            if (refCount_)
+            {
+                ALIMER_ASSERT(refCount_->weakRefs > 0);
+                int32_t weakRefs = AtomicDecrement(&refCount_->weakRefs);
+
+                if (IsExpired() && weakRefs == 0)
+                    delete refCount_;
+            }
+
+            ptr_ = nullptr;
+            refCount_ = nullptr;
+        }
+
+    public:
+        /// Construct a null weak pointer.
+        WeakPtr() noexcept : ptr_(nullptr), refCount_(nullptr)
+        {
+        }
+
+        /// Construct a null weak pointer.
+        WeakPtr(std::nullptr_t) noexcept : ptr_(nullptr), refCount_(nullptr)
+        {
+        }
+
+        /// Copy-construct from another weak pointer.
+        WeakPtr(const WeakPtr<T>& rhs) noexcept : ptr_(rhs.ptr_), refCount_(rhs.refCount_)
+        {
+            InternalAddRef();
+        }
+
+        /// Move-construct from another weak pointer.
+        WeakPtr(WeakPtr<T>&& rhs) noexcept : ptr_(rhs.ptr_), refCount_(rhs.refCount_)
+        {
+            rhs.ptr_ = nullptr;
+            rhs.refCount_ = nullptr;
+        }
+
+        /// Copy-construct from another weak pointer allowing implicit upcasting.
+        template <class U> WeakPtr(const WeakPtr<U>& rhs) noexcept : ptr_(rhs.ptr_), refCount_(rhs.refCount_)
+        {
+            InternalAddRef();
+        }
+
+        /// Construct from a shared pointer.
+        WeakPtr(const RefPtr<T>& rhs) noexcept : ptr_(rhs.Get()), refCount_(rhs.RefCountPtr())
+        {
+            InternalAddRef();
+        }
+
+        /// Construct from a raw pointer.
+        explicit WeakPtr(T* ptr) noexcept : ptr_(ptr), refCount_(ptr ? ptr->RefCountPtr() : nullptr)
+        {
+            InternalAddRef();
+        }
+
+        /// Destruct. Release the weak reference to the object.
+        ~WeakPtr() noexcept
+        {
+            InternalRelease();
+        }
+
+        /// Assign from a shared pointer.
+        WeakPtr<T>& operator =(const RefPtr<T>& rhs)
+        {
+            if (ptr_ == rhs.Get() && refCount_ == rhs.RefCountPtr())
+                return *this;
+
+            WeakPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Assign from a weak pointer.
+        WeakPtr<T>& operator =(const WeakPtr<T>& rhs)
+        {
+            if (ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_)
+                return *this;
+
+            WeakPtr<T> copy(rhs);
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Move-assign from another weak pointer.
+        WeakPtr<T>& operator =(WeakPtr<T>&& rhs)
+        {
+            WeakPtr<T> copy(std::move(rhs));
+            Swap(copy);
+
+            return *this;
+        }
+
+        /// Assign from another weak pointer allowing implicit upcasting.
+        template <class U> WeakPtr<T>& operator =(const WeakPtr<U>& rhs)
+        {
+            if (ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_)
+                return *this;
+
+            InternalRelease();
+            ptr_ = rhs.ptr_;
+            refCount_ = rhs.refCount_;
+            InternalAddRef();
+
+            return *this;
+        }
+
+        /// Assign from a raw pointer.
+        WeakPtr<T>& operator =(T* ptr)
+        {
+            RefCount* refCount = ptr ? ptr->RefCountPtr() : nullptr;
+
+            if (ptr_ == ptr && refCount_ == refCount)
+                return *this;
+
+            InternalRelease();
+            ptr_ = ptr;
+            refCount_ = refCount;
+            InternalAddRef();
+
+            return *this;
+        }
+
+        /// Convert to a shared pointer. If expired, return a null shared pointer.
+        RefPtr<T> Lock() const
+        {
+            if (IsExpired())
+                return RefPtr<T>();
+
+            return RefPtr<T>(ptr_);
+        }
+
+        /// Return raw pointer. If expired, return null.
+        T* Get() const
+        {
+            return IsExpired() ? nullptr : ptr_;
+        }
+
+        /// Point to the object.
+        T* operator ->() const
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return rawPtr;
+        }
+
+        /// Dereference the object.
+        T& operator *() const
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return *rawPtr;
+        }
+
+        /// Subscript the object if applicable.
+        T& operator [](size_t index)
+        {
+            T* rawPtr = Get();
+            ALIMER_ASSERT(rawPtr);
+            return (*rawPtr)[index];
+        }
+
+        /// Test for equality with another weak pointer.
+        template <class U> bool operator ==(const WeakPtr<U>& rhs) const { return ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_; }
+
+        /// Test for inequality with another weak pointer.
+        template <class U> bool operator !=(const WeakPtr<U>& rhs) const { return ptr_ != rhs.ptr_ || refCount_ != rhs.refCount_; }
+
+        /// Test for less than with another weak pointer.
+        template <class U> bool operator <(const WeakPtr<U>& rhs) const { return ptr_ < rhs.ptr_; }
+
+        /// Convert to a raw pointer, null if the object is expired.
+        operator T* () const { return Get(); }   // NOLINT(google-explicit-constructor)
+
+        /// Swap with another WeakPtr.
+        void Swap(WeakPtr<T>& rhs)
+        {
+            std::swap(ptr_, rhs.ptr_);
+            std::swap(refCount_, rhs.refCount_);
+        }
+
+        /// Reset with another pointer.
+        void Reset(T* ptr = nullptr)
+        {
+            WeakPtr<T> copy(ptr);
+            Swap(copy);
+        }
+
+        /// Perform a static cast from a weak pointer of another type.
+        template <class U> void StaticCast(const WeakPtr<U>& rhs)
+        {
+            InternalRelease();
+            ptr_ = static_cast<T*>(rhs.Get());
+            refCount_ = rhs.refCount_;
+            InternalAddRef();
+        }
+
+        /// Perform a dynamic cast from a weak pointer of another type.
+        template <class U> void DynamicCast(const WeakPtr<U>& rhs)
+        {
+            InternalRelease();
+            ptr_ = dynamic_cast<T*>(rhs.Get());
+
+            if (ptr_)
+            {
+                refCount_ = rhs.refCount_;
+                InternalAddRef();
+            }
+            else
+            {
+                refCount_ = nullptr;
+            }
+        }
+
+        /// Check if the pointer is null.
+        bool IsNull() const { return refCount_ == nullptr; }
+
+        /// Check if the pointer is not null.
+        bool IsNotNull() const { return refCount_ != nullptr; }
+
+        /// Return the object's reference count, or 0 if null pointer or if object has expired.
+        int32_t Refs() const { return (refCount_ && refCount_->refs >= 0) ? refCount_->refs : 0; }
+
+        /// Return the object's weak reference count.
+        int32_t WeakRefs() const
+        {
+            if (!IsExpired())
+                return ptr_->WeakRefs();
+            else
+                return refCount_ ? refCount_->weakRefs : 0;
+        }
+
+        /// Return whether the object has expired. If null pointer, always return true.
+        bool IsExpired() const { return refCount_ ? refCount_->refs < 0 : true; }
+
+        /// Return pointer to the RefCount structure.
+        RefCount* RefCountPtr() const { return refCount_; }
+    };
+
     /// Perform a static cast from one shared pointer type to another.
     template <class T, class U> RefPtr<T> StaticCast(const RefPtr<U>& ptr)
     {
@@ -274,5 +549,11 @@ namespace alimer
         RefPtr<T> ret;
         ret.DynamicCast(ptr);
         return ret;
+    }
+
+    /// Construct SharedPtr.
+    template <class T, class ... Args> RefPtr<T> MakeRef(Args && ... args)
+    {
+        return RefPtr<T>(new T(std::forward<Args>(args)...));
     }
 }

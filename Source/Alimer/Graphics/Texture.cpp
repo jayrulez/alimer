@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "Graphics/Texture.h"
-#include "Graphics/Graphics.h"
+#include "Graphics/GraphicsDevice.h"
 #include "Graphics/GraphicsImpl.h"
 
 namespace alimer
@@ -45,8 +45,8 @@ namespace alimer
         , mipLevels(desc.mipLevels)
         , sampleCount(desc.sampleCount)
     {
-        handle = graphics->GetImpl()->CreateTexture(&desc, nullptr);
-        ALIMER_ASSERT(handle.isValid());
+        //handle = graphics->GetImpl()->CreateTexture(&desc, nullptr);
+        //ALIMER_ASSERT(handle.isValid());
     }
 
     Texture::~Texture()
@@ -64,7 +64,7 @@ namespace alimer
     {
         if (handle.isValid())
         {
-            graphics->GetImpl()->Destroy(handle);
+            //graphics->GetImpl()->Destroy(handle);
             handle.id = kInvalidHandleId;
         }
     }

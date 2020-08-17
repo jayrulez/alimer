@@ -31,15 +31,17 @@ namespace alimer
     class GraphicsImpl;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API Graphics final : public RefCounted
+    class ALIMER_API GraphicsDevice final : public Object
     {
         friend class GraphicsResource;
 
+        ALIMER_OBJECT(GraphicsDevice, Object);
+
     public:
         /// Destructor.
-        ~Graphics() override;
+        ~GraphicsDevice() override;
 
-        static Graphics* Create(RendererType preferredRendererType = RendererType::Count);
+        static GraphicsDevice* Create(RendererType preferredRendererType = RendererType::Count);
 
         /// Set graphics mode. Create the window and rendering context if not created yet. Return true on success.
         bool SetMode(const UInt2& size, WindowFlags windowFlags = WindowFlags::None, uint32_t sampleCount = 1);
@@ -79,7 +81,7 @@ namespace alimer
         uint64_t GetFrameCount() const { return frameCount; }
 
     private:
-        Graphics(RendererType rendererType);
+        GraphicsDevice(RendererType rendererType);
 
         GraphicsImpl* impl;
         RefPtr<Window> window;
@@ -88,9 +90,7 @@ namespace alimer
         uint64_t frameCount = 0;
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(Graphics);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
-
-    ALIMER_API extern RefPtr<Graphics> graphics;
 }
 

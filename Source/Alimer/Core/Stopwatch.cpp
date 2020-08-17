@@ -35,7 +35,8 @@
 #include <time.h>
 #endif
 
-namespace alimer {
+namespace alimer
+{
     struct TimerGlobalInitializer {
         uint64_t frequency;
         bool monotonic = false;
@@ -183,4 +184,4 @@ namespace alimer {
         static double s_tickFrequency = (double)TicksPerSecond / s_timeGlobalInitializer.frequency;
         return uint64_t(GetElapsedTicks() * s_tickFrequency) / TicksPerMillisecond;
     }
-} // namespace alimer
+} 
