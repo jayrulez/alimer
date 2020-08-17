@@ -23,9 +23,10 @@
 #pragma once
 
 #include "Core/Log.h"
+#include "Core/Math.h"
+#include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include "Core/Math.h"
 
 namespace alimer
 {
@@ -61,6 +62,9 @@ namespace alimer
         /// Tick one frame.
         void Tick();
 
+        /// Return the main window.
+        Window* GetMainWindow() const { return mainWindow.Get(); }
+
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
         virtual void Initialize();
@@ -94,6 +98,7 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
+        RefPtr<Window> mainWindow;
         //std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 

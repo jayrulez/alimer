@@ -88,7 +88,7 @@ namespace alimer
         T* ptr_;
         template<class U> friend class RefPtr;
 
-        void InternalAddRef() const noexcept
+        void AddRef() const noexcept
         {
             if (ptr_ != nullptr)
             {
@@ -96,7 +96,7 @@ namespace alimer
             }
         }
 
-        void InternalRelease() noexcept
+        void ReleaseRef() noexcept
         {
             if (ptr_)
             {
@@ -119,7 +119,7 @@ namespace alimer
         /// Copy-construct from another shared pointer.
         RefPtr(const RefPtr<T>& rhs) noexcept : ptr_(rhs.ptr_)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Move-construct from another shared pointer.
@@ -131,19 +131,19 @@ namespace alimer
         /// Copy-construct from another shared pointer allowing implicit upcasting.
         template <class U> RefPtr(const RefPtr<U>& rhs) noexcept : ptr_(rhs.ptr_)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Construct from a raw pointer.
         explicit RefPtr(T* ptr) noexcept : ptr_(ptr)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Destruct. Release the object reference.
         ~RefPtr() noexcept
         {
-            InternalRelease();
+            ReleaseRef();
         }
 
         /// Assign from another shared pointer.
@@ -238,7 +238,7 @@ namespace alimer
 
         T** ReleaseAndGetAddressOf() noexcept
         {
-            InternalRelease();
+            ReleaseRef();
             return &ptr_;
         }
 
@@ -283,7 +283,7 @@ namespace alimer
         template <class U> friend class WeakPtr;
 
         /// Add a weak reference to the object pointed to.
-        void InternalAddRef() const noexcept
+        void AddRef() const noexcept
         {
             if (refCount_)
             {
@@ -293,7 +293,7 @@ namespace alimer
         }
 
         /// Release the weak reference. Delete the Refcount structure if necessary.
-        void InternalRelease()
+        void ReleaseRef()
         {
             if (refCount_)
             {
@@ -322,7 +322,7 @@ namespace alimer
         /// Copy-construct from another weak pointer.
         WeakPtr(const WeakPtr<T>& rhs) noexcept : ptr_(rhs.ptr_), refCount_(rhs.refCount_)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Move-construct from another weak pointer.
@@ -335,25 +335,25 @@ namespace alimer
         /// Copy-construct from another weak pointer allowing implicit upcasting.
         template <class U> WeakPtr(const WeakPtr<U>& rhs) noexcept : ptr_(rhs.ptr_), refCount_(rhs.refCount_)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Construct from a shared pointer.
         WeakPtr(const RefPtr<T>& rhs) noexcept : ptr_(rhs.Get()), refCount_(rhs.RefCountPtr())
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Construct from a raw pointer.
         explicit WeakPtr(T* ptr) noexcept : ptr_(ptr), refCount_(ptr ? ptr->RefCountPtr() : nullptr)
         {
-            InternalAddRef();
+            AddRef();
         }
 
         /// Destruct. Release the weak reference to the object.
         ~WeakPtr() noexcept
         {
-            InternalRelease();
+            ReleaseRef();
         }
 
         /// Assign from a shared pointer.
@@ -395,10 +395,10 @@ namespace alimer
             if (ptr_ == rhs.ptr_ && refCount_ == rhs.refCount_)
                 return *this;
 
-            InternalRelease();
+            ReleaseRef();
             ptr_ = rhs.ptr_;
             refCount_ = rhs.refCount_;
-            InternalAddRef();
+            AddRef();
 
             return *this;
         }
@@ -411,10 +411,10 @@ namespace alimer
             if (ptr_ == ptr && refCount_ == refCount)
                 return *this;
 
-            InternalRelease();
+            ReleaseRef();
             ptr_ = ptr;
             refCount_ = refCount;
-            InternalAddRef();
+            AddRef();
 
             return *this;
         }
@@ -487,22 +487,22 @@ namespace alimer
         /// Perform a static cast from a weak pointer of another type.
         template <class U> void StaticCast(const WeakPtr<U>& rhs)
         {
-            InternalRelease();
+            ReleaseRef();
             ptr_ = static_cast<T*>(rhs.Get());
             refCount_ = rhs.refCount_;
-            InternalAddRef();
+            AddRef();
         }
 
         /// Perform a dynamic cast from a weak pointer of another type.
         template <class U> void DynamicCast(const WeakPtr<U>& rhs)
         {
-            InternalRelease();
+            ReleaseRef();
             ptr_ = dynamic_cast<T*>(rhs.Get());
 
             if (ptr_)
             {
                 refCount_ = rhs.refCount_;
-                InternalAddRef();
+                AddRef();
             }
             else
             {

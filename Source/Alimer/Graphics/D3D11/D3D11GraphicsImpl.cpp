@@ -550,11 +550,9 @@ namespace alimer
 
 
         window = windowHandle;
-        backbufferSize.x = width;
-        backbufferSize.y = height;
+        //backbufferSize.x = width;
+        //backbufferSize.y = height;
         UpdateSwapChain();
-
-        initialized = true;
         return true;
     }
 
@@ -577,8 +575,8 @@ namespace alimer
 #endif
 
             DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
-            swapchainDesc.Width = backbufferSize.x;
-            swapchainDesc.Height = backbufferSize.y;
+            //swapchainDesc.Width = backbufferSize.x;
+            //swapchainDesc.Height = backbufferSize.y;
             swapchainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
             swapchainDesc.Stereo = false;
             swapchainDesc.SampleDesc.Count = 1;
@@ -626,7 +624,7 @@ namespace alimer
         }
 
         // Create a render target view of the swap chain back buffer.
-        {
+        /*{
             RefPtr<ID3D11Texture2D> backbufferTextureHandle;
             ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(backbufferTextureHandle.GetAddressOf())));
             backbufferTexture = Texture::CreateExternalTexture(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false);
@@ -652,29 +650,30 @@ namespace alimer
                 nullptr,
                 depthStencil.GetAddressOf()
             ));
-        }
+        }*/
     }
 
-    bool D3D11GraphicsImpl::BeginFrame()
+    bool D3D11GraphicsImpl::BeginFrameImpl()
     {
         return true;
     }
 
-    void D3D11GraphicsImpl::EndFrame(uint64_t frameIndex)
+    void D3D11GraphicsImpl::EndFrameImpl()
     {
         if (isLost) {
             return;
         }
 
         HRESULT hr = S_OK;
-        if (verticalSync)
+        //if (verticalSync)
         {
             hr = swapChain->Present(1, 0);
         }
-        else
+        /*else
         {
+
             hr = swapChain->Present(0, isTearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0);
-        }
+        }*/
 
         if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {

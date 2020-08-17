@@ -36,20 +36,18 @@
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(RendererType rendererType)
-        : impl(nullptr)
-        , frameCount(0)
+    GraphicsDevice* GraphicsDevice::Create(RendererType preferredRendererType)
     {
-        window = new Window();
-
-        switch (rendererType)
+        if (preferredRendererType == RendererType::Count)
         {
-        case RendererType::Null:
-            break;
+            preferredRendererType = RendererType::Direct3D11;
+        }
 
+        switch (preferredRendererType)
+        {
 #if defined(ALIMER_VULKAN)
         case RendererType::Vulkan:
-            impl = new VulkanGraphicsImpl();
+            //impl = new VulkanGraphicsImpl();
             break;
 #endif
 
@@ -60,8 +58,7 @@ namespace alimer
 
 #if defined(ALIMER_D3D11)
         case RendererType::Direct3D11:
-            impl = new D3D11GraphicsImpl();
-            break;
+            return new D3D11GraphicsImpl();
 #endif
 
 #if defined(ALIMER_D3D12)
@@ -70,43 +67,11 @@ namespace alimer
 #endif
 
         default:
-            break;
+            // TODO: Add Null device.
+            return nullptr;
         }
 
-        Texture::RegisterObject();
-        LOGI("Using {} driver", ToString(rendererType));
-    }
-
-    GraphicsDevice::~GraphicsDevice()
-    {
-        SafeDelete(impl);
-    }
-
-    GraphicsDevice* GraphicsDevice::Create(RendererType preferredRendererType)
-    {
-        if (preferredRendererType == RendererType::Count)
-        {
-            preferredRendererType = RendererType::Direct3D11;
-        }
-
-        return new GraphicsDevice(preferredRendererType);
-    }
-
-    bool GraphicsDevice::SetMode(const UInt2& size, WindowFlags windowFlags, uint32_t sampleCount_)
-    {
-        sampleCount = Clamp(sampleCount_, 1u, 16u);
-
-        if (!window->SetSize(size, windowFlags))
-            return false;
-
-        if (impl->IsInitialized()) {
-            // TODO: Resize
-        }
-        else {
-            impl->Initialize(window->GetHandle(), window->GetWidth(), window->GetHeight(), window->IsFullscreen());
-        }
-
-        return impl->IsInitialized();
+        return nullptr;
     }
 
     void GraphicsDevice::SetVerticalSync(bool value)
@@ -121,23 +86,26 @@ namespace alimer
 
     bool GraphicsDevice::BeginFrame()
     {
-        return impl->BeginFrame();
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
+
+        if (!BeginFrameImpl()) {
+            return false;
+        }
+
+        // Now the frame is active again.
+        frameActive = true;
+        return true;
     }
 
     void GraphicsDevice::EndFrame()
     {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
+
         ++frameCount;
-        impl->EndFrame(frameCount);
-    }
+        EndFrameImpl();
 
-    GraphicsImpl* GraphicsDevice::GetImpl() const
-    {
-        return impl;
-    }
-
-    const GraphicsCapabilities& GraphicsDevice::GetCaps() const
-    {
-        return impl->GetCaps();
+        // Frame is not active anymore.
+        frameActive = false;
     }
 
     Texture* GraphicsDevice::GetBackbufferTexture() const

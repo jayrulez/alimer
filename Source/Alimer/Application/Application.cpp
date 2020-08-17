@@ -72,15 +72,16 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            GraphicsDevice* graphics = GraphicsDevice::Create(RendererType::Direct3D11);
-
-            graphics->GetRenderWindow()->SetTitle(config.windowTitle);
-            if (!graphics->SetMode(config.windowSize, WindowFlags::Resizable))
+            mainWindow = new Window();
+            mainWindow->SetTitle(config.windowTitle);
+            if (!mainWindow->SetSize(config.windowSize, WindowFlags::Resizable))
             {
                 headless = true;
             }
             else
             {
+                GraphicsDevice* graphics = GraphicsDevice::Create(RendererType::Direct3D11);
+
                 RegisterSubsystem(graphics);
 
                 // Create main window SwapChain
@@ -180,7 +181,7 @@ namespace alimer
         {
             gameSystem->EndDraw();
         }*/
-        
+
         ImGuiLayer::EndFrame();
         GetGraphics()->EndFrame();
     }
@@ -221,7 +222,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !GetGraphics()->GetRenderWindow()->IsMinimized()
+            && !GetMainWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

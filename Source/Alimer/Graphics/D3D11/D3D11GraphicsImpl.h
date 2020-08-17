@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Graphics/GraphicsImpl.h"
+#include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
 #include <mutex>
 
@@ -48,7 +49,7 @@ namespace alimer
         ID3D11Buffer* handle;
     };
 
-    class D3D11GraphicsImpl final : public GraphicsImpl
+    class D3D11GraphicsImpl final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
@@ -57,36 +58,36 @@ namespace alimer
 
         void Shutdown();
 
-        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
-        bool BeginFrame() override;
-        void EndFrame(uint64_t frameIndex) override;
+        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen);
+        bool BeginFrameImpl() override;
+        void EndFrameImpl() override;
         void HandleDeviceLost();
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
 
-        Texture* GetBackbufferTexture() const override { return backbufferTexture.Get(); }
+        Texture* GetBackbufferTexture() const { return backbufferTexture.Get(); }
 
         /* Resource creation methods */
         TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription* descriptor, const void* data) override;
+        TextureHandle CreateTexture(const TextureDescription* descriptor, const void* data);
         TextureHandle CreateTexture2D(uint32_t width, uint32_t height, const void* data);
-        void Destroy(TextureHandle handle) override;
-        void SetName(TextureHandle handle, const char* name) override;
+        void Destroy(TextureHandle handle);
+        void SetName(TextureHandle handle, const char* name);
 
         BufferHandle AllocBufferHandle();
-        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data) override;
-        void Destroy(BufferHandle handle) override;
-        void SetName(BufferHandle handle, const char* name) override;
+        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data);
+        void Destroy(BufferHandle handle);
+        void SetName(BufferHandle handle, const char* name);
 
         /* Commands */
-        void PushDebugGroup(const String& name, CommandList commandList) override;
-        void PopDebugGroup(CommandList commandList) override;
-        void InsertDebugMarker(const String& name, CommandList commandList) override;
+        void PushDebugGroup(const String& name, CommandList commandList);
+        void PopDebugGroup(CommandList commandList);
+        void InsertDebugMarker(const String& name, CommandList commandList);
 
-        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) override;
-        void EndRenderPass(CommandList commandList) override;
+        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
+        void EndRenderPass(CommandList commandList);
 
     private:
         void CreateFactory();

@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Core/Window.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Buffer.h"
 
@@ -31,7 +30,7 @@ namespace alimer
     class GraphicsImpl;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice final : public Object
+    class ALIMER_API GraphicsDevice : public Object
     {
         friend class GraphicsResource;
 
@@ -39,12 +38,9 @@ namespace alimer
 
     public:
         /// Destructor.
-        ~GraphicsDevice() override;
+        virtual ~GraphicsDevice() = default;
 
         static GraphicsDevice* Create(RendererType preferredRendererType = RendererType::Count);
-
-        /// Set graphics mode. Create the window and rendering context if not created yet. Return true on success.
-        bool SetMode(const UInt2& size, WindowFlags windowFlags = WindowFlags::None, uint32_t sampleCount = 1);
 
         /// Set vertical sync on/off.
         void SetVerticalSync(bool value);
@@ -55,13 +51,8 @@ namespace alimer
         bool BeginFrame();
         void EndFrame();
 
-        /// Return the rendering window.
-        Window* GetRenderWindow() const { return window.Get(); }
-
-        GraphicsImpl* GetImpl() const;
-
         /// Get the device capabilities.
-        const GraphicsCapabilities& GetCaps() const;
+        const GraphicsCapabilities& GetCaps() const { return caps; }
 
         /// Get the current backbuffer texture.
         Texture* GetBackbufferTexture() const;
@@ -80,14 +71,26 @@ namespace alimer
         /// Total number of CPU frames completed.
         uint64_t GetFrameCount() const { return frameCount; }
 
-    private:
-        GraphicsDevice(RendererType rendererType);
+    protected:
+        GraphicsDevice() = default;
+        virtual bool BeginFrameImpl() = 0;
+        virtual void EndFrameImpl() = 0;
 
+        GraphicsCapabilities caps{};
+
+    private:
         GraphicsImpl* impl;
-        RefPtr<Window> window;
         UInt2 resolution = UInt2::Zero;
         uint32_t sampleCount = 1;
-        uint64_t frameCount = 0;
+
+        /// Current active frame index
+        uint32_t activeFrameIndex{ 0 };
+
+        /// Whether a frame is active or not
+        bool frameActive{ false };
+
+        /// Number of frame count
+        uint64_t frameCount{ 0 };
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
