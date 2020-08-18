@@ -29,6 +29,33 @@
 #include "Math/Color.h"
 #include <imgui.h>
 
+namespace
+{
+    void gpu_log_callback(void* user_data, agpu_log_level level, const char* message)
+    {
+        switch (level)
+        {
+        case AGPU_LOG_LEVEL_ERROR:
+            LOGE(message);
+            break;
+
+        case AGPU_LOG_LEVEL_WARN:
+            LOGW(message);
+            break;
+
+        case AGPU_LOG_LEVEL_INFO:
+            LOGI(message);
+            break;
+        case AGPU_LOG_LEVEL_DEBUG:
+            LOGD(message);
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
 namespace alimer
 {
     Application::Application()
@@ -50,7 +77,7 @@ namespace alimer
         //io.ConfigViewportsNoAutoMerge = true;
         //io.ConfigViewportsNoTaskBarIcon = true;
         */
-
+        agpu_set_log_callback(gpu_log_callback, this);
         LOGI("Application started");
     }
 
@@ -59,7 +86,7 @@ namespace alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<GraphicsDevice>();
+        agpu_destroy_device(gpuDevice);
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -80,9 +107,18 @@ namespace alimer
             }
             else
             {
-                GraphicsDevice* graphics = GraphicsDevice::Create(RendererType::Direct3D11);
-
-                RegisterSubsystem(graphics);
+                agpu_swapchain_info swapchain_info = {};
+                swapchain_info.width = mainWindow->GetWidth();
+                swapchain_info.height = mainWindow->GetHeight();
+                swapchain_info.vsync = true;
+                swapchain_info.fullscreen = mainWindow->IsFullscreen();
+                swapchain_info.window_handle = mainWindow->GetHandle();
+                agpu_device_info device_info = {};
+#ifdef _DEBUG
+                device_info.debug = true;
+#endif
+                device_info.swapchain = &swapchain_info;
+                gpuDevice = agpu_create_device(&device_info);
 
                 // Create main window SwapChain
                 /*
@@ -137,9 +173,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame()) {
-            return false;
-        }
+        agpu_frame_begin(gpuDevice);
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
         /*for (auto& gameSystem : gameSystems)
@@ -183,7 +217,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
-        GetGraphics()->EndFrame();
+        agpu_frame_end(gpuDevice);
     }
 
     int Application::Run()

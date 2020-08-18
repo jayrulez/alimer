@@ -22,6 +22,23 @@ elseif(WIN32)
 	set(CMAKE_SHARED_LIBRARY_PREFIX "")
 endif()
 
+# Third party deps
+set(AGPU_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+
+if(NOT EMSCRIPTEN)
+  # glad
+  set(GLAD_DIR "${AGPU_THIRD_PARTY_DIR}/glad")
+  set(GLAD_FILES
+    "${GLAD_DIR}/include/KHR/khrplatform.h"
+    "${GLAD_DIR}/include/glad/glad.h"
+    "${GLAD_DIR}/src/glad.c"
+  )
+
+  add_library(glad STATIC ${GLAD_FILES})
+  target_include_directories(glad PUBLIC "${GLAD_DIR}/include")
+  set_property(TARGET glad PROPERTY FOLDER "ThirdParty")
+endif ()
+
 add_library(agpu
   # Public Headers
 	include/agpu.h
@@ -31,6 +48,7 @@ add_library(agpu
 	src/agpu.c
   src/agpu_driver_d3d_common.h
   src/agpu_driver_d3d11.c
+  src/agpu_driver_opengl.c
 )
 
 target_include_directories(agpu PUBLIC
@@ -56,7 +74,12 @@ endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)
     target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
-    #target_link_libraries(agpu PRIVATE alimer_opengl_headers)
+
+    if(EMSCRIPTEN)
+      target_compile_definitions(agpu PRIVATE -DAGPU_WEBGL)
+    else()
+      target_link_libraries(agpu PRIVATE glad)
+    endif ()
 endif ()
 
 if (MSVC)

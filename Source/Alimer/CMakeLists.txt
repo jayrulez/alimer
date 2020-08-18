@@ -123,25 +123,23 @@ else()
     )
 endif()
 
-if (MSVC)
-    # Set warning level 3 and treat all other warnings as errors
-    set(ALIMER_WARNINGS)
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /fp:fast)
 else()
-    set(ALIMER_WARNINGS
-        -Wall -Wextra -Wno-unused-parameter
-        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        -Wgnu-conditional-omitted-operand
-        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-        -Wover-aligned
-    )
-endif()
+  set(ALIMER_COMPILE_WARNINGS
+      -Wall -Wextra -Wno-unused-parameter
+      -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+      -Wgnu-conditional-omitted-operand
+      -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+      -Wover-aligned
+  )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-        ${ALIMER_WARNINGS}
+  target_compile_options(${PROJECT_NAME} PRIVATE
+        ${ALIMER_COMPILE_WARNINGS}
         $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
-        $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
         $<$<PLATFORM_ID:Linux>:-fPIC>
-)
+  )
+endif()
 
 if(ALIMER_WARNINGS_AS_ERRORS)
     message(STATUS "Warnings as Errors Enabled")

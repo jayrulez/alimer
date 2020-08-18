@@ -76,7 +76,7 @@ static const agpu_driver* drivers[] = {
 #if AGPU_DRIVER_VULKAN && defined(TODO_VK)
     &vulkan_driver,
 #endif
-#if AGPU_DRIVER_OPENGL&& defined(TODO_GL)
+#if AGPU_DRIVER_OPENGL
     &gl_driver,
 #endif
 
@@ -115,4 +115,20 @@ void agpu_destroy_device(agpu_device device) {
     }
 
     device->destroy(device);
+}
+
+agpu_device_caps agpu_query_caps(agpu_device device) {
+    return device->query_caps(device->driver_data);
+}
+
+agpu_texture_format_info agpu_query_texture_format_info(agpu_device device, agpu_texture_format format) {
+    return device->query_texture_format_info(device->driver_data, format);
+}
+
+void agpu_frame_begin(agpu_device device) {
+    device->frame_begin(device->driver_data);
+}
+
+void agpu_frame_end(agpu_device device) {
+    device->frame_end(device->driver_data);
 }

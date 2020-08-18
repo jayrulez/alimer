@@ -24,18 +24,43 @@
 #define AGPU_DRIVER_H
 
 #include "agpu.h"
-
-#ifndef AGPU_MALLOC
-#   define AGPU_MALLOC(s) malloc(s)
-#   define AGPU_FREE(p) free(p)
-#endif
-
-#define AGPU_ALLOC(T) ((T*) AGPU_MALLOC(sizeof(T)))
+#include <stdlib.h>
+#include <string.h> 
+#include <float.h> 
 
 #ifndef AGPU_ASSERT
 #   include <assert.h>
 #   define AGPU_ASSERT(c) assert(c)
 #endif
+
+static inline void* agpu_malloc(size_t size)
+{
+    void* ptr;
+    if (!(ptr = malloc(size))) 
+        agpu_log_error("Out of memory.");
+    return ptr;
+}
+
+static inline void* agpu_realloc(void* ptr, size_t size)
+{
+    if (!(ptr = realloc(ptr, size)))
+        agpu_log_error("Out of memory.");
+    return ptr;
+}
+
+static inline void* agpu_calloc(size_t count, size_t size)
+{
+    void* ptr;
+    AGPU_ASSERT(count <= ~(size_t)0 / size);
+    if (!(ptr = calloc(count, size)))
+        agpu_log_error("Out of memory.");
+    return ptr;
+}
+
+static inline void agpu_free(void* ptr)
+{
+    free(ptr);
+}
 
 #define AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
 
@@ -66,6 +91,11 @@ typedef struct agpu_renderer agpu_renderer;
 
 typedef struct agpu_device_t {
     void (*destroy)(agpu_device device);
+    void (*frame_begin)(agpu_renderer* driver_data);
+    void (*frame_end)(agpu_renderer* driver_data);
+
+    agpu_device_caps(*query_caps)(agpu_renderer* driver_data);
+    agpu_texture_format_info(*query_texture_format_info)(agpu_renderer* driver_data, agpu_texture_format format);
 
     /* Opaque pointer for the Driver */
     agpu_renderer* driver_data;
@@ -73,7 +103,11 @@ typedef struct agpu_device_t {
 
 #define ASSIGN_DRIVER_FUNC(func, name) result->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-	ASSIGN_DRIVER_FUNC(destroy, name)
+	ASSIGN_DRIVER_FUNC(destroy, name)\
+    ASSIGN_DRIVER_FUNC(frame_begin, name)\
+    ASSIGN_DRIVER_FUNC(frame_end, name)\
+    ASSIGN_DRIVER_FUNC(query_caps, name)\
+    ASSIGN_DRIVER_FUNC(query_texture_format_info, name)
 
 typedef struct agpu_driver
 {

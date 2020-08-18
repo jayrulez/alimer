@@ -52,6 +52,16 @@
 extern "C" {
 #endif /* __cplusplus */
 
+    /* Constants */
+    enum {
+        AGPU_MAX_COLOR_ATTACHMENTS = 8u,
+        AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+        AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+        AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+        AGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u,
+    };
+
+    /* Handles */
     typedef struct agpu_device_t* agpu_device;
     typedef struct agpu_texture_t* agpu_texture;
 
@@ -88,80 +98,75 @@ extern "C" {
     typedef enum agpu_texture_format {
         AGPU_TEXTURE_FORMAT_UNDEFINED = 0,
         // 8-bit pixel formats
-        AGPUPixelFormat_R8UNorm,
-        AGPUPixelFormat_R8SNorm,
-        AGPUPixelFormat_R8UInt,
-        AGPUPixelFormat_R8SInt,
-
+        AGPU_TEXTURE_FORMAT_R8_UNORM,
+        AGPU_TEXTURE_FORMAT_R8_SNORM,
+        AGPU_TEXTURE_FORMAT_R8_UINT,
+        AGPU_TEXTURE_FORMAT_R8_SINT,
         // 16-bit pixel formats
-        AGPUPixelFormat_R16UNorm,
-        AGPUPixelFormat_R16SNorm,
-        AGPUPixelFormat_R16UInt,
-        AGPUPixelFormat_R16SInt,
-        AGPUPixelFormat_R16Float,
-        AGPUPixelFormat_RG8UNorm,
-        AGPUPixelFormat_RG8SNorm,
-        AGPUPixelFormat_RG8UInt,
-        AGPUPixelFormat_RG8SInt,
-
+        AGPU_TEXTURE_FORMAT_R16_UNORM,
+        AGPU_TEXTURE_FORMAT_R16_SNORM,
+        AGPU_TEXTURE_FORMAT_R16_UINT,
+        AGPU_TEXTURE_FORMAT_R16_SINT,
+        AGPU_TEXTURE_FORMAT_R16_FLOAT,
+        AGPU_TEXTURE_FORMAT_RG8_UNORM,
+        AGPU_TEXTURE_FORMAT_RG8_SNORM,
+        AGPU_TEXTURE_FORMAT_RG8_UINT,
+        AGPU_TEXTURE_FORMAT_RG8_SINT,
         // 32-bit pixel formats
-        AGPUPixelFormat_R32UInt,
-        AGPUPixelFormat_R32SInt,
-        AGPUPixelFormat_R32Float,
-        AGPUPixelFormat_RG16UInt,
-        AGPUPixelFormat_RG16SInt,
-        AGPUPixelFormat_RG16Float,
-
-        AGPUPixelFormat_RGBA8Unorm,
-        AGPUPixelFormat_RGBA8UnormSrgb,
-        AGPUPixelFormat_RGBA8SNorm,
-        AGPUPixelFormat_RGBA8UInt,
-        AGPUPixelFormat_RGBA8SInt,
-        AGPUPixelFormat_BGRA8Unorm,
-        AGPUPixelFormat_BGRA8UnormSrgb,
-
+        AGPU_TEXTURE_FORMAT_R32_UINT,
+        AGPU_TEXTURE_FORMAT_R32_SINT,
+        AGPU_TEXTURE_FORMAT_R32_FLOAT,
+        AGPU_TEXTURE_FORMAT_RG16_UINT,
+        AGPU_TEXTURE_FORMAT_RG16_SINT,
+        AGPU_TEXTURE_FORMAT_RG16_FLOAT,
+        AGPU_TEXTURE_FORMAT_RGBA8_UNORM,
+        AGPU_TEXTURE_FORMAT_RGBA8_SRGB,
+        AGPU_TEXTURE_FORMAT_RGBA8_SNORM,
+        AGPU_TEXTURE_FORMAT_RGBA8_UINT,
+        AGPU_TEXTURE_FORMAT_RGBA8_SINT,
+        AGPU_TEXTURE_FORMAT_BGRA8_UNORM,
+        AGPU_TEXTURE_FORMAT_BGRA8_SRGB,
         // Packed 32-Bit Pixel formats
-        AGPUPixelFormat_RGB10A2Unorm,
-        AGPUPixelFormat_RG11B10Float,
-
+        AGPU_TEXTURE_FORMAT_RGB10A2_UNORM,
+        AGPU_TEXTURE_FORMAT_RG11B10_FLOAT,
         // 64-Bit Pixel Formats
-        AGPUPixelFormat_RG32UInt,
-        AGPUPixelFormat_RG32SInt,
-        AGPUPixelFormat_RG32Float,
-        AGPUPixelFormat_RGBA16UInt,
-        AGPUPixelFormat_RGBA16SInt,
-        AGPUPixelFormat_RGBA16Float,
-
+        AGPU_TEXTURE_FORMAT_RG32_UINT,
+        AGPU_TEXTURE_FORMAT_RG32_SINT,
+        AGPU_TEXTURE_FORMAT_RG32_FLOAT,
+        AGPU_TEXTURE_FORMAT_RGBA16_UINT,
+        AGPU_TEXTURE_FORMAT_RGBA16_SINT,
+        AGPU_TEXTURE_FORMAT_RGBA16_FLOAT,
         // 128-Bit Pixel Formats
-        AGPUPixelFormat_RGBA32UInt,
-        AGPUPixelFormat_RGBA32SInt,
-        AGPUPixelFormat_RGBA32Float,
+        AGPU_TEXTURE_FORMAT_RGBA32_UINT,
+        AGPU_TEXTURE_FORMAT_RGBA32_SINT,
+        AGPU_TEXTURE_FORMAT_RGBA32_FLOAT,
 
         // Depth-stencil
-        AGPUPixelFormat_Depth16Unorm,
-        AGPUPixelFormat_Depth32Float,
-        AGPUPixelFormat_Depth24Unorm_Stencil8,
-        AGPUPixelFormat_Depth32Float_Stencil8,
+        AGPU_TEXTURE_FORMAT_D16_UNORM,
+        AGPU_TEXTURE_FORMAT_D32_FLOAT,
+        AGPU_TEXTURE_FORMAT_D24_UNORM_S8_UINT,
+        AGPU_TEXTURE_FORMAT_D32_FLOAT_S8_UINT,
 
         // Compressed BC formats
-        AGPUPixelFormat_BC1RGBAUnorm,
-        AGPUPixelFormat_BC1RGBAUnormSrgb,
-        AGPUPixelFormat_BC2RGBAUnorm,
-        AGPUPixelFormat_BC2RGBAUnormSrgb,
-        AGPUPixelFormat_BC3RGBAUnorm,
-        AGPUPixelFormat_BC3RGBAUnormSrgb,
-        AGPUPixelFormat_BC4RUnorm,
-        AGPUPixelFormat_BC4RSnorm,
-        AGPUPixelFormat_BC5RGUnorm,
-        AGPUPixelFormat_BC5RGSnorm,
-        AGPUPixelFormat_BC6HRGBUfloat,
-        AGPUPixelFormat_BC6HRGBSfloat,
-        AGPUPixelFormat_BC7RGBAUnorm,
-        AGPUPixelFormat_BC7RGBAUnormSrgb,
+        AGPU_TEXTURE_FORMAT_BC1_UNORM,
+        AGPU_TEXTURE_FORMAT_BC1_SRGB,
+        AGPU_TEXTURE_FORMAT_BC2_UNORM,
+        AGPU_TEXTURE_FORMAT_BC2_SRGB,
+        AGPU_TEXTURE_FORMAT_BC3_UNORM,
+        AGPU_TEXTURE_FORMAT_BC3_SRGB,
+        AGPU_TEXTURE_FORMAT_BC4_UNORM,
+        AGPU_TEXTURE_FORMAT_BC4_SNORM,
+        AGPU_TEXTURE_FORMAT_BC5_UNORM,
+        AGPU_TEXTURE_FORMAT_BC5_SNORM,
+        AGPU_TEXTURE_FORMAT_BC6H_UFLOAT,
+        AGPU_TEXTURE_FORMAT_BC6H_SFLOAT,
+        AGPU_TEXTURE_FORMAT_BC7_UNORM,
+        AGPU_TEXTURE_FORMAT_BC7_SRGB,
 
-        AGPUPixelFormat_Force32 = 0x7FFFFFFF
+        _AGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
     } agpu_texture_format;
 
+    /* Structs */
     typedef struct agpu_swapchain_info {
         uint32_t width;
         uint32_t height;
@@ -180,6 +185,73 @@ extern "C" {
         const agpu_swapchain_info* swapchain;
     } agpu_device_info;
 
+    typedef struct agpu_features {
+        bool independent_blend;
+        bool compute_shader;
+        bool tessellation_shader;
+        bool multi_viewport;
+        bool index_uint32;
+        bool multi_draw_indirect;
+        bool fill_mode_non_solid;
+        bool sampler_anisotropy;
+        bool texture_compression_ETC2;
+        bool texture_compression_ASTC_LDR;
+        bool texture_compression_BC;
+        bool texture_cube_array;
+        bool raytracing;
+    } agpu_features;
+
+    typedef struct agpu_limits {
+        uint32_t        max_vertex_attributes;
+        uint32_t        max_vertex_bindings;
+        uint32_t        max_vertex_attribute_offset;
+        uint32_t        max_vertex_binding_stride;
+        uint32_t        max_texture_size_1d;
+        uint32_t        max_texture_size_2d;
+        uint32_t        max_texture_size_3d;
+        uint32_t        max_texture_size_cube;
+        uint32_t        max_texture_array_layers;
+        uint32_t        max_color_attachments;
+        uint32_t        max_uniform_buffer_size;
+        uint64_t        min_uniform_buffer_offset_alignment;
+        uint32_t        max_storage_buffer_size;
+        uint64_t        min_storage_buffer_offset_alignment;
+        uint32_t        max_sampler_anisotropy;
+        uint32_t        max_viewports;
+        uint32_t        max_viewport_width;
+        uint32_t        max_viewport_height;
+        uint32_t        max_tessellation_patch_size;
+        float           point_size_range_min;
+        float           point_size_range_max;
+        float           line_width_range_min;
+        float           line_width_range_max;
+        uint32_t        max_compute_shared_memory_size;
+        uint32_t        max_compute_work_group_count_x;
+        uint32_t        max_compute_work_group_count_y;
+        uint32_t        max_compute_work_group_count_z;
+        uint32_t        max_compute_work_group_invocations;
+        uint32_t        max_compute_work_group_size_x;
+        uint32_t        max_compute_work_group_size_y;
+        uint32_t        max_compute_work_group_size_z;
+    } agpu_limits;
+
+    typedef struct agpu_device_caps {
+        agpu_backend_type backend_type;
+        uint32_t vendor_id;
+        uint32_t device_id;
+        agpu_features features;
+        agpu_limits limits;
+    } agpu_device_caps;
+
+    typedef struct agpu_texture_format_info {
+        bool sample;        /* pixel format can be sampled in shaders */
+        bool filter;        /* pixel format can be sampled with filtering */
+        bool render;        /* pixel format can be used as render target */
+        bool blend;         /* alpha-blending is supported */
+        bool msaa;          /* pixel format can be used as MSAA render target */
+        bool depth;         /* pixel format is a depth format */
+    } agpu_texture_format_info;
+
     /* Callbacks */
     typedef void(AGPU_API_CALL* agpu_log_callback)(void* user_data, agpu_log_level level, const char* message);
 
@@ -191,6 +263,10 @@ extern "C" {
 
     AGPU_API agpu_device agpu_create_device(const agpu_device_info* info);
     AGPU_API void agpu_destroy_device(agpu_device device);
+    AGPU_API agpu_device_caps agpu_query_caps(agpu_device device);
+    AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_device device, agpu_texture_format format);
+    AGPU_API void agpu_frame_begin(agpu_device device);
+    AGPU_API void agpu_frame_end(agpu_device device);
 
 #ifdef __cplusplus
 }
