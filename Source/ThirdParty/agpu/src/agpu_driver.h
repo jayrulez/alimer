@@ -62,29 +62,29 @@ extern void __cdecl __debugbreak(void);
 #   error "Unsupported compiler"
 #endif
 
-typedef struct AGPU_Renderer AGPU_Renderer;
+typedef struct agpu_renderer agpu_renderer;
 
-struct AGPUDevice {
-    void (*DestroyDevice)(AGPUDevice* device);
+typedef struct agpu_device_t {
+    void (*destroy)(agpu_device device);
 
     /* Opaque pointer for the Driver */
-    AGPU_Renderer* driverData;
-};
+    agpu_renderer* driver_data;
+} agpu_device_t;
 
 #define ASSIGN_DRIVER_FUNC(func, name) result->func = name##_##func;
 #define ASSIGN_DRIVER(name) \
-	ASSIGN_DRIVER_FUNC(DestroyDevice, name)
+	ASSIGN_DRIVER_FUNC(destroy, name)
 
-typedef struct AGPU_Driver
+typedef struct agpu_driver
 {
-    AGPUBackendType backendType;
-    bool (*IsSupported)(void);
-    AGPUDevice* (*CreateDevice)(void);
-} AGPU_Driver;
+    agpu_backend_type backend_type;
+    bool (*is_supported)(void);
+    agpu_device (*create_device)(const agpu_device_info* info);
+} agpu_driver;
 
-extern AGPU_Driver D3D11Driver;
-extern AGPU_Driver VulkanDriver;
-extern AGPU_Driver MetalDriver;
-extern AGPU_Driver OpenGLDriver;
+extern agpu_driver d3d11_driver;
+extern agpu_driver vulkan_driver;
+extern agpu_driver metal_driver;
+extern agpu_driver gl_driver;
 
 #endif /* AGPU_DRIVER_H */

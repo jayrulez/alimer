@@ -52,23 +52,41 @@
 extern "C" {
 #endif /* __cplusplus */
 
-    typedef struct AGPUDevice AGPUDevice;
-    typedef struct AGPUTexture AGPUTexture;
+    typedef struct agpu_device_t* agpu_device;
+    typedef struct agpu_texture_t* agpu_texture;
 
-    typedef enum AGPUBackendType {
-        AGPUBackendType_Null = 0x00000000,
-        AGPUBackendType_D3D11 = 0x00000001,
-        AGPUBackendType_D3D12 = 0x00000002,
-        AGPUBackendType_Metal = 0x00000003,
-        AGPUBackendType_Vulkan = 0x00000004,
-        AGPUBackendType_OpenGL = 0x00000005,
-        AGPUBackendType_OpenGLES = 0x00000006,
-        AGPUBackendType_Force32 = 0x7FFFFFFF
-    } AGPUBackendType;
+    /* Enums */
+    typedef enum agpu_log_level {
+        AGPU_LOG_LEVEL_ERROR = 0,
+        AGPU_LOG_LEVEL_WARN = 1,
+        AGPU_LOG_LEVEL_INFO = 2,
+        AGPU_LOG_LEVEL_DEBUG = 3,
+        _AGPU_LOG_LEVEL_COUNT,
+        _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+    } agpu_log_level;
+
+    typedef enum agpu_backend_type {
+        AGPU_BACKEND_TYPE_DEFAULT = 0,
+        AGPU_BACKEND_TYPE_NULL,
+        AGPU_BACKEND_TYPE_D3D11,
+        AGPU_BACKEND_TYPE_D3D12,
+        AGPU_BACKEND_TYPE_METAL,
+        AGPU_BACKEND_TYPE_VULKAN,
+        AGPU_BACKEND_TYPE_OPENGL,
+        AGPU_BACKEND_TYPE_COUNT,
+        _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_backend_type;
+
+    typedef enum agpu_device_preference {
+        AGPU_DEVICE_PREFERENCE_DEFAULT = 0,
+        AGPU_DEVICE_PREFERENCE_LOW_POWER = 1,
+        AGPU_DEVICE_PREFERENCE_HIGH_PERFORMANCE = 2,
+        _AGPU_DEVICE_PREFERENCE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_device_preference;
 
     /// Defines pixel format.
-    typedef enum AGPUPixelFormat {
-        AGPUPixelFormat_Undefined = 0,
+    typedef enum agpu_texture_format {
+        AGPU_TEXTURE_FORMAT_UNDEFINED = 0,
         // 8-bit pixel formats
         AGPUPixelFormat_R8UNorm,
         AGPUPixelFormat_R8SNorm,
@@ -142,10 +160,37 @@ extern "C" {
         AGPUPixelFormat_BC7RGBAUnormSrgb,
 
         AGPUPixelFormat_Force32 = 0x7FFFFFFF
-    } AGPUPixelFormat;
+    } agpu_texture_format;
 
-    AGPU_API AGPUDevice* agpuCreateDevice(AGPUBackendType backendType);
-    AGPU_API void agpuDestroyDevice(AGPUDevice* device);
+    typedef struct agpu_swapchain_info {
+        uint32_t width;
+        uint32_t height;
+        agpu_texture_format color_format;
+        agpu_texture_format depth_stencil_format;
+        bool vsync;
+        bool fullscreen;
+        /// Native window handle (HWND, IUnknown, ANativeWindow, NSWindow).
+        void* window_handle;
+    } agpu_swapchain_info;
+
+    typedef struct agpu_device_info {
+        agpu_backend_type backend_type;
+        bool debug;
+        agpu_device_preference device_preference;
+        const agpu_swapchain_info* swapchain;
+    } agpu_device_info;
+
+    /* Callbacks */
+    typedef void(AGPU_API_CALL* agpu_log_callback)(void* user_data, agpu_log_level level, const char* message);
+
+    /* Log functions */
+    AGPU_API void agpu_set_log_callback(agpu_log_callback callback, void* user_data);
+    AGPU_API void agpu_log_error(const char* format, ...);
+    AGPU_API void agpu_log_warn(const char* format, ...);
+    AGPU_API void agpu_log_info(const char* format, ...);
+
+    AGPU_API agpu_device agpu_create_device(const agpu_device_info* info);
+    AGPU_API void agpu_destroy_device(agpu_device device);
 
 #ifdef __cplusplus
 }

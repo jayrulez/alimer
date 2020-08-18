@@ -66,7 +66,7 @@ typedef enum {
     DXGIFACTORY_CAPS_TEARING = (1 << 1),
 } dxgi_factory_caps;
 
-static inline DXGI_FORMAT _vgpuGetDXGIFormat(AGPUPixelFormat format) {
+static inline DXGI_FORMAT _vgpuGetDXGIFormat(agpu_texture_format format) {
     switch (format) {
     case AGPUPixelFormat_R8UNorm:
         return DXGI_FORMAT_R8_UNORM;
@@ -165,7 +165,7 @@ static inline DXGI_FORMAT _vgpuGetDXGIFormat(AGPUPixelFormat format) {
     }
 }
 
-static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(AGPUPixelFormat format)
+static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(agpu_texture_format format)
 {
     switch (format)
     {
@@ -199,7 +199,7 @@ static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(AGPUPixelFormat 
     }
 }*/
 
-static inline DXGI_FORMAT vgpu_d3d_swapchain_format(AGPUPixelFormat format)
+static inline DXGI_FORMAT vgpu_d3d_swapchain_format(agpu_texture_format format)
 {
     switch (format)
     {
@@ -228,7 +228,7 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     uintptr_t handle,
     uint32_t width,
     uint32_t height,
-    AGPUPixelFormat format,
+    agpu_texture_format format,
     uint32_t image_count,
     bool fullscreen)
 {
@@ -262,19 +262,21 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
     DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 #endif
 
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
-    memset(&swapChainDesc, 0, sizeof(swapChainDesc));
-    swapChainDesc.Width = width;
-    swapChainDesc.Height = height;
-    swapChainDesc.Format = vgpu_d3d_swapchain_format(format);
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = image_count;
-    swapChainDesc.SampleDesc.Count = 1;
-    swapChainDesc.SampleDesc.Quality = 0;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-    swapChainDesc.Scaling = scaling;
-    swapChainDesc.SwapEffect = swapEffect;
-    swapChainDesc.Flags = flags;
+    const DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
+        .Width = width,
+        .Height = height,
+        .Format = vgpu_d3d_swapchain_format(format),
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = image_count,
+        .SampleDesc = {
+            .Count = 1,
+            .Quality = 0
+        },
+        .AlphaMode = DXGI_ALPHA_MODE_IGNORE,
+        .Scaling = scaling,
+        .SwapEffect = swapEffect,
+        .Flags = flags
+    };
 
     IDXGISwapChain1* result = NULL;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -287,7 +289,7 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
         dxgiFactory,
         deviceOrCommandQueue,
         window,
-        &swapChainDesc,
+        &swapchain_desc,
         &swapchain_fullscreen_desc,
         NULL,
         &result
@@ -300,7 +302,7 @@ static inline IDXGISwapChain1* vgpu_d3d_create_swapchain(
         dxgiFactory,
         deviceOrCommandQueue,
         window,
-        &swapChainDesc,
+        &swapchain_desc,
         NULL,
         &result
     ));

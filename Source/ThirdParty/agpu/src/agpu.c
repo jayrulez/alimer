@@ -21,39 +21,85 @@
 //
 
 #include "agpu_driver.h"
+#include <stdio.h>
+#include <stdarg.h>
 
-static const AGPU_Driver* drivers[] = {
+#define VGPU_MAX_LOG_MESSAGE (4096)
+static agpu_log_callback s_log_function = NULL;
+static void* s_log_user_data = NULL;
+
+void agpu_set_log_callback(agpu_log_callback callback, void* user_data) {
+    s_log_function = callback;
+    s_log_user_data = user_data;
+}
+
+void agpu_log_error(const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, AGPU_LOG_LEVEL_ERROR, message);
+        va_end(args);
+    }
+}
+
+void agpu_log_warn(const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, AGPU_LOG_LEVEL_ERROR, message);
+        va_end(args);
+    }
+}
+
+void agpu_log_info(const char* format, ...) {
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[VGPU_MAX_LOG_MESSAGE];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE, format, args);
+        s_log_function(s_log_user_data, AGPU_LOG_LEVEL_INFO, message);
+        va_end(args);
+    }
+}
+
+static const agpu_driver* drivers[] = {
 #if AGPU_DRIVER_D3D11
-    &D3D11Driver,
+    & d3d11_driver,
 #endif
 #if AGPU_DRIVER_METAL
-    & MetalDriver,
+    & metal_driver,
 #endif
-#if AGPU_DRIVER_VULKAN /* TODO: Bump this to the top when Vulkan is done! */
-    &VulkanDriver,
+#if AGPU_DRIVER_VULKAN && defined(TODO_VK)
+    &vulkan_driver,
 #endif
-#if AGPU_DRIVER_OPENGL
-    &OpenGLDriver,
+#if AGPU_DRIVER_OPENGL&& defined(TODO_GL)
+    &gl_driver,
 #endif
 
     NULL
 };
 
 
-AGPUDevice* agpuCreateDevice(AGPUBackendType backendType) {
-    AGPUDevice* device = NULL;
-    if (backendType == AGPUBackendType_Force32) {
+agpu_device agpu_create_device(const agpu_device_info* info) {
+    AGPU_ASSERT(info);
+
+    agpu_device device = NULL;
+    if (info->backend_type == AGPU_BACKEND_TYPE_DEFAULT) {
         for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
-            if (drivers[i]->IsSupported()) {
-                device = drivers[i]->CreateDevice();
+            if (drivers[i]->is_supported()) {
+                device = drivers[i]->create_device(info);
                 break;
             }
         }
     }
     else {
         for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
-            if (drivers[i]->backendType == backendType && drivers[i]->IsSupported()) {
-                device = drivers[i]->CreateDevice();
+            if (drivers[i]->backend_type == info->backend_type && drivers[i]->is_supported()) {
+                device = drivers[i]->create_device(info);
                 break;
             }
         }
@@ -62,11 +108,11 @@ AGPUDevice* agpuCreateDevice(AGPUBackendType backendType) {
     return device;
 }
 
-void agpuDestroyDevice(AGPUDevice* device) {
+void agpu_destroy_device(agpu_device device) {
     if (device == NULL)
     {
         return;
     }
 
-    device->DestroyDevice(device);
+    device->destroy(device);
 }
