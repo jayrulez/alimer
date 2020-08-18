@@ -83,15 +83,19 @@ static const agpu_driver* drivers[] = {
     NULL
 };
 
+static agpu_renderer* gpu_renderer = NULL;
 
-agpu_device agpu_create_device(const agpu_device_info* info) {
+bool agpu_init(const agpu_init_info* info) {
     AGPU_ASSERT(info);
 
-    agpu_device device = NULL;
+    if (gpu_renderer) {
+        return true;
+    }
+
     if (info->backend_type == AGPU_BACKEND_TYPE_DEFAULT) {
         for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
             if (drivers[i]->is_supported()) {
-                device = drivers[i]->create_device(info);
+                gpu_renderer = drivers[i]->create_renderer();
                 break;
             }
         }
@@ -99,36 +103,75 @@ agpu_device agpu_create_device(const agpu_device_info* info) {
     else {
         for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
             if (drivers[i]->backend_type == info->backend_type && drivers[i]->is_supported()) {
-                device = drivers[i]->create_device(info);
+                gpu_renderer = drivers[i]->create_renderer();
                 break;
             }
         }
     }
 
-    return device;
+    if (!gpu_renderer || !gpu_renderer->init(info)) {
+        return false;
+    }
+
+    return true;
 }
 
-void agpu_destroy_device(agpu_device device) {
-    if (device == NULL)
+void agpu_shutdown(void) {
+    if (gpu_renderer == NULL)
     {
         return;
     }
 
-    device->destroy(device);
+    gpu_renderer->shutdown();
 }
 
-agpu_device_caps agpu_query_caps(agpu_device device) {
-    return device->query_caps(device->driver_data);
+agpu_device_caps agpu_query_caps(void) {
+    AGPU_ASSERT(gpu_renderer);
+    return gpu_renderer->query_caps();
 }
 
-agpu_texture_format_info agpu_query_texture_format_info(agpu_device device, agpu_texture_format format) {
-    return device->query_texture_format_info(device->driver_data, format);
+agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format) {
+    return gpu_renderer->query_texture_format_info(format);
 }
 
-void agpu_frame_begin(agpu_device device) {
-    device->frame_begin(device->driver_data);
+/* Context */
+static agpu_swapchain_info _agpu_swapchain_info_def(const agpu_swapchain_info* info) {
+    agpu_swapchain_info def = *info;
+    def.width = _agpu_def(def.width, 1u);
+    def.height = _agpu_def(def.height, 1u);
+    def.color_format = _agpu_def(def.color_format, AGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    def.depth_stencil_format = _agpu_def(def.depth_stencil_format, AGPU_TEXTURE_FORMAT_UNDEFINED);
+    def.vsync = _agpu_def(def.vsync, false);
+    def.fullscreen = _agpu_def(def.fullscreen, false);
+    return def;
 }
 
-void agpu_frame_end(agpu_device device) {
-    device->frame_end(device->driver_data);
+
+agpu_context agpu_create_context(const agpu_context_info* info) {
+    AGPU_ASSERT(info);
+
+    agpu_swapchain_info def_swapchain_info;
+    agpu_context_info def = *info;
+    if (def.swapchain_info) {
+        def_swapchain_info = _agpu_swapchain_info_def(def.swapchain_info);
+        def.swapchain_info = &def_swapchain_info;
+    }
+
+    return gpu_renderer->create_context(&def);
+}
+
+void agpu_destroy_context(agpu_context context) {
+    gpu_renderer->destroy_context(context);
+}
+
+void agpu_set_context(agpu_context context) {
+    gpu_renderer->set_context(context);
+}
+
+void agpu_begin_frame(void) {
+    gpu_renderer->begin_frame();
+}
+
+void agpu_end_frame(void) {
+    gpu_renderer->end_frame();
 }

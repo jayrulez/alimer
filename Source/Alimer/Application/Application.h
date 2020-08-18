@@ -27,7 +27,6 @@
 #include "Core/Window.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
-#include <agpu.h>
 
 namespace alimer
 {
@@ -100,7 +99,6 @@ namespace alimer
 
         bool headless{ false };
         RefPtr<Window> mainWindow;
-        agpu_device gpuDevice;
         //std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 

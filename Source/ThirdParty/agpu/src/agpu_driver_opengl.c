@@ -63,44 +63,50 @@
 #   include <glad/glad.h>
 #endif
 
-typedef struct gl_renderer {
-    agpu_device_caps caps;
-
-    bool debug;
-} gl_renderer;
-
 /* Global data */
 static struct {
     bool available_initialized;
     bool available;
 
+    agpu_device_caps caps;
     GLuint default_framebuffer;
     GLuint default_vao;
 } gl;
 
 
 /* Device/Renderer */
-static void gl_destroy(agpu_device device)
+static bool gl_init(const agpu_init_info* info)
 {
-    gl_renderer* renderer = (gl_renderer*)device->driver_data;
-    agpu_free(renderer);
-    agpu_free(device);
+    return true;
 }
 
-static void gl_frame_begin(agpu_renderer* driver_data) {
-    AGPU_UNUSED(driver_data);
+static void gl_shutdown(void)
+{
 }
 
-static void gl_frame_end(agpu_renderer* driver_data) {
-    gl_renderer* renderer = (gl_renderer*)driver_data;
+static agpu_context gl_create_context(const agpu_context_info* info) {
+    return NULL;
 }
 
-static agpu_device_caps gl_query_caps(agpu_renderer* driver_data) {
-    gl_renderer* renderer = (gl_renderer*)driver_data;
-    return renderer->caps;
+static void gl_destroy_context(agpu_context context) {
+
 }
 
-static agpu_texture_format_info gl_query_texture_format_info(agpu_renderer* driver_data, agpu_texture_format format) {
+static void gl_set_context(agpu_context context) {
+
+}
+
+static void gl_begin_frame(void) {
+}
+
+static void gl_end_frame(void) {
+}
+
+static agpu_device_caps gl_query_caps(void) {
+    return gl.caps;
+}
+
+static agpu_texture_format_info gl_query_texture_format_info(agpu_texture_format format) {
     agpu_texture_format_info info;
     memset(&info, 0, sizeof(info));
     return info;
@@ -118,26 +124,17 @@ static bool gl_is_supported(void)
     return true;
 };
 
-static agpu_device gl_create_device(const agpu_device_info* info)
+static agpu_renderer* gl_create_renderer(void)
 {
-    agpu_device result;
-    gl_renderer* renderer;
-
-    /* Allocate and zero out the renderer */
-    renderer = (gl_renderer*)agpu_calloc(1, sizeof(gl_renderer));
-    renderer->debug = info->debug;
-
-    /* Create and return the agpu_device */
-    result = (agpu_device_t*)agpu_malloc(sizeof(agpu_device_t));
-    result->driver_data = (agpu_renderer*)renderer;
+    static agpu_renderer renderer = { 0 };
     ASSIGN_DRIVER(gl);
-    return result;
+    return &renderer;
 }
 
 agpu_driver gl_driver = {
     AGPU_BACKEND_TYPE_OPENGL,
     gl_is_supported,
-    gl_create_device
+    gl_create_renderer
 };
 
 #endif /* defined(AGPU_DRIVER_OPENGL)  */

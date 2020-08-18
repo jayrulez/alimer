@@ -62,7 +62,7 @@ extern "C" {
     };
 
     /* Handles */
-    typedef struct agpu_device_t* agpu_device;
+    typedef struct agpu_context_t* agpu_context;
     typedef struct agpu_texture_t* agpu_texture;
 
     /* Enums */
@@ -178,12 +178,15 @@ extern "C" {
         void* window_handle;
     } agpu_swapchain_info;
 
-    typedef struct agpu_device_info {
+    typedef struct agpu_context_info {
+        const agpu_swapchain_info* swapchain_info;
+    } agpu_context_info;
+
+    typedef struct agpu_init_info {
         agpu_backend_type backend_type;
         bool debug;
         agpu_device_preference device_preference;
-        const agpu_swapchain_info* swapchain;
-    } agpu_device_info;
+    } agpu_init_info;
 
     typedef struct agpu_features {
         bool independent_blend;
@@ -261,12 +264,17 @@ extern "C" {
     AGPU_API void agpu_log_warn(const char* format, ...);
     AGPU_API void agpu_log_info(const char* format, ...);
 
-    AGPU_API agpu_device agpu_create_device(const agpu_device_info* info);
-    AGPU_API void agpu_destroy_device(agpu_device device);
-    AGPU_API agpu_device_caps agpu_query_caps(agpu_device device);
-    AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_device device, agpu_texture_format format);
-    AGPU_API void agpu_frame_begin(agpu_device device);
-    AGPU_API void agpu_frame_end(agpu_device device);
+    AGPU_API bool agpu_init(const agpu_init_info* info);
+    AGPU_API void agpu_shutdown(void);
+    AGPU_API agpu_device_caps agpu_query_caps(void);
+    AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
+
+    /* Context */
+    AGPU_API agpu_context agpu_create_context(const agpu_context_info* info);
+    AGPU_API void agpu_destroy_context(agpu_context context);
+    AGPU_API void agpu_set_context(agpu_context context);
+    AGPU_API void agpu_begin_frame(void);
+    AGPU_API void agpu_end_frame(void);
 
 #ifdef __cplusplus
 }

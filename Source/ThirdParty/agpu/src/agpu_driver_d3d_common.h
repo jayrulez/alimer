@@ -39,6 +39,7 @@ static const IID D3D_IID_IDXGISwapChain3 = { 0x94d99bdb, 0xf1f8, 0x4ab0, {0xb2, 
 static const IID D3D_IID_IDXGIFactory4 = { 0x1bc6ea02, 0xef36, 0x464f, {0xbf, 0x0c, 0x21, 0xca, 0x39, 0xe5, 0x16, 0x8a} };
 static const IID D3D_IID_IDXGIFactory5 = { 0x7632e1f5, 0xee65, 0x4dca, {0x87, 0xfd, 0x84, 0xcd, 0x75, 0xf8, 0x83, 0x8d} };
 static const IID D3D_IID_IDXGIFactory6 = { 0xc1b6694f, 0xff09, 0x44a9, {0xb0, 0x3c, 0x77, 0x90, 0x0a, 0x0a, 0x1d, 0x17 } };
+static const IID D3D_IID_IDXGIOutput6 = { 0x068346e8, 0xaaec, 0x4b84, {0xad, 0xd7, 0x13, 0x7f, 0x51, 0x3f, 0x77, 0xa1 } };
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
@@ -178,13 +179,7 @@ static inline DXGI_FORMAT _agpu_d3d_swapchain_format(agpu_texture_format format)
     return DXGI_FORMAT_B8G8R8A8_UNORM;
 }
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#define DXGI_SWAPCHAIN_TYPE IDXGISwapChain1*
-#else
-#define DXGI_SWAPCHAIN_TYPE IDXGISwapChain3*
-#endif
-
-static inline DXGI_SWAPCHAIN_TYPE _agpu_d3d_create_swapchain(
+static inline IDXGISwapChain1* _agpu_d3d_create_swapchain(
     IDXGIFactory2* dxgi_factory, uint32_t dxgi_factory_caps,
     IUnknown* deviceOrCommandQueue,
     void* window_handle,
@@ -239,13 +234,14 @@ static inline DXGI_SWAPCHAIN_TYPE _agpu_d3d_create_swapchain(
         .Flags = flags
     };
 
+    IDXGISwapChain1* result = NULL;
+
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     const DXGI_SWAP_CHAIN_FULLSCREEN_DESC swapchain_fullscreen_desc = {
        .Windowed = !fullscreen
     };
 
     // Create a SwapChain from a Win32 window.
-    IDXGISwapChain1* result = NULL;
     VHR(IDXGIFactory2_CreateSwapChainForHwnd(
         dxgi_factory,
         deviceOrCommandQueue,
@@ -259,18 +255,14 @@ static inline DXGI_SWAPCHAIN_TYPE _agpu_d3d_create_swapchain(
     // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
     VHR(IDXGIFactory2_MakeWindowAssociation(dxgi_factory, window, DXGI_MWA_NO_ALT_ENTER));
 #else
-    IDXGISwapChain3* result = NULL;
-    IDXGISwapChain1* temp_swap_chain;
     VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
         dxgi_factory,
         deviceOrCommandQueue,
         window,
         &swapchain_desc,
         NULL,
-        &temp_swap_chain
+        &result
     ));
-    VHR(IDXGISwapChain1_QueryInterface(temp_swap_chain, &D3D_IID_IDXGISwapChain3, (void**)&result));
-    IDXGISwapChain1_Release(temp_swap_chain);
 #endif
 
     return result;

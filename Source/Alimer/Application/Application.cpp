@@ -27,6 +27,7 @@
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
+#include <agpu.h>
 #include <imgui.h>
 
 namespace
@@ -86,7 +87,7 @@ namespace alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        agpu_destroy_device(gpuDevice);
+        agpu_shutdown();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -97,49 +98,50 @@ namespace alimer
         GetSubsystem<Input>()->Initialize();
 
         // Init GPU.
-        if (!headless)
+        agpu_init_info gpu_init_info = {};
+#ifdef _DEBUG
+        gpu_init_info.debug = true;
+#endif
+        if (!agpu_init(&gpu_init_info))
+        {
+            headless = true;
+        }
+        else
         {
             mainWindow = new Window();
             mainWindow->SetTitle(config.windowTitle);
-            if (!mainWindow->SetSize(config.windowSize, WindowFlags::Resizable))
+            mainWindow->SetSize(config.windowSize, WindowFlags::Resizable);
+
+            agpu_swapchain_info swapchain_info = {};
+            swapchain_info.width = mainWindow->GetWidth();
+            swapchain_info.height = mainWindow->GetHeight();
+            swapchain_info.vsync = true;
+            swapchain_info.fullscreen = mainWindow->IsFullscreen();
+            swapchain_info.window_handle = mainWindow->GetHandle();
+
+            agpu_context_info context_info = {};
+            context_info.swapchain_info = &swapchain_info;
+            agpu_create_context(&context_info);
+
+            // Create main window SwapChain
+            /*
+            struct VertexPositionColor
             {
-                headless = true;
-            }
-            else
-            {
-                agpu_swapchain_info swapchain_info = {};
-                swapchain_info.width = mainWindow->GetWidth();
-                swapchain_info.height = mainWindow->GetHeight();
-                swapchain_info.vsync = true;
-                swapchain_info.fullscreen = mainWindow->IsFullscreen();
-                swapchain_info.window_handle = mainWindow->GetHandle();
-                agpu_device_info device_info = {};
-#ifdef _DEBUG
-                device_info.debug = true;
-#endif
-                device_info.swapchain = &swapchain_info;
-                gpuDevice = agpu_create_device(&device_info);
+                Vector3 position;
+                Color color;
+            };
 
-                // Create main window SwapChain
-                /*
-                struct VertexPositionColor
-                {
-                    Vector3 position;
-                    Color color;
-                };
+            const VertexPositionColor vertices[] = {
+                // positions            colors
+                {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
+                {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
+                {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
+            };
 
-                const VertexPositionColor vertices[] = {
-                    // positions            colors
-                    {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
-                    {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
-                    {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
-                };
-
-                Buffer vertexBuffer;
-                vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
-                */
-                ImGuiLayer::Initialize();
-            }
+            Buffer vertexBuffer;
+            vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
+            */
+            ImGuiLayer::Initialize();
         }
 
         Initialize();
@@ -173,7 +175,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        agpu_frame_begin(gpuDevice);
+        agpu_begin_frame();
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
         /*for (auto& gameSystem : gameSystems)
@@ -217,7 +219,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
-        agpu_frame_end(gpuDevice);
+        agpu_end_frame();
     }
 
     int Application::Run()
