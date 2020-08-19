@@ -1523,6 +1523,7 @@ namespace alimer
         return nullptr;
     }
 
+#if TOOD_VK
     TextureHandle VulkanGraphicsDevice::AllocTextureHandle()
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
@@ -1540,17 +1541,17 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    TextureHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription* desc, const void* data)
+    TextureHandle VulkanGraphicsDevice::CreateTexture(const GPUTextureDescriptor* desc, const void* data)
     {
         TextureHandle handle = kInvalidTexture;
 
-        if (desc->externalHandle != nullptr)
+        /*if (desc->externalHandle != nullptr)
         {
             handle = AllocTextureHandle();
             textures[handle.id].handle = (VkImage)desc->externalHandle;
             textures[handle.id].memory = VK_NULL_HANDLE;
         }
-        else
+        else*/
         {
             VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
             createInfo.flags = 0u;
@@ -1612,6 +1613,8 @@ namespace alimer
 
         SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)textures[handle.id].handle, name);
     }
+
+#endif // TOOD_VK
 
     BufferHandle VulkanGraphicsDevice::AllocBufferHandle()
     {

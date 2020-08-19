@@ -31,14 +31,6 @@
 
 namespace alimer
 {
-    struct VulkanTexture
-    {
-        enum { MAX_COUNT = 4096 };
-
-        VkImage handle;
-        VmaAllocation memory;
-    };
-
     struct VulkanBuffer
     {
         enum { MAX_COUNT = 4096 };
@@ -71,11 +63,6 @@ namespace alimer
 
         /* Resource creation methods */
         GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) override;
-
-        TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription* desc, const void* data);
-        void Destroy(TextureHandle handle);
-        void SetName(TextureHandle handle, const char* name);
 
         BufferHandle AllocBufferHandle();
         BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data);
@@ -182,7 +169,6 @@ namespace alimer
 
         /* Resource pools */
         std::mutex handle_mutex;
-        GPUResourcePool<VulkanTexture, VulkanTexture::MAX_COUNT> textures;
         GPUResourcePool<VulkanBuffer, VulkanBuffer::MAX_COUNT> buffers;
 
         std::unordered_map<Hash, VkRenderPass> renderPasses;

@@ -99,17 +99,36 @@ namespace alimer
         handle->OMSetRenderTargets(kMaxColorAttachments, zeroRTVS, nullptr);
     }
 
-    void D3D11GPUContext::SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    void D3D11GPUContext::SetScissorRect(const URect& scissorRect)
+    {
+        D3D11_RECT d3dScissorRect;
+        d3dScissorRect.left = static_cast<LONG>(scissorRect.x);
+        d3dScissorRect.top = static_cast<LONG>(scissorRect.y);
+        d3dScissorRect.right = static_cast<LONG>(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = static_cast<LONG>(scissorRect.y + scissorRect.height);
+        handle->RSSetScissorRects(1, &d3dScissorRect);
+    }
+
+    void D3D11GPUContext::SetScissorRects(const URect* scissorRects, uint32_t count)
+    {
+        D3D11_RECT d3dScissorRects[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+        for (uint32 i = 0; i < count; i++)
+        {
+            d3dScissorRects[i].left = static_cast<LONG>(scissorRects[i].x);
+            d3dScissorRects[i].top = static_cast<LONG>(scissorRects[i].y);
+            d3dScissorRects[i].right = static_cast<LONG>(scissorRects[i].x + scissorRects[i].width);
+            d3dScissorRects[i].bottom = static_cast<LONG>(scissorRects[i].y + scissorRects[i].height);
+        }
+
+        handle->RSSetScissorRects(count, d3dScissorRects);
+    }
+
+    void D3D11GPUContext::SetViewport(const Viewport& viewport)
     {
 
     }
 
-    void D3D11GPUContext::SetScissorRects(const Rect* scissorRects, uint32_t count)
-    {
-
-    }
-
-    void D3D11GPUContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
+    void D3D11GPUContext::SetViewports(const Viewport* viewports, uint32_t count)
     {
 
     }

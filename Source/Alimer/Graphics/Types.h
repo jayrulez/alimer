@@ -44,10 +44,8 @@ namespace alimer
     static constexpr uint32 kInvalidHandleId = 0xFFffFFff;
 
     struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
 
     using CommandList = uint8_t;
     static constexpr CommandList kMaxCommandLists = 16;
@@ -146,7 +144,7 @@ namespace alimer
         uint32_t stride;
     };
 
-    struct TextureDescription
+    struct GPUTextureDescriptor
     {
         TextureDimension dimension = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
@@ -157,8 +155,21 @@ namespace alimer
         uint32_t mipLevels = 1u;
         uint32_t arrayLayers = 1u;
         uint32_t sampleCount = 1u;
-        const char* label;
-        const void* externalHandle;
+
+        static GPUTextureDescriptor New2D(uint32 width, uint32 height, PixelFormat format, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
+        {
+            GPUTextureDescriptor descriptor = {};
+            descriptor.dimension = TextureDimension::Texture2D;
+            descriptor.format = format;
+            descriptor.usage = usage;
+            descriptor.width = width;
+            descriptor.height = height;
+            descriptor.depth = 1u;
+            descriptor.mipLevels = mipmapped ? 0u : 1u;
+            descriptor.arrayLayers = 1u;
+            descriptor.sampleCount = 1u;
+            return descriptor;
+        }
     };
 
     class Texture;

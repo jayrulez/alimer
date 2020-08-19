@@ -22,6 +22,7 @@
 
 #include "Core/Log.h"
 #include "D3D11GPUSwapChain.h"
+#include "D3D11GPUTexture.h"
 #include "D3D11GraphicsDevice.h"
 
 namespace alimer
@@ -101,15 +102,18 @@ namespace alimer
 
     void D3D11GPUSwapChain::Destroy()
     {
-        backbufferTexture.Reset();
+        colorTexture.Reset();
         SafeRelease(handle);
     }
 
     void D3D11GPUSwapChain::AfterReset()
     {
         // Create a render target view of the swap chain back buffer.
-        //RefPtr<ID3D11Texture2D> backbufferTextureHandle;
-        //ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(backbufferTextureHandle.GetAddressOf())));
+        ID3D11Texture2D* backbufferTexture;
+        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
+        colorTexture = new D3D11GPUTexture(static_cast<D3D11GraphicsDevice*>(device.Get()), backbufferTexture, colorFormat);
+        backbufferTexture->Release();
+
         //backbufferTexture = Texture::CreateExternalTexture(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false);
 
         /*if (depthStencilFormat != PixelFormat::Invalid)
@@ -133,6 +137,16 @@ namespace alimer
                 depthStencil.GetAddressOf()
             ));
         }*/
+    }
+
+    HRESULT D3D11GPUSwapChain::Present(uint32 syncInterval, uint32 presentFlags)
+    {
+        return handle->Present(syncInterval, presentFlags);
+    }
+
+    Texture* D3D11GPUSwapChain::GetColorTexture() const
+    {
+        return colorTexture.Get();
     }
 }
 

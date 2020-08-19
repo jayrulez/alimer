@@ -183,6 +183,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
+        GetGraphics()->Present(GetGraphics()->GetMainSwapChain(), true);
         GetGraphics()->EndFrame();
     }
 

@@ -31,17 +31,6 @@ namespace alimer
 {
     class D3D11GPUAdapter;
 
-    struct D3D11Texture
-    {
-        enum { MAX_COUNT = 4096 };
-
-        ID3D11Resource* handle;
-        std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
-        std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;
-        std::vector<RefPtr<ID3D11RenderTargetView>> rtvs;
-        std::vector<RefPtr<ID3D11DepthStencilView>> dsvs;
-    };
-
     struct D3D11Buffer
     {
         enum { MAX_COUNT = 4096 };
@@ -58,7 +47,6 @@ namespace alimer
 
         void Shutdown();
 
-        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen);
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
         void Present(GPUSwapChain* swapChain, bool verticalSync) override;
@@ -76,28 +64,14 @@ namespace alimer
         /* Resource creation methods */
         GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) override;
 
-        TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription* descriptor, const void* data);
-        TextureHandle CreateTexture2D(uint32_t width, uint32_t height, const void* data);
-        void Destroy(TextureHandle handle);
-        void SetName(TextureHandle handle, const char* name);
-
         BufferHandle AllocBufferHandle();
         BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data);
         void Destroy(BufferHandle handle);
         void SetName(BufferHandle handle, const char* name);
 
-        /* Commands */
-        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
-
     private:
         void CreateFactory();
         void InitCapabilities();
-        void UpdateSwapChain();
-        ID3D11ShaderResourceView* GetSRV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
-        ID3D11UnorderedAccessView* GetUAV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
-        ID3D11RenderTargetView* GetRTV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
-        ID3D11DepthStencilView* GetDSV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
         static constexpr uint64_t kRenderLatency = 2;
 
@@ -116,7 +90,6 @@ namespace alimer
 
         /* Resource pools */
         std::mutex handle_mutex;
-        GPUResourcePool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
         GPUResourcePool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
     };
 }

@@ -36,9 +36,11 @@ namespace alimer
         ~D3D11GPUSwapChain() override;
 
         void Destroy() override;
-        void AfterReset();
+        Texture* GetColorTexture() const override;
+        HRESULT Present(uint32 syncInterval, uint32 presentFlags);
 
     private:
+        void AfterReset();
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         IDXGISwapChain1* handle = nullptr;
@@ -47,7 +49,7 @@ namespace alimer
 #endif
 
         DXGI_MODE_ROTATION rotation;
-        RefPtr<Texture> backbufferTexture;
+        RefPtr<Texture> colorTexture;
         RefPtr<Texture> depthStencilTexture;
     };
 }

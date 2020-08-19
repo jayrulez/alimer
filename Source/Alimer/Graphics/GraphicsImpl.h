@@ -161,10 +161,6 @@ namespace alimer
         virtual Texture* GetBackbufferTexture() const = 0;
 
         /* Resource creation methods */
-        virtual TextureHandle CreateTexture(const TextureDescription* desc, const void* data) = 0;
-        virtual void Destroy(TextureHandle handle) = 0;
-        virtual void SetName(TextureHandle handle, const char* name) = 0;
-
         virtual BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data = nullptr) = 0;
         virtual void Destroy(BufferHandle handle) = 0;
         virtual void SetName(BufferHandle handle, const char* name) = 0;

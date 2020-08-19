@@ -27,48 +27,48 @@
 
 namespace alimer
 {
-    /// Defines a floating-point rectangle.
-    class ALIMER_API Rect final
+    template <typename T>
+    struct ALIMER_API TRect
     {
     public:
-        /// Specifies the x-coordinate of the rectangle.
-        float x;
-        /// Specifies the y-coordinate of the rectangle.
-        float y;
-        /// Specifies the width of the rectangle.
-        float width;
-        /// Specifies the height of the rectangle.
-        float height;
+        union
+        {
+            T data[4];
+            struct
+            {
+                T x, y, width, height;
+            };
+        };
 
-        constexpr Rect() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f) {}
-        constexpr Rect(float x_, float y_, float width_, float height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
-        constexpr Rect(float width_, float height_) noexcept : x(0.0f), y(0.0f), width(width_), height(height_) {}
-        constexpr Rect(const Size& size) noexcept : x(0.0f), y(0.0f), width(size.width), height(size.height) {}
+        constexpr TRect() = default;
+        constexpr TRect(T value) noexcept : x(value), y(value), width(value), height(value) {}
+        constexpr TRect(T x_, T y_, T width_, T height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
+        constexpr TRect(T width_, T height_) noexcept : x(T(0)), y(T(0)), width(width_), height(height_) {}
 
-        Rect(const Rect&) = default;
-        Rect& operator=(const Rect&) = default;
+        TRect(const TRect&) = default;
+        TRect& operator=(const TRect&) = default;
 
-        Rect(Rect&&) = default;
-        Rect& operator=(Rect&&) = default;
+        TRect(TRect&&) = default;
+        TRect& operator=(TRect&&) = default;
 
-        /// Test for equality with another rect with epsilon.
-        bool Equals(const Rect& rhs) const {
-            return alimer::Equals(x, rhs.x)
-                && alimer::Equals(y, rhs.y)
-                && alimer::Equals(width, rhs.width)
-                && alimer::Equals(height, rhs.height);
-        }
+        T Left() const { return x; }
+        T Right() const { return x + width; }
+        T Top() const { return y; }
+        T Bottom() const { return y + height; }
 
         /// Gets a value that indicates whether the rectangle is empty.
-        bool IsEmpty() const;
-
-        /// Return float data.
-        const float* Data() const { return &x; }
+        ALIMER_FORCE_INLINE bool IsEmpty() const
+        {
+            return (x == 0 && y == 0 && width == 0 && height == 0);
+        }
 
         /// Return as string.
-        String ToString() const;
-
-        // Constants
-        static const Rect Empty;
+        ALIMER_FORCE_INLINE String ToString() const
+        {
+            return fmt::format("{} {} {} {}", x, y, width, height);
+        }
     };
-} 
+
+    using Rect = TRect<float>;
+    using URect = TRect<uint32>;
+}

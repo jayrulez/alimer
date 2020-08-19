@@ -44,9 +44,11 @@ namespace alimer
         void BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) override;
         void EndRenderPass() override;
 
-        void SetScissorRect(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
-        void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) override;
+        void SetScissorRect(const URect& scissorRect) override;
+        void SetScissorRects(const URect* scissorRects, uint32_t count) override;
+        void SetViewport(const Viewport& viewport) override;
+        void SetViewports(const Viewport* viewports, uint32_t count) override;
+
         void SetBlendColor(const Color& color) override;
 
         void BindBuffer(uint32_t slot, GPUBuffer* buffer) override;

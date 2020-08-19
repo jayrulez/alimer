@@ -33,24 +33,7 @@ namespace alimer
 
     public:
         /// Constructor.
-        Texture();
-
-        /// Constructor.
-        Texture(const TextureDescription& desc);
-
-        /// Destructor
-        ~Texture() override;
-
-        /// Register object factory/properties.
-        static void RegisterObject();
-
-        bool Define2D(uint32_t width, uint32_t height, bool mipMap = false, PixelFormat format = PixelFormat::RGBA8Unorm, TextureUsage usage = TextureUsage::Sampled);
-        void Destroy() override;
-
-        static RefPtr<Texture> CreateExternalTexture(void* externalHandle, uint32_t width, uint32_t height, PixelFormat format, bool mipMap = false);
-
-        /// Get the texture handle.
-        TextureHandle GetHandle() const { return handle; }
+        Texture(GraphicsDevice* device, const GPUTextureDescriptor& desc);
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }
@@ -92,8 +75,6 @@ namespace alimer
         static uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 
     protected:
-        TextureHandle handle{ kInvalidHandleId };
-
         TextureDimension dimension = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;

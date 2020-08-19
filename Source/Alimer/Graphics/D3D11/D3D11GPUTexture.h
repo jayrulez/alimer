@@ -22,37 +22,35 @@
 
 #pragma once
 
-#include "Graphics/Buffer.h"
 #include "Graphics/Texture.h"
-#include "Math/Color.h"
-#include "Math/Viewport.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    /// A container that stores commands for the GPU to execute.
-    class ALIMER_API CommandContext
+    class ALIMER_API D3D11GPUTexture final : public Texture
     {
     public:
         /// Constructor.
-        CommandContext();
-        virtual ~CommandContext() = default;
+        D3D11GPUTexture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        /// Constructor.
+        D3D11GPUTexture(D3D11GraphicsDevice* device, const GPUTextureDescriptor& descriptor);
+        /// Destructor
+        ~D3D11GPUTexture() override;
 
-        virtual void Flush() = 0;
+        void Destroy() override;
 
-        virtual void PushDebugGroup(const String& name) = 0;
-        virtual void PopDebugGroup() = 0;
-        virtual void InsertDebugMarker(const String& name) = 0;
+        ID3D11ShaderResourceView* GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11UnorderedAccessView* GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11RenderTargetView* GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11DepthStencilView* GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
-        virtual void BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) = 0;
-        virtual void EndRenderPass() = 0;
+    private:
+        void BackendSetName() override;
 
-        virtual void SetScissorRect(const URect& scissorRect) = 0;
-        virtual void SetScissorRects(const URect* scissorRects, uint32_t count) = 0;
-        virtual void SetViewport(const Viewport& viewport) = 0;
-        virtual void SetViewports(const Viewport* viewports, uint32_t count) = 0;
-        virtual void SetBlendColor(const Color& color) = 0;
-
-        virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
-        virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
+        ID3D11Resource* handle;
+        std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
+        std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;
+        std::vector<RefPtr<ID3D11RenderTargetView>> rtvs;
+        std::vector<RefPtr<ID3D11DepthStencilView>> dsvs;
     };
 }
