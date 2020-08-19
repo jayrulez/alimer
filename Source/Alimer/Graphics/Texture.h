@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/GPUResource.h"
 #include "Math/Size.h"
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GraphicsResource
+    class ALIMER_API Texture : public GPUResource
     {
+        ALIMER_OBJECT(Texture, GPUResource);
+
     public:
         /// Constructor.
         Texture();

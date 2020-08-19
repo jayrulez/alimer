@@ -45,11 +45,6 @@ namespace alimer
     template <typename T> inline bool Equals(T lhs, T rhs, T eps) { return lhs + eps >= rhs && lhs - eps <= rhs; }
     template <class T> inline bool Equals(T lhs, T rhs) { return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs; }
 
-
-    template<typename T> inline T Abs(T v) { return (v >= 0) ? v : -v; }
-    template<typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
-    template<typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
-    template<typename T> inline T Clamp(T value, T min, T max) { return (value < min) ? min : (value < max) ? value : max; }
     template<typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
     
     template <typename T> inline T sin(T v) { return std::sin(v); }

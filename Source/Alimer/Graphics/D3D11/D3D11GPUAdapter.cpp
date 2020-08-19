@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
+#include "D3D11GPUAdapter.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    D3D11GPUAdapter::D3D11GPUAdapter(IDXGIAdapter1* adapter)
+        : adapter{ adapter }
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
-        };
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
 
-        return names[(unsigned)value];
+        deviceId = desc.DeviceId;
+        vendorId = desc.VendorId;
+
+        std::wstring deviceName(desc.Description);
+        name = alimer::ToUtf8(deviceName);
+
+        // Detect adapter type.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            adapterType = GPUAdapterType::CPU;
+        }
+        else
+        {
+            adapterType = GPUAdapterType::IntegratedGPU;
+        }
+    }
+
+    D3D11GPUAdapter::~D3D11GPUAdapter()
+    {
+        SafeRelease(adapter);
     }
 }

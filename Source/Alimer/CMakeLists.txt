@@ -78,7 +78,6 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-  agpu
   stb
   fmt
   imgui
@@ -95,10 +94,6 @@ else()
         target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
     endif()
 endif()
-
-if (ALIMER_D3D11)
-  target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi dxguid)
-endif ()
 
 if (ALIMER_VULKAN)
   target_link_libraries(${TARGET_NAME} PRIVATE volk vma)

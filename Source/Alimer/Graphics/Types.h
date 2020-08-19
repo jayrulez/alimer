@@ -34,14 +34,14 @@
 
 namespace alimer
 {
-    static constexpr uint32_t kInflightFrameCount = 2u;
-    static constexpr uint32_t kMaxColorAttachments = 8u;
-    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
-    static constexpr uint32_t kMaxVertexAttributes = 16u;
-    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
-    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
-    static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
-    static constexpr uint32_t kInvalidHandleId = 0xFFffFFff;
+    static constexpr uint32 kInflightFrameCount = 2u;
+    static constexpr uint32 kMaxColorAttachments = 8u;
+    static constexpr uint32 kMaxVertexBufferBindings = 8u;
+    static constexpr uint32 kMaxVertexAttributes = 16u;
+    static constexpr uint32 kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32 kMaxVertexBufferStride = 2048u;
+    static constexpr uint32 kMaxViewportAndScissorRects = 8u;
+    static constexpr uint32 kInvalidHandleId = 0xFFffFFff;
 
     struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
     struct TextureHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
@@ -52,19 +52,31 @@ namespace alimer
     using CommandList = uint8_t;
     static constexpr CommandList kMaxCommandLists = 16;
 
+    enum class GPUAdapterType : uint32
+    {
+        DiscreteGPU,
+        IntegratedGPU,
+        CPU,
+        Unknown
+    };
+
     /// Enum describing the rendering backend.
-    enum class RendererType
+    enum class GPUBackendType : uint32
     {
         /// Null renderer.
         Null,
-        /// Vulkan backend.
-        Vulkan,
+        /// Direct3D 11 backend.
+        D3D11,
+        /// Direct3D 12 backend.
+        D3D12,
         /// Metal backend.
         Metal,
-        /// Direct3D 11 backend.
-        Direct3D11,
-        /// Direct3D 12 backend.
-        Direct3D12,
+        /// Vulkan backend.
+        Vulkan,
+        /// OpenGL backend.
+        OpenGL,
+        /// OpenGLES backend.
+        OpenGLES,
         /// Default best platform supported backend.
         Count
     };
@@ -74,25 +86,6 @@ namespace alimer
         Default,
         LowPower,
         HighPerformance
-    };
-
-    enum class GPUKnownVendorId
-    {
-        None = 0,
-        AMD = 0x1002,
-        Intel = 0x8086,
-        Nvidia = 0x10DE,
-        ARM = 0x13B5,
-        ImgTec = 0x1010,
-        Qualcomm = 0x5143
-    };
-
-    enum class GPUAdapterType
-    {
-        DiscreteGPU,
-        IntegratedGPU,
-        CPU,
-        Unknown
     };
 
     /// Describes the texture dimension.
@@ -263,14 +256,33 @@ namespace alimer
     /// Describes GPUDevice capabilities.
     struct GraphicsCapabilities
     {
-        RendererType rendererType;
-        String adapterName;
-        uint32_t vendorId = 0;
-        uint32_t deviceId = 0;
-        GPUAdapterType adapterType = GPUAdapterType::Unknown;
         GPUFeatures features;
         GPULimits limits;
     };
 
-    ALIMER_API const char* ToString(RendererType value);
+    struct GPUPlatformHandle
+    {
+#if ALIMER_PLATFORM_WINDOWS
+        HINSTANCE   hinstance;
+        HWND        hwnd;
+#endif
+    };
+
+    struct GPUSwapChainDescriptor
+    {
+        GPUPlatformHandle handle;
+        uint32_t width = 1u;
+        uint32_t height = 1u;
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+        bool isFullscreen = false;
+        uint32_t sampleCount = 1u;
+    };
+
+    struct GPUDeviceDescriptor
+    {
+        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+        GPUSwapChainDescriptor swapChain;
+    };
+
+    ALIMER_API const char* ToString(GPUBackendType value);
 }

@@ -20,16 +20,48 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
+#pragma once
+
+#include "Graphics/GPUAdapter.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    class D3D11GPUAdapter final : public GPUAdapter
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
-        };
+    public:
+        D3D11GPUAdapter(IDXGIAdapter1* adapter);
+        ~D3D11GPUAdapter() override;
 
-        return names[(unsigned)value];
-    }
+        /// Gets the GPU device identifier.
+        ALIMER_FORCE_INLINE uint32 GetDeviceId() const override
+        {
+            return deviceId;
+        }
+
+        /// Gets the GPU vendor identifier.
+        ALIMER_FORCE_INLINE uint32 GetVendorId() const override
+        {
+            return vendorId;
+        }
+
+        /// Gets the adapter name.
+        ALIMER_FORCE_INLINE String GetName() const override
+        {
+            return name;
+        }
+
+        /// Gets the adapter type.
+        ALIMER_FORCE_INLINE GPUAdapterType GetAdapterType() const override
+        {
+            return adapterType;
+        }
+
+    private:
+        IDXGIAdapter1* adapter;
+        uint32 deviceId;
+        uint32 vendorId;
+        String name;
+        GPUAdapterType adapterType;
+    };
 }

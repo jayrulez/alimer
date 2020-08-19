@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "config.h"
-#include "VulkanGraphicsImpl.h"
+#include "VulkanGPUAdapter.h"
+#include "VulkanGraphicsDevice.h"
 #include "Graphics/Texture.h"
 #include "Graphics/Buffer.h"
 
@@ -400,7 +400,7 @@ namespace alimer
         }
     }
 
-    bool VulkanGraphicsImpl::IsAvailable()
+    bool VulkanGraphicsDevice::IsAvailable()
     {
         static bool available_initialized = false;
         static bool available = false;
@@ -439,17 +439,160 @@ namespace alimer
         return true;
     }
 
-    VulkanGraphicsImpl::VulkanGraphicsImpl()
+    VulkanGraphicsDevice::VulkanGraphicsDevice(const String& appName, const GPUDeviceDescriptor& descriptor)
+        : GraphicsDevice(GPUBackendType::Vulkan)
     {
         ALIMER_VERIFY(IsAvailable());
+
+        // Create instance.
+        {
+            vector<const char*> enabledExtensions;
+            vector<const char*> enabledLayers;
+
+            uint32_t instanceExtensionCount;
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
+
+            vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
+            VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
+            for (auto& availableExtension : availableInstanceExtensions)
+            {
+                if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+                {
+                    instanceExts.debugUtils = true;
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+                    enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
+                }
+                else if (strcmp(availableExtension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
+                {
+                    instanceExts.headless = true;
+                }
+                else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
+                {
+                    // VK_KHR_get_physical_device_properties2 is a prerequisite of VK_KHR_performance_query
+                    // which will be used for stats gathering where available.
+                    instanceExts.get_physical_device_properties2 = true;
+                    enabledExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+                }
+                else if (strcmp(availableExtension.extensionName, VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) == 0)
+                {
+                    instanceExts.get_surface_capabilities2 = true;
+                }
+            }
+
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+            uint32_t instanceLayerCount;
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
+
+            vector<VkLayerProperties> supportedInstanceLayers(instanceLayerCount);
+            VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, supportedInstanceLayers.data()));
+
+            vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(supportedInstanceLayers);
+            enabledLayers.insert(enabledLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
+#endif
+
+            const bool headless = false;
+            if (headless)
+            {
+                enabledExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+            }
+            else
+            {
+                enabledExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+
+#if defined(VK_USE_PLATFORM_ANDROID_KHR)
+                enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+                enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+                enabledExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_XCB_KHR)
+                enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
+                enabledExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+                enabledExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+#else
+#	pragma error Platform not supported
+#endif
+
+                if (instanceExts.get_surface_capabilities2)
+                {
+                    enabledExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
+                }
+            }
+
+            VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
+            appInfo.pApplicationName = appName.c_str();
+            appInfo.applicationVersion = 0;
+            appInfo.pEngineName = "Alimer";
+            appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
+            appInfo.apiVersion = volkGetInstanceVersion();
+
+            VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+            VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+
+            if (instanceExts.debugUtils)
+            {
+                debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
+                debugUtilsCreateInfo.pUserData = this;
+
+                createInfo.pNext = &debugUtilsCreateInfo;
+            }
+#endif
+
+            createInfo.pApplicationInfo = &appInfo;
+            createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
+            createInfo.ppEnabledLayerNames = enabledLayers.data();
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+            createInfo.ppEnabledExtensionNames = enabledExtensions.data();
+
+            // Create the Vulkan instance.
+            VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
+
+            if (result != VK_SUCCESS)
+            {
+                VK_LOG_ERROR(result, "Could not create Vulkan instance");
+            }
+
+            volkLoadInstance(instance);
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+            if (instanceExts.debugUtils)
+            {
+                result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
+                if (result != VK_SUCCESS)
+                {
+                    VK_LOG_ERROR(result, "Could not create debug utils messenger");
+                }
+            }
+#endif
+
+            LOGI("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
+            if (createInfo.enabledLayerCount)
+            {
+                for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i)
+                    LOGI("Instance layer '{}'", createInfo.ppEnabledLayerNames[i]);
+            }
+
+            for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i)
+            {
+                LOGI("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
+            }
+        }
     }
 
-    VulkanGraphicsImpl::~VulkanGraphicsImpl()
+    VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {
         Shutdown();
     }
 
-    void VulkanGraphicsImpl::Shutdown()
+    void VulkanGraphicsDevice::Shutdown()
     {
         vkDeviceWaitIdle(device);
 
@@ -507,9 +650,24 @@ namespace alimer
         }
     }
 
-    void VulkanGraphicsImpl::InitCapabilities()
+    GPUAdapter* VulkanGraphicsDevice::GetAdapter() const
     {
-        caps.rendererType = RendererType::Vulkan;
+        return adapter;
+    }
+
+    CommandContext* VulkanGraphicsDevice::GetMainContext() const
+    {
+        return nullptr;
+    }
+
+    GPUSwapChain* VulkanGraphicsDevice::GetMainSwapChain() const
+    {
+        return nullptr;
+    }
+
+    void VulkanGraphicsDevice::InitCapabilities()
+    {
+        /*caps.rendererType = RendererType::Vulkan;
         caps.vendorId = physicalDeviceProperties.properties.vendorID;
         caps.deviceId = physicalDeviceProperties.properties.deviceID;
         caps.adapterName = physicalDeviceProperties.properties.deviceName;
@@ -527,10 +685,10 @@ namespace alimer
         default:
             caps.adapterType = GPUAdapterType::Unknown;
             break;
-        }
+        }*/
     }
 
-    bool VulkanGraphicsImpl::UpdateSwapchain()
+    bool VulkanGraphicsDevice::UpdateSwapchain()
     {
         if (swapchain != VK_NULL_HANDLE)
         {
@@ -598,7 +756,7 @@ namespace alimer
         }
 
         /* Extent */
-        VkExtent2D swapchainSize = { backbufferSize.x, backbufferSize.y };
+        VkExtent2D swapchainSize = {}; // { backbufferSize.x, backbufferSize.y };
         if (swapchainSize.width < 1 || swapchainSize.height < 1)
         {
             swapchainSize = surfaceCaps.capabilities.currentExtent;
@@ -642,6 +800,7 @@ namespace alimer
             composite_mode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
         VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+        const bool verticalSync = true;
         if (!verticalSync)
         {
             // The immediate present mode is not necessarily supported:
@@ -738,7 +897,7 @@ namespace alimer
         return true;
     }
 
-    VkResult VulkanGraphicsImpl::AcquireNextImage(uint32_t* imageIndex)
+    VkResult VulkanGraphicsDevice::AcquireNextImage(uint32_t* imageIndex)
     {
         VkSemaphore acquireSemaphore;
         if (recycledSemaphores.empty())
@@ -792,7 +951,7 @@ namespace alimer
         return VK_SUCCESS;
     }
 
-    VkResult VulkanGraphicsImpl::PresentImage(uint32_t imageIndex)
+    VkResult VulkanGraphicsDevice::PresentImage(uint32_t imageIndex)
     {
         VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.swapchainCount = 1;
@@ -803,7 +962,7 @@ namespace alimer
         return vkQueuePresentKHR(graphicsQueue, &presentInfo);
     }
 
-    bool VulkanGraphicsImpl::Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen)
+    bool VulkanGraphicsDevice::Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen)
     {
         if (!InitInstance())
             return false;
@@ -822,8 +981,8 @@ namespace alimer
 
         InitCapabilities();
 
-        backbufferSize.x = width;
-        backbufferSize.y = height;
+        //backbufferSize.x = width;
+        //backbufferSize.y = height;
         UpdateSwapchain();
 
         // Create frame data.
@@ -848,151 +1007,14 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGraphicsImpl::InitInstance()
+    bool VulkanGraphicsDevice::InitInstance()
     {
-        vector<const char*> enabledExtensions;
-        vector<const char*> enabledLayers;
-
-        uint32_t instanceExtensionCount;
-        VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
-
-        vector<VkExtensionProperties> availableInstanceExtensions(instanceExtensionCount);
-        VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, availableInstanceExtensions.data()));
-        for (auto& availableExtension : availableInstanceExtensions)
-        {
-            if (strcmp(availableExtension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-            {
-                instanceExts.debugUtils = true;
-#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-                enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
-            }
-            else if (strcmp(availableExtension.extensionName, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) == 0)
-            {
-                instanceExts.headless = true;
-            }
-            else if (strcmp(availableExtension.extensionName, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) == 0)
-            {
-                // VK_KHR_get_physical_device_properties2 is a prerequisite of VK_KHR_performance_query
-                // which will be used for stats gathering where available.
-                instanceExts.get_physical_device_properties2 = true;
-                enabledExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-            }
-            else if (strcmp(availableExtension.extensionName, VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME) == 0)
-            {
-                instanceExts.get_surface_capabilities2 = true;
-            }
-        }
-
-
-#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-        uint32_t instanceLayerCount;
-        VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
-
-        vector<VkLayerProperties> supportedInstanceLayers(instanceLayerCount);
-        VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, supportedInstanceLayers.data()));
-
-        vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(supportedInstanceLayers);
-        enabledLayers.insert(enabledLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
-#endif
-
-        const bool headless = false;
-        if (headless)
-        {
-            enabledExtensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-        }
-        else
-        {
-            enabledExtensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-
-#if defined(VK_USE_PLATFORM_ANDROID_KHR)
-            enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_WIN32_KHR)
-            enabledExtensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_MACOS_MVK)
-            enabledExtensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_XCB_KHR)
-            enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_DISPLAY_KHR)
-            enabledExtensions.push_back(VK_KHR_DISPLAY_EXTENSION_NAME);
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
-            enabledExtensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
-#else
-#	pragma error Platform not supported
-#endif
-
-            if (instanceExts.get_surface_capabilities2)
-            {
-                enabledExtensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
-            }
-        }
-
-        VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-        appInfo.pApplicationName = "Alimer";
-        appInfo.applicationVersion = 0;
-        appInfo.pEngineName = "Alimer";
-        appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
-        appInfo.apiVersion = volkGetInstanceVersion();
-
-        VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-
-#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-        VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-
-        if (instanceExts.debugUtils)
-        {
-            debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-            debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-            debugUtilsCreateInfo.pfnUserCallback = DebugUtilsMessengerCallback;
-            debugUtilsCreateInfo.pUserData = this;
-
-            createInfo.pNext = &debugUtilsCreateInfo;
-        }
-#endif
-
-        createInfo.pApplicationInfo = &appInfo;
-        createInfo.enabledLayerCount = static_cast<uint32_t>(enabledLayers.size());
-        createInfo.ppEnabledLayerNames = enabledLayers.data();
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-        createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-
-        // Create the Vulkan instance.
-        VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
-
-        if (result != VK_SUCCESS)
-        {
-            VK_LOG_ERROR(result, "Could not create Vulkan instance");
-        }
-
-        volkLoadInstance(instance);
-
-#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-        if (instanceExts.debugUtils)
-        {
-            result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
-            if (result != VK_SUCCESS)
-            {
-                VK_LOG_ERROR(result, "Could not create debug utils messenger");
-            }
-        }
-#endif
-
-        LOGI("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion), VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
-        if (createInfo.enabledLayerCount)
-        {
-            for (uint32_t i = 0; i < createInfo.enabledLayerCount; ++i)
-                LOGI("Instance layer '{}'", createInfo.ppEnabledLayerNames[i]);
-        }
-
-        for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i)
-        {
-            LOGI("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
-        }
+        
 
         return true;
     }
 
-    bool VulkanGraphicsImpl::InitSurface(WindowHandle windowHandle)
+    bool VulkanGraphicsDevice::InitSurface(WindowHandle windowHandle)
     {
         VkResult result = VK_SUCCESS;
 
@@ -1018,7 +1040,7 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGraphicsImpl::InitPhysicalDevice()
+    bool VulkanGraphicsDevice::InitPhysicalDevice()
     {
         // Enumerating and creating devices:
         uint32_t physicalDevicesCount = 0;
@@ -1084,7 +1106,7 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGraphicsImpl::InitLogicalDevice()
+    bool VulkanGraphicsDevice::InitLogicalDevice()
     {
         VkResult result = VK_SUCCESS;
 
@@ -1294,7 +1316,7 @@ namespace alimer
         return true;
     }
 
-    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const String& name)
+    void VulkanGraphicsDevice::SetObjectName(VkObjectType type, uint64_t handle, const String& name)
     {
         if (!instanceExts.debugUtils)
             return;
@@ -1306,12 +1328,12 @@ namespace alimer
         VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
     }
 
-    void VulkanGraphicsImpl::WaitForGPU()
+    void VulkanGraphicsDevice::WaitForGPU()
     {
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-    bool VulkanGraphicsImpl::BeginFrame()
+    bool VulkanGraphicsDevice::BeginFrameImpl()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
@@ -1341,7 +1363,7 @@ namespace alimer
         return true;
     }
 
-    void VulkanGraphicsImpl::EndFrame(uint64_t frameIndex)
+    void VulkanGraphicsDevice::EndFrameImpl()
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
@@ -1391,17 +1413,22 @@ namespace alimer
         frameActive = false;
     }
 
-    void VulkanGraphicsImpl::SetVerticalSync(bool value)
+    void VulkanGraphicsDevice::Present(GPUSwapChain* swapChain, bool verticalSync)
     {
-        if (verticalSync == value)
+
+    }
+
+    void VulkanGraphicsDevice::SetVerticalSync(bool value)
+    {
+        /*if (verticalSync == value)
             return;
 
         verticalSync = value;
         WaitForGPU();
-        UpdateSwapchain();
+        UpdateSwapchain();*/
     }
 
-    void VulkanGraphicsImpl::TeardownPerFrame(PerFrame& frame)
+    void VulkanGraphicsDevice::TeardownPerFrame(PerFrame& frame)
     {
         Purge(frame);
 
@@ -1437,7 +1464,7 @@ namespace alimer
 
     }
 
-    void VulkanGraphicsImpl::Purge(PerFrame& frame)
+    void VulkanGraphicsDevice::Purge(PerFrame& frame)
     {
         while (frame.deferredReleases.size())
         {
@@ -1491,7 +1518,12 @@ namespace alimer
     }
 
     /* Resource creation methods */
-    TextureHandle VulkanGraphicsImpl::AllocTextureHandle()
+    GPUSwapChain* VulkanGraphicsDevice::CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor)
+    {
+        return nullptr;
+    }
+
+    TextureHandle VulkanGraphicsDevice::AllocTextureHandle()
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
 
@@ -1508,7 +1540,7 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    TextureHandle VulkanGraphicsImpl::CreateTexture(const TextureDescription* desc, const void* data)
+    TextureHandle VulkanGraphicsDevice::CreateTexture(const TextureDescription* desc, const void* data)
     {
         TextureHandle handle = kInvalidTexture;
 
@@ -1561,7 +1593,7 @@ namespace alimer
         return handle;
     }
 
-    void VulkanGraphicsImpl::Destroy(TextureHandle handle)
+    void VulkanGraphicsDevice::Destroy(TextureHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -1573,7 +1605,7 @@ namespace alimer
         textures.Dealloc(handle.id);
     }
 
-    void VulkanGraphicsImpl::SetName(TextureHandle handle, const char* name)
+    void VulkanGraphicsDevice::SetName(TextureHandle handle, const char* name)
     {
         if (!handle.isValid())
             return;
@@ -1581,7 +1613,7 @@ namespace alimer
         SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)textures[handle.id].handle, name);
     }
 
-    BufferHandle VulkanGraphicsImpl::AllocBufferHandle()
+    BufferHandle VulkanGraphicsDevice::AllocBufferHandle()
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
 
@@ -1598,14 +1630,14 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    BufferHandle VulkanGraphicsImpl::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
+    BufferHandle VulkanGraphicsDevice::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
     {
         BufferHandle handle = AllocBufferHandle();
         //buffers[handle.id].handle = d3dBuffer;
         return handle;
     }
 
-    void VulkanGraphicsImpl::Destroy(BufferHandle handle)
+    void VulkanGraphicsDevice::Destroy(BufferHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -1617,7 +1649,7 @@ namespace alimer
         buffers.Dealloc(handle.id);
     }
 
-    void VulkanGraphicsImpl::SetName(BufferHandle handle, const char* name)
+    void VulkanGraphicsDevice::SetName(BufferHandle handle, const char* name)
     {
         if (!handle.isValid())
             return;
@@ -1626,20 +1658,19 @@ namespace alimer
     }
 
     /* Commands */
-
-    void VulkanGraphicsImpl::PushDebugGroup(const String& name, CommandList commandList)
+    void VulkanGraphicsDevice::PushDebugGroup(const String& name, CommandList commandList)
     {
     }
 
-    void VulkanGraphicsImpl::PopDebugGroup(CommandList commandList)
+    void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
     {
     }
 
-    void VulkanGraphicsImpl::InsertDebugMarker(const String& name, CommandList commandList)
+    void VulkanGraphicsDevice::InsertDebugMarker(const String& name, CommandList commandList)
     {
     }
 
-    void VulkanGraphicsImpl::BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
         VkCommandBuffer commandBuffer = frame[backbufferIndex].primaryCommandBuffer;
 
@@ -1663,21 +1694,21 @@ namespace alimer
         beginInfo.framebuffer = GetFramebuffer(beginInfo.renderPass, numColorAttachments, colorAttachments, depthStencil);
         beginInfo.renderArea.offset.x = 0;
         beginInfo.renderArea.offset.y = 0;
-        beginInfo.renderArea.extent.width = backbufferSize.x;
-        beginInfo.renderArea.extent.height = backbufferSize.y;
+        //beginInfo.renderArea.extent.width = backbufferSize.x;
+        //beginInfo.renderArea.extent.height = backbufferSize.y;
         beginInfo.clearValueCount = clearValueCount;
         beginInfo.pClearValues = clearValues;
         vkCmdBeginRenderPass(commandBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    void VulkanGraphicsImpl::EndRenderPass(CommandList commandList)
+    void VulkanGraphicsDevice::EndRenderPass(CommandList commandList)
     {
         /* TODO: Resolve */
         VkCommandBuffer commandBuffer = frame[backbufferIndex].primaryCommandBuffer;
         vkCmdEndRenderPass(commandBuffer);
     }
 
-    void VulkanGraphicsImpl::TextureBarrier(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
+    void VulkanGraphicsDevice::TextureBarrier(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
     {
         VkImageMemoryBarrier imageMemoryBarrier{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -1794,7 +1825,7 @@ namespace alimer
             0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
     }
 
-    VkRenderPass VulkanGraphicsImpl::GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    VkRenderPass VulkanGraphicsDevice::GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
         Hasher h;
 
@@ -1862,14 +1893,14 @@ namespace alimer
         return it->second;
     }
 
-    VkFramebuffer VulkanGraphicsImpl::GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    VkFramebuffer VulkanGraphicsDevice::GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
         Hasher h;
-        h.u64((uint64_t)renderPass);
+        h.u64((uint64)renderPass);
 
-        uint32_t width = backbufferSize.x; // UINT32_MAX;
-        uint32_t height = backbufferSize.y; //UINT32_MAX;
-        uint32_t attachmentCount = 0;
+        uint32 width = 0; // backbufferSize.x; // UINT32_MAX;
+        uint32 height = 0; //  = backbufferSize.y; //UINT32_MAX;
+        uint32 attachmentCount = 0;
         VkImageView attachments[kMaxColorAttachments + 1];
 
         for (uint32_t i = 0; i < numColorAttachments; i++)
@@ -1906,7 +1937,7 @@ namespace alimer
         return it->second;
     }
 
-    void VulkanGraphicsImpl::ClearRenderPassCache()
+    void VulkanGraphicsDevice::ClearRenderPassCache()
     {
         for (auto it : renderPasses) {
             vkDestroyRenderPass(device, it.second, nullptr);
@@ -1914,7 +1945,7 @@ namespace alimer
         renderPasses.clear();
     }
 
-    void VulkanGraphicsImpl::ClearFramebufferCache()
+    void VulkanGraphicsDevice::ClearFramebufferCache()
     {
         for (auto it : framebuffers) {
             vkDestroyFramebuffer(device, it.second, nullptr);

@@ -20,16 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
+#include "Core/Log.h"
+#include "Graphics/GPUResource.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    GPUResource::GPUResource(GraphicsDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
-        };
 
-        return names[(unsigned)value];
+    }
+
+    GPUResource::~GPUResource()
+    {
     }
 }
+

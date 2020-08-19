@@ -22,45 +22,57 @@
 
 #pragma once
 
-#include "Graphics/GPUResource.h"
+#include "Graphics/GPUAdapter.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    /// 
-    class GPUBuffer : public GPUResource
+    class VulkanGPUAdapter final : public GPUAdapter
     {
-        ALIMER_OBJECT(GPUBuffer, GPUResource);
-
     public:
-        /// Constructor
-        GPUBuffer(GraphicsDevice* device);
+        VulkanGPUAdapter(VkPhysicalDevice handle);
 
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
+        /// Gets the GPU device identifier.
+        ALIMER_FORCE_INLINE uint32 GetDeviceId() const override
         {
-            return desc.usage;
+            return properties.deviceID;
         }
 
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetSize() const
+        /// Gets the GPU vendor identifier.
+        ALIMER_FORCE_INLINE uint32 GetVendorId() const override
         {
-            return desc.size;
+            return properties.vendorID;
         }
 
-        /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const
+        /// Gets the adapter name.
+        ALIMER_FORCE_INLINE String GetName() const override
         {
-            return desc.stride;
+            return name;
         }
 
-        /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
+        /// Gets the adapter type.
+        ALIMER_FORCE_INLINE GPUAdapterType GetAdapterType() const override
         {
-            ALIMER_ASSERT(desc.stride > 0);
-            return desc.size / desc.stride;
+            return adapterType;
         }
 
     private:
-        BufferDescription desc;
+        // Handle to the Vulkan physical device
+        VkPhysicalDevice handle{ VK_NULL_HANDLE };
+
+        // The features that this GPU supports
+        VkPhysicalDeviceFeatures features{};
+
+        // The GPU properties
+        VkPhysicalDeviceProperties properties;
+
+        // The GPU memory properties
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+
+        // The GPU queue family properties
+        std::vector<VkQueueFamilyProperties> queueFamilyProperties;
+
+        String name;
+        GPUAdapterType adapterType;
     };
 }

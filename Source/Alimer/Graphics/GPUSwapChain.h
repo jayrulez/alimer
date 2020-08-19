@@ -20,16 +20,25 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
+#pragma once
+
+#include "Graphics/GPUResource.h"
+#include "Math/Size.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    class ALIMER_API GPUSwapChain : public GPUResource
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
-        };
+        ALIMER_OBJECT(GPUSwapChain, GPUResource);
 
-        return names[(unsigned)value];
-    }
+    public:
+        /// Constructor.
+        GPUSwapChain(GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor);
+
+    protected:
+        uint32_t width;
+        uint32_t height;
+        PixelFormat colorFormat;
+        bool isFullscreen;
+    };
 }

@@ -42,9 +42,6 @@
 #   include <Windows.h>
 #endif
 
-#include <wrl/client.h>
-#include <wrl/event.h>
-
 #if defined(NTDDI_WIN10_RS2)
 #   include <dxgi1_6.h>
 #else
@@ -66,13 +63,10 @@ typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid,
 namespace alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
     extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
     extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
-
-    // Type alias for ComPtr template
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
 
     template<typename T> void SafeRelease(T*& resource)
     {
@@ -151,17 +145,6 @@ namespace alimer
         return std::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    static inline std::wstring_view ToUtf16(const std::string_view& str)
-    {
-        std::vector<wchar_t> wchar_buffer;
-        auto ret = MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), nullptr, 0);
-        if (ret < 0)
-            return L"";
-        wchar_buffer.resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str.data(), static_cast<int>(str.length()), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return std::wstring_view(wchar_buffer.data(), wchar_buffer.size());
-    }
-
     struct DxgiFormatDesc
     {
         PixelFormat format;
@@ -204,13 +187,13 @@ namespace alimer
         return ToDXGIFormat(format);
     }
 
-    enum class DXGIFactoryCaps : uint8_t
+    enum class DXGIFactoryCaps : uint8
     {
         None = 0,
         FlipPresent = (1 << 0),
         HDR = (1 << 2)
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8_t);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8);
 
     void DXGISetObjectName(IDXGIObject* obj, const String& name);
 }

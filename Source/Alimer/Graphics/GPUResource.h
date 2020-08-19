@@ -20,16 +20,58 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
+#include "Core/Object.h"
 #include "Graphics/Types.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    class GraphicsDevice;
+
+    /// Defines a GPU Resource created by device.
+    class ALIMER_API GPUResource : public Object
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
+        ALIMER_OBJECT(GPUResource, Object);
+
+    public:
+        enum class Type : uint32
+        {
+            Unknown,
+            Buffer,
+            Texture,
+            SwapChain
         };
 
-        return names[(unsigned)value];
-    }
+        enum class Usage
+        {
+            Default,
+            Immutable,
+            Dynamic,
+            Staging
+        };
+
+        virtual ~GPUResource();
+
+        /// Release the GPU resource.
+        virtual void Destroy() {}
+
+        /// Set the resource name.
+        void SetName(const String& newName) { name = newName; BackendSetName(); }
+
+        /**
+        * Get the resource name
+        */
+        const String& GetName() const { return name; }
+
+    protected:
+        GPUResource(GraphicsDevice* device, Type Type);
+
+        virtual void BackendSetName() {}
+
+    protected:
+        WeakPtr<GraphicsDevice> device;
+        String name;
+        Type type;
+    };
 }

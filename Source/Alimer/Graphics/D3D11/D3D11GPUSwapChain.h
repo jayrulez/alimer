@@ -22,57 +22,32 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
+#include "Graphics/GPUSwapChain.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    /// Defines a Graphics Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    class ALIMER_API D3D11GPUSwapChain final : public GPUSwapChain
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
     public:
-        enum class ResourceDimension
-        {
-            Unknown,
-            Buffer,
-            Texture1D = 2,
-            Texture2D = 3,
-            Texture3D = 4
-        };
+        /// Constructor.
+        D3D11GPUSwapChain(D3D11GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor);
+        /// Destructor
+        ~D3D11GPUSwapChain() override;
 
-        enum class Usage
-        {
-            Default,
-            Immutable,
-            Dynamic,
-            Staging
-        };
+        void Destroy() override;
+        void AfterReset();
 
-        virtual ~GraphicsResource() = default;
+    private:
 
-        /// Release the GPU resource.
-        virtual void Destroy() {}
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        IDXGISwapChain1* handle = nullptr;
+#else
+        IDXGISwapChain3* handle = nullptr;
+#endif
 
-        /// Set the resource name.
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
-
-        /**
-        * Get the resource name
-        */
-        const String& GetName() const { return name; }
-
-    protected:
-        GraphicsResource(ResourceDimension dimension_)
-            : dimension(dimension_)
-        {
-        }
-
-        virtual void BackendSetName() {}
-
-    protected:
-        String name;
-        ResourceDimension dimension;
+        DXGI_MODE_ROTATION rotation;
+        RefPtr<Texture> backbufferTexture;
+        RefPtr<Texture> depthStencilTexture;
     };
 }

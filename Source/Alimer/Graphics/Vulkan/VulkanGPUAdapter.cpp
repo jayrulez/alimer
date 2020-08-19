@@ -20,29 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11Backend.h"
+#include "VulkanGPUAdapter.h"
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
+    VulkanGPUAdapter::VulkanGPUAdapter(VkPhysicalDevice handle)
+        : handle{ handle }
     {
-#ifdef _DEBUG
-        if (obj != nullptr)
+        vkGetPhysicalDeviceFeatures(handle, &features);
+        vkGetPhysicalDeviceProperties(handle, &properties);
+        vkGetPhysicalDeviceMemoryProperties(handle, &memoryProperties);
+
+        name = properties.deviceName;
+
+        uint32_t queueFamilyPropertiesCount = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(handle, &queueFamilyPropertiesCount, nullptr);
+        queueFamilyProperties.resize(queueFamilyPropertiesCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(handle, &queueFamilyPropertiesCount, queueFamilyProperties.data());
+
+        switch (properties.deviceType)
         {
-            if (!name.empty())
-            {
-                obj->SetPrivateData(g_D3DDebugObjectName, static_cast<UINT>(name.length()), name.c_str());
-            }
-            else
-                obj->SetPrivateData(g_D3DDebugObjectName, 0, nullptr);
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+            adapterType = GPUAdapterType::IntegratedGPU;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+            adapterType = GPUAdapterType::DiscreteGPU;
+            break;
+        case VK_PHYSICAL_DEVICE_TYPE_CPU:
+            adapterType = GPUAdapterType::CPU;
+            break;
+        default:
+            adapterType = GPUAdapterType::Unknown;
+            break;
         }
-#else
-        ALIMER_UNUSED(obj);
-        ALIMER_UNUSED(name);
-#endif
     }
 }

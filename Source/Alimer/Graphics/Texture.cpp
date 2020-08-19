@@ -28,13 +28,13 @@
 namespace alimer
 {
     Texture::Texture()
-        : GraphicsResource(ResourceDimension::Texture2D)
+        : GPUResource(nullptr, Type::Texture)
     {
 
     }
 
     Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(ResourceDimension::Texture2D)
+        : GPUResource(nullptr, Type::Texture)
         , dimension(desc.dimension)
         , format(desc.format)
         , usage(desc.usage)

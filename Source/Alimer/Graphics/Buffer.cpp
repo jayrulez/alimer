@@ -20,41 +20,16 @@
 // THE SOFTWARE.
 //
 
+#include "Core/Log.h"
 #include "Graphics/Buffer.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Core/Log.h"
 
 namespace alimer
 {
-    Buffer::Buffer()
-        : GraphicsResource(ResourceDimension::Buffer)
+    GPUBuffer::GPUBuffer(GraphicsDevice* device)
+        : GPUResource(device, Type::Buffer)
     {
 
-    }
-
-    Buffer::~Buffer()
-    {
-        Destroy();
-    }
-
-
-    void Buffer::RegisterObject()
-    {
-        RegisterFactory<Buffer>();
-    }
-
-    void Buffer::Create(BufferUsage usage, uint32_t size, uint32_t stride, const void* initialData)
-    {
-        Destroy();
-    }
-
-    void Buffer::Destroy()
-    {
-        if (handle.isValid())
-        {
-            //GetGraphics()->Destroy(handle);
-            handle.id = kInvalidHandleId;
-        }
     }
 }
 

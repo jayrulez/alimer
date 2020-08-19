@@ -20,16 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
+#include "Core/Log.h"
+#include "Graphics/GPUSwapChain.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    const char* ToString(GPUBackendType value)
+    GPUSwapChain::GPUSwapChain(GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor)
+        : GPUResource(device, Type::SwapChain)
+        , width(descriptor.width)
+        , height(descriptor.height)
+        , colorFormat(descriptor.colorFormat)
+        , isFullscreen(descriptor.isFullscreen)
     {
-        static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
-        };
 
-        return names[(unsigned)value];
     }
 }
+

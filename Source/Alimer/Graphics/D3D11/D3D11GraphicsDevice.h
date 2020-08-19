@@ -29,7 +29,7 @@
 
 namespace alimer
 {
-    class D3D11CommandContext;
+    class D3D11GPUAdapter;
 
     struct D3D11Texture
     {
@@ -49,27 +49,33 @@ namespace alimer
         ID3D11Buffer* handle;
     };
 
-    class D3D11GraphicsImpl final : public GraphicsDevice
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsImpl();
-        ~D3D11GraphicsImpl() override;
+        D3D11GraphicsDevice(const GPUDeviceDescriptor& descriptor);
+        ~D3D11GraphicsDevice() override;
 
         void Shutdown();
 
         bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen);
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
+        void Present(GPUSwapChain* swapChain, bool verticalSync) override;
         void HandleDeviceLost();
 
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        GPUAdapter* GetAdapter() const override;
+        CommandContext* GetMainContext() const override;
+        GPUSwapChain* GetMainSwapChain() const override;
+
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
+        bool IsTearingSupported() const { return isTearingSupported; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
 
-        Texture* GetBackbufferTexture() const { return backbufferTexture.Get(); }
-
         /* Resource creation methods */
+        GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) override;
+
         TextureHandle AllocTextureHandle();
         TextureHandle CreateTexture(const TextureDescription* descriptor, const void* data);
         TextureHandle CreateTexture2D(uint32_t width, uint32_t height, const void* data);
@@ -82,16 +88,11 @@ namespace alimer
         void SetName(BufferHandle handle, const char* name);
 
         /* Commands */
-        void PushDebugGroup(const String& name, CommandList commandList);
-        void PopDebugGroup(CommandList commandList);
-        void InsertDebugMarker(const String& name, CommandList commandList);
-
         void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
-        void EndRenderPass(CommandList commandList);
 
     private:
         void CreateFactory();
-        void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
+        void InitCapabilities();
         void UpdateSwapChain();
         ID3D11ShaderResourceView* GetSRV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
         ID3D11UnorderedAccessView* GetUAV(Texture* texture, DXGI_FORMAT format, uint32_t level, uint32_t slice);
@@ -100,38 +101,22 @@ namespace alimer
 
         static constexpr uint64_t kRenderLatency = 2;
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HMODULE dxgiLib;
-#endif
-
-        ComPtr<IDXGIFactory2> dxgiFactory;
+        IDXGIFactory2* dxgiFactory = nullptr;
         bool isTearingSupported = false;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
+        D3D11GPUAdapter* adapter = nullptr;
         ID3D11Device1*              d3dDevice = nullptr;
-        ID3D11DeviceContext1*       d3dContexts[kMaxCommandLists + 1] = {};
-        ID3DUserDefinedAnnotation*  d3dAnnotations[kMaxCommandLists + 1] = {};
 
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        bool isFullscreen = false;
-        HWND window;
-        IDXGISwapChain1* swapChain = nullptr;
-#else
-        IUnknown* window;
-        IDXGISwapChain3* swapChain = nullptr;
-#endif
-        DXGI_MODE_ROTATION rotation{ DXGI_MODE_ROTATION_IDENTITY };
-        RefPtr<Texture> backbufferTexture;
-        RefPtr<Texture> depthStencilTexture;
+        CommandContext* mainContext = nullptr;
+        RefPtr<GPUSwapChain> mainSwapChain;
 
         /* Resource pools */
         std::mutex handle_mutex;
         GPUResourcePool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
         GPUResourcePool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
-
-        ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
     };
 }

@@ -27,27 +27,50 @@
 #include "Graphics/GraphicsImpl.h"
 
 #if defined(ALIMER_D3D11)
-#   include "Graphics/D3D11/D3D11GraphicsImpl.h"
+#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_VULKAN)
-#   include "Graphics/Vulkan/VulkanGraphicsImpl.h"
+#   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
 
 namespace alimer
 {
-    GraphicsDevice* GraphicsDevice::Create(RendererType preferredRendererType)
+    bool GraphicsDevice::enableGPUValidation = false;
+
+    void GraphicsDevice::EnableGPUBasedBackendValidation(bool value)
     {
-        if (preferredRendererType == RendererType::Count)
+        enableGPUValidation = value;
+    }
+
+    bool GraphicsDevice::IsGPUBasedBackendValidationEnabled()
+    {
+        return enableGPUValidation;
+    }
+
+    GraphicsDevice::GraphicsDevice(GPUBackendType backendType_)
+        : backendType(backendType_)
+    {
+        LOGI("Using {} driver", ToString(backendType));
+    }
+
+    GraphicsDevice* GraphicsDevice::Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType)
+    {
+        GPUBackendType backendType = preferredRendererType;
+
+        if (preferredRendererType == GPUBackendType::Count)
         {
-            preferredRendererType = RendererType::Direct3D11;
+            backendType = GPUBackendType::D3D11;
         }
 
-        switch (preferredRendererType)
+        switch (backendType)
         {
 #if defined(ALIMER_VULKAN)
-        case RendererType::Vulkan:
-            //impl = new VulkanGraphicsImpl();
+        case GPUBackendType::Vulkan:
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                return new VulkanGraphicsDevice(appName, descriptor);
+            }
             break;
 #endif
 
@@ -57,12 +80,12 @@ namespace alimer
 #endif
 
 #if defined(ALIMER_D3D11)
-        case RendererType::Direct3D11:
-            return new D3D11GraphicsImpl();
+        case GPUBackendType::D3D11:
+            return new D3D11GraphicsDevice(descriptor);
 #endif
 
 #if defined(ALIMER_D3D12)
-        case RendererType::Direct3D12:
+        case GPUBackendType::D3D12:
             break;
 #endif
 
@@ -72,16 +95,6 @@ namespace alimer
         }
 
         return nullptr;
-    }
-
-    void GraphicsDevice::SetVerticalSync(bool value)
-    {
-        impl->SetVerticalSync(value);
-    }
-
-    bool GraphicsDevice::GetVerticalSync() const
-    {
-        return impl->GetVerticalSync();
     }
 
     bool GraphicsDevice::BeginFrame()
@@ -108,38 +121,32 @@ namespace alimer
         frameActive = false;
     }
 
-    Texture* GraphicsDevice::GetBackbufferTexture() const
+    GPUSwapChain* GraphicsDevice::CreateSwapChain(const GPUSwapChainDescriptor& descriptor)
     {
-        return impl->GetBackbufferTexture();
+        return CreateSwapChainCore(descriptor);
     }
 
     /* Commands */
     void GraphicsDevice::PushDebugGroup(const String& name, CommandList commandList)
     {
-        impl->PushDebugGroup(name, commandList);
     }
 
     void GraphicsDevice::PopDebugGroup(CommandList commandList)
     {
-        impl->PopDebugGroup(commandList);
     }
 
     void GraphicsDevice::InsertDebugMarker(const String& name, CommandList commandList)
     {
-        impl->InsertDebugMarker(name, commandList);
     }
 
     void GraphicsDevice::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil, CommandList commandList)
     {
         ALIMER_ASSERT(numColorAttachments < kMaxColorAttachments);
         ALIMER_ASSERT(numColorAttachments || depthStencil);
-
-        impl->BeginRenderPass(commandList, numColorAttachments, colorAttachments, depthStencil);
     }
 
     void GraphicsDevice::EndRenderPass(CommandList commandList)
     {
-        impl->EndRenderPass(commandList);
     }
 }
 

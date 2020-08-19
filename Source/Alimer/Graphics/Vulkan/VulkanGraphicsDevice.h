@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Graphics/GraphicsImpl.h"
+#include "Graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
 #include <mutex>
 #include <queue>
@@ -46,41 +47,48 @@ namespace alimer
         VmaAllocation memory;
     };
 
-    class VulkanGraphicsImpl final : public GraphicsImpl
+    class VulkanGPUAdapter;
+
+    class VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsImpl();
-        ~VulkanGraphicsImpl() override;
+        VulkanGraphicsDevice(const String& appName, const GPUDeviceDescriptor& descriptor);
+        ~VulkanGraphicsDevice() override;
 
-        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen) override;
+        bool Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen);
         void WaitForGPU();
-        bool BeginFrame() override;
-        void EndFrame(uint64_t frameIndex) override;
+        bool BeginFrameImpl() override;
+        void EndFrameImpl() override;
+        void Present(GPUSwapChain* swapChain, bool verticalSync) override;
 
-        void SetVerticalSync(bool value) override;
+        void SetVerticalSync(bool value);
 
-        Texture* GetBackbufferTexture() const override { return swapchainTextures[backbufferIndex].Get(); }
+        GPUAdapter* GetAdapter() const override;
+        CommandContext* GetMainContext() const override;
+        GPUSwapChain* GetMainSwapChain() const override;
 
         /* Resource creation methods */
+        GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) override;
+
         TextureHandle AllocTextureHandle();
-        TextureHandle CreateTexture(const TextureDescription* desc, const void* data) override;
-        void Destroy(TextureHandle handle) override;
-        void SetName(TextureHandle handle, const char* name) override;
+        TextureHandle CreateTexture(const TextureDescription* desc, const void* data);
+        void Destroy(TextureHandle handle);
+        void SetName(TextureHandle handle, const char* name);
 
         BufferHandle AllocBufferHandle();
-        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data) override;
-        void Destroy(BufferHandle handle) override;
-        void SetName(BufferHandle handle, const char* name) override;
+        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data);
+        void Destroy(BufferHandle handle);
+        void SetName(BufferHandle handle, const char* name);
 
         /* Commands */
-        void PushDebugGroup(const String& name, CommandList commandList) override;
-        void PopDebugGroup(CommandList commandList) override;
-        void InsertDebugMarker(const String& name, CommandList commandList) override;
+        void PushDebugGroup(const String& name, CommandList commandList);
+        void PopDebugGroup(CommandList commandList);
+        void InsertDebugMarker(const String& name, CommandList commandList);
 
-        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil) override;
-        void EndRenderPass(CommandList commandList) override;
+        void BeginRenderPass(CommandList commandList, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
+        void EndRenderPass(CommandList commandList);
 
         void TextureBarrier(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
 
@@ -113,6 +121,8 @@ namespace alimer
         VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
 
         VkSurfaceKHR surface{ VK_NULL_HANDLE };
+
+        VulkanGPUAdapter* adapter = nullptr;
 
         VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
         VkPhysicalDeviceProperties2 physicalDeviceProperties{};

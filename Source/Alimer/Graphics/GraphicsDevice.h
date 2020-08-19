@@ -22,8 +22,10 @@
 
 #pragma once
 
+#include "Graphics/GPUAdapter.h"
 #include "Graphics/CommandContext.h"
 #include "Graphics/Buffer.h"
+#include "Graphics/GPUSwapChain.h"
 
 namespace alimer
 {
@@ -40,25 +42,38 @@ namespace alimer
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
-        static GraphicsDevice* Create(RendererType preferredRendererType = RendererType::Count);
+        static void EnableGPUBasedBackendValidation(bool value);
+        static bool IsGPUBasedBackendValidationEnabled();
 
-        /// Set vertical sync on/off.
-        void SetVerticalSync(bool value);
+        static GraphicsDevice* Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType = GPUBackendType::Count);
 
-        /// Return whether is using vertical sync.
-        bool GetVerticalSync() const;
+        /// Gets the adapter device.
+        virtual GPUAdapter* GetAdapter() const = 0;
+
+        /// Gets the main GPU context.
+        virtual CommandContext* GetMainContext() const = 0;
+
+        /// Gets the main swap chain created with the device.
+        virtual GPUSwapChain* GetMainSwapChain() const = 0;
+
+        /// Gets the device backend type.
+        ALIMER_FORCE_INLINE GPUBackendType GetBackendType() const
+        {
+            return backendType;
+        }
+
+        /// Get the device capabilities.
+        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const
+        {
+            return caps;
+        }
 
         bool BeginFrame();
         void EndFrame();
+        virtual void Present(GPUSwapChain* swapChain, bool verticalSync) = 0;
 
-        /// Get the device capabilities.
-        const GraphicsCapabilities& GetCaps() const { return caps; }
-
-        /// Get the current backbuffer texture.
-        Texture* GetBackbufferTexture() const;
-
-        /// Get the depth stencil texture.
-        //Texture* GetDepthStencilTexture() const;
+        /* Resource creation methods. */
+        GPUSwapChain* CreateSwapChain(const GPUSwapChainDescriptor& descriptor);
 
         /* Commands */
         void PushDebugGroup(const String& name, CommandList commandList = 0);
@@ -72,14 +87,18 @@ namespace alimer
         uint64_t GetFrameCount() const { return frameCount; }
 
     protected:
-        GraphicsDevice() = default;
+        GraphicsDevice(GPUBackendType backendType_);
+
         virtual bool BeginFrameImpl() = 0;
         virtual void EndFrameImpl() = 0;
+        virtual GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) = 0;
 
+        GPUBackendType backendType;
         GraphicsCapabilities caps{};
 
     private:
-        GraphicsImpl* impl;
+        static bool enableGPUValidation;
+
         UInt2 resolution = UInt2::Zero;
         uint32_t sampleCount = 1;
 

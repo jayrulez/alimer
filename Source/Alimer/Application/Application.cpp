@@ -27,35 +27,7 @@
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
-#include <agpu.h>
 #include <imgui.h>
-
-namespace
-{
-    void gpu_log_callback(void* user_data, agpu_log_level level, const char* message)
-    {
-        switch (level)
-        {
-        case AGPU_LOG_LEVEL_ERROR:
-            LOGE(message);
-            break;
-
-        case AGPU_LOG_LEVEL_WARN:
-            LOGW(message);
-            break;
-
-        case AGPU_LOG_LEVEL_INFO:
-            LOGI(message);
-            break;
-        case AGPU_LOG_LEVEL_DEBUG:
-            LOGD(message);
-            break;
-
-        default:
-            break;
-        }
-    }
-}
 
 namespace alimer
 {
@@ -78,7 +50,6 @@ namespace alimer
         //io.ConfigViewportsNoAutoMerge = true;
         //io.ConfigViewportsNoTaskBarIcon = true;
         */
-        agpu_set_log_callback(gpu_log_callback, this);
         LOGI("Application started");
     }
 
@@ -87,7 +58,7 @@ namespace alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        agpu_shutdown();
+        RemoveSubsystem<GraphicsDevice>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -98,30 +69,21 @@ namespace alimer
         GetSubsystem<Input>()->Initialize();
 
         // Init GPU.
-        agpu_init_info gpu_init_info = {};
-#ifdef _DEBUG
-        gpu_init_info.debug = true;
-#endif
-        if (!agpu_init(&gpu_init_info))
-        {
-            headless = true;
-        }
-        else
+        if (!headless)
         {
             mainWindow = new Window();
             mainWindow->SetTitle(config.windowTitle);
             mainWindow->SetSize(config.windowSize, WindowFlags::Resizable);
 
-            agpu_swapchain_info swapchain_info = {};
-            swapchain_info.width = mainWindow->GetWidth();
-            swapchain_info.height = mainWindow->GetHeight();
-            swapchain_info.vsync = true;
-            swapchain_info.fullscreen = mainWindow->IsFullscreen();
-            swapchain_info.window_handle = mainWindow->GetHandle();
+            GPUDeviceDescriptor gpuDeviceDesc = {};
+#if ALIMER_PLATFORM_WINDOWS
+            gpuDeviceDesc.swapChain.handle.hinstance = GetModuleHandle(NULL);
+            gpuDeviceDesc.swapChain.handle.hwnd = mainWindow->GetHandle();
+#endif
+            gpuDeviceDesc.swapChain.width = mainWindow->GetWidth();
+            gpuDeviceDesc.swapChain.height = mainWindow->GetHeight();
 
-            agpu_context_info context_info = {};
-            context_info.swapchain_info = &swapchain_info;
-            agpu_create_context(&context_info);
+            RegisterSubsystem(GraphicsDevice::Create(config.applicationName, gpuDeviceDesc));
 
             // Create main window SwapChain
             /*
@@ -175,7 +137,9 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        agpu_begin_frame();
+        if (!GetGraphics()->BeginFrame())
+            return false;
+
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
         /*for (auto& gameSystem : gameSystems)
@@ -219,7 +183,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
-        agpu_end_frame();
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()
