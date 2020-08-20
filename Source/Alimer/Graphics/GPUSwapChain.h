@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
+#include "Graphics/GPUTexture.h"
 #include "Math/Size.h"
 
 namespace alimer
@@ -33,9 +33,9 @@ namespace alimer
 
     public:
         /// Constructor.
-        GPUSwapChain(GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor);
+        GPUSwapChain(const GPUSwapChainDescriptor& descriptor);
 
-        virtual Texture* GetColorTexture() const = 0;
+        virtual GPUTexture* GetColorTexture() const = 0;
 
     protected:
         uint32_t width;

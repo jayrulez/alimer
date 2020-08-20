@@ -27,7 +27,7 @@
 #include "Graphics/GraphicsImpl.h"
 
 #if defined(ALIMER_D3D11)
-#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#   include "Graphics/D3D11/D3D11GPUDevice.h"
 #endif
 
 #if defined(ALIMER_VULKAN)
@@ -60,7 +60,8 @@ namespace alimer
 
         if (preferredRendererType == GPUBackendType::Count)
         {
-            backendType = GPUBackendType::D3D11;
+            //backendType = GPUBackendType::D3D11;
+            backendType = GPUBackendType::Vulkan;
         }
 
         switch (backendType)
@@ -81,7 +82,7 @@ namespace alimer
 
 #if defined(ALIMER_D3D11)
         case GPUBackendType::D3D11:
-            return new D3D11GraphicsDevice(descriptor);
+            return new D3D11GPUDevice(descriptor);
 #endif
 
 #if defined(ALIMER_D3D12)

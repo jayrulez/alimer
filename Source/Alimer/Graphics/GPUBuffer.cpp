@@ -20,47 +20,19 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/GPUResource.h"
+#include "Core/Log.h"
+#include "Graphics/GPUBuffer.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    /// 
-    class GPUBuffer : public GPUResource
+    GPUBuffer::GPUBuffer(const GPUBufferDescriptor& descriptor)
+        : GPUResource(Type::Buffer, descriptor.label)
+        , usage(descriptor.usage)
+        , size(descriptor.size)
+        , stride(descriptor.stride)
     {
-        ALIMER_OBJECT(GPUBuffer, GPUResource);
 
-    public:
-        /// Constructor
-        GPUBuffer(GraphicsDevice* device);
-
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
-        {
-            return desc.usage;
-        }
-
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetSize() const
-        {
-            return desc.size;
-        }
-
-        /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const
-        {
-            return desc.stride;
-        }
-
-        /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
-        {
-            ALIMER_ASSERT(desc.stride > 0);
-            return desc.size / desc.stride;
-        }
-
-    private:
-        BufferDescription desc;
-    };
+    }
 }
+

@@ -22,11 +22,12 @@
 
 #include "Core/Log.h"
 #include "D3D11GPUContext.h"
-#include "D3D11GraphicsDevice.h"
+#include "D3D11GPUDevice.h"
 
 namespace alimer
 {
-    D3D11GPUContext::D3D11GPUContext(D3D11GraphicsDevice* device, ID3D11DeviceContext* context)
+    D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice* device, ID3D11DeviceContext* context)
+        : device{ device }
     {
         ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&handle)));
         ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&annotation)));
@@ -62,12 +63,11 @@ namespace alimer
 
     void D3D11GPUContext::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
-
         ID3D11RenderTargetView* renderTargetViews[kMaxColorAttachments];
 
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
-            Texture* texture = /*colorAttachments[i].texture == nullptr ? backbufferTexture.Get() :*/ colorAttachments[i].texture;
+            GPUTexture* texture = /*colorAttachments[i].texture == nullptr ? backbufferTexture.Get() :*/ colorAttachments[i].texture;
 
             /*D3D11Texture& d3d11Texture = textures[texture->GetHandle().id];
             ID3D11RenderTargetView* rtv = GetRTV(texture, DXGI_FORMAT_UNKNOWN, colorAttachments[i].mipLevel, colorAttachments[i].slice);

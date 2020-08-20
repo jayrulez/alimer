@@ -21,37 +21,36 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/Texture.h"
+#include "Graphics/GPUTexture.h"
 #include "Graphics/GraphicsDevice.h"
-#include "Graphics/GraphicsImpl.h"
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice* device, const GPUTextureDescriptor& desc)
-        : GPUResource(nullptr, Type::Texture)
-        , dimension(desc.dimension)
-        , format(desc.format)
-        , usage(desc.usage)
-        , width(desc.width)
-        , height(desc.height)
-        , depth(desc.depth)
-        , arrayLayers(desc.arrayLayers)
-        , mipLevels(desc.mipLevels)
-        , sampleCount(desc.sampleCount)
+    GPUTexture::GPUTexture(const GPUTextureDescriptor& descriptor)
+        : GPUResource(Type::Texture, descriptor.label)
+        , dimension(descriptor.dimension)
+        , format(descriptor.format)
+        , usage(descriptor.usage)
+        , width(descriptor.width)
+        , height(descriptor.height)
+        , depth(descriptor.depth)
+        , arrayLayers(descriptor.arrayLayers)
+        , mipLevels(descriptor.mipLevels)
+        , sampleCount(descriptor.sampleCount)
     {
     }
 
-    uint32_t Texture::GetWidth(uint32_t mipLevel) const
+    uint32_t GPUTexture::GetWidth(uint32_t mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, width >> mipLevel) : 0;
     }
 
-    uint32_t Texture::GetHeight(uint32_t mipLevel) const
+    uint32_t GPUTexture::GetHeight(uint32_t mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> mipLevel) : 0;
     }
 
-    uint32_t Texture::GetDepth(uint32_t mipLevel) const
+    uint32_t GPUTexture::GetDepth(uint32_t mipLevel) const
     {
         if (dimension == TextureDimension::Texture3D)
             return 1u;
@@ -59,7 +58,7 @@ namespace alimer
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }
 
-    uint32_t Texture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
+    uint32_t GPUTexture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
     {
         uint32_t mipLevels = 0;
         uint32_t size = Max(Max(width, height), depth);

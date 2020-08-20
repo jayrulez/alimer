@@ -38,12 +38,12 @@ namespace alimer
         ID3D11Buffer* handle;
     };
 
-    class D3D11GraphicsDevice final : public GraphicsDevice
+    class D3D11GPUDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsDevice(const GPUDeviceDescriptor& descriptor);
-        ~D3D11GraphicsDevice() override;
+        D3D11GPUDevice(const GPUDeviceDescriptor& descriptor);
+        ~D3D11GPUDevice() override;
 
         void Shutdown();
 
@@ -53,7 +53,7 @@ namespace alimer
         void HandleDeviceLost();
 
         GPUAdapter* GetAdapter() const override;
-        CommandContext* GetMainContext() const override;
+        GPUContext* GetMainContext() const override;
         GPUSwapChain* GetMainSwapChain() const override;
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
@@ -85,7 +85,7 @@ namespace alimer
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
-        CommandContext* mainContext = nullptr;
+        GPUContext* mainContext = nullptr;
         RefPtr<GPUSwapChain> mainSwapChain;
 
         /* Resource pools */

@@ -22,16 +22,16 @@
 
 #pragma once
 
-#include "Graphics/CommandContext.h"
+#include "Graphics/GPUContext.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    class ALIMER_API D3D11GPUContext final : public CommandContext
+    class ALIMER_API D3D11GPUContext final : public GPUContext
     {
     public:
         /// Constructor.
-        D3D11GPUContext(D3D11GraphicsDevice* device, ID3D11DeviceContext* context);
+        D3D11GPUContext(D3D11GPUDevice* device, ID3D11DeviceContext* context);
         /// Destructor
         ~D3D11GPUContext() override;
 
@@ -55,6 +55,7 @@ namespace alimer
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
     private:
+        D3D11GPUDevice* device;
         ID3D11DeviceContext1* handle = nullptr;
         ID3DUserDefinedAnnotation* annotation = nullptr;
 

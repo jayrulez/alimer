@@ -137,11 +137,12 @@ namespace alimer
         Clear
     };
 
-    struct BufferDescription
+    struct GPUBufferDescriptor
     {
         BufferUsage usage;
         uint32_t size;
         uint32_t stride;
+        const char* label;
     };
 
     struct GPUTextureDescriptor
@@ -149,12 +150,13 @@ namespace alimer
         TextureDimension dimension = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
-        uint32_t width = 1u;
-        uint32_t height = 1u;
-        uint32_t depth = 1u;
-        uint32_t mipLevels = 1u;
-        uint32_t arrayLayers = 1u;
-        uint32_t sampleCount = 1u;
+        uint32 width = 1u;
+        uint32 height = 1u;
+        uint32 depth = 1u;
+        uint32 mipLevels = 1u;
+        uint32 arrayLayers = 1u;
+        uint32 sampleCount = 1u;
+        const char* label;
 
         static GPUTextureDescriptor New2D(uint32 width, uint32 height, PixelFormat format, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
         {
@@ -172,10 +174,10 @@ namespace alimer
         }
     };
 
-    class Texture;
+    class GPUTexture;
     struct RenderPassColorAttachment
     {
-        Texture* texture = nullptr;
+        GPUTexture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -187,7 +189,7 @@ namespace alimer
     };
 
     struct RenderPassDepthStencilAttachment {
-        Texture* texture = nullptr;
+        GPUTexture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;

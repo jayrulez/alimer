@@ -26,9 +26,9 @@
 
 namespace alimer
 {
-    GPUResource::GPUResource(GraphicsDevice* device, Type type)
-        : device{ device }
-        , type{ type }
+    GPUResource::GPUResource(Type type, const String& name)
+        : type{ type }
+        , name{ name }
     {
 
     }

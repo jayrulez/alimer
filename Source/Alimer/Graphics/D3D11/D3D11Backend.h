@@ -35,7 +35,7 @@ namespace alimer
     extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
 
-    class D3D11GraphicsDevice;
+    class D3D11GPUDevice;
 
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
 

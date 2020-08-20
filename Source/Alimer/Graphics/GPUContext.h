@@ -22,20 +22,20 @@
 
 #pragma once
 
-#include "Graphics/Buffer.h"
-#include "Graphics/Texture.h"
+#include "Graphics/GPUBuffer.h"
+#include "Graphics/GPUTexture.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"
 
 namespace alimer
 {
     /// A container that stores commands for the GPU to execute.
-    class ALIMER_API CommandContext
+    class ALIMER_API GPUContext
     {
     public:
         /// Constructor.
-        CommandContext();
-        virtual ~CommandContext() = default;
+        GPUContext();
+        virtual ~GPUContext() = default;
 
         virtual void Flush() = 0;
 

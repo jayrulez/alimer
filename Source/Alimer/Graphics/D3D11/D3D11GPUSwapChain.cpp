@@ -23,12 +23,13 @@
 #include "Core/Log.h"
 #include "D3D11GPUSwapChain.h"
 #include "D3D11GPUTexture.h"
-#include "D3D11GraphicsDevice.h"
+#include "D3D11GPUDevice.h"
 
 namespace alimer
 {
-    D3D11GPUSwapChain::D3D11GPUSwapChain(D3D11GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor)
-        : GPUSwapChain(device, descriptor)
+    D3D11GPUSwapChain::D3D11GPUSwapChain(D3D11GPUDevice* device, const GPUSwapChainDescriptor& descriptor)
+        : GPUSwapChain(descriptor)
+        , device{ device }
         , rotation(DXGI_MODE_ROTATION_IDENTITY)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -111,7 +112,7 @@ namespace alimer
         // Create a render target view of the swap chain back buffer.
         ID3D11Texture2D* backbufferTexture;
         ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
-        colorTexture = new D3D11GPUTexture(static_cast<D3D11GraphicsDevice*>(device.Get()), backbufferTexture, colorFormat);
+        colorTexture = new D3D11GPUTexture(device, backbufferTexture, colorFormat);
         backbufferTexture->Release();
 
         //backbufferTexture = Texture::CreateExternalTexture(backbufferTextureHandle, backbufferSize.x, backbufferSize.y, PixelFormat::BGRA8Unorm, false);
@@ -144,7 +145,7 @@ namespace alimer
         return handle->Present(syncInterval, presentFlags);
     }
 
-    Texture* D3D11GPUSwapChain::GetColorTexture() const
+    GPUTexture* D3D11GPUSwapChain::GetColorTexture() const
     {
         return colorTexture.Get();
     }

@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "D3D11GPUTexture.h"
-#include "D3D11GraphicsDevice.h"
+#include "D3D11GPUDevice.h"
 
 namespace alimer
 {
@@ -37,15 +37,17 @@ namespace alimer
         }
     }
 
-    D3D11GPUTexture::D3D11GPUTexture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : Texture(device, Convert2DDesc(externalTexture, format))
+    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
+        : GPUTexture(Convert2DDesc(externalTexture, format))
+        , device{ device }
         , handle(externalTexture)
     {
         handle->AddRef();
     }
 
-    D3D11GPUTexture::D3D11GPUTexture(D3D11GraphicsDevice* device, const GPUTextureDescriptor& descriptor)
-        : Texture(device, descriptor)
+    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescriptor& descriptor)
+        : GPUTexture(descriptor)
+        , device{ device }
     {
         D3D11_TEXTURE2D_DESC d3dDesc;
         d3dDesc.Width = width;
@@ -216,10 +218,8 @@ namespace alimer
             break;
         }
 
-        auto d3dDevice = static_cast<D3D11GraphicsDevice*>(device.Get())->GetD3DDevice();
-
         RefPtr<ID3D11ShaderResourceView> srv;
-        ThrowIfFailed(d3dDevice->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
         srvs.push_back(srv);
         return srv.Get();
     }
@@ -332,10 +332,8 @@ namespace alimer
             break;
         }
 
-        auto d3dDevice = static_cast<D3D11GraphicsDevice*>(device.Get())->GetD3DDevice();
-
         RefPtr<ID3D11UnorderedAccessView> uav;
-        ThrowIfFailed(d3dDevice->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
         uavs.push_back(uav);
         return uav.Get();
     }
@@ -467,12 +465,8 @@ namespace alimer
             break;
         }
 
-
-        auto d3dDevice = static_cast<D3D11GraphicsDevice*>(device.Get())->GetD3DDevice();
-
-
         RefPtr<ID3D11RenderTargetView> rtv;
-        ThrowIfFailed(d3dDevice->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
         rtvs.push_back(rtv);
         return rtv.Get();
     }
@@ -589,10 +583,8 @@ namespace alimer
             break;
         }
 
-        auto d3dDevice = static_cast<D3D11GraphicsDevice*>(device.Get())->GetD3DDevice();
-
         RefPtr<ID3D11DepthStencilView> view;
-        ThrowIfFailed(d3dDevice->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
         dsvs.push_back(view);
         return view.Get();
     }

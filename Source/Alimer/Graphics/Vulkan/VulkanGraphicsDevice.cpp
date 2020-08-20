@@ -22,8 +22,6 @@
 
 #include "VulkanGPUAdapter.h"
 #include "VulkanGraphicsDevice.h"
-#include "Graphics/Texture.h"
-#include "Graphics/Buffer.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -286,8 +284,8 @@ namespace alimer
 
         struct SwapChainSupportDetails {
             VkSurfaceCapabilitiesKHR capabilities;
-            std::vector<VkSurfaceFormatKHR> formats;
-            std::vector<VkPresentModeKHR> presentModes;
+            vector<VkSurfaceFormatKHR> formats;
+            vector<VkPresentModeKHR> presentModes;
         };
 
         SwapChainSupportDetails QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
@@ -585,6 +583,21 @@ namespace alimer
                 LOGI("Instance extension '{}'", createInfo.ppEnabledExtensionNames[i]);
             }
         }
+
+        if (!InitSurface(descriptor.swapChain.handle)) {
+            return;
+        }
+
+        if (!InitPhysicalDevice(descriptor.powerPreference)) {
+            return;
+        }
+
+        if (!InitLogicalDevice()) {
+            return;
+        }
+
+        InitCapabilities();
+
     }
 
     VulkanGraphicsDevice::~VulkanGraphicsDevice()
@@ -655,7 +668,7 @@ namespace alimer
         return adapter;
     }
 
-    CommandContext* VulkanGraphicsDevice::GetMainContext() const
+    GPUContext* VulkanGraphicsDevice::GetMainContext() const
     {
         return nullptr;
     }
@@ -696,7 +709,7 @@ namespace alimer
         }
 
 
-        SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(physicalDevice, surface, instanceExts.get_surface_capabilities2, physicalDeviceExts.win32_full_screen_exclusive);
+        SwapChainSupportDetails surfaceCaps = QuerySwapchainSupport(adapter->GetHandle(), surface, instanceExts.get_surface_capabilities2, physicalDeviceExts.win32_full_screen_exclusive);
 
         /* Detect image count. */
         uint32_t imageCount = surfaceCaps.capabilities.minImageCount + 1;
@@ -964,23 +977,6 @@ namespace alimer
 
     bool VulkanGraphicsDevice::Initialize(WindowHandle windowHandle, uint32_t width, uint32_t height, bool isFullscreen)
     {
-        if (!InitInstance())
-            return false;
-
-        if (!InitSurface(windowHandle)) {
-            return false;
-        }
-
-        if (!InitPhysicalDevice()) {
-            return false;
-        }
-
-        if (!InitLogicalDevice()) {
-            return false;
-        }
-
-        InitCapabilities();
-
         //backbufferSize.x = width;
         //backbufferSize.y = height;
         UpdateSwapchain();
@@ -1007,22 +1003,15 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGraphicsDevice::InitInstance()
-    {
-        
-
-        return true;
-    }
-
-    bool VulkanGraphicsDevice::InitSurface(WindowHandle windowHandle)
+    bool VulkanGraphicsDevice::InitSurface(GPUPlatformHandle windowHandle)
     {
         VkResult result = VK_SUCCESS;
 
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
         VkWin32SurfaceCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-        createInfo.hinstance = GetModuleHandle(NULL);
-        createInfo.hwnd = (HWND)windowHandle;
+        createInfo.hinstance = windowHandle.hinstance;
+        createInfo.hwnd = windowHandle.hwnd;
         result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -1040,7 +1029,7 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGraphicsDevice::InitPhysicalDevice()
+    bool VulkanGraphicsDevice::InitPhysicalDevice(GPUPowerPreference powerPreference)
     {
         // Enumerating and creating devices:
         uint32_t physicalDevicesCount = 0;
@@ -1051,7 +1040,7 @@ namespace alimer
             assert(0);
         }
 
-        std::vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
+        vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
         vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, physicalDevices.data());
 
         uint32_t bestDeviceScore = 0u;
@@ -1071,20 +1060,27 @@ namespace alimer
                 score += 10000u;
             }
 
-            switch (physical_device_props.deviceType) {
+            switch (physical_device_props.deviceType)
+            {
             case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                score += 1000u;
+                score += 100u;
+                if (powerPreference == GPUPowerPreference::HighPerformance)
+                    score += 1000u;
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                score += 100u;
+                score += 90u;
+                if (powerPreference == GPUPowerPreference::LowPower)
+                    score += 1000u;
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-                score += 80U;
+                score += 80u;
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_CPU:
-                score += 70U;
+                score += 70u;
                 break;
-            default: score += 10U;
+            default:
+                score += 10U;
+                break;
             }
 
             if (score > bestDeviceScore) {
@@ -1098,11 +1094,9 @@ namespace alimer
             return false;
         }
 
-        physicalDevice = physicalDevices[bestDeviceIndex];
-        physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-        vkGetPhysicalDeviceProperties2(physicalDevice, &physicalDeviceProperties);
-        queueFamilies = QueryQueueFamilies(instance, physicalDevice, surface);
-        physicalDeviceExts = QueryPhysicalDeviceExtensions(instanceExts, physicalDevice);
+        adapter = new VulkanGPUAdapter(physicalDevices[bestDeviceIndex]);
+        queueFamilies = QueryQueueFamilies(instance, adapter->GetHandle(), surface);
+        physicalDeviceExts = QueryPhysicalDeviceExtensions(instanceExts, adapter->GetHandle());
         return true;
     }
 
@@ -1111,10 +1105,7 @@ namespace alimer
         VkResult result = VK_SUCCESS;
 
         /* Setup device queue's. */
-        uint32_t queue_count;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, nullptr);
-        vector<VkQueueFamilyProperties> queue_families(queue_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_count, queue_families.data());
+        vector<VkQueueFamilyProperties> queue_families = adapter->GetQueueFamilyProperties();
 
         uint32_t universal_queue_index = 1;
         uint32_t compute_queue_index = 0;
@@ -1174,7 +1165,7 @@ namespace alimer
 
         /* Setup device extensions now. */
         vector<const char*> enabledExtensions;
-        const bool deviceApiVersion11 = physicalDeviceProperties.properties.apiVersion >= VK_API_VERSION_1_1;
+        const bool deviceApiVersion11 = adapter->GetProperties().apiVersion >= VK_API_VERSION_1_1;
 
         if (surface != VK_NULL_HANDLE) {
             enabledExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -1239,7 +1230,7 @@ namespace alimer
             ppNext = &multiview_features.pNext;
         }
 
-        vkGetPhysicalDeviceFeatures2(physicalDevice, &features);
+        vkGetPhysicalDeviceFeatures2(adapter->GetHandle(), &features);
 
         // Enable device features we might care about.
         {
@@ -1275,7 +1266,7 @@ namespace alimer
         createInfo.enabledExtensionCount = (uint32_t)enabledExtensions.size();
         createInfo.ppEnabledExtensionNames = enabledExtensions.data();
 
-        result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
+        result = vkCreateDevice(adapter->GetHandle(), &createInfo, nullptr, &device);
         if (result != VK_SUCCESS)
         {
             VK_LOG_ERROR(result, "Failed to create device");
@@ -1287,17 +1278,18 @@ namespace alimer
         vkGetDeviceQueue(device, queueFamilies.copyQueueFamily, copy_queue_index, &copyQueue);
 
         LOGI("Created VkDevice using '{}' adapter with API version: {}.{}.{}",
-            physicalDeviceProperties.properties.deviceName,
-            VK_VERSION_MAJOR(physicalDeviceProperties.properties.apiVersion),
-            VK_VERSION_MINOR(physicalDeviceProperties.properties.apiVersion),
-            VK_VERSION_PATCH(physicalDeviceProperties.properties.apiVersion));
-        for (uint32_t i = 0; i < createInfo.enabledExtensionCount; ++i) {
+            adapter->GetProperties().deviceName,
+            VK_VERSION_MAJOR(adapter->GetProperties().apiVersion),
+            VK_VERSION_MINOR(adapter->GetProperties().apiVersion),
+            VK_VERSION_PATCH(adapter->GetProperties().apiVersion));
+        for (uint32 i = 0; i < createInfo.enabledExtensionCount; ++i)
+        {
             LOGI("Device extension '{}'", createInfo.ppEnabledExtensionNames[i]);
         }
 
         // Create vma allocator.
         VmaAllocatorCreateInfo allocatorInfo = {};
-        allocatorInfo.physicalDevice = physicalDevice;
+        allocatorInfo.physicalDevice = adapter->GetHandle();
         allocatorInfo.device = device;
         allocatorInfo.instance = instance;
 
@@ -1337,7 +1329,7 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
-        VkResult result = AcquireNextImage(&backbufferIndex);
+        /*VkResult result = AcquireNextImage(&backbufferIndex);
 
         // Handle outdated error in acquire.
         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -1352,10 +1344,10 @@ namespace alimer
             return false;
         }
 
-        /* Begin primary frame command buffer. We will only submit this once before it's recycled */
+        // Begin primary frame command buffer. We will only submit this once before it's recycled 
         VkCommandBufferBeginInfo beginInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        VK_CHECK(vkBeginCommandBuffer(frame[backbufferIndex].primaryCommandBuffer, &beginInfo));
+        VK_CHECK(vkBeginCommandBuffer(frame[backbufferIndex].primaryCommandBuffer, &beginInfo));*/
 
         // Now the frame is active again.
         frameActive = true;
@@ -1367,7 +1359,7 @@ namespace alimer
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
 
-        VkResult result = VK_SUCCESS;
+        /*VkResult result = VK_SUCCESS;
         VkCommandBuffer commandBuffer = frame[backbufferIndex].primaryCommandBuffer;
 
         //TextureBarrier(commandBuffer, swapchainImages[backbufferIndex], swapChainImageLayouts[backbufferIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -1407,7 +1399,7 @@ namespace alimer
         else if (result != VK_SUCCESS)
         {
             LOGE("Failed to present swapchain image.");
-        }
+        }*/
 
         // Frame is not active anymore
         frameActive = false;

@@ -56,6 +56,12 @@ namespace alimer
             return adapterType;
         }
 
+        VkPhysicalDevice GetHandle() const { return handle; }
+        const VkPhysicalDeviceFeatures& GetFeatures() const;
+        const VkPhysicalDeviceProperties GetProperties() const;
+        const VkPhysicalDeviceMemoryProperties GetMemoryProperties() const;
+        const std::vector<VkQueueFamilyProperties>& GetQueueFamilyProperties() const;
+
     private:
         // Handle to the Vulkan physical device
         VkPhysicalDevice handle{ VK_NULL_HANDLE };

@@ -23,7 +23,7 @@
 #include "D3D11GPUAdapter.h"
 #include "D3D11GPUSwapChain.h"
 #include "D3D11GPUContext.h"
-#include "D3D11GraphicsDevice.h"
+#include "D3D11GPUDevice.h"
 #include "Core/String.h"
 
 namespace alimer
@@ -125,7 +125,7 @@ namespace alimer
     D3D11Initializer s_d3d11_Initializer;
 #endif
 
-    bool D3D11GraphicsDevice::IsAvailable()
+    bool D3D11GPUDevice::IsAvailable()
     {
         static bool available_initialized = false;
         static bool available = false;
@@ -170,7 +170,7 @@ namespace alimer
         return false;
     }
 
-    D3D11GraphicsDevice::D3D11GraphicsDevice(const GPUDeviceDescriptor& descriptor)
+    D3D11GPUDevice::D3D11GPUDevice(const GPUDeviceDescriptor& descriptor)
         : GraphicsDevice(GPUBackendType::D3D11)
     {
         ALIMER_VERIFY(IsAvailable());
@@ -359,12 +359,12 @@ namespace alimer
         mainSwapChain = CreateSwapChainCore(descriptor.swapChain);
     }
 
-    D3D11GraphicsDevice::~D3D11GraphicsDevice()
+    D3D11GPUDevice::~D3D11GPUDevice()
     {
         Shutdown();
     }
 
-    void D3D11GraphicsDevice::Shutdown()
+    void D3D11GPUDevice::Shutdown()
     {
         SafeDelete(mainContext);
         mainSwapChain.Reset();
@@ -403,22 +403,22 @@ namespace alimer
 #endif
     }
 
-    GPUAdapter* D3D11GraphicsDevice::GetAdapter() const
+    GPUAdapter* D3D11GPUDevice::GetAdapter() const
     {
         return adapter;
     }
 
-    CommandContext* D3D11GraphicsDevice::GetMainContext() const
+    GPUContext* D3D11GPUDevice::GetMainContext() const
     {
         return mainContext;
     }
 
-    GPUSwapChain* D3D11GraphicsDevice::GetMainSwapChain() const
+    GPUSwapChain* D3D11GPUDevice::GetMainSwapChain() const
     {
         return mainSwapChain.Get();
     }
 
-    void D3D11GraphicsDevice::CreateFactory()
+    void D3D11GPUDevice::CreateFactory()
     {
         SafeRelease(dxgiFactory);
 
@@ -519,7 +519,7 @@ namespace alimer
 #endif
     }
 
-    void D3D11GraphicsDevice::InitCapabilities()
+    void D3D11GPUDevice::InitCapabilities()
     {
         // Features
         caps.features.independentBlend = true;
@@ -594,12 +594,12 @@ namespace alimer
         }
     }
 
-    bool D3D11GraphicsDevice::BeginFrameImpl()
+    bool D3D11GPUDevice::BeginFrameImpl()
     {
         return !isLost;
     }
 
-    void D3D11GraphicsDevice::EndFrameImpl()
+    void D3D11GPUDevice::EndFrameImpl()
     {
         if (isLost) {
             return;
@@ -614,7 +614,7 @@ namespace alimer
         }
     }
 
-    void D3D11GraphicsDevice::Present(GPUSwapChain* swapChain, bool verticalSync)
+    void D3D11GPUDevice::Present(GPUSwapChain* swapChain, bool verticalSync)
     {
         HRESULT hr = S_OK;
         if (verticalSync)
@@ -642,19 +642,17 @@ namespace alimer
         }
     }
 
-    void D3D11GraphicsDevice::HandleDeviceLost()
+    void D3D11GPUDevice::HandleDeviceLost()
     {
     }
 
     /* Resource creation methods */
-    GPUSwapChain* D3D11GraphicsDevice::CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor)
+    GPUSwapChain* D3D11GPUDevice::CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor)
     {
         return new D3D11GPUSwapChain(this, descriptor);
     }
 
-    
-
-    BufferHandle D3D11GraphicsDevice::AllocBufferHandle()
+    BufferHandle D3D11GPUDevice::AllocBufferHandle()
     {
         std::lock_guard<std::mutex> LockGuard(handle_mutex);
 
@@ -670,7 +668,7 @@ namespace alimer
         return { (uint32_t)id };
     }
 
-    BufferHandle D3D11GraphicsDevice::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
+    BufferHandle D3D11GPUDevice::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
@@ -742,7 +740,7 @@ namespace alimer
         return handle;
     }
 
-    void D3D11GraphicsDevice::Destroy(BufferHandle handle)
+    void D3D11GPUDevice::Destroy(BufferHandle handle)
     {
         if (!handle.isValid())
             return;
@@ -754,7 +752,7 @@ namespace alimer
         buffers.Dealloc(handle.id);
     }
 
-    void D3D11GraphicsDevice::SetName(BufferHandle handle, const char* name)
+    void D3D11GPUDevice::SetName(BufferHandle handle, const char* name)
     {
         if (!handle.isValid())
             return;

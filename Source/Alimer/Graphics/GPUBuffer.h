@@ -20,14 +20,49 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/CommandContext.h"
-#include "Core/Log.h"
+#pragma once
+
+#include "Graphics/GPUResource.h"
 
 namespace alimer
 {
-    CommandContext::CommandContext()
+    /// 
+    class GPUBuffer : public GPUResource
     {
+        ALIMER_OBJECT(GPUBuffer, GPUResource);
 
-    }
+    public:
+        /// Constructor
+        GPUBuffer(const GPUBufferDescriptor& descriptor);
+
+        /// Gets buffer usage.
+        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
+        {
+            return usage;
+        }
+
+        /// Gets buffer size in bytes.
+        ALIMER_FORCE_INLINE uint32 GetSize() const
+        {
+            return size;
+        }
+
+        /// Gets buffer elements count.
+        ALIMER_FORCE_INLINE uint32 GetStride() const
+        {
+            return stride;
+        }
+
+        /// Gets the number of elements.
+        ALIMER_FORCE_INLINE uint32 GetElementsCount() const
+        {
+            ALIMER_ASSERT(stride > 0);
+            return size / stride;
+        }
+
+    private:
+        BufferUsage usage;
+        uint32 size;
+        uint32 stride;
+    };
 }
-

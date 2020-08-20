@@ -59,18 +59,15 @@ namespace alimer
         /// Set the resource name.
         void SetName(const String& newName) { name = newName; BackendSetName(); }
 
-        /**
-        * Get the resource name
-        */
+        /// Get the resource name
         const String& GetName() const { return name; }
 
     protected:
-        GPUResource(GraphicsDevice* device, Type Type);
+        GPUResource(Type type, const String& name = "");
 
         virtual void BackendSetName() {}
 
     protected:
-        WeakPtr<GraphicsDevice> device;
         String name;
         Type type;
     };

@@ -158,8 +158,6 @@ namespace alimer
         virtual void SetVerticalSync(bool value) { verticalSync = value; }
         bool GetVerticalSync() const { return verticalSync; }
 
-        virtual Texture* GetBackbufferTexture() const = 0;
-
         /* Resource creation methods */
         virtual BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data = nullptr) = 0;
         virtual void Destroy(BufferHandle handle) = 0;

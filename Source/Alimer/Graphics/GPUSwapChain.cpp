@@ -26,8 +26,8 @@
 
 namespace alimer
 {
-    GPUSwapChain::GPUSwapChain(GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor)
-        : GPUResource(device, Type::SwapChain)
+    GPUSwapChain::GPUSwapChain(const GPUSwapChainDescriptor& descriptor)
+        : GPUResource(Type::SwapChain)
         , width(descriptor.width)
         , height(descriptor.height)
         , colorFormat(descriptor.colorFormat)

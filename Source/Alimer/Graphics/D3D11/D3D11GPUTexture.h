@@ -22,18 +22,18 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
+#include "Graphics/GPUTexture.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    class ALIMER_API D3D11GPUTexture final : public Texture
+    class ALIMER_API D3D11GPUTexture final : public GPUTexture
     {
     public:
         /// Constructor.
-        D3D11GPUTexture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        D3D11GPUTexture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11GPUTexture(D3D11GraphicsDevice* device, const GPUTextureDescriptor& descriptor);
+        D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescriptor& descriptor);
         /// Destructor
         ~D3D11GPUTexture() override;
 
@@ -47,6 +47,7 @@ namespace alimer
     private:
         void BackendSetName() override;
 
+        D3D11GPUDevice* device;
         ID3D11Resource* handle;
         std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
         std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;

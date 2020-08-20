@@ -27,62 +27,62 @@
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    class ALIMER_API GPUTexture : public GPUResource
     {
-        ALIMER_OBJECT(Texture, GPUResource);
+        ALIMER_OBJECT(GPUTexture, GPUResource);
 
     public:
         /// Constructor.
-        Texture(GraphicsDevice* device, const GPUTextureDescriptor& desc);
+        GPUTexture(const GPUTextureDescriptor& descriptor);
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }
 
         /// Get a mip-level width.
-        uint32_t GetWidth(uint32_t mipLevel = 0) const;
+        uint32 GetWidth(uint32 mipLevel = 0) const;
 
         /// Get a mip-level height.
-        uint32_t GetHeight(uint32_t mipLevel = 0) const;
+        uint32 GetHeight(uint32 mipLevel = 0) const;
 
         /// Get a mip-level depth.
-        uint32_t GetDepth(uint32_t mipLevel = 0) const;
+        uint32 GetDepth(uint32 mipLevel = 0) const;
 
         /// Gets number of mipmap levels of the texture.
-        uint32_t GetMipLevels() const { return mipLevels; }
+        uint32 GetMipLevels() const { return mipLevels; }
 
         /// Get the array layers of the texture.
-        uint32_t GetArrayLayers() const { return arrayLayers; }
+        uint32 GetArrayLayers() const { return arrayLayers; }
 
         /// Get the texture usage.
         TextureUsage GetUsage() const { return usage; }
 
         /// Get the array index of a subresource.
-        uint32_t GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
+        uint32 GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
 
         /// Get the mip-level of a subresource.
-        uint32_t GetSubresourceMipLevel(uint32_t subresource) const { return subresource % mipLevels; }
+        uint32 GetSubresourceMipLevel(uint32_t subresource) const { return subresource % mipLevels; }
 
         /// Get the subresource index.
-        uint32_t GetSubresourceIndex(uint32_t mipLevel, uint32_t arraySlice) const { return mipLevel + arraySlice * mipLevels; }
+        uint32 GetSubresourceIndex(uint32 mipLevel, uint32 arraySlice) const { return mipLevel + arraySlice * mipLevels; }
 
         /// Calculates the resulting size at a single level for an original size.
-        static uint32_t CalculateMipSize(uint32_t mipLevel, uint32_t baseSize)
+        static uint32 CalculateMipSize(uint32 mipLevel, uint32 baseSize)
         {
             baseSize = baseSize >> mipLevel;
             return baseSize > 0u ? baseSize : 1u;
         }
 
-        static uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
+        static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
     protected:
         TextureDimension dimension = TextureDimension::Texture2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
-        uint32_t width = 1u;
-        uint32_t height = 1u;
-        uint32_t depth = 1u;
-        uint32_t mipLevels = 1u;
-        uint32_t arrayLayers = 1u;
-        uint32_t sampleCount = 1u;
+        uint32 width = 1u;
+        uint32 height = 1u;
+        uint32 depth = 1u;
+        uint32 mipLevels = 1u;
+        uint32 arrayLayers = 1u;
+        uint32 sampleCount = 1u;
     };
 }

@@ -31,16 +31,18 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3D11GPUSwapChain(D3D11GraphicsDevice* device, const GPUSwapChainDescriptor& descriptor);
+        D3D11GPUSwapChain(D3D11GPUDevice* device, const GPUSwapChainDescriptor& descriptor);
         /// Destructor
         ~D3D11GPUSwapChain() override;
-
         void Destroy() override;
-        Texture* GetColorTexture() const override;
+
+        GPUTexture* GetColorTexture() const override;
         HRESULT Present(uint32 syncInterval, uint32 presentFlags);
 
     private:
         void AfterReset();
+
+        D3D11GPUDevice* device;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         IDXGISwapChain1* handle = nullptr;
@@ -49,7 +51,7 @@ namespace alimer
 #endif
 
         DXGI_MODE_ROTATION rotation;
-        RefPtr<Texture> colorTexture;
-        RefPtr<Texture> depthStencilTexture;
+        RefPtr<GPUTexture> colorTexture;
+        RefPtr<GPUTexture> depthStencilTexture;
     };
 }

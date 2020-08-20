@@ -21,13 +21,11 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/Buffer.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GPUContext.h"
 
 namespace alimer
 {
-    GPUBuffer::GPUBuffer(GraphicsDevice* device)
-        : GPUResource(device, Type::Buffer)
+    GPUContext::GPUContext()
     {
 
     }

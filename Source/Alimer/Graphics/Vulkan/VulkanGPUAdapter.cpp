@@ -31,6 +31,9 @@ namespace alimer
         vkGetPhysicalDeviceProperties(handle, &properties);
         vkGetPhysicalDeviceMemoryProperties(handle, &memoryProperties);
 
+        //VkPhysicalDeviceProperties2 gpuProps = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
+        //vkGetPhysicalDeviceProperties2(handle, &gpuProps);
+
         name = properties.deviceName;
 
         uint32_t queueFamilyPropertiesCount = 0;
@@ -53,5 +56,25 @@ namespace alimer
             adapterType = GPUAdapterType::Unknown;
             break;
         }
+    }
+
+    const VkPhysicalDeviceFeatures& VulkanGPUAdapter::GetFeatures() const
+    {
+        return features;
+    }
+
+    const VkPhysicalDeviceProperties VulkanGPUAdapter::GetProperties() const
+    {
+        return properties;
+    }
+
+    const VkPhysicalDeviceMemoryProperties VulkanGPUAdapter::GetMemoryProperties() const
+    {
+        return memoryProperties;
+    }
+
+    const std::vector<VkQueueFamilyProperties>& VulkanGPUAdapter::GetQueueFamilyProperties() const
+    {
+        return queueFamilyProperties;
     }
 }

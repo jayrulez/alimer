@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Graphics/GPUAdapter.h"
-#include "Graphics/CommandContext.h"
-#include "Graphics/Buffer.h"
+#include "Graphics/GPUContext.h"
+#include "Graphics/GPUBuffer.h"
 #include "Graphics/GPUSwapChain.h"
 
 namespace alimer
@@ -51,7 +51,7 @@ namespace alimer
         virtual GPUAdapter* GetAdapter() const = 0;
 
         /// Gets the main GPU context.
-        virtual CommandContext* GetMainContext() const = 0;
+        virtual GPUContext* GetMainContext() const = 0;
 
         /// Gets the main swap chain created with the device.
         virtual GPUSwapChain* GetMainSwapChain() const = 0;
@@ -74,6 +74,7 @@ namespace alimer
 
         /* Resource creation methods. */
         GPUSwapChain* CreateSwapChain(const GPUSwapChainDescriptor& descriptor);
+        GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor);
 
         /* Commands */
         void PushDebugGroup(const String& name, CommandList commandList = 0);

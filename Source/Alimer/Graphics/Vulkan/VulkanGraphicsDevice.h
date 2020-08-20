@@ -58,7 +58,7 @@ namespace alimer
         void SetVerticalSync(bool value);
 
         GPUAdapter* GetAdapter() const override;
-        CommandContext* GetMainContext() const override;
+        GPUContext* GetMainContext() const override;
         GPUSwapChain* GetMainSwapChain() const override;
 
         /* Resource creation methods */
@@ -82,14 +82,12 @@ namespace alimer
         void SetObjectName(VkObjectType type, uint64_t handle, const String& name);
 
         VkInstance GetVkInstance() const { return instance; }
-        VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
         VkDevice GetVkDevice() const { return device; }
 
     private:
         void Shutdown();
-        bool InitInstance();
-        bool InitSurface(WindowHandle windowHandle);
-        bool InitPhysicalDevice();
+        bool InitSurface(GPUPlatformHandle windowHandle);
+        bool InitPhysicalDevice(GPUPowerPreference powerPreference);
         bool InitLogicalDevice();
         void InitCapabilities();
         bool UpdateSwapchain();
@@ -111,8 +109,6 @@ namespace alimer
 
         VulkanGPUAdapter* adapter = nullptr;
 
-        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
-        VkPhysicalDeviceProperties2 physicalDeviceProperties{};
         QueueFamilyIndices queueFamilies;
         PhysicalDeviceExtensions physicalDeviceExts;
 
@@ -129,7 +125,7 @@ namespace alimer
         uint32_t backbufferIndex = 0;
 
         std::vector<VkImageLayout> swapChainImageLayouts;
-        std::vector<RefPtr<Texture>> swapchainTextures;
+        std::vector<RefPtr<GPUTexture>> swapchainTextures;
 
         /// The image view for each swapchain image.
         std::vector<VkImageView> swapchainImageViews;
