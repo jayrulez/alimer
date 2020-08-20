@@ -22,23 +22,16 @@
 
 #pragma once
 
-#include "Graphics/GraphicsImpl.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GPUDevice.h"
 #include "D3D11Backend.h"
 #include <mutex>
 
 namespace alimer
 {
     class D3D11GPUAdapter;
+    class D3D11GPUContext;
 
-    struct D3D11Buffer
-    {
-        enum { MAX_COUNT = 4096 };
-
-        ID3D11Buffer* handle;
-    };
-
-    class D3D11GPUDevice final : public GraphicsDevice
+    class D3D11GPUDevice final : public GPUDevice
     {
     public:
         static bool IsAvailable();
@@ -47,27 +40,19 @@ namespace alimer
 
         void Shutdown();
 
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
-        void Present(GPUSwapChain* swapChain, bool verticalSync) override;
-        void HandleDeviceLost();
+        void Frame();
+        void HandleDeviceLost(HRESULT hr);
 
         GPUAdapter* GetAdapter() const override;
         GPUContext* GetMainContext() const override;
-        GPUSwapChain* GetMainSwapChain() const override;
-
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
         bool IsTearingSupported() const { return isTearingSupported; }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
+        bool IsLost() const { return isLost; }
 
         /* Resource creation methods */
-        GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) override;
-
-        BufferHandle AllocBufferHandle();
-        BufferHandle CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data);
-        void Destroy(BufferHandle handle);
-        void SetName(BufferHandle handle, const char* name);
+        GPUContext* CreateContextCore(const GPUContextDescription& desc) override;
 
     private:
         void CreateFactory();
@@ -80,16 +65,12 @@ namespace alimer
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
         D3D11GPUAdapter* adapter = nullptr;
-        ID3D11Device1*              d3dDevice = nullptr;
+        ID3D11Device1*  d3dDevice = nullptr;
+        ID3D11DeviceContext1* d3dContext = nullptr;
 
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
-        GPUContext* mainContext = nullptr;
-        RefPtr<GPUSwapChain> mainSwapChain;
-
-        /* Resource pools */
-        std::mutex handle_mutex;
-        GPUResourcePool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
+        D3D11GPUContext* mainContext = nullptr;
     };
 }

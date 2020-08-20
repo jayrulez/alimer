@@ -36,7 +36,7 @@ namespace alimer
         GPUBuffer(const GPUBufferDescriptor& descriptor);
 
         /// Gets buffer usage.
-        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
+        ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const
         {
             return usage;
         }
@@ -61,7 +61,7 @@ namespace alimer
         }
 
     private:
-        BufferUsage usage;
+        GPUBufferUsage usage;
         uint32 size;
         uint32 stride;
     };

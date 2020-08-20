@@ -31,6 +31,34 @@
 struct GLFWwindow;
 #endif
 
+#if ALIMER_PLATFORM_WINDOWS
+struct WindowHandle
+{
+    HWND window;
+    HINSTANCE hinstance;
+};
+#elif ALIMER_PLATFORM_UWP
+struct WindowHandle
+{
+    IUnknown* window;
+};
+#elif ALIMER_PLATFORM_LINUX
+struct WindowHandle
+{
+    Display* display;
+    Window window;
+};
+#elif ALIMER_PLATFORM_MACOS
+struct WindowHandle
+{
+#if defined(__OBJC__) && defined(__has_feature) && __has_feature(objc_arc)
+    NSWindow __unsafe_unretained* window;
+#else
+    NSWindow* window;
+#endif
+};
+#endif
+
 namespace alimer
 {
     enum class WindowFlags : uint32_t
@@ -45,18 +73,6 @@ namespace alimer
         Maximized = (1 << 6)
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
-
-#if ALIMER_PLATFORM_WINDOWS
-    using WindowHandle = HWND;
-#elif ALIMER_PLATFORM_UWP
-    using WindowHandle = IUnknown*;
-#elif ALIMER_PLATFORM_LINUX
-    struct WindowHandle
-    {
-        Display* display;
-        Window window;
-    };
-#endif
 
     /// Defines an OS window.
     class ALIMER_API Window final : public RefCounted
@@ -89,7 +105,7 @@ namespace alimer
         bool IsFullscreen() const;
 
         /// Get the native window handle
-        WindowHandle GetHandle() const;
+        bool GetHandle(WindowHandle* handle) const;
 
         //Delegate<void()> SizeChanged;
 

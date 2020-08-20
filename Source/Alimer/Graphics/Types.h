@@ -25,6 +25,7 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+#include "Core/Window.h"
 
 #if !defined(GPU_DEBUG)
 #   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
@@ -41,16 +42,8 @@ namespace alimer
     static constexpr uint32 kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32 kMaxVertexBufferStride = 2048u;
     static constexpr uint32 kMaxViewportAndScissorRects = 8u;
-    static constexpr uint32 kInvalidHandleId = 0xFFffFFff;
 
-    struct BufferHandle { uint32_t id; bool isValid() const { return id != kInvalidHandleId; } };
-
-    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
-
-    using CommandList = uint8_t;
-    static constexpr CommandList kMaxCommandLists = 16;
-
-    enum class GPUAdapterType : uint32
+    enum class GPUAdapterType 
     {
         DiscreteGPU,
         IntegratedGPU,
@@ -59,7 +52,7 @@ namespace alimer
     };
 
     /// Enum describing the rendering backend.
-    enum class GPUBackendType : uint32
+    enum class GPUBackendType 
     {
         /// Null renderer.
         Null,
@@ -79,22 +72,22 @@ namespace alimer
         Count
     };
 
-    enum class GPUPowerPreference : uint32_t
+    enum class GPUPowerPreference 
     {
         Default,
         LowPower,
         HighPerformance
     };
 
-    /// Describes the texture dimension.
-    enum class TextureDimension
+    /// Describes the texture type.
+    enum class TextureType
     {
         /// A two-dimensional texture image.
-        Texture2D,
+        Type2D,
         /// A three-dimensional texture image.
-        Texture3D,
+        Type3D,
         /// A cube texture with six two-dimensional images.
-        TextureCube
+        TypeCube
     };
 
     /// Defines the usage of texture resource.
@@ -108,7 +101,7 @@ namespace alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
-    enum class BufferUsage : uint32_t
+    enum class GPUBufferUsage : uint32_t
     {
         None = 0,
         Vertex = 1 << 0,
@@ -119,7 +112,7 @@ namespace alimer
         Dynamic = 1 << 5,
         Staging = 1 << 6,
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUBufferUsage, uint32_t);
 
     enum class TextureCubemapFace : uint8_t {
         PositiveX = 0, //!< +x face
@@ -137,17 +130,18 @@ namespace alimer
         Clear
     };
 
+    /* Structs */
     struct GPUBufferDescriptor
     {
-        BufferUsage usage;
+        GPUBufferUsage usage;
         uint32_t size;
         uint32_t stride;
         const char* label;
     };
 
-    struct GPUTextureDescriptor
+    struct GPUTextureDescription
     {
-        TextureDimension dimension = TextureDimension::Texture2D;
+        TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
@@ -158,19 +152,19 @@ namespace alimer
         uint32 sampleCount = 1u;
         const char* label;
 
-        static GPUTextureDescriptor New2D(uint32 width, uint32 height, PixelFormat format, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
+        static GPUTextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
         {
-            GPUTextureDescriptor descriptor = {};
-            descriptor.dimension = TextureDimension::Texture2D;
-            descriptor.format = format;
-            descriptor.usage = usage;
-            descriptor.width = width;
-            descriptor.height = height;
-            descriptor.depth = 1u;
-            descriptor.mipLevels = mipmapped ? 0u : 1u;
-            descriptor.arrayLayers = 1u;
-            descriptor.sampleCount = 1u;
-            return descriptor;
+            GPUTextureDescription desc = {};
+            desc.type = TextureType::Type2D;
+            desc.format = format;
+            desc.usage = usage;
+            desc.width = width;
+            desc.height = height;
+            desc.depth = 1u;
+            desc.mipLevels = mipmapped ? 0u : 1u;
+            desc.arrayLayers = 1u;
+            desc.sampleCount = 1u;
+            return desc;
         }
     };
 
@@ -266,35 +260,17 @@ namespace alimer
         uint32_t maxComputeWorkGroupSizeZ;
     };
 
-    /// Describes GPUDevice capabilities.
-    struct GraphicsCapabilities
+    struct GPUContextDescription
     {
-        GPUFeatures features;
-        GPULimits limits;
-    };
-
-    struct GPUPlatformHandle
-    {
-#if ALIMER_PLATFORM_WINDOWS
-        HINSTANCE   hinstance;
-        HWND        hwnd;
-#endif
-    };
-
-    struct GPUSwapChainDescriptor
-    {
-        GPUPlatformHandle handle;
-        uint32_t width = 1u;
-        uint32_t height = 1u;
-        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-        bool isFullscreen = false;
-        uint32_t sampleCount = 1u;
+        WindowHandle handle;
+        uint32_t width;
+        uint32_t height;
     };
 
     struct GPUDeviceDescriptor
     {
         GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        GPUSwapChainDescriptor swapChain;
+        GPUContextDescription mainContext;
     };
 
     ALIMER_API const char* ToString(GPUBackendType value);

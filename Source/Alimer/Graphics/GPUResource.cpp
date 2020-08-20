@@ -22,19 +22,16 @@
 
 #include "Core/Log.h"
 #include "Graphics/GPUResource.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GPUDevice.h"
 
 namespace alimer
 {
-    GPUResource::GPUResource(Type type, const String& name)
-        : type{ type }
-        , name{ name }
+    GPUResource::GPUResource(Type type_, const char* name_)
+        : type(type_)
     {
-
-    }
-
-    GPUResource::~GPUResource()
-    {
+        if (name_ && strlen(name_))
+        {
+            name = name_;
+        }
     }
 }
-

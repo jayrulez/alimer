@@ -23,24 +23,24 @@
 #pragma once
 
 #include "Graphics/GPUTexture.h"
-#include "Math/Size.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API GPUSwapChain : public GPUResource
+    class VulkanGPUTexture final : public GPUTexture
     {
-        ALIMER_OBJECT(GPUSwapChain, GPUResource);
-
     public:
-        /// Constructor.
-        GPUSwapChain(const GPUSwapChainDescriptor& descriptor);
+        VulkanGPUTexture(VulkanGPUDevice* device_, const GPUTextureDescription& desc);
+        ~VulkanGPUTexture() override;
 
-        virtual GPUTexture* GetColorTexture() const = 0;
+        void Destroy() override;
 
-    protected:
-        uint32_t width;
-        uint32_t height;
-        PixelFormat colorFormat;
-        bool isFullscreen;
+    private:
+        void BackendSetName() override;
+
+        VulkanGPUDevice* device;
+
+        VkImage handle{ VK_NULL_HANDLE };
+        VmaAllocation allocation{ VK_NULL_HANDLE };
     };
 }

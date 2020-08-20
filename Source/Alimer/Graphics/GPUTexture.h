@@ -33,7 +33,7 @@ namespace alimer
 
     public:
         /// Constructor.
-        GPUTexture(const GPUTextureDescriptor& descriptor);
+        GPUTexture(const GPUTextureDescription& desc);
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }
@@ -75,7 +75,7 @@ namespace alimer
         static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
     protected:
-        TextureDimension dimension = TextureDimension::Texture2D;
+        TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;

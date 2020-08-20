@@ -22,21 +22,159 @@
 
 #include "Core/Log.h"
 #include "D3D11GPUContext.h"
+#include "D3D11GPUTexture.h"
 #include "D3D11GPUDevice.h"
 
 namespace alimer
 {
-    D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice* device, ID3D11DeviceContext* context)
-        : device{ device }
+    D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice* device_, ID3D11DeviceContext1* context, const GPUContextDescription& desc, bool isMain_)
+        : GPUContext(desc.width, desc.height, isMain_)
+        , device(device_)
+        , handle(context)
     {
-        ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&handle)));
         ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&annotation)));
+
+        if (desc.handle.window)
+        {
+            window = desc.handle.window;
+        }
     }
 
     D3D11GPUContext::~D3D11GPUContext()
     {
         SafeRelease(annotation);
         SafeRelease(handle);
+        SafeRelease(swapChain);
+    }
+
+    bool D3D11GPUContext::BeginFrameImpl()
+    {
+        if (colorTextures.empty()) {
+            CreateObjects();
+        }
+
+        return !device->IsLost();
+    }
+
+    void D3D11GPUContext::EndFrameImpl()
+    {
+        if (device->IsLost()) {
+            return;
+        }
+
+        if (swapChain)
+        {
+            uint32 syncInterval = 1u;
+            uint32 presentFlags = 0u;
+
+            if (!verticalSync)
+            {
+                syncInterval = 0u;
+                presentFlags = device->IsTearingSupported() ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+            }
+
+            HRESULT hr = swapChain->Present(syncInterval, presentFlags);
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                device->HandleDeviceLost(hr);
+            }
+        }
+
+        // TODO: Measure timestamp using query
+        if (isMain) {
+            device->Frame();
+        }
+    }
+
+    void D3D11GPUContext::CreateObjects()
+    {
+        if (window)
+        {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            const DXGI_SCALING dxgiScaling = DXGI_SCALING_STRETCH;
+
+            DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+            if (!any(device->GetDXGIFactoryCaps() & DXGIFactoryCaps::FlipPresent))
+            {
+                swapEffect = DXGI_SWAP_EFFECT_DISCARD;
+            }
+#else
+            const DXGI_SCALING dxgiScaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+            const DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#endif
+
+            DXGI_SWAP_CHAIN_DESC1 swapchainDesc = {};
+            swapchainDesc.Width = extent.width;
+            swapchainDesc.Height = extent.height;
+            swapchainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
+            swapchainDesc.Stereo = false;
+            swapchainDesc.SampleDesc.Count = 1;
+            swapchainDesc.SampleDesc.Quality = 0;
+            swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapchainDesc.BufferCount = kInflightFrameCount;
+            swapchainDesc.Scaling = dxgiScaling;
+            swapchainDesc.SwapEffect = swapEffect;
+            swapchainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            swapchainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+            if (device->IsTearingSupported())
+            {
+                swapchainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+            }
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapchainDesc = {};
+            fsSwapchainDesc.Windowed = !isFullscreen;
+
+            // Create a SwapChain from a Win32 window.
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+                device->GetD3DDevice(),
+                window,
+                &swapchainDesc,
+                &fsSwapchainDesc,
+                nullptr,
+                &swapChain
+            ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+#else
+            IDXGISwapChain1* tempSwapChain;
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+                device->GetD3DDevice(),
+                window,
+                &swapchainDesc,
+                nullptr,
+                &tempSwapChain
+            ));
+            ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
+            SafeRelease(tempSwapChain);
+#endif
+
+            CreateSwapChainObjects();
+        }
+        else
+        {
+            /* TODO: Offscreen rendering. */
+        }
+
+        if (depthStencilFormat != PixelFormat::Invalid)
+        {
+            GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
+            depthStencilTexture.Reset(new D3D11GPUTexture(device, depthTextureDesc, nullptr));
+        }
+    }
+
+    void D3D11GPUContext::CreateSwapChainObjects()
+    {
+        colorTextures.clear();
+        depthStencilTexture.Reset();
+
+        // Create a render target view of the swap chain back buffer.
+        ID3D11Texture2D* backbufferTexture;
+        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
+        colorTextures.push_back(MakeRef<D3D11GPUTexture>(device, backbufferTexture, colorFormat));
+        backbufferTexture->Release();
     }
 
     void D3D11GPUContext::Flush()
@@ -67,26 +205,25 @@ namespace alimer
 
         for (uint32_t i = 0; i < numColorAttachments; i++)
         {
-            GPUTexture* texture = /*colorAttachments[i].texture == nullptr ? backbufferTexture.Get() :*/ colorAttachments[i].texture;
+            D3D11GPUTexture* texture = static_cast<D3D11GPUTexture*>(colorAttachments[i].texture);
 
-            /*D3D11Texture& d3d11Texture = textures[texture->GetHandle().id];
-            ID3D11RenderTargetView* rtv = GetRTV(texture, DXGI_FORMAT_UNKNOWN, colorAttachments[i].mipLevel, colorAttachments[i].slice);
+            ID3D11RenderTargetView* rtv = texture->GetRTV(DXGI_FORMAT_UNKNOWN, colorAttachments[i].mipLevel, colorAttachments[i].slice);
 
             switch (colorAttachments[i].loadAction)
             {
             case LoadAction::DontCare:
-                d3dContexts[commandList]->DiscardView(rtv);
+                handle->DiscardView(rtv);
                 break;
 
             case LoadAction::Clear:
-                d3dContexts[commandList]->ClearRenderTargetView(rtv, &colorAttachments[i].clearColor.r);
+                handle->ClearRenderTargetView(rtv, &colorAttachments[i].clearColor.r);
                 break;
 
             default:
                 break;
             }
 
-            renderTargetViews[i] = rtv;*/
+            renderTargetViews[i] = rtv;
         }
 
         handle->OMSetRenderTargets(numColorAttachments, renderTargetViews, nullptr);

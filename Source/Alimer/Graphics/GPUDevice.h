@@ -25,36 +25,28 @@
 #include "Graphics/GPUAdapter.h"
 #include "Graphics/GPUContext.h"
 #include "Graphics/GPUBuffer.h"
-#include "Graphics/GPUSwapChain.h"
 
 namespace alimer
 {
-    class GraphicsImpl;
-
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice : public Object
+    class ALIMER_API GPUDevice : public Object
     {
-        friend class GraphicsResource;
-
-        ALIMER_OBJECT(GraphicsDevice, Object);
+        ALIMER_OBJECT(GPUDevice, Object);
 
     public:
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        virtual ~GPUDevice() = default;
 
         static void EnableGPUBasedBackendValidation(bool value);
         static bool IsGPUBasedBackendValidationEnabled();
 
-        static GraphicsDevice* Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType = GPUBackendType::Count);
+        static GPUDevice* Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType = GPUBackendType::Count);
 
         /// Gets the adapter device.
         virtual GPUAdapter* GetAdapter() const = 0;
 
-        /// Gets the main GPU context.
+        /// Gets the main GPU context. The main context takes care of deferred release of GPU resources.
         virtual GPUContext* GetMainContext() const = 0;
-
-        /// Gets the main swap chain created with the device.
-        virtual GPUSwapChain* GetMainSwapChain() const = 0;
 
         /// Gets the device backend type.
         ALIMER_FORCE_INLINE GPUBackendType GetBackendType() const
@@ -62,58 +54,43 @@ namespace alimer
             return backendType;
         }
 
-        /// Get the device capabilities.
-        ALIMER_FORCE_INLINE const GraphicsCapabilities& GetCaps() const
+        /// Get the device features.
+        ALIMER_FORCE_INLINE const GPUFeatures& GetFeatures() const
         {
-            return caps;
+            return features;
         }
 
-        bool BeginFrame();
-        void EndFrame();
-        virtual void Present(GPUSwapChain* swapChain, bool verticalSync) = 0;
+        /// Get the device limits.
+        ALIMER_FORCE_INLINE const GPULimits& GetLimits() const
+        {
+            return limits;
+        }
 
         /* Resource creation methods. */
-        GPUSwapChain* CreateSwapChain(const GPUSwapChainDescriptor& descriptor);
-        GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor);
-
-        /* Commands */
-        void PushDebugGroup(const String& name, CommandList commandList = 0);
-        void PopDebugGroup(CommandList commandList = 0);
-        void InsertDebugMarker(const String& name, CommandList commandList = 0);
-
-        void BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil = nullptr, CommandList commandList = 0);
-        void EndRenderPass(CommandList commandList = 0);
+        GPUContext* CreateContext(const GPUContextDescription& desc);
+        GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor, const void* initialData = nullptr);
 
         /// Total number of CPU frames completed.
         uint64_t GetFrameCount() const { return frameCount; }
 
     protected:
-        GraphicsDevice(GPUBackendType backendType_);
+        GPUDevice(GPUBackendType backendType_);
 
-        virtual bool BeginFrameImpl() = 0;
-        virtual void EndFrameImpl() = 0;
-        virtual GPUSwapChain* CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor) = 0;
+        virtual GPUContext* CreateContextCore(const GPUContextDescription& desc) = 0;
 
         GPUBackendType backendType;
-        GraphicsCapabilities caps{};
+
+        GPUFeatures features{};
+        GPULimits limits{};
 
     private:
         static bool enableGPUValidation;
-
-        UInt2 resolution = UInt2::Zero;
-        uint32_t sampleCount = 1;
-
-        /// Current active frame index
-        uint32_t activeFrameIndex{ 0 };
-
-        /// Whether a frame is active or not
-        bool frameActive{ false };
 
         /// Number of frame count
         uint64_t frameCount{ 0 };
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
+        ALIMER_DISABLE_COPY_MOVE(GPUDevice);
     };
 }
 

@@ -22,7 +22,6 @@
 
 #include "Core/Log.h"
 #include "Graphics/GPUBuffer.h"
-#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {

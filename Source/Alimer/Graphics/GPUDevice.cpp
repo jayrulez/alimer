@@ -23,38 +23,37 @@
 #include "config.h"
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/GraphicsImpl.h"
+#include "Graphics/GPUDevice.h"
 
 #if defined(ALIMER_D3D11)
 #   include "Graphics/D3D11/D3D11GPUDevice.h"
 #endif
 
 #if defined(ALIMER_VULKAN)
-#   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#   include "Graphics/Vulkan/VulkanGPUDevice.h"
 #endif
 
 namespace alimer
 {
-    bool GraphicsDevice::enableGPUValidation = false;
+    bool GPUDevice::enableGPUValidation = false;
 
-    void GraphicsDevice::EnableGPUBasedBackendValidation(bool value)
+    void GPUDevice::EnableGPUBasedBackendValidation(bool value)
     {
         enableGPUValidation = value;
     }
 
-    bool GraphicsDevice::IsGPUBasedBackendValidationEnabled()
+    bool GPUDevice::IsGPUBasedBackendValidationEnabled()
     {
         return enableGPUValidation;
     }
 
-    GraphicsDevice::GraphicsDevice(GPUBackendType backendType_)
+    GPUDevice::GPUDevice(GPUBackendType backendType_)
         : backendType(backendType_)
     {
         LOGI("Using {} driver", ToString(backendType));
     }
 
-    GraphicsDevice* GraphicsDevice::Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType)
+    GPUDevice* GPUDevice::Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType)
     {
         GPUBackendType backendType = preferredRendererType;
 
@@ -66,11 +65,11 @@ namespace alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_VULKAN)
+#if defined(ALIMER_VULKAN) 
         case GPUBackendType::Vulkan:
-            if (VulkanGraphicsDevice::IsAvailable())
+            if (VulkanGPUDevice::IsAvailable())
             {
-                return new VulkanGraphicsDevice(appName, descriptor);
+                return new VulkanGPUDevice(appName, descriptor);
             }
             break;
 #endif
@@ -98,56 +97,9 @@ namespace alimer
         return nullptr;
     }
 
-    bool GraphicsDevice::BeginFrame()
+    GPUContext* GPUDevice::CreateContext(const GPUContextDescription& desc)
     {
-        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
-
-        if (!BeginFrameImpl()) {
-            return false;
-        }
-
-        // Now the frame is active again.
-        frameActive = true;
-        return true;
-    }
-
-    void GraphicsDevice::EndFrame()
-    {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
-
-        ++frameCount;
-        EndFrameImpl();
-
-        // Frame is not active anymore.
-        frameActive = false;
-    }
-
-    GPUSwapChain* GraphicsDevice::CreateSwapChain(const GPUSwapChainDescriptor& descriptor)
-    {
-        return CreateSwapChainCore(descriptor);
-    }
-
-    /* Commands */
-    void GraphicsDevice::PushDebugGroup(const String& name, CommandList commandList)
-    {
-    }
-
-    void GraphicsDevice::PopDebugGroup(CommandList commandList)
-    {
-    }
-
-    void GraphicsDevice::InsertDebugMarker(const String& name, CommandList commandList)
-    {
-    }
-
-    void GraphicsDevice::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil, CommandList commandList)
-    {
-        ALIMER_ASSERT(numColorAttachments < kMaxColorAttachments);
-        ALIMER_ASSERT(numColorAttachments || depthStencil);
-    }
-
-    void GraphicsDevice::EndRenderPass(CommandList commandList)
-    {
+        return CreateContextCore(desc);
     }
 }
 

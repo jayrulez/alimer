@@ -22,46 +22,45 @@
 
 #include "Core/Log.h"
 #include "Graphics/GPUTexture.h"
-#include "Graphics/GraphicsDevice.h"
 
 namespace alimer
 {
-    GPUTexture::GPUTexture(const GPUTextureDescriptor& descriptor)
-        : GPUResource(Type::Texture, descriptor.label)
-        , dimension(descriptor.dimension)
-        , format(descriptor.format)
-        , usage(descriptor.usage)
-        , width(descriptor.width)
-        , height(descriptor.height)
-        , depth(descriptor.depth)
-        , arrayLayers(descriptor.arrayLayers)
-        , mipLevels(descriptor.mipLevels)
-        , sampleCount(descriptor.sampleCount)
+    GPUTexture::GPUTexture(const GPUTextureDescription& desc)
+        : GPUResource(Type::Texture, desc.label)
+        , type(desc.type)
+        , format(desc.format)
+        , usage(desc.usage)
+        , width(desc.width)
+        , height(desc.height)
+        , depth(desc.depth)
+        , arrayLayers(desc.arrayLayers)
+        , mipLevels(desc.mipLevels)
+        , sampleCount(desc.sampleCount)
     {
     }
 
-    uint32_t GPUTexture::GetWidth(uint32_t mipLevel) const
+    uint32 GPUTexture::GetWidth(uint32 mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, width >> mipLevel) : 0;
     }
 
-    uint32_t GPUTexture::GetHeight(uint32_t mipLevel) const
+    uint32 GPUTexture::GetHeight(uint32 mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> mipLevel) : 0;
     }
 
-    uint32_t GPUTexture::GetDepth(uint32_t mipLevel) const
+    uint32 GPUTexture::GetDepth(uint32 mipLevel) const
     {
-        if (dimension == TextureDimension::Texture3D)
+        if (type == TextureType::Type3D)
             return 1u;
 
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }
 
-    uint32_t GPUTexture::CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
+    uint32 GPUTexture::CalculateMipLevels(uint32 width, uint32 height, uint32 depth)
     {
-        uint32_t mipLevels = 0;
-        uint32_t size = Max(Max(width, height), depth);
+        uint32 mipLevels = 0;
+        uint32 size = Max(Max(width, height), depth);
         while (1u << mipLevels <= size) {
             ++mipLevels;
         }

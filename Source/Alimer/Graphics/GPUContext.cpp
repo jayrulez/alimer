@@ -25,9 +25,49 @@
 
 namespace alimer
 {
-    GPUContext::GPUContext()
+    GPUContext::GPUContext(uint32 width, uint32 height, bool isMain_)
+        : extent{width, height}
+        , isMain(isMain_)
+        , verticalSync(isMain)
     {
 
+    }
+
+    bool GPUContext::BeginFrame()
+    {
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
+
+        if (!BeginFrameImpl()) {
+            return false;
+        }
+
+        // Now the frame is active again.
+        frameActive = true;
+        return true;
+    }
+
+    void GPUContext::EndFrame()
+    {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
+
+        EndFrameImpl();
+
+        // Frame is not active anymore.
+        frameActive = false;
+    }
+
+    GPUTexture* GPUContext::GetCurrentTexture() const
+    {
+        // Backend objects are created after the first call of BeginFrame.
+        if (colorTextures.empty())
+            return nullptr;
+
+        return colorTextures[activeFrameIndex].Get();
+    }
+
+    GPUTexture* GPUContext::GetDepthStencilTexture() const
+    {
+        return depthStencilTexture.Get();
     }
 }
 

@@ -27,7 +27,7 @@
 
 namespace alimer
 {
-    class GraphicsDevice;
+    class GPUDevice;
 
     /// Defines a GPU Resource created by device.
     class ALIMER_API GPUResource : public Object
@@ -35,7 +35,7 @@ namespace alimer
         ALIMER_OBJECT(GPUResource, Object);
 
     public:
-        enum class Type : uint32
+        enum class Type
         {
             Unknown,
             Buffer,
@@ -51,24 +51,24 @@ namespace alimer
             Staging
         };
 
-        virtual ~GPUResource();
+        virtual ~GPUResource() = default;
 
         /// Release the GPU resource.
         virtual void Destroy() {}
 
         /// Set the resource name.
-        void SetName(const String& newName) { name = newName; BackendSetName(); }
+        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
 
         /// Get the resource name
-        const String& GetName() const { return name; }
+        const std::string& GetName() const { return name; }
 
     protected:
-        GPUResource(Type type, const String& name = "");
+        GPUResource(Type type_, const char* name_ = nullptr);
 
         virtual void BackendSetName() {}
 
     protected:
-        String name;
+        std::string name;
         Type type;
     };
 }

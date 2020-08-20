@@ -23,19 +23,20 @@
 #pragma once
 
 #include "Graphics/GPUContext.h"
-#include "D3D11Backend.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    class ALIMER_API D3D11GPUContext final : public GPUContext
+    class VulkanGPUSwapChain;
+
+    class VulkanGPUContext final : public GPUContext
     {
     public:
-        /// Constructor.
-        D3D11GPUContext(D3D11GPUDevice * device, ID3D11DeviceContext1 * context, const GPUContextDescription& desc, bool isMain_);
-        /// Destructor
-        ~D3D11GPUContext() override;
+        VulkanGPUContext(VulkanGPUDevice* device_, const GPUContextDescription& desc, VkSurfaceKHR surface_, bool isMain_);
+        ~VulkanGPUContext() override;
 
-        void Flush();
+        bool BeginFrameImpl() override;
+        void EndFrameImpl() override;
 
         void PushDebugGroup(const String& name) override;
         void PopDebugGroup() override;
@@ -54,28 +55,17 @@ namespace alimer
         void BindBuffer(uint32_t slot, GPUBuffer* buffer) override;
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
+        void TextureBarrier(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     private:
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
+
         void CreateObjects();
-        void CreateSwapChainObjects();
+        void TeardownFrame(VulkanRenderFrame& frame);
+        void Purge(VulkanRenderFrame& frame);
 
     private:
-        D3D11GPUDevice* device;
-        ID3D11DeviceContext1* handle = nullptr;
-        ID3DUserDefinedAnnotation* annotation = nullptr;
-
-        /* Swapchain (if not offscreen context) */
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = nullptr;
-        IDXGISwapChain1* swapChain = nullptr;
-#else
-        IUnknown* window = nullptr;
-        IDXGISwapChain3* swapChain = nullptr;
-#endif
-
-        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-
-        ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
+        VulkanGPUDevice* device;
+        VkSurfaceKHR surface{ VK_NULL_HANDLE };
+        VulkanGPUSwapChain* swapChain = nullptr;
+        std::vector<VulkanRenderFrame> frames;
     };
 }

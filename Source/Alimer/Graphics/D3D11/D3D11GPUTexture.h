@@ -33,7 +33,7 @@ namespace alimer
         /// Constructor.
         D3D11GPUTexture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescriptor& descriptor);
+        D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData);
         /// Destructor
         ~D3D11GPUTexture() override;
 

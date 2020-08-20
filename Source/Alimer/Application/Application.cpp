@@ -24,7 +24,7 @@
 #include "Core/Log.h"
 #include "Core/Window.h"
 #include "Core/Input.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GPUDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include <imgui.h>
@@ -58,7 +58,7 @@ namespace alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<GraphicsDevice>();
+        RemoveSubsystem<GPUDevice>();
         PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
@@ -76,14 +76,11 @@ namespace alimer
             mainWindow->SetSize(config.windowSize, WindowFlags::Resizable);
 
             GPUDeviceDescriptor gpuDeviceDesc = {};
-#if ALIMER_PLATFORM_WINDOWS
-            gpuDeviceDesc.swapChain.handle.hinstance = GetModuleHandle(NULL);
-            gpuDeviceDesc.swapChain.handle.hwnd = mainWindow->GetHandle();
-#endif
-            gpuDeviceDesc.swapChain.width = mainWindow->GetWidth();
-            gpuDeviceDesc.swapChain.height = mainWindow->GetHeight();
+            mainWindow->GetHandle(&gpuDeviceDesc.mainContext.handle);
+            gpuDeviceDesc.mainContext.width = mainWindow->GetWidth();
+            gpuDeviceDesc.mainContext.height = mainWindow->GetHeight();
 
-            RegisterSubsystem(GraphicsDevice::Create(config.applicationName, gpuDeviceDesc));
+            RegisterSubsystem(GPUDevice::Create(config.applicationName, gpuDeviceDesc));
 
             // Create main window SwapChain
             /*
@@ -137,7 +134,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame())
+        if (!GetGPUDevice()->GetMainContext()->BeginFrame())
             return false;
 
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
@@ -165,14 +162,17 @@ namespace alimer
             LOGI("Right held");
         }
 
-        /*graphics->PushDebugGroup("Clear");
+        auto context = GetGPUDevice()->GetMainContext();
+
+        context->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
+        colorAttachment.texture = context->GetCurrentTexture();
         colorAttachment.clearColor = Colors::CornflowerBlue;
         //colorAttachment.loadAction = LoadAction::DontCare;
         //colorAttachment.slice = 1;
-        graphics->BeginRenderPass(1, &colorAttachment, nullptr);
-        graphics->EndRenderPass();
-        graphics->PopDebugGroup();*/
+        context->BeginRenderPass(1, &colorAttachment, nullptr);
+        context->EndRenderPass();
+        context->PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -183,8 +183,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
-        GetGraphics()->Present(GetGraphics()->GetMainSwapChain(), true);
-        GetGraphics()->EndFrame();
+        GetGPUDevice()->GetMainContext()->EndFrame();
     }
 
     int Application::Run()

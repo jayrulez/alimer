@@ -24,6 +24,7 @@
 
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/GPUTexture.h"
+#include "Math/Size.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"
 
@@ -32,12 +33,19 @@ namespace alimer
     /// A container that stores commands for the GPU to execute.
     class ALIMER_API GPUContext
     {
-    public:
+    protected:
         /// Constructor.
-        GPUContext();
+        GPUContext(uint32 width, uint32 height, bool isMain_);
+
+    public:
+        /// Destructor.
         virtual ~GPUContext() = default;
 
-        virtual void Flush() = 0;
+        bool BeginFrame();
+        void EndFrame();
+
+        virtual GPUTexture* GetCurrentTexture() const;
+        virtual GPUTexture* GetDepthStencilTexture() const;
 
         virtual void PushDebugGroup(const String& name) = 0;
         virtual void PopDebugGroup() = 0;
@@ -54,5 +62,28 @@ namespace alimer
 
         virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
         virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
+
+    private:
+        virtual bool BeginFrameImpl() = 0;
+        virtual void EndFrameImpl() = 0;
+
+    protected:
+        USize extent;
+        PixelFormat colorFormat = PixelFormat::RGBA8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool verticalSync = false;
+        bool isFullscreen = false;
+
+        std::vector<RefPtr<GPUTexture>> colorTextures;
+        RefPtr<GPUTexture> depthStencilTexture;
+
+        /// Whether this context is the main one.
+        bool isMain;
+
+        /// Current active frame index
+        uint32 activeFrameIndex{ 0 };
+
+        /// Whether a frame is active or not
+        bool frameActive{ false };
     };
 }

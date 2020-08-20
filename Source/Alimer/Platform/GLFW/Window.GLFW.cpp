@@ -279,10 +279,12 @@ namespace alimer
         }
     }
 
-    WindowHandle Window::GetHandle() const
+    bool Window::GetHandle(WindowHandle* handle) const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return glfwGetWin32Window(window);
+        handle->window = glfwGetWin32Window(window);
+        handle->hinstance = GetModuleHandle(NULL);
+        return true;
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
         WindowHandle handle{};
         handle.display = glfwGetX11Display();

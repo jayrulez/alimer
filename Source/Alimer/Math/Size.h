@@ -26,33 +26,42 @@
 
 namespace alimer
 {
-    /// Defines a two-dimensional floating-point size.
-    class ALIMER_API Size
+    template <typename T>
+    struct ALIMER_API TSize
     {
     public:
-        /// Specifies the width of the size.
-        float width;
-        /// Specifies the height of the size.
-        float height;
+        union
+        {
+            T data[2];
+            struct
+            {
+                T width, height;
+            };
+        };
 
-        Size() noexcept : width(0.0f), height(0.0f) {}
-        constexpr Size(float width_, float height_) noexcept : width(width_), height(height_) {}
-        explicit Size(uint32_t width_, uint32_t height_) noexcept : width(float(width_)), height(float(height_)) {}
+        constexpr TSize() = default;
+        constexpr TSize(T value) noexcept : width(value), height(value) {}
+        constexpr TSize(T width_, T height_) noexcept : width(width_), height(height_) {}
 
-        Size(const Size&) = default;
-        Size& operator=(const Size&) = default;
+        TSize(const TSize&) = default;
+        TSize& operator=(const TSize&) = default;
 
-        Size(Size&&) = default;
-        Size& operator=(Size&&) = default;
+        TSize(TSize&&) = default;
+        TSize& operator=(TSize&&) = default;
 
-        // Comparison operators
-        bool operator == (const Size& rhs) const noexcept { return (width == rhs.width) && (height == rhs.height); }
-        bool operator != (const Size& rhs) const noexcept { return (width != rhs.width) || (height != rhs.height); }
+        /// Gets a value that indicates whether the size is empty.
+        ALIMER_FORCE_INLINE bool IsEmpty() const
+        {
+            return (width == 0 && height == 0);
+        }
 
         /// Return as string.
-        String ToString() const;
-
-        // Constants
-        static const Size Empty;
+        ALIMER_FORCE_INLINE std::string ToString() const
+        {
+            return fmt::format("{} {}", width, height);
+        }
     };
+
+    using Size = TSize<float>;
+    using USize = TSize<uint32>;
 }

@@ -63,7 +63,7 @@ namespace alimer
         }
 
         /// Return as string.
-        ALIMER_FORCE_INLINE String ToString() const
+        ALIMER_FORCE_INLINE std::string ToString() const
         {
             return fmt::format("{} {} {} {}", x, y, width, height);
         }

@@ -50,29 +50,6 @@ namespace alimer
             return SUCCEEDED(hr);
         }
 #endif
-
-        UINT D3D11GetBindFlags(BufferUsage usage)
-        {
-            if (any(usage & BufferUsage::Uniform))
-            {
-                // This cannot be combined with nothing else.
-                return D3D11_BIND_CONSTANT_BUFFER;
-            }
-
-            UINT flags = {};
-            if (any(usage & BufferUsage::Index))
-                flags |= D3D11_BIND_INDEX_BUFFER;
-            if (any(usage & BufferUsage::Vertex))
-                flags |= D3D11_BIND_VERTEX_BUFFER;
-
-            if (any(usage & BufferUsage::Storage))
-            {
-                flags |= D3D11_BIND_SHADER_RESOURCE;
-                flags |= D3D11_BIND_UNORDERED_ACCESS;
-            }
-
-            return flags;
-        }
     }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -171,7 +148,7 @@ namespace alimer
     }
 
     D3D11GPUDevice::D3D11GPUDevice(const GPUDeviceDescriptor& descriptor)
-        : GraphicsDevice(GPUBackendType::D3D11)
+        : GPUDevice(GPUBackendType::D3D11)
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -345,8 +322,10 @@ namespace alimer
             ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&d3dDevice)));
 
             // Create main context.
-            mainContext = new D3D11GPUContext(this, context);
+            ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&d3dContext)));
             context->Release();
+
+            mainContext = new D3D11GPUContext(this, d3dContext, descriptor.mainContext, true);
             device->Release();
 
             // Init adapter.
@@ -355,8 +334,6 @@ namespace alimer
             // Init caps
             InitCapabilities();
         }
-
-        mainSwapChain = CreateSwapChainCore(descriptor.swapChain);
     }
 
     D3D11GPUDevice::~D3D11GPUDevice()
@@ -367,7 +344,6 @@ namespace alimer
     void D3D11GPUDevice::Shutdown()
     {
         SafeDelete(mainContext);
-        mainSwapChain.Reset();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -411,11 +387,6 @@ namespace alimer
     GPUContext* D3D11GPUDevice::GetMainContext() const
     {
         return mainContext;
-    }
-
-    GPUSwapChain* D3D11GPUDevice::GetMainSwapChain() const
-    {
-        return mainSwapChain.Get();
     }
 
     void D3D11GPUDevice::CreateFactory()
@@ -522,59 +493,59 @@ namespace alimer
     void D3D11GPUDevice::InitCapabilities()
     {
         // Features
-        caps.features.independentBlend = true;
-        caps.features.computeShader = true;
-        caps.features.geometryShader = true;
-        caps.features.tessellationShader = true;
-        caps.features.logicOp = true;
-        caps.features.multiViewport = true;
-        caps.features.fullDrawIndexUint32 = true;
-        caps.features.multiDrawIndirect = true;
-        caps.features.fillModeNonSolid = true;
-        caps.features.samplerAnisotropy = true;
-        caps.features.textureCompressionETC2 = false;
-        caps.features.textureCompressionASTC_LDR = false;
-        caps.features.textureCompressionBC = true;
-        caps.features.textureCubeArray = true;
-        caps.features.raytracing = false;
+        features.independentBlend = true;
+        features.computeShader = true;
+        features.geometryShader = true;
+        features.tessellationShader = true;
+        features.logicOp = true;
+        features.multiViewport = true;
+        features.fullDrawIndexUint32 = true;
+        features.multiDrawIndirect = true;
+        features.fillModeNonSolid = true;
+        features.samplerAnisotropy = true;
+        features.textureCompressionETC2 = false;
+        features.textureCompressionASTC_LDR = false;
+        features.textureCompressionBC = true;
+        features.textureCubeArray = true;
+        features.raytracing = false;
 
         // Limits
-        caps.limits.maxVertexAttributes = kMaxVertexAttributes;
-        caps.limits.maxVertexBindings = kMaxVertexAttributes;
-        caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
-        caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
+        limits.maxVertexAttributes = kMaxVertexAttributes;
+        limits.maxVertexBindings = kMaxVertexAttributes;
+        limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        limits.maxVertexBindingStride = kMaxVertexBufferStride;
 
         //caps.limits.maxTextureDimension1D = D3D11_REQ_TEXTURE1D_U_DIMENSION;
-        caps.limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        caps.limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        caps.limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
-        caps.limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        caps.limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
-        caps.limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
-        caps.limits.minUniformBufferOffsetAlignment = 256u;
-        caps.limits.maxStorageBufferSize = UINT32_MAX;
-        caps.limits.minStorageBufferOffsetAlignment = 16;
-        caps.limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
-        caps.limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        if (caps.limits.maxViewports > kMaxViewportAndScissorRects) {
-            caps.limits.maxViewports = kMaxViewportAndScissorRects;
+        limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
+        limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        limits.minUniformBufferOffsetAlignment = 256u;
+        limits.maxStorageBufferSize = UINT32_MAX;
+        limits.minStorageBufferOffsetAlignment = 16;
+        limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
+        limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        if (limits.maxViewports > kMaxViewportAndScissorRects) {
+            limits.maxViewports = kMaxViewportAndScissorRects;
         }
 
-        caps.limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
-        caps.limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
-        caps.limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
-        caps.limits.pointSizeRangeMin = 1.0f;
-        caps.limits.pointSizeRangeMax = 1.0f;
-        caps.limits.lineWidthRangeMin = 1.0f;
-        caps.limits.lineWidthRangeMax = 1.0f;
-        caps.limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
-        caps.limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
-        caps.limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
-        caps.limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
-        caps.limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
+        limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
+        limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
+        limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        limits.pointSizeRangeMin = 1.0f;
+        limits.pointSizeRangeMax = 1.0f;
+        limits.lineWidthRangeMin = 1.0f;
+        limits.lineWidthRangeMax = 1.0f;
+        limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
+        limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
+        limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
 
         /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
         UINT dxgi_fmt_caps = 0;
@@ -594,19 +565,8 @@ namespace alimer
         }
     }
 
-    bool D3D11GPUDevice::BeginFrameImpl()
+    void D3D11GPUDevice::Frame()
     {
-        return !isLost;
-    }
-
-    void D3D11GPUDevice::EndFrameImpl()
-    {
-        if (isLost) {
-            return;
-        }
-
-        // TODO: Measure timestamp using query
-
         if (!dxgiFactory->IsCurrent())
         {
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
@@ -614,149 +574,21 @@ namespace alimer
         }
     }
 
-    void D3D11GPUDevice::Present(GPUSwapChain* swapChain, bool verticalSync)
+    void D3D11GPUDevice::HandleDeviceLost(HRESULT hr)
     {
-        HRESULT hr = S_OK;
-        if (verticalSync)
-        {
-            hr = static_cast<D3D11GPUSwapChain*>(swapChain)->Present(1, 0);
-        }
-        else
-        {
 
-            hr = static_cast<D3D11GPUSwapChain*>(swapChain)->Present(0, isTearingSupported ? DXGI_PRESENT_ALLOW_TEARING : 0);
-        }
-
-        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-        {
 #ifdef _DEBUG
-            char buff[64] = {};
-            sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
-            OutputDebugStringA(buff);
+        char buff[64] = {};
+        sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+        OutputDebugStringA(buff);
 #endif
 
-            // TODO: Handle device lost.
-            HandleDeviceLost();
-            isLost = true;
-            return;
-        }
-    }
-
-    void D3D11GPUDevice::HandleDeviceLost()
-    {
+        isLost = true;
     }
 
     /* Resource creation methods */
-    GPUSwapChain* D3D11GPUDevice::CreateSwapChainCore(const GPUSwapChainDescriptor& descriptor)
+    GPUContext* D3D11GPUDevice::CreateContextCore(const GPUContextDescription& desc)
     {
-        return new D3D11GPUSwapChain(this, descriptor);
-    }
-
-    BufferHandle D3D11GPUDevice::AllocBufferHandle()
-    {
-        std::lock_guard<std::mutex> LockGuard(handle_mutex);
-
-        if (buffers.isFull()) {
-            LOGE("Not enough free buffer slots.");
-            return kInvalidBuffer;
-        }
-        const int id = buffers.Alloc();
-        ALIMER_ASSERT(id >= 0);
-
-        D3D11Buffer& buffer = buffers[id];
-        buffer.handle = nullptr;
-        return { (uint32_t)id };
-    }
-
-    BufferHandle D3D11GPUDevice::CreateBuffer(BufferUsage usage, uint32_t size, uint32_t stride, const void* data)
-    {
-        static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
-        static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
-
-        if (size > c_maxBytes)
-        {
-            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", size);
-            return kInvalidBuffer;
-        }
-
-        uint32_t bufferSize = size;
-        if ((usage & BufferUsage::Uniform) != BufferUsage::None)
-        {
-            bufferSize = AlignTo(size, caps.limits.minUniformBufferOffsetAlignment);
-        }
-
-        const bool needUav = any(usage & BufferUsage::Storage) || any(usage & BufferUsage::Indirect);
-
-        D3D11_BUFFER_DESC d3dDesc = {};
-        d3dDesc.ByteWidth = bufferSize;
-        d3dDesc.BindFlags = D3D11GetBindFlags(usage);
-        d3dDesc.Usage = D3D11_USAGE_DEFAULT;
-        d3dDesc.CPUAccessFlags = 0;
-
-        if (any(usage & BufferUsage::Dynamic))
-        {
-            d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
-            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-        }
-        else if (any(usage & BufferUsage::Staging)) {
-            d3dDesc.Usage = D3D11_USAGE_STAGING;
-            d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
-        }
-
-        if (needUav)
-        {
-            const bool rawBuffer = false;
-            if (rawBuffer)
-            {
-                d3dDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-            }
-            else
-            {
-                d3dDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-            }
-        }
-
-        if (any(usage & BufferUsage::Indirect))
-        {
-            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
-        }
-
-        d3dDesc.StructureByteStride = stride;
-
-        D3D11_SUBRESOURCE_DATA initialData;
-        initialData.pSysMem = data;
-        initialData.SysMemPitch = 0;
-        initialData.SysMemSlicePitch = 0;
-
-        ID3D11Buffer* d3dBuffer;
-        HRESULT hr = d3dDevice->CreateBuffer(&d3dDesc, data ? &initialData : nullptr, &d3dBuffer);
-        if (FAILED(hr)) {
-            LOGE("Direct3D11: Failed to create buffer");
-            return kInvalidBuffer;
-        }
-
-        BufferHandle handle = AllocBufferHandle();
-        buffers[handle.id].handle = d3dBuffer;
-        return handle;
-    }
-
-    void D3D11GPUDevice::Destroy(BufferHandle handle)
-    {
-        if (!handle.isValid())
-            return;
-
-        D3D11Buffer& buffer = buffers[handle.id];
-        SafeRelease(buffer.handle);
-
-        std::lock_guard<std::mutex> LockGuard(handle_mutex);
-        buffers.Dealloc(handle.id);
-    }
-
-    void D3D11GPUDevice::SetName(BufferHandle handle, const char* name)
-    {
-        if (!handle.isValid())
-            return;
-
-        D3D11SetObjectName(buffers[handle.id].handle, name);
+        return new D3D11GPUContext(this, d3dContext, desc, false);
     }
 }

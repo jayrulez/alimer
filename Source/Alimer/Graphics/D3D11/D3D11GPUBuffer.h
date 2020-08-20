@@ -22,27 +22,25 @@
 
 #pragma once
 
-#include "Graphics/GPUTexture.h"
+#include "Graphics/GPUBuffer.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    /*class ALIMER_API D3D11GPUSwapChain final 
+    class ALIMER_API D3D11GPUBuffer final : public GPUBuffer
     {
     public:
         /// Constructor.
-        D3D11GPUSwapChain(D3D11GPUDevice* device, const GPUSwapChainDescription& descriptor);
+        D3D11GPUBuffer(D3D11GPUDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData);
         /// Destructor
-        ~D3D11GPUSwapChain() override;
+        ~D3D11GPUBuffer() override;
+
         void Destroy() override;
 
-        GPUTexture* GetColorTexture() const override;
-        void Present() override;
-
     private:
-        void AfterReset();
+        void BackendSetName() override;
 
         D3D11GPUDevice* device;
-
-    };*/
+        ID3D11Buffer* handle = nullptr;
+    };
 }

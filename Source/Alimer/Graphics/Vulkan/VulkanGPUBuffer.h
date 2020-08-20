@@ -20,20 +20,26 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GPUSwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#pragma once
+
+#include "Graphics/GPUBuffer.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    GPUSwapChain::GPUSwapChain(const GPUSwapChainDescriptor& descriptor)
-        : GPUResource(Type::SwapChain)
-        , width(descriptor.width)
-        , height(descriptor.height)
-        , colorFormat(descriptor.colorFormat)
-        , isFullscreen(descriptor.isFullscreen)
+    class VulkanGPUBuffer final : public GPUBuffer
     {
+    public:
+        VulkanGPUBuffer(VulkanGPUDevice* device_, const GPUBufferDescriptor& descriptor);
+        ~VulkanGPUBuffer() override;
+        void Destroy() override;
 
-    }
+    private:
+        void BackendSetName() override;
+
+        VulkanGPUDevice* device;
+
+        VkBuffer handle{ VK_NULL_HANDLE };
+        VmaAllocation allocation{ VK_NULL_HANDLE };
+    };
 }
-

@@ -28,12 +28,12 @@ namespace alimer
 {
     namespace
     {
-        GPUTextureDescriptor Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
+        GPUTextureDescription Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
         {
             D3D11_TEXTURE2D_DESC d3dDesc;
             texture->GetDesc(&d3dDesc);
 
-            return GPUTextureDescriptor::New2D(d3dDesc.Width, d3dDesc.Height, format, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
+            return GPUTextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
         }
     }
 
@@ -45,34 +45,101 @@ namespace alimer
         handle->AddRef();
     }
 
-    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescriptor& descriptor)
-        : GPUTexture(descriptor)
+    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData)
+        : GPUTexture(desc)
         , device{ device }
     {
-        D3D11_TEXTURE2D_DESC d3dDesc;
-        d3dDesc.Width = width;
-        d3dDesc.Height = height;
-        d3dDesc.MipLevels = 1u;
-        d3dDesc.ArraySize = 1u;
-        d3dDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        d3dDesc.SampleDesc.Count = 1;
-        d3dDesc.SampleDesc.Quality = 0;
-        d3dDesc.Usage = D3D11_USAGE_DEFAULT;
-        d3dDesc.BindFlags = 0;
-        d3dDesc.CPUAccessFlags = 0;
-        d3dDesc.MiscFlags = 0;
-
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
-        D3D11_SUBRESOURCE_DATA initialData = {};
-        /*if (data != nullptr) {
-            initialData.pSysMem = data;
-            initialDataPtr = &initialData;
-        }*/
+        D3D11_SUBRESOURCE_DATA initialResourceData = {};
+        if (initialData != nullptr)
+        {
+            initialResourceData.pSysMem = initialData;
+            initialDataPtr = &initialResourceData;
+        }
 
-        HRESULT hr = device->GetD3DDevice()->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
-        if (FAILED(hr)) {
-            LOGE("Direct3D11: Failed to create 2D texture");
-            return;
+        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
+        D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
+        UINT bindFlags = 0;
+        UINT CPUAccessFlags = 0;
+        UINT miscFlags = 0;
+        UINT arraySizeMultiplier = 1;
+        if (desc.type == TextureType::TypeCube) {
+            arraySizeMultiplier = 6;
+            miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
+        }
+
+        if (any(desc.usage & TextureUsage::Sampled)) {
+            bindFlags |= D3D11_BIND_SHADER_RESOURCE;
+        }
+
+        if (any(desc.usage & TextureUsage::Storage)) {
+            bindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+        }
+
+        if (any(desc.usage & TextureUsage::RenderTarget)) {
+            if (IsDepthStencilFormat(desc.format)) {
+                bindFlags |= D3D11_BIND_DEPTH_STENCIL;
+            }
+            else {
+                bindFlags |= D3D11_BIND_RENDER_TARGET;
+            }
+        }
+
+        if (any(desc.usage & TextureUsage::GenerateMipmaps))
+        {
+            bindFlags |= D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+            miscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+        }
+
+        switch (desc.type)
+        {
+        case TextureType::Type2D:
+        case TextureType::TypeCube:
+        {
+            D3D11_TEXTURE2D_DESC d3dDesc = {};
+            d3dDesc.Width = desc.width;
+            d3dDesc.Height = desc.height;
+            d3dDesc.MipLevels = desc.mipLevels;
+            d3dDesc.ArraySize = desc.arrayLayers;
+            d3dDesc.Format = dxgiFormat;
+            d3dDesc.SampleDesc.Count = desc.sampleCount;
+            d3dDesc.SampleDesc.Quality = 0;
+            d3dDesc.Usage = usage;
+            d3dDesc.BindFlags = bindFlags;
+            d3dDesc.CPUAccessFlags = CPUAccessFlags;
+            d3dDesc.MiscFlags = miscFlags;
+
+            HRESULT hr = device->GetD3DDevice()->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
+            if (FAILED(hr)) {
+                LOGE("Direct3D11: Failed to create 2D texture");
+                return;
+            }
+        }
+        break;
+
+        case TextureType::Type3D:
+        {
+            D3D11_TEXTURE3D_DESC d3dDesc = {};
+            d3dDesc.Width = desc.width;
+            d3dDesc.Height = desc.height;
+            d3dDesc.Depth = desc.depth;
+            d3dDesc.MipLevels = desc.mipLevels;
+            d3dDesc.Format = dxgiFormat;
+            d3dDesc.Usage = usage;
+            d3dDesc.BindFlags = bindFlags;
+            d3dDesc.CPUAccessFlags = CPUAccessFlags;
+            d3dDesc.MiscFlags = miscFlags;
+
+            HRESULT hr = device->GetD3DDevice()->CreateTexture3D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture3D**>(&handle));
+            if (FAILED(hr)) {
+                LOGE("Direct3D11: Failed to create 2D texture");
+                return;
+            }
+        }
+        break;
+        default:
+            ALIMER_FORCE_CRASH();
+            break;
         }
     }
 

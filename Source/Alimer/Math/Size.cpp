@@ -24,10 +24,4 @@
 
 namespace alimer
 {
-    const Size Size::Empty = { 0.0f, 0.0f };
-
-    String Size::ToString() const
-    {
-        return fmt::format("{} {}", width, height);
-    }
 }

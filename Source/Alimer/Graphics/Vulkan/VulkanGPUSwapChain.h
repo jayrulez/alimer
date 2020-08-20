@@ -23,26 +23,32 @@
 #pragma once
 
 #include "Graphics/GPUTexture.h"
-#include "D3D11Backend.h"
+#include "VulkanBackend.h"
 
 namespace alimer
 {
-    /*class ALIMER_API D3D11GPUSwapChain final 
+    class VulkanGPUSwapChain final 
     {
     public:
-        /// Constructor.
-        D3D11GPUSwapChain(D3D11GPUDevice* device, const GPUSwapChainDescription& descriptor);
-        /// Destructor
-        ~D3D11GPUSwapChain() override;
-        void Destroy() override;
+        VulkanGPUSwapChain(VulkanGPUDevice* device_, VkSurfaceKHR surface_, bool verticalSync_);
+        ~VulkanGPUSwapChain();
 
-        GPUTexture* GetColorTexture() const override;
-        void Present() override;
+        VkResult AcquireNextImage(VkSemaphore acquireSemaphore, uint32* imageIndex);
+        VkResult Present(VkSemaphore semaphore, uint32 imageIndex);
+
+        uint32 GetImageCount() const { return imageCount; }
+        VkImage GetImage(uint32 index) const { return images[index]; }
 
     private:
-        void AfterReset();
+        bool UpdateSwapchain();
 
-        D3D11GPUDevice* device;
+        VulkanGPUDevice* device;
 
-    };*/
+        VkQueue presentQueue;
+        VkSurfaceKHR surface{ VK_NULL_HANDLE };
+        VkSwapchainKHR handle{ VK_NULL_HANDLE };
+        bool verticalSync;
+        uint32 imageCount = 0;
+        std::vector<VkImage> images;
+    };
 }
