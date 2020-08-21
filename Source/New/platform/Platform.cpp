@@ -20,18 +20,16 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
+#pragma once
+
+#include "Platform.h"
 
 namespace Alimer
 {
-    class TestApp : public Application
-    {
-    public:
-    };
+    std::vector<std::string> PlatformBase::arguments = {};
 
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
+    void PlatformBase::SetArguments(const std::vector<std::string>& args)
     {
-        return std::make_unique<TestApp>();
+        arguments = args;
     }
 }
-

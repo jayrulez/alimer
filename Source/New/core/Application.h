@@ -20,18 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
+#pragma once
+
+#include <stdint.h>
+#include <string>
+#include <vector>
+#include <memory>
 
 namespace Alimer
 {
-    class TestApp : public Application
+    class Application
     {
     public:
+        virtual ~Application() = default;
     };
 
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
-    {
-        return std::make_unique<TestApp>();
-    }
+    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args);
 }
-

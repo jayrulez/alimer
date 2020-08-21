@@ -36,13 +36,14 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 set(SOURCE_FILES Alimer.natvis)
 
 define_engine_source_files(
-    Core
-    Math
-    Graphics
-    Scene
-    UI
-    OS
-    Application
+  Platform
+  Core
+  Math
+  Graphics
+  Scene
+  UI
+  OS
+  Application
 )
 
 if(NOT (EMSCRIPTEN OR ANDROID))

@@ -20,18 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
+#pragma once
 
 namespace Alimer
 {
-    class TestApp : public Application
-    {
-    public:
-    };
-
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
-    {
-        return std::make_unique<TestApp>();
-    }
+#if ALIMER_PLATFORM_WINDOWS
+    class WindowsPlatform;
+    using Platform = WindowsPlatform;
+#endif
 }
-

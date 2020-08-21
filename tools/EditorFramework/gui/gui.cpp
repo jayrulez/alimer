@@ -20,11 +20,6 @@
 // THE SOFTWARE.
 //
 
-#include "config.h"
-#include "gui.h"
-#include "Math/Color.h"
-#include "Core/Log.h"
-
 namespace alimer
 {
 }

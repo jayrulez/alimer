@@ -22,29 +22,64 @@
 
 #pragma once
 
-#if TODO
-#include "Application/Application.h"
+#include "core/Config.h"
+#include "platform/Types.h"
+#include <string>
+#include <vector>
 
 namespace Alimer
 {
-    class Gui;
-
-    class Editor final : public Application
+    /// Identifiers the running platform type.
+    enum class PlatformId 
     {
-        ALIMER_OBJECT(Editor, Application);
+        /// Unknown platform.
+        Unknown,
+        /// Windows platform.
+        Windows,
+        /// Linux platform.
+        Linux,
+        /// macOS platform.
+        macOS,
+        /// Android platform.
+        Android,
+        /// iOS platform.
+        iOS,
+        /// tvOS platform.
+        tvOS,
+        /// Universal Windows platform.
+        UWP,
+        /// Xbox One platform.
+        XboxOne,
+        /// Web platform.
+        Web
+    };
 
+    /// Identifiers the running platform family.
+    enum class PlatformFamily
+    {
+        /// Unknown family.
+        Unknown,
+        /// Mobile family.
+        Mobile,
+        /// Desktop family.
+        Desktop,
+        /// Console family.
+        Console
+    };
+
+    class ALIMER_API PlatformBase
+    {
     public:
-        /// Constructor.
-        Editor();
+        std::vector<std::string>& GetArguments();
 
-        /// Destructor.
-        ~Editor();
+        static void SetArguments(const std::vector<std::string>& args);
 
     private:
-        void Initialize() override;
-        bool BeginDraw() override;
-        void Draw(const GameTime& gameTime) override;
+        static std::vector<std::string> arguments;
     };
 }
 
-#endif // TODO
+
+#if ALIMER_PLATFORM_WINDOWS
+#   include "Windows/WindowsPlatform.h"
+#endif

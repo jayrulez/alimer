@@ -20,18 +20,16 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
+#pragma once
 
-namespace Alimer
-{
-    class TestApp : public Application
-    {
-    public:
-    };
+#include "core/Preprocessor.h"
 
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
-    {
-        return std::make_unique<TestApp>();
-    }
-}
-
+#if defined(ALIMER_SHARED_LIBRARY)
+#   if defined(ALIMER_COMPILE)
+#       define ALIMER_API ALIMER_DLL_EXPORT
+#   else
+#       define ALIMER_API ALIMER_DLL_IMPORT
+#   endif
+#else
+#   define ALIMER_API
+#endif  // defined(ALIMER_SHARED_LIBRARY)

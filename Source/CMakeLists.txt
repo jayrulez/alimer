@@ -2,4 +2,4 @@
 add_subdirectory(ThirdParty)
 
 # Engine
-add_subdirectory(Alimer)
+add_subdirectory(New)

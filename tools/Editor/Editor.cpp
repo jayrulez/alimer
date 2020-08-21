@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Editor.h"
 #include "OS/Window.h"
 #include "Math/Color.h"
@@ -95,10 +96,12 @@ namespace Alimer
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
             ImGui::End();
-        }
+    }
 #endif // TODO
 
-    }
+}
 }
 
 ALIMER_DEFINE_APPLICATION(Alimer::Editor);
+#endif // TODO
+

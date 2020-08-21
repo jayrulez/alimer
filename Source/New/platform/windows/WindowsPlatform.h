@@ -20,18 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
+#pragma once
+
+#include "Platform/Platform.h"
+
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 namespace Alimer
 {
-    class TestApp : public Application
+    class ALIMER_API WindowsPlatform final : public PlatformBase
     {
     public:
+        static HINSTANCE hInstance;
+
+        /// Return the current platform name.
+        static const char* GetName();
+
+        /// Return the current platform ID.
+        static PlatformId GetId();
+
+        /// Return the current platform family.
+        static PlatformFamily GetFamily();
     };
-
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
-    {
-        return std::make_unique<TestApp>();
-    }
 }
-
