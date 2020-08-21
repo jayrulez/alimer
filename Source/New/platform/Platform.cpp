@@ -22,11 +22,16 @@
 
 #pragma once
 
-#include "Platform.h"
+#include "platform/Platform.h"
 
 namespace Alimer
 {
     std::vector<std::string> PlatformBase::arguments = {};
+
+    std::vector<std::string> PlatformBase::GetArguments()
+    {
+        return Platform::arguments;
+    }
 
     void PlatformBase::SetArguments(const std::vector<std::string>& args)
     {

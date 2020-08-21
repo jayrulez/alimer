@@ -22,24 +22,27 @@
 
 #pragma once
 
-#include "Platform/Platform.h"
+#include "platform/Platform.h"
 
-#define NOMINMAX
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+struct HINSTANCE__;
+struct HWND__;
 
 namespace Alimer
 {
+    using HANDLE = void*;
+    using HINSTANCE = HINSTANCE__*;
+    using HWND = HWND__*;
+
     class ALIMER_API WindowsPlatform final : public PlatformBase
     {
-    public:
+    private:
         static HINSTANCE hInstance;
+
+    public:
+        static const wchar_t AppWindowClass[];
+
+        static bool Init(HINSTANCE hInstance);
+        static void Shutdown();
 
         /// Return the current platform name.
         static const char* GetName();
@@ -49,5 +52,10 @@ namespace Alimer
 
         /// Return the current platform family.
         static PlatformFamily GetFamily();
+
+        static HINSTANCE GetHInstance();
     };
+
+    std::string ToUtf8(const std::wstring& wstr);
+    std::wstring ToUtf16(const std::string& str);
 }

@@ -22,13 +22,17 @@
 
 #pragma once
 
+#include "platform/Platform.h"
+#include "platform/Window.h"
+
 namespace Alimer
 {
-#if ALIMER_PLATFORM_WINDOWS
-    class WindowsPlatform;
-    class WindowsWindow;
+    class ALIMER_API WindowsWindow final : public WindowBase
+    {
+    public:
+        WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
-    using Platform = WindowsPlatform;
-    using Window = WindowsWindow;
-#endif
+    private:
+        HWND handle;
+    };
 }

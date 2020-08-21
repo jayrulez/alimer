@@ -21,6 +21,7 @@
 //
 
 #include "core/Application.h"
+#include "platform/Window.h"
 
 namespace Alimer
 {
@@ -31,6 +32,8 @@ namespace Alimer
 
     std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args)
     {
+        Window* window = new Window("Alimer", 0, 0, 640, 480);
+
         return std::make_unique<TestApp>();
     }
 }

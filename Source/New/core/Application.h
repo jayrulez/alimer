@@ -33,6 +33,8 @@ namespace Alimer
     {
     public:
         virtual ~Application() = default;
+
+        void Tick();
     };
 
     std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args);

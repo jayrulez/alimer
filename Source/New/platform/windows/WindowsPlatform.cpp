@@ -24,6 +24,7 @@
 
 #include "core/Application.h"
 #include "WindowsPlatform.h"
+#include "WindowsPrivate.h"
 #include <shellapi.h>
 #include <objbase.h>
 #include <stdio.h>
@@ -39,7 +40,49 @@ namespace Alimer
 {
     std::unique_ptr<Application> g_Application;
 
+    const wchar_t WindowsPlatform::AppWindowClass[] = TEXT("AlimerWindow");
     HINSTANCE WindowsPlatform::hInstance;
+
+    bool WindowsPlatform::Init(HINSTANCE hInstance_)
+    {
+        HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+        if (FAILED(hr))
+            return false;
+
+#ifdef _DEBUG
+        if (AllocConsole()) {
+            FILE* fp;
+            freopen_s(&fp, "conin$", "r", stdin);
+            freopen_s(&fp, "conout$", "w", stdout);
+            freopen_s(&fp, "conout$", "w", stderr);
+        }
+#endif
+
+        // Parse arguments
+        LPWSTR* argv;
+        int     argc;
+
+        argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+        // Ignore the first argument containing the application full path
+        std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
+        std::vector<std::string>  args;
+
+        for (auto& arg : arg_strings)
+        {
+            args.push_back(ToUtf8(arg));
+        }
+
+        Platform::SetArguments(args);
+
+        hInstance = hInstance_;
+        return true;
+    }
+
+    void WindowsPlatform::Shutdown()
+    {
+        CoUninitialize();
+    }
 
     const char* WindowsPlatform::GetName()
     {
@@ -55,11 +98,14 @@ namespace Alimer
     {
         return PlatformFamily::Desktop;
     }
-}
 
-namespace
-{
-    std::string wstr_to_str(const std::wstring& wstr)
+    HINSTANCE WindowsPlatform::GetHInstance()
+    {
+        return hInstance;
+    }
+
+
+    std::string ToUtf8(const std::wstring& wstr)
     {
         if (wstr.empty())
         {
@@ -74,8 +120,24 @@ namespace
 
         return str;
     }
+
+    std::wstring ToUtf16(const std::string& str)
+    {
+        if (str.empty())
+        {
+            return {};
+        }
+
+        auto str_len = static_cast<int>(str.size());
+        auto wstr_len = MultiByteToWideChar(CP_UTF8, 0, &str[0], str_len, NULL, 0);
+
+        std::wstring wstr(wstr_len, 0);
+        MultiByteToWideChar(CP_UTF8, 0, &str[0], str_len, &wstr[0], wstr_len);
+        return wstr;
+    }
 }
 
+using namespace Alimer;
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
@@ -83,37 +145,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
-    if (FAILED(hr))
+    if (!Platform::Init(hInstance))
         return 1;
-
-#ifdef _DEBUG
-    if (AllocConsole()) {
-        FILE* fp;
-        freopen_s(&fp, "conin$", "r", stdin);
-        freopen_s(&fp, "conout$", "w", stdout);
-        freopen_s(&fp, "conout$", "w", stderr);
-    }
-#endif
-
-    // Parse arguments
-    LPWSTR* argv;
-    int     argc;
-
-    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-
-    // Ignore the first argument containing the application full path
-    std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
-    std::vector<std::string>  args;
-
-    for (auto& arg : arg_strings)
-    {
-        args.push_back(wstr_to_str(arg));
-    }
-
-    using namespace Alimer;
-    Platform::hInstance = hInstance;
-    g_Application = CreateApplication(args);
 
     // Register class and create window
     {
@@ -126,13 +159,31 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
         wcex.hIcon = LoadIconW(hInstance, L"IDI_ICON");
         wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
         wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-        wcex.lpszClassName = L"$safeprojectname$WindowClass";
+        wcex.lpszClassName = Platform::AppWindowClass;
         wcex.hIconSm = LoadIconW(wcex.hInstance, L"IDI_ICON");
         if (!RegisterClassExW(&wcex))
             return 1;
 
-        CoUninitialize();
+        g_Application = CreateApplication(Platform::GetArguments());
 
+        // Main message loop
+        MSG msg = {};
+        while (WM_QUIT != msg.message)
+        {
+            if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+            else
+            {
+                g_Application->Tick();
+            }
+        }
+
+        g_Application.reset();
+
+        Platform::Shutdown();
         return 0;
     }
 }
@@ -146,5 +197,5 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
 
-    return DefWindowProc(hWnd, message, wParam, lParam);
+    return DefWindowProcW(hWnd, message, wParam, lParam);
 }

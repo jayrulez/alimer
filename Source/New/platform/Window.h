@@ -22,13 +22,21 @@
 
 #pragma once
 
+#include "core/Config.h"
+
 namespace Alimer
 {
-#if ALIMER_PLATFORM_WINDOWS
-    class WindowsPlatform;
-    class WindowsWindow;
+    class ALIMER_API WindowBase
+    {
+    public:
+        virtual ~WindowBase() = default;
 
-    using Platform = WindowsPlatform;
-    using Window = WindowsWindow;
-#endif
+    private:
+    };
 }
+
+#if ALIMER_PLATFORM_WINDOWS
+#   include "Windows/WindowsWindow.h"
+#endif
+
+#include "platform/Types.h"

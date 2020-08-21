@@ -22,13 +22,11 @@
 
 #pragma once
 
+#include "core/Application.h"
+
 namespace Alimer
 {
-#if ALIMER_PLATFORM_WINDOWS
-    class WindowsPlatform;
-    class WindowsWindow;
-
-    using Platform = WindowsPlatform;
-    using Window = WindowsWindow;
-#endif
+    void Application::Tick()
+    {
+    }
 }

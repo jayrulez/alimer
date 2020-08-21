@@ -22,13 +22,12 @@
 
 #pragma once
 
-namespace Alimer
-{
-#if ALIMER_PLATFORM_WINDOWS
-    class WindowsPlatform;
-    class WindowsWindow;
-
-    using Platform = WindowsPlatform;
-    using Window = WindowsWindow;
-#endif
-}
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>

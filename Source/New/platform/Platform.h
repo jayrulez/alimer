@@ -23,7 +23,6 @@
 #pragma once
 
 #include "core/Config.h"
-#include "platform/Types.h"
 #include <string>
 #include <vector>
 
@@ -70,7 +69,7 @@ namespace Alimer
     class ALIMER_API PlatformBase
     {
     public:
-        std::vector<std::string>& GetArguments();
+        static std::vector<std::string> GetArguments();
 
         static void SetArguments(const std::vector<std::string>& args);
 
@@ -79,7 +78,8 @@ namespace Alimer
     };
 }
 
-
 #if ALIMER_PLATFORM_WINDOWS
 #   include "Windows/WindowsPlatform.h"
 #endif
+
+#include "platform/Types.h"
