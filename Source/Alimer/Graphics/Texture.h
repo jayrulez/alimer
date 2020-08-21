@@ -27,13 +27,13 @@
 
 namespace alimer
 {
-    class ALIMER_API GPUTexture : public GPUResource
+    class ALIMER_API Texture : public GPUResource
     {
-        ALIMER_OBJECT(GPUTexture, GPUResource);
+        ALIMER_OBJECT(Texture, GPUResource);
 
     public:
         /// Constructor.
-        GPUTexture(const GPUTextureDescription& desc);
+        Texture(const GPUTextureDescription& desc);
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }

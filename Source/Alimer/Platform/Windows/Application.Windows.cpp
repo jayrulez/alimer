@@ -21,6 +21,7 @@
 //
 
 #include "Core/Log.h"
+#include "Graphics/GPUDevice.h"
 #include "Application/Application.h"
 
 #define GLFW_INCLUDE_NONE
@@ -91,7 +92,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (GetMainWindow()->ShouldClose())
+                if (GetGPUDevice()->GetMainWindow()->ShouldClose())
                 {
                     running = false;
                     break;

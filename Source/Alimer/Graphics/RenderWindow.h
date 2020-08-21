@@ -22,27 +22,40 @@
 
 #pragma once
 
-#include "Graphics/GPUTexture.h"
-#include "D3D11Backend.h"
+#include "Core/Window.h"
+#include "Math/Size.h"
+#include "Graphics/PixelFormat.h"
 
 namespace alimer
 {
-    /*class ALIMER_API D3D11GPUSwapChain final 
+    struct RenderWindowDescription
     {
+        std::string title = "Alimer";
+        SizeI size = { 1280, 720 };
+        WindowFlags windowFlags = WindowFlags::None;
+
+        /// Whether to try use sRGB backbuffer color format.
+        bool colorFormatSrgb = false;
+
+        /// The depth format.
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+
+        /// Should the window wait for vertical sync before swapping buffers.
+        bool verticalSync = false;
+        bool fullscreen = false;
+
+        uint32 sampleCount = 1u;
+    };
+
+    class ALIMER_API RenderWindow : public Window
+    {
+        ALIMER_OBJECT(RenderWindow, Window);
+
     public:
-        /// Constructor.
-        D3D11GPUSwapChain(D3D11GPUDevice* device, const GPUSwapChainDescription& descriptor);
-        /// Destructor
-        ~D3D11GPUSwapChain() override;
-        void Destroy() override;
-
-        GPUTexture* GetColorTexture() const override;
-        void Present() override;
-
-    private:
-        void AfterReset();
-
-        D3D11GPUDevice* device;
-
-    };*/
+        RenderWindow(const RenderWindowDescription& desc);
+        
+    protected:
+        PixelFormat colorFormat;
+        PixelFormat depthStencilFormat;
+    };
 }

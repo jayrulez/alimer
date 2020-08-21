@@ -168,10 +168,10 @@ namespace alimer
         }
     };
 
-    class GPUTexture;
+    class Texture;
     struct RenderPassColorAttachment
     {
-        GPUTexture* texture = nullptr;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -183,7 +183,7 @@ namespace alimer
     };
 
     struct RenderPassDepthStencilAttachment {
-        GPUTexture* texture = nullptr;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         union {
             TextureCubemapFace face = TextureCubemapFace::PositiveX;
@@ -262,15 +262,8 @@ namespace alimer
 
     struct GPUContextDescription
     {
-        WindowHandle handle;
         uint32_t width;
         uint32_t height;
-    };
-
-    struct GPUDeviceDescriptor
-    {
-        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        GPUContextDescription mainContext;
     };
 
     ALIMER_API const char* ToString(GPUBackendType value);

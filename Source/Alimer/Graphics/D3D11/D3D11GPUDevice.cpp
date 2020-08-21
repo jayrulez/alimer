@@ -21,7 +21,7 @@
 //
 
 #include "D3D11GPUAdapter.h"
-#include "D3D11GPUSwapChain.h"
+#include "D3D11RenderWindow.h"
 #include "D3D11GPUContext.h"
 #include "D3D11GPUDevice.h"
 #include "Core/String.h"
@@ -147,7 +147,7 @@ namespace alimer
         return false;
     }
 
-    D3D11GPUDevice::D3D11GPUDevice(const GPUDeviceDescriptor& descriptor)
+    D3D11GPUDevice::D3D11GPUDevice(const GraphicsDeviceDescription& desc)
         : GPUDevice(GPUBackendType::D3D11)
     {
         ALIMER_VERIFY(IsAvailable());
@@ -325,7 +325,7 @@ namespace alimer
             ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&d3dContext)));
             context->Release();
 
-            mainContext = new D3D11GPUContext(this, d3dContext, descriptor.mainContext, true);
+            mainContext = new D3D11GPUContext(this, d3dContext, true);
             device->Release();
 
             // Init adapter.
@@ -334,6 +334,9 @@ namespace alimer
             // Init caps
             InitCapabilities();
         }
+
+        // Create main render window.
+        renderWindow = new D3D11RenderWindow(this, desc.mainWindow);
     }
 
     D3D11GPUDevice::~D3D11GPUDevice()
@@ -343,6 +346,7 @@ namespace alimer
 
     void D3D11GPUDevice::Shutdown()
     {
+        renderWindow.Reset();
         SafeDelete(mainContext);
 
         ULONG refCount = d3dDevice->Release();
@@ -589,6 +593,6 @@ namespace alimer
     /* Resource creation methods */
     GPUContext* D3D11GPUDevice::CreateContextCore(const GPUContextDescription& desc)
     {
-        return new D3D11GPUContext(this, d3dContext, desc, false);
+        return new D3D11GPUContext(this, d3dContext, false);
     }
 }

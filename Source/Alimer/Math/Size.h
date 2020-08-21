@@ -26,42 +26,63 @@
 
 namespace alimer
 {
-    template <typename T>
-    struct ALIMER_API TSize
+    /// Defines a floating-point size.
+    struct ALIMER_API Size
     {
     public:
-        union
-        {
-            T data[2];
-            struct
-            {
-                T width, height;
-            };
-        };
+        /// Specifies the width of the rectangle.
+        float width;
 
-        constexpr TSize() = default;
-        constexpr TSize(T value) noexcept : width(value), height(value) {}
-        constexpr TSize(T width_, T height_) noexcept : width(width_), height(height_) {}
+        /// Specifies the height of the rectangle.
+        float height;
 
-        TSize(const TSize&) = default;
-        TSize& operator=(const TSize&) = default;
+        constexpr Size() : width(0.0f), height(0.0f) {}
+        constexpr Size(float value) noexcept : width(value), height(value) {}
+        constexpr Size(float width_, float height_) noexcept : width(width_), height(height_) {}
 
-        TSize(TSize&&) = default;
-        TSize& operator=(TSize&&) = default;
+        Size(const Size&) = default;
+        Size& operator=(const Size&) = default;
+
+        Size(Size&&) = default;
+        Size& operator=(Size&&) = default;
 
         /// Gets a value that indicates whether the size is empty.
-        ALIMER_FORCE_INLINE bool IsEmpty() const
-        {
-            return (width == 0 && height == 0);
-        }
+        bool IsEmpty() const;
 
         /// Return as string.
-        ALIMER_FORCE_INLINE std::string ToString() const
-        {
-            return fmt::format("{} {}", width, height);
-        }
+        std::string ToString() const;
+
+        // Constants
+        static const Size Empty;
     };
 
-    using Size = TSize<float>;
-    using USize = TSize<uint32>;
+    /// Defines an integer size.
+    struct ALIMER_API SizeI
+    {
+    public:
+        /// Specifies the width of the rectangle.
+        int32 width;
+
+        /// Specifies the height of the rectangle.
+        int32 height;
+
+        constexpr SizeI() : width(0), height(0) {}
+        constexpr SizeI(int32 value) noexcept : width(value), height(value) {}
+        constexpr SizeI(int32 width_, int32 height_) noexcept : width(width_), height(height_) {}
+
+        SizeI(const SizeI&) = default;
+        SizeI& operator=(const SizeI&) = default;
+
+        SizeI(SizeI&&) = default;
+        SizeI& operator=(SizeI&&) = default;
+
+        /// Gets a value that indicates whether the size is empty.
+        bool IsEmpty() const;
+
+        /// Return as string.
+        std::string ToString() const;
+
+        // Constants
+        static const SizeI Empty;
+    };
 }

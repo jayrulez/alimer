@@ -59,7 +59,7 @@ if (ALIMER_D3D11)
 endif()
 
 if (ALIMER_VULKAN)
-  define_engine_source_files(Graphics/Vulkan)
+  #define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()

@@ -23,40 +23,12 @@
 #pragma once
 
 #include "config.h"
-#include "Core/Ptr.h"
-#include "Core/Math.h"
+#include "Core/Object.h"
+#include "Math/Size.h"
 #include "Core/Delegate.h"
 
 #if defined(ALIMER_GLFW)
 struct GLFWwindow;
-#endif
-
-#if ALIMER_PLATFORM_WINDOWS
-struct WindowHandle
-{
-    HWND window;
-    HINSTANCE hinstance;
-};
-#elif ALIMER_PLATFORM_UWP
-struct WindowHandle
-{
-    IUnknown* window;
-};
-#elif ALIMER_PLATFORM_LINUX
-struct WindowHandle
-{
-    Display* display;
-    Window window;
-};
-#elif ALIMER_PLATFORM_MACOS
-struct WindowHandle
-{
-#if defined(__OBJC__) && defined(__has_feature) && __has_feature(objc_arc)
-    NSWindow __unsafe_unretained* window;
-#else
-    NSWindow* window;
-#endif
-};
 #endif
 
 namespace alimer
@@ -70,33 +42,35 @@ namespace alimer
         Hidden = (1 << 3),
         Borderless = (1 << 4),
         Minimized = (1 << 5),
-        Maximized = (1 << 6)
+        Maximized = (1 << 6),
+        OpenGL = (1 << 7),
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
+    using NativeHandle = void*;
+
     /// Defines an OS window.
-    class ALIMER_API Window final : public RefCounted
+    class ALIMER_API Window : public Object
     {
+        ALIMER_OBJECT(Window, Object);
+
     public:
-        Window() = default;
-        ~Window() override;
+        constexpr static const int32 Centered = Limits<int32_t>::Max;
+
+        Window(const std::string& title, int32 x, int32 y, int32 width, int32 height, WindowFlags flags = WindowFlags::None);
+
+        virtual ~Window() override;
+        virtual void Destroy();
         void Close();
         void BeginFrame();
-
-        /// Set window size. Creates the window if not created yet. Return true on success.
-        bool SetSize(const UInt2& size, WindowFlags flags = WindowFlags::None);
 
         /// Set window title.
         void SetTitle(const String& newTitle);
 
         /// Return window title.
-        const String& GetTitle() const { return title; }
+        const std::string& GetTitle() const;
         /// Return window client size.
-        const UInt2& GetSize() const { return size; }
-        /// Return window client area width.
-        uint32_t GetWidth() const { return size.x; }
-        /// Return window client area height.
-        uint32_t GetHeight() const { return size.y; }
+        SizeI GetSize() const;
 
         bool ShouldClose() const;
         bool IsVisible() const;
@@ -104,14 +78,21 @@ namespace alimer
         bool IsMinimized() const;
         bool IsFullscreen() const;
 
+        virtual void SetVerticalSync(bool value);
+        virtual void Present();
+
+        /// The dot-per-inch scale factor
+        float GetDpiFactor() const;
+
+        /// The scale factor for systems with heterogeneous window and pixel coordinates
+        float GetContentScaleFactor() const;
+
         /// Get the native window handle
-        bool GetHandle(WindowHandle* handle) const;
+        NativeHandle GetNativeHandle() const noexcept;
 
         //Delegate<void()> SizeChanged;
 
-    private:
-        String title = "Alimer";
-        UInt2 size = UInt2::Zero;
+    protected:
         /// Resizable flag.
         bool resizable = false;
         /// Fullscreen flag.
@@ -123,6 +104,7 @@ namespace alimer
         //GLFWwindow* GetWindow() const { return window; }
 
     private:
+        std::string title;
         GLFWwindow* window = nullptr;
 #else
         void* window = nullptr;

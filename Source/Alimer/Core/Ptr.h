@@ -552,7 +552,7 @@ namespace alimer
     }
 
     /// Construct SharedPtr.
-    template <class T, class ... Args> RefPtr<T> MakeRef(Args && ... args)
+    template <class T, class ... Args> RefPtr<T> MakeRefPtr(Args && ... args)
     {
         return RefPtr<T>(new T(std::forward<Args>(args)...));
     }

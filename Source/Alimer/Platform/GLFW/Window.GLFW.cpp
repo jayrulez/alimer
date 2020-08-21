@@ -112,16 +112,104 @@ namespace alimer
         }
     }
 
+    Window::Window(const std::string& title_, int32 x, int32 y, int32 width, int32 height, WindowFlags flags)
+    {
+        title = title_;
+        resizable = any(flags & WindowFlags::Resizable);
+        fullscreen = any(flags & WindowFlags::Fullscreen);
+        exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
+
+        if (any(flags & WindowFlags::OpenGL))
+        {
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+            //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        }
+        else
+        {
+            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        }
+
+        glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
+        if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        }
+        else
+        {
+            glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+        }
+
+        //glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_FLAG_BORDERLESS) ? GLFW_FALSE : GLFW_TRUE);
+
+        if (any(flags & WindowFlags::Minimized))
+        {
+            glfwWindowHint(GLFW_ICONIFIED, GLFW_TRUE);
+        }
+        else if (any(flags & WindowFlags::Maximized))
+        {
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+        }
+
+        GLFWmonitor* monitor = nullptr;
+        if (fullscreen)
+        {
+            monitor = glfwGetPrimaryMonitor();
+        }
+
+        if (exclusiveFullscreen)
+        {
+            monitor = glfwGetPrimaryMonitor();
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+            glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+            glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+            glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+            glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
+        }
+
+        window = glfwCreateWindow(width, height, title_.c_str(), monitor, nullptr);
+        if (window == nullptr)
+        {
+            LOGE("GLFW: Failed to create window.");
+            return;
+        }
+
+        glfwDefaultWindowHints();
+        glfwSetWindowUserPointer(window, this);
+        glfwSetMouseButtonCallback(window, Glfw_MouseButtonCallback);
+        //glfwSetKeyCallback(glfwWindow, glfw_key_callback);
+
+        // Init ImGui logic.
+        if (any(flags & WindowFlags::OpenGL))
+        {
+            glfwMakeContextCurrent(window);
+            glfwSwapInterval(1);
+            ImGui_ImplGlfw_InitForOpenGL(window, true);
+        }
+        else
+        {
+            ImGui_ImplGlfw_InitForVulkan(window, true);
+        }
+    }
+
     Window::~Window()
     {
         Close();
+        ImGui_ImplGlfw_Shutdown();
+    }
+
+    void Window::Destroy()
+    {
+        glfwDestroyWindow(window);
+        window = nullptr;
     }
 
     void Window::Close()
     {
-        if (window != nullptr)
+        if (window)
         {
-            ImGui_ImplGlfw_Shutdown();
             glfwSetWindowShouldClose(window, GLFW_TRUE);
             window = nullptr;
         }
@@ -173,130 +261,90 @@ namespace alimer
         return fullscreen || exclusiveFullscreen;
     }
 
-    bool Window::SetSize(const UInt2& size_, WindowFlags flags)
+    float Window::GetDpiFactor() const
     {
-        resizable = any(flags & WindowFlags::Resizable);
-        fullscreen = any(flags & WindowFlags::Fullscreen);
-        exclusiveFullscreen = any(flags & WindowFlags::ExclusiveFullscreen);
+        GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
 
-        if (window == nullptr)
-        {
-            /*if (any(flags & WindowFlags::OpenGL))
-            {
-                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-                //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-            }
-            else*/
-            {
-                glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            }
+        int width_mm, height_mm;
+        glfwGetMonitorPhysicalSize(primaryMonitor, &width_mm, &height_mm);
 
-            glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
-            if ((flags & WindowFlags::Hidden) != WindowFlags::None) {
-                glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-            }
-            else
-            {
-                glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-            }
+        // As suggested by the GLFW monitor guide
+        static const float inch_to_mm = 25.0f;
+        static const float win_base_density = 96.0f;
 
-            //glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_FLAG_BORDERLESS) ? GLFW_FALSE : GLFW_TRUE);
-
-            if (any(flags & WindowFlags::Minimized))
-            {
-                glfwWindowHint(GLFW_ICONIFIED, GLFW_TRUE);
-            }
-            else if (any(flags & WindowFlags::Maximized))
-            {
-                glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-            }
-
-            GLFWmonitor* monitor = nullptr;
-            if (fullscreen)
-            {
-                monitor = glfwGetPrimaryMonitor();
-            }
-
-            if (exclusiveFullscreen)
-            {
-                monitor = glfwGetPrimaryMonitor();
-                const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-
-                glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-                glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-                glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-                glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-                glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-            }
-
-            window = glfwCreateWindow(static_cast<int>(size_.x), static_cast<int>(size_.y), title.c_str(), monitor, nullptr);
-            if (window == nullptr)
-            {
-                LOGE("GLFW: Failed to create window.");
-                return false;
-            }
-
-            glfwDefaultWindowHints();
-            glfwSetWindowUserPointer(window, this);
-            glfwSetMouseButtonCallback(window, Glfw_MouseButtonCallback);
-            //glfwSetKeyCallback(glfwWindow, glfw_key_callback);
-
-        }
-        else
-        {
-            glfwSetWindowSize(window, static_cast<int>(size_.x), static_cast<int>(size_.y));
-            glfwSetWindowAttrib(window, GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
-        }
-
-        // Update size from GLFW
-        int w;
-        int h;
-        glfwGetWindowSize(window, &w, &h);
-        size.x = static_cast<uint32_t>(w);
-        size.y = static_cast<uint32_t>(h);
-
-        /*if (any(flags & WindowFlags::OpenGL))
-        {
-            glfwMakeContextCurrent(handle);
-            ImGui_ImplGlfw_InitForOpenGL(handle, true);
-        }
-        else
-        {
-            ImGui_ImplGlfw_InitForVulkan(handle, true);
-        }*/
-
-        return true;
+        uint32 dpi = static_cast<uint32>(videoMode->width / (width_mm / inch_to_mm));
+        float dpi_factor = dpi / win_base_density;
+        return dpi_factor;
     }
+
+    float Window::GetContentScaleFactor() const
+    {
+        if (!window)
+            return 1.0f;
+
+        int fb_width, fb_height;
+        glfwGetFramebufferSize(window, &fb_width, &fb_height);
+        int win_width, win_height;
+        glfwGetWindowSize(window, &win_width, &win_height);
+
+        // We could return a 2D result here instead of a scalar,
+        // but non-uniform scaling is very unlikely, and would
+        // require significantly more changes in the IMGUI integration
+        return static_cast<float>(fb_width) / win_width;
+    }
+
 
     void Window::SetTitle(const String& newTitle)
     {
-        title = newTitle;
-        if (window)
-        {
-            glfwSetWindowTitle(window, newTitle.c_str());
-        }
+        glfwSetWindowTitle(window, newTitle.c_str());
     }
 
-    bool Window::GetHandle(WindowHandle* handle) const
+    const std::string& Window::GetTitle() const
+    {
+        return title;
+    }
+
+    SizeI Window::GetSize() const
+    {
+        SizeI result{};
+        glfwGetWindowSize(window, &result.width, &result.height);
+        return result;
+    }
+
+    NativeHandle Window::GetNativeHandle() const noexcept
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        handle->window = glfwGetWin32Window(window);
-        handle->hinstance = GetModuleHandle(NULL);
-        return true;
+        return glfwGetWin32Window(window);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
-        WindowHandle handle{};
-        handle.display = glfwGetX11Display();
-        handle.window = glfwGetX11Window();
-        return handle;
+        return (void*)(uintptr_t)glfwGetX11Window(window);
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
         return glfwGetCocoaWindow(window);
 #elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        WindowHandle handle{};
-        handle.display = glfwGetWaylandDisplay();
-        handle.window = = glfwGetWaylandWindow(window);
-        return handle;
+        return glfwGetWaylandWindow(window);
+#else
+        return nullptr;
 #endif
+    }
+
+    void Window::SetVerticalSync(bool value)
+    {
+        if (glfwGetWindowAttrib(window, GLFW_CLIENT_API) != GLFW_NO_API)
+        {
+            if (glfwGetCurrentContext() != window)
+            {
+                glfwMakeContextCurrent(window);
+            }
+
+            glfwSwapInterval(value ? 1 : 0);
+        }
+    }
+
+    void Window::Present()
+    {
+        if (glfwGetWindowAttrib(window, GLFW_CLIENT_API) != GLFW_NO_API)
+        {
+            glfwSwapBuffers(window);
+        }
     }
 }

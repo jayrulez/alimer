@@ -29,7 +29,7 @@
 #   include "Graphics/D3D11/D3D11GPUDevice.h"
 #endif
 
-#if defined(ALIMER_VULKAN)
+#if defined(ALIMER_VULKAN) && defined(TODO_VK)
 #   include "Graphics/Vulkan/VulkanGPUDevice.h"
 #endif
 
@@ -53,19 +53,19 @@ namespace alimer
         LOGI("Using {} driver", ToString(backendType));
     }
 
-    GPUDevice* GPUDevice::Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType)
+    GPUDevice* GPUDevice::Create(const GraphicsDeviceDescription& desc, GPUBackendType preferredRendererType)
     {
         GPUBackendType backendType = preferredRendererType;
 
         if (preferredRendererType == GPUBackendType::Count)
         {
-            //backendType = GPUBackendType::D3D11;
-            backendType = GPUBackendType::Vulkan;
+            backendType = GPUBackendType::D3D11;
+            //backendType = GPUBackendType::Vulkan;
         }
 
         switch (backendType)
         {
-#if defined(ALIMER_VULKAN) 
+#if defined(ALIMER_VULKAN) && defined(TODO_VK)
         case GPUBackendType::Vulkan:
             if (VulkanGPUDevice::IsAvailable())
             {
@@ -81,7 +81,7 @@ namespace alimer
 
 #if defined(ALIMER_D3D11)
         case GPUBackendType::D3D11:
-            return new D3D11GPUDevice(descriptor);
+            return new D3D11GPUDevice(desc);
 #endif
 
 #if defined(ALIMER_D3D12)

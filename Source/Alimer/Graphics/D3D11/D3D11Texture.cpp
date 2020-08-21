@@ -21,7 +21,7 @@
 //
 
 #include "Core/Log.h"
-#include "D3D11GPUTexture.h"
+#include "D3D11Texture.h"
 #include "D3D11GPUDevice.h"
 
 namespace alimer
@@ -37,16 +37,16 @@ namespace alimer
         }
     }
 
-    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : GPUTexture(Convert2DDesc(externalTexture, format))
+    D3D11Texture::D3D11Texture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
+        : Texture(Convert2DDesc(externalTexture, format))
         , device{ device }
         , handle(externalTexture)
     {
         handle->AddRef();
     }
 
-    D3D11GPUTexture::D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData)
-        : GPUTexture(desc)
+    D3D11Texture::D3D11Texture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData)
+        : Texture(desc)
         , device{ device }
     {
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
@@ -143,12 +143,12 @@ namespace alimer
         }
     }
 
-    D3D11GPUTexture::~D3D11GPUTexture()
+    D3D11Texture::~D3D11Texture()
     {
         Destroy();
     }
 
-    void D3D11GPUTexture::Destroy()
+    void D3D11Texture::Destroy()
     {
         srvs.clear();
         uavs.clear();
@@ -157,12 +157,12 @@ namespace alimer
         SafeRelease(handle);
     }
 
-    void D3D11GPUTexture::BackendSetName()
+    void D3D11Texture::BackendSetName()
     {
         D3D11SetObjectName(handle, name);
     }
 
-    ID3D11ShaderResourceView* D3D11GPUTexture::GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    ID3D11ShaderResourceView* D3D11Texture::GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
     {
         // For non-array textures force slice to 0.
         if (GetArrayLayers() <= 1)
@@ -291,7 +291,7 @@ namespace alimer
         return srv.Get();
     }
 
-    ID3D11UnorderedAccessView* D3D11GPUTexture::GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    ID3D11UnorderedAccessView* D3D11Texture::GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
     {
         // For non-array textures force slice to 0.
         if (GetArrayLayers() <= 1)
@@ -405,7 +405,7 @@ namespace alimer
         return uav.Get();
     }
 
-    ID3D11RenderTargetView* D3D11GPUTexture::GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    ID3D11RenderTargetView* D3D11Texture::GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
     {
         // For non-array textures force slice to 0.
         if (GetArrayLayers() <= 1)
@@ -538,7 +538,7 @@ namespace alimer
         return rtv.Get();
     }
 
-    ID3D11DepthStencilView* D3D11GPUTexture::GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    ID3D11DepthStencilView* D3D11Texture::GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
     {
         // For non-array textures force slice to 0.
         if (GetArrayLayers() <= 1)

@@ -23,8 +23,7 @@
 #pragma once
 
 #include "Core/Log.h"
-#include "Core/Math.h"
-#include "Core/Window.h"
+#include "Math/Size.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 
@@ -39,10 +38,10 @@ namespace alimer
         bool headless = false;
 
         /// Main window title.
-        String windowTitle = "Alimer";
+        std::string windowTitle = "Alimer";
 
         /// Main window size.
-        UInt2 windowSize = { 1280u, 720u };
+        SizeI windowSize = { 1280, 720 };
     };
 
     class ALIMER_API Application : public Object
@@ -61,9 +60,6 @@ namespace alimer
 
         /// Tick one frame.
         void Tick();
-
-        /// Return the main window.
-        Window* GetMainWindow() const { return mainWindow.Get(); }
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -98,7 +94,6 @@ namespace alimer
         GameTime time;
 
         bool headless{ false };
-        RefPtr<Window> mainWindow;
         //std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 } 

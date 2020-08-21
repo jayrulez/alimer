@@ -21,11 +21,11 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/GPUTexture.h"
+#include "Graphics/Texture.h"
 
 namespace alimer
 {
-    GPUTexture::GPUTexture(const GPUTextureDescription& desc)
+    Texture::Texture(const GPUTextureDescription& desc)
         : GPUResource(Type::Texture, desc.label)
         , type(desc.type)
         , format(desc.format)
@@ -39,17 +39,17 @@ namespace alimer
     {
     }
 
-    uint32 GPUTexture::GetWidth(uint32 mipLevel) const
+    uint32 Texture::GetWidth(uint32 mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, width >> mipLevel) : 0;
     }
 
-    uint32 GPUTexture::GetHeight(uint32 mipLevel) const
+    uint32 Texture::GetHeight(uint32 mipLevel) const
     {
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> mipLevel) : 0;
     }
 
-    uint32 GPUTexture::GetDepth(uint32 mipLevel) const
+    uint32 Texture::GetDepth(uint32 mipLevel) const
     {
         if (type == TextureType::Type3D)
             return 1u;
@@ -57,7 +57,7 @@ namespace alimer
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }
 
-    uint32 GPUTexture::CalculateMipLevels(uint32 width, uint32 height, uint32 depth)
+    uint32 Texture::CalculateMipLevels(uint32 width, uint32 height, uint32 depth)
     {
         uint32 mipLevels = 0;
         uint32 size = Max(Max(width, height), depth);

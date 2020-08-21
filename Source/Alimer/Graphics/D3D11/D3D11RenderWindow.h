@@ -20,30 +20,39 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#pragma once
+
+#include "Graphics/RenderWindow.h"
+#include "D3D11Backend.h"
 
 namespace alimer
 {
-    const Size Size::Empty = { 0.0f, 0.0f };
-    const SizeI SizeI::Empty = { 0, 0 };
-
-    bool Size::IsEmpty() const
+    class ALIMER_API D3D11RenderWindow final : public RenderWindow
     {
-        return (width == 0 && height == 0);
-    }
+    public:
+        /// Constructor.
+        D3D11RenderWindow(D3D11GPUDevice* device, const RenderWindowDescription& desc);
+        /// Destructor
+        ~D3D11RenderWindow() override;
 
-    std::string Size::ToString() const
-    {
-        return fmt::format("{} {}", width, height);
-    }
+        void Destroy() override;
+        void SetVerticalSync(bool value) override;
+        void Present() override;
 
-    bool SizeI::IsEmpty() const
-    {
-        return (width == 0 && height == 0);
-    }
+    private:
+        void AfterReset();
 
-    std::string SizeI::ToString() const
-    {
-        return fmt::format("{} {}", width, height);
-    }
+        D3D11GPUDevice* device;
+
+        uint32 syncInterval = 1u;
+        uint32 presentFlags = 0u;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        IDXGISwapChain1* swapChain = nullptr;
+#else
+        IDXGISwapChain3* swapChain = nullptr;
+#endif
+
+        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
+    };
 }

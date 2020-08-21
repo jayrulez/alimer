@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/GPUBuffer.h"
-#include "Graphics/GPUTexture.h"
+#include "Graphics/Texture.h"
 #include "Math/Size.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"
@@ -35,7 +35,7 @@ namespace alimer
     {
     protected:
         /// Constructor.
-        GPUContext(uint32 width, uint32 height, bool isMain_);
+        GPUContext(bool isMain_);
 
     public:
         /// Destructor.
@@ -44,8 +44,8 @@ namespace alimer
         bool BeginFrame();
         void EndFrame();
 
-        virtual GPUTexture* GetCurrentTexture() const;
-        virtual GPUTexture* GetDepthStencilTexture() const;
+        virtual Texture* GetCurrentTexture() const;
+        virtual Texture* GetDepthStencilTexture() const;
 
         virtual void PushDebugGroup(const String& name) = 0;
         virtual void PopDebugGroup() = 0;
@@ -68,14 +68,8 @@ namespace alimer
         virtual void EndFrameImpl() = 0;
 
     protected:
-        USize extent;
-        PixelFormat colorFormat = PixelFormat::RGBA8UnormSrgb;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool verticalSync = false;
-        bool isFullscreen = false;
-
-        std::vector<RefPtr<GPUTexture>> colorTextures;
-        RefPtr<GPUTexture> depthStencilTexture;
+        std::vector<RefPtr<Texture>> colorTextures;
+        RefPtr<Texture> depthStencilTexture;
 
         /// Whether this context is the main one.
         bool isMain;

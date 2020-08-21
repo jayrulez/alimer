@@ -23,11 +23,20 @@
 #pragma once
 
 #include "Graphics/GPUAdapter.h"
+#include "Graphics/RenderWindow.h"
 #include "Graphics/GPUContext.h"
 #include "Graphics/GPUBuffer.h"
 
 namespace alimer
 {
+
+    struct GraphicsDeviceDescription
+    {
+        String applicationName = "";
+        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
+        RenderWindowDescription mainWindow;
+    };
+
     /// Defines the graphics subsystem.
     class ALIMER_API GPUDevice : public Object
     {
@@ -40,10 +49,13 @@ namespace alimer
         static void EnableGPUBasedBackendValidation(bool value);
         static bool IsGPUBasedBackendValidationEnabled();
 
-        static GPUDevice* Create(const String& appName, const GPUDeviceDescriptor& descriptor, GPUBackendType preferredRendererType = GPUBackendType::Count);
+        static GPUDevice* Create(const GraphicsDeviceDescription& desc, GPUBackendType preferredRendererType = GPUBackendType::Count);
 
         /// Gets the adapter device.
         virtual GPUAdapter* GetAdapter() const = 0;
+
+        /// Return the main window.
+        RenderWindow* GetMainWindow() const { return renderWindow.Get(); }
 
         /// Gets the main GPU context. The main context takes care of deferred release of GPU resources.
         virtual GPUContext* GetMainContext() const = 0;
@@ -79,9 +91,9 @@ namespace alimer
         virtual GPUContext* CreateContextCore(const GPUContextDescription& desc) = 0;
 
         GPUBackendType backendType;
-
         GPUFeatures features{};
         GPULimits limits{};
+        RefPtr<RenderWindow> renderWindow;
 
     private:
         static bool enableGPUValidation;

@@ -75,7 +75,7 @@ namespace alimer::ImGuiLayer
         //Assert_(CurrBeginFrame != DX12::CurrentCPUFrame);
 
         ImGuiIO& io = ImGui::GetIO();
-        io.DisplaySize = ImVec2(float(window->GetWidth()), float(window->GetHeight()));
+        io.DisplaySize = ImVec2(float(window->GetSize().width), float(window->GetSize().height));
         io.DeltaTime = deltaTime;
 
         window->BeginFrame();

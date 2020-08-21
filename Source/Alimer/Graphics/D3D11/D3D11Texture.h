@@ -22,20 +22,20 @@
 
 #pragma once
 
-#include "Graphics/GPUTexture.h"
+#include "Graphics/Texture.h"
 #include "D3D11Backend.h"
 
 namespace alimer
 {
-    class ALIMER_API D3D11GPUTexture final : public GPUTexture
+    class ALIMER_API D3D11Texture final : public Texture
     {
     public:
         /// Constructor.
-        D3D11GPUTexture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        D3D11Texture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11GPUTexture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData);
+        D3D11Texture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData);
         /// Destructor
-        ~D3D11GPUTexture() override;
+        ~D3D11Texture() override;
 
         void Destroy() override;
 

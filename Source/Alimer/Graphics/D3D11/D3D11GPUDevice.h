@@ -35,7 +35,7 @@ namespace alimer
     {
     public:
         static bool IsAvailable();
-        D3D11GPUDevice(const GPUDeviceDescriptor& descriptor);
+        D3D11GPUDevice(const GraphicsDeviceDescription& desc);
         ~D3D11GPUDevice() override;
 
         void Shutdown();

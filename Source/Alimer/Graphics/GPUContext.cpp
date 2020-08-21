@@ -25,10 +25,8 @@
 
 namespace alimer
 {
-    GPUContext::GPUContext(uint32 width, uint32 height, bool isMain_)
-        : extent{width, height}
-        , isMain(isMain_)
-        , verticalSync(isMain)
+    GPUContext::GPUContext(bool isMain_)
+        : isMain(isMain_)
     {
 
     }
@@ -56,7 +54,7 @@ namespace alimer
         frameActive = false;
     }
 
-    GPUTexture* GPUContext::GetCurrentTexture() const
+    Texture* GPUContext::GetCurrentTexture() const
     {
         // Backend objects are created after the first call of BeginFrame.
         if (colorTextures.empty())
@@ -65,7 +63,7 @@ namespace alimer
         return colorTextures[activeFrameIndex].Get();
     }
 
-    GPUTexture* GPUContext::GetDepthStencilTexture() const
+    Texture* GPUContext::GetDepthStencilTexture() const
     {
         return depthStencilTexture.Get();
     }

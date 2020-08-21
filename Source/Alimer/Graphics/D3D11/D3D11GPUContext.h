@@ -31,7 +31,7 @@ namespace alimer
     {
     public:
         /// Constructor.
-        D3D11GPUContext(D3D11GPUDevice * device, ID3D11DeviceContext1 * context, const GPUContextDescription& desc, bool isMain_);
+        D3D11GPUContext(D3D11GPUDevice * device, ID3D11DeviceContext1* context, bool isMain_);
         /// Destructor
         ~D3D11GPUContext() override;
 
@@ -64,18 +64,6 @@ namespace alimer
         D3D11GPUDevice* device;
         ID3D11DeviceContext1* handle = nullptr;
         ID3DUserDefinedAnnotation* annotation = nullptr;
-
-        /* Swapchain (if not offscreen context) */
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = nullptr;
-        IDXGISwapChain1* swapChain = nullptr;
-#else
-        IUnknown* window = nullptr;
-        IDXGISwapChain3* swapChain = nullptr;
-#endif
-
-        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-
         ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
     };
 }

@@ -71,16 +71,12 @@ namespace alimer
         // Init GPU.
         if (!headless)
         {
-            mainWindow = new Window();
-            mainWindow->SetTitle(config.windowTitle);
-            mainWindow->SetSize(config.windowSize, WindowFlags::Resizable);
+            GraphicsDeviceDescription graphicsDeviceDesc = {};
+            graphicsDeviceDesc.applicationName = config.applicationName;
+            graphicsDeviceDesc.mainWindow.title = config.windowTitle;
+            graphicsDeviceDesc.mainWindow.size = config.windowSize;
 
-            GPUDeviceDescriptor gpuDeviceDesc = {};
-            mainWindow->GetHandle(&gpuDeviceDesc.mainContext.handle);
-            gpuDeviceDesc.mainContext.width = mainWindow->GetWidth();
-            gpuDeviceDesc.mainContext.height = mainWindow->GetHeight();
-
-            RegisterSubsystem(GPUDevice::Create(config.applicationName, gpuDeviceDesc));
+            RegisterSubsystem(GPUDevice::Create(graphicsDeviceDesc));
 
             // Create main window SwapChain
             /*
@@ -162,7 +158,7 @@ namespace alimer
             LOGI("Right held");
         }
 
-        auto context = GetGPUDevice()->GetMainContext();
+        /*auto context = GetGPUDevice()->GetMainContext();
 
         context->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
@@ -172,7 +168,7 @@ namespace alimer
         //colorAttachment.slice = 1;
         context->BeginRenderPass(1, &colorAttachment, nullptr);
         context->EndRenderPass();
-        context->PopDebugGroup();
+        context->PopDebugGroup();*/
     }
 
     void Application::EndDraw()
@@ -183,6 +179,7 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
+        GetGPUDevice()->GetMainWindow()->Present();
         GetGPUDevice()->GetMainContext()->EndFrame();
     }
 
@@ -222,7 +219,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !GetMainWindow()->IsMinimized()
+            && !GetGPUDevice()->GetMainWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

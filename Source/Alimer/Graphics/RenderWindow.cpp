@@ -20,13 +20,15 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "D3D11GPUSwapChain.h"
-#include "D3D11GPUTexture.h"
-#include "D3D11GPUDevice.h"
+#include "Graphics/RenderWindow.h"
 
 namespace alimer
 {
-    
-}
+    RenderWindow::RenderWindow(const RenderWindowDescription& desc)
+        : Window(desc.title, Window::Centered, Window::Centered, desc.size.width, desc.size.height, desc.fullscreen ? WindowFlags::Fullscreen : WindowFlags::None)
+        , colorFormat(desc.colorFormatSrgb ? PixelFormat::BGRA8UnormSrgb : PixelFormat::BGRA8Unorm)
+        , depthStencilFormat(desc.depthStencilFormat)
+    {
 
+    }
+}
