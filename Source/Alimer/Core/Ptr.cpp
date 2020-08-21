@@ -22,7 +22,7 @@
 
 #include "Core/Ptr.h"
 
-namespace alimer
+namespace Alimer
 {
     RefCounted::RefCounted()
         : refCount(new RefCount())

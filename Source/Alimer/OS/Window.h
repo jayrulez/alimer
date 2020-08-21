@@ -31,7 +31,12 @@
 struct GLFWwindow;
 #endif
 
-namespace alimer
+namespace OS
+{
+
+}
+
+namespace Alimer
 {
     enum class WindowFlags : uint32_t
     {

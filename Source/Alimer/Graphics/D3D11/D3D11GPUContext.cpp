@@ -25,7 +25,7 @@
 #include "D3D11Texture.h"
 #include "D3D11GPUDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice* device_, ID3D11DeviceContext1* context, bool isMain_)
         : GPUContext(isMain_)
@@ -39,48 +39,6 @@ namespace alimer
     {
         SafeRelease(annotation);
         SafeRelease(handle);
-    }
-
-    bool D3D11GPUContext::BeginFrameImpl()
-    {
-        if (colorTextures.empty()) {
-            CreateObjects();
-        }
-
-        return !device->IsLost();
-    }
-
-    void D3D11GPUContext::EndFrameImpl()
-    {
-        if (device->IsLost()) {
-            return;
-        }
-
-        // TODO: Measure timestamp using query
-        if (isMain) {
-            device->Frame();
-        }
-    }
-
-    void D3D11GPUContext::CreateObjects()
-    {
-        /*if (depthStencilFormat != PixelFormat::Invalid)
-        {
-            GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
-            depthStencilTexture.Reset(new D3D11Texture(device, depthTextureDesc, nullptr));
-        }*/
-    }
-
-    void D3D11GPUContext::CreateSwapChainObjects()
-    {
-        colorTextures.clear();
-        depthStencilTexture.Reset();
-
-        // Create a render target view of the swap chain back buffer.
-       /* ID3D11Texture2D* backbufferTexture;
-        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
-        colorTextures.push_back(MakeRefPtr<D3D11Texture>(device, backbufferTexture, colorFormat));
-        backbufferTexture->Release();*/
     }
 
     void D3D11GPUContext::Flush()

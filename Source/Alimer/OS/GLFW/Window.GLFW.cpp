@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Window.h"
+#include "OS/Window.h"
 #include "Core/Input.h"
 #include "Core/Log.h"
 
@@ -36,33 +36,10 @@
 #include <GLFW/glfw3native.h>
 #include "imgui_impl_glfw.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
-        void OnGLFWError(int code, const char* description) {
-            LOGE("GLFW  Error (code {}): {}", code, description);
-        }
-
-        struct GLFWInitializer
-        {
-            GLFWInitializer()
-            {
-                glfwSetErrorCallback(OnGLFWError);
-                if (!glfwInit())
-                {
-                    LOGE("GLFW couldn't be initialized.");
-                }
-            }
-
-            ~GLFWInitializer()
-            {
-                glfwTerminate();
-            }
-        };
-
-        GLFWInitializer s_glfw_Initializer;
-
         MouseButton FromGlfw(int button)
         {
             switch (button)

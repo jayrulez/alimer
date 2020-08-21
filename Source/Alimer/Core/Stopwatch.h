@@ -24,7 +24,7 @@
 
 #include "Core/Platform.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API Stopwatch final
     {

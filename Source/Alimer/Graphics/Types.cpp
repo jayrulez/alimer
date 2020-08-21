@@ -22,7 +22,7 @@
 
 #include "Graphics/Types.h"
 
-namespace alimer
+namespace Alimer
 {
     const char* ToString(GPUBackendType value)
     {

@@ -23,7 +23,7 @@
 #include "Core/Log.h"
 #include "Graphics/GPUBuffer.h"
 
-namespace alimer
+namespace Alimer
 {
     GPUBuffer::GPUBuffer(const GPUBufferDescriptor& descriptor)
         : GPUResource(Type::Buffer, descriptor.label)

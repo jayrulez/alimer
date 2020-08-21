@@ -20,28 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
-#include "Application/Application.h"
+#include "Application/ApplicationPlatform.h"
 
 namespace Alimer
 {
-    GameTime::GameTime()
-        : targetElapsedTicks(TicksPerSecond / 60)
+    ApplicationPlatform::ApplicationPlatform(Application* application)
+        : application{ application }
     {
-        qpcFrequency = Stopwatch::GetFrequency();
-        qpcLastTime = Stopwatch::GetTimestamp();
 
-        // Initialize max delta to 1/10 of a second.
-        qpcMaxDelta = static_cast<uint64_t>(qpcFrequency / 10);
     }
-
-    void GameTime::ResetElapsedTime()
-    {
-        qpcLastTime = Stopwatch::GetTimestamp();
-
-        leftOverTicks = 0;
-        framesPerSecond = 0;
-        framesThisSecond = 0;
-        qpcSecondCounter = 0;
-    }
-} // namespace Alimer
+}

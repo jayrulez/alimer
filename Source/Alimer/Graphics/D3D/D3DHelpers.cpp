@@ -22,7 +22,7 @@
 
 #include "D3DHelpers.h"
 
-namespace alimer
+namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;

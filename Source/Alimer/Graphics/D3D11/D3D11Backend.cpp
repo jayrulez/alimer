@@ -22,7 +22,7 @@
 
 #include "D3D11Backend.h"
 
-namespace alimer
+namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;

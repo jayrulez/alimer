@@ -23,6 +23,15 @@
 #include "Core/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
+#ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif
+#include <Windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#undef NOMINMAX
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #include <mach/mach_time.h>
@@ -35,7 +44,7 @@
 #include <time.h>
 #endif
 
-namespace alimer
+namespace Alimer
 {
     struct TimerGlobalInitializer {
         uint64_t frequency;

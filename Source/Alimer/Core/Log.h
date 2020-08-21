@@ -25,7 +25,7 @@
 #include "Core/Assert.h"
 #include <fmt/format.h>
 
-namespace alimer
+namespace Alimer
 {
     enum class LogLevel : uint32_t
     {
@@ -48,9 +48,9 @@ namespace alimer
     ALIMER_API void Critical(const std::string& message);
 }
 
-#define LOGV(...) alimer::Verbose(fmt::format(__VA_ARGS__));
-#define LOGD(...) alimer::Debug(fmt::format(__VA_ARGS__));
-#define LOGI(...) alimer::Info(fmt::format(__VA_ARGS__));
-#define LOGW(...) alimer::Warn(fmt::format(__VA_ARGS__));
-#define LOGE(...) alimer::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
-#define LOGC(...) alimer::Critical(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
+#define LOGV(...) Alimer::Verbose(fmt::format(__VA_ARGS__));
+#define LOGD(...) Alimer::Debug(fmt::format(__VA_ARGS__));
+#define LOGI(...) Alimer::Info(fmt::format(__VA_ARGS__));
+#define LOGW(...) Alimer::Warn(fmt::format(__VA_ARGS__));
+#define LOGE(...) Alimer::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
+#define LOGC(...) Alimer::Critical(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));

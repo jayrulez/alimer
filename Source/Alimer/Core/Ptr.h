@@ -26,7 +26,7 @@
 #include "Core/Concurrency.h"
 #include <utility>
 
-namespace alimer
+namespace Alimer
 {
     /// Reference count structure.
     struct RefCount

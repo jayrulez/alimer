@@ -22,7 +22,7 @@
 
 #include "Math/Matrix4x4.h"
 
-namespace alimer
+namespace Alimer
 {
     const Matrix4x4 Matrix4x4::Zero = {
         0.0f, 0.0f, 0.0f, 0.0f,
@@ -70,7 +70,7 @@ namespace alimer
 
         float yScale = 1.0f / tan(fieldOfView * 0.5f);
         float xScale = yScale / aspectRatio;
-        const float negFarRange = alimer::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
+        const float negFarRange = Alimer::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
 
         result->m11 = xScale;
         result->m12 = 0.0f;

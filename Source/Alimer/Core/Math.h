@@ -25,7 +25,7 @@
 #include "Math/MathHelper.h"
 #include "Core/String.h"
 
-namespace alimer
+namespace Alimer
 {
     /// 2D Vector; 32 bit floating point components
     struct ALIMER_API Float2

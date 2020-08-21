@@ -25,7 +25,7 @@
 #include "Graphics/GPUAdapter.h"
 #include "D3D11Backend.h"
 
-namespace alimer
+namespace Alimer
 {
     class D3D11GPUAdapter final : public GPUAdapter
     {

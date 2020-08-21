@@ -33,7 +33,7 @@
 #   pragma warning(disable:4702) // unreachable code
 #endif
 
-namespace alimer
+namespace Alimer
 {
     static constexpr float Pi = 3.1415926535897932f;
     static constexpr float TwoPi = 6.28318530718f;

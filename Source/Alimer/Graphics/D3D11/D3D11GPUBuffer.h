@@ -25,7 +25,7 @@
 #include "Graphics/GPUBuffer.h"
 #include "D3D11Backend.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API D3D11GPUBuffer final : public GPUBuffer
     {

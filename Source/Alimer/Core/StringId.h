@@ -24,7 +24,7 @@
 
 #include "Core/String.h"
 
-namespace alimer
+namespace Alimer
 {
     /// 32-bit hash value for a string.
     class ALIMER_API StringId32
@@ -48,7 +48,7 @@ namespace alimer
         /// Construct from a C string.
         StringId32(const char* str) noexcept;
         /// Construct from a string.
-        StringId32(const String& str) noexcept;
+        StringId32(const std::string& str) noexcept;
 
         /// Assign from another hash.
         StringId32& operator =(const StringId32& rhs) noexcept = default;
@@ -103,9 +103,9 @@ namespace alimer
 namespace std
 {
     template<>
-    class hash<alimer::StringId32> {
+    class hash<Alimer::StringId32> {
     public:
-        size_t operator()(const alimer::StringId32& value) const
+        size_t operator()(const Alimer::StringId32& value) const
         {
             return value.Value();
         }

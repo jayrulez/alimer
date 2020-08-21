@@ -25,7 +25,7 @@
 #include "Core/Stopwatch.h"
 #include "Math/MathHelper.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API GameTime final
     {
@@ -67,7 +67,7 @@ namespace alimer
                  // accumulate enough tiny errors that it would drop a frame. It is better to just round
                  // small deviations down to zero to leave things running smoothly.
 
-                 if (static_cast<uint64_t>(alimer::Abs(static_cast<int64_t>(timeDelta - targetElapsedTicks))) < TicksPerSecond / 4000)
+                 if (static_cast<uint64_t>(Alimer::Abs(static_cast<int64_t>(timeDelta - targetElapsedTicks))) < TicksPerSecond / 4000)
                  {
                      timeDelta = targetElapsedTicks;
                  }

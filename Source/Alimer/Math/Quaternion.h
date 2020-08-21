@@ -24,7 +24,7 @@
 
 #include "Core/Math.h"
 
-namespace alimer
+namespace Alimer
 {
     /// Class specifying a four-dimensional quaternion.
     struct ALIMER_API Quaternion

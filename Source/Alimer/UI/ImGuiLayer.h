@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "Core/Window.h"
+#include "OS/Window.h"
 
-namespace alimer::ImGuiLayer
+namespace Alimer::ImGuiLayer
 {
     ALIMER_API void Initialize(void);
     ALIMER_API void Shutdown(void);

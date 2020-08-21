@@ -25,7 +25,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-namespace alimer::ImGuiLayer
+namespace Alimer::ImGuiLayer
 {
     void Initialize(void)
     {

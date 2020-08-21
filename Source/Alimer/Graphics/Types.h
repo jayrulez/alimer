@@ -25,7 +25,6 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
-#include "Core/Window.h"
 
 #if !defined(GPU_DEBUG)
 #   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
@@ -33,7 +32,7 @@
 #   endif
 #endif
 
-namespace alimer
+namespace Alimer
 {
     static constexpr uint32 kInflightFrameCount = 2u;
     static constexpr uint32 kMaxColorAttachments = 8u;

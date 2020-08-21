@@ -25,7 +25,7 @@
 #include "Core/Assert.h"
 #include <string>
 
-namespace alimer
+namespace Alimer
 {
     /// Defines pixel format.
     enum class PixelFormat : uint32_t

@@ -26,7 +26,7 @@
 #include <pthread.h>
 #endif
 
-namespace alimer
+namespace Alimer
 {
     int32_t AtomicIncrement(volatile int32_t* value) {
 #if ALIMER_PLATFORM_WINDOWS

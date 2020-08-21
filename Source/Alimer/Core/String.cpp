@@ -23,7 +23,7 @@
 #include "Core/String.h"
 #include "Core/Hash.h"
 
-namespace alimer
+namespace Alimer
 {
     const std::string EMPTY_STRING{};
 }

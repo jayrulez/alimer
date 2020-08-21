@@ -20,28 +20,43 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
-#include "Application/Application.h"
+#include "OS/OS.h"
+#include "Core/Log.h"
 
-namespace Alimer
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#if defined(_WIN32)
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#elif defined(__linux__)
+#   define GLFW_EXPOSE_NATIVE_X11
+#elif defined(__APPLE__)
+#   define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#include <GLFW/glfw3native.h>
+
+namespace OS
 {
-    GameTime::GameTime()
-        : targetElapsedTicks(TicksPerSecond / 60)
+    namespace
     {
-        qpcFrequency = Stopwatch::GetFrequency();
-        qpcLastTime = Stopwatch::GetTimestamp();
-
-        // Initialize max delta to 1/10 of a second.
-        qpcMaxDelta = static_cast<uint64_t>(qpcFrequency / 10);
+        void OnGLFWError(int code, const char* description)
+        {
+            LOGE("GLFW  Error (code {}): {}", code, description);
+        }
     }
 
-    void GameTime::ResetElapsedTime()
+    bool Init()
     {
-        qpcLastTime = Stopwatch::GetTimestamp();
+        glfwSetErrorCallback(OnGLFWError);
+        if (glfwInit() == GLFW_FALSE)
+        {
+            return false;
+        }
 
-        leftOverTicks = 0;
-        framesPerSecond = 0;
-        framesThisSecond = 0;
-        qpcSecondCounter = 0;
+        return true;
     }
-} // namespace Alimer
+
+    void Shutdown() noexcept
+    {
+        glfwTerminate();
+    }
+}

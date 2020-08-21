@@ -24,7 +24,7 @@
 
 #include "Core/Math.h"
 
-namespace alimer
+namespace Alimer
 {
     /// Defines a 4x4 floating-point matrix.
     class ALIMER_API Matrix4x4

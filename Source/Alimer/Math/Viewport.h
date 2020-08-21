@@ -24,7 +24,7 @@
 
 #include "Core/String.h"
 
-namespace alimer
+namespace Alimer
 {
     /// A 3D rectangular region for the viewport clipping.
     class ALIMER_API Viewport

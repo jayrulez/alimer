@@ -22,7 +22,7 @@
 
 #include "Core/Input.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {

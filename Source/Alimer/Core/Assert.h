@@ -23,7 +23,7 @@
 
 #include "Core/Platform.h"
 
-namespace alimer
+namespace Alimer
 {
     enum class AssertFailBehavior : uint8_t
     {
@@ -37,7 +37,7 @@ namespace alimer
     ALIMER_API void SetAssertHandler(AssertHandler newHandler);
 
     ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line, const char* msg, ...);
-} // namespace alimer
+}
 
 /** Assert macro */
 #ifndef ALIMER_ENABLE_ASSERT
@@ -55,8 +55,8 @@ namespace alimer
 		{ \
 			if (!(cond)) \
 			{ \
-				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
-					alimer::AssertFailBehavior::Halt) \
+				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
+					Alimer::AssertFailBehavior::Halt) \
 					ALIMER_FORCE_CRASH(); \
 			} \
 		} while(0)
@@ -66,8 +66,8 @@ namespace alimer
 		{ \
 			if (!(cond)) \
 			{ \
-				if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-					alimer::AssertFailBehavior::Halt) \
+				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+					Alimer::AssertFailBehavior::Halt) \
 					ALIMER_FORCE_CRASH(); \
 			} \
 		} while(0)
@@ -75,8 +75,8 @@ namespace alimer
 #   define ALIMER_ASSERT_FAIL(msg, ...) \
 		do \
 		{ \
-			if (alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-				alimer::AssertFailBehavior::Halt) \
+			if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
+				Alimer::AssertFailBehavior::Halt) \
 			    ALIMER_FORCE_CRASH(); \
 		} while(0)
 

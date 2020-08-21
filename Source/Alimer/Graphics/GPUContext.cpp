@@ -23,7 +23,7 @@
 #include "Core/Log.h"
 #include "Graphics/GPUContext.h"
 
-namespace alimer
+namespace Alimer
 {
     GPUContext::GPUContext(bool isMain_)
         : isMain(isMain_)
@@ -31,41 +31,5 @@ namespace alimer
 
     }
 
-    bool GPUContext::BeginFrame()
-    {
-        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
-
-        if (!BeginFrameImpl()) {
-            return false;
-        }
-
-        // Now the frame is active again.
-        frameActive = true;
-        return true;
-    }
-
-    void GPUContext::EndFrame()
-    {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
-
-        EndFrameImpl();
-
-        // Frame is not active anymore.
-        frameActive = false;
-    }
-
-    Texture* GPUContext::GetCurrentTexture() const
-    {
-        // Backend objects are created after the first call of BeginFrame.
-        if (colorTextures.empty())
-            return nullptr;
-
-        return colorTextures[activeFrameIndex].Get();
-    }
-
-    Texture* GPUContext::GetDepthStencilTexture() const
-    {
-        return depthStencilTexture.Get();
-    }
 }
 

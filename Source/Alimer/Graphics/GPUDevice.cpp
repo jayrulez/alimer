@@ -33,7 +33,7 @@
 #   include "Graphics/Vulkan/VulkanGPUDevice.h"
 #endif
 
-namespace alimer
+namespace Alimer
 {
     bool GPUDevice::enableGPUValidation = false;
 
@@ -95,6 +95,30 @@ namespace alimer
         }
 
         return nullptr;
+    }
+
+    bool GPUDevice::BeginFrame()
+    {
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
+
+        if (!BeginFrameImpl()) {
+            return false;
+        }
+
+        // Now the frame is active again.
+        frameActive = true;
+        return true;
+    }
+
+    void GPUDevice::EndFrame()
+    {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
+
+        EndFrameImpl();
+
+        // Frame is not active anymore.
+        frameActive = false;
+        ++frameCount;
     }
 
     GPUContext* GPUDevice::CreateContext(const GPUContextDescription& desc)

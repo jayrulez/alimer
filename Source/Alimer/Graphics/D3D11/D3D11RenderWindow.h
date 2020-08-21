@@ -25,7 +25,7 @@
 #include "Graphics/RenderWindow.h"
 #include "D3D11Backend.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API D3D11RenderWindow final : public RenderWindow
     {

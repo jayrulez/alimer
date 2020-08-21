@@ -24,7 +24,7 @@
 
 #include "Core/Assert.h"
 
-namespace alimer
+namespace Alimer
 {
     /// Identifiers the running platform type.
     enum class PlatformId : uint32_t

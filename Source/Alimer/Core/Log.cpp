@@ -45,7 +45,7 @@
 #  include <emscripten.h>
 #endif
 
-namespace alimer
+namespace Alimer
 {
     static const char* LogLevelPefixes[uint32_t(LogLevel::Count)] = {
         "VERBOSE",

@@ -20,28 +20,51 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
-#include "Application/Application.h"
+#pragma once
 
-namespace Alimer
+#include "Event.h"
+#include <deque>
+
+namespace OS
 {
-    GameTime::GameTime()
-        : targetElapsedTicks(TicksPerSecond / 60)
+    namespace
     {
-        qpcFrequency = Stopwatch::GetFrequency();
-        qpcLastTime = Stopwatch::GetTimestamp();
+        std::deque<Event>& GetEventQueue() noexcept
+        {
+            static std::deque<Event> event_queue;
+            return event_queue;
+        }
 
-        // Initialize max delta to 1/10 of a second.
-        qpcMaxDelta = static_cast<uint64_t>(qpcFrequency / 10);
+        bool PopEvent(Event& e) noexcept
+        {
+            auto& event_queue = GetEventQueue();
+
+            // Pop the first event of the queue, if it is not empty.
+            if (!event_queue.empty())
+            {
+                e = event_queue.front();
+                event_queue.pop_front();
+                return true;
+            }
+
+            return false;
+        }
     }
 
-    void GameTime::ResetElapsedTime()
+    void PushEvent(const Event& e)
     {
-        qpcLastTime = Stopwatch::GetTimestamp();
-
-        leftOverTicks = 0;
-        framesPerSecond = 0;
-        framesThisSecond = 0;
-        qpcSecondCounter = 0;
+        GetEventQueue().emplace_back(e);
     }
-} // namespace Alimer
+
+    void PushEvent(Event&& e)
+    {
+        GetEventQueue().emplace_back(std::move(e));
+    }
+    
+    bool PollEvent(Event& e) noexcept
+    {
+        //impl::pump_events();
+
+        return PopEvent(e);
+    }
+}

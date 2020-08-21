@@ -24,7 +24,7 @@
 
 #include "Core/String.h"
 
-namespace alimer
+namespace Alimer
 {
     /// Defines a floating-point size.
     struct ALIMER_API Size

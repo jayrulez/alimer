@@ -25,7 +25,7 @@
 #include "Core/String.h"
 #include "Graphics/Types.h"
 
-namespace alimer
+namespace Alimer
 {
     static constexpr uint32 KnownVendorId_AMD = 0x1002;
     static constexpr uint32 KnownVendorId_Intel = 0x8086;

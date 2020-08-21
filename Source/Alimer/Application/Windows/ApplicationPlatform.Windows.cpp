@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Library.h"
-#if defined(_WIN32)
+#include "Application/ApplicationPlatform.h"
 #ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN
 #endif
@@ -29,45 +28,44 @@
 #   define NOMINMAX
 #endif
 #include <Windows.h>
+#include <shellapi.h>
+#include <objbase.h>
 #undef WIN32_LEAN_AND_MEAN
 #undef NOMINMAX
-#endif
-
-#if defined(_DEBUG)
-#include "Core/Log.h"
-#endif
 
 namespace Alimer
 {
-    LibHandle LibraryOpen(const char* libName)
+    class WindowApplicationPlatform final : public ApplicationPlatform
     {
-        HMODULE handle = LoadLibraryA(libName);
+    public:
+        WindowApplicationPlatform(Application* application);
+        ~WindowApplicationPlatform() override;
+    };
 
-#if defined(_DEBUG)
-        if (handle == nullptr)
-        {
-            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
-        }
-#endif
-
-        return (LibHandle)handle;
+    std::unique_ptr<ApplicationPlatform> ApplicationPlatform::CreateDefault(Application* application)
+    {
+        return std::make_unique<WindowApplicationPlatform>(application);
     }
 
-    void LibraryClose(LibHandle handle)
+    /* WindowApplicationPlatform */
+    WindowApplicationPlatform::WindowApplicationPlatform(Application* application)
+        : ApplicationPlatform(application)
     {
-        FreeLibrary(static_cast<HMODULE>(handle));
+        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+        if (hr == RPC_E_CHANGED_MODE) {
+            hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+        }
+
+        if (AllocConsole()) {
+            FILE* fp;
+            freopen_s(&fp, "conin$", "r", stdin);
+            freopen_s(&fp, "conout$", "w", stdout);
+            freopen_s(&fp, "conout$", "w", stderr);
+        }
     }
 
-    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    WindowApplicationPlatform::~WindowApplicationPlatform()
     {
-        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
-
-#if defined(_DEBUG)
-        if (proc == nullptr)
-        {
-            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
-        }
-#endif
-        return proc;
+        CoUninitialize();
     }
 }

@@ -22,47 +22,20 @@
 
 #pragma once
 
-#include "OS/Window.h"
-#include "Math/Size.h"
-#include "Graphics/Texture.h"
+#include "Core/Platform.h"
 
 namespace Alimer
 {
-    struct RenderWindowDescription
+    template <class RetType, class... Args>
+    class TEvent
     {
-        std::string title = "Alimer";
-        SizeI size = { 1280, 720 };
-        WindowFlags windowFlags = WindowFlags::None;
-
-        /// Whether to try use sRGB backbuffer color format.
-        bool colorFormatSrgb = false;
-
-        /// The depth format.
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-
-        /// Should the window wait for vertical sync before swapping buffers.
-        bool verticalSync = false;
-        bool fullscreen = false;
-
-        uint32 sampleCount = 1u;
     };
 
-    class ALIMER_API RenderWindow : public Window
+    template <typename Signature>
+    class Event;
+
+    template <class RetType, class... Args>
+    class Event<RetType(Args...) > : public TEvent <RetType, Args...>
     {
-        ALIMER_OBJECT(RenderWindow, Window);
-
-    public:
-        RenderWindow(const RenderWindowDescription& desc);
-
-        virtual Texture* GetCurrentTexture() const;
-        virtual Texture* GetDepthStencilTexture() const;
-        
-    protected:
-        uint32 backbufferIndex{ 0 };
-        PixelFormat colorFormat;
-        PixelFormat depthStencilFormat;
-
-        std::vector<RefPtr<Texture>> colorTextures;
-        RefPtr<Texture> depthStencilTexture;
     };
 }

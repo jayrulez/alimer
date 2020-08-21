@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <memory>
 
-namespace alimer
+namespace Alimer
 {
     namespace details
     {
@@ -176,7 +176,7 @@ namespace alimer
         return details::context().input;
     }
 
-    GPUDevice* Object::GetGPUDevice()
+    GPUDevice* Object::GetGraphics()
     {
         return details::context().graphics;
     }

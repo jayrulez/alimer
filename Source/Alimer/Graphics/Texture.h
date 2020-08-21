@@ -25,7 +25,7 @@
 #include "Graphics/GPUResource.h"
 #include "Math/Size.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API Texture : public GPUResource
     {

@@ -25,7 +25,7 @@
 #include "D3D11Texture.h"
 #include "D3D11GPUDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     D3D11RenderWindow::D3D11RenderWindow(D3D11GPUDevice* device_, const RenderWindowDescription& desc)
         : RenderWindow(desc)
@@ -96,6 +96,8 @@ namespace alimer
         ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain)));
         SafeRelease(tempSwapChain);
 #endif
+
+        AfterReset();
     }
 
     D3D11RenderWindow::~D3D11RenderWindow()
@@ -107,6 +109,24 @@ namespace alimer
     {
         SafeRelease(swapChain);
         RenderWindow::Destroy();
+    }
+
+    void D3D11RenderWindow::AfterReset()
+    {
+        colorTextures.clear();
+        depthStencilTexture.Reset();
+
+        // Create a render target view of the swap chain back buffer.
+        ID3D11Texture2D* backbufferTexture;
+        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
+        colorTextures.push_back(MakeRefPtr<D3D11Texture>(device, backbufferTexture, colorFormat));
+        backbufferTexture->Release();
+
+        if (depthStencilFormat != PixelFormat::Invalid)
+        {
+            //GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
+            //depthStencilTexture.Reset(new D3D11Texture(device, depthTextureDesc, nullptr));
+        }
     }
 
     void D3D11RenderWindow::SetVerticalSync(bool value)

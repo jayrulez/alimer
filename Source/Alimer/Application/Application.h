@@ -24,15 +24,16 @@
 
 #include "Core/Log.h"
 #include "Math/Size.h"
+#include "Application/ApplicationPlatform.h"
 #include "Application/GameTime.h"
 #include "Application/GameSystem.h"
 
-namespace alimer
+namespace Alimer
 {
     struct Configuration
     {
         /// Name of the application.
-        String applicationName = "Alimer";
+        std::string applicationName = "Alimer";
 
         /// Run engine in headless mode.
         bool headless = false;
@@ -82,6 +83,8 @@ namespace alimer
         /// Called by platform backend.
         void InitBeforeRun();
         void Render();
+
+        std::unique_ptr<ApplicationPlatform> platform;
 
     protected:
         std::vector<String> args;

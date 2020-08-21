@@ -25,7 +25,7 @@
 #include "Math/MathHelper.h"
 #include "Math/Size.h"
 
-namespace alimer
+namespace Alimer
 {
     template <typename T>
     struct ALIMER_API TRect

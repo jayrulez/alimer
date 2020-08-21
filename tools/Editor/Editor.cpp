@@ -21,12 +21,12 @@
 //
 
 #include "Editor.h"
-#include "Core/Window.h"
+#include "OS/Window.h"
 #include "Math/Color.h"
 #include <imgui.h>
 #include <imgui_internal.h>
 
-namespace alimer
+namespace Alimer
 {
     Editor::Editor()
     {
@@ -101,4 +101,4 @@ namespace alimer
     }
 }
 
-ALIMER_DEFINE_APPLICATION(alimer::Editor);
+ALIMER_DEFINE_APPLICATION(Alimer::Editor);

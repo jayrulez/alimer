@@ -22,6 +22,6 @@
 
 #include "Math/Rect.h"
 
-namespace alimer
+namespace Alimer
 {
 }

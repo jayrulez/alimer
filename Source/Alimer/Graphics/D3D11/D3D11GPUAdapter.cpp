@@ -22,7 +22,7 @@
 
 #include "D3D11GPUAdapter.h"
 
-namespace alimer
+namespace Alimer
 {
     D3D11GPUAdapter::D3D11GPUAdapter(IDXGIAdapter1* adapter)
         : adapter{ adapter }
@@ -34,7 +34,7 @@ namespace alimer
         vendorId = desc.VendorId;
 
         std::wstring deviceName(desc.Description);
-        name = alimer::ToUtf8(deviceName);
+        name = Alimer::ToUtf8(deviceName);
 
         // Detect adapter type.
         if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)

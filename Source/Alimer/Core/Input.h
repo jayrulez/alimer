@@ -26,7 +26,7 @@
 #include <vector>
 #include <bitset>
 
-namespace alimer
+namespace Alimer
 {
     /// Defines input key modifiers.
     enum class ModifierKeys : uint8_t

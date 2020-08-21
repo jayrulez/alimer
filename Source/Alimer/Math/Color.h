@@ -30,7 +30,7 @@
 #define ALIMER_SELECT_ANY __declspec(selectany)
 #endif
 
-namespace alimer
+namespace Alimer
 {
     /// Class specifying a floating-point RGBA color.
     class ALIMER_API Color final

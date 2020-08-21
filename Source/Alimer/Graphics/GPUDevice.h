@@ -27,9 +27,8 @@
 #include "Graphics/GPUContext.h"
 #include "Graphics/GPUBuffer.h"
 
-namespace alimer
+namespace Alimer
 {
-
     struct GraphicsDeviceDescription
     {
         String applicationName = "";
@@ -50,6 +49,9 @@ namespace alimer
         static bool IsGPUBasedBackendValidationEnabled();
 
         static GPUDevice* Create(const GraphicsDeviceDescription& desc, GPUBackendType preferredRendererType = GPUBackendType::Count);
+
+        bool BeginFrame();
+        void EndFrame();
 
         /// Gets the adapter device.
         virtual GPUAdapter* GetAdapter() const = 0;
@@ -96,7 +98,13 @@ namespace alimer
         RefPtr<RenderWindow> renderWindow;
 
     private:
+        virtual bool BeginFrameImpl() = 0;
+        virtual void EndFrameImpl() = 0;
+
         static bool enableGPUValidation;
+
+        /// Whether a frame is active or not
+        bool frameActive{ false };
 
         /// Number of frame count
         uint64_t frameCount{ 0 };

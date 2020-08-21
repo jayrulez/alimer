@@ -23,7 +23,7 @@
 #include "Math/Viewport.h"
 #include <fmt/format.h>
 
-namespace alimer
+namespace Alimer
 {
     float Viewport::AspectRatio() const
     {

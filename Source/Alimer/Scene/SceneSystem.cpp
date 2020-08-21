@@ -22,7 +22,7 @@
 
 #include "Scene/SceneSystem.h"
 
-namespace alimer
+namespace Alimer
 {
     SceneSystem::SceneSystem()
     {

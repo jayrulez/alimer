@@ -60,7 +60,7 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, _COM
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-namespace alimer
+namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;

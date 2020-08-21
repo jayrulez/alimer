@@ -22,7 +22,7 @@
 
 #include "Math/Size.h"
 
-namespace alimer
+namespace Alimer
 {
     const Size Size::Empty = { 0.0f, 0.0f };
     const SizeI SizeI::Empty = { 0, 0 };

@@ -24,7 +24,7 @@
 
 #include "Core/Assert.h"
 
-namespace alimer {
+namespace Alimer {
     using LibHandle = void*;
 
     /**
@@ -42,4 +42,4 @@ namespace alimer {
      * Get library symbol.
      */
     ALIMER_API void* LibrarySymbol(LibHandle handle, const char* symbolName);
-} // namespace alimer
+} // namespace Alimer

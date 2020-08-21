@@ -20,28 +20,25 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
-#include "Application/Application.h"
+#pragma once
 
-namespace Alimer
+#include <stddef.h>
+#include <stdint.h>
+
+namespace OS
 {
-    GameTime::GameTime()
-        : targetElapsedTicks(TicksPerSecond / 60)
+    enum class EventType : uint8_t
     {
-        qpcFrequency = Stopwatch::GetFrequency();
-        qpcLastTime = Stopwatch::GetTimestamp();
+        Unkwnown = 0,
+        Quit,
+    };
 
-        // Initialize max delta to 1/10 of a second.
-        qpcMaxDelta = static_cast<uint64_t>(qpcFrequency / 10);
-    }
-
-    void GameTime::ResetElapsedTime()
+    struct Event
     {
-        qpcLastTime = Stopwatch::GetTimestamp();
+        EventType type;
+    };
 
-        leftOverTicks = 0;
-        framesPerSecond = 0;
-        framesThisSecond = 0;
-        qpcSecondCounter = 0;
-    }
-} // namespace Alimer
+    void PushEvent(const Event& e);
+    void PushEvent(Event&& e);
+    bool PollEvent(Event& e) noexcept;
+}

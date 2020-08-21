@@ -25,7 +25,7 @@
 #include "Core/Platform.h"
 #include <vector>
 
-namespace alimer
+namespace Alimer
 {
 #if TODO
     template <typename T> struct Function;

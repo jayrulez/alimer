@@ -24,7 +24,7 @@
 #include "D3D11Texture.h"
 #include "D3D11GPUDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {

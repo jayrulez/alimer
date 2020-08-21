@@ -22,7 +22,7 @@
 
 #include "Core/Math.h"
 
-namespace alimer
+namespace Alimer
 {
     /* Float2 */
     const Float2 Float2::Zero = { 0.0f, 0.0f };

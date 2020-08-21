@@ -26,7 +26,7 @@
 #include "D3D11GPUDevice.h"
 #include "Core/String.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -569,7 +569,12 @@ namespace alimer
         }
     }
 
-    void D3D11GPUDevice::Frame()
+    bool D3D11GPUDevice::BeginFrameImpl()
+    {
+        return !isLost;
+    }
+
+    void D3D11GPUDevice::EndFrameImpl() 
     {
         if (!dxgiFactory->IsCurrent())
         {

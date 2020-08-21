@@ -41,15 +41,17 @@ define_engine_source_files(
     Graphics
     Scene
     UI
+    OS
     Application
 )
 
 if(NOT (EMSCRIPTEN OR ANDROID))
-    define_engine_source_files(Platform/GLFW)
+    define_engine_source_files(OS/GLFW)
 endif()
 
 if (WIN32)
-    define_engine_source_files(Platform/Windows)
+  define_engine_source_files(Application/Windows)
+  define_engine_source_files(Platform/Windows)
 endif ()
 
 # Graphics modules

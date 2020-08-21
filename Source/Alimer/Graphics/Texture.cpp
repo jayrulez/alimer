@@ -23,7 +23,7 @@
 #include "Core/Log.h"
 #include "Graphics/Texture.h"
 
-namespace alimer
+namespace Alimer
 {
     Texture::Texture(const GPUTextureDescription& desc)
         : GPUResource(Type::Texture, desc.label)

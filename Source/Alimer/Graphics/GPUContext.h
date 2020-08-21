@@ -28,7 +28,7 @@
 #include "Math/Color.h"
 #include "Math/Viewport.h"
 
-namespace alimer
+namespace Alimer
 {
     /// A container that stores commands for the GPU to execute.
     class ALIMER_API GPUContext
@@ -40,12 +40,6 @@ namespace alimer
     public:
         /// Destructor.
         virtual ~GPUContext() = default;
-
-        bool BeginFrame();
-        void EndFrame();
-
-        virtual Texture* GetCurrentTexture() const;
-        virtual Texture* GetDepthStencilTexture() const;
 
         virtual void PushDebugGroup(const String& name) = 0;
         virtual void PopDebugGroup() = 0;
@@ -63,21 +57,9 @@ namespace alimer
         virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
         virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
 
-    private:
-        virtual bool BeginFrameImpl() = 0;
-        virtual void EndFrameImpl() = 0;
 
     protected:
-        std::vector<RefPtr<Texture>> colorTextures;
-        RefPtr<Texture> depthStencilTexture;
-
         /// Whether this context is the main one.
         bool isMain;
-
-        /// Current active frame index
-        uint32 activeFrameIndex{ 0 };
-
-        /// Whether a frame is active or not
-        bool frameActive{ false };
     };
 }

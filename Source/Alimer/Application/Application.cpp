@@ -22,16 +22,16 @@
 
 #include "Application/Application.h"
 #include "Core/Log.h"
-#include "Core/Window.h"
 #include "Core/Input.h"
 #include "Graphics/GPUDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 #include <imgui.h>
 
-namespace alimer
+namespace Alimer
 {
     Application::Application()
+        : platform(ApplicationPlatform::CreateDefault(this))
     {
         // Construct platform logic first.
         PlatformConstruct();
@@ -130,7 +130,7 @@ namespace alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGPUDevice()->GetMainContext()->BeginFrame())
+        if (!GetGraphics()->BeginFrame())
             return false;
 
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
@@ -158,17 +158,17 @@ namespace alimer
             LOGI("Right held");
         }
 
-        /*auto context = GetGPUDevice()->GetMainContext();
+        auto context = GetGraphics()->GetMainContext();
 
         context->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
-        colorAttachment.texture = context->GetCurrentTexture();
+        colorAttachment.texture = GetGraphics()->GetMainWindow()->GetCurrentTexture();
         colorAttachment.clearColor = Colors::CornflowerBlue;
         //colorAttachment.loadAction = LoadAction::DontCare;
         //colorAttachment.slice = 1;
         context->BeginRenderPass(1, &colorAttachment, nullptr);
         context->EndRenderPass();
-        context->PopDebugGroup();*/
+        context->PopDebugGroup();
     }
 
     void Application::EndDraw()
@@ -179,8 +179,8 @@ namespace alimer
         }*/
 
         ImGuiLayer::EndFrame();
-        GetGPUDevice()->GetMainWindow()->Present();
-        GetGPUDevice()->GetMainContext()->EndFrame();
+        GetGraphics()->GetMainWindow()->Present();
+        GetGraphics()->EndFrame();
     }
 
     int Application::Run()
@@ -219,7 +219,7 @@ namespace alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !GetGPUDevice()->GetMainWindow()->IsMinimized()
+            && !GetGraphics()->GetMainWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

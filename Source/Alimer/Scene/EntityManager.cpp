@@ -23,7 +23,7 @@
 #include "Scene/EntityManager.h"
 #include "Core/Log.h"
 
-namespace alimer
+namespace Alimer
 {
     void EntityManager::AddRoot(Entity* entity)
     {

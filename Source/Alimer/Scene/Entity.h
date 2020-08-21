@@ -26,7 +26,7 @@
 #include "Core/String.h"
 #include "Math/Matrix4x4.h"
 
-namespace alimer
+namespace Alimer
 {
     class EntityManager;
 

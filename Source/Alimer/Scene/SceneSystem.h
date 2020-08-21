@@ -24,7 +24,7 @@
 
 #include "Scene/EntityManager.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API SceneSystem final : public EntityManager
     {

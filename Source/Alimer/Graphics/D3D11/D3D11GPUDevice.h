@@ -26,7 +26,7 @@
 #include "D3D11Backend.h"
 #include <mutex>
 
-namespace alimer
+namespace Alimer
 {
     class D3D11GPUAdapter;
     class D3D11GPUContext;
@@ -40,7 +40,6 @@ namespace alimer
 
         void Shutdown();
 
-        void Frame();
         void HandleDeviceLost(HRESULT hr);
 
         GPUAdapter* GetAdapter() const override;
@@ -57,6 +56,8 @@ namespace alimer
     private:
         void CreateFactory();
         void InitCapabilities();
+        bool BeginFrameImpl() override;
+        void EndFrameImpl() override;
 
         static constexpr uint64_t kRenderLatency = 2;
 

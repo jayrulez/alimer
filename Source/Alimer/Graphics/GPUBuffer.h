@@ -24,7 +24,7 @@
 
 #include "Graphics/GPUResource.h"
 
-namespace alimer
+namespace Alimer
 {
     /// 
     class GPUBuffer : public GPUResource

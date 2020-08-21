@@ -29,7 +29,7 @@
 #define D3D11_NO_HELPERS
 #include <d3d11_1.h>
 
-namespace alimer
+namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;

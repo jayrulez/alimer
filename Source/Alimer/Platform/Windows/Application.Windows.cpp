@@ -28,7 +28,7 @@
 #include <GLFW/glfw3.h>
 #include <shellapi.h>
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -92,7 +92,7 @@ namespace alimer
             while (running)
             {
                 glfwPollEvents();
-                if (GetGPUDevice()->GetMainWindow()->ShouldClose())
+                if (GetGraphics()->GetMainWindow()->ShouldClose())
                 {
                     running = false;
                     break;

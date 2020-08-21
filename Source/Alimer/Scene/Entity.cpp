@@ -23,7 +23,7 @@
 #include "Scene/Entity.h"
 #include "Scene/EntityManager.h"
 
-namespace alimer
+namespace Alimer
 {
     Entity::Entity(const String& name)
         : name{ name }

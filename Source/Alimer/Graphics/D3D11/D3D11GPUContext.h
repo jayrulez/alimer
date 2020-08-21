@@ -25,7 +25,7 @@
 #include "Graphics/GPUContext.h"
 #include "D3D11Backend.h"
 
-namespace alimer
+namespace Alimer
 {
     class ALIMER_API D3D11GPUContext final : public GPUContext
     {
@@ -53,12 +53,6 @@ namespace alimer
 
         void BindBuffer(uint32_t slot, GPUBuffer* buffer) override;
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
-
-    private:
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
-        void CreateObjects();
-        void CreateSwapChainObjects();
 
     private:
         D3D11GPUDevice* device;

@@ -22,7 +22,7 @@
 
 #include "Graphics/RenderWindow.h"
 
-namespace alimer
+namespace Alimer
 {
     RenderWindow::RenderWindow(const RenderWindowDescription& desc)
         : Window(desc.title, Window::Centered, Window::Centered, desc.size.width, desc.size.height, desc.fullscreen ? WindowFlags::Fullscreen : WindowFlags::None)
@@ -30,5 +30,16 @@ namespace alimer
         , depthStencilFormat(desc.depthStencilFormat)
     {
 
+    }
+
+
+    Texture* RenderWindow::GetCurrentTexture() const
+    {
+        return colorTextures[backbufferIndex].Get();
+    }
+
+    Texture* RenderWindow::GetDepthStencilTexture() const
+    {
+        return depthStencilTexture.Get();
     }
 }

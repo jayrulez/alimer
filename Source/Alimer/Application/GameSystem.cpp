@@ -22,7 +22,7 @@
 
 #include "Application/GameSystem.h"
 
-namespace alimer
+namespace Alimer
 {
     GameSystem::GameSystem()
     {

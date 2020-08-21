@@ -24,7 +24,7 @@
 
 #include "Core/Platform.h"
 
-namespace alimer
+namespace Alimer
 {
     ALIMER_API uint32_t Murmur32(const void* key, uint32_t len, uint32_t seed);
     ALIMER_API uint64_t Murmur64(const void* key, uint64_t len, uint64_t seed);

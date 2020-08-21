@@ -22,8 +22,21 @@
 
 #include "Core/Assert.h"
 #include <cstdio>
+#include <cstdarg>
+#if defined(_WIN32) || defined(_WIN64)
+#ifndef WIN32_LEAN_AND_MEAN
+#   define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#   define NOMINMAX
+#endif
+#include <Windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#undef NOMINMAX
+#endif
 
-namespace alimer {
+namespace Alimer
+{
     AssertFailBehavior DefaultHandler(const char* condition,
         const char* msg,
         const char* file,
@@ -86,4 +99,4 @@ namespace alimer {
 
         return GetAssertHandlerInstance()(condition, message, file, line);
     }
-} // namespace alimer
+} 

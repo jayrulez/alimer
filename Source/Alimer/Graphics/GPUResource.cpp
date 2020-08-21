@@ -24,7 +24,7 @@
 #include "Graphics/GPUResource.h"
 #include "Graphics/GPUDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     GPUResource::GPUResource(Type type_, const char* name_)
         : type(type_)
