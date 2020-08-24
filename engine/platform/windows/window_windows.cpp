@@ -27,6 +27,8 @@
 #include "io/path.h"
 //#include <stdexcept>
 
+using namespace std;
+
 namespace Alimer
 {
     namespace
@@ -37,6 +39,19 @@ namespace Alimer
             {
             case WM_DESTROY:
                 PostQuitMessage(0);
+                break;
+
+            case WM_PAINT:
+                /*if (s_in_sizemove && game)
+                {
+                    game->Tick();
+                }
+                else*/
+                {
+                    PAINTSTRUCT ps;
+                    (void)BeginPaint(hWnd, &ps);
+                    EndPaint(hWnd, &ps);
+                }
                 break;
             }
 
@@ -96,5 +111,10 @@ namespace Alimer
 
         ShowWindow(handle, SW_SHOW);
         SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+    }
+
+    unique_ptr<Window> Window::create(const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+    {
+        return make_unique<WindowsWindow>(title, x, y, width, height);
     }
 }

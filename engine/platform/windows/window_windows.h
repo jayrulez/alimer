@@ -36,6 +36,6 @@ namespace Alimer
         WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
     private:
-        HWND handle;
+        HWND handle = nullptr;
     };
 }

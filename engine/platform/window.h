@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "core/Config.h"
+#include "config.h"
 #include <memory>
 
 namespace Alimer
@@ -32,7 +32,7 @@ namespace Alimer
     public:
         virtual ~Window() = default;
 
-        static std::unique_ptr<Window> create();
+        static std::unique_ptr<Window> create(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
     private:
     };

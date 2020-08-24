@@ -68,8 +68,11 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(alimer)
 
-# Source
-add_subdirectory(Source)
+# Third Party 
+add_subdirectory(third_party)
+
+# Engine
+add_subdirectory(engine)
 
 if (ALIMER_BUILD_TOOLS)
     add_subdirectory(tools)

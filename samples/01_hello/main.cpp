@@ -30,11 +30,11 @@ namespace Alimer
     public:
     };
 
-    std::unique_ptr<Application> Application::Create(const std::vector<std::string>& args)
+    Application* application_create(int argc, char** argv)
     {
-        Window* window = new Window("Alimer", 0, 0, 640, 480);
+        auto window = Window::create("Alimer", 0, 0, 640, 480);
 
-        return std::make_unique<TestApp>();
+        return new TestApp();
     }
 }
 
