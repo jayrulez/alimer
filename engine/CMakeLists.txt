@@ -33,15 +33,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 
 define_engine_source_files(
   core
-  io
+  IO
   platform
 )
 
-if (WIN32)
-  define_engine_source_files(platform/windows)
-elseif(EMSCRIPTEN)
-  define_engine_source_files(platform/web)
-endif ()
+define_engine_source_files(platform/${ALIMER_NATIVE_PLATFORM})
 
 group_sources()
 
@@ -67,12 +63,22 @@ if(ALIMER_WARNINGS_AS_ERRORS)
     endif()
 endif()
 
-if (WIN32)
+if(EMSCRIPTEN)
+elseif(ANDROID)
+elseif(APPLE)
+elseif(WINDOWS_STORE)
+  target_compile_options(${TARGET_NAME} PUBLIC "/Zc:__cplusplus")
+  # we need this when using /permissive
+  target_compile_options(${TARGET_NAME} PUBLIC "/Zc:twoPhase-")
+  target_compile_definitions(${TARGET_NAME} PUBLIC -D_UNICODE)
+  #target_compile_options(${TARGET_NAME} PRIVATE /ZW)
+  #target_compile_options(${TARGET_NAME} PRIVATE /await)
+elseif (WIN32)
   set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_SECURE_NO_WARNINGS)
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_NONSTDC_NO_WARNINGS)
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_UNICODE)
-elseif(EMSCRIPTEN)
+elseif(UNIX)
 endif ()
 
 if(NOT (EMSCRIPTEN OR ANDROID))

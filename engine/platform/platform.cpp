@@ -26,12 +26,12 @@ namespace Alimer
 {
     std::vector<std::string> Platform::arguments = {};
 
-    std::vector<std::string> Platform::get_arguments()
+    std::vector<std::string> Platform::GetArguments()
     {
         return Platform::arguments;
     }
 
-    void Platform::set_arguments(const std::vector<std::string>& args)
+    void Platform::SetArguments(const std::vector<std::string>& args)
     {
         arguments = args;
     }

@@ -111,7 +111,7 @@ namespace Alimer
         SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
     }
 
-    unique_ptr<Window> Window::create(const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+    unique_ptr<Window> Window::Create(const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
     {
         return make_unique<WindowsWindow>(title, x, y, width, height);
     }

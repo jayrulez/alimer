@@ -20,10 +20,13 @@
 // THE SOFTWARE.
 //
 
+#include "platform/platform.h"
 #include "core/application.h"
 #include "windows_private.h"
+#include "IO/Path.h"
+#include <shellapi.h>
 #include <objbase.h>
-#include <stdio.h>
+#include <DirectXMath.h>
 
 // Indicates to hybrid graphics systems to prefer the discrete part by default
 extern "C"
@@ -32,32 +35,54 @@ extern "C"
     __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 
-namespace Alimer
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
 {
-    int application_main(Application* (*create_application)(int, char**), int argc, char* argv[])
-    {
-        HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
-        if (FAILED(hr))
-            return false;
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+
+    if (!DirectX::XMVerifyCPUSupport())
+        return 1;
+
+    HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+    if (FAILED(hr))
+        return false;
 
 #ifdef _DEBUG
-        if (AllocConsole()) {
-            FILE* fp;
-            freopen_s(&fp, "conin$", "r", stdin);
-            freopen_s(&fp, "conout$", "w", stdout);
-            freopen_s(&fp, "conout$", "w", stderr);
-        }
+    if (AllocConsole()) {
+        FILE* fp;
+        freopen_s(&fp, "conin$", "r", stdin);
+        freopen_s(&fp, "conout$", "w", stdout);
+        freopen_s(&fp, "conout$", "w", stderr);
+    }
 #endif
 
-        auto app = std::unique_ptr<Alimer::Application>(create_application(argc, argv));
+    int argc;
+    wchar_t** wide_argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    std::vector<char*> argv_buffer(argc + 1);
+    char** argv = nullptr;
+    std::vector<std::string> argv_strings(argc);
 
-        if (app)
+    if (wide_argv)
+    {
+        argv = argv_buffer.data();
+        for (int i = 0; i < argc; i++)
         {
-            app.reset();
-            CoUninitialize(); 
-            return 0;
+            argv_strings[i] = Alimer::Path::to_utf8(wide_argv[i]);
+            argv_buffer[i] = const_cast<char*>(argv_strings[i].c_str());
         }
-
-        return 1;
     }
+
+    Alimer::Platform::SetArguments(argv_strings);
+
+    int exitCode = 1;
+    std::unique_ptr<Alimer::Application> app = std::unique_ptr<Alimer::Application>(Alimer::CreateApplication(argc, argv));
+
+    if (app)
+    {
+        app.reset();
+        exitCode = 0;
+    }
+
+    CoUninitialize();
+    return exitCode;
 }

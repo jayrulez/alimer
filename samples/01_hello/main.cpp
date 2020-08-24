@@ -30,11 +30,9 @@ namespace Alimer
     public:
     };
 
-    Application* application_create(int argc, char** argv)
+    Application* CreateApplication(int argc, char* argv[])
     {
-        application_dummy();
-
-        auto window = Window::create("Alimer", 0, 0, 640, 480);
+        auto window = Window::Create("Alimer", 0, 0, 640, 480);
 
         return new TestApp();
     }

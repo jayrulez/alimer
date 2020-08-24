@@ -70,17 +70,17 @@ namespace Alimer
     {
     public:
         /// Return the current platform name.
-        static const char* get_name();
+        static std::string GetName();
 
         /// Return the current platform ID.
-        static PlatformId get_id();
+        static PlatformId GetId();
 
         /// Return the current platform family.
-        static PlatformFamily get_family();
+        static PlatformFamily GetFamily();
 
-        static std::vector<std::string> get_arguments();
+        static std::vector<std::string> GetArguments();
 
-        static void set_arguments(const std::vector<std::string>& args);
+        static void SetArguments(const std::vector<std::string>& args);
 
     private:
         static std::vector<std::string> arguments;

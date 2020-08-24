@@ -20,12 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "io/path.h"
+#include "IO/Path.h"
 #include <vector>
 #include <algorithm>
 
 #ifdef _WIN32
-#   include "platform/windows/windows_private.h"
+#   include "platform/Win32/windows_private.h"
 #else
 #   include <unistd.h>
 #   ifdef __linux__

@@ -34,10 +34,8 @@ namespace Alimer
 
     }
 
-    Application* application_create(int argc, char** argv)
+    Application* CreateApplication(int argc, char* argv[])
     {
-        application_dummy();
-
         return new Editor();
     }
 }

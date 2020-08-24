@@ -6,7 +6,7 @@ function(add_sample sample_name)
 
     if (ANDROID)
         add_library(${sample_name} SHARED ${SOURCE_FILES})
-    elseif (WIN32)
+    elseif (WIN32 OR WINDOWS_STORE)
         add_executable(${sample_name} WIN32 ${SOURCE_FILES})
     else ()
 	    add_executable(${sample_name} ${SOURCE_FILES})

@@ -33,8 +33,7 @@ namespace Alimer
     public:
         virtual ~Window() = default;
 
-        static std::unique_ptr<Window> create(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
-
+        static std::unique_ptr<Window> Create(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
     private:
     };
 }

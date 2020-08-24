@@ -25,18 +25,18 @@
 
 namespace Alimer
 {
-    const char* Platform::get_name()
+    std::string Platform::GetName()
     {
-        return "Web";
+        return "Windows";
     }
 
-    PlatformId Platform::get_id()
+    PlatformId Platform::GetId()
     {
-        return PlatformId::Web;
+        return PlatformId::Windows;
     }
 
-    PlatformFamily Platform::get_family()
+    PlatformFamily Platform::GetFamily()
     {
-        return PlatformFamily::Mobile;
+        return PlatformFamily::Desktop;
     }
 }

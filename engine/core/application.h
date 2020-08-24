@@ -30,21 +30,21 @@ namespace Alimer
     class Application
     {
     public:
-        virtual ~Application() = default;
+        Application();
+        virtual ~Application();
+
+        static Application* Current();
 
         void run_frame();
 
-        virtual std::string get_name()
+        virtual std::string GetName()
         {
             return "Alimer";
         }
+
+    private:
+        static Application* s_current;
     };
 
-    int application_main(Application* (*create_application)(int, char**), int argc, char** argv);
-
-    extern Application* application_create(int argc, char* argv[]);
-
-    // Call this to ensure application-main is linked in correctly without having to mess around
-    // with -Wl,--whole-archive.
-    void application_dummy();
+    extern Application* CreateApplication(int argc, char* argv[]);
 }

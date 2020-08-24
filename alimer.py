@@ -300,8 +300,8 @@ if __name__ == "__main__":
         if buildSystem == "vs2019":
             generator = "Visual Studio 16"
 
-        if (buildSystem == "uwp"):
-            batCmd.AddCommand("cmake -G \"%s\" -T host=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A %s ../../" % (generator, vcArch))
+        if (target == "uwp"):
+            batCmd.AddCommand("cmake -G \"%s\" -DCMAKE_INSTALL_PREFIX=\"sdk\" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A %s ../../" % (generator, vcArch))
         else:
             batCmd.AddCommand("cmake -G \"%s\" -T %shost=x64 -DCMAKE_INSTALL_PREFIX=\"sdk\" -A %s ../../" % (generator, vcToolset, vcArch))
 

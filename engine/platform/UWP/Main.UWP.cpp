@@ -20,53 +20,48 @@
 // THE SOFTWARE.
 //
 
-#include "core/preprocessor.h"
-#include "core/application.h"
 #include "platform/platform.h"
-#include "io/path.h"
+#include <Windows.h>
+#include "winrt/Windows.ApplicationModel.h"
+#include "winrt/Windows.ApplicationModel.Core.h"
+#include "winrt/Windows.ApplicationModel.Activation.h"
+#include "winrt/Windows.Foundation.h"
+#include "winrt/Windows.Graphics.Display.h"
+#include "winrt/Windows.System.h"
+#include "winrt/Windows.UI.Core.h"
+#include "winrt/Windows.UI.Input.h"
+#include "winrt/Windows.UI.ViewManagement.h"
 
-#if ALIMER_PLATFORM_WINDOWS
-#include "platform/windows/windows_private.h"
-#include <shellapi.h>
-#endif
+using namespace winrt::Windows::ApplicationModel;
+using namespace winrt::Windows::ApplicationModel::Core;
+using namespace winrt::Windows::ApplicationModel::Activation;
+using namespace winrt::Windows::UI::Core;
+using namespace winrt::Windows::UI::Input;
+using namespace winrt::Windows::UI::ViewManagement;
+using namespace winrt::Windows::System;
+using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::Graphics::Display;
 
 namespace Alimer
 {
     // Make sure this is linked in.
-    void application_dummy()
+    void ApplicationDummy()
     {
     }
 }
 
-#ifdef _WIN32
-int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
-#else
-int main(int argc, char* argv[])
-#endif
+int WINAPI wWinMain(
+    _In_ HINSTANCE /*hInstance*/,
+    _In_ HINSTANCE /*hPrevInstance*/,
+    _In_ LPWSTR    /*lpCmdLine*/,
+    _In_ int       /*nCmdShow*/
+)
 {
-#ifdef _WIN32
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
-
-    int argc;
-    wchar_t** wide_argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    std::vector<char*> argv_buffer(argc + 1);
-    char** argv = nullptr;
-    std::vector<std::string> argv_strings(argc);
-
-    if (wide_argv)
+    if (!DirectX::XMVerifyCPUSupport())
     {
-        argv = argv_buffer.data();
-        for (int i = 0; i < argc; i++)
-        {
-            argv_strings[i] = Alimer::Path::to_utf8(wide_argv[i]);
-            argv_buffer[i] = const_cast<char*>(argv_strings[i].c_str());
-        }
+        throw std::exception("XMVerifyCPUSupport");
     }
-#endif
 
-    Alimer::Platform::set_arguments({ argv + 1, argv + argc });
-
-    int ret = Alimer::application_main(Alimer::application_create, argc, argv);
-    return ret;
+    //CoreApplication::Run(viewProviderFactory);
+    return 0;
 }

@@ -24,6 +24,23 @@
 
 namespace Alimer
 {
+    Application* Application::s_current;
+
+    Application::Application()
+    {
+        s_current = this;
+    }
+
+    Application::~Application()
+    {
+        s_current = nullptr;
+    }
+
+    Application* Application::Current()
+    {
+        return s_current;
+    }
+
     void Application::run_frame()
     {
     }
