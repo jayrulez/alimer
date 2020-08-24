@@ -20,23 +20,19 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
 #include "platform/platform.h"
-#include "windows_private.h"
+#include "platform/window.h"
 
 namespace Alimer
 {
-    const char* Platform::get_name()
+    class WindowWeb final : public Window
     {
-        return "Web";
-    }
+    public:
+        WindowWeb(const char* canvasName, const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
-    PlatformId Platform::get_id()
-    {
-        return PlatformId::Web;
-    }
-
-    PlatformFamily Platform::get_family()
-    {
-        return PlatformFamily::Mobile;
-    }
+    private:
+        const char* canvasName;
+    };
 }

@@ -20,8 +20,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "io/path.h"
 #include <vector>
 #include <algorithm>

@@ -20,23 +20,34 @@
 // THE SOFTWARE.
 //
 
-#include "platform/platform.h"
-#include "windows_private.h"
+#include "window_web.h"
+#include <emscripten.h>
+#include <emscripten/html5.h>
+
+using namespace std;
 
 namespace Alimer
 {
-    const char* Platform::get_name()
+    namespace
     {
-        return "Web";
+        EM_BOOL web_resize_callback(int eventType, const EmscriptenUiEvent* uiEvent, void* userData)
+        {
+            if (eventType == EMSCRIPTEN_EVENT_RESIZE)
+            {
+            }
+
+            return true;
+        }
     }
 
-    PlatformId Platform::get_id()
+    WindowWeb::WindowWeb(const char* canvasName, const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+        : canvasName{ canvasName }
     {
-        return PlatformId::Web;
+        emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false, web_resize_callback);
     }
 
-    PlatformFamily Platform::get_family()
+    unique_ptr<Window> Window::create(const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
     {
-        return PlatformFamily::Mobile;
+        return make_unique<WindowWeb>("#canvas", title, x, y, width, height);
     }
 }

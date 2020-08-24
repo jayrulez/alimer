@@ -68,6 +68,28 @@ set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(alimer)
 
+# Setup
+if(EMSCRIPTEN)
+  string(CONCAT ALIMER_EMSCRIPTEN_FLAGS
+    "-Os "
+    "-s USE_WEBGL2=1 "
+    "-s FORCE_FILESYSTEM=1 "
+    "-s USE_PTHREADS=1 "
+  )
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALIMER_EMSCRIPTEN_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALIMER_EMSCRIPTEN_FLAGS}")
+  set(CMAKE_EXECUTABLE_SUFFIX ".html")
+
+elseif(ANDROID)
+  find_package(Java REQUIRED)
+elseif(UNIX)
+  find_package(PkgConfig)
+  if(NOT APPLE)
+    set(CMAKE_SKIP_RPATH OFF)
+  endif()
+endif()
+
 # Third Party 
 add_subdirectory(third_party)
 

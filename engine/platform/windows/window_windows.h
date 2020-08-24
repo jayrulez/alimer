@@ -30,7 +30,7 @@ namespace Alimer
 {
     using HWND = HWND__*;
 
-    class ALIMER_API WindowsWindow final : public Window
+    class WindowsWindow final : public Window
     {
     public:
         WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);

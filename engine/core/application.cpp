@@ -20,8 +20,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "core/application.h"
 
 namespace Alimer

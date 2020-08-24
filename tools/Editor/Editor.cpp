@@ -20,8 +20,31 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "Editor.h"
+
+namespace Alimer
+{
+    Editor::Editor()
+    {
+
+    }
+
+    Editor::~Editor()
+    {
+
+    }
+
+    Application* application_create(int argc, char** argv)
+    {
+        application_dummy();
+
+        return new Editor();
+    }
+}
+
+
+
+#if TODO
 #include "OS/Window.h"
 #include "Math/Color.h"
 #include <imgui.h>

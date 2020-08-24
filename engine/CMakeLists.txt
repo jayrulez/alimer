@@ -38,7 +38,9 @@ define_engine_source_files(
 )
 
 if (WIN32)
-    define_engine_source_files(platform/windows)
+  define_engine_source_files(platform/windows)
+elseif(EMSCRIPTEN)
+  define_engine_source_files(platform/web)
 endif ()
 
 group_sources()

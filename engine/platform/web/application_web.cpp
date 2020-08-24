@@ -20,23 +20,35 @@
 // THE SOFTWARE.
 //
 
-#include "platform/platform.h"
-#include "windows_private.h"
+#include "core/application.h"
+#include <emscripten.h>
+#include <emscripten/html5.h>
 
 namespace Alimer
 {
-    const char* Platform::get_name()
+    namespace
     {
-        return "Web";
+        EM_BOOL frame_loop(double time, void* userData)
+        {
+            printf("frame_loop %g!\n", time);
+            static_cast<Alimer::Application*>(userData)->run_frame();
+            return EM_TRUE;
+        }
     }
 
-    PlatformId Platform::get_id()
+    int application_main(Application* (*create_application)(int, char**), int argc, char* argv[])
     {
-        return PlatformId::Web;
-    }
+        printf("hello, world!\n");
+        auto app = std::unique_ptr<Alimer::Application>(create_application(argc, argv));
 
-    PlatformFamily Platform::get_family()
-    {
-        return PlatformFamily::Mobile;
+        if (app)
+        {
+            emscripten_request_animation_frame_loop(frame_loop, app.get());
+
+            app.reset();
+            return 0;
+        }
+
+        return 1;
     }
 }

@@ -20,8 +20,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "platform/platform.h"
 
 namespace Alimer

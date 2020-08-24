@@ -21,22 +21,22 @@
 //
 
 #include "platform/platform.h"
-#include "windows_private.h"
+#include <emscripten.h>
 
 namespace Alimer
 {
     const char* Platform::get_name()
     {
-        return "Web";
+        return "Windows";
     }
 
     PlatformId Platform::get_id()
     {
-        return PlatformId::Web;
+        return PlatformId::Windows;
     }
 
     PlatformFamily Platform::get_family()
     {
-        return PlatformFamily::Mobile;
+        return PlatformFamily::Desktop;
     }
 }

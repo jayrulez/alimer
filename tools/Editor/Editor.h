@@ -22,8 +22,7 @@
 
 #pragma once
 
-#if TODO
-#include "Application/Application.h"
+#include "core/application.h"
 
 namespace Alimer
 {
@@ -31,7 +30,7 @@ namespace Alimer
 
     class Editor final : public Application
     {
-        ALIMER_OBJECT(Editor, Application);
+        //ALIMER_OBJECT(Editor, Application);
 
     public:
         /// Constructor.
@@ -41,10 +40,8 @@ namespace Alimer
         ~Editor();
 
     private:
-        void Initialize() override;
-        bool BeginDraw() override;
-        void Draw(const GameTime& gameTime) override;
+        //void Initialize() override;
+        //bool BeginDraw() override;
+        //void Draw(const GameTime& gameTime) override;
     };
 }
-
-#endif // TODO

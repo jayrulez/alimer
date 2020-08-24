@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "core/Application.h"
 #include "platform/Window.h"
+#include "core/application.h"
 
 namespace Alimer
 {
@@ -32,6 +32,8 @@ namespace Alimer
 
     Application* application_create(int argc, char** argv)
     {
+        application_dummy();
+
         auto window = Window::create("Alimer", 0, 0, 640, 480);
 
         return new TestApp();

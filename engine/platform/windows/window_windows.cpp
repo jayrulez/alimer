@@ -20,8 +20,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "window_windows.h"
 #include "windows_private.h"
 #include "io/path.h"

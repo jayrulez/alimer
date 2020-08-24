@@ -20,8 +20,6 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "core/preprocessor.h"
 #include "core/application.h"
 #include "platform/platform.h"
