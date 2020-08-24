@@ -1,7 +1,7 @@
 # CMake version
 cmake_minimum_required(VERSION 3.10)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -18,11 +18,6 @@ project (
 set(ALIMER_WARNINGS_AS_ERRORS ON CACHE BOOL "Enable Warnings as Errors")
 option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
-
-# Platfofm backend.
-if(NOT (EMSCRIPTEN OR ANDROID))
-  set(ALIMER_GLFW ON CACHE BOOL "Use GLFW platform backend")
-endif()
 
 # Graphics module backend
 if (WIN32)
@@ -107,6 +102,10 @@ endif()
 
 if(ALIMER_VULKAN)
     message(STATUS "Build Renderer: Vulkan")
+endif()
+
+if(ALIMER_WARNINGS_AS_ERRORS)
+    message(STATUS "Warnings as Errors Enabled")
 endif()
 
 # Install files

@@ -34,8 +34,19 @@ namespace Alimer
     public:
         virtual ~Application() = default;
 
-        void Tick();
+        void run_frame();
+
+        virtual std::string get_name()
+        {
+            return "Alimer";
+        }
     };
 
-    std::unique_ptr<Application> CreateApplication(const std::vector<std::string>& args);
+    int application_main(Application* (*create_application)(int, char**), int argc, char** argv);
+
+    extern Application* application_create(int argc, char* argv[]);
+
+    // Call this to ensure application-main is linked in correctly without having to mess around
+    // with -Wl,--whole-archive.
+    void application_dummy();
 }

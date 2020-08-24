@@ -22,40 +22,15 @@
 
 #pragma once
 
-#include "platform/Platform.h"
+#include <string>
+#include <utility>
 
-struct HINSTANCE__;
-struct HWND__;
-
-namespace Alimer
+namespace Alimer::Path
 {
-    using HANDLE = void*;
-    using HINSTANCE = HINSTANCE__*;
-    using HWND = HWND__*;
-
-    class ALIMER_API WindowsPlatform final : public PlatformBase
-    {
-    private:
-        static HINSTANCE hInstance;
-
-    public:
-        static const wchar_t AppWindowClass[];
-
-        static bool Init(HINSTANCE hInstance);
-        static void Shutdown();
-
-        /// Return the current platform name.
-        static const char* GetName();
-
-        /// Return the current platform ID.
-        static PlatformId GetId();
-
-        /// Return the current platform family.
-        static PlatformFamily GetFamily();
-
-        static HINSTANCE GetHInstance();
-    };
-
-    std::string ToUtf8(const std::wstring& wstr);
-    std::wstring ToUtf16(const std::string& str);
+#ifdef _WIN32
+    std::string to_utf8(const wchar_t* wstr, size_t len);
+    std::wstring to_utf16(const char* str, size_t len);
+    std::string to_utf8(const std::wstring& wstr);
+    std::wstring to_utf16(const std::string& str);
+#endif
 }

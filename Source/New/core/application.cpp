@@ -22,21 +22,11 @@
 
 #pragma once
 
-#include "core/Config.h"
+#include "core/application.h"
 
 namespace Alimer
 {
-    class ALIMER_API WindowBase
+    void Application::run_frame()
     {
-    public:
-        virtual ~WindowBase() = default;
-
-    private:
-    };
+    }
 }
-
-#if ALIMER_PLATFORM_WINDOWS
-#   include "Windows/WindowsWindow.h"
-#endif
-
-#include "platform/Types.h"

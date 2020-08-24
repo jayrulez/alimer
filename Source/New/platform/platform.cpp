@@ -22,11 +22,19 @@
 
 #pragma once
 
-#include "core/Application.h"
+#include "platform/platform.h"
 
 namespace Alimer
 {
-    void Application::Tick()
+    std::vector<std::string> Platform::arguments = {};
+
+    std::vector<std::string> Platform::get_arguments()
     {
+        return Platform::arguments;
+    }
+
+    void Platform::set_arguments(const std::vector<std::string>& args)
+    {
+        arguments = args;
     }
 }

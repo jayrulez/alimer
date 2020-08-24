@@ -22,17 +22,18 @@
 
 #pragma once
 
-#include "platform/Platform.h"
-#include "platform/Window.h"
+#include "core/Config.h"
+#include <memory>
 
 namespace Alimer
 {
-    class ALIMER_API WindowsWindow final : public WindowBase
+    class ALIMER_API Window
     {
     public:
-        WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
+        virtual ~Window() = default;
+
+        static std::unique_ptr<Window> create();
 
     private:
-        HWND handle;
     };
 }

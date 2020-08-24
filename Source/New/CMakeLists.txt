@@ -29,10 +29,11 @@ macro(group_sources)
     endforeach ()
 endmacro()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/core/Config.h.in ${CMAKE_CURRENT_BINARY_DIR}/core/Config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 define_engine_source_files(
   core
+  io
   platform
 )
 
@@ -55,12 +56,25 @@ target_include_directories(${TARGET_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
+
+if(ALIMER_WARNINGS_AS_ERRORS)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        target_compile_options(${TARGET_NAME} PRIVATE -Werror)
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        target_compile_options(${TARGET_NAME} PRIVATE /W3 /WX)
+    endif()
+endif()
+
 if (WIN32)
   set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_SECURE_NO_WARNINGS)
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_NONSTDC_NO_WARNINGS)
   target_compile_definitions(${TARGET_NAME} PUBLIC -D_UNICODE)
 elseif(EMSCRIPTEN)
+endif ()
+
+if(NOT (EMSCRIPTEN OR ANDROID))
+  #target_link_libraries(${TARGET_NAME} glfw)
 endif ()
 
 # SDK installation

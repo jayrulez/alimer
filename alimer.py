@@ -145,7 +145,7 @@ if __name__ == "__main__":
         target = args.target
 
     if args.generator is None:
-        if target == "windows":
+        if target == "windows" or target == "uwp":
             generator = "vs2019"
         else:
             generator = "ninja"

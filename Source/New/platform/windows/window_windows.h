@@ -22,19 +22,20 @@
 
 #pragma once
 
-#include "platform/Platform.h"
+#include "platform/platform.h"
+#include "platform/window.h"
+struct HWND__;
 
 namespace Alimer
 {
-    std::vector<std::string> PlatformBase::arguments = {};
+    using HWND = HWND__*;
 
-    std::vector<std::string> PlatformBase::GetArguments()
+    class ALIMER_API WindowsWindow final : public Window
     {
-        return Platform::arguments;
-    }
+    public:
+        WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
-    void PlatformBase::SetArguments(const std::vector<std::string>& args)
-    {
-        arguments = args;
-    }
+    private:
+        HWND handle;
+    };
 }

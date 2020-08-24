@@ -66,20 +66,23 @@ namespace Alimer
         Console
     };
 
-    class ALIMER_API PlatformBase
+    class ALIMER_API Platform
     {
     public:
-        static std::vector<std::string> GetArguments();
+        /// Return the current platform name.
+        static const char* get_name();
 
-        static void SetArguments(const std::vector<std::string>& args);
+        /// Return the current platform ID.
+        static PlatformId get_id();
+
+        /// Return the current platform family.
+        static PlatformFamily get_family();
+
+        static std::vector<std::string> get_arguments();
+
+        static void set_arguments(const std::vector<std::string>& args);
 
     private:
         static std::vector<std::string> arguments;
     };
 }
-
-#if ALIMER_PLATFORM_WINDOWS
-#   include "Windows/WindowsPlatform.h"
-#endif
-
-#include "platform/Types.h"

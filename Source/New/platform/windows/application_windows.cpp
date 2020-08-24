@@ -20,16 +20,44 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "core/application.h"
+#include "windows_private.h"
+#include <objbase.h>
+#include <stdio.h>
 
-#include "core/Preprocessor.h"
+// Indicates to hybrid graphics systems to prefer the discrete part by default
+extern "C"
+{
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 
-#if defined(ALIMER_SHARED_LIBRARY)
-#   if defined(ALIMER_COMPILE)
-#       define ALIMER_API ALIMER_DLL_EXPORT
-#   else
-#       define ALIMER_API ALIMER_DLL_IMPORT
-#   endif
-#else
-#   define ALIMER_API
-#endif  // defined(ALIMER_SHARED_LIBRARY)
+namespace Alimer
+{
+    int application_main(Application* (*create_application)(int, char**), int argc, char* argv[])
+    {
+        HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+        if (FAILED(hr))
+            return false;
+
+#ifdef _DEBUG
+        if (AllocConsole()) {
+            FILE* fp;
+            freopen_s(&fp, "conin$", "r", stdin);
+            freopen_s(&fp, "conout$", "w", stdout);
+            freopen_s(&fp, "conout$", "w", stderr);
+        }
+#endif
+
+        auto app = std::unique_ptr<Alimer::Application>(create_application(argc, argv));
+
+        if (app)
+        {
+            app.reset();
+            CoUninitialize(); 
+            return 0;
+        }
+
+        return 1;
+    }
+}

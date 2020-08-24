@@ -22,14 +22,52 @@
 
 #pragma once
 
-#include "WindowsWindow.h"
-#include "WindowsPrivate.h"
-#include <stdexcept>
+#include "window_windows.h"
+#include "windows_private.h"
+#include "io/path.h"
+//#include <stdexcept>
 
 namespace Alimer
 {
+    namespace
+    {
+        LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+        {
+            switch (message)
+            {
+            case WM_DESTROY:
+                PostQuitMessage(0);
+                break;
+            }
+
+            return DefWindowProcW(hWnd, message, wParam, lParam);
+        }
+    }
+
     WindowsWindow::WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
     {
+        static const TCHAR AppWindowClass[] = TEXT("AlimerApp");
+        HINSTANCE hInstance = GetModuleHandleW(nullptr);
+
+        static bool wcexInit = false;
+        if (!wcexInit) {
+            // Register class
+            WNDCLASSEXW wcex = {};
+            wcex.cbSize = sizeof(WNDCLASSEXW);
+            wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+            wcex.lpfnWndProc = WndProc;
+            wcex.hInstance = hInstance;
+            wcex.hIcon = LoadIconW(hInstance, L"IDI_ICON");
+            wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+            wcex.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+            wcex.lpszClassName = AppWindowClass;
+            wcex.hIconSm = LoadIconW(wcex.hInstance, L"IDI_ICON");
+            if (!RegisterClassExW(&wcex))
+            {
+                return;
+            }
+        }
+
         x = CW_USEDEFAULT;
         y = CW_USEDEFAULT;
 
@@ -42,21 +80,21 @@ namespace Alimer
         width = (width > 0) ? windowRect.right - windowRect.left : CW_USEDEFAULT;
         height = (height > 0.0F) ? windowRect.bottom - windowRect.top : CW_USEDEFAULT;
 
-        auto wideTitle = ToUtf16(title);
+        auto wideTitle = Path::to_utf16(title);
         handle = CreateWindowExW(windowExStyle,
-            Platform::AppWindowClass,
+            AppWindowClass,
             wideTitle.c_str(),
             windowStyle,
             x, y,
             width, height,
             nullptr, nullptr,
-            Platform::GetHInstance(),
+            hInstance,
             nullptr);
 
         //if (!handle)
         //    throw std::system_error(GetLastError(), std::system_category(), "Failed to create window");
 
         ShowWindow(handle, SW_SHOW);
-        SetWindowLongPtr(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+        SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
     }
 }

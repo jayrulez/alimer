@@ -22,13 +22,23 @@
 
 #pragma once
 
+#include "platform/platform.h"
+#include "windows_private.h"
+
 namespace Alimer
 {
-#if ALIMER_PLATFORM_WINDOWS
-    class WindowsPlatform;
-    class WindowsWindow;
+    const char* Platform::get_name()
+    {
+        return "Windows";
+    }
 
-    using Platform = WindowsPlatform;
-    using Window = WindowsWindow;
-#endif
+    PlatformId Platform::get_id()
+    {
+        return PlatformId::Windows;
+    }
+
+    PlatformFamily Platform::get_family()
+    {
+        return PlatformFamily::Desktop;
+    }
 }
