@@ -48,12 +48,13 @@ namespace Alimer
         : AppHost(application)
     {
         auto& config = application->GetConfig();
-        window = new Win32_Window(config.windowTitle, 0, 0, config.windowSize.width, config.windowSize.height);
+        window = new Win32_Window(application->GetName(), config.windowSize.width, config.windowSize.height);
     }
 
     void WindowAppHost::Run()
     {
         InitBeforeRun();
+        window->SetTitle(application->GetName());
         window->Show();
 
         MSG msg = {};

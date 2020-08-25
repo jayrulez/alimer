@@ -52,7 +52,6 @@ namespace Alimer
     public:
         /// Destructor.
         virtual ~Window() = default;
-        void Close();
 
         /// Gets the bounding rectangle of the window.
         virtual Rect GetBounds() const = 0;
@@ -77,6 +76,8 @@ namespace Alimer
         virtual NativeHandle GetNativeHandle() const = 0;
 
         //Delegate<void()> SizeChanged;
+    private:
+        virtual void SetPlatformTitle(const std::string& newTitle) = 0;
 
     protected:
         /// Constructor.

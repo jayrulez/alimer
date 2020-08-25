@@ -28,11 +28,27 @@
 
 namespace Alimer
 {
+    struct PresentationParameters
+    {
+        uint32_t backBufferWidth;
+        uint32_t backBufferHeight;
+        /// Whether to try use sRGB backbuffer color format.
+        bool colorFormatSrgb = false;
+
+        /// The depth format.
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+
+        /// Should the window wait for vertical sync before swapping buffers.
+        bool verticalSync = false;
+        bool fullscreen = false;
+        uint32 sampleCount = 1u;
+        void* windowHandle;
+    };
+
     struct GraphicsDeviceDescription
     {
-        String applicationName = "";
         GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        //RenderWindowDescription mainWindow;
+        const char* applicationName = nullptr;
     };
 
     /// Defines the graphics subsystem.

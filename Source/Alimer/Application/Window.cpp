@@ -27,6 +27,7 @@ namespace Alimer
     void Window::SetTitle(const std::string& newTitle)
     {
         title = newTitle;
+        SetPlatformTitle(title);
     }
 
     const std::string& Window::GetTitle() const

@@ -163,9 +163,8 @@ namespace Alimer
             HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
             if (SUCCEEDED(hr))
             {
-                const bool lowPower = false;
                 DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-                if (lowPower)
+                if (desc.powerPreference == GPUPowerPreference::LowPower)
                 {
                     gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
                 }

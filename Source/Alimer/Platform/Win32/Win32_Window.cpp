@@ -59,7 +59,7 @@ namespace Alimer
         }
     }
 
-    Win32_Window::Win32_Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+    Win32_Window::Win32_Window(const std::string& title,  uint32_t width, uint32_t height)
         : Window()
     {
         static const TCHAR AppWindowClass[] = TEXT("AlimerApp");
@@ -84,8 +84,9 @@ namespace Alimer
             }
         }
 
-        x = CW_USEDEFAULT;
-        y = CW_USEDEFAULT;
+        // TODO: Center
+        int x = CW_USEDEFAULT;
+        int y = CW_USEDEFAULT;
 
         const auto windowStyle = WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_CLIPSIBLINGS | WS_BORDER | WS_DLGFRAME | WS_THICKFRAME | WS_GROUP | WS_TABSTOP;
         const auto windowExStyle = WS_EX_APPWINDOW;
@@ -94,7 +95,7 @@ namespace Alimer
         AdjustWindowRectEx(&windowRect, windowStyle, FALSE, windowExStyle);
 
         width = (width > 0) ? windowRect.right - windowRect.left : CW_USEDEFAULT;
-        height = (height > 0.0F) ? windowRect.bottom - windowRect.top : CW_USEDEFAULT;
+        height = (height > 0) ? windowRect.bottom - windowRect.top : CW_USEDEFAULT;
 
         auto wideTitle = ToUtf16(title);
         handle = CreateWindowExW(windowExStyle,
@@ -116,6 +117,12 @@ namespace Alimer
     void Win32_Window::Show()
     {
         ShowWindow(handle, SW_SHOW);
+    }
+
+    void Win32_Window::SetPlatformTitle(const std::string& newTitle)
+    {
+        auto wideTitle = ToUtf16(title);
+        SetWindowTextW(handle, wideTitle.c_str());
     }
 
     Rect Win32_Window::GetBounds() const

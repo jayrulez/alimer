@@ -25,7 +25,7 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GPUDevice.h"
 
-#if defined(ALIMER_D3D11)
+#if ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
 #   include "Graphics/D3D11/D3D11GPUDevice.h"
 #endif
 
@@ -79,7 +79,7 @@ namespace Alimer
             break;
 #endif
 
-#if defined(ALIMER_D3D11)
+#if ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
         case GPUBackendType::D3D11:
             return new D3D11GPUDevice(desc);
 #endif

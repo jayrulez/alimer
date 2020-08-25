@@ -39,6 +39,8 @@ namespace Alimer
         /// Destructor.
         ~Editor();
 
+        std::string GetName() override;
+
     private:
         //void Initialize() override;
         //bool BeginDraw() override;

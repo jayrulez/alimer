@@ -32,14 +32,8 @@ namespace Alimer
 {
     struct Configuration
     {
-        /// Name of the application.
-        std::string applicationName = "Alimer";
-
         /// Run engine in headless mode.
         bool headless = false;
-
-        /// Main window title.
-        std::string windowTitle = "Alimer";
 
         /// Main window size.
         SizeI windowSize = { 1280, 720 };
@@ -60,6 +54,8 @@ namespace Alimer
         /// Destructor.
         virtual ~Application();
 
+        static Application* GetCurrent();
+
         /// Run main application loop and setup all required systems.
         int Run();
 
@@ -70,6 +66,12 @@ namespace Alimer
         ALIMER_FORCE_INLINE const Configuration& GetConfig() const
         {
             return config;
+        }
+
+        /// Gets the application name.
+        virtual std::string GetName()
+        {
+            return "Alimer";
         }
 
         Window* GetWindow() const;
@@ -92,6 +94,7 @@ namespace Alimer
         void InitBeforeRun();
         void Render();
 
+        static Application* s_current;
         std::unique_ptr<AppHost> host;
 
     protected:

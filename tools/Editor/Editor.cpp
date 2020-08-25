@@ -35,13 +35,17 @@ namespace Alimer
 
     }
 
+    std::string Editor::GetName()
+    {
+        return "Alimer Studio";
+    }
+
     Application* ApplicationCreate(int argc, char* argv[])
     {
         ApplicationDummy();
 
         Configuration config{};
-        config.applicationName = "Alimer Studio";
-        config.windowTitle = "Alimer Studio";
+        //config.windowTitle = "Alimer Studio";
         return new Editor(config);
     }
 }

@@ -32,10 +32,12 @@ namespace Alimer
     class Win32_Window final : public Window
     {
     public:
-        Win32_Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
+        Win32_Window(const std::string& title, uint32_t width, uint32_t height);
 
         void Show();
 
+    private:
+        void SetPlatformTitle(const std::string& newTitle) override;
         Rect GetBounds() const override;
         NativeHandle GetNativeHandle() const override;
 

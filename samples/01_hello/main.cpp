@@ -34,6 +34,11 @@ namespace Alimer
         {
 
         }
+
+        std::string GetName() override
+        {
+            return "TestApp";
+        }
     };
 
     Application* ApplicationCreate(int argc, char* argv[])
@@ -41,8 +46,6 @@ namespace Alimer
         ApplicationDummy();
 
         Configuration config{};
-        config.applicationName = "TestApp";
-        config.windowTitle = "TestApp";
         return new TestApp(config);
     }
 }

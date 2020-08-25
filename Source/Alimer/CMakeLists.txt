@@ -53,7 +53,7 @@ if(NOT (EMSCRIPTEN OR ANDROID))
 endif()
 
 # Graphics modules
-if (ALIMER_D3D11)
+if (WIN32 OR WINDOWS_STORE)
   define_engine_source_files(Graphics/D3D)
   define_engine_source_files(Graphics/D3D11)
 endif()

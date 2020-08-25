@@ -129,18 +129,6 @@ if(ALIMER_WARNINGS_AS_ERRORS)
     message(STATUS "  Warnings as Errors Enabled")
 endif()
 
-if(ALIMER_D3D11)
-    message(STATUS "Build Renderer: Direct3D 11")
-endif()
-
-if(ALIMER_D3D12)
-    message(STATUS "Build Renderer: Direct3D 12")
-endif()
-
-if(ALIMER_VULKAN)
-    message(STATUS "Build Renderer: Vulkan")
-endif()
-
 # Install files
 # README.md and license
 install (FILES

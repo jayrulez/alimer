@@ -36,6 +36,8 @@ namespace Alimer
     {
     }
 
+    Application* Application::s_current;
+
     Application::Application(const Configuration& config)
         : config{ config }
     {
@@ -58,6 +60,9 @@ namespace Alimer
         //io.ConfigViewportsNoAutoMerge = true;
         //io.ConfigViewportsNoTaskBarIcon = true;
         */
+
+        s_current = this;
+
         LOGI("Application started");
     }
 
@@ -67,7 +72,13 @@ namespace Alimer
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
         RemoveSubsystem<GPUDevice>();
+        s_current = nullptr;
         LOGI("Application destroyed correctly");
+    }
+
+    Application* Application::GetCurrent()
+    {
+        return s_current;
     }
 
     void Application::InitBeforeRun()
@@ -81,7 +92,7 @@ namespace Alimer
             auto bounds = GetWindow()->GetBounds();
 
             GraphicsDeviceDescription graphicsDeviceDesc = {};
-            graphicsDeviceDesc.applicationName = config.applicationName;
+            graphicsDeviceDesc.applicationName = GetName().c_str();
             //graphicsDeviceDesc.mainWindow.title = config.windowTitle;
             //graphicsDeviceDesc.mainWindow.size = config.windowSize;
 
