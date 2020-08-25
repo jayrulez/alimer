@@ -20,13 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "platform/platform.h"
-#include "core/application.h"
-#include "windows_private.h"
-#include "io/path.h"
+#include "Application/Application.h"
+#include "Application/AppHost.h"
+#include "Win32_Include.h"
 #include <shellapi.h>
 #include <objbase.h>
 #include <DirectXMath.h>
+
+namespace
+{
+    std::string WStringToString(const std::wstring& wstr)
+    {
+        if (wstr.empty())
+        {
+            return {};
+        }
+
+        auto wstr_len = static_cast<int>(wstr.size());
+        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, NULL, 0, NULL, NULL);
+
+        std::string str(str_len, 0);
+        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, &str[0], str_len, NULL, NULL);
+
+        return str;
+    }
+
+}
 
 // Indicates to hybrid graphics systems to prefer the discrete part by default
 extern "C"
@@ -67,20 +86,20 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
         argv = argv_buffer.data();
         for (int i = 0; i < argc; i++)
         {
-            argv_strings[i] = alimer::path::to_utf8(wide_argv[i]);
+            argv_strings[i] = WStringToString(wide_argv[i]);
             argv_buffer[i] = const_cast<char*>(argv_strings[i].c_str());
         }
     }
 
-    alimer::Platform::set_arguments(argv_strings);
+    //Alimer::Platform::set_arguments(argv_strings);
 
     int exitCode = 1;
-    std::unique_ptr<alimer::Application> app = std::unique_ptr<alimer::Application>(alimer::create_application(argc, argv));
+    std::unique_ptr<Alimer::Application> app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(argc, argv));
 
     if (app)
     {
+        exitCode = app->Run();
         app.reset();
-        exitCode = 0;
     }
 
     CoUninitialize();

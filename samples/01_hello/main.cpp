@@ -20,21 +20,30 @@
 // THE SOFTWARE.
 //
 
-#include "platform/Window.h"
-#include "core/application.h"
+#include "Application/Application.h"
 
-namespace alimer
+namespace Alimer
 {
     class TestApp : public Application
     {
+        ALIMER_OBJECT(TestApp, Application);
+
     public:
+        TestApp(const Configuration& config)
+            : Application(config)
+        {
+
+        }
     };
 
-    Application* create_application(int argc, char* argv[])
+    Application* ApplicationCreate(int argc, char* argv[])
     {
-        auto window = Window::Create("Alimer", 0, 0, 640, 480);
+        ApplicationDummy();
 
-        return new TestApp();
+        Configuration config{};
+        config.applicationName = "TestApp";
+        config.windowTitle = "TestApp";
+        return new TestApp(config);
     }
 }
 

@@ -20,43 +20,33 @@
 // THE SOFTWARE.
 //
 
-#include "OS/OS.h"
-#include "Core/Log.h"
+#pragma once
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-#if defined(_WIN32)
-#   define GLFW_EXPOSE_NATIVE_WIN32
-#elif defined(__linux__)
-#   define GLFW_EXPOSE_NATIVE_X11
-#elif defined(__APPLE__)
-#   define GLFW_EXPOSE_NATIVE_COCOA
-#endif
-#include <GLFW/glfw3native.h>
+#include "Core/Platform.h"
+#include <memory>
 
-namespace OS
+namespace Alimer
 {
-    namespace
-    {
-        void OnGLFWError(int code, const char* description)
-        {
-            LOGE("GLFW  Error (code {}): {}", code, description);
-        }
-    }
+    class Application;
+    class Window;
 
-    bool Init()
+    class ALIMER_API AppHost
     {
-        glfwSetErrorCallback(OnGLFWError);
-        if (glfwInit() == GLFW_FALSE)
-        {
-            return false;
-        }
+    public:
+        AppHost(Application* application);
 
-        return true;
-    }
+        /// Destructor.
+        virtual ~AppHost() = default;
 
-    void Shutdown() noexcept
-    {
-        glfwTerminate();
-    }
+        static std::unique_ptr<AppHost> CreateDefault(Application* application);
+
+        virtual void Run() = 0;
+
+        virtual Window* GetWindow() const = 0;
+
+    protected:
+        void InitBeforeRun();
+
+        Application* application;
+    };
 }

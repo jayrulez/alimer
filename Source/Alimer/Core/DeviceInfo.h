@@ -26,6 +26,44 @@
 
 namespace Alimer
 {
+    /// Identifiers the running platform type.
+    enum class PlatformId
+    {
+        /// Unknown platform.
+        Unknown,
+        /// Windows platform.
+        Windows,
+        /// Linux platform.
+        Linux,
+        /// macOS platform.
+        macOS,
+        /// Android platform.
+        Android,
+        /// iOS platform.
+        iOS,
+        /// tvOS platform.
+        tvOS,
+        /// Universal Windows platform.
+        UWP,
+        /// Xbox One platform.
+        XboxOne,
+        /// Web platform.
+        Web
+    };
+
+    /// Identifiers the running platform family.
+    enum class PlatformFamily
+    {
+        /// Unknown family.
+        Unknown,
+        /// Mobile family.
+        Mobile,
+        /// Desktop family.
+        Desktop,
+        /// Console family.
+        Console
+    };
+
 #if defined(_WIN32) || defined(_WIN64)
     enum class WindowsVersion : uint32_t
     {

@@ -13,43 +13,10 @@ project (
     LANGUAGES C CXX
 )
 
-# Options
-set(ALIMER_WARNINGS_AS_ERRORS ON CACHE BOOL "Enable Warnings as Errors")
-option(ALIMER_BUILD_SHARED "Build as a shared library" OFF)
-option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
-
-# Graphics module backend
-if(EMSCRIPTEN)
-  set(ALIMER_NATIVE_PLATFORM "Web")
-  set(ALIMER_OPENGL ON CACHE BOOL "Enable OpenGL GPU backend")
-elseif(ANDROID)  
-  set(ALIMER_NATIVE_PLATFORM "Android")
-  set(ALIMER_OPENGL ON CACHE BOOL "Enable OpenGL GPU backend")
-elseif(APPLE)
-  set(ALIMER_NATIVE_PLATFORM "Apple")
-  set(ALIMER_METAL ON CACHE BOOL "Enable Metal GPU backend")
-elseif(WINDOWS_STORE)
-  set(ALIMER_NATIVE_PLATFORM "UWP")
-  option(ALIMER_D3D11 "Enable Direct3D11 backend" ON)
-  option(ALIMER_D3D12 "Enable Direct3D12 backend" ON)
-elseif(WIN32)
-  set(ALIMER_NATIVE_PLATFORM "Win32")
-  option(ALIMER_D3D11 "Include Direct3D11 backend" ON)
-  option(ALIMER_D3D12 "Include Direct3D12 backend" ON)
-  option(ALIMER_VULKAN "Include Vulkan backend" ON)
-elseif(UNIX)
-  set(ALIMER_NATIVE_PLATFORM "Unix") 
-else()
-  message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+# For build type to relese if not specified
+if (NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Release" CACHE STRINGS "Force build type to release")
 endif()
-
-if (ANDROID OR IOS OR EMSCRIPTEN OR WINDOWS_STORE)
-    set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
-    set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable editor" FORCE)
-else ()
-    option(ALIMER_BUILD_TOOLS "Build tools" ON)
-    option(ALIMER_BUILD_EDITOR "Build Editor" ON)
-endif ()
 
 # Enable folders in IDE (VisualStudio)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -74,9 +41,38 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/bin")
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ALIMER_BUILD_DIR}/lib")
 
+# Detect platform
+if(EMSCRIPTEN)
+  set(ALIMER_NATIVE_PLATFORM "Web")
+elseif(ANDROID)  
+  set(ALIMER_NATIVE_PLATFORM "Android")
+elseif(APPLE)
+  set(ALIMER_NATIVE_PLATFORM "Apple")
+elseif(WINDOWS_STORE)
+  set(ALIMER_NATIVE_PLATFORM "UWP")
+elseif(WIN32)
+  set(ALIMER_NATIVE_PLATFORM "Win32")
+elseif(UNIX)
+  set(ALIMER_NATIVE_PLATFORM "Unix") 
+else()
+  message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 # Configure additional cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(alimer)
+
+# Options
+option(BUILD_SHARED_LIBS  "Build shared libraries" OFF)
+option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
+
+if (ANDROID OR IOS OR EMSCRIPTEN OR WINDOWS_STORE)
+    set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
+    set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable editor" FORCE)
+else ()
+    option(ALIMER_BUILD_TOOLS "Build tools" ON)
+    option(ALIMER_BUILD_EDITOR "Build Editor" ON)
+endif ()
 
 # Setup
 if(EMSCRIPTEN)
@@ -90,7 +86,6 @@ if(EMSCRIPTEN)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALIMER_EMSCRIPTEN_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALIMER_EMSCRIPTEN_FLAGS}")
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
-
 elseif(ANDROID)
   find_package(Java REQUIRED)
 elseif(UNIX)
@@ -103,8 +98,8 @@ endif()
 # Third Party 
 add_subdirectory(third_party)
 
-# Engine
-add_subdirectory(engine)
+# Source
+add_subdirectory(Source)
 
 if (ALIMER_BUILD_TOOLS)
     add_subdirectory(tools)
@@ -120,12 +115,19 @@ if(CMAKE_VERSION VERSION_GREATER "3.6" AND ALIMER_BUILD_EDITOR)
 endif()
 
 # Print current build configuration
-message(STATUS "Build Configuration:")
-if (ALIMER_BUILD_SHARED)
+message(STATUS "Alimer Engine version ${ALIMER_VERSION}")
+message(STATUS "System: ${CMAKE_SYSTEM_NAME} - BuildType: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build platform: ${ALIMER_NATIVE_PLATFORM}")
+
+if (BUILD_SHARED_LIBS)
     message(STATUS "  Library         SHARED")
 else ()
     message(STATUS "  Library         STATIC")
 endif ()
+
+if(ALIMER_WARNINGS_AS_ERRORS)
+    message(STATUS "  Warnings as Errors Enabled")
+endif()
 
 if(ALIMER_D3D11)
     message(STATUS "Build Renderer: Direct3D 11")
@@ -137,10 +139,6 @@ endif()
 
 if(ALIMER_VULKAN)
     message(STATUS "Build Renderer: Vulkan")
-endif()
-
-if(ALIMER_WARNINGS_AS_ERRORS)
-    message(STATUS "Warnings as Errors Enabled")
 endif()
 
 # Install files

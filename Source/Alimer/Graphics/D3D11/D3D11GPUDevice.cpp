@@ -21,7 +21,7 @@
 //
 
 #include "D3D11GPUAdapter.h"
-#include "D3D11RenderWindow.h"
+//#include "D3D11RenderWindow.h"
 #include "D3D11GPUContext.h"
 #include "D3D11GPUDevice.h"
 #include "Core/String.h"
@@ -336,7 +336,7 @@ namespace Alimer
         }
 
         // Create main render window.
-        renderWindow = new D3D11RenderWindow(this, desc.mainWindow);
+        //renderWindow = new D3D11RenderWindow(this, desc.mainWindow);
     }
 
     D3D11GPUDevice::~D3D11GPUDevice()
@@ -346,7 +346,7 @@ namespace Alimer
 
     void D3D11GPUDevice::Shutdown()
     {
-        renderWindow.Reset();
+       // renderWindow.Reset();
         SafeDelete(mainContext);
 
         ULONG refCount = d3dDevice->Release();

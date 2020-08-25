@@ -69,7 +69,7 @@ namespace Alimer::ImGuiLayer
         ImGui::DestroyContext();
     }
 
-    void BeginFrame(Window* window, float deltaTime)
+    /*void BeginFrame(Window* window, float deltaTime)
     {
         return;
         //Assert_(CurrBeginFrame != DX12::CurrentCPUFrame);
@@ -95,5 +95,5 @@ namespace Alimer::ImGuiLayer
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
         }
-    }
+    }*/
 }

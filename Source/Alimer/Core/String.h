@@ -32,4 +32,12 @@ namespace Alimer
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
     static constexpr uint32_t MATRIX_CONVERSION_BUFFER_LENGTH = 256;
     extern const std::string EMPTY_STRING;
+
+#ifdef _WIN32
+    std::string ToUtf8(const wchar_t* wstr, size_t len);
+    std::string ToUtf8(const std::wstring& wstr);
+
+    std::wstring ToUtf16(const char* str, size_t len);
+    std::wstring ToUtf16(const std::string& str);
+#endif
 }

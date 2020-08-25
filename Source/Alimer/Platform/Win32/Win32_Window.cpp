@@ -20,19 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "window_windows.h"
-#include "windows_private.h"
-#include "io/path.h"
-//#include <stdexcept>
+#include "Win32_Window.h"
+#include "Win32_Include.h"
 
 using namespace std;
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
         LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
+            Win32_Window* window = reinterpret_cast<Win32_Window*>(GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+            if(!window)
+                return DefWindowProcW(hWnd, message, wParam, lParam);
+
             switch (message)
             {
             case WM_DESTROY:
@@ -57,7 +59,8 @@ namespace alimer
         }
     }
 
-    WindowsWindow::WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+    Win32_Window::Win32_Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+        : Window()
     {
         static const TCHAR AppWindowClass[] = TEXT("AlimerApp");
         HINSTANCE hInstance = GetModuleHandleW(nullptr);
@@ -93,7 +96,7 @@ namespace alimer
         width = (width > 0) ? windowRect.right - windowRect.left : CW_USEDEFAULT;
         height = (height > 0.0F) ? windowRect.bottom - windowRect.top : CW_USEDEFAULT;
 
-        auto wideTitle = alimer::path::to_utf16(title);
+        auto wideTitle = ToUtf16(title);
         handle = CreateWindowExW(windowExStyle,
             AppWindowClass,
             wideTitle.c_str(),
@@ -107,12 +110,31 @@ namespace alimer
         //if (!handle)
         //    throw std::system_error(GetLastError(), std::system_category(), "Failed to create window");
 
-        ShowWindow(handle, SW_SHOW);
         SetWindowLongPtrW(handle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
     }
 
-    unique_ptr<Window> Window::Create(const string& title, int32_t x, int32_t y, uint32_t width, uint32_t height)
+    void Win32_Window::Show()
     {
-        return make_unique<WindowsWindow>(title, x, y, width, height);
+        ShowWindow(handle, SW_SHOW);
+    }
+
+    Rect Win32_Window::GetBounds() const
+    {
+        POINT pos{};
+        RECT rc{};
+        ClientToScreen(handle, &pos);
+        GetClientRect(handle, &rc);
+
+        Rect result{};
+        result.x = static_cast<float>(pos.x);
+        result.y = static_cast<float>(pos.y);
+        result.width = static_cast<float>(rc.right - rc.left);
+        result.height = static_cast<float>(rc.bottom - rc.top);
+        return result;
+    }
+
+    NativeHandle Win32_Window::GetNativeHandle() const
+    {
+        return handle;
     }
 }

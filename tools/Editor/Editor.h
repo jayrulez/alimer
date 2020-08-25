@@ -22,19 +22,19 @@
 
 #pragma once
 
-#include "core/application.h"
+#include "Application/Application.h"
 
-namespace alimer
+namespace Alimer
 {
     class Gui;
 
     class Editor final : public Application
     {
-        //ALIMER_OBJECT(Editor, Application);
+        ALIMER_OBJECT(Editor, Application);
 
     public:
         /// Constructor.
-        Editor();
+        Editor(const Configuration& config);
 
         /// Destructor.
         ~Editor();

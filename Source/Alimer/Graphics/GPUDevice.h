@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Graphics/GPUAdapter.h"
-#include "Graphics/RenderWindow.h"
 #include "Graphics/GPUContext.h"
 #include "Graphics/GPUBuffer.h"
 
@@ -33,7 +32,7 @@ namespace Alimer
     {
         String applicationName = "";
         GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        RenderWindowDescription mainWindow;
+        //RenderWindowDescription mainWindow;
     };
 
     /// Defines the graphics subsystem.
@@ -55,9 +54,6 @@ namespace Alimer
 
         /// Gets the adapter device.
         virtual GPUAdapter* GetAdapter() const = 0;
-
-        /// Return the main window.
-        RenderWindow* GetMainWindow() const { return renderWindow.Get(); }
 
         /// Gets the main GPU context. The main context takes care of deferred release of GPU resources.
         virtual GPUContext* GetMainContext() const = 0;
@@ -95,7 +91,6 @@ namespace Alimer
         GPUBackendType backendType;
         GPUFeatures features{};
         GPULimits limits{};
-        RefPtr<RenderWindow> renderWindow;
 
     private:
         virtual bool BeginFrameImpl() = 0;

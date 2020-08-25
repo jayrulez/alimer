@@ -4,15 +4,15 @@ project(Alimer)
 set(TARGET_NAME Alimer)
 
 macro (define_engine_source_files)
-  cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
-  foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
-	  # Get header files
+    cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
+    foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
+	    # Get header files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.hpp ${path}/*.h ${path}/*.inl)
 
 		list (APPEND HEADER_FILES ${_files})
 
 		# Install them
-    install (FILES ${_files} DESTINATION ${DEST_INCLUDE_DIR}/${path})
+        install (FILES ${_files} DESTINATION ${DEST_INCLUDE_DIR}/${path})
 
 		# Get source files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.c ${path}/*.cpp)
@@ -42,18 +42,15 @@ define_engine_source_files(
   Graphics
   Scene
   UI
-  OS
   Application
 )
+
+# Include platform files.
+define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
 
 if(NOT (EMSCRIPTEN OR ANDROID))
     define_engine_source_files(OS/GLFW)
 endif()
-
-if (WIN32)
-  define_engine_source_files(Application/Windows)
-  define_engine_source_files(Platform/Windows)
-endif ()
 
 # Graphics modules
 if (ALIMER_D3D11)
@@ -85,18 +82,6 @@ target_link_libraries(${TARGET_NAME} PUBLIC
   fmt
   imgui
 )
-
-# Link platform specific libraries
-if (WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
-elseif(ANDROID)
-    target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
-else()
-    if(NOT (EMSCRIPTEN OR DIRECT_TO_DISPLAY))
-        target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
-    endif()
-endif()
 
 if (ALIMER_VULKAN)
   target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
@@ -139,29 +124,29 @@ else()
   )
 endif()
 
-if(ALIMER_WARNINGS_AS_ERRORS)
-    message(STATUS "Warnings as Errors Enabled")
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
-    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-        target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
-    endif()
+# Warnings as Errors Enabled"
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
 endif()
 
-# compiler flags based on compiler type
-if(MSVC)
-    target_compile_options(${PROJECT_NAME} PUBLIC /MP)
-else ()
-    target_compile_options(${PROJECT_NAME} PUBLIC -fexceptions)
-endif()
+# Compiler flags
+if(EMSCRIPTEN)
+elseif(ANDROID)
+    target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
+elseif(APPLE)
+elseif(WINDOWS_STORE)
+elseif (WIN32)
+  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
+  target_compile_definitions(${TARGET_NAME} PUBLIC UNICODE _UNICODE)
 
-if (WIN32)
-    target_compile_definitions(${TARGET_NAME} PRIVATE
-      _CRT_SECURE_NO_WARNINGS
-      # Enable unicode strings
-      _UNICODE
-    )
-endif()
+  set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
+
+  target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
+elseif(UNIX)
+endif ()
 
 # SDK installation
 install(TARGETS ${PROJECT_NAME}

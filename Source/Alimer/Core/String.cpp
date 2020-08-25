@@ -23,7 +23,52 @@
 #include "Core/String.h"
 #include "Core/Hash.h"
 
+#ifdef _WIN32
+#   include "Platform/Win32/Win32_Include.h"
+#else
+#   include <unistd.h>
+#   ifdef __linux__
+#       include <linux/limits.h>
+#   endif
+#endif
+
+using namespace std;
+
 namespace Alimer
 {
-    const std::string EMPTY_STRING{};
+    const string EMPTY_STRING{};
+
+#ifdef _WIN32
+    string ToUtf8(const wchar_t* wstr, size_t len)
+    {
+        vector<char> char_buffer;
+        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
+        if (ret < 0)
+            return "";
+        char_buffer.resize(ret);
+        WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
+        return string(char_buffer.data(), char_buffer.size());
+    }
+
+    string ToUtf8(const wstring& wstr)
+    {
+        return ToUtf8(wstr.data(), wstr.size());
+    }
+
+    wstring ToUtf16(const char* str, size_t len)
+    {
+        vector<wchar_t> wchar_buffer;
+        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
+        if (ret < 0)
+            return L"";
+        wchar_buffer.resize(ret);
+        MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
+        return wstring(wchar_buffer.data(), wchar_buffer.size());
+    }
+
+    wstring ToUtf16(const string& str)
+    {
+        return ToUtf16(str.data(), str.size());
+    }
+#endif
 }

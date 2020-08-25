@@ -20,13 +20,44 @@
 // THE SOFTWARE.
 //
 
-#include "Application/ApplicationPlatform.h"
+#include "Core/Library.h"
+#include "Win32_Include.h"
+
+#if defined(_DEBUG)
+#include "Core/Log.h"
+#endif
 
 namespace Alimer
 {
-    ApplicationPlatform::ApplicationPlatform(Application* application)
-        : application{ application }
+    LibHandle LibraryOpen(const char* libName)
     {
+        HMODULE handle = LoadLibraryA(libName);
 
+#if defined(_DEBUG)
+        if (handle == nullptr)
+        {
+            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
+        }
+#endif
+
+        return (LibHandle)handle;
+    }
+
+    void LibraryClose(LibHandle handle)
+    {
+        FreeLibrary(static_cast<HMODULE>(handle));
+    }
+
+    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    {
+        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+
+#if defined(_DEBUG)
+        if (proc == nullptr)
+        {
+            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
+        }
+#endif
+        return proc;
     }
 }

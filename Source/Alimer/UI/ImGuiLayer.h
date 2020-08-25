@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "OS/Window.h"
+#include "Core/Platform.h"
 
 namespace Alimer::ImGuiLayer
 {
     ALIMER_API void Initialize(void);
     ALIMER_API void Shutdown(void);
-    ALIMER_API void BeginFrame(Window* window, float deltaTime);
-    ALIMER_API void EndFrame(void);
+    //ALIMER_API void BeginFrame(Window* window, float deltaTime);
+    //ALIMER_API void EndFrame(void);
 }

@@ -22,19 +22,9 @@
 
 #pragma once
 
-#include "config.h"
 #include "Core/Object.h"
-#include "Math/Size.h"
-#include "Core/Delegate.h"
-
-#if defined(ALIMER_GLFW)
-struct GLFWwindow;
-#endif
-
-namespace OS
-{
-
-}
+#include "Math/Rect.h"
+//#include "Core/Delegate.h"
 
 namespace Alimer
 {
@@ -60,59 +50,38 @@ namespace Alimer
         ALIMER_OBJECT(Window, Object);
 
     public:
-        constexpr static const int32 Centered = Limits<int32_t>::Max;
-
-        Window(const std::string& title, int32 x, int32 y, int32 width, int32 height, WindowFlags flags = WindowFlags::None);
-
-        virtual ~Window() override;
-        virtual void Destroy();
+        /// Destructor.
+        virtual ~Window() = default;
         void Close();
-        void BeginFrame();
+
+        /// Gets the bounding rectangle of the window.
+        virtual Rect GetBounds() const = 0;
 
         /// Set window title.
-        void SetTitle(const String& newTitle);
-
+        void SetTitle(const std::string& newTitle);
         /// Return window title.
         const std::string& GetTitle() const;
-        /// Return window client size.
-        SizeI GetSize() const;
 
-        bool ShouldClose() const;
         bool IsVisible() const;
         bool IsMaximized() const;
         bool IsMinimized() const;
         bool IsFullscreen() const;
 
-        virtual void SetVerticalSync(bool value);
-        virtual void Present();
-
         /// The dot-per-inch scale factor
-        float GetDpiFactor() const;
+        virtual float GetDpiFactor() const;
 
         /// The scale factor for systems with heterogeneous window and pixel coordinates
-        float GetContentScaleFactor() const;
+        virtual float GetContentScaleFactor() const;
 
         /// Get the native window handle
-        NativeHandle GetNativeHandle() const noexcept;
+        virtual NativeHandle GetNativeHandle() const = 0;
 
         //Delegate<void()> SizeChanged;
 
     protected:
-        /// Resizable flag.
-        bool resizable = false;
-        /// Fullscreen flag.
-        bool fullscreen = false;
-        bool exclusiveFullscreen = false;
+        /// Constructor.
+        Window() = default;
 
-#if defined(ALIMER_GLFW)
-    //public:
-        //GLFWwindow* GetWindow() const { return window; }
-
-    private:
         std::string title;
-        GLFWwindow* window = nullptr;
-#else
-        void* window = nullptr;
-#endif
     };
 }

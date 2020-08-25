@@ -20,31 +20,19 @@
 // THE SOFTWARE.
 //
 
-#include <stdint.h>
-#include <string>
-#include <vector>
-#include <memory>
+#include "Application/Application.h"
+#include "Application/AppHost.h"
 
-namespace alimer
+namespace Alimer
 {
-    class Application
+    AppHost::AppHost(Application* application)
+        : application{ application }
     {
-    public:
-        Application();
-        virtual ~Application();
 
-        static Application* get_current();
+    }
 
-        void run_frame();
-
-        virtual std::string GetName()
-        {
-            return "Alimer";
-        }
-
-    private:
-        static Application* s_current;
-    };
-
-    extern Application* create_application(int argc, char* argv[]);
+    void AppHost::InitBeforeRun()
+    {
+        application->InitBeforeRun();
+    }
 }

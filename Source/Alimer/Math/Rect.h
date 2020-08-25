@@ -70,5 +70,6 @@ namespace Alimer
     };
 
     using Rect = TRect<float>;
-    using URect = TRect<uint32>;
+    using RectI = TRect<int32_t>;
+    using URect = TRect<int32_t>;
 }

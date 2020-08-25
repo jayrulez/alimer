@@ -20,54 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Library.h"
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif
-#include <Windows.h>
-#undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
-#endif
-
-#if defined(_DEBUG)
-#include "Core/Log.h"
-#endif
+#include "Application/Window.h"
 
 namespace Alimer
 {
-    LibHandle LibraryOpen(const char* libName)
+    void Window::SetTitle(const std::string& newTitle)
     {
-        HMODULE handle = LoadLibraryA(libName);
-
-#if defined(_DEBUG)
-        if (handle == nullptr)
-        {
-            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
-        }
-#endif
-
-        return (LibHandle)handle;
+        title = newTitle;
     }
 
-    void LibraryClose(LibHandle handle)
+    const std::string& Window::GetTitle() const
     {
-        FreeLibrary(static_cast<HMODULE>(handle));
+        return title;
     }
 
-    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    float Window::GetDpiFactor() const
     {
-        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+        return 1.0f;
+    }
 
-#if defined(_DEBUG)
-        if (proc == nullptr)
-        {
-            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
-        }
-#endif
-        return proc;
+    float Window::GetContentScaleFactor() const
+    {
+        return 1.0f;
     }
 }

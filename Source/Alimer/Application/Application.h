@@ -24,8 +24,8 @@
 
 #include "Core/Log.h"
 #include "Math/Size.h"
-#include "Application/ApplicationPlatform.h"
 #include "Application/GameTime.h"
+#include "Application/Window.h"
 #include "Application/GameSystem.h"
 
 namespace Alimer
@@ -45,13 +45,17 @@ namespace Alimer
         SizeI windowSize = { 1280, 720 };
     };
 
+    class AppHost;
+
     class ALIMER_API Application : public Object
     {
+        friend class AppHost;
+
         ALIMER_OBJECT(Application, Object);
 
     public:
         /// Constructor.
-        Application();
+        Application(const Configuration& config);
 
         /// Destructor.
         virtual ~Application();
@@ -61,6 +65,14 @@ namespace Alimer
 
         /// Tick one frame.
         void Tick();
+
+        /// Get the application configuration.
+        ALIMER_FORCE_INLINE const Configuration& GetConfig() const
+        {
+            return config;
+        }
+
+        Window* GetWindow() const;
 
     protected:
         /// Setup after window and graphics setup, by default initializes all GameSystems.
@@ -76,15 +88,11 @@ namespace Alimer
         virtual void EndDraw();
 
     private:
-        void PlatformConstruct();
-        void PlatformDestroy();
-        int PlatformRun();
-
         /// Called by platform backend.
         void InitBeforeRun();
         void Render();
 
-        std::unique_ptr<ApplicationPlatform> platform;
+        std::unique_ptr<AppHost> host;
 
     protected:
         std::vector<String> args;
@@ -99,41 +107,10 @@ namespace Alimer
         bool headless{ false };
         //std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
+
+    extern Application* ApplicationCreate(int argc, char* argv[]);
+
+    // Call this to ensure application-main is linked in correctly without having to mess around
+    // with -Wl,--whole-archive.
+    void ApplicationDummy();
 } 
-
-#if defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
-#include <windows.h>
-#include <crtdbg.h>
-#endif
-
-// MSVC debug mode: use memory leak reporting
-#if defined(_WIN32) && defined(_DEBUG) && !defined(ALIMER_WIN32_CONSOLE)
-#define ALIMER_DEFINE_MAIN(function) \
-int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
-{ \
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF); \
-    return function; \
-}
-// Other Win32 or minidumps disabled: just execute the function
-#elif defined(_WIN32) && !defined(ALIMER_WIN32_CONSOLE)
-#define ALIMER_DEFINE_MAIN(function) \
-int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) \
-{ \
-    return function; \
-}
-#else
-#define ALIMER_DEFINE_MAIN(function) \
-int main(int argc, char** argv) \
-{ \
-    Alimer::ParseArguments(argc, argv); \
-    return function; \
-}
-#endif
-
-#define ALIMER_DEFINE_APPLICATION(className) \
-int RunApplication() \
-{ \
-    className application; \
-    return application.Run(); \
-} \
-ALIMER_DEFINE_MAIN(RunApplication())

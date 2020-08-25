@@ -123,28 +123,6 @@ namespace Alimer
     while(0)
 #endif
 
-    static inline std::string ToUtf8(const std::wstring& str)
-    {
-        std::vector<char> char_buffer;
-        auto ret = WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0, nullptr, nullptr);
-        if (ret < 0)
-            return "";
-        char_buffer.resize(ret);
-        WideCharToMultiByte(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
-        return std::string(char_buffer.data(), char_buffer.size());
-    }
-
-    static inline std::wstring ToUtf16(const std::string& str)
-    {
-        std::vector<wchar_t> wchar_buffer;
-        auto ret = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), nullptr, 0);
-        if (ret < 0)
-            return L"";
-        wchar_buffer.resize(ret);
-        MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.length()), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return std::wstring(wchar_buffer.data(), wchar_buffer.size());
-    }
-
     struct DxgiFormatDesc
     {
         PixelFormat format;

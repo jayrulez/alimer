@@ -22,9 +22,10 @@
 
 #include "Editor.h"
 
-namespace alimer
+namespace Alimer
 {
-    Editor::Editor()
+    Editor::Editor(const Configuration& config)
+        : Application(config)
     {
 
     }
@@ -34,9 +35,14 @@ namespace alimer
 
     }
 
-    Application* create_application(int argc, char* argv[])
+    Application* ApplicationCreate(int argc, char* argv[])
     {
-        return new Editor();
+        ApplicationDummy();
+
+        Configuration config{};
+        config.applicationName = "Alimer Studio";
+        config.windowTitle = "Alimer Studio";
+        return new Editor(config);
     }
 }
 

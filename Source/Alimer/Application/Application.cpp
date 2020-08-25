@@ -21,6 +21,7 @@
 //
 
 #include "Application/Application.h"
+#include "Application/AppHost.h"
 #include "Core/Log.h"
 #include "Core/Input.h"
 #include "Graphics/GPUDevice.h"
@@ -30,11 +31,18 @@
 
 namespace Alimer
 {
-    Application::Application()
-        : platform(ApplicationPlatform::CreateDefault(this))
+    // Make sure this is linked in.
+    void ApplicationDummy()
     {
+    }
+
+    Application::Application(const Configuration& config)
+        : config{ config }
+    {
+        // Create default AppHost.
+        host = AppHost::CreateDefault(this);
+
         // Construct platform logic first.
-        PlatformConstruct();
         RegisterSubsystem(new Input());
 
         // Init ImGui
@@ -59,7 +67,6 @@ namespace Alimer
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
         RemoveSubsystem<GPUDevice>();
-        PlatformDestroy();
         LOGI("Application destroyed correctly");
     }
 
@@ -71,10 +78,12 @@ namespace Alimer
         // Init GPU.
         if (!headless)
         {
+            auto bounds = GetWindow()->GetBounds();
+
             GraphicsDeviceDescription graphicsDeviceDesc = {};
             graphicsDeviceDesc.applicationName = config.applicationName;
-            graphicsDeviceDesc.mainWindow.title = config.windowTitle;
-            graphicsDeviceDesc.mainWindow.size = config.windowSize;
+            //graphicsDeviceDesc.mainWindow.title = config.windowTitle;
+            //graphicsDeviceDesc.mainWindow.size = config.windowSize;
 
             RegisterSubsystem(GPUDevice::Create(graphicsDeviceDesc));
 
@@ -158,7 +167,7 @@ namespace Alimer
             LOGI("Right held");
         }
 
-        auto context = GetGraphics()->GetMainContext();
+       /* auto context = GetGraphics()->GetMainContext();
 
         context->PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
@@ -168,7 +177,7 @@ namespace Alimer
         //colorAttachment.slice = 1;
         context->BeginRenderPass(1, &colorAttachment, nullptr);
         context->EndRenderPass();
-        context->PopDebugGroup();
+        context->PopDebugGroup();*/
     }
 
     void Application::EndDraw()
@@ -178,8 +187,8 @@ namespace Alimer
             gameSystem->EndDraw();
         }*/
 
-        ImGuiLayer::EndFrame();
-        GetGraphics()->GetMainWindow()->Present();
+        //ImGuiLayer::EndFrame();
+        //GetGraphics()->GetMainWindow()->Present();
         GetGraphics()->EndFrame();
     }
 
@@ -190,7 +199,7 @@ namespace Alimer
             return EXIT_FAILURE;
         }
 
-        PlatformRun();
+        host->Run();
         return exitCode;
     }
 
@@ -219,11 +228,17 @@ namespace Alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            && !GetGraphics()->GetMainWindow()->IsMinimized()
+            //&& !GetGraphics()->GetMainWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);
             EndDraw();
         }
+    }
+
+
+    Window* Application::GetWindow() const
+    {
+        return host->GetWindow();
     }
 }

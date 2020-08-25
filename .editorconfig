@@ -40,11 +40,6 @@ indent_size = 2
 [*.{props,targets,config,nuspec}]
 indent_size = 2
 
-# CMakeLists txt files
-[CMakeLists.txt]
-charset = utf-8
-indent_size = 2
-
 # Shell scripts
 [*.sh]
 end_of_line = lf

@@ -20,52 +20,61 @@
 // THE SOFTWARE.
 //
 
-#include "Application/ApplicationPlatform.h"
-#ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif
-#include <Windows.h>
-#include <shellapi.h>
-#include <objbase.h>
-#undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
+#include "Application/Application.h"
+#include "Application/AppHost.h"
+#include "Win32_Window.h"
+#include "Win32_Include.h"
 
 namespace Alimer
 {
-    class WindowApplicationPlatform final : public ApplicationPlatform
+    class WindowAppHost final : public AppHost
     {
     public:
-        WindowApplicationPlatform(Application* application);
-        ~WindowApplicationPlatform() override;
+        WindowAppHost(Application* application);
+        void Run() override;
+        Window* GetWindow() const override;
+
+    private:
+        RefPtr<Win32_Window> window;
     };
 
-    std::unique_ptr<ApplicationPlatform> ApplicationPlatform::CreateDefault(Application* application)
+    std::unique_ptr<AppHost> AppHost::CreateDefault(Application* application)
     {
-        return std::make_unique<WindowApplicationPlatform>(application);
+        return std::make_unique<WindowAppHost>(application);
     }
 
     /* WindowApplicationPlatform */
-    WindowApplicationPlatform::WindowApplicationPlatform(Application* application)
-        : ApplicationPlatform(application)
+    WindowAppHost::WindowAppHost(Application* application)
+        : AppHost(application)
     {
-        HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-        if (hr == RPC_E_CHANGED_MODE) {
-            hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-        }
-
-        if (AllocConsole()) {
-            FILE* fp;
-            freopen_s(&fp, "conin$", "r", stdin);
-            freopen_s(&fp, "conout$", "w", stdout);
-            freopen_s(&fp, "conout$", "w", stderr);
-        }
+        auto& config = application->GetConfig();
+        window = new Win32_Window(config.windowTitle, 0, 0, config.windowSize.width, config.windowSize.height);
     }
 
-    WindowApplicationPlatform::~WindowApplicationPlatform()
+    void WindowAppHost::Run()
     {
-        CoUninitialize();
+        InitBeforeRun();
+        window->Show();
+
+        MSG msg = {};
+        while (WM_QUIT != msg.message)
+        {
+            if (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+            else
+            {
+                application->Tick();
+            }
+        }
+
+        window.Reset();
+    }
+
+    Window* WindowAppHost::GetWindow() const
+    {
+        return window.Get();
     }
 }

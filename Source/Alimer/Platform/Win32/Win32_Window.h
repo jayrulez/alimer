@@ -22,23 +22,24 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+#include "Application/Window.h"
+struct HWND__;
 
-namespace OS
+namespace Alimer
 {
-    enum class EventType : uint8_t
-    {
-        Unkwnown = 0,
-        Quit,
-    };
+    using HWND = HWND__*;
 
-    struct Event
+    class Win32_Window final : public Window
     {
-        EventType type;
-    };
+    public:
+        Win32_Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
 
-    void PushEvent(const Event& e);
-    void PushEvent(Event&& e);
-    bool PollEvent(Event& e) noexcept;
+        void Show();
+
+        Rect GetBounds() const override;
+        NativeHandle GetNativeHandle() const override;
+
+    private:
+        HWND handle = nullptr;
+    };
 }

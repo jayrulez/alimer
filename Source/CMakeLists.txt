@@ -1,2 +1,2 @@
 # Engine
-add_subdirectory(New)
+add_subdirectory(Alimer)

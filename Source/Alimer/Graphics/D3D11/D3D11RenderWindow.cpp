@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Core/Log.h"
 #include "D3D11RenderWindow.h"
 #include "D3D11Texture.h"
@@ -98,7 +99,7 @@ namespace Alimer
 #endif
 
         AfterReset();
-    }
+        }
 
     D3D11RenderWindow::~D3D11RenderWindow()
     {
@@ -151,5 +152,7 @@ namespace Alimer
             device->HandleDeviceLost(hr);
         }
     }
-}
+    }
 
+
+#endif // TODO
