@@ -24,7 +24,7 @@
 
 #include "core/application.h"
 
-namespace Alimer
+namespace alimer
 {
     class Gui;
 

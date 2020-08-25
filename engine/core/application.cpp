@@ -22,7 +22,7 @@
 
 #include "core/application.h"
 
-namespace Alimer
+namespace alimer
 {
     Application* Application::s_current;
 
@@ -36,7 +36,7 @@ namespace Alimer
         s_current = nullptr;
     }
 
-    Application* Application::Current()
+    Application* Application::get_current()
     {
         return s_current;
     }

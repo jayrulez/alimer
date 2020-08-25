@@ -25,7 +25,7 @@
 #include <vector>
 #include <memory>
 
-namespace Alimer
+namespace alimer
 {
     class Application
     {
@@ -33,7 +33,7 @@ namespace Alimer
         Application();
         virtual ~Application();
 
-        static Application* Current();
+        static Application* get_current();
 
         void run_frame();
 
@@ -46,5 +46,5 @@ namespace Alimer
         static Application* s_current;
     };
 
-    extern Application* CreateApplication(int argc, char* argv[]);
+    extern Application* create_application(int argc, char* argv[]);
 }

@@ -22,7 +22,7 @@
 
 #include "Editor.h"
 
-namespace Alimer
+namespace alimer
 {
     Editor::Editor()
     {
@@ -34,7 +34,7 @@ namespace Alimer
 
     }
 
-    Application* CreateApplication(int argc, char* argv[])
+    Application* create_application(int argc, char* argv[])
     {
         return new Editor();
     }

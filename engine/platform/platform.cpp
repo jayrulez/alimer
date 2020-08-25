@@ -22,16 +22,16 @@
 
 #include "platform/platform.h"
 
-namespace Alimer
+namespace alimer
 {
     std::vector<std::string> Platform::arguments = {};
 
-    std::vector<std::string> Platform::GetArguments()
+    std::vector<std::string> Platform::get_arguments()
     {
         return Platform::arguments;
     }
 
-    void Platform::SetArguments(const std::vector<std::string>& args)
+    void Platform::set_arguments(const std::vector<std::string>& args)
     {
         arguments = args;
     }

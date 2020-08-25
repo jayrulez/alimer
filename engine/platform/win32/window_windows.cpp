@@ -27,7 +27,7 @@
 
 using namespace std;
 
-namespace Alimer
+namespace alimer
 {
     namespace
     {
@@ -67,7 +67,7 @@ namespace Alimer
             // Register class
             WNDCLASSEXW wcex = {};
             wcex.cbSize = sizeof(WNDCLASSEXW);
-            wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+            wcex.style = CS_HREDRAW | CS_VREDRAW;
             wcex.lpfnWndProc = WndProc;
             wcex.hInstance = hInstance;
             wcex.hIcon = LoadIconW(hInstance, L"IDI_ICON");
@@ -93,7 +93,7 @@ namespace Alimer
         width = (width > 0) ? windowRect.right - windowRect.left : CW_USEDEFAULT;
         height = (height > 0.0F) ? windowRect.bottom - windowRect.top : CW_USEDEFAULT;
 
-        auto wideTitle = Path::to_utf16(title);
+        auto wideTitle = alimer::path::to_utf16(title);
         handle = CreateWindowExW(windowExStyle,
             AppWindowClass,
             wideTitle.c_str(),

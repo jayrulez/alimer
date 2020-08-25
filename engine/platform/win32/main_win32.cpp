@@ -23,7 +23,7 @@
 #include "platform/platform.h"
 #include "core/application.h"
 #include "windows_private.h"
-#include "IO/Path.h"
+#include "io/path.h"
 #include <shellapi.h>
 #include <objbase.h>
 #include <DirectXMath.h>
@@ -67,15 +67,15 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
         argv = argv_buffer.data();
         for (int i = 0; i < argc; i++)
         {
-            argv_strings[i] = Alimer::Path::to_utf8(wide_argv[i]);
+            argv_strings[i] = alimer::path::to_utf8(wide_argv[i]);
             argv_buffer[i] = const_cast<char*>(argv_strings[i].c_str());
         }
     }
 
-    Alimer::Platform::SetArguments(argv_strings);
+    alimer::Platform::set_arguments(argv_strings);
 
     int exitCode = 1;
-    std::unique_ptr<Alimer::Application> app = std::unique_ptr<Alimer::Application>(Alimer::CreateApplication(argc, argv));
+    std::unique_ptr<alimer::Application> app = std::unique_ptr<alimer::Application>(alimer::create_application(argc, argv));
 
     if (app)
     {

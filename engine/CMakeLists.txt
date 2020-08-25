@@ -37,7 +37,15 @@ define_engine_source_files(
   platform
 )
 
-define_engine_source_files(platform/${ALIMER_NATIVE_PLATFORM})
+# Include platform files.
+if(EMSCRIPTEN)
+elseif(ANDROID)
+elseif(APPLE)
+elseif(WINDOWS_STORE)
+elseif (WIN32)
+  define_engine_source_files(platform/win32)
+elseif(UNIX)
+endif ()
 
 group_sources()
 
@@ -70,14 +78,16 @@ elseif(WINDOWS_STORE)
   target_compile_options(${TARGET_NAME} PUBLIC "/Zc:__cplusplus")
   # we need this when using /permissive
   target_compile_options(${TARGET_NAME} PUBLIC "/Zc:twoPhase-")
-  target_compile_definitions(${TARGET_NAME} PUBLIC -D_UNICODE)
   #target_compile_options(${TARGET_NAME} PRIVATE /ZW)
   #target_compile_options(${TARGET_NAME} PRIVATE /await)
 elseif (WIN32)
+  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
+  target_compile_definitions(${TARGET_NAME} PUBLIC UNICODE _UNICODE)
+
   set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
-  target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_SECURE_NO_WARNINGS)
-  target_compile_definitions(${TARGET_NAME} PUBLIC -D_CRT_NONSTDC_NO_WARNINGS)
-  target_compile_definitions(${TARGET_NAME} PUBLIC -D_UNICODE)
+  set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+  set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 elseif(UNIX)
 endif ()
 

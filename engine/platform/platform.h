@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace Alimer
+namespace alimer
 {
     /// Identifiers the running platform type.
     enum class PlatformId 
@@ -70,17 +70,17 @@ namespace Alimer
     {
     public:
         /// Return the current platform name.
-        static std::string GetName();
+        static std::string get_name();
 
         /// Return the current platform ID.
-        static PlatformId GetId();
+        static PlatformId get_id();
 
         /// Return the current platform family.
-        static PlatformFamily GetFamily();
+        static PlatformFamily get_family();
 
-        static std::vector<std::string> GetArguments();
+        static std::vector<std::string> get_arguments();
 
-        static void SetArguments(const std::vector<std::string>& args);
+        static void set_arguments(const std::vector<std::string>& args);
 
     private:
         static std::vector<std::string> arguments;

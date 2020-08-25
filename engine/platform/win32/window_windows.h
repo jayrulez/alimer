@@ -22,15 +22,20 @@
 
 #pragma once
 
-#include <string>
-#include <utility>
+#include "platform/platform.h"
+#include "platform/window.h"
+struct HWND__;
 
-namespace Alimer::Path
+namespace alimer
 {
-#ifdef _WIN32
-    std::string to_utf8(const wchar_t* wstr, size_t len);
-    std::wstring to_utf16(const char* str, size_t len);
-    std::string to_utf8(const std::wstring& wstr);
-    std::wstring to_utf16(const std::string& str);
-#endif
+    using HWND = HWND__*;
+
+    class WindowsWindow final : public Window
+    {
+    public:
+        WindowsWindow(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
+
+    private:
+        HWND handle = nullptr;
+    };
 }

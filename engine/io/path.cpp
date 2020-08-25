@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "IO/Path.h"
+#include "io/path.h"
 #include <vector>
 #include <algorithm>
 
@@ -35,7 +35,7 @@
 
 using namespace std;
 
-namespace Alimer::Path
+namespace alimer::path
 {
 #ifdef _WIN32
     string to_utf8(const wchar_t* wstr, size_t len)

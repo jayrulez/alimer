@@ -20,20 +20,23 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "platform/platform.h"
+#include "windows_private.h"
 
-#include "config.h"
-#include <string>
-#include <memory>
-
-namespace Alimer
+namespace alimer
 {
-    class ALIMER_API Window
+    std::string Platform::get_name()
     {
-    public:
-        virtual ~Window() = default;
+        return "Windows";
+    }
 
-        static std::unique_ptr<Window> Create(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height);
-    private:
-    };
+    PlatformId Platform::get_id()
+    {
+        return PlatformId::Windows;
+    }
+
+    PlatformFamily Platform::get_family()
+    {
+        return PlatformFamily::Desktop;
+    }
 }

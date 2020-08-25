@@ -23,14 +23,14 @@
 #include "platform/Window.h"
 #include "core/application.h"
 
-namespace Alimer
+namespace alimer
 {
     class TestApp : public Application
     {
     public:
     };
 
-    Application* CreateApplication(int argc, char* argv[])
+    Application* create_application(int argc, char* argv[])
     {
         auto window = Window::Create("Alimer", 0, 0, 640, 480);
 
