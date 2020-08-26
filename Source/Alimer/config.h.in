@@ -37,13 +37,4 @@
 #cmakedefine ALIMER_NETWORK
 #cmakedefine ALIMER_PLUGINS
 
-/* Platform library */
-#cmakedefine ALIMER_GLFW
-#cmakedefine ALIMER_SDL
-
-/* Graphics */
-#cmakedefine ALIMER_D3D11
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_VULKAN
-
 #endif

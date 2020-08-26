@@ -28,42 +28,29 @@
 
 namespace Alimer
 {
-    struct PresentationParameters
+    struct GraphicsDeviceSettings
     {
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
         /// Whether to try use sRGB backbuffer color format.
         bool colorFormatSrgb = false;
-
         /// The depth format.
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-
         /// Should the window wait for vertical sync before swapping buffers.
         bool verticalSync = false;
-        bool fullscreen = false;
         uint32 sampleCount = 1u;
-        void* windowHandle;
     };
 
-    struct GraphicsDeviceDescription
-    {
-        GPUPowerPreference powerPreference = GPUPowerPreference::Default;
-        const char* applicationName = nullptr;
-    };
+    class Window;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API GPUDevice : public Object
+    class ALIMER_API GraphicsDevice : public Object
     {
-        ALIMER_OBJECT(GPUDevice, Object);
+        ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
         /// Destructor.
-        virtual ~GPUDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
-        static void EnableGPUBasedBackendValidation(bool value);
-        static bool IsGPUBasedBackendValidationEnabled();
-
-        static GPUDevice* Create(const GraphicsDeviceDescription& desc, GPUBackendType preferredRendererType = GPUBackendType::Count);
+        static GraphicsDevice* Create(Window* window, const GraphicsDeviceSettings& settings);
 
         bool BeginFrame();
         void EndFrame();
@@ -93,26 +80,26 @@ namespace Alimer
         }
 
         /* Resource creation methods. */
-        GPUContext* CreateContext(const GPUContextDescription& desc);
         GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor, const void* initialData = nullptr);
 
         /// Total number of CPU frames completed.
         uint64_t GetFrameCount() const { return frameCount; }
 
     protected:
-        GPUDevice(GPUBackendType backendType_);
+        GraphicsDevice(Window* window, GPUBackendType backendType);
 
-        virtual GPUContext* CreateContextCore(const GPUContextDescription& desc) = 0;
+        //virtual GPUBuffer* CreateBufferCore(const GPUBufferDescriptor& descriptor, const void* initialData) = 0;
 
+        Window* window;
         GPUBackendType backendType;
         GPUFeatures features{};
         GPULimits limits{};
 
     private:
+        static GPUBackendType s_backendType;
+
         virtual bool BeginFrameImpl() = 0;
         virtual void EndFrameImpl() = 0;
-
-        static bool enableGPUValidation;
 
         /// Whether a frame is active or not
         bool frameActive{ false };
@@ -121,7 +108,7 @@ namespace Alimer
         uint64_t frameCount{ 0 };
 
     private:
-        ALIMER_DISABLE_COPY_MOVE(GPUDevice);
+        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }
 

@@ -40,6 +40,7 @@ namespace Alimer
     };
 
     class AppHost;
+    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -107,7 +108,7 @@ namespace Alimer
         // Rendering loop timer.
         GameTime time;
 
-        bool headless{ false };
+        RefPtr<GraphicsDevice> graphicsDevice;
         //std::vector<std::unique_ptr<GameSystem>> gameSystems;
     };
 

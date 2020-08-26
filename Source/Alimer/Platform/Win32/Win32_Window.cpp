@@ -140,6 +140,21 @@ namespace Alimer
         return result;
     }
 
+    bool Win32_Window::IsVisible() const
+    {
+        return ::IsWindowVisible(handle);
+    }
+
+    bool Win32_Window::IsMaximized() const
+    {
+        return IsZoomed(handle);
+    }
+
+    bool Win32_Window::IsMinimized() const
+    {
+        return IsIconic(handle);
+    }
+
     NativeHandle Win32_Window::GetNativeHandle() const
     {
         return handle;

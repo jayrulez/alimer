@@ -61,10 +61,10 @@ namespace Alimer
         /// Return window title.
         const std::string& GetTitle() const;
 
-        bool IsVisible() const;
-        bool IsMaximized() const;
-        bool IsMinimized() const;
-        bool IsFullscreen() const;
+        virtual bool IsVisible() const = 0;
+        virtual bool IsMaximized() const = 0;
+        virtual bool IsMinimized() const = 0;
+        bool IsFullscreen() const noexcept { return fullscreen; }
 
         /// The dot-per-inch scale factor
         virtual float GetDpiFactor() const;
@@ -84,5 +84,6 @@ namespace Alimer
         Window() = default;
 
         std::string title;
+        bool fullscreen{ false };
     };
 }

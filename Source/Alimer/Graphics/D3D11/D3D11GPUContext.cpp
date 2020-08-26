@@ -23,11 +23,11 @@
 #include "Core/Log.h"
 #include "D3D11GPUContext.h"
 #include "D3D11Texture.h"
-#include "D3D11GPUDevice.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
-    D3D11GPUContext::D3D11GPUContext(D3D11GPUDevice* device_, ID3D11DeviceContext1* context, bool isMain_)
+    D3D11GPUContext::D3D11GPUContext(D3D11GraphicsDevice* device_, ID3D11DeviceContext1* context, bool isMain_)
         : GPUContext(isMain_)
         , device(device_)
         , handle(context)

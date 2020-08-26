@@ -31,7 +31,7 @@ namespace Alimer
     {
     public:
         /// Constructor.
-        D3D11GPUBuffer(D3D11GPUDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData);
+        D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData);
         /// Destructor
         ~D3D11GPUBuffer() override;
 
@@ -40,7 +40,7 @@ namespace Alimer
     private:
         void BackendSetName() override;
 
-        D3D11GPUDevice* device;
+        D3D11GraphicsDevice* device;
         ID3D11Buffer* handle = nullptr;
     };
 }

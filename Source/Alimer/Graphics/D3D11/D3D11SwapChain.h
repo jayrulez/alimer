@@ -22,35 +22,36 @@
 
 #pragma once
 
-#include "Graphics/RenderWindow.h"
 #include "D3D11Backend.h"
 
 namespace Alimer
 {
-    class ALIMER_API D3D11RenderWindow final : public RenderWindow
+    class Window;
+
+    class ALIMER_API D3D11SwapChain final
     {
     public:
         /// Constructor.
-        D3D11RenderWindow(D3D11GPUDevice* device, const RenderWindowDescription& desc);
+        D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool verticalSync);
         /// Destructor
-        ~D3D11RenderWindow() override;
+        ~D3D11SwapChain();
 
-        void Destroy() override;
-        void SetVerticalSync(bool value) override;
-        void Present() override;
+        HRESULT Present();
 
     private:
         void AfterReset();
 
-        D3D11GPUDevice* device;
+        D3D11GraphicsDevice* device;
 
-        uint32 syncInterval = 1u;
-        uint32 presentFlags = 0u;
+        uint32_t backBufferCount = 2u;
+        uint32_t syncInterval;
+        uint32_t presentFlags;
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        IDXGISwapChain1* swapChain = nullptr;
+
+#if ALIMER_PLATFORM_WINDOWS
+        Microsoft::WRL::ComPtr<IDXGISwapChain1> handle;
 #else
-        IDXGISwapChain3* swapChain = nullptr;
+        Microsoft::WRL::ComPtr<IDXGISwapChain3> handle;
 #endif
 
         DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;

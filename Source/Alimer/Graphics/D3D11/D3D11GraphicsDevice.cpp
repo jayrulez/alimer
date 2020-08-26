@@ -23,148 +23,41 @@
 #include "D3D11GPUAdapter.h"
 //#include "D3D11RenderWindow.h"
 #include "D3D11GPUContext.h"
-#include "D3D11GPUDevice.h"
+#include "D3D11GraphicsDevice.h"
+#include "D3D11SwapChain.h"
 #include "Core/String.h"
+
+using Microsoft::WRL::ComPtr;
 
 namespace Alimer
 {
-    namespace
+    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const GraphicsDeviceSettings& settings)
+        : GraphicsDevice(window, GPUBackendType::D3D11)
     {
-#if defined(_DEBUG)
-        // Check for SDK Layer support.
-        inline bool SdkLayersAvailable() noexcept
-        {
-            HRESULT hr = D3D11CreateDevice(
-                nullptr,
-                D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
-                nullptr,
-                D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
-                nullptr,                    // Any feature level will do.
-                0,
-                D3D11_SDK_VERSION,
-                nullptr,                    // No need to keep the D3D device reference.
-                nullptr,                    // No need to know the feature level.
-                nullptr                     // No need to keep the D3D device context reference.
-            );
-
-            return SUCCEEDED(hr);
-        }
-#endif
-    }
-
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    struct D3D11Initializer
-    {
-        HMODULE dxgiLib;
-        HMODULE d3d11Lib;
+        dxgiDLL = LoadLibraryW(L"dxgi.dll");
+        d3d11DLL = LoadLibraryW(L"d3d11.dll");
 
-        D3D11Initializer()
-        {
-            dxgiLib = nullptr;
-            d3d11Lib = nullptr;
-        }
-
-        ~D3D11Initializer()
-        {
-            if (dxgiLib)
-                FreeLibrary(dxgiLib);
-
-            if (d3d11Lib)
-                FreeLibrary(d3d11Lib);
-        }
-
-        bool Initialize()
-        {
-            dxgiLib = LoadLibraryA("dxgi.dll");
-            if (!dxgiLib)
-                return false;
-
-            CreateDXGIFactory1 = (PFN_CREATE_DXGI_FACTORY1)GetProcAddress(dxgiLib, "CreateDXGIFactory1");
-            if (!CreateDXGIFactory1)
-                return false;
-
-            CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiLib, "CreateDXGIFactory2");
-            DXGIGetDebugInterface1 = (PFN_GET_DXGI_DEBUG_INTERFACE1)GetProcAddress(dxgiLib, "DXGIGetDebugInterface1");
-
-            d3d11Lib = LoadLibraryA("d3d11.dll");
-            if (!d3d11Lib)
-                return false;
-
-            D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(d3d11Lib, "D3D11CreateDevice");
-            if (!D3D11CreateDevice) {
-                return false;
-            }
-
-            return true;
-        }
-    };
-
-    D3D11Initializer s_d3d11_Initializer;
+        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
+        CreateDXGIFactory1 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY1>(GetProcAddress(dxgiDLL, "CreateDXGIFactory1"));
+        CreateDXGIFactory2 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY2>(GetProcAddress(dxgiDLL, "CreateDXGIFactory2"));
+        D3D11CreateDevice = reinterpret_cast<PFN_D3D11_CREATE_DEVICE>(GetProcAddress(d3d11DLL, "D3D11CreateDevice"));
 #endif
-
-    bool D3D11GPUDevice::IsAvailable()
-    {
-        static bool available_initialized = false;
-        static bool available = false;
-        if (available_initialized) {
-            return available;
-        }
-
-        available_initialized = true;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (!s_d3d11_Initializer.Initialize())
-            return false;
-#endif
-
-        static const D3D_FEATURE_LEVEL s_featureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-            D3D_FEATURE_LEVEL_10_1,
-            D3D_FEATURE_LEVEL_10_0
-        };
-
-        HRESULT hr = D3D11CreateDevice(
-            nullptr,
-            D3D_DRIVER_TYPE_HARDWARE,
-            nullptr,
-            D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-            s_featureLevels,
-            _countof(s_featureLevels),
-            D3D11_SDK_VERSION,
-            nullptr,
-            nullptr,
-            nullptr
-        );
-
-        if (SUCCEEDED(hr))
-        {
-            available = true;
-            return true;
-        }
-
-        return false;
-    }
-
-    D3D11GPUDevice::D3D11GPUDevice(const GraphicsDeviceDescription& desc)
-        : GPUDevice(GPUBackendType::D3D11)
-    {
-        ALIMER_VERIFY(IsAvailable());
 
         CreateFactory();
 
         // Get adapter and create device.
         {
-            IDXGIAdapter1* dxgiAdapter = nullptr;
+            ComPtr<IDXGIAdapter1> dxgiAdapter = nullptr;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-            IDXGIFactory6* dxgiFactory6 = nullptr;
-            HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
+            ComPtr<IDXGIFactory6> dxgiFactory6;
+            HRESULT hr = dxgiFactory.As(&dxgiFactory6);
             if (SUCCEEDED(hr))
             {
+                const bool lowPower = false;
                 DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-                if (desc.powerPreference == GPUPowerPreference::LowPower)
+                if (lowPower)
                 {
                     gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
                 }
@@ -173,7 +66,7 @@ namespace Alimer
                     SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
                         adapterIndex,
                         gpuPreference,
-                        IID_PPV_ARGS(&dxgiAdapter)));
+                        IID_PPV_ARGS(dxgiAdapter.ReleaseAndGetAddressOf())));
                     adapterIndex++)
                 {
                     DXGI_ADAPTER_DESC1 desc;
@@ -182,20 +75,17 @@ namespace Alimer
                     if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
                     {
                         // Don't select the Basic Render Driver adapter.
-                        dxgiAdapter->Release();
                         continue;
                     }
 
                     break;
                 }
             }
-
-            SafeRelease(dxgiFactory6);
 #endif
 
             if (!dxgiAdapter)
             {
-                for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, &dxgiAdapter)); ++adapterIndex)
+                for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, dxgiAdapter.ReleaseAndGetAddressOf())); ++adapterIndex)
                 {
                     DXGI_ADAPTER_DESC1 desc;
                     ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
@@ -203,7 +93,6 @@ namespace Alimer
                     if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
                     {
                         // Don't select the Basic Render Driver adapter.
-                        dxgiAdapter->Release();
                         continue;
                     }
 
@@ -220,7 +109,7 @@ namespace Alimer
             UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-            if (SdkLayersAvailable())
+            if (IsSdkLayersAvailable())
             {
                 // If the project is in a debug build, enable debugging via SDK Layers with this flag.
                 creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -248,7 +137,7 @@ namespace Alimer
             if (dxgiAdapter)
             {
                 hr = D3D11CreateDevice(
-                    dxgiAdapter,
+                    dxgiAdapter.Get(),
                     D3D_DRIVER_TYPE_UNKNOWN,
                     nullptr,
                     creationFlags,
@@ -334,18 +223,23 @@ namespace Alimer
             InitCapabilities();
         }
 
-        // Create main render window.
-        //renderWindow = new D3D11RenderWindow(this, desc.mainWindow);
+        // Create SwapChain.
+        swapChain = new D3D11SwapChain(this, window, settings.verticalSync);
     }
 
-    D3D11GPUDevice::~D3D11GPUDevice()
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
     {
         Shutdown();
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        FreeLibrary(dxgiDLL);
+        FreeLibrary(d3d11DLL);
+#endif
     }
 
-    void D3D11GPUDevice::Shutdown()
+    void D3D11GraphicsDevice::Shutdown()
     {
-       // renderWindow.Reset();
+        SafeDelete(swapChain);
         SafeDelete(mainContext);
 
         ULONG refCount = d3dDevice->Release();
@@ -366,49 +260,29 @@ namespace Alimer
 #endif
 
         SafeDelete(adapter);
-        SafeRelease(dxgiFactory);
-
-#ifdef _DEBUG
-        IDXGIDebug1* dxgiDebug1;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        if (DXGIGetDebugInterface1 && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
-#else
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
-#endif
-        {
-            dxgiDebug1->ReportLiveObjects(g_DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-            dxgiDebug1->Release();
-        }
-#endif
     }
 
-    GPUAdapter* D3D11GPUDevice::GetAdapter() const
+    GPUAdapter* D3D11GraphicsDevice::GetAdapter() const
     {
         return adapter;
     }
 
-    GPUContext* D3D11GPUDevice::GetMainContext() const
+    GPUContext* D3D11GraphicsDevice::GetMainContext() const
     {
         return mainContext;
     }
 
-    void D3D11GPUDevice::CreateFactory()
+    void D3D11GraphicsDevice::CreateFactory()
     {
-        SafeRelease(dxgiFactory);
-
 #if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
         bool debugDXGI = false;
         {
-            IDXGIInfoQueue* dxgiInfoQueue;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
-#else
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
-#endif
+            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
                 debugDXGI = true;
 
-                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory)));
+                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
                 dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -421,22 +295,21 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
-                dxgiInfoQueue->Release();
             }
         }
 
         if (!debugDXGI)
 #endif
         {
-            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)));
+            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
 
         // Determines whether tearing support is available for fullscreen borderless windows.
         {
             BOOL allowTearing = FALSE;
 
-            IDXGIFactory5* factory5 = nullptr;
-            HRESULT hr = dxgiFactory->QueryInterface(&factory5);
+            ComPtr<IDXGIFactory5> factory5;
+            HRESULT hr = dxgiFactory.As(&factory5);
             if (SUCCEEDED(hr))
             {
                 hr = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -444,22 +317,20 @@ namespace Alimer
 
             if (FAILED(hr) || !allowTearing)
             {
-                isTearingSupported = false;
 #ifdef _DEBUG
                 OutputDebugStringA("WARNING: Variable refresh rate displays not supported");
 #endif
             }
             else
             {
-                isTearingSupported = true;
+                dxgiFactoryCaps |= DXGIFactoryCaps::Tearing;
             }
-            SafeRelease(factory5);
         }
 
         // Disable HDR if we are on an OS that can't support FLIP swap effects
         {
-            IDXGIFactory5* factory5 = nullptr;
-            if (FAILED(dxgiFactory->QueryInterface(&factory5)))
+            ComPtr<IDXGIFactory5> factory5;
+            if (FAILED(dxgiFactory.As(&factory5)))
             {
 #ifdef _DEBUG
                 OutputDebugStringA("WARNING: HDR swap chains not supported");
@@ -469,14 +340,13 @@ namespace Alimer
             {
                 dxgiFactoryCaps |= DXGIFactoryCaps::HDR;
             }
-            SafeRelease(factory5);
         }
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         // Disable FLIP if not on a supporting OS
         {
-            IDXGIFactory4* factory4 = nullptr;
-            if (FAILED(dxgiFactory->QueryInterface(&factory4)))
+            ComPtr<IDXGIFactory4> factory4;
+            if (FAILED(dxgiFactory.As(&factory4)))
             {
 #ifdef _DEBUG
                 OutputDebugStringA("INFO: Flip swap effects not supported");
@@ -486,14 +356,34 @@ namespace Alimer
             {
                 dxgiFactoryCaps |= DXGIFactoryCaps::FlipPresent;
             }
-            SafeRelease(factory4);
         }
 #else
         dxgiFactoryCaps |= DXGIFactoryCaps::FlipPresent;
 #endif
     }
 
-    void D3D11GPUDevice::InitCapabilities()
+#if defined(_DEBUG)
+    bool D3D11GraphicsDevice::IsSdkLayersAvailable() noexcept
+    {
+        // Check for SDK Layer support.
+        HRESULT hr = D3D11CreateDevice(
+            nullptr,
+            D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+            nullptr,
+            D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
+            nullptr,                    // Any feature level will do.
+            0,
+            D3D11_SDK_VERSION,
+            nullptr,                    // No need to keep the D3D device reference.
+            nullptr,                    // No need to know the feature level.
+            nullptr                     // No need to keep the D3D device context reference.
+        );
+
+        return SUCCEEDED(hr);
+    }
+#endif
+
+    void D3D11GraphicsDevice::InitCapabilities()
     {
         // Features
         features.independentBlend = true;
@@ -568,35 +458,41 @@ namespace Alimer
         }
     }
 
-    bool D3D11GPUDevice::BeginFrameImpl()
+    bool D3D11GraphicsDevice::BeginFrameImpl()
     {
         return !isLost;
     }
 
-    void D3D11GPUDevice::EndFrameImpl() 
+    void D3D11GraphicsDevice::EndFrameImpl()
     {
-        if (!dxgiFactory->IsCurrent())
+        HRESULT  hr = swapChain->Present();
+
+        // If the device was removed either by a disconnection or a driver upgrade, we
+        // must recreate all device resources.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
-            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-            CreateFactory();
+#ifdef _DEBUG
+            char buff[64] = {};
+            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
+            OutputDebugStringA(buff);
+#endif
+            HandleDeviceLost();
+        }
+        else
+        {
+            ThrowIfFailed(hr);
+
+            if (!dxgiFactory->IsCurrent())
+            {
+                // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+                CreateFactory();
+            }
         }
     }
 
-    void D3D11GPUDevice::HandleDeviceLost(HRESULT hr)
+    void D3D11GraphicsDevice::HandleDeviceLost()
     {
-
-#ifdef _DEBUG
-        char buff[64] = {};
-        sprintf_s(buff, "Device Lost on ResizeBuffers: Reason code 0x%08X\n", static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
-        OutputDebugStringA(buff);
-#endif
-
         isLost = true;
-    }
-
-    /* Resource creation methods */
-    GPUContext* D3D11GPUDevice::CreateContextCore(const GPUContextDescription& desc)
-    {
-        return new D3D11GPUContext(this, d3dContext, false);
     }
 }

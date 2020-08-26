@@ -31,7 +31,7 @@ namespace Alimer
     {
     public:
         /// Constructor.
-        D3D11GPUContext(D3D11GPUDevice * device, ID3D11DeviceContext1* context, bool isMain_);
+        D3D11GPUContext(D3D11GraphicsDevice* device, ID3D11DeviceContext1* context, bool isMain_);
         /// Destructor
         ~D3D11GPUContext() override;
 
@@ -55,7 +55,7 @@ namespace Alimer
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
     private:
-        D3D11GPUDevice* device;
+        D3D11GraphicsDevice* device;
         ID3D11DeviceContext1* handle = nullptr;
         ID3DUserDefinedAnnotation* annotation = nullptr;
         ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};

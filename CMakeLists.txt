@@ -15,7 +15,8 @@ project (
 
 # For build type to relese if not specified
 if (NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Release" CACHE STRINGS "Force build type to release")
+    message(WARNING "CMAKE_BUILD_TYPE not set, forcing it to Debug")
+	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
 # Enable folders in IDE (VisualStudio)
@@ -74,6 +75,38 @@ else ()
     option(ALIMER_BUILD_EDITOR "Build Editor" ON)
 endif ()
 
+# Default values for the backend-enabling options
+set(ENABLE_D3D11 OFF)
+set(ENABLE_D3D12 OFF)
+set(ENABLE_METAL OFF)
+set(ENABLE_OPENGL OFF)
+set(ENABLE_VULKAN OFF)
+
+if(EMSCRIPTEN)
+    set(ENABLE_OPENGL ON)
+elseif(ANDROID)
+    set(ENABLE_OPENGL ON)
+    set(ENABLE_VULKAN ON)
+elseif(WINDOWS_STORE)
+    set(ENABLE_D3D11 ON)
+    set(ENABLE_D3D12 ON)
+elseif (WIN32)
+    set(ENABLE_D3D11 ON)
+    set(ENABLE_D3D12 ON)
+    set(ENABLE_VULKAN ON)
+elseif(APPLE)
+    set(ENABLE_METAL ON)
+elseif(UNIX)
+    set(ENABLE_OPENGL ON)
+    set(ENABLE_VULKAN ON)
+endif()
+option(ALIMER_ENABLE_D3D11 "Enable compilation of the D3D11 backend" ${ENABLE_D3D11})
+option(ALIMER_ENABLE_D3D12 "Enable compilation of the D3D12 backend" ${ENABLE_D3D12})
+option(ALIMER_ENABLE_METAL "Enable compilation of the Metal backend" ${ENABLE_METAL})
+option(ALIMER_ENABLE_NULL "Enable compilation of the Null backend" ON)
+option(ALIMER_ENABLE_OPENGL "Enable compilation of the OpenGL backend" ${ENABLE_OPENGL})
+option(ALIMER_ENABLE_VULKAN "Enable compilation of the Vulkan backend" ${ENABLE_VULKAN})
+
 # Setup
 if(EMSCRIPTEN)
   string(CONCAT ALIMER_EMSCRIPTEN_FLAGS
@@ -127,6 +160,26 @@ endif ()
 
 if(ALIMER_WARNINGS_AS_ERRORS)
     message(STATUS "  Warnings as Errors Enabled")
+endif()
+
+# Print graphics backends.
+if(ALIMER_ENABLE_D3D11)
+    message(STATUS "  Build Renderer: Direct3D 11")
+endif()
+if(ALIMER_ENABLE_D3D12)
+    message(STATUS "  Build Renderer: Direct3D 12")
+endif()
+if(ALIMER_ENABLE_METAL)
+    message(STATUS "  Build Renderer: Metal")
+endif()
+if(ALIMER_ENABLE_NULL)
+    message(STATUS "  Build Renderer: Null")
+endif()
+if(ALIMER_ENABLE_OPENGL)
+    message(STATUS "  Build Renderer: OpenGL")
+endif()
+if(ALIMER_ENABLE_VULKAN)
+    message(STATUS "  Build Renderer: Vulkan")
 endif()
 
 # Install files

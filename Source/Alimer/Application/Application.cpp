@@ -24,10 +24,9 @@
 #include "Application/AppHost.h"
 #include "Core/Log.h"
 #include "Core/Input.h"
-#include "Graphics/GPUDevice.h"
+#include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
-#include <imgui.h>
 
 namespace Alimer
 {
@@ -47,20 +46,6 @@ namespace Alimer
         // Construct platform logic first.
         RegisterSubsystem(new Input());
 
-        // Init ImGui
-        ImGui::CreateContext();
-        ImGui::StyleColorsDark();
-
-        /*ImGuiIO& io = ImGui::GetIO();
-        io.UserData = this;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-        //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-        //io.ConfigViewportsNoAutoMerge = true;
-        //io.ConfigViewportsNoTaskBarIcon = true;
-        */
-
         s_current = this;
 
         LOGI("Application started");
@@ -71,7 +56,8 @@ namespace Alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<GPUDevice>();
+        RemoveSubsystem<GraphicsDevice>();
+        graphicsDevice.Reset();
         s_current = nullptr;
         LOGI("Application destroyed correctly");
     }
@@ -86,38 +72,35 @@ namespace Alimer
         // Init subsytems.
         GetSubsystem<Input>()->Initialize();
 
+        ImGuiLayer::Initialize();
+
         // Init GPU.
-        if (!headless)
+        auto bounds = GetWindow()->GetBounds();
+
+        GraphicsDeviceSettings settings = {};
+        settings.sampleCount = 4;
+        graphicsDevice = GraphicsDevice::Create(GetWindow(), settings);
+        RegisterSubsystem(graphicsDevice);
+
+        // Create main window SwapChain
+        /*
+        struct VertexPositionColor
         {
-            auto bounds = GetWindow()->GetBounds();
+            Vector3 position;
+            Color color;
+        };
 
-            GraphicsDeviceDescription graphicsDeviceDesc = {};
-            graphicsDeviceDesc.applicationName = GetName().c_str();
-            //graphicsDeviceDesc.mainWindow.title = config.windowTitle;
-            //graphicsDeviceDesc.mainWindow.size = config.windowSize;
+        const VertexPositionColor vertices[] = {
+            // positions            colors
+            {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
+            {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
+            {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
+        };
 
-            RegisterSubsystem(GPUDevice::Create(graphicsDeviceDesc));
-
-            // Create main window SwapChain
-            /*
-            struct VertexPositionColor
-            {
-                Vector3 position;
-                Color color;
-            };
-
-            const VertexPositionColor vertices[] = {
-                // positions            colors
-                {{0.0f, 0.5f, 0.5f},    {1.0f, 0.0f, 0.0f, 1.0f}},
-                {{ 0.5f, -0.5f, 0.5f},  {0.0f, 1.0f, 0.0f, 1.0f}},
-                {{-0.5f, -0.5f, 0.5f},  {0.0f, 0.0f, 1.0f, 1.0f}}
-            };
-
-            Buffer vertexBuffer;
-            vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
-            */
-            ImGuiLayer::Initialize();
-        }
+        Buffer vertexBuffer;
+        vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
+        */
+        ImGuiLayer::Initialize();
 
         Initialize();
         if (exitCode)
@@ -150,7 +133,7 @@ namespace Alimer
 
     bool Application::BeginDraw()
     {
-        if (!GetGraphics()->BeginFrame())
+        if (!graphicsDevice->BeginFrame())
             return false;
 
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
@@ -178,17 +161,17 @@ namespace Alimer
             LOGI("Right held");
         }
 
-       /* auto context = GetGraphics()->GetMainContext();
+        /* auto context = GetGraphics()->GetMainContext();
 
-        context->PushDebugGroup("Clear");
-        RenderPassColorAttachment colorAttachment = {};
-        colorAttachment.texture = GetGraphics()->GetMainWindow()->GetCurrentTexture();
-        colorAttachment.clearColor = Colors::CornflowerBlue;
-        //colorAttachment.loadAction = LoadAction::DontCare;
-        //colorAttachment.slice = 1;
-        context->BeginRenderPass(1, &colorAttachment, nullptr);
-        context->EndRenderPass();
-        context->PopDebugGroup();*/
+         context->PushDebugGroup("Clear");
+         RenderPassColorAttachment colorAttachment = {};
+         colorAttachment.texture = GetGraphics()->GetMainWindow()->GetCurrentTexture();
+         colorAttachment.clearColor = Colors::CornflowerBlue;
+         //colorAttachment.loadAction = LoadAction::DontCare;
+         //colorAttachment.slice = 1;
+         context->BeginRenderPass(1, &colorAttachment, nullptr);
+         context->EndRenderPass();
+         context->PopDebugGroup();*/
     }
 
     void Application::EndDraw()
@@ -200,7 +183,7 @@ namespace Alimer
 
         //ImGuiLayer::EndFrame();
         //GetGraphics()->GetMainWindow()->Present();
-        GetGraphics()->EndFrame();
+        graphicsDevice->EndFrame();
     }
 
     int Application::Run()
@@ -239,7 +222,7 @@ namespace Alimer
         // Don't try to render anything before the first Update.
         if (running
             && time.GetFrameCount() > 0
-            //&& !GetGraphics()->GetMainWindow()->IsMinimized()
+            && !GetWindow()->IsMinimized()
             && BeginDraw())
         {
             Draw(time);

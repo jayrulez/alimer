@@ -27,7 +27,6 @@
 
 namespace Alimer
 {
-#if TODO
     template <typename T> struct Function;
     template <typename T> struct Delegate;
 
@@ -153,6 +152,4 @@ namespace Alimer
     private:
         std::vector<Function<R(Args...)>> delegates;
     };
-#endif // TODO
-
 }

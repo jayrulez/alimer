@@ -23,10 +23,10 @@
 #include "config.h"
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
-#include "Graphics/GPUDevice.h"
+#include "Graphics/GraphicsDevice.h"
 
-#if ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
-#   include "Graphics/D3D11/D3D11GPUDevice.h"
+#if defined(ALIMER_ENABLE_BACKEND_D3D11)
+#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_VULKAN) && defined(TODO_VK)
@@ -35,35 +35,34 @@
 
 namespace Alimer
 {
-    bool GPUDevice::enableGPUValidation = false;
+#if defined(ALIMER_ENABLE_BACKEND_D3D11)
+    GPUBackendType GraphicsDevice::s_backendType = GPUBackendType::D3D11;
+#elif defined(ALIMER_ENABLE_BACKEND_METAL)
+    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::Metal;
+#elif defined(ALIMER_ENABLE_BACKEND_VULKAN)
+    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::Vulkan;
+#elif defined(ALIMER_ENABLE_BACKEND_OPENGL)
+    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::OpenGL;
+#else
+#    error
+#endif
 
-    void GPUDevice::EnableGPUBasedBackendValidation(bool value)
-    {
-        enableGPUValidation = value;
-    }
-
-    bool GPUDevice::IsGPUBasedBackendValidationEnabled()
-    {
-        return enableGPUValidation;
-    }
-
-    GPUDevice::GPUDevice(GPUBackendType backendType_)
-        : backendType(backendType_)
+    GraphicsDevice::GraphicsDevice(Window* window, GPUBackendType backendType)
+        : window{ window }
+        , backendType{ backendType }
     {
         LOGI("Using {} driver", ToString(backendType));
     }
 
-    GPUDevice* GPUDevice::Create(const GraphicsDeviceDescription& desc, GPUBackendType preferredRendererType)
+    GraphicsDevice* GraphicsDevice::Create(Window* window, const GraphicsDeviceSettings& settings)
     {
-        GPUBackendType backendType = preferredRendererType;
-
-        if (preferredRendererType == GPUBackendType::Count)
+        if (s_backendType == GPUBackendType::Count)
         {
-            backendType = GPUBackendType::D3D11;
+            s_backendType = GPUBackendType::D3D11;
             //backendType = GPUBackendType::Vulkan;
         }
 
-        switch (backendType)
+        switch (s_backendType)
         {
 #if defined(ALIMER_VULKAN) && defined(TODO_VK)
         case GPUBackendType::Vulkan:
@@ -79,9 +78,9 @@ namespace Alimer
             break;
 #endif
 
-#if ALIMER_PLATFORM_WINDOWS || ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
+#if defined(ALIMER_ENABLE_BACKEND_D3D11)
         case GPUBackendType::D3D11:
-            return new D3D11GPUDevice(desc);
+            return new D3D11GraphicsDevice(window, settings);
 #endif
 
 #if defined(ALIMER_D3D12)
@@ -97,7 +96,7 @@ namespace Alimer
         return nullptr;
     }
 
-    bool GPUDevice::BeginFrame()
+    bool GraphicsDevice::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
 
@@ -110,7 +109,7 @@ namespace Alimer
         return true;
     }
 
-    void GPUDevice::EndFrame()
+    void GraphicsDevice::EndFrame()
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
 
@@ -119,11 +118,6 @@ namespace Alimer
         // Frame is not active anymore.
         frameActive = false;
         ++frameCount;
-    }
-
-    GPUContext* GPUDevice::CreateContext(const GPUContextDescription& desc)
-    {
-        return CreateContextCore(desc);
     }
 }
 

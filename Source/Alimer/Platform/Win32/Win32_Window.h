@@ -39,6 +39,10 @@ namespace Alimer
     private:
         void SetPlatformTitle(const std::string& newTitle) override;
         Rect GetBounds() const override;
+
+        bool IsVisible() const override;
+        bool IsMaximized() const override;
+        bool IsMinimized() const override;
         NativeHandle GetNativeHandle() const override;
 
     private:

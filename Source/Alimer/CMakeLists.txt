@@ -53,9 +53,9 @@ if(NOT (EMSCRIPTEN OR ANDROID))
 endif()
 
 # Graphics modules
-if (WIN32 OR WINDOWS_STORE)
-  define_engine_source_files(Graphics/D3D)
-  define_engine_source_files(Graphics/D3D11)
+if (ALIMER_ENABLE_D3D11)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D11)
 endif()
 
 if (ALIMER_VULKAN)
@@ -138,15 +138,27 @@ elseif(ANDROID)
 elseif(APPLE)
 elseif(WINDOWS_STORE)
 elseif (WIN32)
-  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
-  target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
-  target_compile_definitions(${TARGET_NAME} PUBLIC UNICODE _UNICODE)
+    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
+    target_compile_definitions(${TARGET_NAME} PUBLIC UNICODE _UNICODE)
 
-  set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
-
-  target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
+    set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
+    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
 elseif(UNIX)
 endif ()
+
+if (ALIMER_ENABLE_D3D11)
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_BACKEND_D3D11")
+    target_link_libraries(${TARGET_NAME} PRIVATE dxguid)
+
+    if(WINDOWS_STORE)
+        target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
+    endif()
+endif()
+
+if (ALIMER_ENABLE_D3D12)
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_BACKEND_D3D12")
+endif()
 
 # SDK installation
 install(TARGETS ${PROJECT_NAME}

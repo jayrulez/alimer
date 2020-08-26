@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "D3D11GPUBuffer.h"
-#include "D3D11GPUDevice.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -52,7 +52,7 @@ namespace Alimer
         }
     }
 
-    D3D11GPUBuffer::D3D11GPUBuffer(D3D11GPUDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData)
+    D3D11GPUBuffer::D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData)
         : GPUBuffer(descriptor)
         , device{ device }
     {

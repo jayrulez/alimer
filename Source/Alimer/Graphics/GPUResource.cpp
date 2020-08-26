@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "Graphics/GPUResource.h"
-#include "Graphics/GPUDevice.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {

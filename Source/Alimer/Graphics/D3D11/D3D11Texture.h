@@ -31,9 +31,9 @@ namespace Alimer
     {
     public:
         /// Constructor.
-        D3D11Texture(D3D11GPUDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11Texture(D3D11GPUDevice* device, const GPUTextureDescription& desc, const void* initialData);
+        D3D11Texture(D3D11GraphicsDevice* device, const GPUTextureDescription& desc, const void* initialData);
         /// Destructor
         ~D3D11Texture() override;
 
@@ -47,7 +47,7 @@ namespace Alimer
     private:
         void BackendSetName() override;
 
-        D3D11GPUDevice* device;
+        D3D11GraphicsDevice* device;
         ID3D11Resource* handle;
         std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
         std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;

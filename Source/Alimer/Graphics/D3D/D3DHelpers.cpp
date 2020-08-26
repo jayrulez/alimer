@@ -21,15 +21,10 @@
 //
 
 #include "D3DHelpers.h"
+using Microsoft::WRL::ComPtr;
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-
 #ifdef ALIMER_ENABLE_ASSERT
 #define CHK_ERRA(hrchk) case hrchk: wcscpy_s( desc, count, L#hrchk )
 #define CHK_ERR(hrchk, strOut) case hrchk: wcscpy_s( desc, count, L##strOut )
@@ -237,5 +232,77 @@ namespace Alimer
         ALIMER_UNUSED(obj);
         ALIMER_UNUSED(name);
 #endif
+    }
+
+    ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps,
+        IUnknown* deviceOrCommandQueue,
+        void* window,
+        uint32_t backBufferWidth, uint32_t backBufferHeight, DXGI_FORMAT backBufferFormat,
+        uint32_t backBufferCount,
+        bool fullscreen)
+    {
+        UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+
+        if (any(caps & DXGIFactoryCaps::Tearing))
+        {
+            flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        const DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
+        DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+
+        if (!any(caps & DXGIFactoryCaps::FlipPresent))
+        {
+            swapEffect = DXGI_SWAP_EFFECT_DISCARD;
+        }
+#else
+        const DXGI_SCALING scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+        const DXGI_SWAP_EFFECT swapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#endif
+
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.Width = backBufferWidth;
+        swapChainDesc.Height = backBufferHeight;
+        swapChainDesc.Format = backBufferFormat;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.BufferCount = backBufferCount;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.Scaling = scaling;
+        swapChainDesc.SwapEffect = swapEffect;
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapChainDesc.Flags = flags;
+
+        ComPtr<IDXGISwapChain1> swapChain;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+        fsSwapChainDesc.Windowed = !fullscreen;
+
+        // Create a SwapChain from a Win32 window.
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+            deviceOrCommandQueue,
+            (HWND)window,
+            &swapChainDesc,
+            &fsSwapChainDesc,
+            NULL,
+            swapChain.GetAddressOf()
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation((HWND)window, DXGI_MWA_NO_ALT_ENTER));
+#else
+        VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
+            dxgi_factory,
+            deviceOrCommandQueue,
+            window,
+            &swapchain_desc,
+            NULL,
+            &result
+        ));
+#endif
+
+        return swapChain;
     }
 }

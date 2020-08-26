@@ -22,7 +22,6 @@
 
 #include "Core/Object.h"
 #include "Core/Input.h"
-#include "Graphics/GPUDevice.h"
 #include <unordered_map>
 #include <memory>
 
@@ -37,7 +36,6 @@ namespace Alimer
             std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
-            WeakPtr<GPUDevice> graphics;
 
             void RegisterSubsystem(Object* subsystem)
             {
@@ -47,12 +45,6 @@ namespace Alimer
             void RegisterSubsystem(Input* subsystem)
             {
                 input = subsystem;
-                RegisterSubsystem((Object*)subsystem);
-            }
-
-            void RegisterSubsystem(GPUDevice* subsystem)
-            {
-                graphics = subsystem;
                 RegisterSubsystem((Object*)subsystem);
             }
 
@@ -148,11 +140,6 @@ namespace Alimer
         details::context().RegisterSubsystem(subsystem);
     }
 
-    void Object::RegisterSubsystem(GPUDevice* subsystem)
-    {
-        details::context().RegisterSubsystem(subsystem);
-    }
-
     void Object::RemoveSubsystem(Object* subsystem)
     {
         if (!subsystem)
@@ -174,11 +161,6 @@ namespace Alimer
     Input* Object::GetInput()
     {
         return details::context().input;
-    }
-
-    GPUDevice* Object::GetGraphics()
-    {
-        return details::context().graphics;
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

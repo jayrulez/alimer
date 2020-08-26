@@ -27,15 +27,11 @@
 #include "Graphics/GPUResource.h"
 #include "Graphics/D3D/D3DHelpers.h"
 #define D3D11_NO_HELPERS
-#include <d3d11_1.h>
+#include <d3d11_3.h>
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
-    class D3D11GPUDevice;
+    class D3D11GraphicsDevice;
 
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name);
 

@@ -71,13 +71,6 @@ namespace Alimer
         Count
     };
 
-    enum class GPUPowerPreference 
-    {
-        Default,
-        LowPower,
-        HighPerformance
-    };
-
     /// Describes the texture type.
     enum class TextureType
     {
@@ -257,12 +250,6 @@ namespace Alimer
         uint32_t maxComputeWorkGroupSizeX;
         uint32_t maxComputeWorkGroupSizeY;
         uint32_t maxComputeWorkGroupSizeZ;
-    };
-
-    struct GPUContextDescription
-    {
-        uint32_t width;
-        uint32_t height;
     };
 
     ALIMER_API const char* ToString(GPUBackendType value);

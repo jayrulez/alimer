@@ -24,7 +24,7 @@
 
 namespace Alimer
 {
-    D3D11GPUAdapter::D3D11GPUAdapter(IDXGIAdapter1* adapter)
+    D3D11GPUAdapter::D3D11GPUAdapter(const Microsoft::WRL::ComPtr<IDXGIAdapter1>& adapter)
         : adapter{ adapter }
     {
         DXGI_ADAPTER_DESC1 desc;
@@ -45,10 +45,5 @@ namespace Alimer
         {
             adapterType = GPUAdapterType::IntegratedGPU;
         }
-    }
-
-    D3D11GPUAdapter::~D3D11GPUAdapter()
-    {
-        SafeRelease(adapter);
     }
 }

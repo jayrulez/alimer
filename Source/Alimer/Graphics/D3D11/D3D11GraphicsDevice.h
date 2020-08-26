@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GPUDevice.h"
+#include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
 #include <mutex>
 
@@ -30,39 +30,57 @@ namespace Alimer
 {
     class D3D11GPUAdapter;
     class D3D11GPUContext;
+    class D3D11SwapChain;
 
-    class D3D11GPUDevice final : public GPUDevice
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
-        static bool IsAvailable();
-        D3D11GPUDevice(const GraphicsDeviceDescription& desc);
-        ~D3D11GPUDevice() override;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        // Functions from dxgi.dll
+        using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
+        using PFN_CREATE_DXGI_FACTORY1 = HRESULT(WINAPI*)(REFIID riid, _COM_Outptr_ void** ppFactory);
+        using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
+
+        PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
+        PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1 = nullptr;
+        PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
+
+        // Functions from d3d11.dll
+        PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
+#endif
+
+        D3D11GraphicsDevice(Window* window, const GraphicsDeviceSettings& settings);
+        ~D3D11GraphicsDevice() override;
 
         void Shutdown();
 
-        void HandleDeviceLost(HRESULT hr);
+        void HandleDeviceLost();
 
         GPUAdapter* GetAdapter() const override;
         GPUContext* GetMainContext() const override;
-        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory; }
-        bool IsTearingSupported() const { return isTearingSupported; }
+        IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         bool IsLost() const { return isLost; }
 
-        /* Resource creation methods */
-        GPUContext* CreateContextCore(const GPUContextDescription& desc) override;
-
     private:
         void CreateFactory();
+#if defined(_DEBUG)
+        bool IsSdkLayersAvailable() noexcept;
+#endif
+
         void InitCapabilities();
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
 
         static constexpr uint64_t kRenderLatency = 2;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HMODULE dxgiDLL = nullptr;
+        HMODULE d3d11DLL = nullptr;
+#endif
 
-        IDXGIFactory2* dxgiFactory = nullptr;
-        bool isTearingSupported = false;
+        Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
         D3D11GPUAdapter* adapter = nullptr;
@@ -73,5 +91,7 @@ namespace Alimer
         bool isLost = false;
 
         D3D11GPUContext* mainContext = nullptr;
+        
+        D3D11SwapChain* swapChain = nullptr;
     };
 }

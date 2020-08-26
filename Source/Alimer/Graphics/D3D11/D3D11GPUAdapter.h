@@ -30,8 +30,7 @@ namespace Alimer
     class D3D11GPUAdapter final : public GPUAdapter
     {
     public:
-        D3D11GPUAdapter(IDXGIAdapter1* adapter);
-        ~D3D11GPUAdapter() override;
+        D3D11GPUAdapter(const Microsoft::WRL::ComPtr<IDXGIAdapter1>& adapter);
 
         /// Gets the GPU device identifier.
         ALIMER_FORCE_INLINE uint32 GetDeviceId() const override
@@ -58,7 +57,7 @@ namespace Alimer
         }
 
     private:
-        IDXGIAdapter1* adapter;
+        Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
         uint32 deviceId;
         uint32 vendorId;
         String name;
