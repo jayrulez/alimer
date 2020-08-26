@@ -13,6 +13,10 @@ set(IMGUI_FILES
     imstb_truetype.h
 )
 
+if(MSVC)
+    set(IMGUI_FILES ${IMGUI_FILES} misc/natvis/imgui.natvis)
+endif()
+
 add_library(imgui STATIC ${IMGUI_FILES})
 target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set_property(TARGET imgui PROPERTY FOLDER "ThirdParty")
