@@ -119,5 +119,11 @@ namespace Alimer
         frameActive = false;
         ++frameCount;
     }
+
+    CommandBuffer& GraphicsDevice::RequestCommandBuffer(const char* name, bool profile)
+    {
+        CommandBuffer* newCommandBuffer = RequestCommandBufferCore(name, profile);
+        return *newCommandBuffer;
+    }
 }
 

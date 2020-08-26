@@ -23,8 +23,9 @@
 #pragma once
 
 #include "Graphics/GPUAdapter.h"
-#include "Graphics/GPUContext.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
+#include "Graphics/Texture.h"
 
 namespace Alimer
 {
@@ -58,9 +59,6 @@ namespace Alimer
         /// Gets the adapter device.
         virtual GPUAdapter* GetAdapter() const = 0;
 
-        /// Gets the main GPU context. The main context takes care of deferred release of GPU resources.
-        virtual GPUContext* GetMainContext() const = 0;
-
         /// Gets the device backend type.
         ALIMER_FORCE_INLINE GPUBackendType GetBackendType() const
         {
@@ -79,6 +77,10 @@ namespace Alimer
             return limits;
         }
 
+        virtual Texture* GetBackbufferTexture() const = 0;
+
+        CommandBuffer& RequestCommandBuffer(const char* name = nullptr, bool profile = false);
+
         /* Resource creation methods. */
         GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor, const void* initialData = nullptr);
 
@@ -88,6 +90,7 @@ namespace Alimer
     protected:
         GraphicsDevice(Window* window, GPUBackendType backendType);
 
+        virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
         //virtual GPUBuffer* CreateBufferCore(const GPUBufferDescriptor& descriptor, const void* initialData) = 0;
 
         Window* window;

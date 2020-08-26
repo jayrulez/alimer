@@ -83,8 +83,7 @@ namespace Alimer
         RegisterSubsystem(graphicsDevice);
 
         // Create main window SwapChain
-        /*
-        struct VertexPositionColor
+        /*struct VertexPositionColor
         {
             Vector3 position;
             Color color;
@@ -98,8 +97,8 @@ namespace Alimer
         };
 
         Buffer vertexBuffer;
-        vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);
-        */
+        vertexBuffer.Create(BufferUsage::Vertex, 3, sizeof(VertexPositionColor), vertices);*/
+
         ImGuiLayer::Initialize();
 
         Initialize();
@@ -109,6 +108,7 @@ namespace Alimer
             return;
         }
 
+        running = true;
         time.ResetElapsedTime();
         BeginRun();
     }
@@ -161,17 +161,17 @@ namespace Alimer
             LOGI("Right held");
         }
 
-        /* auto context = GetGraphics()->GetMainContext();
-
-         context->PushDebugGroup("Clear");
-         RenderPassColorAttachment colorAttachment = {};
-         colorAttachment.texture = GetGraphics()->GetMainWindow()->GetCurrentTexture();
-         colorAttachment.clearColor = Colors::CornflowerBlue;
-         //colorAttachment.loadAction = LoadAction::DontCare;
-         //colorAttachment.slice = 1;
-         context->BeginRenderPass(1, &colorAttachment, nullptr);
-         context->EndRenderPass();
-         context->PopDebugGroup();*/
+        CommandBuffer& commandBuffer = graphicsDevice->RequestCommandBuffer("Clear");
+        commandBuffer.PushDebugGroup("Clear");
+        RenderPassColorAttachment colorAttachment = {};
+        colorAttachment.texture = graphicsDevice->GetBackbufferTexture();
+        colorAttachment.clearColor = Colors::CornflowerBlue;
+        //colorAttachment.loadAction = LoadAction::DontCare;
+        //colorAttachment.slice = 1;
+        commandBuffer.BeginRenderPass(1, &colorAttachment, nullptr);
+        commandBuffer.EndRenderPass();
+        commandBuffer.PopDebugGroup();
+        commandBuffer.Commit();
     }
 
     void Application::EndDraw()

@@ -26,10 +26,13 @@
 #include "D3D11GraphicsDevice.h"
 #include "Application/Window.h"
 
+using Microsoft::WRL::ComPtr;
+
 namespace Alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool verticalSync)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync)
         : device{ device }
+        , colorFormat(srgb ? PixelFormat::BGRA8UnormSrgb : PixelFormat::BGRA8Unorm)
     {
         if (!verticalSync)
         {
@@ -62,6 +65,12 @@ namespace Alimer
 
     void D3D11SwapChain::AfterReset()
     {
+        colorTexture.Reset();
+
+        ComPtr<ID3D11Texture2D> backbufferTexture;
+        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
+        colorTexture = MakeRefPtr<D3D11Texture>(device, backbufferTexture.Get(), colorFormat);
+
         /*colorTextures.clear();
         depthStencilTexture.Reset();
 

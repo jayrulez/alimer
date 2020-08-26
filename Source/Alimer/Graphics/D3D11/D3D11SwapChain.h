@@ -27,16 +27,18 @@
 namespace Alimer
 {
     class Window;
+    class D3D11Texture;
 
     class ALIMER_API D3D11SwapChain final
     {
     public:
         /// Constructor.
-        D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool verticalSync);
+        D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync);
         /// Destructor
         ~D3D11SwapChain();
 
         HRESULT Present();
+        D3D11Texture* GetColorTexture() const { return colorTexture.Get(); }
 
     private:
         void AfterReset();
@@ -47,7 +49,6 @@ namespace Alimer
         uint32_t syncInterval;
         uint32_t presentFlags;
 
-
 #if ALIMER_PLATFORM_WINDOWS
         Microsoft::WRL::ComPtr<IDXGISwapChain1> handle;
 #else
@@ -55,5 +56,7 @@ namespace Alimer
 #endif
 
         DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
+        PixelFormat colorFormat;
+        RefPtr<D3D11Texture> colorTexture;
     };
 }

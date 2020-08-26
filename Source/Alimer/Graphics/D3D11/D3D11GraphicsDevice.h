@@ -24,12 +24,13 @@
 
 #include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
+#include <queue>
 #include <mutex>
 
 namespace Alimer
 {
     class D3D11GPUAdapter;
-    class D3D11GPUContext;
+    class D3D11CommandBuffer;
     class D3D11SwapChain;
 
     class D3D11GraphicsDevice final : public GraphicsDevice
@@ -53,16 +54,19 @@ namespace Alimer
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
-
         void HandleDeviceLost();
 
+        void CommitCommandBuffer(D3D11CommandBuffer* commandBuffer);
+        void SubmitCommandBuffer(D3D11CommandBuffer* commandBuffer);
+        void SubmitCommandBuffers();
+
         GPUAdapter* GetAdapter() const override;
-        GPUContext* GetMainContext() const override;
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         bool IsLost() const { return isLost; }
+        Texture* GetBackbufferTexture() const override;
 
     private:
         void CreateFactory();
@@ -73,8 +77,8 @@ namespace Alimer
         void InitCapabilities();
         bool BeginFrameImpl() override;
         void EndFrameImpl() override;
+        CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) override;
 
-        static constexpr uint64_t kRenderLatency = 2;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HMODULE dxgiDLL = nullptr;
         HMODULE d3d11DLL = nullptr;
@@ -85,13 +89,17 @@ namespace Alimer
 
         D3D11GPUAdapter* adapter = nullptr;
         ID3D11Device1*  d3dDevice = nullptr;
-        ID3D11DeviceContext1* d3dContext = nullptr;
+        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> immediateContext;
+        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> d3dAnnotation;
 
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
 
-        D3D11GPUContext* mainContext = nullptr;
-        
         D3D11SwapChain* swapChain = nullptr;
+
+        std::vector<std::unique_ptr<D3D11CommandBuffer>> cmdBuffersPool;
+        std::queue<D3D11CommandBuffer*> availableCommandBuffers;
+        std::mutex cmdBuffersAllocationMutex;
+        std::queue<D3D11CommandBuffer*> commitCommandBuffers;
     };
 }

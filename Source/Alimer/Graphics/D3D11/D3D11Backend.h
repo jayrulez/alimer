@@ -29,6 +29,8 @@
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
 
+#define MEGABYTES(x) (static_cast<uint64_t>(x) << 20ULL)
+
 namespace Alimer
 {
     class D3D11GraphicsDevice;

@@ -21,10 +21,11 @@
 //
 
 #include "D3D11GPUAdapter.h"
-//#include "D3D11RenderWindow.h"
-#include "D3D11GPUContext.h"
+#include "D3D11CommandBuffer.h"
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
+#include "D3D11GPUBuffer.h"
+#include "D3D11Texture.h"
 #include "Core/String.h"
 
 using Microsoft::WRL::ComPtr;
@@ -130,8 +131,8 @@ namespace Alimer
             };
 
             // Create the Direct3D 11 API device object and a corresponding context.
-            ID3D11Device* device;
-            ID3D11DeviceContext* context;
+            ComPtr<ID3D11Device> device;
+            ComPtr<ID3D11DeviceContext> context;
 
             hr = E_FAIL;
             if (dxgiAdapter)
@@ -144,9 +145,9 @@ namespace Alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    &device,
+                    device.GetAddressOf(),
                     &d3dFeatureLevel,
-                    &context
+                    context.GetAddressOf()
                 );
             }
 #if defined(NDEBUG)
@@ -168,9 +169,9 @@ namespace Alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    &device,
+                    device.GetAddressOf(),
                     &d3dFeatureLevel,
-                    &context
+                    context.GetAddressOf()
                 );
 
                 if (SUCCEEDED(hr))
@@ -183,11 +184,11 @@ namespace Alimer
             ThrowIfFailed(hr);
 
 #ifndef NDEBUG
-            ID3D11Debug* d3dDebug;
-            if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&d3dDebug))))
+            ComPtr<ID3D11Debug> d3dDebug;
+            if (SUCCEEDED(device.As(&d3dDebug)))
             {
-                ID3D11InfoQueue* d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug->QueryInterface(IID_PPV_ARGS(&d3dInfoQueue))))
+                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -201,20 +202,15 @@ namespace Alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
-                    d3dInfoQueue->Release();
                 }
-                d3dDebug->Release();
             }
 #endif
 
             ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&d3dDevice)));
 
             // Create main context.
-            ThrowIfFailed(context->QueryInterface(IID_PPV_ARGS(&d3dContext)));
-            context->Release();
-
-            mainContext = new D3D11GPUContext(this, d3dContext, true);
-            device->Release();
+            ThrowIfFailed(context.As(&immediateContext));
+            ThrowIfFailed(context.As(&d3dAnnotation));
 
             // Init adapter.
             adapter = new D3D11GPUAdapter(dxgiAdapter);
@@ -224,7 +220,7 @@ namespace Alimer
         }
 
         // Create SwapChain.
-        swapChain = new D3D11SwapChain(this, window, settings.verticalSync);
+        swapChain = new D3D11SwapChain(this, window, settings.colorFormatSrgb, settings.verticalSync);
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
@@ -240,7 +236,9 @@ namespace Alimer
     void D3D11GraphicsDevice::Shutdown()
     {
         SafeDelete(swapChain);
-        SafeDelete(mainContext);
+        d3dAnnotation.Reset();
+        immediateContext.Reset();
+        cmdBuffersPool.clear();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -265,11 +263,6 @@ namespace Alimer
     GPUAdapter* D3D11GraphicsDevice::GetAdapter() const
     {
         return adapter;
-    }
-
-    GPUContext* D3D11GraphicsDevice::GetMainContext() const
-    {
-        return mainContext;
     }
 
     void D3D11GraphicsDevice::CreateFactory()
@@ -385,6 +378,9 @@ namespace Alimer
 
     void D3D11GraphicsDevice::InitCapabilities()
     {
+        D3D11_FEATURE_DATA_THREADING threadingSupport = { 0 };
+        ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingSupport, sizeof(threadingSupport)));
+
         // Features
         features.independentBlend = true;
         features.computeShader = true;
@@ -465,6 +461,8 @@ namespace Alimer
 
     void D3D11GraphicsDevice::EndFrameImpl()
     {
+        SubmitCommandBuffers();
+
         HRESULT  hr = swapChain->Present();
 
         // If the device was removed either by a disconnection or a driver upgrade, we
@@ -494,5 +492,59 @@ namespace Alimer
     void D3D11GraphicsDevice::HandleDeviceLost()
     {
         isLost = true;
+    }
+
+    Texture* D3D11GraphicsDevice::GetBackbufferTexture() const
+    {
+        return swapChain->GetColorTexture();
+    }
+
+    CommandBuffer* D3D11GraphicsDevice::RequestCommandBufferCore(const char* name, bool profile)
+    {
+        std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
+
+        D3D11CommandBuffer* commandBuffer = nullptr;
+        if (availableCommandBuffers.empty())
+        {
+            //commandBuffer = new D3D11CommandBuffer(this, MEGABYTES(8));
+            commandBuffer = new D3D11ContextCommandBuffer(this);
+            cmdBuffersPool.emplace_back(commandBuffer);
+        }
+        else
+        {
+            commandBuffer = availableCommandBuffers.front();
+            availableCommandBuffers.pop();
+            commandBuffer->Reset();
+        }
+        ALIMER_ASSERT(commandBuffer != nullptr);
+
+        return commandBuffer;
+    }
+
+    void D3D11GraphicsDevice::CommitCommandBuffer(D3D11CommandBuffer* commandBuffer)
+    {
+        commitCommandBuffers.push(commandBuffer);
+    }
+
+    void D3D11GraphicsDevice::SubmitCommandBuffer(D3D11CommandBuffer* commandBuffer)
+    {
+        ALIMER_ASSERT(commandBuffer != nullptr);
+        std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
+        commandBuffer->Execute(immediateContext.Get(), d3dAnnotation.Get());
+        availableCommandBuffers.push(commandBuffer);
+    }
+
+    void D3D11GraphicsDevice::SubmitCommandBuffers()
+    {
+        D3D11CommandBuffer* commandBuffer = nullptr;
+
+        while (!commitCommandBuffers.empty())
+        {
+            commandBuffer = commitCommandBuffers.front();
+            SubmitCommandBuffer(commandBuffer);
+            commitCommandBuffers.pop();
+        }
+
+        immediateContext->ClearState();
     }
 }
