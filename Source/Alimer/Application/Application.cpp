@@ -25,6 +25,7 @@
 #include "Core/Log.h"
 #include "Core/Input.h"
 #include "Graphics/GraphicsDevice.h"
+#include "Graphics/gpu/gpu.h"
 #include "UI/ImGuiLayer.h"
 #include "Math/Color.h"
 
@@ -56,8 +57,7 @@ namespace Alimer
         //gameSystems.clear();
         ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        RemoveSubsystem<GraphicsDevice>();
-        graphicsDevice.Reset();
+        gpu::Shutdown();
         s_current = nullptr;
         LOGI("Application destroyed correctly");
     }
@@ -79,8 +79,10 @@ namespace Alimer
 
         GraphicsDeviceSettings settings = {};
         settings.sampleCount = 4;
-        graphicsDevice = GraphicsDevice::Create(GetWindow(), settings);
-        RegisterSubsystem(graphicsDevice);
+        if (!gpu::Init(GetWindow()->GetNativeHandle(), gpu::InitFlags::DebugOutput))
+        {
+
+        }
 
         // Create main window SwapChain
         /*struct VertexPositionColor
@@ -133,8 +135,8 @@ namespace Alimer
 
     bool Application::BeginDraw()
     {
-        if (!graphicsDevice->BeginFrame())
-            return false;
+        //if (!GraphicsDevice::Instance->BeginFrame())
+        //    return false;
 
         //ImGuiLayer::BeginFrame(graphics->GetRenderWindow(), 0.0f);
 
@@ -161,7 +163,7 @@ namespace Alimer
             LOGI("Right held");
         }
 
-        CommandBuffer& commandBuffer = graphicsDevice->RequestCommandBuffer("Clear");
+        /*CommandBuffer& commandBuffer = graphicsDevice->RequestCommandBuffer("Clear");
         commandBuffer.PushDebugGroup("Clear");
         RenderPassColorAttachment colorAttachment = {};
         colorAttachment.texture = graphicsDevice->GetBackbufferTexture();
@@ -171,7 +173,7 @@ namespace Alimer
         commandBuffer.BeginRenderPass(1, &colorAttachment, nullptr);
         commandBuffer.EndRenderPass();
         commandBuffer.PopDebugGroup();
-        commandBuffer.Commit();
+        commandBuffer.Commit();*/
     }
 
     void Application::EndDraw()
@@ -183,7 +185,7 @@ namespace Alimer
 
         //ImGuiLayer::EndFrame();
         //GetGraphics()->GetMainWindow()->Present();
-        graphicsDevice->EndFrame();
+        //GraphicsDevice::Instance->EndFrame();
     }
 
     int Application::Run()

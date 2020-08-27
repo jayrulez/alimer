@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Core/Log.h"
 #include "VulkanGPUSwapChain.h"
 #include "VulkanGPUTexture.h"
@@ -366,11 +367,11 @@ namespace alimer
             //backbufferTextures[backbufferIndex] = new VulkanTexture(this, swapChainImages[i]);
             //backbufferTextures[backbufferIndex]->SetName(fmt::format("Back Buffer {}", i));
             SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)swapchainImages[i], fmt::format("Back Buffer {}", i));
-        }
+    }
 #endif // TODO
 
         return true;
-    }
+}
 
     VkResult VulkanGPUSwapChain::AcquireNextImage(VkSemaphore acquireSemaphore, uint32_t* imageIndex)
     {
@@ -388,3 +389,5 @@ namespace alimer
         return vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 }
+
+#endif // TODO

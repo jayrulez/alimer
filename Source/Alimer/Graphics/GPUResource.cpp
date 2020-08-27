@@ -24,14 +24,3 @@
 #include "Graphics/GPUResource.h"
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
-{
-    GPUResource::GPUResource(Type type_, const char* name_)
-        : type(type_)
-    {
-        if (name_ && strlen(name_))
-        {
-            name = name_;
-        }
-    }
-}

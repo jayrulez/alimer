@@ -25,13 +25,24 @@
 
 namespace Alimer
 {
-    GPUBuffer::GPUBuffer(const GPUBufferDescriptor& descriptor)
-        : GPUResource(Type::Buffer, descriptor.label)
-        , usage(descriptor.usage)
-        , size(descriptor.size)
-        , stride(descriptor.stride)
+    GPUBuffer::GPUBuffer(const std::string_view& name)
+        : GPUResource(Type::Buffer, name)
+        , handle(gpu::kInvalidBuffer)
     {
 
+    }
+
+    bool GPUBuffer::Init(GPUBufferUsage usage, uint64_t size, uint64_t stride, const void* initialData)
+    {
+        if (IsAllocated())
+            Destroy();
+
+        return true;
+    }
+
+    bool GPUBuffer::IsAllocated() const
+    {
+        return _size > 0;
     }
 }
 

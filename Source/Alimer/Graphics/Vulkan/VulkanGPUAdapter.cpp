@@ -22,7 +22,7 @@
 
 #include "VulkanGPUAdapter.h"
 
-namespace alimer
+namespace Alimer
 {
     VulkanGPUAdapter::VulkanGPUAdapter(VkPhysicalDevice handle)
         : handle{ handle }

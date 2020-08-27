@@ -16,7 +16,7 @@ if(NOT (WIN32 OR WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
 
-if (ALIMER_VULKAN)
+if (ALIMER_ENABLE_VULKAN)
     # vulkan
     add_library(vulkan INTERFACE)
     set(VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
@@ -42,13 +42,6 @@ if (ALIMER_VULKAN)
             target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
         endif()
     endif()
-
-     # vma
-    add_library(vma INTERFACE)
-    set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma)
-    target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
-    target_include_directories(vma INTERFACE ${VMA_DIR})
-    target_link_libraries(vma INTERFACE vulkan)
 
     # volk
     set(VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk")

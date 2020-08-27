@@ -25,6 +25,7 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+#include "Graphics/gpu/gpu.h"
 
 #if !defined(GPU_DEBUG)
 #   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
@@ -35,12 +36,7 @@
 namespace Alimer
 {
     static constexpr uint32 kInflightFrameCount = 2u;
-    static constexpr uint32 kMaxColorAttachments = 8u;
-    static constexpr uint32 kMaxVertexBufferBindings = 8u;
-    static constexpr uint32 kMaxVertexAttributes = 16u;
-    static constexpr uint32 kMaxVertexAttributeOffset = 2047u;
-    static constexpr uint32 kMaxVertexBufferStride = 2048u;
-    static constexpr uint32 kMaxViewportAndScissorRects = 8u;
+    
 
     enum class GPUAdapterType 
     {
@@ -123,14 +119,6 @@ namespace Alimer
     };
 
     /* Structs */
-    struct GPUBufferDescriptor
-    {
-        GPUBufferUsage usage;
-        uint32_t size;
-        uint32_t stride;
-        const char* label;
-    };
-
     struct GPUTextureDescription
     {
         TextureType type = TextureType::Type2D;
@@ -158,43 +146,6 @@ namespace Alimer
             desc.sampleCount = 1u;
             return desc;
         }
-    };
-
-    class Texture;
-    struct RenderPassColorAttachment
-    {
-        Texture* texture = nullptr;
-        uint32_t mipLevel = 0;
-        union {
-            TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t layer;
-            uint32_t slice;
-        };
-        LoadAction loadAction = LoadAction::Clear;
-        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    };
-
-    struct RenderPassDepthStencilAttachment {
-        Texture* texture = nullptr;
-        uint32_t mipLevel = 0;
-        union {
-            TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t layer;
-            uint32_t slice;
-        };
-        LoadAction depthLoadAction = LoadAction::Clear;
-        LoadAction stencilLoadOp = LoadAction::DontCare;
-        float clearDepth = 1.0f;
-        uint8_t clearStencil = 0;
-    };
-
-    struct RenderPassDescriptor
-    {
-        // Render area will be clipped to the actual framebuffer.
-        //RectU renderArea = { UINT32_MAX, UINT32_MAX };
-
-        RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
-        RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
     struct GPUFeatures

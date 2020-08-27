@@ -27,42 +27,48 @@
 namespace Alimer
 {
     /// 
-    class GPUBuffer : public GPUResource
+    class GPUBuffer final : public GPUResource
     {
         ALIMER_OBJECT(GPUBuffer, GPUResource);
 
     public:
         /// Constructor
-        GPUBuffer(const GPUBufferDescriptor& descriptor);
+        GPUBuffer(const std::string_view& name);
+
+        bool Init(GPUBufferUsage usage, uint64_t size, uint64_t stride, const void* initialData);
+
+        /// Gets a value indicating whether this buffer has been allocated. 
+        bool IsAllocated() const;
 
         /// Gets buffer usage.
         ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const
         {
-            return usage;
+            return _usage;
         }
 
         /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32 GetSize() const
+        ALIMER_FORCE_INLINE uint64_t GetSize() const
         {
-            return size;
+            return _size;
         }
 
         /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32 GetStride() const
+        ALIMER_FORCE_INLINE uint32_t GetStride() const
         {
-            return stride;
+            return _stride;
         }
 
         /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32 GetElementsCount() const
+        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
         {
-            ALIMER_ASSERT(stride > 0);
-            return size / stride;
+            ALIMER_ASSERT(_stride > 0);
+            return _size / _stride;
         }
 
     private:
-        GPUBufferUsage usage;
-        uint32 size;
-        uint32 stride;
+        gpu::BufferHandle handle;
+        GPUBufferUsage _usage{ GPUBufferUsage::None };
+        uint64_t _size{ 0 };
+        uint32_t _stride{ 0 };
     };
 }

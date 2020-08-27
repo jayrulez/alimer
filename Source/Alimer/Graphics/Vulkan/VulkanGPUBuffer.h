@@ -25,19 +25,19 @@
 #include "Graphics/GPUBuffer.h"
 #include "VulkanBackend.h"
 
-namespace alimer
+namespace Alimer
 {
     class VulkanGPUBuffer final : public GPUBuffer
     {
     public:
-        VulkanGPUBuffer(VulkanGPUDevice* device_, const GPUBufferDescriptor& descriptor);
+        VulkanGPUBuffer(VulkanGraphicsDevice* device, const std::string_view& name);
         ~VulkanGPUBuffer() override;
         void Destroy() override;
 
     private:
         void BackendSetName() override;
 
-        VulkanGPUDevice* device;
+        VulkanGraphicsDevice* device;
 
         VkBuffer handle{ VK_NULL_HANDLE };
         VmaAllocation allocation{ VK_NULL_HANDLE };

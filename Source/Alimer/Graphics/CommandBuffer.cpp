@@ -63,17 +63,17 @@ namespace Alimer
         Write(name);
     }
 
-    void CommandBuffer::BeginRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    void CommandBuffer::BeginRenderPass(uint32_t numColorAttachments, const gpu::RenderPassColorAttachment* colorAttachments, const gpu::RenderPassDepthStencilAttachment* depthStencil)
     {
         Write(CommandID::BeginRenderPass);
         Write(numColorAttachments);
         if (numColorAttachments > 0)
-            Write(colorAttachments, sizeof(RenderPassColorAttachment) * numColorAttachments);
+            Write(colorAttachments, sizeof(gpu::RenderPassColorAttachment) * numColorAttachments);
 
         if (depthStencil != nullptr)
         {
             Write((uint8_t)1);
-            Write(depthStencil, sizeof(RenderPassDepthStencilAttachment));
+            Write(depthStencil, sizeof(gpu::RenderPassDepthStencilAttachment));
         }
         else
         {

@@ -25,7 +25,7 @@
 #include "Graphics/GPUAdapter.h"
 #include "VulkanBackend.h"
 
-namespace alimer
+namespace Alimer
 {
     class VulkanGPUAdapter final : public GPUAdapter
     {

@@ -22,39 +22,60 @@
 
 #pragma once
 
-#include "Graphics/GPUDevice.h"
+#include "Graphics/GraphicsImpl.h"
 #include "VulkanBackend.h"
 #include "VulkanGPUAdapter.h"
 #include <mutex>
 #include <unordered_map>
 
-namespace alimer
+namespace Alimer
 {
     class VulkanGPUContext;
 
-    class VulkanGPUDevice final : public GPUDevice
+    struct VulkanTexture
+    {
+        enum { MAX_COUNT = 4096 };
+
+        VkImage handle;
+        VmaAllocation allocation;
+    };
+
+    struct VulkanBuffer
+    {
+        enum { MAX_COUNT = 4096 };
+
+        VkBuffer handle;
+        VmaAllocation allocation;
+    };
+
+    class VulkanGraphicsImpl final : public GraphicsImpl
     {
     public:
         static bool IsAvailable();
 
-        VulkanGPUDevice(const String& appName, const GPUDeviceDescriptor& descriptor);
-        ~VulkanGPUDevice() override;
+        VulkanGraphicsImpl();
+        ~VulkanGraphicsImpl() override;
 
-        void WaitForGPU();
+        bool Initialize(Window* window, const GraphicsDeviceSettings* settings) override;
+        void WaitForGPU() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
 
         VkSemaphore RequestSemaphore();
         void ReturnSemaphore(VkSemaphore semaphore);
+
+        /* Resource creation methods */
+        TextureHandle AllocTextureHandle();
+        BufferHandle AllocBufferHandle();
 
         void SetObjectName(VkObjectType type, uint64_t handle, const String& name);
         VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
         VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
 
-        GPUAdapter* GetAdapter() const override;
-        GPUContext* GetMainContext() const override;
+
+        GPUAdapter* GetAdapter() const;
         VulkanGPUContext* GetVulkanMainContext() const;
 
-        /* Resource creation methods */
-        GPUContext* CreateContextCore(const GPUContextDescription& desc) override;
 
         VkInstance GetVkInstance() const { return instance; }
         const VulkanInstanceExtensions& GetInstanceExtensions() const { return instanceExts; }
@@ -68,8 +89,8 @@ namespace alimer
 
     private:
         void Shutdown();
-        VkSurfaceKHR CreateSurface(WindowHandle windowHandle);
-        bool InitPhysicalDevice(GPUPowerPreference powerPreference, VkSurfaceKHR surface);
+        VkSurfaceKHR CreateSurface(Window* window);
+        bool InitPhysicalDevice(VkSurfaceKHR surface);
         bool InitLogicalDevice();
         void InitCapabilities();
        
@@ -96,6 +117,10 @@ namespace alimer
 
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
+
+        std::mutex handle_mutex;
+        GPUResourcePool<VulkanTexture, VulkanTexture::MAX_COUNT> textures;
+        GPUResourcePool<VulkanBuffer, VulkanBuffer::MAX_COUNT> buffers;
 
         VulkanGPUContext* mainContext = nullptr;
 

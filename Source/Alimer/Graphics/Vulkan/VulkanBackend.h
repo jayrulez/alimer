@@ -26,13 +26,13 @@
 #include "Core/Log.h"
 #include "Graphics/Types.h"
 
-#include <vk_mem_alloc.h>
 #include <volk.h>
+#include "vk_mem_alloc.h"
 #include <queue>
 
-namespace alimer
+namespace Alimer
 {
-    class VulkanGPUDevice;
+    class VulkanGraphicsDevice;
 
     const char* ToString(VkResult result);
 
@@ -45,9 +45,9 @@ namespace alimer
     };
 
     struct QueueFamilyIndices {
-        uint32 graphicsQueueFamilyIndex;
-        uint32 computeQueueFamily;
-        uint32 copyQueueFamily;
+        uint32_t graphicsQueueFamilyIndex;
+        uint32_t computeQueueFamily;
+        uint32_t copyQueueFamily;
     };
 
     struct PhysicalDeviceExtensions {
@@ -176,8 +176,8 @@ namespace alimer
 		VkResult err = x;                                           \
 		if (err)                                                    \
 		{                                                           \
-			LOGE("Detected Vulkan error: {}", alimer::ToString(err)); \
+			LOGE("Detected Vulkan error: {}", Alimer::ToString(err)); \
 		}                                                           \
 	} while (0)
 
-#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, alimer::ToString(result));
+#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, Alimer::ToString(result));

@@ -21,15 +21,15 @@
 //
 
 #include "VulkanGPUTexture.h"
-#include "VulkanGPUDevice.h"
+#include "VulkanGraphicsImpl.h"
 
-namespace alimer
+namespace Alimer
 {
-    VulkanGPUTexture::VulkanGPUTexture(VulkanGPUDevice* device_, const GPUTextureDescription& desc)
-        : GPUTexture(desc)
+    VulkanGPUTexture::VulkanGPUTexture(VulkanGraphicsDevice* device_, const GPUTextureDescription& desc)
+        : Texture(desc)
         , device(device_)
     {
-        VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        /*VkImageCreateInfo createInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         createInfo.flags = 0u;
         createInfo.imageType = VK_IMAGE_TYPE_2D;
         createInfo.format = VK_FORMAT_R8G8B8A8_UNORM; // GetVkFormat(desc->format);
@@ -57,7 +57,7 @@ namespace alimer
         if (result != VK_SUCCESS)
         {
             LOGE("Vulkan: Failed to create image");
-        }
+        }*/
     }
 
     VulkanGPUTexture::~VulkanGPUTexture()
@@ -71,12 +71,12 @@ namespace alimer
             && allocation != VK_NULL_HANDLE)
         {
             //unmap();
-            vmaDestroyImage(device->GetAllocator(), handle, allocation);
+            //vmaDestroyImage(device->GetAllocator(), handle, allocation);
         }
     }
 
     void VulkanGPUTexture::BackendSetName()
     {
-        device->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
+        //device->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
     }
 }

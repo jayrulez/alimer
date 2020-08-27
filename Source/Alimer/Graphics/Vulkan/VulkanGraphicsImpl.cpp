@@ -21,16 +21,16 @@
 //
 
 #include "config.h"
+#include "VulkanGraphicsImpl.h"
 #include "VulkanGPUTexture.h"
-#include "VulkanGPUContext.h"
-#include "VulkanGPUDevice.h"
-
+#include "VulkanGPUBuffer.h"
+#include "Application/Application.h"
 #define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
+#include "vk_mem_alloc.h"
 
 using namespace std;
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -300,7 +300,7 @@ namespace alimer
         }
     }
 
-    bool VulkanGPUDevice::IsAvailable()
+    bool VulkanGraphicsImpl::IsAvailable()
     {
         static bool available_initialized = false;
         static bool available = false;
@@ -339,11 +339,59 @@ namespace alimer
         return true;
     }
 
-    VulkanGPUDevice::VulkanGPUDevice(const String& appName, const GPUDeviceDescriptor& descriptor)
-        : GPUDevice(GPUBackendType::Vulkan)
+    VulkanGraphicsImpl::VulkanGraphicsImpl()
+        : GraphicsImpl(GPUBackendType::Vulkan)
     {
         ALIMER_VERIFY(IsAvailable());
+    }
 
+    VulkanGraphicsImpl::~VulkanGraphicsImpl()
+    {
+        Shutdown();
+    }
+
+    void VulkanGraphicsImpl::Shutdown()
+    {
+        vkDeviceWaitIdle(device);
+
+        for (auto semaphore : recycledSemaphores)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
+
+        // Clear caches
+        ClearRenderPassCache();
+        ClearFramebufferCache();
+
+        if (allocator != VK_NULL_HANDLE)
+        {
+            VmaStats stats;
+            vmaCalculateStats(allocator, &stats);
+
+            if (stats.total.usedBytes > 0) {
+                LOGE("Total device memory leaked: {} bytes.", stats.total.usedBytes);
+            }
+
+            vmaDestroyAllocator(allocator);
+        }
+
+        vkDestroyDevice(device, nullptr);
+
+#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
+        if (debugUtilsMessenger != VK_NULL_HANDLE)
+        {
+            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
+        }
+#endif
+
+        if (instance != VK_NULL_HANDLE)
+        {
+            vkDestroyInstance(instance, nullptr);
+        }
+    }
+
+    bool VulkanGraphicsImpl::Initialize(Window* window, const GraphicsDeviceSettings* settings)
+    {
         // Create instance.
         {
             vector<const char*> enabledExtensions;
@@ -424,7 +472,12 @@ namespace alimer
             }
 
             VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-            appInfo.pApplicationName = appName.c_str();
+            if (Application::GetCurrent() != nullptr)
+            {
+                auto name = Application::GetCurrent()->GetName();
+                appInfo.pApplicationName = name.c_str();
+            }
+
             appInfo.applicationVersion = 0;
             appInfo.pEngineName = "Alimer";
             appInfo.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
@@ -486,103 +539,53 @@ namespace alimer
             }
         }
 
-        VkSurfaceKHR surface = CreateSurface(descriptor.mainContext.handle);
+        VkSurfaceKHR surface = CreateSurface(window);
 
         if (!surface) {
-            return;
+            return false;
         }
 
-        if (!InitPhysicalDevice(descriptor.powerPreference, surface)) {
-            return;
+        if (!InitPhysicalDevice(surface)) {
+            return false;
         }
 
         if (!InitLogicalDevice()) {
-            return;
+            return false;
         }
 
         InitCapabilities();
 
-        mainContext = new VulkanGPUContext(this, descriptor.mainContext, surface, true);
+        return true;
     }
 
-    VulkanGPUDevice::~VulkanGPUDevice()
-    {
-        Shutdown();
-    }
-
-    void VulkanGPUDevice::Shutdown()
-    {
-        vkDeviceWaitIdle(device);
-
-        for (auto semaphore : recycledSemaphores)
-        {
-            vkDestroySemaphore(device, semaphore, nullptr);
-        }
-
-        // Clear caches
-        ClearRenderPassCache();
-        ClearFramebufferCache();
-
-        if (allocator != VK_NULL_HANDLE)
-        {
-            VmaStats stats;
-            vmaCalculateStats(allocator, &stats);
-
-            if (stats.total.usedBytes > 0) {
-                LOGE("Total device memory leaked: {} bytes.", stats.total.usedBytes);
-            }
-
-            vmaDestroyAllocator(allocator);
-        }
-
-        vkDestroyDevice(device, nullptr);
-
-#if defined(GPU_DEBUG) || defined(VULKAN_VALIDATION_LAYERS)
-        if (debugUtilsMessenger != VK_NULL_HANDLE)
-        {
-            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
-        }
-#endif
-
-        if (instance != VK_NULL_HANDLE)
-        {
-            vkDestroyInstance(instance, nullptr);
-        }
-    }
-
-    GPUAdapter* VulkanGPUDevice::GetAdapter() const
+    GPUAdapter* VulkanGraphicsImpl::GetAdapter() const
     {
         return adapter;
     }
 
-    GPUContext* VulkanGPUDevice::GetMainContext() const
+    VulkanGPUContext* VulkanGraphicsImpl::GetVulkanMainContext() const
     {
         return mainContext;
     }
 
-    VulkanGPUContext* VulkanGPUDevice::GetVulkanMainContext() const
-    {
-        return mainContext;
-    }
-
-    void VulkanGPUDevice::InitCapabilities()
+    void VulkanGraphicsImpl::InitCapabilities()
     {
         // Init features
         const VkPhysicalDeviceFeatures& vkFeatures = adapter->GetFeatures();
 
-        features.independentBlend = vkFeatures.independentBlend;
-        features.computeShader = true;
-        features.geometryShader = vkFeatures.geometryShader;
-        features.tessellationShader = vkFeatures.tessellationShader;
-        features.multiViewport = vkFeatures.multiViewport;
-        features.fullDrawIndexUint32 = vkFeatures.fullDrawIndexUint32;
-        features.multiDrawIndirect = vkFeatures.multiDrawIndirect;
-        features.fillModeNonSolid = vkFeatures.fillModeNonSolid;
-        features.samplerAnisotropy = vkFeatures.samplerAnisotropy;
-        features.textureCompressionETC2 = vkFeatures.textureCompressionETC2;
-        features.textureCompressionASTC_LDR = vkFeatures.textureCompressionASTC_LDR;
-        features.textureCompressionBC = vkFeatures.textureCompressionBC;
-        features.textureCubeArray = vkFeatures.imageCubeArray;
+        _features.independentBlend = vkFeatures.independentBlend;
+        _features.computeShader = true;
+        _features.geometryShader = vkFeatures.geometryShader;
+        _features.tessellationShader = vkFeatures.tessellationShader;
+        _features.multiViewport = vkFeatures.multiViewport;
+        _features.fullDrawIndexUint32 = vkFeatures.fullDrawIndexUint32;
+        _features.multiDrawIndirect = vkFeatures.multiDrawIndirect;
+        _features.fillModeNonSolid = vkFeatures.fillModeNonSolid;
+        _features.samplerAnisotropy = vkFeatures.samplerAnisotropy;
+        _features.textureCompressionETC2 = vkFeatures.textureCompressionETC2;
+        _features.textureCompressionASTC_LDR = vkFeatures.textureCompressionASTC_LDR;
+        _features.textureCompressionBC = vkFeatures.textureCompressionBC;
+        _features.textureCubeArray = vkFeatures.imageCubeArray;
         //renderer->features.raytracing = vk.KHR_get_physical_device_properties2
         //    && renderer->device_features.get_memory_requirements2
         //    || HasExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
@@ -590,41 +593,41 @@ namespace alimer
         // Limits
         const VkPhysicalDeviceProperties& gpuProps = adapter->GetProperties();
 
-        limits.maxVertexAttributes = gpuProps.limits.maxVertexInputAttributes;
-        limits.maxVertexBindings = gpuProps.limits.maxVertexInputBindings;
-        limits.maxVertexAttributeOffset = gpuProps.limits.maxVertexInputAttributeOffset;
-        limits.maxVertexBindingStride = gpuProps.limits.maxVertexInputBindingStride;
+        _limits.maxVertexAttributes = gpuProps.limits.maxVertexInputAttributes;
+        _limits.maxVertexBindings = gpuProps.limits.maxVertexInputBindings;
+        _limits.maxVertexAttributeOffset = gpuProps.limits.maxVertexInputAttributeOffset;
+        _limits.maxVertexBindingStride = gpuProps.limits.maxVertexInputBindingStride;
 
         //limits.maxTextureDimension1D = gpuProps.limits.maxImageDimension1D;
-        limits.maxTextureDimension2D = gpuProps.limits.maxImageDimension2D;
-        limits.maxTextureDimension3D = gpuProps.limits.maxImageDimension3D;
-        limits.maxTextureDimensionCube = gpuProps.limits.maxImageDimensionCube;
-        limits.maxTextureArrayLayers = gpuProps.limits.maxImageArrayLayers;
-        limits.maxColorAttachments = gpuProps.limits.maxColorAttachments;
-        limits.maxUniformBufferSize = gpuProps.limits.maxUniformBufferRange;
-        limits.minUniformBufferOffsetAlignment = (uint32_t)gpuProps.limits.minUniformBufferOffsetAlignment;
-        limits.maxStorageBufferSize = gpuProps.limits.maxStorageBufferRange;
-        limits.minStorageBufferOffsetAlignment = (uint32_t)gpuProps.limits.minStorageBufferOffsetAlignment;
-        limits.maxSamplerAnisotropy = (uint32_t)gpuProps.limits.maxSamplerAnisotropy;
-        limits.maxViewports = gpuProps.limits.maxViewports;
-        limits.maxViewportWidth = gpuProps.limits.maxViewportDimensions[0];
-        limits.maxViewportHeight = gpuProps.limits.maxViewportDimensions[1];
-        limits.maxTessellationPatchSize = gpuProps.limits.maxTessellationPatchSize;
-        limits.pointSizeRangeMin = gpuProps.limits.pointSizeRange[0];
-        limits.pointSizeRangeMax = gpuProps.limits.pointSizeRange[1];
-        limits.lineWidthRangeMin = gpuProps.limits.lineWidthRange[0];
-        limits.lineWidthRangeMax = gpuProps.limits.lineWidthRange[1];
-        limits.maxComputeSharedMemorySize = gpuProps.limits.maxComputeSharedMemorySize;
-        limits.maxComputeWorkGroupCountX = gpuProps.limits.maxComputeWorkGroupCount[0];
-        limits.maxComputeWorkGroupCountY = gpuProps.limits.maxComputeWorkGroupCount[1];
-        limits.maxComputeWorkGroupCountZ = gpuProps.limits.maxComputeWorkGroupCount[2];
-        limits.maxComputeWorkGroupInvocations = gpuProps.limits.maxComputeWorkGroupInvocations;
-        limits.maxComputeWorkGroupSizeX = gpuProps.limits.maxComputeWorkGroupSize[0];
-        limits.maxComputeWorkGroupSizeY = gpuProps.limits.maxComputeWorkGroupSize[1];
-        limits.maxComputeWorkGroupSizeZ = gpuProps.limits.maxComputeWorkGroupSize[2];
+        _limits.maxTextureDimension2D = gpuProps.limits.maxImageDimension2D;
+        _limits.maxTextureDimension3D = gpuProps.limits.maxImageDimension3D;
+        _limits.maxTextureDimensionCube = gpuProps.limits.maxImageDimensionCube;
+        _limits.maxTextureArrayLayers = gpuProps.limits.maxImageArrayLayers;
+        _limits.maxColorAttachments = gpuProps.limits.maxColorAttachments;
+        _limits.maxUniformBufferSize = gpuProps.limits.maxUniformBufferRange;
+        _limits.minUniformBufferOffsetAlignment = (uint32_t)gpuProps.limits.minUniformBufferOffsetAlignment;
+        _limits.maxStorageBufferSize = gpuProps.limits.maxStorageBufferRange;
+        _limits.minStorageBufferOffsetAlignment = (uint32_t)gpuProps.limits.minStorageBufferOffsetAlignment;
+        _limits.maxSamplerAnisotropy = (uint32_t)gpuProps.limits.maxSamplerAnisotropy;
+        _limits.maxViewports = gpuProps.limits.maxViewports;
+        _limits.maxViewportWidth = gpuProps.limits.maxViewportDimensions[0];
+        _limits.maxViewportHeight = gpuProps.limits.maxViewportDimensions[1];
+        _limits.maxTessellationPatchSize = gpuProps.limits.maxTessellationPatchSize;
+        _limits.pointSizeRangeMin = gpuProps.limits.pointSizeRange[0];
+        _limits.pointSizeRangeMax = gpuProps.limits.pointSizeRange[1];
+        _limits.lineWidthRangeMin = gpuProps.limits.lineWidthRange[0];
+        _limits.lineWidthRangeMax = gpuProps.limits.lineWidthRange[1];
+        _limits.maxComputeSharedMemorySize = gpuProps.limits.maxComputeSharedMemorySize;
+        _limits.maxComputeWorkGroupCountX = gpuProps.limits.maxComputeWorkGroupCount[0];
+        _limits.maxComputeWorkGroupCountY = gpuProps.limits.maxComputeWorkGroupCount[1];
+        _limits.maxComputeWorkGroupCountZ = gpuProps.limits.maxComputeWorkGroupCount[2];
+        _limits.maxComputeWorkGroupInvocations = gpuProps.limits.maxComputeWorkGroupInvocations;
+        _limits.maxComputeWorkGroupSizeX = gpuProps.limits.maxComputeWorkGroupSize[0];
+        _limits.maxComputeWorkGroupSizeY = gpuProps.limits.maxComputeWorkGroupSize[1];
+        _limits.maxComputeWorkGroupSizeZ = gpuProps.limits.maxComputeWorkGroupSize[2];
     }
 
-    VkSurfaceKHR VulkanGPUDevice::CreateSurface(WindowHandle windowHandle)
+    VkSurfaceKHR VulkanGraphicsImpl::CreateSurface(Window* window)
     {
         VkResult result = VK_SUCCESS;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -632,8 +635,8 @@ namespace alimer
 #if defined(VK_USE_PLATFORM_ANDROID_KHR)
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
         VkWin32SurfaceCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-        createInfo.hinstance = windowHandle.hinstance;
-        createInfo.hwnd = windowHandle.window;
+        createInfo.hinstance = GetModuleHandle(NULL);
+        createInfo.hwnd = (HWND)window->GetNativeHandle();
         result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -651,7 +654,7 @@ namespace alimer
         return surface;
     }
 
-    bool VulkanGPUDevice::InitPhysicalDevice(GPUPowerPreference powerPreference, VkSurfaceKHR surface)
+    bool VulkanGraphicsImpl::InitPhysicalDevice(VkSurfaceKHR surface)
     {
         // Enumerating and creating devices:
         uint32_t physicalDevicesCount = 0;
@@ -685,14 +688,10 @@ namespace alimer
             switch (physical_device_props.deviceType)
             {
             case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-                score += 100u;
-                if (powerPreference == GPUPowerPreference::HighPerformance)
-                    score += 1000u;
+                score += 1000u;
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-                score += 90u;
-                if (powerPreference == GPUPowerPreference::LowPower)
-                    score += 1000u;
+                score += 100u;
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
                 score += 80u;
@@ -722,7 +721,7 @@ namespace alimer
         return true;
     }
 
-    bool VulkanGPUDevice::InitLogicalDevice()
+    bool VulkanGraphicsImpl::InitLogicalDevice()
     {
         VkResult result = VK_SUCCESS;
 
@@ -930,7 +929,7 @@ namespace alimer
         return true;
     }
 
-    VkSemaphore VulkanGPUDevice::RequestSemaphore()
+    VkSemaphore VulkanGraphicsImpl::RequestSemaphore()
     {
         VkSemaphore semaphore;
         if (recycledSemaphores.empty())
@@ -947,12 +946,12 @@ namespace alimer
         return semaphore;
     }
 
-    void VulkanGPUDevice::ReturnSemaphore(VkSemaphore semaphore)
+    void VulkanGraphicsImpl::ReturnSemaphore(VkSemaphore semaphore)
     {
         recycledSemaphores.push_back(semaphore);
     }
 
-    void VulkanGPUDevice::SetObjectName(VkObjectType type, uint64_t handle, const String& name)
+    void VulkanGraphicsImpl::SetObjectName(VkObjectType type, uint64_t handle, const String& name)
     {
         if (!instanceExts.debugUtils)
             return;
@@ -964,24 +963,40 @@ namespace alimer
         VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
     }
 
-    void VulkanGPUDevice::WaitForGPU()
+    void VulkanGraphicsImpl::WaitForGPU()
     {
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
-
-    /* Resource creation methods */
-    GPUContext* VulkanGPUDevice::CreateContextCore(const GPUContextDescription& desc)
+    bool VulkanGraphicsImpl::BeginFrame()
     {
-        VkSurfaceKHR surface = VK_NULL_HANDLE; // CreateSurface(descriptor.handle);
-        if (surface == VK_NULL_HANDLE)
-            return nullptr;
-
-        return nullptr;
-        //return new VulkanGPUSwapChain(this, surface, descriptor);
+        return true;
     }
 
-    VkRenderPass VulkanGPUDevice::GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    void VulkanGraphicsImpl::EndFrame()
+    {
+
+    }
+
+    /* Resource creation methods */
+    BufferHandle VulkanGraphicsImpl::AllocBufferHandle()
+    {
+        std::lock_guard<std::mutex> LockGuard(handle_mutex);
+
+        if (buffers.isFull()) {
+            LOGE("Vulkan: Not enough free buffer slots.");
+            return kInvalidBuffer;
+        }
+        const int id = buffers.Alloc();
+        ALIMER_ASSERT(id >= 0);
+
+        VulkanBuffer& buffer = buffers[id];
+        buffer.handle = nullptr;
+        buffer.allocation = nullptr;
+        return { (uint32_t)id };
+    }
+
+    VkRenderPass VulkanGraphicsImpl::GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
         Hasher h;
 
@@ -1049,7 +1064,7 @@ namespace alimer
         return it->second;
     }
 
-    VkFramebuffer VulkanGPUDevice::GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
+    VkFramebuffer VulkanGraphicsImpl::GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil)
     {
         Hasher h;
         h.u64((uint64)renderPass);
@@ -1093,7 +1108,7 @@ namespace alimer
         return it->second;
     }
 
-    void VulkanGPUDevice::ClearRenderPassCache()
+    void VulkanGraphicsImpl::ClearRenderPassCache()
     {
         for (auto it : renderPasses) {
             vkDestroyRenderPass(device, it.second, nullptr);
@@ -1101,7 +1116,7 @@ namespace alimer
         renderPasses.clear();
     }
 
-    void VulkanGPUDevice::ClearFramebufferCache()
+    void VulkanGraphicsImpl::ClearFramebufferCache()
     {
         for (auto it : framebuffers) {
             vkDestroyFramebuffer(device, it.second, nullptr);

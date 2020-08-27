@@ -21,9 +21,9 @@
 //
 
 #include "VulkanGPUBuffer.h"
-#include "VulkanGPUDevice.h"
+#include "VulkanGraphicsImpl.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -49,11 +49,11 @@ namespace alimer
         }
     }
 
-    VulkanGPUBuffer::VulkanGPUBuffer(VulkanGPUDevice* device_, const GPUBufferDescriptor& descriptor)
-        : GPUBuffer(descriptor)
-        , device(device_)
+    VulkanGPUBuffer::VulkanGPUBuffer(VulkanGraphicsDevice* device, const std::string_view& name)
+        : GPUBuffer(name)
+        , device{ device }
     {
-        VkBufferCreateInfo createInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        /*VkBufferCreateInfo createInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         createInfo.size = descriptor.size;
         createInfo.usage = VulkanBufferUsage(descriptor.usage);
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -68,7 +68,7 @@ namespace alimer
         VkResult result = vmaCreateBuffer(device->GetAllocator(),
             &createInfo, &memoryInfo,
             &handle, &allocation,
-            &allocationInfo);
+            &allocationInfo);*/
     }
 
     VulkanGPUBuffer::~VulkanGPUBuffer()
@@ -82,12 +82,12 @@ namespace alimer
             && allocation != VK_NULL_HANDLE)
         {
             //unmap();
-            vmaDestroyBuffer(device->GetAllocator(), handle, allocation);
+            //vmaDestroyBuffer(device->GetAllocator(), handle, allocation);
         }
     }
 
     void VulkanGPUBuffer::BackendSetName()
     {
-        device->SetObjectName(VK_OBJECT_TYPE_BUFFER, (uint64_t)handle, name);
+       // device->SetObjectName(VK_OBJECT_TYPE_BUFFER, (uint64_t)handle, name);
     }
 }

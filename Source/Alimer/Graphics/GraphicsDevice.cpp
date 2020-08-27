@@ -29,80 +29,47 @@
 #   include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_VULKAN) && defined(TODO_VK)
-#   include "Graphics/Vulkan/VulkanGPUDevice.h"
+#if defined(ALIMER_ENABLE_VULKAN)
+#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
 #endif
 
 namespace Alimer
 {
-#if defined(ALIMER_ENABLE_BACKEND_D3D11)
-    GPUBackendType GraphicsDevice::s_backendType = GPUBackendType::D3D11;
-#elif defined(ALIMER_ENABLE_BACKEND_METAL)
-    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::Metal;
-#elif defined(ALIMER_ENABLE_BACKEND_VULKAN)
-    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::Vulkan;
-#elif defined(ALIMER_ENABLE_BACKEND_OPENGL)
-    GPUBackendType GraphicsDevice::s_backendType = wgpu::BackendType::OpenGL;
-#else
-#    error
-#endif
+    GraphicsDevice* GraphicsDevice::Instance;
 
-    GraphicsDevice::GraphicsDevice(Window* window, GPUBackendType backendType)
-        : window{ window }
-        , backendType{ backendType }
+    GraphicsDevice::GraphicsDevice(GraphicsImpl* impl)
     {
-        LOGI("Using {} driver", ToString(backendType));
+        //LOGI("Using {} driver", ToString(impl->GetBackendType()));
     }
 
-    GraphicsDevice* GraphicsDevice::Create(Window* window, const GraphicsDeviceSettings& settings)
+    GraphicsDevice::~GraphicsDevice()
     {
-        if (s_backendType == GPUBackendType::Count)
+    }
+
+    bool GraphicsDevice::Initialize(Window* window, const GraphicsDeviceSettings& settings)
+    {
+        if (Instance != nullptr)
         {
-            s_backendType = GPUBackendType::D3D11;
-            //backendType = GPUBackendType::Vulkan;
+            LOGW("Cannot initialize more than one GraphicsDevice instances");
+            return true;
         }
 
-        switch (s_backendType)
-        {
-#if defined(ALIMER_VULKAN) && defined(TODO_VK)
-        case GPUBackendType::Vulkan:
-            if (VulkanGPUDevice::IsAvailable())
-            {
-                return new VulkanGPUDevice(appName, descriptor);
-            }
-            break;
-#endif
+        Instance = new GraphicsDevice(nullptr);
+        return true;
+    }
 
-#if defined(ALIMER_METAL)
-        case RendererType::Metal:
-            break;
-#endif
-
-#if defined(ALIMER_ENABLE_BACKEND_D3D11)
-        case GPUBackendType::D3D11:
-            return new D3D11GraphicsDevice(window, settings);
-#endif
-
-#if defined(ALIMER_D3D12)
-        case GPUBackendType::D3D12:
-            break;
-#endif
-
-        default:
-            // TODO: Add Null device.
-            return nullptr;
-        }
-
-        return nullptr;
+    void GraphicsDevice::WaitForGPU()
+    {
+        //impl->WaitForGPU();
     }
 
     bool GraphicsDevice::BeginFrame()
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
 
-        if (!BeginFrameImpl()) {
+        /*if (!impl->BeginFrame()) {
             return false;
-        }
+        }*/
 
         // Now the frame is active again.
         frameActive = true;
@@ -113,17 +80,26 @@ namespace Alimer
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
 
-        EndFrameImpl();
+        //impl->EndFrame();
 
         // Frame is not active anymore.
         frameActive = false;
         ++frameCount;
     }
 
-    CommandBuffer& GraphicsDevice::RequestCommandBuffer(const char* name, bool profile)
+    /*GPUBackendType GraphicsDevice::GetBackendType() const
     {
-        CommandBuffer* newCommandBuffer = RequestCommandBufferCore(name, profile);
-        return *newCommandBuffer;
+        return impl->GetBackendType();
     }
+
+    const GPUFeatures& GraphicsDevice::GetFeatures() const
+    {
+        return impl->GetFeatures();
+    }
+
+    const GPULimits& GraphicsDevice::GetLimits() const
+    {
+        return impl->GetLimits();
+    }*/
 }
 

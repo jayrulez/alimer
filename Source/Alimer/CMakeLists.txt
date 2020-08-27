@@ -39,6 +39,7 @@ define_engine_source_files(
   Platform
   Core
   Math
+  Graphics/gpu
   Graphics
   Scene
   UI
@@ -54,11 +55,11 @@ endif()
 
 # Graphics modules
 if (ALIMER_ENABLE_D3D11)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D11)
+    #define_engine_source_files(Graphics/D3D)
+    #define_engine_source_files(Graphics/D3D11)
 endif()
 
-if (ALIMER_VULKAN)
+if (ALIMER_ENABLE_VULKAN)
   #define_engine_source_files(Graphics/Vulkan)
 endif()
 
@@ -78,14 +79,10 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-  stb
-  fmt
-  imgui
+    stb
+    fmt
+    imgui
 )
-
-if (ALIMER_VULKAN)
-  target_link_libraries(${TARGET_NAME} PRIVATE volk vma)
-endif()
 
 if (MSVC)
     set(OPTIMIZATION_FLAGS
@@ -148,16 +145,16 @@ elseif(UNIX)
 endif ()
 
 if (ALIMER_ENABLE_D3D11)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_BACKEND_D3D11")
-    target_link_libraries(${TARGET_NAME} PRIVATE dxguid)
-
-    if(WINDOWS_STORE)
-        target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
-    endif()
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D11")
 endif()
 
 if (ALIMER_ENABLE_D3D12)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_BACKEND_D3D12")
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D12")
+endif()
+
+if (ALIMER_ENABLE_VULKAN)
+    #target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
+    #target_link_libraries(${TARGET_NAME} PRIVATE volk)
 endif()
 
 # SDK installation

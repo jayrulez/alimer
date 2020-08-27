@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "VulkanGPUContext.h"
 #include "VulkanGPUSwapChain.h"
 #include "VulkanGPUDevice.h"
@@ -498,3 +499,5 @@ namespace alimer
             0, 0, nullptr, 0, nullptr, 1, &imageMemoryBarrier);
     }
 }
+
+#endif // TODO

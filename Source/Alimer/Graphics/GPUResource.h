@@ -43,14 +43,6 @@ namespace Alimer
             SwapChain
         };
 
-        enum class Usage
-        {
-            Default,
-            Immutable,
-            Dynamic,
-            Staging
-        };
-
         virtual ~GPUResource() = default;
 
         /// Release the GPU resource.
@@ -63,7 +55,11 @@ namespace Alimer
         const std::string& GetName() const { return name; }
 
     protected:
-        GPUResource(Type type_, const char* name_ = nullptr);
+        GPUResource(Type type_, const std::string_view& name_)
+            : type(type_)
+            , name(name_)
+        {
+        }
 
         virtual void BackendSetName() {}
 

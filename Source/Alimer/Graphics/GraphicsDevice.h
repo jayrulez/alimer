@@ -41,69 +41,53 @@ namespace Alimer
     };
 
     class Window;
+    class GraphicsImpl;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice : public Object
+    class ALIMER_API GraphicsDevice final : public Object
     {
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        ~GraphicsDevice() override;
 
-        static GraphicsDevice* Create(Window* window, const GraphicsDeviceSettings& settings);
+        /// The single instance of the graphics device.
+        static GraphicsDevice* Instance;
 
+        static bool Initialize(Window* window, const GraphicsDeviceSettings& settings);
+
+        /// Wait for GPU to finish pending operation and become idle.
+        void WaitForGPU();
         bool BeginFrame();
         void EndFrame();
 
         /// Gets the adapter device.
-        virtual GPUAdapter* GetAdapter() const = 0;
+        //virtual GPUAdapter* GetAdapter() const = 0;
 
         /// Gets the device backend type.
-        ALIMER_FORCE_INLINE GPUBackendType GetBackendType() const
-        {
-            return backendType;
-        }
+        GPUBackendType GetBackendType() const;
 
         /// Get the device features.
-        ALIMER_FORCE_INLINE const GPUFeatures& GetFeatures() const
-        {
-            return features;
-        }
+        const GPUFeatures& GetFeatures() const;
 
         /// Get the device limits.
-        ALIMER_FORCE_INLINE const GPULimits& GetLimits() const
-        {
-            return limits;
-        }
+        const GPULimits& GetLimits() const;
 
-        virtual Texture* GetBackbufferTexture() const = 0;
-
-        CommandBuffer& RequestCommandBuffer(const char* name = nullptr, bool profile = false);
+        //virtual Texture* GetBackbufferTexture() const = 0;
+        //CommandBuffer& RequestCommandBuffer(const char* name = nullptr, bool profile = false);
 
         /* Resource creation methods. */
-        GPUBuffer* CreateBuffer(const GPUBufferDescriptor& descriptor, const void* initialData = nullptr);
+        //virtual GPUBuffer* CreateBuffer(const std::string_view& name) = 0;
 
         /// Total number of CPU frames completed.
         uint64_t GetFrameCount() const { return frameCount; }
 
     protected:
-        GraphicsDevice(Window* window, GPUBackendType backendType);
+        GraphicsDevice(GraphicsImpl* impl);
 
-        virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
-        //virtual GPUBuffer* CreateBufferCore(const GPUBufferDescriptor& descriptor, const void* initialData) = 0;
-
-        Window* window;
-        GPUBackendType backendType;
-        GPUFeatures features{};
-        GPULimits limits{};
+        //virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
 
     private:
-        static GPUBackendType s_backendType;
-
-        virtual bool BeginFrameImpl() = 0;
-        virtual void EndFrameImpl() = 0;
-
         /// Whether a frame is active or not
         bool frameActive{ false };
 

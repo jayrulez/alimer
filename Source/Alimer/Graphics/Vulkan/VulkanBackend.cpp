@@ -22,7 +22,7 @@
 
 #include "VulkanBackend.h"
 
-namespace alimer
+namespace Alimer
 {
     const char* ToString(VkResult result)
     {
