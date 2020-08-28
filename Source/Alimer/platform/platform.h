@@ -22,53 +22,28 @@
 
 #pragma once
 
-#include "Graphics/GPUResource.h"
+#include "Core/Platform.h"
 
 namespace Alimer
 {
-    /// 
-    class GPUBuffer final : public GPUResource
+    namespace platform
     {
-        ALIMER_OBJECT(GPUBuffer, GPUResource);
-
-    public:
-        /// Constructor
-        GPUBuffer(const std::string_view& name);
-
-        bool Init(GPUBufferUsage usage, uint64_t size, uint64_t stride, const void* initialData);
-
-        /// Gets a value indicating whether this buffer has been allocated. 
-        bool IsAllocated() const;
-
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const
+        enum class EventType : uint8_t
         {
-            return _usage;
-        }
+            Unkwnown = 0,
+            Quit,
+        };
 
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint64_t GetSize() const
+        struct Event
         {
-            return _size;
-        }
+            EventType type;
+        };
 
-        /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const
-        {
-            return _stride;
-        }
+        bool init(bool opengl);
+        void shutdown() noexcept;
 
-        /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
-        {
-            ALIMER_ASSERT(_stride > 0);
-            return _size / _stride;
-        }
-
-    private:
-        gpu::BufferHandle handle;
-        GPUBufferUsage _usage{ GPUBufferUsage::None };
-        uint64_t _size{ 0 };
-        uint32_t _stride{ 0 };
-    };
+        void push_event(Event&& e);
+        void push_event(const Event& e);
+        bool poll_event(Event& e) noexcept;
+    }
 }

@@ -21,6 +21,7 @@
 //
 
 #include "platform/platform.h"
+#include "Application/Application.h"
 #include <Windows.h>
 #include "winrt/Windows.ApplicationModel.h"
 #include "winrt/Windows.ApplicationModel.Core.h"
@@ -45,23 +46,103 @@ using namespace winrt::Windows::Graphics::Display;
 namespace Alimer
 {
     // Make sure this is linked in.
-    void ApplicationDummy()
+   /* void ApplicationDummy()
     {
+    }*/
+
+    namespace platform
+    {
+
+        bool init(bool opengl)
+        {
+            return true;
+        }
+
+        void shutdown() noexcept
+        {
+        }
+
+        void pump_events() noexcept
+        {
+
+        }
     }
 }
 
-int WINAPI wWinMain(
-    _In_ HINSTANCE /*hInstance*/,
-    _In_ HINSTANCE /*hPrevInstance*/,
-    _In_ LPWSTR    /*lpCmdLine*/,
-    _In_ int       /*nCmdShow*/
-)
+namespace
 {
+    class ViewProvider : public winrt::implements<ViewProvider, IFrameworkView>
+    {
+    public:
+        ViewProvider() noexcept
+            : exit(false)
+            , visible(true)
+        {
+        }
+
+        // IFrameworkView methods
+        void Initialize(const CoreApplicationView& applicationView)
+        {
+            app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(__argc, __argv));
+        }
+
+        void Uninitialize() noexcept
+        {
+            app.reset();
+        }
+
+        void SetWindow(const CoreWindow& window)
+        {
+        }
+
+        void Load(const winrt::hstring&) noexcept
+        {
+        }
+
+        void Run()
+        {
+            while (!exit)
+            {
+                if (visible)
+                {
+                    app->Tick();
+
+                    CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
+                }
+                else
+                {
+                    CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessOneAndAllPending);
+                }
+            }
+        }
+
+    private:
+        bool exit;
+        bool visible;
+        std::unique_ptr<Alimer::Application> app;
+    };
+
+    class ViewProviderFactory : public winrt::implements<ViewProviderFactory, IFrameworkViewSource>
+    {
+    public:
+        IFrameworkView CreateView()
+        {
+            return winrt::make<ViewProvider>();
+        }
+    };
+}
+
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
+{
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+
     if (!DirectX::XMVerifyCPUSupport())
     {
         throw std::exception("XMVerifyCPUSupport");
     }
 
-    //CoreApplication::Run(viewProviderFactory);
+    auto viewProviderFactory = winrt::make<ViewProviderFactory>();
+    CoreApplication::Run(viewProviderFactory);
     return 0;
 }

@@ -22,21 +22,29 @@
 
 #pragma once
 
-#include "Graphics/GPUResource.h"
-#include "Math/Size.h"
+#include "graphics/graphics.h"
+#include "resource/resource.h"
 
 namespace Alimer
 {
-    class ALIMER_API Texture : public GPUResource
+    class ALIMER_API Texture final : public Resource
     {
-        ALIMER_OBJECT(Texture, GPUResource);
+        ALIMER_OBJECT(Texture, Resource);
 
     public:
         /// Constructor.
-        Texture(const GPUTextureDescription& desc);
+        Texture();
+        /// Destructor.
+        ~Texture() override;
+
+        /// Constructor.
+        //Texture(const GPUTextureDescription& desc);
+
+        /// Register object factory and properties.
+        static void register_object();
 
         /// Get the texture pixel format.
-        PixelFormat GetFormat() const { return format; }
+        //PixelFormat GetFormat() const { return format; }
 
         /// Get a mip-level width.
         uint32 GetWidth(uint32 mipLevel = 0) const;
@@ -54,7 +62,7 @@ namespace Alimer
         uint32 GetArrayLayers() const { return arrayLayers; }
 
         /// Get the texture usage.
-        TextureUsage GetUsage() const { return usage; }
+        //TextureUsage GetUsage() const { return usage; }
 
         /// Get the array index of a subresource.
         uint32 GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
@@ -74,10 +82,13 @@ namespace Alimer
 
         static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
+    private:
+        graphics::TextureHandle handle;
+
     protected:
-        TextureType type = TextureType::Type2D;
-        PixelFormat format = PixelFormat::RGBA8Unorm;
-        TextureUsage usage = TextureUsage::Sampled;
+        //TextureType type = TextureType::Type2D;
+        //PixelFormat format = PixelFormat::RGBA8Unorm;
+        //TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
         uint32 height = 1u;
         uint32 depth = 1u;

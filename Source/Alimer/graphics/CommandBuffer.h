@@ -58,8 +58,8 @@ namespace Alimer
         virtual void PopDebugGroup();
         virtual void InsertDebugMarker(const char* name);
 
-        virtual void BeginRenderPass(uint32_t numColorAttachments, const gpu::RenderPassColorAttachment* colorAttachments, const gpu::RenderPassDepthStencilAttachment* depthStencil);
-        virtual void EndRenderPass();
+        //virtual void BeginRenderPass(uint32_t numColorAttachments, const gpu::RenderPassColorAttachment* colorAttachments, const gpu::RenderPassDepthStencilAttachment* depthStencil);
+        //virtual void EndRenderPass();
 
         virtual void SetScissorRect(const URect& scissorRect) = 0;
         virtual void SetScissorRects(const URect* scissorRects, uint32_t count) = 0;

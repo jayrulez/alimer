@@ -22,12 +22,11 @@
 
 #include "Application/Application.h"
 #include "Application/AppHost.h"
-#include "Core/Log.h"
+#include "core/log.h"
 #include "Core/Input.h"
-#include "Graphics/GraphicsDevice.h"
-#include "Graphics/gpu/gpu.h"
+#include "platform/platform.h"
+#include "graphics/graphics.h"
 #include "UI/ImGuiLayer.h"
-#include "Math/Color.h"
 
 namespace Alimer
 {
@@ -42,7 +41,7 @@ namespace Alimer
         : config{ config }
     {
         // Create default AppHost.
-        host = AppHost::CreateDefault(this);
+        //host = AppHost::CreateDefault(this);
 
         // Construct platform logic first.
         RegisterSubsystem(new Input());
@@ -55,9 +54,9 @@ namespace Alimer
     Application::~Application()
     {
         //gameSystems.clear();
-        ImGuiLayer::Shutdown();
+        //ImGuiLayer::Shutdown();
         RemoveSubsystem<Input>();
-        gpu::Shutdown();
+        graphics::shutdown();
         s_current = nullptr;
         LOGI("Application destroyed correctly");
     }
@@ -77,9 +76,16 @@ namespace Alimer
         // Init GPU.
         auto bounds = GetWindow()->GetBounds();
 
-        GraphicsDeviceSettings settings = {};
-        settings.sampleCount = 4;
-        if (!gpu::Init(GetWindow()->GetNativeHandle(), gpu::InitFlags::DebugOutput))
+        graphics::Config graphics_config = {};
+#ifdef _DEBUG
+        graphics_config.debug = true;
+#endif
+        graphics_config.preferred_backend = graphics::BackendType::OpenGL;
+        graphics_config.swapchain.window_handle = GetWindow()->GetNativeHandle();
+
+        //GraphicsDeviceSettings settings = {};
+        //settings.sampleCount = 4;
+        if (!graphics::init(&graphics_config))
         {
 
         }
@@ -195,7 +201,26 @@ namespace Alimer
             return EXIT_FAILURE;
         }
 
-        host->Run();
+        if (!platform::init(true))
+        {
+            return EXIT_FAILURE;
+        }
+
+        while (running)
+        {
+            platform::Event event;
+            while (platform::poll_event(event))
+            {
+                if (event.type == platform::EventType::Quit)
+                {
+                    //std::cout << "quit (all windows were closed)" << std::endl;
+                    running = false;
+                    break;
+                }
+            }
+        }
+
+        platform::shutdown();
         return exitCode;
     }
 

@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
+#include "core/log.h"
 
 #if defined(__APPLE__)
 #  include <TargetConditionals.h>

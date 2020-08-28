@@ -71,6 +71,12 @@ if (WIN32 OR WINDOWS_STORE)
 
 	# Disable run-time type information (RTTI)
 	replace_compile_flags("/GR" "/GR-")
+
+    # Disable incremental linking
+	replace_linker_flags("/INCREMENTAL" "/INCREMENTAL:NO" debug)
+	if(WINDOWS_STORE)
+		add_exe_linker_flags(/INCREMENTAL:NO)
+	endif()
 endif()
 
 # Add colors to ninja builds

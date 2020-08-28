@@ -29,10 +29,6 @@
 #   include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
-#if defined(ALIMER_ENABLE_VULKAN)
-#include "Graphics/Vulkan/VulkanGraphicsImpl.h"
-#endif
-
 namespace Alimer
 {
     GraphicsDevice* GraphicsDevice::Instance;
@@ -40,6 +36,7 @@ namespace Alimer
     GraphicsDevice::GraphicsDevice(GraphicsImpl* impl)
     {
         //LOGI("Using {} driver", ToString(impl->GetBackendType()));
+        Texture::register_object();
     }
 
     GraphicsDevice::~GraphicsDevice()

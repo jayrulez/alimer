@@ -36,31 +36,22 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DI
 set(SOURCE_FILES Alimer.natvis)
 
 define_engine_source_files(
-  Platform
-  Core
-  Math
-  Graphics/gpu
-  Graphics
-  Scene
-  UI
-  Application
+    core
+    math
+    resource
+    graphics
+    graphics/internal
+    Scene
+    UI
+    platform
+    Application
 )
 
 # Include platform files.
-define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
+define_engine_source_files(platform/${ALIMER_NATIVE_PLATFORM})
 
-if(NOT (EMSCRIPTEN OR ANDROID))
-    define_engine_source_files(OS/GLFW)
-endif()
-
-# Graphics modules
-if (ALIMER_ENABLE_D3D11)
-    #define_engine_source_files(Graphics/D3D)
-    #define_engine_source_files(Graphics/D3D11)
-endif()
-
-if (ALIMER_ENABLE_VULKAN)
-  #define_engine_source_files(Graphics/Vulkan)
+if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
+    define_engine_source_files(platform/glfw)
 endif()
 
 group_sources()
@@ -76,6 +67,7 @@ target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_COMPILE)
 target_include_directories(${TARGET_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/third_party
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
@@ -123,9 +115,9 @@ endif()
 
 # Warnings as Errors Enabled"
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W3 /WX)
 endif()
 
 # Compiler flags
@@ -134,6 +126,14 @@ elseif(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
 elseif(APPLE)
 elseif(WINDOWS_STORE)
+    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(${TARGET_NAME} PUBLIC "/Zc:__cplusplus")
+    # we need this when using /permissive
+    target_compile_options(${TARGET_NAME} PUBLIC "/Zc:twoPhase-")
+
+    if (ALIMER_ENABLE_D3D11)
+        target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
+    endif()
 elseif (WIN32)
     target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
@@ -144,16 +144,20 @@ elseif (WIN32)
 elseif(UNIX)
 endif ()
 
+if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
+    target_link_libraries(${TARGET_NAME} PRIVATE glfw)
+endif ()
+
 if (ALIMER_ENABLE_D3D11)
     target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D11")
 endif()
 
-if (ALIMER_ENABLE_D3D12)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D12")
+if (ALIMER_ENABLE_OPENGL)
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_OPENGL")
 endif()
 
 if (ALIMER_ENABLE_VULKAN)
-    #target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
     #target_link_libraries(${TARGET_NAME} PRIVATE volk)
 endif()
 

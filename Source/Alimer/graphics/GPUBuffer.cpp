@@ -20,22 +20,29 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Platform.h"
+#include "Core/Log.h"
+#include "Graphics/GPUBuffer.h"
 
 namespace Alimer
 {
-    template <class RetType, class... Args>
-    class TEvent
+    GPUBuffer::GPUBuffer(const std::string_view& name)
+        : GPUResource(Type::Buffer, name)
+       // , handle(gpu::kInvalidBuffer)
     {
-    };
 
-    template <typename Signature>
-    class Event;
+    }
 
-    template <class RetType, class... Args>
-    class Event<RetType(Args...) > : public TEvent <RetType, Args...>
+    bool GPUBuffer::Init(GPUBufferUsage usage, uint32_t size, uint32_t stride, const void* initialData)
     {
-    };
+        if (IsAllocated())
+            Destroy();
+
+        return true;
+    }
+
+    bool GPUBuffer::IsAllocated() const
+    {
+        return _size > 0;
+    }
 }
+

@@ -20,29 +20,57 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GPUBuffer.h"
+#pragma once
+
+#include "platform/platform.h"
+#include <deque>
 
 namespace Alimer
 {
-    GPUBuffer::GPUBuffer(const std::string_view& name)
-        : GPUResource(Type::Buffer, name)
-        , handle(gpu::kInvalidBuffer)
+    namespace platform
     {
+        namespace
+        {
+            std::deque<Event>& get_event_queue() noexcept
+            {
+                static std::deque<Event> event_queue;
+                return event_queue;
+            }
 
-    }
+            
+            bool pop_event(Event& e) noexcept
+            {
+                auto& event_queue = get_event_queue();
+                // Pop the first event of the queue, if it is not empty
+                if (!event_queue.empty())
+                {
+                    e = event_queue.front();
+                    event_queue.pop_front();
+                    return true;
+                }
 
-    bool GPUBuffer::Init(GPUBufferUsage usage, uint64_t size, uint64_t stride, const void* initialData)
-    {
-        if (IsAllocated())
-            Destroy();
+                return false;
+            }
+        }
 
-        return true;
-    }
+        /* Implemented by platform */
+        extern void pump_events() noexcept;
 
-    bool GPUBuffer::IsAllocated() const
-    {
-        return _size > 0;
+        void push_event(const Event& e)
+        {
+            get_event_queue().emplace_back(e);
+        }
+
+        void push_event(Event&& e)
+        {
+            get_event_queue().emplace_back(std::move(e));
+        }
+
+        bool poll_event(Event& e) noexcept
+        {
+            pump_events();
+
+            return pop_event(e);
+        }
     }
 }
-

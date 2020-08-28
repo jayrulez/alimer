@@ -25,7 +25,6 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
-#include "Graphics/gpu/gpu.h"
 
 #if !defined(GPU_DEBUG)
 #   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
