@@ -24,7 +24,7 @@
 #include "Core/Hash.h"
 
 #ifdef _WIN32
-#   include "Platform/Win32/Win32_Include.h"
+#   include "platform/win32/include_win32.h"
 #else
 #   include <unistd.h>
 #   ifdef __linux__

@@ -21,6 +21,8 @@
 //
 
 #if defined(ALIMER_ENABLE_OPENGL)
+
+#include "application.h"
 #include "gpu_driver.h"
 
 #if defined(__EMSCRIPTEN__)

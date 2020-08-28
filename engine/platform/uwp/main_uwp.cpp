@@ -21,7 +21,7 @@
 //
 
 #include "platform/platform.h"
-#include "Application/Application.h"
+#include "application.h"
 #include <Windows.h>
 #include "winrt/Windows.ApplicationModel.h"
 #include "winrt/Windows.ApplicationModel.Core.h"
@@ -43,30 +43,29 @@ using namespace winrt::Windows::System;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Graphics::Display;
 
-namespace Alimer
+using namespace Alimer;
+
+namespace
 {
-    // Make sure this is linked in.
-   /* void ApplicationDummy()
-    {
-    }*/
+    ::IUnknown* window;
+}
 
-    namespace platform
-    {
+bool Platform::init(const Config*)
+{
+    return true;
+}
 
-        bool init(bool opengl)
-        {
-            return true;
-        }
+void Platform::shutdown() noexcept
+{
+}
 
-        void shutdown() noexcept
-        {
-        }
+void Platform::run()
+{
+}
 
-        void pump_events() noexcept
-        {
-
-        }
-    }
+::IUnknown* Platform::get_native_handle(void) noexcept
+{
+    return window;
 }
 
 namespace
@@ -75,37 +74,56 @@ namespace
     {
     public:
         ViewProvider() noexcept
-            : exit(false)
+            : config{}
             , visible(true)
+            , dpi(96.0f)
         {
         }
 
         // IFrameworkView methods
         void Initialize(const CoreApplicationView& applicationView)
         {
-            app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(__argc, __argv));
+            applicationView.Activated({ this, &ViewProvider::OnActivated });
+
+            CoreApplication::Suspending({ this, &ViewProvider::OnSuspending });
+
+            CoreApplication::Resuming({ this, &ViewProvider::OnResuming });
+
+            config = App::main(__argc, __argv);
         }
 
         void Uninitialize() noexcept
         {
-            app.reset();
+
         }
 
-        void SetWindow(const CoreWindow& window)
+        void SetWindow(const CoreWindow& coreWindow)
         {
+            auto currentDisplayInformation = DisplayInformation::GetForCurrentView();
+            dpi = currentDisplayInformation.LogicalDpi();
+
+            logicalWidth = coreWindow.Bounds().Width;
+            logicalHeight = coreWindow.Bounds().Height;
+
+            config.width = ConvertDipsToPixels(logicalWidth);
+            config.height = ConvertDipsToPixels(logicalHeight);
+
+            window = static_cast<::IUnknown*>(winrt::get_abi(coreWindow));
         }
 
-        void Load(const winrt::hstring&) noexcept
+        void Load(winrt::hstring const&) noexcept
         {
         }
 
         void Run()
         {
-            while (!exit)
+            Alimer::App::run(&config);
+
+            while (App::is_running())
             {
                 if (visible)
                 {
-                    app->Tick();
+                    App::tick();
 
                     CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
                 }
@@ -116,10 +134,81 @@ namespace
             }
         }
 
+        inline uint32_t ConvertDipsToPixels(float dips) const noexcept
+        {
+            return int(dips * dpi / 96.f + 0.5f);
+        }
+
+        inline float ConvertPixelsToDips(uint32_t pixels) const noexcept
+        {
+            return (float(pixels) * 96.f / dpi);
+        }
+
+    protected:
+        // Event handlers
+        void OnActivated(CoreApplicationView const& /*applicationView*/, IActivatedEventArgs const& args)
+        {
+            if (args.Kind() == ActivationKind::Launch)
+            {
+                auto launchArgs = (const LaunchActivatedEventArgs*)(&args);
+
+                if (launchArgs->PrelaunchActivated())
+                {
+                    // Opt-out of Prelaunch
+                    CoreApplication::Exit();
+                    return;
+                }
+            }
+
+            dpi = DisplayInformation::GetForCurrentView().LogicalDpi();
+            auto view = ApplicationView::GetForCurrentView();
+
+            view.Title(L"CIAO");
+            if (config.fullscreen)
+            {
+                ApplicationView::PreferredLaunchWindowingMode(ApplicationViewWindowingMode::FullScreen);
+                CoreWindow::GetForCurrentThread().Activate();
+            }
+            else
+            {
+                ApplicationView::PreferredLaunchWindowingMode(ApplicationViewWindowingMode::PreferredLaunchViewSize);
+                auto desiredSize = Size(ConvertPixelsToDips(config.width), ConvertPixelsToDips(config.height));
+                ApplicationView::PreferredLaunchViewSize(desiredSize);
+
+                auto minSize = Size(ConvertPixelsToDips(320), ConvertPixelsToDips(200));
+                view.SetPreferredMinSize(minSize);
+
+                CoreWindow::GetForCurrentThread().Activate();
+
+                view.FullScreenSystemOverlayMode(FullScreenSystemOverlayMode::Minimal);
+
+                view.TryResizeView(desiredSize);
+            }
+        }
+
+        void OnSuspending(IInspectable const& /*sender*/, SuspendingEventArgs const& args)
+        {
+            auto deferral = args.SuspendingOperation().GetDeferral();
+
+            /*auto f = std::async(std::launch::async, [this, deferral]()
+            {
+                m_game->OnSuspending();
+
+                deferral.Complete();
+            });*/
+        }
+
+        void OnResuming(IInspectable const& /*sender*/, IInspectable const& /*args*/)
+        {
+            //m_game->OnResuming();
+        }
+
     private:
-        bool exit;
+        Alimer::Config config;
         bool visible;
-        std::unique_ptr<Alimer::Application> app;
+        float dpi;
+        float logicalWidth{ 0.0f };
+        float logicalHeight{ 0.0f };
     };
 
     class ViewProviderFactory : public winrt::implements<ViewProviderFactory, IFrameworkViewSource>

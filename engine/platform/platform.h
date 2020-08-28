@@ -22,28 +22,31 @@
 
 #pragma once
 
-#include "Core/Platform.h"
+#include <stdint.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <winapifamily.h>
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#else
+struct IUnknown;
+#endif
+#endif
 
 namespace Alimer
 {
-    namespace platform
+    struct Config;
+
+    namespace Platform
     {
-        enum class EventType : uint8_t
-        {
-            Unkwnown = 0,
-            Quit,
-        };
+        bool init(const Config* config);
+        void shutdown(void) noexcept;
+        void run(void);
 
-        struct Event
-        {
-            EventType type;
-        };
-
-        bool init(bool opengl);
-        void shutdown() noexcept;
-
-        void push_event(Event&& e);
-        void push_event(const Event& e);
-        bool poll_event(Event& e) noexcept;
+#if defined(_WIN32) || defined(_WIN64)
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#else
+        IUnknown* get_native_handle(void) noexcept;
+#endif
+#endif
     }
 }

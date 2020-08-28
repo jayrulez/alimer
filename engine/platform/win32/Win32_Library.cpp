@@ -20,28 +20,44 @@
 // THE SOFTWARE.
 //
 
-#include "Application/GameTime.h"
-#include "Application/Application.h"
+#include "Core/Library.h"
+#include "include_win32.h"
+
+#if defined(_DEBUG)
+#include "Core/Log.h"
+#endif
 
 namespace Alimer
 {
-    GameTime::GameTime()
-        : targetElapsedTicks(TicksPerSecond / 60)
+    LibHandle LibraryOpen(const char* libName)
     {
-        qpcFrequency = Stopwatch::GetFrequency();
-        qpcLastTime = Stopwatch::GetTimestamp();
+        HMODULE handle = LoadLibraryA(libName);
 
-        // Initialize max delta to 1/10 of a second.
-        qpcMaxDelta = static_cast<uint64_t>(qpcFrequency / 10);
+#if defined(_DEBUG)
+        if (handle == nullptr)
+        {
+            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
+        }
+#endif
+
+        return (LibHandle)handle;
     }
 
-    void GameTime::ResetElapsedTime()
+    void LibraryClose(LibHandle handle)
     {
-        qpcLastTime = Stopwatch::GetTimestamp();
-
-        leftOverTicks = 0;
-        framesPerSecond = 0;
-        framesThisSecond = 0;
-        qpcSecondCounter = 0;
+        FreeLibrary(static_cast<HMODULE>(handle));
     }
-} // namespace Alimer
+
+    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    {
+        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+
+#if defined(_DEBUG)
+        if (proc == nullptr)
+        {
+            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
+        }
+#endif
+        return proc;
+    }
+}

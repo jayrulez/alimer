@@ -21,59 +21,88 @@
 //
 
 #include "platform/platform.h"
+#include "application.h"
 #include "core/log.h"
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-namespace Alimer
+using namespace Alimer;
+
+namespace
 {
-    namespace platform
+    GLFWwindow* window = nullptr;
+
+    void on_glfw_error(int code, const char* description)
     {
-        static void on_glfw_error(int code, const char* description)
-        {
-            LOGE("GLFW Error {} - {}", description, code);
-        }
+        LOGE("GLFW Error {} - {}", description, code);
+    }
+}
 
-        bool init(bool opengl)
-        {
-            glfwSetErrorCallback(on_glfw_error);
+bool Platform::init(const Config* config)
+{
+    glfwSetErrorCallback(on_glfw_error);
 #ifdef __APPLE__
-            glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+    glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
 #endif
-            if (!glfwInit())
-            {
-                return false;
-            }
+    if (!glfwInit())
+    {
+        return false;
+    }
 
-            if (opengl)
-            {
-                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-                glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-#ifdef _DEBUG
-                glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
-                glfwWindowHint(GLFW_CONTEXT_NO_ERROR, false);
-#endif
-                //glfwWindowHint(GLFW_SAMPLES, msaa);
-                glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
-            }
-            else
-            {
-                glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-            }
+    if (config->graphics_backend == graphics::BackendType::OpenGL)
+    {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+        glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, config->debug);
+        glfwWindowHint(GLFW_CONTEXT_NO_ERROR, !config->debug);
+        glfwWindowHint(GLFW_SAMPLES, config->sample_count);
+        glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
+    }
+    else
+    {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    }
 
-            return true;
-        }
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+    uint32_t width = config->width ? config->width : (uint32_t)mode->width;
+    uint32_t height = config->height ? config->height : (uint32_t)mode->height;
 
-        void shutdown() noexcept
-        {
-            glfwTerminate();
-        }
+    if (config->fullscreen) {
+        glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+        glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+        glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+        glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+    }
 
-        void pump_events() noexcept
-        {
-            glfwPollEvents();
-        }
+    window = glfwCreateWindow(width, height, config->title, config->fullscreen ? monitor : nullptr, nullptr);
+
+    if (!window) {
+        return false;
+    }
+
+    if (config->graphics_backend == graphics::BackendType::OpenGL)
+    {
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(config->vsync ? 1 : 0);
+    }
+
+    return true;
+}
+
+void Platform::shutdown(void) noexcept
+{
+    glfwTerminate();
+}
+
+void Platform::run(void)
+{
+    while (!glfwWindowShouldClose(window))
+    {
+        App::tick();
+        glfwPollEvents();
     }
 }

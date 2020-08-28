@@ -40,6 +40,8 @@ inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
 
 namespace Alimer
 {
+    struct Config;
+
     namespace graphics
     {
         static constexpr uint32_t kMaxColorAttachments = 8u;
@@ -55,9 +57,6 @@ namespace Alimer
 
         static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
         static constexpr TextureHandle kInvalidTexture = { kInvalidHandleId };
-
-        using CommandList = uint8_t;
-        static constexpr CommandList kMaxCommandLists = 16;
 
         enum class LogLevel : uint32_t
         {
@@ -122,26 +121,11 @@ namespace Alimer
             RenderPassDepthStencilAttachment depthStencilAttachment;
         };
 
-        struct SwapchainConfig
-        {
-            void* window_handle;
-            uint32_t width;
-            uint32_t height;
-            bool vsync;
-        };
-
-        struct Config
-        {
-            BackendType preferred_backend;
-            bool debug;
-            PowerPreference powerPreference;
-            SwapchainConfig swapchain;
-            void (*callback)(void* context, const char* message, LogLevel level);
-            void* context;
-        };
-
+        BackendType get_platform_backend(void);
         bool init(const Config* config);
-        void shutdown();
+        void shutdown(void);
+        void begin_frame(void);
+        void end_frame(void);
     }
 }
 

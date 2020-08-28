@@ -21,7 +21,7 @@
 //
 
 #include "Core/DeviceInfo.h"
-#include "Win32_Include.h"
+#include "include_win32.h"
 
 namespace Alimer
 {

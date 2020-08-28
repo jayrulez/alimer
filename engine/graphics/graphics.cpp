@@ -21,9 +21,10 @@
 //
 
 
-#include "Core/Assert.h"
+#include "core/Assert.h"
 #include "graphics/texture.h"
 #include "internal/gpu_driver.h"
+#include "application.h"
 
 namespace Alimer
 {
@@ -40,13 +41,25 @@ namespace Alimer
             &vulkan_driver,
         #endif
         #if defined(ALIMER_ENABLE_OPENGL)
-            & gl_driver,
+            &gl_driver,
         #endif
 
             NULL
         };
 
         static Renderer* gpu_renderer = nullptr;
+
+        BackendType get_platform_backend(void)
+        {
+            for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
+            {
+                if (drivers[i]->supported()) {
+                    return drivers[i]->type;
+                }
+            }
+
+            return BackendType::Default;
+        }
 
         bool init(const Config* config)
         {
@@ -55,22 +68,40 @@ namespace Alimer
             if (gpu_renderer != nullptr)
                 return true;
 
-            if (config->preferred_backend == BackendType::Default || config->preferred_backend == BackendType::Count)
+            graphics::BackendType graphics_backend = config->graphics_backend;
+
+        retry:
+            if (graphics_backend == BackendType::Default || graphics_backend == BackendType::Count)
             {
-                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
-                    if (drivers[i]->supported()) {
+                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
+                {
+                    if (!drivers[i])
+                        break;
+
+                    if (drivers[i]->supported())
+                    {
                         gpu_renderer = drivers[i]->create_renderer();
                         break;
                     }
                 }
             }
-            else {
-                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++) {
-                    if (drivers[i]->type == config->preferred_backend && drivers[i]->supported()) {
+            else
+            {
+                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
+                {
+                    if (!drivers[i])
+                        break;
+
+                    if (drivers[i]->type == graphics_backend && drivers[i]->supported()) {
                         gpu_renderer = drivers[i]->create_renderer();
                         break;
                     }
                 }
+            }
+
+            if (!gpu_renderer) {
+                graphics_backend = get_platform_backend();
+                goto retry;
             }
 
             if (!gpu_renderer || !gpu_renderer->init(config)) {
@@ -83,7 +114,7 @@ namespace Alimer
             return true;
         }
 
-        void shutdown()
+        void shutdown(void)
         {
             if (gpu_renderer == nullptr)
             {
@@ -92,6 +123,16 @@ namespace Alimer
 
             gpu_renderer->shutdown();
             gpu_renderer = nullptr;
+        }
+
+        void begin_frame(void)
+        {
+            gpu_renderer->begin_frame();
+        }
+
+        void end_frame(void)
+        {
+            gpu_renderer->end_frame();
         }
     }
 }

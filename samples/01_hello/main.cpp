@@ -20,33 +20,24 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
+#include "application.h"
 
 namespace Alimer
 {
-    class TestApp : public Application
+    namespace App
     {
-        ALIMER_OBJECT(TestApp, Application);
-
-    public:
-        TestApp(const Configuration& config)
-            : Application(config)
+        Config main(int argc, char* argv[])
         {
+            Config config{};
+            config.graphics_backend = graphics::BackendType::OpenGL;
+            config.title = "TestApp";
+            //config.fullscreen = true;
+            //config.width = 1280;
+            //config.height = 720;
+            //config.on_render = render;
 
+            return config;
         }
-
-        std::string GetName() override
-        {
-            return "TestApp";
-        }
-    };
-
-    Application* ApplicationCreate(int argc, char* argv[])
-    {
-        ApplicationDummy();
-
-        Configuration config{};
-        return new TestApp(config);
     }
 }
 

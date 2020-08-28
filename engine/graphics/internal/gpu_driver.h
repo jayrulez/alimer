@@ -171,6 +171,8 @@ namespace Alimer
         {
             bool (*init)(const Config* config);
             void (*shutdown)(void);
+            void (*begin_frame)(void);
+            void (*end_frame)(void);
         };
 
         struct Driver

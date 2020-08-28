@@ -8,7 +8,6 @@ macro (define_engine_source_files)
     foreach (path ${DEFINE_SRC_FILES_UNPARSED_ARGUMENTS})
 	    # Get header files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.hpp ${path}/*.h ${path}/*.inl)
-
 		list (APPEND HEADER_FILES ${_files})
 
 		# Install them
@@ -17,6 +16,12 @@ macro (define_engine_source_files)
 		# Get source files
 		file (GLOB _files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.c ${path}/*.cpp)
 		list (APPEND SOURCE_FILES ${_files})
+
+        if (MSVC)
+            # Get natvis files
+            file (GLOB NATVIS_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${path}/*.natvis)
+		    list (APPEND SOURCE_FILES ${NATVIS_FILES})
+        endif ()
 	endforeach ()
 endmacro()
 
@@ -33,7 +38,12 @@ macro(group_sources)
 endmacro()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-set(SOURCE_FILES Alimer.natvis)
+
+set(SOURCE_FILES
+    application.cpp
+    application.h
+    platform/platform.h
+)
 
 define_engine_source_files(
     core
@@ -43,8 +53,6 @@ define_engine_source_files(
     graphics/internal
     Scene
     UI
-    platform
-    Application
 )
 
 # Include platform files.
@@ -126,6 +134,8 @@ elseif(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
 elseif(APPLE)
 elseif(WINDOWS_STORE)
+    set_target_properties(${TARGET_NAME} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
+
     target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
     target_compile_options(${TARGET_NAME} PUBLIC "/Zc:__cplusplus")
     # we need this when using /permissive

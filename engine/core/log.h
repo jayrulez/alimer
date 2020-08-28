@@ -39,18 +39,22 @@ namespace Alimer
         Count
     };
 
-    ALIMER_API void Log(LogLevel level, const std::string& message);
+    ALIMER_API void Write(LogLevel level, const std::string& message);
     ALIMER_API void Verbose(const std::string& message);
     ALIMER_API void Debug(const std::string& message);
     ALIMER_API void Info(const std::string& message);
     ALIMER_API void Warn(const std::string& message);
-    ALIMER_API void Error(const std::string& message);
     ALIMER_API void Critical(const std::string& message);
+
+    namespace Log
+    {
+        void error(const std::string& message);
+    }
 }
 
 #define LOGV(...) Alimer::Verbose(fmt::format(__VA_ARGS__));
 #define LOGD(...) Alimer::Debug(fmt::format(__VA_ARGS__));
 #define LOGI(...) Alimer::Info(fmt::format(__VA_ARGS__));
 #define LOGW(...) Alimer::Warn(fmt::format(__VA_ARGS__));
-#define LOGE(...) Alimer::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
+#define LOGE(...) Alimer::Log::error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
 #define LOGC(...) Alimer::Critical(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));

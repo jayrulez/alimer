@@ -22,9 +22,12 @@
 
 #if defined(ALIMER_ENABLE_D3D11)
 
+#include "application.h"
+#include "platform/platform.h"
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
 #include "gpu_driver_d3d_common.h"
+#include <stdio.h>
 
 namespace Alimer
 {
@@ -63,6 +66,8 @@ namespace Alimer
             //agpu_device_caps caps;
 
             bool debug;
+            bool vsync;
+
             IDXGIFactory2* factory;
             uint32_t factory_caps;
 
@@ -71,6 +76,8 @@ namespace Alimer
             ID3DUserDefinedAnnotation* d3d_annotation;
             D3D_FEATURE_LEVEL feature_level;
             bool is_lost;
+
+            IDXGISwapChain1* swapChain;
 
             Pool<D3D11_Texture, D3D11_Texture::MAX_COUNT> textures;
             Pool<D3D11_Buffer, D3D11_Buffer::MAX_COUNT> buffers;
@@ -248,11 +255,12 @@ namespace Alimer
         static bool D3D11_Init(const Config* config)
         {
             d3d11.debug = config->debug;
+            d3d11.vsync = config->vsync;
 
             if (!D3D11_CreateFactory())
                 return false;
 
-            IDXGIAdapter1* dxgiAdapter = D3D11_GetAdapter(config->powerPreference);
+            IDXGIAdapter1* dxgiAdapter = D3D11_GetAdapter(config->power_preference);
 
             /* Create d3d11 device */
             {
@@ -303,7 +311,7 @@ namespace Alimer
 #if defined(NDEBUG)
                 else
                 {
-                    agpu_log_error("No Direct3D hardware device found");
+                    //agpu_log_error("No Direct3D hardware device found");
                     AGPU_UNREACHABLE();
                 }
 #else
@@ -386,6 +394,31 @@ namespace Alimer
             d3d11.textures.Init();
             d3d11.buffers.Init();
 
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+            swapChainDesc.Width = config->width;
+            swapChainDesc.Height = config->height;
+            swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = 2u;
+            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+            // Create a swap chain for the window.
+            
+            VHR(d3d11.factory->CreateSwapChainForCoreWindow(
+                d3d11.device,
+                Platform::get_native_handle(),
+                &swapChainDesc,
+                nullptr,
+                &d3d11.swapChain
+            ));
+
+            //VHR(swapChain.As(&m_swapChain));
+
             // TODO: Init caps
             SAFE_RELEASE(dxgiAdapter);
 
@@ -428,6 +461,50 @@ namespace Alimer
                 dxgiDebug1->Release();
             }
 #endif
+        }
+
+        static void d3d11_begin_frame(void)
+        {
+        }
+
+        static void d3d11_end_frame(void)
+        {
+            HRESULT hr = E_FAIL;
+            if (!d3d11.vsync)
+            {
+                // Recommended to always use tearing if supported when using a sync interval of 0.
+                hr = d3d11.swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+            }
+            else
+            {
+                // The first argument instructs DXGI to block until VSync, putting the application
+                // to sleep until the next VSync. This ensures we don't waste any cycles rendering
+                // frames that will never be displayed to the screen.
+                hr = d3d11.swapChain->Present(1, 0);
+            }
+
+            // If the device was removed either by a disconnection or a driver upgrade, we
+            // must recreate all device resources.
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+#ifdef _DEBUG
+                char buff[64] = {};
+                sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+                    static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3d11.device->GetDeviceRemovedReason() : hr));
+                OutputDebugStringA(buff);
+#endif
+                //HandleDeviceLost();
+            }
+            else
+            {
+                VHR(hr);
+
+                if (!d3d11.factory->IsCurrent())
+                {
+                    // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+                    D3D11_CreateFactory();
+                }
+            }
         }
 
         /* Driver functions */
@@ -503,6 +580,8 @@ namespace Alimer
             static Renderer renderer = { nullptr };
             renderer.init = D3D11_Init;
             renderer.shutdown = D3D11_Shutdown;
+            renderer.begin_frame = d3d11_begin_frame;
+            renderer.end_frame = d3d11_end_frame;
             return &renderer;
         }
 

@@ -44,6 +44,7 @@
 #elif defined(__EMSCRIPTEN__)
 #  include <emscripten.h>
 #endif
+using namespace Alimer;
 
 namespace Alimer
 {
@@ -238,7 +239,7 @@ namespace Alimer
 #endif
 }
 
-    void Log(LogLevel level, const std::string& message)
+    void Write(LogLevel level, const std::string& message)
     {
         Logger::GetDefault()->Log(level, message);
     }
@@ -263,13 +264,13 @@ namespace Alimer
         Logger::GetDefault()->Log(LogLevel::Warn, message);
     }
 
-    void Error(const std::string& message)
-    {
-        Logger::GetDefault()->Log(LogLevel::Error, message);
-    }
-
     void Critical(const std::string& message)
     {
         Logger::GetDefault()->Log(LogLevel::Critical, message);
     }
+}
+
+void Log::error(const std::string& message)
+{
+    Logger::GetDefault()->Log(LogLevel::Error, message);
 }

@@ -20,38 +20,49 @@
 // THE SOFTWARE.
 //
 
-#include "Application/Application.h"
-#include "Application/AppHost.h"
-#include "Win32_Include.h"
+#include "application.h"
+#include "include_win32.h"
 #include <shellapi.h>
 #include <objbase.h>
 #include <DirectXMath.h>
-
-namespace
-{
-    std::string WStringToString(const std::wstring& wstr)
-    {
-        if (wstr.empty())
-        {
-            return {};
-        }
-
-        auto wstr_len = static_cast<int>(wstr.size());
-        auto str_len = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, NULL, 0, NULL, NULL);
-
-        std::string str(str_len, 0);
-        WideCharToMultiByte(CP_UTF8, 0, &wstr[0], wstr_len, &str[0], str_len, NULL, NULL);
-
-        return str;
-    }
-
-}
+#include <stdio.h>
+#include <stdlib.h>
 
 // Indicates to hybrid graphics systems to prefer the discrete part by default
 extern "C"
 {
     __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
     __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
+static char** _win32_command_line_to_utf8_argv(LPWSTR w_command_line, int* o_argc) {
+    int argc = 0;
+    char** argv = 0;
+    char* args;
+
+    LPWSTR* w_argv = CommandLineToArgvW(w_command_line, &argc);
+    if (w_argv == NULL) {
+        //LOGE("Win32: failed to parse command line");
+    }
+    else {
+        size_t size = wcslen(w_command_line) * 4;
+        argv = (char**)calloc(1, (argc + 1) * sizeof(char*) + size);
+        args = (char*)&argv[argc + 1];
+        int n;
+        for (int i = 0; i < argc; ++i) {
+            n = WideCharToMultiByte(CP_UTF8, 0, w_argv[i], -1, args, (int)size, NULL, NULL);
+            if (n == 0) {
+                //LOGE("Win32: failed to convert all arguments to utf8");
+                break;
+            }
+            argv[i] = args;
+            size -= n;
+            args += n;
+        }
+        LocalFree(w_argv);
+    }
+    *o_argc = argc;
+    return argv;
 }
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow)
@@ -75,33 +86,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
     }
 #endif
 
-    int argc;
-    wchar_t** wide_argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    std::vector<char*> argv_buffer(argc + 1);
-    char** argv = nullptr;
-    std::vector<std::string> argv_strings(argc);
-
-    if (wide_argv)
-    {
-        argv = argv_buffer.data();
-        for (int i = 0; i < argc; i++)
-        {
-            argv_strings[i] = WStringToString(wide_argv[i]);
-            argv_buffer[i] = const_cast<char*>(argv_strings[i].c_str());
-        }
-    }
-
-    //Alimer::Platform::set_arguments(argv_strings);
-
-    int exitCode = 1;
-    std::unique_ptr<Alimer::Application> app = std::unique_ptr<Alimer::Application>(Alimer::ApplicationCreate(argc, argv));
-
-    if (app)
-    {
-        exitCode = app->Run();
-        app.reset();
-    }
-
+    int argc_utf8 = 0;
+    char** argv_utf8 = _win32_command_line_to_utf8_argv(GetCommandLineW(), &argc_utf8);
+    Alimer::Config app_config = Alimer::App::main(argc_utf8, argv_utf8);
+    Alimer::App::run(&app_config);
+    free(argv_utf8);
     CoUninitialize();
-    return exitCode;
+    return EXIT_SUCCESS;
 }

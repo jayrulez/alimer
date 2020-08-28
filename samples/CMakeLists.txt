@@ -12,6 +12,10 @@ function(add_sample sample_name)
 	    add_executable(${sample_name} ${SOURCE_FILES})
     endif ()
 	target_link_libraries(${sample_name} Alimer)
+    
+    if (WINDOWS_STORE)
+        set_target_properties(${sample_name} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
+    endif ()
 
     install(TARGETS ${sample_name}
         LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
