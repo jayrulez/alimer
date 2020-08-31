@@ -25,6 +25,9 @@
 #include "core/log.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
+#ifdef _WIN32
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 #include <GLFW/glfw3native.h>
 
 using namespace Alimer;
@@ -55,7 +58,9 @@ bool Platform::init(const Config* config)
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#ifdef __APPLE__
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, config->debug);
         glfwWindowHint(GLFW_CONTEXT_NO_ERROR, !config->debug);
         glfwWindowHint(GLFW_SAMPLES, config->sample_count);
@@ -106,3 +111,20 @@ void Platform::run(void)
         glfwPollEvents();
     }
 }
+
+void* Platform::get_gl_proc_address(const char* name)
+{
+    return (void*)glfwGetProcAddress(name);
+}
+
+void Platform::swap_buffers(void)
+{
+    glfwSwapBuffers(window);
+}
+
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+HWND Platform::get_native_handle(void) noexcept
+{
+    return glfwGetWin32Window(window);
+}
+#endif

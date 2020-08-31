@@ -30,11 +30,11 @@ namespace Alimer
     ALIMER_API int32_t AtomicDecrement(volatile int32_t* value);
     ALIMER_API int64_t AtomicDecrement(volatile int64_t* value);
 
-    ALIMER_API int32_t AtomicAdd(int32_t volatile* addend, int32_t value);
-    ALIMER_API int64_t AtomicAdd(int64_t volatile* addend, int64_t value);
-    ALIMER_API int32_t AtomicSubtract(int32_t volatile* addend, int32_t value);
-    ALIMER_API int64_t AtomicSubtract(int64_t volatile* addend, int64_t value);
+    ALIMER_API int32_t AtomicAdd(volatile int32_t* addend, int32_t value);
+    ALIMER_API int64_t AtomicAdd(volatile int64_t* addend, int64_t value);
+    ALIMER_API int32_t AtomicSubtract(volatile int32_t* addend, int32_t value);
+    ALIMER_API int64_t AtomicSubtract(volatile int64_t* addend, int64_t value);
 
-    ALIMER_API bool CompareAndExchange(int32_t volatile* dest, int32_t exchange, int32_t comperand);
-    ALIMER_API bool CompareAndExchange64(int64_t volatile* dest, int64_t exchange, int64_t comperand);
+    ALIMER_API bool CompareAndExchange(volatile int32_t* dest, int32_t exchange, int32_t comperand);
+    ALIMER_API bool CompareAndExchange64(volatile int64_t* dest, int64_t exchange, int64_t comperand);
 }

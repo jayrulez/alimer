@@ -22,17 +22,38 @@
 
 #if defined(ALIMER_ENABLE_OPENGL)
 
+#include "platform/platform.h"
 #include "application.h"
 #include "gpu_driver.h"
 
 #if defined(__EMSCRIPTEN__)
-#   include <GLES3/gl3.h>
-#   include <GLES2/gl2ext.h>
-#   include <GL/gl.h>
-#   include <GL/glext.h>
+#   include "GLES2/gl2.h"
+#   include "GLES2/gl2ext.h"
+#   include "GLES3/gl3.h"
 #else
-#   include "glad/glad.h"
+#   include "GL/glcorearb.h"
+#   include "GL/glext.h"
 #endif
+
+#define GL_FOREACH(X)\
+    X(glGetError, GLGETERROR)\
+    X(glGetIntegerv, GLGETINTEGERV)\
+    X(glGetString, GLGETSTRING)\
+    X(glGetStringI, GLGETSTRINGI)\
+    X(glEnable, GLENABLE)\
+    X(glDisable, GLDISABLE)\
+    X(glCullFace, GLCULLFACE)\
+    X(glFrontFace, GLFRONTFACE)\
+    X(glPolygonOffset, GLPOLYGONOFFSET)\
+    X(glDepthMask, GLDEPTHMASK)\
+    X(glDepthFunc, GLDEPTHFUNC)\
+    X(glColorMask, GLCOLORMASK)\
+    X(glClearBufferfv, GLCLEARBUFFERFV)\
+    X(glClearBufferfi, GLCLEARBUFFERFI)\
+    X(glClearBufferiv, GLCLEARBUFFERIV)
+
+#define GL_DECLARE(fn, upper) static PFN##upper##PROC fn;
+#define GL_LOAD(fn, upper) fn = (PFN##upper##PROC) Platform::get_gl_proc_address(#fn);
 
 namespace Alimer
 {
@@ -52,6 +73,8 @@ namespace Alimer
             GLuint handle;
         };
 
+        GL_FOREACH(GL_DECLARE);
+
         /* Global data */
         static struct {
             Pool<GL_Texture, GL_Texture::MAX_COUNT> textures;
@@ -61,6 +84,10 @@ namespace Alimer
         /* Renderer functions */
         static bool gl_init(const Config* config)
         {
+#if !defined(__EMSCRIPTEN__)
+            GL_FOREACH(GL_LOAD);
+#endif
+
             // Init pools.
             d3d11.textures.Init();
             d3d11.buffers.Init();
@@ -72,8 +99,20 @@ namespace Alimer
         {
         }
 
+        static void gl_begin_frame(void)
+        {
+            float clear_color[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
+            glClearBufferfv(GL_COLOR, 0, clear_color);
+        }
+
+        static void gl_end_frame(void)
+        {
+            // Swap buffers
+            Platform::swap_buffers();
+        }
+
         /* Driver functions */
-        static bool opengl_supported(void)
+        static bool gl_supported(void)
         {
             return true;
         }
@@ -81,14 +120,13 @@ namespace Alimer
         static Renderer* gl_create_renderer(void)
         {
             static Renderer renderer = { nullptr };
-            renderer.init = gl_init;
-            renderer.shutdown = gl_shutdown;
+            ASSIGN_DRIVER(gl);
             return &renderer;
         }
 
         Driver gl_driver = {
             BackendType::OpenGL,
-            opengl_supported,
+            gl_supported,
             gl_create_renderer
         };
     }

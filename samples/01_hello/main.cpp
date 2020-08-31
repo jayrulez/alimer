@@ -22,22 +22,19 @@
 
 #include "application.h"
 
-namespace Alimer
+namespace Alimer::App
 {
-    namespace App
+    Config main(int argc, char* argv[])
     {
-        Config main(int argc, char* argv[])
-        {
-            Config config{};
-            config.graphics_backend = graphics::BackendType::OpenGL;
-            config.title = "TestApp";
-            //config.fullscreen = true;
-            //config.width = 1280;
-            //config.height = 720;
-            //config.on_render = render;
+        Config config{};
+        config.graphics_backend = graphics::BackendType::OpenGL;
+        config.title = "TestApp";
+        //config.fullscreen = true;
+        //config.width = 1280;
+        //config.height = 720;
+        //config.on_render = render;
 
-            return config;
-        }
+        return config;
     }
 }
 

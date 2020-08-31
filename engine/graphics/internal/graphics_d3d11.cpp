@@ -22,8 +22,8 @@
 
 #if defined(ALIMER_ENABLE_D3D11)
 
-#include "application.h"
 #include "platform/platform.h"
+#include "application.h"
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
 #include "gpu_driver_d3d_common.h"
@@ -252,7 +252,7 @@ namespace Alimer
             return adapter;
         }
 
-        static bool D3D11_Init(const Config* config)
+        static bool d3d11_init(const Config* config)
         {
             d3d11.debug = config->debug;
             d3d11.vsync = config->vsync;
@@ -402,13 +402,29 @@ namespace Alimer
             swapChainDesc.BufferCount = 2u;
             swapChainDesc.SampleDesc.Count = 1;
             swapChainDesc.SampleDesc.Quality = 0;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+#else
             swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+#endif
             swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
             swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
             // Create a swap chain for the window.
-            
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            fsSwapChainDesc.Windowed = TRUE;
+
+            VHR(d3d11.factory->CreateSwapChainForHwnd(
+                d3d11.device,
+                Platform::get_native_handle(),
+                &swapChainDesc,
+                &fsSwapChainDesc,
+                nullptr,
+                &d3d11.swapChain
+            ));
+#else
             VHR(d3d11.factory->CreateSwapChainForCoreWindow(
                 d3d11.device,
                 Platform::get_native_handle(),
@@ -416,7 +432,7 @@ namespace Alimer
                 nullptr,
                 &d3d11.swapChain
             ));
-
+#endif
             //VHR(swapChain.As(&m_swapChain));
 
             // TODO: Init caps
@@ -425,7 +441,7 @@ namespace Alimer
             return true;
         }
 
-        static void D3D11_Shutdown(void)
+        static void d3d11_shutdown(void)
         {
             SAFE_RELEASE(d3d11.context);
             SAFE_RELEASE(d3d11.d3d_annotation);
@@ -508,7 +524,7 @@ namespace Alimer
         }
 
         /* Driver functions */
-        static bool D3D11_IsSupported(void) {
+        static bool d3d11_supported(void) {
             if (d3d11.available_initialized) {
                 return d3d11.available;
             }
@@ -575,20 +591,17 @@ namespace Alimer
             return true;
         }
 
-        static Renderer* D3D11_CreateRenderer(void)
+        static Renderer* d3d11_create_renderer(void)
         {
             static Renderer renderer = { nullptr };
-            renderer.init = D3D11_Init;
-            renderer.shutdown = D3D11_Shutdown;
-            renderer.begin_frame = d3d11_begin_frame;
-            renderer.end_frame = d3d11_end_frame;
+            ASSIGN_DRIVER(d3d11);
             return &renderer;
         }
 
         Driver d3d11_driver = {
             BackendType::D3D11,
-            D3D11_IsSupported,
-            D3D11_CreateRenderer
+            d3d11_supported,
+            d3d11_create_renderer
         };
     }
 }

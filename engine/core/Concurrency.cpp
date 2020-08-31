@@ -60,7 +60,7 @@ namespace Alimer
 #endif
     }
 
-    int32_t AtomicAdd(int32_t volatile* addend, int32_t value) {
+    int32_t AtomicAdd(volatile int32_t* addend, int32_t value) {
 #if defined(_WIN32)
         return _InterlockedExchangeAdd((volatile long*)addend, value);
 #else
@@ -68,7 +68,8 @@ namespace Alimer
 #endif
     }
 
-    int64_t AtomicAdd(int64_t volatile* addend, int64_t value) {
+    int64_t AtomicAdd(volatile int64_t* addend, int64_t value)
+    {
 #if defined(_WIN32)
         return _InterlockedExchangeAdd64((volatile long long*)addend, value);
 #else
@@ -76,7 +77,7 @@ namespace Alimer
 #endif
     }
 
-    int32_t AtomicSubtract(int32_t volatile* addend, int32_t value) {
+    int32_t AtomicSubtract(volatile int32_t* addend, int32_t value) {
 #if defined(_WIN32)
         return _InterlockedExchangeAdd((volatile long*)addend, -value);
 #else
@@ -84,7 +85,7 @@ namespace Alimer
 #endif
     }
 
-    int64_t AtomicSubtract(int64_t volatile* addend, int64_t value) {
+    int64_t AtomicSubtract(volatile int64_t* addend, int64_t value) {
 #if defined(_WIN32)
         return _InterlockedExchangeAdd64((volatile long long*)addend, -value);
 #else
@@ -92,7 +93,7 @@ namespace Alimer
 #endif
     }
 
-    bool CompareAndExchange(int32_t volatile* dest, int32_t exchange, int32_t comperand) {
+    bool CompareAndExchange(volatile int32_t* dest, int32_t exchange, int32_t comperand) {
 #if defined(_WIN32)
         return _InterlockedCompareExchange((volatile long*)dest, exchange, comperand) == comperand;
 #else
@@ -100,7 +101,7 @@ namespace Alimer
 #endif
     }
 
-    bool CompareAndExchange64(int64_t volatile* dest, int64_t exchange, int64_t comperand) {
+    bool CompareAndExchange64(volatile int64_t* dest, int64_t exchange, int64_t comperand) {
 #if defined(_WIN32)
         return _InterlockedCompareExchange64(dest, exchange, comperand) == comperand;
 #else

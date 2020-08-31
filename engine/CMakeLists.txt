@@ -75,7 +75,6 @@ target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_COMPILE)
 target_include_directories(${TARGET_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>/third_party
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
@@ -164,6 +163,7 @@ endif()
 
 if (ALIMER_ENABLE_OPENGL)
     target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_OPENGL")
+    target_link_libraries(${TARGET_NAME} PRIVATE alimer_khronos_platform)
 endif()
 
 if (ALIMER_ENABLE_VULKAN)

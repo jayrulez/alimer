@@ -27,6 +27,7 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <winapifamily.h>
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+struct HWND__;
 #else
 struct IUnknown;
 #endif
@@ -42,8 +43,13 @@ namespace Alimer
         void shutdown(void) noexcept;
         void run(void);
 
+        /* OpenGL functions */
+        void* get_gl_proc_address(const char* name);
+        void swap_buffers(void);
+
 #if defined(_WIN32) || defined(_WIN64)
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND__* get_native_handle(void) noexcept;
 #else
         IUnknown* get_native_handle(void) noexcept;
 #endif

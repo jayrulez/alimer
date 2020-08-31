@@ -17,6 +17,14 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
 endif ()
 
+add_library(alimer_khronos_platform  INTERFACE)
+target_sources(alimer_khronos_platform INTERFACE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/KHR/khrplatform.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/GL/glcorearb.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/khronos/GL/glext.h"
+)
+target_include_directories(alimer_khronos_platform INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/khronos")
+
 if (ALIMER_ENABLE_VULKAN)
     # vulkan
     add_library(vulkan INTERFACE)

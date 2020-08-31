@@ -175,6 +175,13 @@ namespace Alimer
             void (*end_frame)(void);
         };
 
+#define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
+#define ASSIGN_DRIVER(name) \
+	ASSIGN_DRIVER_FUNC(init, name)\
+	ASSIGN_DRIVER_FUNC(shutdown, name)\
+    ASSIGN_DRIVER_FUNC(begin_frame, name)\
+    ASSIGN_DRIVER_FUNC(end_frame, name)
+
         struct Driver
         {
             BackendType type;

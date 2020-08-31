@@ -20,37 +20,23 @@
 // THE SOFTWARE.
 //
 
-#include "Editor.h"
+#include "application.h"
 
-namespace Alimer
+namespace Alimer::App
 {
-    Editor::Editor(const Configuration& config)
-        : Application(config)
+    Config main(int argc, char* argv[])
     {
+        Config config{};
+        config.graphics_backend = graphics::BackendType::Default;
+        config.title = "Alimer Studio";
+        //config.fullscreen = true;
+        config.width = 1280;
+        config.height = 720;
+        //config.on_render = render;
 
-    }
-
-    Editor::~Editor()
-    {
-
-    }
-
-    std::string Editor::GetName()
-    {
-        return "Alimer Studio";
-    }
-
-    Application* ApplicationCreate(int argc, char* argv[])
-    {
-        ApplicationDummy();
-
-        Configuration config{};
-        //config.windowTitle = "Alimer Studio";
-        return new Editor(config);
+        return config;
     }
 }
-
-
 
 #if TODO
 #include "OS/Window.h"
