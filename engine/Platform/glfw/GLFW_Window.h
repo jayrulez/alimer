@@ -20,30 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Platform/Window.h"
+
+struct GLFWwindow;
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    class GLFW_Window final : public Window
     {
     public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        /// Constructor.
+        GLFW_Window(const char* title, uint32 width, uint32 height, bool resizable, bool fullscreen);
 
-        }
+        /// Destructor.
+        ~GLFW_Window() override;
+
+        static void PollEvents();
+
+        bool IsOpen() const override;
+
+    private:
+        GLFWwindow* handle{ nullptr };
     };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
-    }
-}
-
+} 

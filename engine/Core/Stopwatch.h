@@ -20,30 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    class ALIMER_API Stopwatch final
     {
     public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        static constexpr uint64 TicksPerMillisecond = 10000;
+        static constexpr uint64 TicksPerSecond = 10000000;
 
-        }
+        /// Constructor.
+        Stopwatch();
+        /// Destructor.
+        ~Stopwatch();
+
+        void Reset();
+        void Start();
+        void Stop();
+        void Restart();
+
+        bool IsRunning() const { return isRunning; }
+        uint64 GetElapsedTicks() const;
+        uint64 GetElapsedMilliseconds() const;
+
+        static uint64 GetFrequency();
+        static uint64 GetTimestamp();
+
+    private:
+        bool isRunning;
+        uint64 elapsed;
+        uint64 startTimeStamp;
     };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
-    }
 }
-

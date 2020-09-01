@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Core/Platform.h"
+#include "Core/Preprocessor.h"
 
 namespace Alimer::ImGuiLayer
 {

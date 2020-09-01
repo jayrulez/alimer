@@ -20,30 +20,24 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
+#include <fmt/format.h>
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
-    {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+    using String = std::string;
 
-        }
-    };
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128;
+    static constexpr uint32_t MATRIX_CONVERSION_BUFFER_LENGTH = 256;
+    extern const std::string EMPTY_STRING;
 
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+#ifdef _WIN32
+    std::string ToUtf8(const wchar_t* wstr, size_t len);
+    std::string ToUtf8(const std::wstring& wstr);
 
-        return new HelloWorldApp(config);
-    }
+    std::wstring ToUtf16(const char* str, size_t len);
+    std::wstring ToUtf16(const std::string& str);
+#endif
 }
-

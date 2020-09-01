@@ -20,30 +20,27 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Core/Assert.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
-    {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+    using LibHandle = void*;
 
-        }
-    };
+    /**
+     * Open library (.so, .dll, .dylib).
+     * @param libName Name of libtary.
+     */
+    ALIMER_API LibHandle LibraryOpen(const char* libName);
 
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+    /**
+     * Close library.
+     */
+    ALIMER_API void LibraryClose(LibHandle handle);
 
-        return new HelloWorldApp(config);
-    }
-}
-
+    /**
+     * Get library symbol.
+     */
+    ALIMER_API void* LibrarySymbol(LibHandle handle, const char* symbolName);
+} 

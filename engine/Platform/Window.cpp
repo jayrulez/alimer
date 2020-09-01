@@ -20,30 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#include "Platform/Window.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    Window::Window(uint32 width, uint32 height)
+        : width{ width }
+        , height{ height }
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
     }
 }
-

@@ -20,11 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "application.h"
+#include "Editor.h"
 
-namespace Alimer::App
+namespace Alimer
 {
-    Config main(int argc, char* argv[])
+    Editor::Editor(const Config& config)
+        : Application(config)
+    {
+    }
+
+    Editor::~Editor()
+    {
+
+    }
+
+    Application* CreateApplication()
     {
         Config config{};
         config.graphics_backend = graphics::BackendType::Default;
@@ -34,7 +44,7 @@ namespace Alimer::App
         config.height = 720;
         //config.on_render = render;
 
-        return config;
+        return new Editor(config);
     }
 }
 

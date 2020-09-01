@@ -20,30 +20,12 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Core/Preprocessor.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
-    {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
-    }
+    ALIMER_API uint32 Murmur32(const void* key, uint32 len, uint32 seed);
+    ALIMER_API uint64 Murmur64(const void* key, uint64 len, uint64 seed);
 }
-

@@ -20,30 +20,42 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Platform/Platform.h"
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    enum class WindowsVersion 
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
-
-        }
+        Unknown,
+        Win7,
+        Win8,
+        Win81,
+        Win10
     };
 
-    Application* CreateApplication()
+    class WindowsPlatform : public Platform
     {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+    public:
+        static HINSTANCE hInstance;
 
-        return new HelloWorldApp(config);
-    }
+        WindowsPlatform(Application* application);
+        virtual ~WindowsPlatform();
+
+        /// Return the current windows version.
+        static WindowsVersion GetWindowsVersion();
+
+    private:
+        void Run() override;
+    };
 }
-

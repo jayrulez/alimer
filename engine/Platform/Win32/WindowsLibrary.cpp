@@ -20,30 +20,45 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#include "Platform/Library.h"
+#include "WindowsPlatform.h"
+
+#if defined(_DEBUG)
+#   include "Core/Log.h"
+#endif
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    LibHandle LibraryOpen(const char* libName)
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
+        HMODULE handle = LoadLibraryA(libName);
+
+#if defined(_DEBUG)
+        if (handle == nullptr)
         {
-
+            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
         }
-    };
+#endif
 
-    Application* CreateApplication()
+        return (LibHandle)handle;
+    }
+
+    void LibraryClose(LibHandle handle)
     {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+        FreeLibrary(static_cast<HMODULE>(handle));
+    }
 
-        return new HelloWorldApp(config);
+    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    {
+        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+
+#if defined(_DEBUG)
+        if (proc == nullptr)
+        {
+            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
+        }
+#endif
+
+        return proc;
     }
 }
-

@@ -22,26 +22,60 @@
 
 #pragma once
 
-#include "Platform/Application.h"
+#include "Platform/Platform.h"
+#include "Graphics/gpu/gpu.h"
 
 namespace Alimer
 {
-    class Gui;
-
-    class Editor final : public Application
+    struct Config
     {
-       // ALIMER_OBJECT(Editor, Application);
+        const char* title;
+        uint32_t width = 1280;
+        uint32_t height = 720;
+        bool fullscreen = false; 
+        bool resizable = true;
+        bool debug;
+        int vsync;
+        uint32_t sample_count;
 
+        graphics::BackendType graphics_backend;
+        graphics::PowerPreference power_preference;
+    };
+
+    class ALIMER_API Application 
+    {
     public:
+        enum class State
+        {
+            Uninitialized,
+        };
+
         /// Constructor.
-        Editor(const Config& config);
+        Application(const Config& config);
 
         /// Destructor.
-        ~Editor() override;
+        virtual ~Application();
+
+        /// Gets the current Application instance.
+        static Application* Current();
+
+        /// Setups all subsystem and run's platform main loop.
+        void Run();
+
+        void Tick();
+
+        // Gets the config data used to run the application
+        const Config* GetConfig();
+
+        /// Get the main window.
+        Window& GetMainWindow() const;
 
     private:
-        //void Initialize() override;
-        //bool BeginDraw() override;
-        //void Draw(const GameTime& gameTime) override;
+        std::unique_ptr<Platform> platform;
+        Config _config;
+        State _state;
+
     };
-}
+
+    extern Application* CreateApplication(void);
+} 

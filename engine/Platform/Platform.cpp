@@ -20,30 +20,47 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#include "Core/Assert.h"
+#include "Core/Log.h"
+#include "Platform/Platform.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    std::vector<std::string> Platform::arguments = {};
+
+    Platform::Platform(Application* application)
+        : application{ application }
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        ALIMER_ASSERT(application);
+    }
 
-        }
-    };
-
-    Application* CreateApplication()
+    Window& Platform::GetMainWindow() const
     {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+        return *window;
+    }
 
-        return new HelloWorldApp(config);
+    std::string Platform::GetName()
+    {
+        return "Windows";
+    }
+
+    PlatformId Platform::GetId()
+    {
+        return PlatformId::Windows;
+    }
+
+    PlatformFamily Platform::GetFamily()
+    {
+        return PlatformFamily::Desktop;
+    }
+
+    std::vector<std::string> Platform::GetArguments()
+    {
+        return Platform::arguments;
+    }
+
+    void Platform::SetArguments(const std::vector<std::string>& args)
+    {
+        arguments = args;
     }
 }
-

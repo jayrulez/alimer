@@ -20,30 +20,53 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#include "core/log.h"
+#include "platform/application.h"
+#include "platform/platform.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    static Application* s_appCurrent = nullptr;
+
+    Application::Application(const Config& config)
+        : _config(config)
+        , _state(State::Uninitialized)
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
-        }
-    };
+        platform = Platform::Create(this);
 
-    Application* CreateApplication()
+        s_appCurrent = this;
+    }
+
+    Application::~Application()
     {
-        Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+        s_appCurrent = nullptr;
+        platform.reset();
+    }
 
-        return new HelloWorldApp(config);
+    Application* Application::Current()
+    {
+        return s_appCurrent;
+    }
+
+    void Application::Run()
+    {
+        platform->Run();
+    }
+
+    void Application::Tick()
+    {
+
+    }
+
+    const Config* Application::GetConfig()
+    {
+        return &_config;
+    }
+
+    Window& Application::GetMainWindow() const
+    {
+        return platform->GetMainWindow();
     }
 }
-
