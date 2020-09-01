@@ -23,7 +23,7 @@
 #if defined(ALIMER_ENABLE_OPENGL)
 
 #include "platform/platform.h"
-#include "application.h"
+#include "platform/application.h"
 #include "gpu_driver.h"
 
 #if defined(__EMSCRIPTEN__)
@@ -85,7 +85,7 @@ namespace Alimer
         static bool gl_init(const Config* config)
         {
 #if !defined(__EMSCRIPTEN__)
-            GL_FOREACH(GL_LOAD);
+            //GL_FOREACH(GL_LOAD);
 #endif
 
             // Init pools.
@@ -108,7 +108,7 @@ namespace Alimer
         static void gl_end_frame(void)
         {
             // Swap buffers
-            Platform::swap_buffers();
+            //Platform::swap_buffers();
         }
 
         /* Driver functions */

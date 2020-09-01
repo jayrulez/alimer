@@ -19,76 +19,35 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-#include "application.h"
+
 #include "core/log.h"
+#include "platform/application.h"
 #include "platform/platform.h"
 
-using namespace Alimer;
-
-namespace
+namespace Alimer
 {
-    static Config app_config;
-    static bool app_is_running = false;
-}
+    static Application* s_appCurrent = nullptr;
 
-bool App::run(const Config* config)
-{
-    app_config = *config;
-
-    // figure out the graphics api
-    if (app_config.graphics_backend == graphics::BackendType::Default)
-    {
-        app_config.graphics_backend = graphics::get_platform_backend();
-        if (app_config.graphics_backend == graphics::BackendType::Default)
-        {
-            return false;
-        }
-    }
-
-    // Init platform first.
-    if (!Platform::init(&app_config))
-    {
-        Log::error("Failed to initialize system module");
-        return false;
-    }
-
-    // Init graphics
-    if (!graphics::init(&app_config))
+    // Make sure this is linked in.
+    void ApplicationDummy()
     {
     }
 
-    app_is_running = true;
-    // Run platform main loop.
-    Platform::run();
+    Application::Application(const Config& config)
+        : _config(config)
+        , _state(State::Uninitialized)
+    {
+        ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
+        s_appCurrent = this;
+    }
 
-    Platform::shutdown();
-    return true;
-}
+    Application::~Application()
+    {
+        s_appCurrent = nullptr;
+    }
 
-bool App::is_running(void)
-{
-    return app_is_running;
-}
-
-void App::tick(void)
-{
-    // TODO: add timer.
-
-    graphics::begin_frame();
-    graphics::end_frame();
-}
-
-const Config* App::get_config()
-{
-    return &app_config;
-}
-
-uint32_t App::get_width()
-{
-    return app_config.width;
-}
-
-uint32_t App::get_height()
-{
-    return app_config.height;
+    Application* Application::Current()
+    {
+        return s_appCurrent;
+    }
 }

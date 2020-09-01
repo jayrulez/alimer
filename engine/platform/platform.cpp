@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,20 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "core/Platform.h"
+#include "core/log.h"
+#include "platform/Platform.h"
 
 namespace Alimer
 {
-    class ALIMER_API Platform
+    std::vector<std::string> Platform::arguments = {};
+
+    std::vector<std::string> Platform::get_arguments()
     {
-    public:
-        Platform() = default;
-        virtual ~Platform() = default;
+        return Platform::arguments;
+    }
 
-
-        static std::vector<std::string> get_arguments();
-        static void set_arguments(const std::vector<std::string>& args);
-
-    private:
-        static std::vector<std::string> arguments;
-    };
+    void Platform::set_arguments(const std::vector<std::string>& args)
+    {
+        arguments = args;
+    }
 }

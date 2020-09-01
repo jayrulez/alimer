@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Object.h"
 #include "graphics/graphics.h"
 
 namespace Alimer
@@ -50,36 +51,33 @@ namespace Alimer
 
         graphics::BackendType graphics_backend;
         graphics::PowerPreference power_preference;
-
-        /* Callbacks */
-        void* user_data;
-        void (*on_startup)(void* user_data);
-        void (*on_shutdown)(void* user_data);
-        void (*on_event)(void* user_data, const Event* event);
     };
 
-    namespace App
+    class ALIMER_API Application 
     {
-#if !defined(ALIMER_SHARED_LIBRARY)
-        extern Config main(int argc, char* argv[]);
-#endif
+    public:
+        enum class State
+        {
+            Uninitialized,
+        };
 
-        // Run the application.
-        bool run(const Config* config);
+        /// Constructor.
+        Application(const Config& config);
 
-        // Returns whether the application is running.
-        bool is_running(void);
+        /// Destructor.
+        ~Application();
 
-        // Tick one frame.
-        void tick(void);
+        /// Gets the current Application instance.
+        static Application* Current();
 
-        // Gets the config data used to run the application
-        const Config* get_config();
+    private:
+        Config _config;
+        State _state;
+    };
 
-        // Gets the main window width.
-        uint32_t get_width();
+    extern Application* ApplicationCreate(void);
 
-        // Gets the main window height.
-        uint32_t get_height();
-    }
+    // Call this to ensure application-main is linked in correctly without having to mess around
+    // with -Wl,--whole-archive.
+    void ApplicationDummy(void);
 } 

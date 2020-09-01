@@ -22,19 +22,30 @@
 
 #include "application.h"
 
-namespace Alimer::App
+namespace Alimer
 {
-    Config main(int argc, char* argv[])
+    class HelloWorldApp final : public Application
     {
+    public:
+        HelloWorldApp(const Config& config)
+            : Application(config)
+        {
+
+        }
+    };
+
+    Application* ApplicationCreate()
+    {
+        ApplicationDummy();
+
         Config config{};
-        config.graphics_backend = graphics::BackendType::OpenGL;
+        //config.graphics_backend = graphics::BackendType::OpenGL;
         config.title = "TestApp";
         //config.fullscreen = true;
         //config.width = 1280;
         //config.height = 720;
-        //config.on_render = render;
 
-        return config;
+        return new HelloWorldApp(config);
     }
 }
 

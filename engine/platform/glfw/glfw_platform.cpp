@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,43 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "core/Platform.h"
+#include "glfw_platform.h"
+#include "platform/application.h"
+#include "core/log.h"
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#ifdef _WIN32
+#   define GLFW_EXPOSE_NATIVE_WIN32
+#endif
+#include <GLFW/glfw3native.h>
 
 namespace Alimer
 {
-    class ALIMER_API Platform
+    namespace
     {
-    public:
-        Platform() = default;
-        virtual ~Platform() = default;
+        void OnGLFWError(int code, const char* description)
+        {
+            LOGE("GLFW Error {} - {}", description, code);
+        }
+    }
 
+    GLFWPlatform::GLFWPlatform()
+    {
+        glfwSetErrorCallback(OnGLFWError);
+#ifdef __APPLE__
+        glfwInitHint(GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE);
+#endif
+        if (!glfwInit())
+        {
+            throw std::runtime_error("GLFW couldn't be initialized.");
+        }
 
-        static std::vector<std::string> get_arguments();
-        static void set_arguments(const std::vector<std::string>& args);
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    }
 
-    private:
-        static std::vector<std::string> arguments;
-    };
+    GLFWPlatform::~GLFWPlatform()
+    {
+        glfwTerminate();
+    }
 }
+

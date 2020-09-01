@@ -20,11 +20,60 @@
 // THE SOFTWARE.
 //
 
-#include "Core/DeviceInfo.h"
-#include "include_win32.h"
+#include "core/String.h"
+#include "core/DeviceInfo.h"
+#include "windows_platform.h"
+#include <shellapi.h>
+#include <objbase.h>
+
+// Indicates to hybrid graphics systems to prefer the discrete part by default
+extern "C"
+{
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
 
 namespace Alimer
 {
+    WindowsPlatform::WindowsPlatform(HINSTANCE hInstance)
+        : hInstance{ hInstance }
+    {
+        HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+        if (FAILED(hr))
+            return;
+
+#ifdef _DEBUG
+        if (AllocConsole()) {
+            FILE* fp;
+            freopen_s(&fp, "conin$", "r", stdin);
+            freopen_s(&fp, "conout$", "w", stdout);
+            freopen_s(&fp, "conout$", "w", stderr);
+        }
+#endif
+
+        // Parse command line
+        LPWSTR* argv;
+        int     argc;
+
+        argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+        // Ignore the first argument containing the application full path
+        std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
+        std::vector<std::string>  args;
+
+        for (auto& arg : arg_strings)
+        {
+            args.push_back(Alimer::ToUtf8(arg));
+        }
+
+        Platform::set_arguments(args);
+    }
+
+    WindowsPlatform::~WindowsPlatform()
+    {
+        CoUninitialize();
+    }
+
     const char* DeviceInfo::GetName()
     {
         return "Windows";

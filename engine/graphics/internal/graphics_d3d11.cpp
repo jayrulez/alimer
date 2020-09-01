@@ -23,7 +23,7 @@
 #if defined(ALIMER_ENABLE_D3D11)
 
 #include "platform/platform.h"
-#include "application.h"
+#include "platform/application.h"
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
 #include "gpu_driver_d3d_common.h"
@@ -413,17 +413,21 @@ namespace Alimer
 
             // Create a swap chain for the window.
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            HWND window = nullptr; // Platform::get_native_handle()
             DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
             fsSwapChainDesc.Windowed = TRUE;
 
             VHR(d3d11.factory->CreateSwapChainForHwnd(
                 d3d11.device,
-                Platform::get_native_handle(),
+                window,
                 &swapChainDesc,
                 &fsSwapChainDesc,
                 nullptr,
                 &d3d11.swapChain
             ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            VHR(d3d11.factory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
             VHR(d3d11.factory->CreateSwapChainForCoreWindow(
                 d3d11.device,

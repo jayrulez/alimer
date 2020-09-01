@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,27 +20,35 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "core/log.h"
+#include "platform/platform.h"
 
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "core/Platform.h"
-
-namespace Alimer
+#if defined(__ANDROID__)
+void android_main(android_app* state)
 {
-    class ALIMER_API Platform
-    {
-    public:
-        Platform() = default;
-        virtual ~Platform() = default;
+#elif ALIMER_PLATFORM_WINDOWS 
+#   include "platform/win32/windows_platform.h"
+#   include <DirectXMath.h>
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
+{
+    UNREFERENCED_PARAMETER(hPrevInstance);
+    UNREFERENCED_PARAMETER(lpCmdLine);
+    UNREFERENCED_PARAMETER(nCmdShow);
 
+    if (!DirectX::XMVerifyCPUSupport())
+        return 1;
 
-        static std::vector<std::string> get_arguments();
-        static void set_arguments(const std::vector<std::string>& args);
+    Alimer::WindowsPlatform platform{ hInstance };
 
-    private:
-        static std::vector<std::string> arguments;
-    };
+#elif ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
+#   include "platform/uwp/windows_platform.h"
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
+{
+#else
+int main(int argc, char* argv[])
+#endif
+
+#if !defined(__ANDROID__)
+return EXIT_SUCCESS;
+#endif
 }
