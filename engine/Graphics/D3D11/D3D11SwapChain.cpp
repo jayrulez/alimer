@@ -24,11 +24,11 @@
 #include "D3D11SwapChain.h"
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
-#include "Application/Window.h"
+#include "Platform/Window.h"
 
 using Microsoft::WRL::ComPtr;
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync)
         : device{ device }
@@ -46,7 +46,7 @@ namespace Alimer
             presentFlags = 0u;
         }
 
-        auto bounds = window->GetBounds();
+        /*auto bounds = window->GetBounds();
 
         handle = DXGICreateSwapChain(
             device->GetDXGIFactory(), device->GetDXGIFactoryCaps(),
@@ -56,7 +56,7 @@ namespace Alimer
             DXGI_FORMAT_B8G8R8A8_UNORM,
             backBufferCount,
             window->IsFullscreen());
-        AfterReset();
+        AfterReset();*/
     }
 
     D3D11SwapChain::~D3D11SwapChain()

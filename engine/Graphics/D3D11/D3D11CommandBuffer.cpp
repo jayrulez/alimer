@@ -21,11 +21,12 @@
 //
 
 #include "Core/Log.h"
+#if TODO
 #include "D3D11CommandBuffer.h"
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     D3D11CommandBuffer::D3D11CommandBuffer(D3D11GraphicsDevice* device, uint64_t memoryStreamBlockSize)
         : CommandBuffer(memoryStreamBlockSize)
@@ -266,3 +267,5 @@ namespace Alimer
     }
 }
 
+
+#endif // TODO

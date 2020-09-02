@@ -28,7 +28,7 @@
 #include "Graphics/Types.h"
 
 #if ALIMER_PLATFORM_WINDOWS
-#include "Platform/Win32/Win32_Include.h"
+#include "Platform/Win32/WindowsPlatform.h"
 #else
 #define NOMINMAX
 #endif
@@ -45,7 +45,7 @@
 #include <dxgidebug.h>
 #endif
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     template<typename T> void SafeRelease(T*& resource)
     {

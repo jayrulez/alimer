@@ -25,7 +25,7 @@
 #include "Core/Object.h"
 #include "Graphics/Types.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     class GPUDevice;
 

@@ -23,26 +23,15 @@
 #include "Core/Log.h"
 #include "Graphics/GPUBuffer.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
-    GPUBuffer::GPUBuffer(const std::string_view& name)
+    GPUBuffer::GPUBuffer(const std::string_view& name, const GPUBufferDescription* desc)
         : GPUResource(Type::Buffer, name)
-       // , handle(gpu::kInvalidBuffer)
+        , usage(desc->usage)
+        , size(desc->size)
+        , stride(desc->stride)
     {
 
-    }
-
-    bool GPUBuffer::Init(GPUBufferUsage usage, uint32_t size, uint32_t stride, const void* initialData)
-    {
-        if (IsAllocated())
-            Destroy();
-
-        return true;
-    }
-
-    bool GPUBuffer::IsAllocated() const
-    {
-        return _size > 0;
     }
 }
 

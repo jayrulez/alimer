@@ -22,7 +22,7 @@
 
 #include "D3D11Backend.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
     {

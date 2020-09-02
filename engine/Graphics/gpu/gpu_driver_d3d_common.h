@@ -48,22 +48,20 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-namespace Alimer
+namespace gpu
 {
-    namespace graphics
-    {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
-        extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-        extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_GET_DXGI_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
 #endif
 
-        enum class DXGIFactoryCaps : uint32_t {
-            FlipPresent = (1 << 0),
-            HDR = (1 << 1),
-            Tearing = (1 << 2)
-        };
-    }
+    enum class DXGIFactoryCaps : uint32_t {
+        FlipPresent = (1 << 0),
+        HDR = (1 << 1),
+        Tearing = (1 << 2)
+    };
+    GPU_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint32_t);
 }
 
 #endif /* AGPU_DRIVER_H */

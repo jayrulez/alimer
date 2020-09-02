@@ -25,7 +25,7 @@
 #include "Graphics/Texture.h"
 #include "D3D11Backend.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     class ALIMER_API D3D11Texture final : public Texture
     {
@@ -37,7 +37,7 @@ namespace Alimer
         /// Destructor
         ~D3D11Texture() override;
 
-        void Destroy() override;
+        void Destroy();
 
         ID3D11ShaderResourceView* GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
         ID3D11UnorderedAccessView* GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
@@ -45,7 +45,7 @@ namespace Alimer
         ID3D11DepthStencilView* GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
     private:
-        void BackendSetName() override;
+        void BackendSetName();
 
         D3D11GraphicsDevice* device;
         ID3D11Resource* handle;

@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "Graphics/GPUAdapter.h"
+#include "Graphics/Types.h"
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/Texture.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     struct GraphicsDeviceSettings
     {
@@ -41,37 +41,28 @@ namespace Alimer
     };
 
     class Window;
-    class GraphicsImpl;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice final : public Object
+    class ALIMER_API GraphicsDevice : public Object
     {
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
-        ~GraphicsDevice() override;
+        virtual ~GraphicsDevice() = default;
 
-        /// The single instance of the graphics device.
-        static GraphicsDevice* Instance;
-
-        static bool Initialize(Window* window, const GraphicsDeviceSettings& settings);
+        static std::unique_ptr<GraphicsDevice> Create(Window* window, const GraphicsDeviceSettings& settings);
 
         /// Wait for GPU to finish pending operation and become idle.
-        void WaitForGPU();
-        bool BeginFrame();
-        void EndFrame();
+        virtual void WaitForGPU() = 0;
 
-        /// Gets the adapter device.
-        //virtual GPUAdapter* GetAdapter() const = 0;
+        /// Total number of CPU frames completed.
+        virtual uint64 Frame() = 0;
 
         /// Gets the device backend type.
-        GPUBackendType GetBackendType() const;
+        RendererType GetRendererType() const { return caps.rendererType; }
 
-        /// Get the device features.
-        const GPUFeatures& GetFeatures() const;
-
-        /// Get the device limits.
-        const GPULimits& GetLimits() const;
+        /// Get the device caps.
+        const GraphicsDeviceCaps& GetCaps() const;
 
         //virtual Texture* GetBackbufferTexture() const = 0;
         //CommandBuffer& RequestCommandBuffer(const char* name = nullptr, bool profile = false);
@@ -79,20 +70,12 @@ namespace Alimer
         /* Resource creation methods. */
         //virtual GPUBuffer* CreateBuffer(const std::string_view& name) = 0;
 
-        /// Total number of CPU frames completed.
-        uint64_t GetFrameCount() const { return frameCount; }
-
     protected:
-        GraphicsDevice(GraphicsImpl* impl);
+        GraphicsDevice();
 
         //virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
 
-    private:
-        /// Whether a frame is active or not
-        bool frameActive{ false };
-
-        /// Number of frame count
-        uint64_t frameCount{ 0 };
+        GraphicsDeviceCaps caps{};
 
     private:
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);

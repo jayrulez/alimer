@@ -25,7 +25,7 @@
 #include "Graphics/CommandBuffer.h"
 #include "D3D11Backend.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
 	class ALIMER_API D3D11CommandBuffer : public CommandBuffer
 	{

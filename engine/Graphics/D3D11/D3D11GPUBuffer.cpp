@@ -24,7 +24,7 @@
 #include "D3D11GPUBuffer.h"
 #include "D3D11GraphicsDevice.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     namespace
     {
@@ -52,39 +52,39 @@ namespace Alimer
         }
     }
 
-    D3D11GPUBuffer::D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData)
-        : GPUBuffer(descriptor)
+    D3D11GPUBuffer::D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescription* desc, const void* initialData)
+        : GPUBuffer("", desc)
         , device{ device }
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
 
-        if (descriptor.size > c_maxBytes)
+        if (desc->size > c_maxBytes)
         {
-            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", descriptor.size);
+            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", desc->size);
             return;
         }
 
-        uint32_t bufferSize = descriptor.size;
-        if (any(descriptor.usage & GPUBufferUsage::Uniform))
+        uint32_t bufferSize = desc->size;
+        if (any(desc->usage & GPUBufferUsage::Uniform))
         {
-            bufferSize = AlignTo(descriptor.size, device->GetLimits().minUniformBufferOffsetAlignment);
+            bufferSize = AlignTo(desc->size, device->GetCaps().limits.minUniformBufferOffsetAlignment);
         }
 
-        const bool needUav = any(descriptor.usage & GPUBufferUsage::Storage) || any(descriptor.usage & GPUBufferUsage::Indirect);
+        const bool needUav = any(desc->usage & GPUBufferUsage::Storage) || any(desc->usage & GPUBufferUsage::Indirect);
 
         D3D11_BUFFER_DESC d3dDesc = {};
         d3dDesc.ByteWidth = bufferSize;
-        d3dDesc.BindFlags = D3D11GetBindFlags(descriptor.usage);
+        d3dDesc.BindFlags = D3D11GetBindFlags(desc->usage);
         d3dDesc.Usage = D3D11_USAGE_DEFAULT;
         d3dDesc.CPUAccessFlags = 0;
 
-        if (any(descriptor.usage & GPUBufferUsage::Dynamic))
+        if (any(desc->usage & GPUBufferUsage::Dynamic))
         {
             d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
             d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         }
-        else if (any(descriptor.usage & GPUBufferUsage::Staging)) {
+        else if (any(desc->usage & GPUBufferUsage::Staging)) {
             d3dDesc.Usage = D3D11_USAGE_STAGING;
             d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
         }
@@ -102,12 +102,12 @@ namespace Alimer
             }
         }
 
-        if (any(descriptor.usage & GPUBufferUsage::Indirect))
+        if (any(desc->usage & GPUBufferUsage::Indirect))
         {
             d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
         }
 
-        d3dDesc.StructureByteStride = descriptor.stride;
+        d3dDesc.StructureByteStride = desc->stride;
 
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialResourceData = {};

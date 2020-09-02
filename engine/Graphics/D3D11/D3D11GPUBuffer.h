@@ -25,13 +25,13 @@
 #include "Graphics/GPUBuffer.h"
 #include "D3D11Backend.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     class ALIMER_API D3D11GPUBuffer final : public GPUBuffer
     {
     public:
         /// Constructor.
-        D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescriptor& descriptor, const void* initialData);
+        D3D11GPUBuffer(D3D11GraphicsDevice* device, const GPUBufferDescription* desc, const void* initialData);
         /// Destructor
         ~D3D11GPUBuffer() override;
 

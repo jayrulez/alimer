@@ -24,7 +24,7 @@
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     namespace
     {
@@ -38,7 +38,7 @@ namespace Alimer
     }
 
     D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : Texture(Convert2DDesc(externalTexture, format))
+        : Texture("", Convert2DDesc(externalTexture, format))
         , device{ device }
         , handle(externalTexture)
     {
@@ -46,7 +46,7 @@ namespace Alimer
     }
 
     D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, const GPUTextureDescription& desc, const void* initialData)
-        : Texture(desc)
+        : Texture("", desc)
         , device{ device }
     {
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;

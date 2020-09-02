@@ -25,78 +25,24 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_ENABLE_BACKEND_D3D11)
+#if defined(ALIMER_ENABLE_D3D11)
 #   include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 
-namespace Alimer
+namespace Alimer::Graphics
 {
-    GraphicsDevice* GraphicsDevice::Instance;
-
-    GraphicsDevice::GraphicsDevice(GraphicsImpl* impl)
-    {
-        //LOGI("Using {} driver", ToString(impl->GetBackendType()));
-        Texture::RegisterObject();
-    }
-
-    GraphicsDevice::~GraphicsDevice()
+    GraphicsDevice::GraphicsDevice()
     {
     }
 
-    bool GraphicsDevice::Initialize(Window* window, const GraphicsDeviceSettings& settings)
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(Window* window, const GraphicsDeviceSettings& settings)
     {
-        if (Instance != nullptr)
-        {
-            LOGW("Cannot initialize more than one GraphicsDevice instances");
-            return true;
-        }
-
-        Instance = new GraphicsDevice(nullptr);
-        return true;
+        return std::make_unique<D3D11GraphicsDevice>(window, settings);
     }
 
-    void GraphicsDevice::WaitForGPU()
+    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
     {
-        //impl->WaitForGPU();
+        return caps;
     }
-
-    bool GraphicsDevice::BeginFrame()
-    {
-        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first.");
-
-        /*if (!impl->BeginFrame()) {
-            return false;
-        }*/
-
-        // Now the frame is active again.
-        frameActive = true;
-        return true;
-    }
-
-    void GraphicsDevice::EndFrame()
-    {
-        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame");
-
-        //impl->EndFrame();
-
-        // Frame is not active anymore.
-        frameActive = false;
-        ++frameCount;
-    }
-
-    /*GPUBackendType GraphicsDevice::GetBackendType() const
-    {
-        return impl->GetBackendType();
-    }
-
-    const GPUFeatures& GraphicsDevice::GetFeatures() const
-    {
-        return impl->GetFeatures();
-    }
-
-    const GPULimits& GraphicsDevice::GetLimits() const
-    {
-        return impl->GetLimits();
-    }*/
 }
 

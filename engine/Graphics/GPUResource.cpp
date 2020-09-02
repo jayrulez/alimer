@@ -24,3 +24,7 @@
 #include "Graphics/GPUResource.h"
 #include "Graphics/GraphicsDevice.h"
 
+namespace Alimer::Graphics
+{
+
+}

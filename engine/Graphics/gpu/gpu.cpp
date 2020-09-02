@@ -26,113 +26,57 @@
 #include "gpu_driver.h"
 #include "Platform/Application.h"
 
-namespace Alimer
+namespace gpu
 {
-    namespace graphics
+    static const agpu_driver* drivers[] = {
+       #if defined(ALIMER_ENABLE_D3D12)
+           &d3d12_driver,
+       #endif
+       #if defined(ALIMER_ENABLE_D3D11)
+           &d3d11_driver,
+       #endif
+       #if AGPU_DRIVER_METAL
+           & metal_driver,
+       #endif
+       #if AGPU_DRIVER_VULKAN && defined(TODO_VK)
+           &vulkan_driver,
+       #endif
+       #if defined(ALIMER_ENABLE_OPENGL)
+           &gl_driver,
+       #endif
+
+           NULL
+    };
+
+
+    agpu_api agpu_get_platform_api(void)
     {
-        static const Driver* drivers[] = {
-        #if defined(ALIMER_ENABLE_D3D11)
-            &d3d11_driver,
-        #endif
-        #if AGPU_DRIVER_METAL
-            & metal_driver,
-        #endif
-        #if AGPU_DRIVER_VULKAN && defined(TODO_VK)
-            &vulkan_driver,
-        #endif
-        #if defined(ALIMER_ENABLE_OPENGL)
-            &gl_driver,
-        #endif
-
-            NULL
-        };
-
-        static Renderer* gpu_renderer = nullptr;
-
-        BackendType get_platform_backend(void)
+        for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
         {
-            for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-            {
-                if (drivers[i]->supported()) {
-                    return drivers[i]->type;
-                }
-            }
+            if (!drivers[i])
+                break;
 
-            return BackendType::Default;
+            if (drivers[i]->supported()) {
+                return drivers[i]->api;
+            }
         }
 
-        bool init(const Config* config)
-        {
-            ALIMER_ASSERT(config);
+        return AGPU_API_DEFAULT;
+    }
 
-            if (gpu_renderer != nullptr)
-                return true;
+    bool agpu_init(agpu_api preferred_api, const agpu_config* config) {
 
-            graphics::BackendType graphics_backend = config->graphics_backend;
+    }
 
-        retry:
-            if (graphics_backend == BackendType::Default || graphics_backend == BackendType::Count)
-            {
-                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-                {
-                    if (!drivers[i])
-                        break;
+    void agpu_shutdown(void) {
 
-                    if (drivers[i]->supported())
-                    {
-                        gpu_renderer = drivers[i]->create_renderer();
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-                {
-                    if (!drivers[i])
-                        break;
+    }
 
-                    if (drivers[i]->type == graphics_backend && drivers[i]->supported()) {
-                        gpu_renderer = drivers[i]->create_renderer();
-                        break;
-                    }
-                }
-            }
+    void agpu_begin_frame(void) {
 
-            if (!gpu_renderer) {
-                graphics_backend = get_platform_backend();
-                goto retry;
-            }
+    }
 
-            if (!gpu_renderer || !gpu_renderer->init(config)) {
-                return false;
-            }
+    void agpu_end_frame(void) {
 
-            // Register factories
-            Texture::RegisterObject();
-
-            return true;
-        }
-
-        void shutdown(void)
-        {
-            if (gpu_renderer == nullptr)
-            {
-                return;
-            }
-
-            gpu_renderer->shutdown();
-            gpu_renderer = nullptr;
-        }
-
-        void begin_frame(void)
-        {
-            gpu_renderer->begin_frame();
-        }
-
-        void end_frame(void)
-        {
-            gpu_renderer->end_frame();
-        }
     }
 }

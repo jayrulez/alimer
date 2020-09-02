@@ -23,29 +23,10 @@
 #include "Core/Log.h"
 #include "Graphics/Texture.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
-    void Texture::RegisterObject()
-    {
-        RegisterFactory<Texture>();
-    }
-
-    Texture::Texture()
-        : handle(graphics::kInvalidTexture)
-    {
-
-    }
-
-    Texture::~Texture()
-    {
-        if (handle.is_valid()) {
-
-        }
-    }
-
-    /*Texture::Texture(const GPUTextureDescription& desc)
-        : GPUResource(Type::Texture, desc.label)
-        , type(desc.type)
+    Texture::Texture(const std::string_view& name, const GPUTextureDescription& desc)
+        : type(desc.type)
         , format(desc.format)
         , usage(desc.usage)
         , width(desc.width)
@@ -55,7 +36,8 @@ namespace Alimer
         , mipLevels(desc.mipLevels)
         , sampleCount(desc.sampleCount)
     {
-    }*/
+
+    }
 
     uint32 Texture::GetWidth(uint32 mipLevel) const
     {
@@ -69,8 +51,8 @@ namespace Alimer
 
     uint32 Texture::GetDepth(uint32 mipLevel) const
     {
-       // if (type == TextureType::Type3D)
-        //    return 1u;
+        // if (type == TextureType::Type3D)
+         //    return 1u;
 
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }

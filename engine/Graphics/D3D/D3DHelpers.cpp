@@ -23,7 +23,7 @@
 #include "D3DHelpers.h"
 using Microsoft::WRL::ComPtr;
 
-namespace Alimer
+namespace Alimer::Graphics
 {
 #ifdef ALIMER_ENABLE_ASSERT
 #define CHK_ERRA(hrchk) case hrchk: wcscpy_s( desc, count, L#hrchk )

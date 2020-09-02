@@ -22,12 +22,12 @@
 
 #include "Graphics/Types.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
-    const char* ToString(GPUBackendType value)
+    const char* ToString(RendererType value)
     {
         static const char* names[] = {
-            "Null", "D3D11", "D3D12", "Metal", "Vulkan", "OpenGL", "OpenGLES", "Count"
+            "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "OpenGL", "Count"
         };
 
         return names[(unsigned)value];

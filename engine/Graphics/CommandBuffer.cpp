@@ -23,7 +23,7 @@
 #include "Core/Log.h"
 #include "Graphics/CommandBuffer.h"
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     CommandBuffer::CommandBuffer(uint64_t memoryStreamBlockSize)
         : state(State::Initial)

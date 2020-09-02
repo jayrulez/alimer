@@ -26,18 +26,25 @@
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
 
-#if !defined(GPU_DEBUG)
-#   if !defined(NDEBUG) || defined(DEBUG) || defined(_DEBUG)
-#	    define GPU_DEBUG
-#   endif
-#endif
-
-namespace Alimer
+namespace Alimer::Graphics
 {
     static constexpr uint32 kInflightFrameCount = 2u;
-    
+    static constexpr uint32 kMaxColorAttachments = 8u;
+    static constexpr uint32 kMaxVertexBufferBindings = 8u;
+    static constexpr uint32 kMaxVertexAttributes = 16u;
+    static constexpr uint32 kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32 kMaxVertexBufferStride = 2048u;
+    static constexpr uint32 kMaxViewportAndScissorRects = 8u;
 
-    enum class GPUAdapterType 
+    static constexpr uint32 KnownVendorId_AMD = 0x1002;
+    static constexpr uint32 KnownVendorId_Intel = 0x8086;
+    static constexpr uint32 KnownVendorId_Nvidia = 0x10DE;
+    static constexpr uint32 KnownVendorId_Microsoft = 0x1414;
+    static constexpr uint32 KnownVendorId_ARM = 0x13B5;
+    static constexpr uint32 KnownVendorId_ImgTec = 0x1010;
+    static constexpr uint32 KnownVendorId_Qualcomm = 0x5143;
+
+    enum class GPUAdapterType
     {
         DiscreteGPU,
         IntegratedGPU,
@@ -46,24 +53,29 @@ namespace Alimer
     };
 
     /// Enum describing the rendering backend.
-    enum class GPUBackendType 
+    enum class RendererType
     {
         /// Null renderer.
         Null,
         /// Direct3D 11 backend.
-        D3D11,
+        Direct3D11,
         /// Direct3D 12 backend.
-        D3D12,
+        Direct3D12,
         /// Metal backend.
         Metal,
         /// Vulkan backend.
         Vulkan,
         /// OpenGL backend.
         OpenGL,
-        /// OpenGLES backend.
-        OpenGLES,
         /// Default best platform supported backend.
         Count
+    };
+
+    enum class PowerPreference : uint32_t
+    {
+        Default,
+        LowPower,
+        HighPerformance
     };
 
     /// Describes the texture type.
@@ -118,6 +130,13 @@ namespace Alimer
     };
 
     /* Structs */
+    struct GPUBufferDescription
+    {
+        GPUBufferUsage usage;
+        uint32 size;
+        uint32 stride;
+    };
+
     struct GPUTextureDescription
     {
         TextureType type = TextureType::Type2D;
@@ -147,60 +166,104 @@ namespace Alimer
         }
     };
 
-    struct GPUFeatures
+    struct GraphicsDeviceCaps
     {
-        bool independentBlend = false;
-        bool computeShader = false;
-        bool geometryShader = false;
-        bool tessellationShader = false;
-        bool logicOp = false;
-        bool multiViewport = false;
-        bool fullDrawIndexUint32 = false;
-        bool multiDrawIndirect = false;
-        bool fillModeNonSolid = false;
-        bool samplerAnisotropy = false;
-        bool textureCompressionETC2 = false;
-        bool textureCompressionASTC_LDR = false;
-        bool textureCompressionBC = false;
-        /// Specifies whether cube array textures are supported.
-        bool textureCubeArray = false;
-        /// Specifies whether raytracing is supported.
-        bool raytracing = false;
+        RendererType rendererType;
+
+        /// Gets the GPU device identifier.
+        uint32 deviceId;
+
+        /// Gets the GPU vendor identifier.
+        uint32 vendorId;
+
+        /// Gets the adapter name.
+        std::string adapterName;
+
+        /// Gets the adapter type.
+        GPUAdapterType adapterType;
+
+        struct Features
+        {
+            bool independentBlend = false;
+            bool computeShader = false;
+            bool geometryShader = false;
+            bool tessellationShader = false;
+            bool logicOp = false;
+            bool multiViewport = false;
+            bool fullDrawIndexUint32 = false;
+            bool multiDrawIndirect = false;
+            bool fillModeNonSolid = false;
+            bool samplerAnisotropy = false;
+            bool textureCompressionETC2 = false;
+            bool textureCompressionASTC_LDR = false;
+            bool textureCompressionBC = false;
+            /// Specifies whether cube array textures are supported.
+            bool textureCubeArray = false;
+            /// Specifies whether raytracing is supported.
+            bool raytracing = false;
+        };
+
+        struct Limits
+        {
+            uint32_t maxVertexAttributes;
+            uint32_t maxVertexBindings;
+            uint32_t maxVertexAttributeOffset;
+            uint32_t maxVertexBindingStride;
+            uint32_t maxTextureDimension2D;
+            uint32_t maxTextureDimension3D;
+            uint32_t maxTextureDimensionCube;
+            uint32_t maxTextureArrayLayers;
+            uint32_t maxColorAttachments;
+            uint32_t maxUniformBufferSize;
+            uint32_t minUniformBufferOffsetAlignment;
+            uint32_t maxStorageBufferSize;
+            uint32_t minStorageBufferOffsetAlignment;
+            uint32_t maxSamplerAnisotropy;
+            uint32_t maxViewports;
+            uint32_t maxViewportWidth;
+            uint32_t maxViewportHeight;
+            uint32_t maxTessellationPatchSize;
+            float pointSizeRangeMin;
+            float pointSizeRangeMax;
+            float lineWidthRangeMin;
+            float lineWidthRangeMax;
+            uint32_t maxComputeSharedMemorySize;
+            uint32_t maxComputeWorkGroupCountX;
+            uint32_t maxComputeWorkGroupCountY;
+            uint32_t maxComputeWorkGroupCountZ;
+            uint32_t maxComputeWorkGroupInvocations;
+            uint32_t maxComputeWorkGroupSizeX;
+            uint32_t maxComputeWorkGroupSizeY;
+            uint32_t maxComputeWorkGroupSizeZ;
+        };
+
+        Features features;
+        Limits limits;
     };
 
-    struct GPULimits
-    {
-        uint32_t maxVertexAttributes;
-        uint32_t maxVertexBindings;
-        uint32_t maxVertexAttributeOffset;
-        uint32_t maxVertexBindingStride;
-        uint32_t maxTextureDimension2D;
-        uint32_t maxTextureDimension3D;
-        uint32_t maxTextureDimensionCube;
-        uint32_t maxTextureArrayLayers;
-        uint32_t maxColorAttachments;
-        uint32_t maxUniformBufferSize;
-        uint32_t minUniformBufferOffsetAlignment;
-        uint32_t maxStorageBufferSize;
-        uint32_t minStorageBufferOffsetAlignment;
-        uint32_t maxSamplerAnisotropy;
-        uint32_t maxViewports;
-        uint32_t maxViewportWidth;
-        uint32_t maxViewportHeight;
-        uint32_t maxTessellationPatchSize;
-        float pointSizeRangeMin;
-        float pointSizeRangeMax;
-        float lineWidthRangeMin;
-        float lineWidthRangeMax;
-        uint32_t maxComputeSharedMemorySize;
-        uint32_t maxComputeWorkGroupCountX;
-        uint32_t maxComputeWorkGroupCountY;
-        uint32_t maxComputeWorkGroupCountZ;
-        uint32_t maxComputeWorkGroupInvocations;
-        uint32_t maxComputeWorkGroupSizeX;
-        uint32_t maxComputeWorkGroupSizeY;
-        uint32_t maxComputeWorkGroupSizeZ;
-    };
+    ALIMER_API const char* ToString(RendererType value);
 
-    ALIMER_API const char* ToString(GPUBackendType value);
+    // Returns true if adapter's vendor is AMD.
+    ALIMER_FORCE_INLINE bool IsAMD(uint32 vendorId)
+    {
+        return vendorId == KnownVendorId_AMD;
+    }
+
+    // Returns true if adapter's vendor is Intel.
+    ALIMER_FORCE_INLINE bool IsIntel(uint32 vendorId)
+    {
+        return vendorId == KnownVendorId_Intel;
+    }
+
+    // Returns true if adapter's vendor is Nvidia.
+    ALIMER_FORCE_INLINE bool IsNvidia(uint32 vendorId)
+    {
+        return vendorId == KnownVendorId_Nvidia;
+    }
+
+    // Returns true if adapter's vendor is Microsoft.
+    ALIMER_FORCE_INLINE bool IsMicrosoft(uint32 vendorId)
+    {
+        return vendorId == KnownVendorId_Microsoft;
+    }
 }

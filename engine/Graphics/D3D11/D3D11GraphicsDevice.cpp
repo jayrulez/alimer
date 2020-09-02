@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11GPUAdapter.h"
-#include "D3D11CommandBuffer.h"
+//#include "D3D11CommandBuffer.h"
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
 #include "D3D11GPUBuffer.h"
@@ -30,10 +29,10 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const GraphicsDeviceSettings& settings)
-        : GraphicsDevice(window, GPUBackendType::D3D11)
+        : GraphicsDevice()
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         dxgiDLL = LoadLibraryW(L"dxgi.dll");
@@ -212,15 +211,15 @@ namespace Alimer
             ThrowIfFailed(context.As(&immediateContext));
             ThrowIfFailed(context.As(&d3dAnnotation));
 
-            // Init adapter.
-            adapter = new D3D11GPUAdapter(dxgiAdapter);
-
             // Init caps
-            InitCapabilities();
+            InitCapabilities(dxgiAdapter.Get());
         }
 
         // Create SwapChain.
-        swapChain = new D3D11SwapChain(this, window, settings.colorFormatSrgb, settings.verticalSync);
+        //swapChain = new D3D11SwapChain(this, window, settings.colorFormatSrgb, settings.verticalSync);
+
+        // 
+        LOGI("Successfully created {} GraphicsDevice", ToString(caps.rendererType));
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
@@ -238,7 +237,7 @@ namespace Alimer
         SafeDelete(swapChain);
         d3dAnnotation.Reset();
         immediateContext.Reset();
-        cmdBuffersPool.clear();
+        //cmdBuffersPool.clear();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -256,13 +255,6 @@ namespace Alimer
 #else
         (void)refCount; // avoid warning
 #endif
-
-        SafeDelete(adapter);
-    }
-
-    GPUAdapter* D3D11GraphicsDevice::GetAdapter() const
-    {
-        return adapter;
     }
 
     void D3D11GraphicsDevice::CreateFactory()
@@ -376,65 +368,85 @@ namespace Alimer
     }
 #endif
 
-    void D3D11GraphicsDevice::InitCapabilities()
+    void D3D11GraphicsDevice::InitCapabilities(IDXGIAdapter1* adapter)
     {
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
+
+        caps.rendererType = RendererType::Direct3D11;
+        caps.deviceId = desc.DeviceId;
+        caps.vendorId = desc.VendorId;
+
+        std::wstring deviceName(desc.Description);
+        caps.adapterName = Alimer::ToUtf8(deviceName);
+
+        // Detect adapter type.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            caps.adapterType = GPUAdapterType::CPU;
+        }
+        else
+        {
+            caps.adapterType = GPUAdapterType::IntegratedGPU;
+        }
+
         D3D11_FEATURE_DATA_THREADING threadingSupport = { 0 };
         ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingSupport, sizeof(threadingSupport)));
 
         // Features
-        features.independentBlend = true;
-        features.computeShader = true;
-        features.geometryShader = true;
-        features.tessellationShader = true;
-        features.logicOp = true;
-        features.multiViewport = true;
-        features.fullDrawIndexUint32 = true;
-        features.multiDrawIndirect = true;
-        features.fillModeNonSolid = true;
-        features.samplerAnisotropy = true;
-        features.textureCompressionETC2 = false;
-        features.textureCompressionASTC_LDR = false;
-        features.textureCompressionBC = true;
-        features.textureCubeArray = true;
-        features.raytracing = false;
+        caps.features.independentBlend = true;
+        caps.features.computeShader = true;
+        caps.features.geometryShader = true;
+        caps.features.tessellationShader = true;
+        caps.features.logicOp = true;
+        caps.features.multiViewport = true;
+        caps.features.fullDrawIndexUint32 = true;
+        caps.features.multiDrawIndirect = true;
+        caps.features.fillModeNonSolid = true;
+        caps.features.samplerAnisotropy = true;
+        caps.features.textureCompressionETC2 = false;
+        caps.features.textureCompressionASTC_LDR = false;
+        caps.features.textureCompressionBC = true;
+        caps.features.textureCubeArray = true;
+        caps.features.raytracing = false;
 
         // Limits
-        limits.maxVertexAttributes = kMaxVertexAttributes;
-        limits.maxVertexBindings = kMaxVertexAttributes;
-        limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
-        limits.maxVertexBindingStride = kMaxVertexBufferStride;
+        caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+        caps.limits.maxVertexBindings = kMaxVertexAttributes;
+        caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
 
         //caps.limits.maxTextureDimension1D = D3D11_REQ_TEXTURE1D_U_DIMENSION;
-        limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
-        limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
-        limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
-        limits.minUniformBufferOffsetAlignment = 256u;
-        limits.maxStorageBufferSize = UINT32_MAX;
-        limits.minStorageBufferOffsetAlignment = 16;
-        limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
-        limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        if (limits.maxViewports > kMaxViewportAndScissorRects) {
-            limits.maxViewports = kMaxViewportAndScissorRects;
+        caps.limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        caps.limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        caps.limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
+        caps.limits.maxTextureArrayLayers = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        caps.limits.maxColorAttachments = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        caps.limits.maxUniformBufferSize = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        caps.limits.minUniformBufferOffsetAlignment = 256u;
+        caps.limits.maxStorageBufferSize = UINT32_MAX;
+        caps.limits.minStorageBufferOffsetAlignment = 16;
+        caps.limits.maxSamplerAnisotropy = D3D11_MAX_MAXANISOTROPY;
+        caps.limits.maxViewports = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        if (caps.limits.maxViewports > kMaxViewportAndScissorRects) {
+            caps.limits.maxViewports = kMaxViewportAndScissorRects;
         }
 
-        limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
-        limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
-        limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
-        limits.pointSizeRangeMin = 1.0f;
-        limits.pointSizeRangeMax = 1.0f;
-        limits.lineWidthRangeMin = 1.0f;
-        limits.lineWidthRangeMax = 1.0f;
-        limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
-        limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
-        limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
-        limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
-        limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
+        caps.limits.maxViewportWidth = D3D11_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxViewportHeight = D3D11_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxTessellationPatchSize = D3D11_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        caps.limits.pointSizeRangeMin = 1.0f;
+        caps.limits.pointSizeRangeMax = 1.0f;
+        caps.limits.lineWidthRangeMin = 1.0f;
+        caps.limits.lineWidthRangeMax = 1.0f;
+        caps.limits.maxComputeSharedMemorySize = D3D11_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        caps.limits.maxComputeWorkGroupCountX = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountY = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountZ = D3D11_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupInvocations = D3D11_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        caps.limits.maxComputeWorkGroupSizeX = D3D11_CS_THREAD_GROUP_MAX_X;
+        caps.limits.maxComputeWorkGroupSizeY = D3D11_CS_THREAD_GROUP_MAX_Y;
+        caps.limits.maxComputeWorkGroupSizeZ = D3D11_CS_THREAD_GROUP_MAX_Z;
 
         /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
         UINT dxgi_fmt_caps = 0;
@@ -454,14 +466,14 @@ namespace Alimer
         }
     }
 
-    bool D3D11GraphicsDevice::BeginFrameImpl()
+    void D3D11GraphicsDevice::WaitForGPU()
     {
-        return !isLost;
+        immediateContext->Flush();
     }
 
-    void D3D11GraphicsDevice::EndFrameImpl()
+    uint64 D3D11GraphicsDevice::Frame()
     {
-        SubmitCommandBuffers();
+        //SubmitCommandBuffers();
 
         HRESULT  hr = swapChain->Present();
 
@@ -486,7 +498,10 @@ namespace Alimer
                 // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
                 CreateFactory();
             }
+
         }
+
+        return frameCount++;
     }
 
     void D3D11GraphicsDevice::HandleDeviceLost()
@@ -494,32 +509,32 @@ namespace Alimer
         isLost = true;
     }
 
-    Texture* D3D11GraphicsDevice::GetBackbufferTexture() const
-    {
-        return swapChain->GetColorTexture();
-    }
+    //Texture* D3D11GraphicsDevice::GetBackbufferTexture() const
+    //{
+    //    return swapChain->GetColorTexture();
+    //}
 
-    CommandBuffer* D3D11GraphicsDevice::RequestCommandBufferCore(const char* name, bool profile)
-    {
-        std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
+    //CommandBuffer* D3D11GraphicsDevice::RequestCommandBufferCore(const char* name, bool profile)
+    //{
+    //    std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
 
-        D3D11CommandBuffer* commandBuffer = nullptr;
-        if (availableCommandBuffers.empty())
-        {
-            //commandBuffer = new D3D11CommandBuffer(this, MEGABYTES(8));
-            commandBuffer = new D3D11ContextCommandBuffer(this);
-            cmdBuffersPool.emplace_back(commandBuffer);
-        }
-        else
-        {
-            commandBuffer = availableCommandBuffers.front();
-            availableCommandBuffers.pop();
-            commandBuffer->Reset();
-        }
-        ALIMER_ASSERT(commandBuffer != nullptr);
+    //    D3D11CommandBuffer* commandBuffer = nullptr;
+    //    if (availableCommandBuffers.empty())
+    //    {
+    //        //commandBuffer = new D3D11CommandBuffer(this, MEGABYTES(8));
+    //        commandBuffer = new D3D11ContextCommandBuffer(this);
+    //        cmdBuffersPool.emplace_back(commandBuffer);
+    //    }
+    //    else
+    //    {
+    //        commandBuffer = availableCommandBuffers.front();
+    //        availableCommandBuffers.pop();
+    //        commandBuffer->Reset();
+    //    }
+    //    ALIMER_ASSERT(commandBuffer != nullptr);
 
-        return commandBuffer;
-    }
+    //    return commandBuffer;
+    //}
 
     void D3D11GraphicsDevice::CommitCommandBuffer(D3D11CommandBuffer* commandBuffer)
     {
@@ -530,7 +545,7 @@ namespace Alimer
     {
         ALIMER_ASSERT(commandBuffer != nullptr);
         std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
-        commandBuffer->Execute(immediateContext.Get(), d3dAnnotation.Get());
+        //commandBuffer->Execute(immediateContext.Get(), d3dAnnotation.Get());
         availableCommandBuffers.push(commandBuffer);
     }
 

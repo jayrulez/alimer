@@ -55,81 +55,78 @@
 #define GL_DECLARE(fn, upper) static PFN##upper##PROC fn;
 #define GL_LOAD(fn, upper) fn = (PFN##upper##PROC) Platform::get_gl_proc_address(#fn);
 
-namespace Alimer
+namespace gpu
 {
-    namespace graphics
+    struct GL_Texture
     {
-        struct GL_Texture
-        {
-            enum { MAX_COUNT = 8192 };
+        enum { MAX_COUNT = 8192 };
 
-            GLuint handle;
-        };
+        GLuint handle;
+    };
 
-        struct GL_Buffer
-        {
-            enum { MAX_COUNT = 8192 };
+    struct GL_Buffer
+    {
+        enum { MAX_COUNT = 8192 };
 
-            GLuint handle;
-        };
+        GLuint handle;
+    };
 
-        GL_FOREACH(GL_DECLARE);
+    GL_FOREACH(GL_DECLARE);
 
-        /* Global data */
-        static struct {
-            Pool<GL_Texture, GL_Texture::MAX_COUNT> textures;
-            Pool<GL_Buffer, GL_Buffer::MAX_COUNT> buffers;
-        } d3d11;
+    /* Global data */
+    static struct {
+        Pool<GL_Texture, GL_Texture::MAX_COUNT> textures;
+        Pool<GL_Buffer, GL_Buffer::MAX_COUNT> buffers;
+    } d3d11;
 
-        /* Renderer functions */
-        static bool gl_init(const Config* config)
-        {
+    /* Renderer functions */
+    static bool gl_init(const gpu_config* config)
+    {
 #if !defined(__EMSCRIPTEN__)
-            //GL_FOREACH(GL_LOAD);
+        //GL_FOREACH(GL_LOAD);
 #endif
 
             // Init pools.
-            d3d11.textures.Init();
-            d3d11.buffers.Init();
+        d3d11.textures.Init();
+        d3d11.buffers.Init();
 
-            return true;
-        }
-
-        static void gl_shutdown(void)
-        {
-        }
-
-        static void gl_begin_frame(void)
-        {
-            float clear_color[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
-            glClearBufferfv(GL_COLOR, 0, clear_color);
-        }
-
-        static void gl_end_frame(void)
-        {
-            // Swap buffers
-            //Platform::swap_buffers();
-        }
-
-        /* Driver functions */
-        static bool gl_supported(void)
-        {
-            return true;
-        }
-
-        static Renderer* gl_create_renderer(void)
-        {
-            static Renderer renderer = { nullptr };
-            ASSIGN_DRIVER(gl);
-            return &renderer;
-        }
-
-        Driver gl_driver = {
-            BackendType::OpenGL,
-            gl_supported,
-            gl_create_renderer
-        };
+        return true;
     }
+
+    static void gl_shutdown(void)
+    {
+    }
+
+    static void gl_begin_frame(void)
+    {
+        float clear_color[4] = { 0.2f, 0.3f, 0.3f, 1.0f };
+        glClearBufferfv(GL_COLOR, 0, clear_color);
+    }
+
+    static void gl_end_frame(void)
+    {
+        // Swap buffers
+        //Platform::swap_buffers();
+    }
+
+    /* Driver functions */
+    static bool gl_supported(void)
+    {
+        return true;
+    }
+
+    static Renderer* gl_create_renderer(void)
+    {
+        static Renderer renderer = { nullptr };
+        ASSIGN_DRIVER(gl);
+        return &renderer;
+    }
+
+    Driver gl_driver = {
+        BackendType::OpenGL,
+        gl_supported,
+        gl_create_renderer
+    };
 }
 
 #endif /* defined(ALIMER_ENABLE_OPENGL) */

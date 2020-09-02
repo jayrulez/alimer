@@ -27,9 +27,8 @@
 #include <queue>
 #include <mutex>
 
-namespace Alimer
+namespace Alimer::Graphics
 {
-    class D3D11GPUAdapter;
     class D3D11CommandBuffer;
     class D3D11SwapChain;
 
@@ -60,13 +59,12 @@ namespace Alimer
         void SubmitCommandBuffer(D3D11CommandBuffer* commandBuffer);
         void SubmitCommandBuffers();
 
-        GPUAdapter* GetAdapter() const override;
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         bool IsLost() const { return isLost; }
-        Texture* GetBackbufferTexture() const override;
+        //Texture* GetBackbufferTexture() const override;
 
     private:
         void CreateFactory();
@@ -74,10 +72,10 @@ namespace Alimer
         bool IsSdkLayersAvailable() noexcept;
 #endif
 
-        void InitCapabilities();
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
-        CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) override;
+        void InitCapabilities(IDXGIAdapter1* adapter);
+        void WaitForGPU() override;
+        uint64 Frame() override;
+        //CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) override;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HMODULE dxgiDLL = nullptr;
@@ -87,17 +85,18 @@ namespace Alimer
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
-        D3D11GPUAdapter* adapter = nullptr;
         ID3D11Device1*  d3dDevice = nullptr;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext1> immediateContext;
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> d3dAnnotation;
 
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
+        /// Number of frame count
+        uint64 frameCount{ 0 };
 
         D3D11SwapChain* swapChain = nullptr;
 
-        std::vector<std::unique_ptr<D3D11CommandBuffer>> cmdBuffersPool;
+        //std::vector<std::unique_ptr<D3D11CommandBuffer>> cmdBuffersPool;
         std::queue<D3D11CommandBuffer*> availableCommandBuffers;
         std::mutex cmdBuffersAllocationMutex;
         std::queue<D3D11CommandBuffer*> commitCommandBuffers;

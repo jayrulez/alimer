@@ -31,7 +31,7 @@
 
 #define MEGABYTES(x) (static_cast<uint64_t>(x) << 20ULL)
 
-namespace Alimer
+namespace Alimer::Graphics
 {
     class D3D11GraphicsDevice;
 
