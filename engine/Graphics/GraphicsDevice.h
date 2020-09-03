@@ -25,7 +25,7 @@
 #include "Graphics/Types.h"
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
-#include "Graphics/Texture.h"
+#include "Graphics/SwapChain.h"
 #include <mutex>
 
 namespace Alimer
@@ -52,6 +52,9 @@ namespace Alimer
         /// Get the device caps.
         const GraphicsDeviceCaps& GetCaps() const;
 
+        /// Get the main/primary SwapChain.
+        SwapChain* GetPrimarySwapChain() const;
+
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
@@ -66,6 +69,7 @@ namespace Alimer
         //virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
 
         GraphicsDeviceCaps caps{};
+        RefPtr<SwapChain> primarySwapChain;
 
     private:
         /// Mutex for accessing the GPU objects vector from several threads.

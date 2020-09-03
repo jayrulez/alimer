@@ -182,7 +182,7 @@ namespace Alimer
     struct SwapChainDescription
     {
         void* windowHandle;
-        TextureUsage usage = TextureUsage::RenderTarget;
+        /// The color format.
         PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
         /// The depth format.
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
@@ -190,6 +190,7 @@ namespace Alimer
         uint32_t height;
         bool verticalSync = false;
         uint32 sampleCount = 1u;
+        bool fullscreen = false;
         const char* label;
     };
 

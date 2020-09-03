@@ -170,11 +170,5 @@ namespace Alimer
 
     void DXGISetObjectName(IDXGIObject* obj, const eastl::string& name);
 
-
-    Microsoft::WRL::ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps,
-        IUnknown* deviceOrCommandQueue,
-        void* window,
-        uint32_t backBufferWidth, uint32_t backBufferHeight, DXGI_FORMAT backBufferFormat,
-        uint32_t backBufferCount,
-        bool fullscreen);
+    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, const SwapChainDescription& desc);
 }

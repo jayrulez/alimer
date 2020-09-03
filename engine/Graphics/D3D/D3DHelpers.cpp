@@ -239,12 +239,7 @@ namespace Alimer
 #endif
     }
 
-    ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps,
-        IUnknown* deviceOrCommandQueue,
-        void* window,
-        uint32_t backBufferWidth, uint32_t backBufferHeight, DXGI_FORMAT backBufferFormat,
-        uint32_t backBufferCount,
-        bool fullscreen)
+    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, const SwapChainDescription& desc)
     {
         UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
@@ -267,11 +262,11 @@ namespace Alimer
 #endif
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = backBufferWidth;
-        swapChainDesc.Height = backBufferHeight;
-        swapChainDesc.Format = backBufferFormat;
+        swapChainDesc.Width = desc.width;
+        swapChainDesc.Height = desc.height;
+        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(desc.colorFormat));
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = backBufferCount;
+        swapChainDesc.BufferCount = kInflightFrameCount; // Should be 3? triple buffering? Configurable?
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.Scaling = scaling;
@@ -279,32 +274,34 @@ namespace Alimer
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         swapChainDesc.Flags = flags;
 
-        ComPtr<IDXGISwapChain1> swapChain;
+        IDXGISwapChain1* swapChain;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND window = (HWND)desc.windowHandle;
+        ALIMER_ASSERT(IsWindow(window));
+
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !fullscreen;
+        fsSwapChainDesc.Windowed = !desc.fullscreen;
 
         // Create a SwapChain from a Win32 window.
         ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
             deviceOrCommandQueue,
-            (HWND)window,
+            window,
             &swapChainDesc,
             &fsSwapChainDesc,
-            NULL,
-            swapChain.GetAddressOf()
+            nullptr,
+            &swapChain
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(dxgiFactory->MakeWindowAssociation((HWND)window, DXGI_MWA_NO_ALT_ENTER));
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
-        VHR(IDXGIFactory2_CreateSwapChainForCoreWindow(
-            dxgi_factory,
+        VHR(dxgiFactory->CreateSwapChainForCoreWindow(
             deviceOrCommandQueue,
             window,
-            &swapchain_desc,
-            NULL,
-            &result
+            &swapChainDesc,
+            nullptr,
+            &swapChain
         ));
 #endif
 

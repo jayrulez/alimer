@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,42 +22,24 @@
 
 #pragma once
 
-#include "Platform/Window.h"
-
-struct GLFWwindow;
+#include "Graphics/SwapChain.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    enum class WindowFlags : uint32_t
-    {
-        None = 0,
-        Fullscreen = 1 << 0,
-        FullscreenDesktop = 1 << 1,
-        Hidden = 1 << 2,
-        Borderless = 1 << 3,
-        Resizable = 1 << 4,
-        Minimized = 1 << 5,
-        Maximized = 1 << 6,
-        HighDpi = 1 << 7,
-        OpenGL = 1 << 8,
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
-
-    class GLFW_Window final : public Window
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        /// Constructor.
-        GLFW_Window(const char* title, uint32 width, uint32 height, WindowFlags flags);
+        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        ~D3D12SwapChain() override;
+        void Destroy() override;
 
-        /// Destructor.
-        ~GLFW_Window() override;
-
-        static void PollEvents();
-
-        bool IsOpen() const override;
-        void* GetNativeHandle() const override;
+        bool Present(bool verticalSync) override;
 
     private:
-        GLFWwindow* handle{ nullptr };
+        void BackendSetName() override;
+
+        IDXGISwapChain3* handle;
+        bool isTearingSupported;
     };
-} 
+}

@@ -43,16 +43,22 @@ namespace Alimer
         void Shutdown();
         void HandleDeviceLost();
 
+        bool IsLost() const { return isLost; }
         IDXGIFactory4* GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
-        bool IsLost() const { return isLost; }
+        D3D12MA::Allocator* GetAllocator() const { return allocator; }
+
+        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
+        ID3D12CommandQueue* GetComputeQueue() const { return computeQueue; }
+        ID3D12CommandQueue* GetCopyQueue() const { return copyQueue; }
 
     private:
         void GetAdapter(GraphicsAdapterPreference adapterPreference, IDXGIAdapter1** ppAdapter);
-
+        void CreateCommandQueues();
         void InitCapabilities(IDXGIAdapter1* adapter);
+
         void WaitForGPU() override;
         uint64 Frame() override;
 
@@ -66,7 +72,16 @@ namespace Alimer
         D3D12MA::Allocator* allocator = nullptr;
 
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
+        bool supportsRenderPass = false;
         bool isLost = false;
+
+        ID3D12CommandQueue* graphicsQueue = nullptr;
+        ID3D12CommandQueue* computeQueue = nullptr;
+        ID3D12CommandQueue* copyQueue = nullptr;
+
+        ID3D12Fence* frameFence = nullptr;
+        HANDLE frameFenceEvent = INVALID_HANDLE_VALUE;
+
         /// Number of frame count
         uint64 frameCount{ 0 };
     };

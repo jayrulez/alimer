@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "core/log.h"
-#include "platform/application.h"
-#include "platform/platform.h"
+#include "Core/Log.h"
+#include "Platform/Application.h"
+#include "Platform/Platform.h"
 
 namespace Alimer
 {
@@ -64,24 +64,21 @@ namespace Alimer
 #ifdef _DEBUG
         deviceDesc.flags |= GraphicsDeviceFlags::DebugRuntime;
 #endif
+        deviceDesc.primarySwapChain.width = GetMainWindow().GetWidth();
+        deviceDesc.primarySwapChain.height = GetMainWindow().GetHeight();
+        deviceDesc.primarySwapChain.windowHandle = GetMainWindow().GetNativeHandle();
+
         graphics = GraphicsDevice::Create(RendererType::Count, deviceDesc);
     }
 
     void Application::Run()
     {
-        /*gpu::gpu_config gpu_config{};
-#ifdef _DEBUG
-        gpu_config.debug = true;
-#endif
-        gpu_config.device_preference = config.powerPreference;
-        gpu::init(config.graphicsBackend , &gpu_config);
-        */
-
         platform->Run();
     }
 
     void Application::Tick()
     {
+        graphics->GetPrimarySwapChain()->Present(false);
         graphics->Frame();
     }
 

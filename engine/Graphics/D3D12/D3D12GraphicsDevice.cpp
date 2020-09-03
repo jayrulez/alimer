@@ -23,7 +23,7 @@
 #include "D3D12GraphicsDevice.h"
 //#include "D3D12Texture.h"
 #include "D3D12Buffer.h"
-//#include "D3D12CommandContext.h"
+#include "D3D12SwapChain.h"
 
 namespace Alimer
 {
@@ -199,6 +199,16 @@ namespace Alimer
 
             InitCapabilities(adapter.Get());
         }
+
+        // Create Command queue's
+        CreateCommandQueues();
+
+        // Create primary SwapChain.
+        primarySwapChain.Reset(new D3D12SwapChain(this, desc.primarySwapChain));
+
+        // Frame fence.
+        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
@@ -210,7 +220,9 @@ namespace Alimer
     {
         WaitForGPU();
 
-        // Allocator
+        primarySwapChain.Reset();
+
+        // Allocator.
         if (allocator != nullptr)
         {
             D3D12MA::Stats stats;
@@ -222,6 +234,14 @@ namespace Alimer
 
             allocator->Release(); allocator = nullptr;
         }
+
+        SafeRelease(copyQueue);
+        SafeRelease(computeQueue);
+        SafeRelease(graphicsQueue);
+
+        // Frame fence
+        CloseHandle(frameFenceEvent);
+        SafeRelease(frameFence);
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -335,6 +355,36 @@ namespace Alimer
         *ppAdapter = adapter.Detach();
     }
 
+    void D3D12GraphicsDevice::CreateCommandQueues()
+    {
+        SafeRelease(graphicsQueue);
+        SafeRelease(computeQueue);
+        SafeRelease(copyQueue);
+
+        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        queueDesc.NodeMask = 0x0;
+
+        D3D12_COMMAND_QUEUE_DESC directDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
+        D3D12_COMMAND_QUEUE_DESC asyncDesc = { D3D12_COMMAND_LIST_TYPE_COMPUTE, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
+
+        // Direct/Graphics 
+        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
+        graphicsQueue->SetName(L"Direct Command Queue");
+
+        // Compute
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeQueue)));
+        computeQueue->SetName(L"Compute Command Queue");
+
+        // Copy
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&copyQueue)));
+        copyQueue->SetName(L"Copy Command Queue");
+    }
+
     void D3D12GraphicsDevice::HandleDeviceLost()
     {
 
@@ -343,16 +393,171 @@ namespace Alimer
 
     void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* adapter)
     {
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
 
+        caps.rendererType = RendererType::Direct3D12;
+        caps.deviceId = desc.DeviceId;
+        caps.vendorId = desc.VendorId;
+
+        eastl::wstring deviceName(desc.Description);
+        caps.adapterName = Alimer::ToUtf8(deviceName);
+
+        // Detect adapter type.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            caps.adapterType = GPUAdapterType::CPU;
+        }
+        else
+        {
+            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+
+            caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
+        }
+
+        // Determine maximum supported feature level for this device
+        static const D3D_FEATURE_LEVEL s_featureLevels[] =
+        {
+            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_0,
+            D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0,
+        };
+
+        D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
+        {
+            _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
+        };
+
+        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels))))
+        {
+            d3dFeatureLevel = featLevels.MaxSupportedFeatureLevel;
+        }
+        else
+        {
+            d3dFeatureLevel = d3dMinFeatureLevel;
+        }
+
+        // Features
+        caps.features.independentBlend = true;
+        caps.features.computeShader = true;
+        caps.features.geometryShader = true;
+        caps.features.tessellationShader = true;
+        caps.features.logicOp = true;
+        caps.features.multiViewport = true;
+        caps.features.fullDrawIndexUint32 = true;
+        caps.features.multiDrawIndirect = true;
+        caps.features.fillModeNonSolid = true;
+        caps.features.samplerAnisotropy = true;
+        caps.features.textureCompressionETC2 = false;
+        caps.features.textureCompressionASTC_LDR = false;
+        caps.features.textureCompressionBC = true;
+        caps.features.textureCubeArray = true;
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
+        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(
+            D3D12_FEATURE_D3D12_OPTIONS5,
+            &d3d12options5, sizeof(d3d12options5)))
+            && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+        {
+            caps.features.raytracing = true;
+        }
+        else
+        {
+            caps.features.raytracing = false;
+        }
+
+        supportsRenderPass = false;
+        if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
+            caps.vendorId != KnownVendorId_Intel)
+        {
+            supportsRenderPass = true;
+        }
+
+        // Limits
+        caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+        caps.limits.maxVertexBindings = kMaxVertexAttributes;
+        caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
+
+        //caps.limits.maxTextureDimension1D = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        caps.limits.maxTextureDimension2D = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        caps.limits.maxTextureDimension3D = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        caps.limits.maxTextureDimensionCube = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        caps.limits.maxTextureArrayLayers = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        caps.limits.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        caps.limits.maxUniformBufferSize = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        caps.limits.minUniformBufferOffsetAlignment = 256u;
+        caps.limits.maxStorageBufferSize = UINT32_MAX;
+        caps.limits.minStorageBufferOffsetAlignment = 16;
+        caps.limits.maxSamplerAnisotropy = D3D12_MAX_MAXANISOTROPY;
+        caps.limits.maxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        if (caps.limits.maxViewports > kMaxViewportAndScissorRects) {
+            caps.limits.maxViewports = kMaxViewportAndScissorRects;
+        }
+
+        caps.limits.maxViewportWidth = D3D12_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxViewportHeight = D3D12_VIEWPORT_BOUNDS_MAX;
+        caps.limits.maxTessellationPatchSize = D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        caps.limits.pointSizeRangeMin = 1.0f;
+        caps.limits.pointSizeRangeMax = 1.0f;
+        caps.limits.lineWidthRangeMin = 1.0f;
+        caps.limits.lineWidthRangeMax = 1.0f;
+        caps.limits.maxComputeSharedMemorySize = D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        caps.limits.maxComputeWorkGroupCountX = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountY = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupCountZ = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        caps.limits.maxComputeWorkGroupInvocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        caps.limits.maxComputeWorkGroupSizeX = D3D12_CS_THREAD_GROUP_MAX_X;
+        caps.limits.maxComputeWorkGroupSizeY = D3D12_CS_THREAD_GROUP_MAX_Y;
+        caps.limits.maxComputeWorkGroupSizeZ = D3D12_CS_THREAD_GROUP_MAX_Z;
+
+        /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
+        UINT dxgi_fmt_caps = 0;
+        for (uint32_t format = (static_cast<uint32_t>(PixelFormat::Invalid) + 1); format < static_cast<uint32_t>(PixelFormat::Count); format++)
+        {
+            D3D12_FEATURE_DATA_FORMAT_SUPPORT support;
+            support.Format = ToDXGIFormat((PixelFormat)format);
+
+            if (support.Format == DXGI_FORMAT_UNKNOWN)
+                continue;
+
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+        }
     }
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
-
+        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
+        frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
+        WaitForSingleObject(frameFenceEvent, INFINITE);
     }
 
     uint64 D3D12GraphicsDevice::Frame()
     {
+        if (!isLost)
+            return frameCount;
+
+        // TODO: Manage upload
+
+        // Signal the fence with the current frame number, so that we can check back on it
+        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
+
+        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+
+        if ((frameCount - GPUFrameCount) >= kInflightFrameCount)
+        {
+            frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
+            WaitForSingleObject(frameFenceEvent, INFINITE);
+        }
+
+        if (!dxgiFactory->IsCurrent())
+        {
+            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+        }
+
         return frameCount;
     }
 }

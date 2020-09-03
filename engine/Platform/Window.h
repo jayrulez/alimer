@@ -39,6 +39,10 @@ namespace Alimer
 
         virtual bool IsOpen() const = 0;
 
+        uint32 GetWidth() const { return width; }
+        uint32 GetHeight() const { return height; }
+        virtual void* GetNativeHandle() const = 0;
+
     private:
         uint32 width;
         uint32 height;

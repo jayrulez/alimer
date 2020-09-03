@@ -59,5 +59,10 @@ namespace Alimer
     {
         return caps;
     }
+
+    SwapChain* GraphicsDevice::GetPrimarySwapChain() const
+    {
+        return primarySwapChain.Get();
+    }
 }
 

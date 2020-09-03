@@ -144,4 +144,19 @@ namespace Alimer
     {
         return !glfwWindowShouldClose(handle);
     }
+
+    void* GLFW_Window::GetNativeHandle() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return glfwGetWin32Window(handle);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Window(handle);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return glfwGetCocoaWindow(handle);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandWindow(handle);
+#else
+        return nullptr;
+#endif
+    }
 }
