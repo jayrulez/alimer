@@ -48,19 +48,23 @@ namespace Alimer
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         bool IsLost() const { return isLost; }
-        //Texture* GetBackbufferTexture() const override;
 
     private:
-        void CreateFactory();
+        void GetAdapter(GraphicsAdapterPreference adapterPreference, IDXGIAdapter1** ppAdapter);
 
         void InitCapabilities(IDXGIAdapter1* adapter);
         void WaitForGPU() override;
         uint64 Frame() override;
 
+        DWORD dxgiFactoryFlags;
         ComPtr<IDXGIFactory4> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps;
 
-        ID3D12Device2*  d3dDevice = nullptr;
+        D3D_FEATURE_LEVEL d3dMinFeatureLevel;
+
+        ID3D12Device* d3dDevice = nullptr;
+        D3D12MA::Allocator* allocator = nullptr;
+
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool isLost = false;
         /// Number of frame count

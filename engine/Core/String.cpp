@@ -37,11 +37,7 @@
 #include <stdio.h>
 int Vsnprintf8(char* pDestination, size_t n, const char* pFormat, va_list arguments)
 {
-#ifdef _MSC_VER
-    return vsnprintf_s(pDestination, n, _TRUNCATE, pFormat, arguments);
-#else
     return vsnprintf(pDestination, n, pFormat, arguments);
-#endif
 }
 
 //int Vsnprintf16(char16_t* pDestination, size_t n, const char16_t* pFormat, va_list arguments);

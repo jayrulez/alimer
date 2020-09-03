@@ -200,7 +200,6 @@ namespace Alimer
         SwapChainDescription primarySwapChain;
     };
 
-
     struct GraphicsDeviceCaps
     {
         RendererType rendererType;

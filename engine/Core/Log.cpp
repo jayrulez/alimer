@@ -184,7 +184,7 @@ namespace Alimer::Log
             offset += static_cast<std::size_t>(written);
         }
 #elif defined(_WIN32)
-        eastl::string fmt_str = Alimer::Format("[%s] %s\r\n", LogLevelPefixes[(uint32_t)level], message);
+        eastl::string fmt_str = Alimer::Format("[%s] %s\r\n", LogLevelPefixes[(uint32_t)level], message.c_str());
         OutputDebugStringA(fmt_str.c_str());
 
 #  ifdef _DEBUG
@@ -210,7 +210,7 @@ namespace Alimer::Log
         // reset to orig colors
         ::SetConsoleTextAttribute(consoleOutput, orig_attribs);
 
-        fmt_str = Alimer::Format("] %s\n", message);
+        fmt_str = Alimer::Format("] %s\n", message.c_str());
         WriteConsoleA(consoleOutput, fmt_str.c_str(), static_cast<DWORD>(fmt_str.length()), nullptr, nullptr);
 #  endif
 #elif defined(__EMSCRIPTEN__)

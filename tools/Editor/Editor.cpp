@@ -37,7 +37,7 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        config.graphics_backend = graphics::BackendType::Default;
+        //config.rendererType = RendererType::Default;
         config.title = "Alimer Studio";
         //config.fullscreen = true;
         config.width = 1280;
