@@ -55,7 +55,7 @@ namespace Alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Float2 Zero;
@@ -146,7 +146,7 @@ namespace Alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Float3 Zero;
@@ -196,7 +196,7 @@ namespace Alimer
         const float* Data() const { return &x; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Float4 Zero;

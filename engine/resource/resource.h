@@ -33,15 +33,15 @@ namespace Alimer
 
     public:
         /// Set the resource name.
-        void set_name(const std::string& new_name);
+        void set_name(const eastl::string& new_name);
 
         /// Get the resource name.
-        const std::string& get_name() const { return name; }
+        const eastl::string& get_name() const { return name; }
         /// Return name id of the resource.
         const StringId32& get_name_id() const { return name_id; }
 
     protected:
-        std::string name;
+        eastl::string name;
         StringId32 name_id;
     };
 }

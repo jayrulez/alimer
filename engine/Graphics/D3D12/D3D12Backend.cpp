@@ -29,14 +29,14 @@ namespace Alimer
     PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
 #endif
 
-    void D3D12SetObjectName(ID3D12Object* obj, const std::string& name)
+    void D3D12SetObjectName(ID3D12Object* obj, const eastl::string& name)
     {
 #ifdef _DEBUG
         if (obj != nullptr)
         {
             if (!name.empty())
             {
-                std::wstring wideStr = ToUtf16(name);
+                eastl::wstring wideStr = ToUtf16(name);
                 obj->SetName(wideStr.c_str());
             }
             else

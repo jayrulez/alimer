@@ -82,7 +82,7 @@ namespace Alimer
 
     void Application::Tick()
     {
-
+        graphics->Frame();
     }
 
     const Config* Application::GetConfig()

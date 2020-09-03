@@ -42,15 +42,17 @@ namespace Alimer
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
     {
+        ALIMER_ASSERT(resource);
+
         std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
         gpuObjects.push_back(resource);
     }
 
     void GraphicsDevice::RemoveGraphicsResource(GraphicsResource* resource)
     {
+        ALIMER_ASSERT(resource);
         std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
-
-        //gpuObjects.erase_first(object);
+        gpuObjects.erase_first(resource);
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const

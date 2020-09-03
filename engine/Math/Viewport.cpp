@@ -21,7 +21,6 @@
 //
 
 #include "Math/Viewport.h"
-#include <fmt/format.h>
 
 namespace Alimer
 {

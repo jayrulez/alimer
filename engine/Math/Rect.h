@@ -62,11 +62,12 @@ namespace Alimer
             return (x == 0 && y == 0 && width == 0 && height == 0);
         }
 
+        /*
         /// Return as string.
         ALIMER_FORCE_INLINE std::string ToString() const
         {
             return fmt::format("{} {} {} {}", x, y, width, height);
-        }
+        }*/
     };
 
     using Rect = TRect<float>;

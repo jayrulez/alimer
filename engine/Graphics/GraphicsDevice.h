@@ -72,7 +72,7 @@ namespace Alimer
         std::mutex gpuObjectMutex;
 
         /// GPU objects.
-        std::vector<GraphicsResource*> gpuObjects;
+        eastl::vector<GraphicsResource*> gpuObjects;
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };

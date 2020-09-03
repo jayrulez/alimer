@@ -53,7 +53,8 @@ namespace Alimer
 #endif
             if (!glfwInit())
             {
-                throw std::runtime_error("GLFW couldn't be initialized.");
+                LOGE("GLFW couldn't be initialized.");
+                ALIMER_FORCE_CRASH();
             }
         }
 
@@ -110,7 +111,8 @@ namespace Alimer
 
         if (!handle)
         {
-            throw std::runtime_error("Couldn't create glfw window.");
+            LOGE("Couldn't create glfw window.");
+            ALIMER_FORCE_CRASH();
         }
 
         glfwDefaultWindowHints();

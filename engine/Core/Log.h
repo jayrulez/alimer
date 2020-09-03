@@ -23,11 +23,11 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <fmt/format.h>
+#include "Core/String.h"
 
-namespace Alimer
+namespace Alimer::Log
 {
-    enum class LogLevel : uint32_t
+    enum class Level : uint32_t
     {
         Verbose,
         Debug,
@@ -39,22 +39,18 @@ namespace Alimer
         Count
     };
 
-    ALIMER_API void Write(LogLevel level, const std::string& message);
-    ALIMER_API void Verbose(const std::string& message);
-    ALIMER_API void Debug(const std::string& message);
-    ALIMER_API void Info(const std::string& message);
-    ALIMER_API void Warn(const std::string& message);
-    ALIMER_API void Critical(const std::string& message);
-
-    namespace Log
-    {
-        void error(const std::string& message);
-    }
+    ALIMER_API void Write(Level level, const eastl::string& message);
+    ALIMER_API void Verbose(const eastl::string& message);
+    ALIMER_API void Debug(const eastl::string& message);
+    ALIMER_API void Info(const eastl::string& message);
+    ALIMER_API void Warn(const eastl::string& message);
+    ALIMER_API void Critical(const eastl::string& message);
+    ALIMER_API void Error(const eastl::string& message);
 }
 
-#define LOGV(...) Alimer::Verbose(fmt::format(__VA_ARGS__));
-#define LOGD(...) Alimer::Debug(fmt::format(__VA_ARGS__));
-#define LOGI(...) Alimer::Info(fmt::format(__VA_ARGS__));
-#define LOGW(...) Alimer::Warn(fmt::format(__VA_ARGS__));
-#define LOGE(...) Alimer::Log::error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
-#define LOGC(...) Alimer::Critical(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)));
+#define LOGV(...) Alimer::Log::Verbose(Alimer::Format(__VA_ARGS__));
+#define LOGD(...) Alimer::Log::Debug(Alimer::Format(__VA_ARGS__));
+#define LOGI(...) Alimer::Log::Info(Alimer::Format(__VA_ARGS__));
+#define LOGW(...) Alimer::Log::Warn(Alimer::Format(__VA_ARGS__));
+#define LOGE(...) Alimer::Log::Error(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__)));
+#define LOGC(...) Alimer::Log::Critical(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__)));

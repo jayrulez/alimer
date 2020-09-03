@@ -32,41 +32,65 @@
 #   endif
 #endif
 
-using namespace std;
+#if !defined(EASTL_EASTDC_VSNPRINTF) || !EASTL_EASTDC_VSNPRINTF
+// https://eastl.docsforge.com/master/faq/
+#include <stdio.h>
+int Vsnprintf8(char* pDestination, size_t n, const char* pFormat, va_list arguments)
+{
+#ifdef _MSC_VER
+    return vsnprintf_s(pDestination, n, _TRUNCATE, pFormat, arguments);
+#else
+    return vsnprintf(pDestination, n, pFormat, arguments);
+#endif
+}
+
+//int Vsnprintf16(char16_t* pDestination, size_t n, const char16_t* pFormat, va_list arguments);
+//int Vsnprintf32(char32_t* pDestination, size_t n, const char32_t* pFormat, va_list arguments);
+#endif
 
 namespace Alimer
 {
-    const string EMPTY_STRING{};
+    const eastl::string EMPTY_STRING{};
+
+    eastl::string Format(const char* format, ...)
+    {
+        eastl::string ret;
+        va_list args;
+        va_start(args, format);
+        ret.append_sprintf_va_list(format, args);
+        va_end(args);
+        return ret;
+    }
 
 #ifdef _WIN32
-    string ToUtf8(const wchar_t* wstr, size_t len)
+    eastl::string ToUtf8(const wchar_t* wstr, eastl_size_t len)
     {
-        vector<char> char_buffer;
+        eastl::vector<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
             return "";
         char_buffer.resize(ret);
         WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
-        return string(char_buffer.data(), char_buffer.size());
+        return eastl::string(char_buffer.data(), char_buffer.size());
     }
 
-    string ToUtf8(const wstring& wstr)
+    eastl::string ToUtf8(const eastl::wstring& wstr)
     {
         return ToUtf8(wstr.data(), wstr.size());
     }
 
-    wstring ToUtf16(const char* str, size_t len)
+    eastl::wstring ToUtf16(const char* str, eastl_size_t len)
     {
-        vector<wchar_t> wchar_buffer;
+        eastl::vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return wstring(wchar_buffer.data(), wchar_buffer.size());
+        return eastl::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    wstring ToUtf16(const string& str)
+    eastl::wstring ToUtf16(const eastl::string& str)
     {
         return ToUtf16(str.data(), str.size());
     }

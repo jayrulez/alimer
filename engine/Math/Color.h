@@ -66,7 +66,7 @@ namespace Alimer
         const float* Data() const { return &r; }
 
         /// Return as string.
-        String ToString() const;
+        eastl::string ToString() const;
     };
 
     /* Copied from DirectXMath (https://github.com/microsoft/DirectXMath/blob/b412a61c518923e52e2d43d9e4d7084af8352ca2/Inc/DirectXColors.h) */

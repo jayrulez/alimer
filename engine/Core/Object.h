@@ -46,7 +46,7 @@ namespace Alimer
         /// Return type.
         StringId32 GetType() const { return type; }
         /// Return type name.
-        const std::string& GetTypeName() const { return typeName; }
+        const eastl::string& GetTypeName() const { return typeName; }
         /// Return base type info.
         const TypeInfo* GetBaseTypeInfo() const { return baseTypeInfo; }
 
@@ -54,7 +54,7 @@ namespace Alimer
         /// Type.
         StringId32 type;
         /// Type name.
-        std::string typeName;
+        eastl::string typeName;
         /// Base class type info.
         const TypeInfo* baseTypeInfo;
     };
@@ -76,7 +76,7 @@ namespace Alimer
         /// Return type hash.
         virtual StringId32 GetType() const = 0;
         /// Return type name.
-        virtual const std::string& GetTypeName() const = 0;
+        virtual const eastl::string& GetTypeName() const = 0;
         /// Return type info.
         virtual const TypeInfo* GetTypeInfo() const = 0;
 
@@ -141,7 +141,7 @@ namespace Alimer
         StringId32 GetType() const { return typeInfo->GetType(); }
 
         /// Return type name of objects created by this factory.
-        const std::string& GetTypeName() const { return typeInfo->GetTypeName(); }
+        const eastl::string& GetTypeName() const { return typeInfo->GetTypeName(); }
 
     protected:
         /// Type info.
@@ -168,8 +168,8 @@ namespace Alimer
         using ClassName = typeName; \
         using Parent = baseTypeName; \
         virtual Alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
-        virtual const std::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
+        virtual const eastl::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
         virtual const Alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
         static Alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
-        static const std::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
+        static const eastl::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
         static const Alimer::TypeInfo* GetTypeInfoStatic() { static const Alimer::TypeInfo typeInfoStatic(#typeName, Parent::GetTypeInfoStatic()); return &typeInfoStatic; } \

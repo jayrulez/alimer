@@ -212,7 +212,7 @@ namespace Alimer
         uint32 vendorId;
 
         /// Gets the adapter name.
-        std::string adapterName;
+        eastl::string adapterName;
 
         /// Gets the adapter type.
         GPUAdapterType adapterType;

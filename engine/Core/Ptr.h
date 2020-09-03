@@ -24,7 +24,7 @@
 
 #include "Core/Assert.h"
 #include "Core/Concurrency.h"
-#include <utility>
+#include <EASTL/utility.h>
 
 namespace Alimer
 {
@@ -161,7 +161,7 @@ namespace Alimer
         /// Move-assign from another shared pointer.
         RefPtr<T>& operator =(RefPtr<T>&& rhs)
         {
-            RefPtr<T> copy(std::move(rhs));
+            RefPtr<T> copy(eastl::move(rhs));
             Swap(copy);
 
             return *this;
@@ -194,7 +194,7 @@ namespace Alimer
         /// Swap with another SharedPtr.
         void Swap(_Inout_ RefPtr& rhs)
         {
-            std::swap(ptr_, rhs.ptr_);
+            eastl::swap(ptr_, rhs.ptr_);
         }
 
         explicit operator bool() const { return ptr_ != nullptr; }
@@ -383,7 +383,7 @@ namespace Alimer
         /// Move-assign from another weak pointer.
         WeakPtr<T>& operator =(WeakPtr<T>&& rhs)
         {
-            WeakPtr<T> copy(std::move(rhs));
+            WeakPtr<T> copy(eastl::move(rhs));
             Swap(copy);
 
             return *this;
@@ -473,8 +473,8 @@ namespace Alimer
         /// Swap with another WeakPtr.
         void Swap(WeakPtr<T>& rhs)
         {
-            std::swap(ptr_, rhs.ptr_);
-            std::swap(refCount_, rhs.refCount_);
+            eastl::swap(ptr_, rhs.ptr_);
+            eastl::swap(refCount_, rhs.refCount_);
         }
 
         /// Reset with another pointer.
@@ -554,6 +554,6 @@ namespace Alimer
     /// Construct SharedPtr.
     template <class T, class ... Args> RefPtr<T> MakeRefPtr(Args && ... args)
     {
-        return RefPtr<T>(new T(std::forward<Args>(args)...));
+        return RefPtr<T>(new T(eastl::forward<Args>(args)...));
     }
 }

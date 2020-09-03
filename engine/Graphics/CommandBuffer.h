@@ -27,6 +27,8 @@
 #include "Math/Size.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"
+#include <EASTL/vector.h>
+#include <EASTL/list.h>
 
 namespace Alimer
 {
@@ -82,7 +84,7 @@ namespace Alimer
         /* Command stream */
         struct MemoryBlock
         {
-            std::vector<uint8_t> allocation;
+            eastl::vector<uint8_t> allocation;
             uint64_t readAddr;
             uint64_t writeAddr;
         };
@@ -90,9 +92,9 @@ namespace Alimer
         void AllocateNewBlock(uint64_t size);
 
         uint64_t blockSize;
-        std::list<MemoryBlock> blocks;
-        std::list<MemoryBlock>::iterator readBlock;
-        std::list<MemoryBlock>::iterator writeBlock;
+        eastl::list<MemoryBlock> blocks;
+        eastl::list<MemoryBlock>::iterator readBlock;
+        eastl::list<MemoryBlock>::iterator writeBlock;
 
     protected:
         enum class CommandID : uint8_t
@@ -158,7 +160,7 @@ namespace Alimer
 
         CommandID ReadCommandID();
         void Read(void* pData, uint64_t size);
-        std::string ReadString();
+        eastl::string ReadString();
 
     protected:
     };

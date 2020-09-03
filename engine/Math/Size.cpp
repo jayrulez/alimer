@@ -32,9 +32,11 @@ namespace Alimer
         return (width == 0 && height == 0);
     }
 
-    std::string Size::ToString() const
+    eastl::string Size::ToString() const
     {
-        return fmt::format("{} {}", width, height);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%g %g", width, height);
+        return eastl::string(tempBuffer);
     }
 
     bool SizeI::IsEmpty() const
@@ -42,8 +44,10 @@ namespace Alimer
         return (width == 0 && height == 0);
     }
 
-    std::string SizeI::ToString() const
+    eastl::string SizeI::ToString() const
     {
-        return fmt::format("{} {}", width, height);
+        char tempBuffer[CONVERSION_BUFFER_LENGTH];
+        sprintf(tempBuffer, "%d %d", width, height);
+        return eastl::string(tempBuffer);
     }
 }

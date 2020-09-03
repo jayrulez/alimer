@@ -50,7 +50,7 @@ namespace Alimer
         bool IsEmpty() const;
 
         /// Return as string.
-        std::string ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const Size Empty;
@@ -80,7 +80,7 @@ namespace Alimer
         bool IsEmpty() const;
 
         /// Return as string.
-        std::string ToString() const;
+        eastl::string ToString() const;
 
         // Constants
         static const SizeI Empty;

@@ -25,7 +25,7 @@
 
 namespace Alimer
 {
-    Entity::Entity(const String& name)
+    Entity::Entity(const eastl::string& name)
         : name{ name }
     {
     }

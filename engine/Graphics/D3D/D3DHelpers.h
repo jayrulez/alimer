@@ -80,23 +80,23 @@ namespace Alimer
 #ifdef ALIMER_ENABLE_ASSERT
     void WINAPI DXGetErrorDescriptionW(_In_ HRESULT hr, _Out_cap_(count) wchar_t* desc, _In_ size_t count);
 
-    inline std::wstring GetDXErrorString(HRESULT hr)
+    inline eastl::wstring GetDXErrorString(HRESULT hr)
     {
         const uint32_t errStringSize = 1024;
         wchar_t errorString[errStringSize];
         DXGetErrorDescriptionW(hr, errorString, errStringSize);
 
-        std::wstring message = L"DirectX Error: ";
+        eastl::wstring message = L"DirectX Error: ";
         message += errorString;
         return message;
     }
 
-    inline std::string GetDXErrorStringAnsi(HRESULT hr)
+    inline eastl::string GetDXErrorStringAnsi(HRESULT hr)
     {
-        std::wstring errorString = GetDXErrorString(hr);
+        eastl::wstring errorString = GetDXErrorString(hr);
 
-        std::string message;
-        for (std::string::size_type i = 0; i < errorString.length(); ++i)
+        eastl::string message;
+        for (eastl_size_t i = 0; i < errorString.length(); ++i)
         {
             message.append(1, static_cast<char>(errorString[i]));
         }
@@ -168,7 +168,7 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8);
 
-    void DXGISetObjectName(IDXGIObject* obj, const String& name);
+    void DXGISetObjectName(IDXGIObject* obj, const eastl::string& name);
 
 
     Microsoft::WRL::ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps,

@@ -38,11 +38,10 @@
 #elif defined(__EMSCRIPTEN__)
 #  include <emscripten.h>
 #endif
-using namespace Alimer;
 
-namespace Alimer
+namespace Alimer::Log
 {
-    static const char* LogLevelPefixes[uint32_t(LogLevel::Count)] = {
+    static const char* LogLevelPefixes[uint32_t(Level::Count)] = {
         "VERBOSE",
         "DEBUG",
         "INFO",
@@ -69,7 +68,7 @@ namespace Alimer
     class Logger
     {
     public:
-        Logger(const std::string& name);
+        Logger(const eastl::string& name);
         ~Logger() = default;
 
         static Logger* GetDefault()
@@ -78,28 +77,28 @@ namespace Alimer
             return &defaultLogger;
         }
 
-        void Log(LogLevel level, const std::string& message);
+        void Log(Level level, const eastl::string& message);
 
     private:
-        bool ShouldLog(LogLevel msgLevel) const
+        bool ShouldLog(Level msgLevel) const
         {
             return msgLevel >= level;
         }
 
-        std::string name;
-        LogLevel level;
+        eastl::string name;
+        Level level;
 
 #if defined(_DEBUG) && defined(_WIN32)
-        std::array<WORD, size_t(LogLevel::Count)> consoleColors;
+        std::array<WORD, size_t(Level::Count)> consoleColors;
 #endif
     };
 
-    Logger::Logger(const std::string& name)
-        : name{ name }
+    Logger::Logger(const eastl::string& name_)
+        : name(name_)
 #ifdef _DEBUG
-        , level(LogLevel::Debug)
+        , level(Level::Debug)
 #else
-        , level(LogLevel::Info)
+        , level(Level::Info)
 #endif
     {
 #if defined(_DEBUG) && defined(_WIN32)
@@ -110,17 +109,17 @@ namespace Alimer
         const WORD WHITE = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
         const WORD YELLOW = FOREGROUND_RED | FOREGROUND_GREEN;
 
-        consoleColors[(uint32_t)LogLevel::Verbose] = WHITE;
-        consoleColors[(uint32_t)LogLevel::Debug] = CYAN;
-        consoleColors[(uint32_t)LogLevel::Info] = GREEN;
-        consoleColors[(uint32_t)LogLevel::Warn] = YELLOW | BOLD;
-        consoleColors[(uint32_t)LogLevel::Error] = RED | BOLD;                         // red bold
-        consoleColors[(uint32_t)LogLevel::Critical] = BACKGROUND_RED | WHITE | BOLD; // white bold on red background
-        consoleColors[(uint32_t)LogLevel::Off] = 0;
+        consoleColors[(uint32_t)Level::Verbose] = WHITE;
+        consoleColors[(uint32_t)Level::Debug] = CYAN;
+        consoleColors[(uint32_t)Level::Info] = GREEN;
+        consoleColors[(uint32_t)Level::Warn] = YELLOW | BOLD;
+        consoleColors[(uint32_t)Level::Error] = RED | BOLD;                         // red bold
+        consoleColors[(uint32_t)Level::Critical] = BACKGROUND_RED | WHITE | BOLD; // white bold on red background
+        consoleColors[(uint32_t)Level::Off] = 0;
 #endif
     }
 
-    void Logger::Log(LogLevel level, const std::string& message)
+    void Logger::Log(Level level, const eastl::string& message)
     {
         bool log_enabled = ShouldLog(level);
         if (!log_enabled)
@@ -185,21 +184,21 @@ namespace Alimer
             offset += static_cast<std::size_t>(written);
         }
 #elif defined(_WIN32)
-        std::string fmt_str = fmt::format("[{}] {}\r\n", LogLevelPefixes[(uint32_t)level], message);
+        eastl::string fmt_str = Alimer::Format("[%s] %s\r\n", LogLevelPefixes[(uint32_t)level], message);
         OutputDebugStringA(fmt_str.c_str());
 
 #  ifdef _DEBUG
         HANDLE consoleOutput;
         switch (level)
         {
-        case LogLevel::Warn:
-        case LogLevel::Error:
-        case LogLevel::Critical:
+        case Level::Warn:
+        case Level::Error:
+        case Level::Critical:
             consoleOutput = GetStdHandle(STD_ERROR_HANDLE);
             break;
-        case LogLevel::Verbose:
-        case LogLevel::Debug:
-        case LogLevel::Info:
+        case Level::Verbose:
+        case Level::Debug:
+        case Level::Info:
             consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
             break;
         default: return;
@@ -211,7 +210,7 @@ namespace Alimer
         // reset to orig colors
         ::SetConsoleTextAttribute(consoleOutput, orig_attribs);
 
-        fmt_str = fmt::format("] {}\n", message);
+        fmt_str = Alimer::Format("] %s\n", message);
         WriteConsoleA(consoleOutput, fmt_str.c_str(), static_cast<DWORD>(fmt_str.length()), nullptr, nullptr);
 #  endif
 #elif defined(__EMSCRIPTEN__)
@@ -233,38 +232,38 @@ namespace Alimer
 #endif
 }
 
-    void Write(LogLevel level, const std::string& message)
+    void Write(Level level, const eastl::string& message)
     {
         Logger::GetDefault()->Log(level, message);
     }
 
-    void Verbose(const std::string& message)
+    void Verbose(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(LogLevel::Verbose, message);
+        Logger::GetDefault()->Log(Level::Verbose, message);
     }
 
-    void Debug(const std::string& message)
+    void Debug(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(LogLevel::Debug, message);
+        Logger::GetDefault()->Log(Level::Debug, message);
     }
 
-    void Info(const std::string& message)
+    void Info(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(LogLevel::Info, message);
+        Logger::GetDefault()->Log(Level::Info, message);
     }
 
-    void Warn(const std::string& message)
+    void Warn(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(LogLevel::Warn, message);
+        Logger::GetDefault()->Log(Level::Warn, message);
     }
 
-    void Critical(const std::string& message)
+    void Error(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(LogLevel::Critical, message);
+        Logger::GetDefault()->Log(Level::Error, message);
     }
-}
 
-void Log::error(const std::string& message)
-{
-    Logger::GetDefault()->Log(LogLevel::Error, message);
+    void Critical(const eastl::string& message)
+    {
+        Logger::GetDefault()->Log(Level::Critical, message);
+    }
 }

@@ -24,7 +24,7 @@
 
 #include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
-#include <vector>
+#include <EASTL/vector.h>
 #include <queue>
 #include <mutex>
 

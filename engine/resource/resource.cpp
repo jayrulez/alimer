@@ -25,7 +25,7 @@
 
 namespace Alimer
 {
-    void Resource::set_name(const std::string& new_name)
+    void Resource::set_name(const eastl::string& new_name)
     {
         name = new_name;
         name_id = StringId32(new_name);
