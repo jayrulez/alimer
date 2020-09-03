@@ -41,7 +41,7 @@ namespace Alimer
 
     }
 
-    GLFW_Window::GLFW_Window(const char* title, uint32 width, uint32 height, bool resizable, bool fullscreen)
+    GLFW_Window::GLFW_Window(const char* title, uint32 width, uint32 height, WindowFlags flags)
         : Window(width, height)
     {
         // Init glfw at first call
@@ -57,9 +57,7 @@ namespace Alimer
             }
         }
 
-        const bool opengl = false;
-
-        if (opengl)
+        if (any(flags & WindowFlags::OpenGL))
         {
             glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
             glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -77,21 +75,38 @@ namespace Alimer
             glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         }
 
-        glfwWindowHint(GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
+        auto visible = any(flags & WindowFlags::Hidden) ? GLFW_FALSE : GLFW_TRUE;
+        glfwWindowHint(GLFW_VISIBLE, visible);
 
-        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-        width = width ? width : (uint32)mode->width;
-        height = height ? height : (uint32)mode->height;
+        auto decorated = any(flags & WindowFlags::Borderless) ? GLFW_FALSE : GLFW_TRUE;
+        glfwWindowHint(GLFW_DECORATED, decorated);
 
-        if (fullscreen) {
+        auto resizable = any(flags & WindowFlags::Resizable) ? GLFW_TRUE : GLFW_FALSE;
+        glfwWindowHint(GLFW_RESIZABLE, resizable);
+
+        auto maximized = any(flags & WindowFlags::Maximized) ? GLFW_TRUE : GLFW_FALSE;
+        glfwWindowHint(GLFW_MAXIMIZED, maximized);
+
+        GLFWmonitor* monitor = nullptr;
+        if (any(flags & WindowFlags::Fullscreen))
+        {
+            monitor = glfwGetPrimaryMonitor();
+        }
+
+        if (any(flags & WindowFlags::FullscreenDesktop))
+        {
+            monitor = glfwGetPrimaryMonitor();
+            auto mode = glfwGetVideoMode(monitor);
+
             glfwWindowHint(GLFW_RED_BITS, mode->redBits);
             glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
             glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
             glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+
+            glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        handle = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title, fullscreen ? monitor : nullptr, nullptr);
+        handle = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title, monitor, nullptr);
 
         if (!handle)
         {
@@ -100,7 +115,7 @@ namespace Alimer
 
         glfwDefaultWindowHints();
 
-        if (opengl)
+        if (any(flags & WindowFlags::OpenGL))
         {
             glfwMakeContextCurrent(handle);
             //glfwSwapInterval(config->vsync ? 1 : 0);

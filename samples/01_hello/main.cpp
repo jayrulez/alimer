@@ -37,7 +37,7 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        //config.graphics_backend = graphics::BackendType::OpenGL;
+        //config.graphicsBackend = graphics::BackendType::OpenGL;
         config.title = "TestApp";
         //config.fullscreen = true;
         //config.width = 1280;

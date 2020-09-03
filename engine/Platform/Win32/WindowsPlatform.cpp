@@ -72,6 +72,26 @@ namespace Alimer
         }
 
         Platform::SetArguments(args);
+
+        // Create main window.
+        auto config = application->GetConfig();
+        WindowFlags windowFlags = WindowFlags::None;
+        if (config->resizable)
+        {
+            windowFlags |= WindowFlags::Resizable;
+        }
+
+        if (config->fullscreen)
+        {
+            windowFlags |= WindowFlags::Fullscreen;
+        }
+
+        if (config->rendererType == RendererType::OpenGL)
+        {
+            windowFlags |= WindowFlags::OpenGL;
+        }
+
+        window = std::make_unique<GLFW_Window>(config->title, config->width, config->height, windowFlags);
     }
 
     WindowsPlatform::~WindowsPlatform()
@@ -118,8 +138,7 @@ namespace Alimer
 
     void WindowsPlatform::Run()
     {
-        auto config = application->GetConfig();
-        window = std::make_unique<GLFW_Window>(config->title, config->width, config->height, config->resizable, config->fullscreen);
+        InitApplication();
 
         while (window->IsOpen())
         {

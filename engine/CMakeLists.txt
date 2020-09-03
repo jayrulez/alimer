@@ -45,16 +45,24 @@ define_engine_source_files(
     Math
     resource
     Graphics
-    Graphics/gpu
     Scene
     UI
 )
 
 # Include platform files.
-define_engine_source_files(platform/${ALIMER_NATIVE_PLATFORM})
+define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
-    define_engine_source_files(platform/glfw)
+    define_engine_source_files(Platform/glfw)
+endif()
+
+if (ALIMER_ENABLE_D3D12)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D12)
+endif()
+
+if (ALIMER_ENABLE_VULKAN)
+    #define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()
@@ -135,6 +143,10 @@ elseif(WINDOWS_STORE)
     # we need this when using /permissive
     target_compile_options(${TARGET_NAME} PUBLIC "/Zc:twoPhase-")
 
+    if (ALIMER_ENABLE_D3D12)
+        target_link_libraries(${TARGET_NAME} PRIVATE d3d12 dxgi)
+    endif()
+
     if (ALIMER_ENABLE_D3D11)
         target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
     endif()
@@ -152,18 +164,17 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${TARGET_NAME} PRIVATE glfw)
 endif ()
 
+if (ALIMER_ENABLE_D3D12)
+    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D12")
+endif()
+
 if (ALIMER_ENABLE_D3D11)
     target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D11")
 endif()
 
-if (ALIMER_ENABLE_OPENGL)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_OPENGL")
-    target_link_libraries(${TARGET_NAME} PRIVATE alimer_khronos_platform)
-endif()
-
 if (ALIMER_ENABLE_VULKAN)
     target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
-    #target_link_libraries(${TARGET_NAME} PRIVATE volk)
+    target_link_libraries(${TARGET_NAME} PRIVATE volk)
 endif()
 
 # SDK installation

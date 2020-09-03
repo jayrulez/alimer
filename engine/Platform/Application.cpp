@@ -28,11 +28,17 @@ namespace Alimer
 {
     static Application* s_appCurrent = nullptr;
 
-    Application::Application(const Config& config)
-        : _config(config)
-        , _state(State::Uninitialized)
+    Application::Application(const Config& config_)
+        : config(config_)
+        , state(State::Uninitialized)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
+
+        // Figure out the graphics backend API.
+        if (config.rendererType  == RendererType::Count)
+        {
+            //config.rendererType = gpu::getPlatformBackend();
+        }
 
         platform = Platform::Create(this);
 
@@ -41,6 +47,8 @@ namespace Alimer
 
     Application::~Application()
     {
+        graphics->WaitForGPU();
+        graphics.Reset();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -50,8 +58,25 @@ namespace Alimer
         return s_appCurrent;
     }
 
+    void Application::InitBeforeRun()
+    {
+        GraphicsDeviceDescription deviceDesc = {};
+#ifdef _DEBUG
+        deviceDesc.flags |= GraphicsDeviceFlags::DebugRuntime;
+#endif
+        graphics = GraphicsDevice::Create(RendererType::Count, deviceDesc);
+    }
+
     void Application::Run()
     {
+        /*gpu::gpu_config gpu_config{};
+#ifdef _DEBUG
+        gpu_config.debug = true;
+#endif
+        gpu_config.device_preference = config.powerPreference;
+        gpu::init(config.graphicsBackend , &gpu_config);
+        */
+
         platform->Run();
     }
 
@@ -62,7 +87,7 @@ namespace Alimer
 
     const Config* Application::GetConfig()
     {
-        return &_config;
+        return &config;
     }
 
     Window& Application::GetMainWindow() const

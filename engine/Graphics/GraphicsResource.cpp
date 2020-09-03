@@ -20,51 +20,28 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "Core/Log.h"
+#include "Graphics/GraphicsResource.h"
+#include "Graphics/GraphicsDevice.h"
 
-#include "Core/Object.h"
-#include "Graphics/Types.h"
-
-namespace Alimer::Graphics
+namespace Alimer
 {
-    class GPUDevice;
-
-    /// Defines a GPU Resource created by device.
-    class ALIMER_API GPUResource : public Object
+    GraphicsResource::GraphicsResource(GraphicsDevice* device_, Type type_)
+        : device(device_)
+        , type(type_)
     {
-        ALIMER_OBJECT(GPUResource, Object);
+        if (device)
+            device->AddGraphicsResource(this);
+    }
 
-    public:
-        enum class Type
-        {
-            Unknown,
-            Buffer,
-            Texture,
-            SwapChain
-        };
+    GraphicsResource::~GraphicsResource()
+    {
+        if (device)
+            device->RemoveGraphicsResource(this);
+    }
 
-        virtual ~GPUResource() = default;
-
-        /// Release the GPU resource.
-        virtual void Destroy() {}
-
-        /// Set the resource name.
-        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
-
-        /// Get the resource name
-        const std::string& GetName() const { return name; }
-
-    protected:
-        GPUResource(Type type_, const std::string_view& name_)
-            : type(type_)
-            , name(name_)
-        {
-        }
-
-        virtual void BackendSetName() {}
-
-    protected:
-        std::string name;
-        Type type;
-    };
+    GraphicsDevice* GraphicsResource::GetGraphicsDevice() const
+    {
+        return device;
+    }
 }

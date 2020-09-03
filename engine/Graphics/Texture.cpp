@@ -23,10 +23,11 @@
 #include "Core/Log.h"
 #include "Graphics/Texture.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
-    Texture::Texture(const std::string_view& name, const GPUTextureDescription& desc)
-        : type(desc.type)
+    Texture::Texture(GraphicsDevice* device, const GPUTextureDescription& desc)
+        : GraphicsResource(device, Type::Texture)
+        , type(desc.type)
         , format(desc.format)
         , usage(desc.usage)
         , width(desc.width)
@@ -51,8 +52,8 @@ namespace Alimer::Graphics
 
     uint32 Texture::GetDepth(uint32 mipLevel) const
     {
-        // if (type == TextureType::Type3D)
-         //    return 1u;
+        if (type == TextureType::Type3D)
+            return 1u;
 
         return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
     }

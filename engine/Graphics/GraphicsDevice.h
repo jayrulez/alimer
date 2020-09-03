@@ -26,22 +26,10 @@
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/Texture.h"
+#include <mutex>
 
-namespace Alimer::Graphics
+namespace Alimer
 {
-    struct GraphicsDeviceSettings
-    {
-        /// Whether to try use sRGB backbuffer color format.
-        bool colorFormatSrgb = false;
-        /// The depth format.
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        /// Should the window wait for vertical sync before swapping buffers.
-        bool verticalSync = false;
-        uint32 sampleCount = 1u;
-    };
-
-    class Window;
-
     /// Defines the graphics subsystem.
     class ALIMER_API GraphicsDevice : public Object
     {
@@ -50,7 +38,7 @@ namespace Alimer::Graphics
     public:
         virtual ~GraphicsDevice() = default;
 
-        static std::unique_ptr<GraphicsDevice> Create(Window* window, const GraphicsDeviceSettings& settings);
+        static RefPtr<GraphicsDevice> Create(RendererType preferredRenderer, const GraphicsDeviceDescription& desc);
 
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
@@ -64,8 +52,10 @@ namespace Alimer::Graphics
         /// Get the device caps.
         const GraphicsDeviceCaps& GetCaps() const;
 
-        //virtual Texture* GetBackbufferTexture() const = 0;
-        //CommandBuffer& RequestCommandBuffer(const char* name = nullptr, bool profile = false);
+        /// Add a GPU object to keep track of. Called by GraphicsResource.
+        void AddGraphicsResource(GraphicsResource* resource);
+        /// Remove a GPU object. Called by GraphicsResource.
+        void RemoveGraphicsResource(GraphicsResource* resource);
 
         /* Resource creation methods. */
         //virtual GPUBuffer* CreateBuffer(const std::string_view& name) = 0;
@@ -78,6 +68,12 @@ namespace Alimer::Graphics
         GraphicsDeviceCaps caps{};
 
     private:
+        /// Mutex for accessing the GPU objects vector from several threads.
+        std::mutex gpuObjectMutex;
+
+        /// GPU objects.
+        std::vector<GraphicsResource*> gpuObjects;
+
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }

@@ -22,22 +22,22 @@
 
 #pragma once
 
-#include "Graphics/Buffer.h"
+#include "Graphics/GPUBuffer.h"
 #include "D3D12Backend.h"
 
-namespace alimer
+namespace Alimer
 {
-    class D3D12Buffer final : public Buffer
+    class D3D12Buffer final : public GPUBuffer
     {
     public:
-        D3D12Buffer(D3D12GraphicsDevice* device, const eastl::string_view& name, const BufferDescription& desc, const void* initialData);
+        D3D12Buffer(D3D12GraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData);
         ~D3D12Buffer() override;
         void Destroy();
 
         D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
 
     private:
-        void SetName(const eastl::string_view& name);
+        void BackendSetName() override;
 
         D3D12GraphicsDevice* device;
         ID3D12Resource* resource = nullptr;

@@ -28,7 +28,7 @@
 #include "Math/Color.h"
 #include "Math/Viewport.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     /// A container that stores commands for the GPU to execute.
     class ALIMER_API CommandBuffer

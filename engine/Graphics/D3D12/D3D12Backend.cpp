@@ -20,53 +20,31 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Platform/Platform.h"
-#include "Platform/Application.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    std::vector<std::string> Platform::arguments = {};
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+#endif
 
-    Platform::Platform(Application* application)
-        : application{ application }
+    void D3D12SetObjectName(ID3D12Object* obj, const std::string& name)
     {
-        ALIMER_ASSERT(application);
-    }
-
-    Window& Platform::GetMainWindow() const
-    {
-        return *window;
-    }
-
-    void Platform::InitApplication()
-    {
-        application->InitBeforeRun();
-    }
-
-    std::string Platform::GetName()
-    {
-        return "Windows";
-    }
-
-    PlatformId Platform::GetId()
-    {
-        return PlatformId::Windows;
-    }
-
-    PlatformFamily Platform::GetFamily()
-    {
-        return PlatformFamily::Desktop;
-    }
-
-    std::vector<std::string> Platform::GetArguments()
-    {
-        return Platform::arguments;
-    }
-
-    void Platform::SetArguments(const std::vector<std::string>& args)
-    {
-        arguments = args;
+#ifdef _DEBUG
+        if (obj != nullptr)
+        {
+            if (!name.empty())
+            {
+                std::wstring wideStr = ToUtf16(name);
+                obj->SetName(wideStr.c_str());
+            }
+            else
+                obj->SetName(nullptr);
+        }
+#else
+        ALIMER_UNUSED(obj);
+        ALIMER_UNUSED(name);
+#endif
     }
 }

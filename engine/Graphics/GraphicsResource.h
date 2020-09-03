@@ -22,47 +22,51 @@
 
 #pragma once
 
-#include "Graphics/GraphicsResource.h"
+#include "Core/Object.h"
+#include "Graphics/Types.h"
 
 namespace Alimer
 {
-    /// 
-    class GPUBuffer : public GraphicsResource
+    class GraphicsDevice;
+
+    /// Defines a GPU Resource created by device.
+    class ALIMER_API GraphicsResource : public Object
     {
-        ALIMER_OBJECT(GPUBuffer, GraphicsResource);
+        ALIMER_OBJECT(GraphicsResource, Object);
 
     public:
-        /// Constructor
-        GPUBuffer(GraphicsDevice* device, const GPUBufferDescription& desc);
-
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const
+        enum class Type
         {
-            return usage;
-        }
+            Unknown,
+            Buffer,
+            Texture,
+            SwapChain
+        };
 
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetSize() const
-        {
-            return size;
-        }
+        ~GraphicsResource();
 
-        /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const
-        {
-            return stride;
-        }
+        /// Release the GPU resource.
+        virtual void Destroy() {}
 
-        /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
-        {
-            ALIMER_ASSERT(stride > 0);
-            return size / stride;
-        }
+        /// Return the graphics device associated with this GPU resource.
+        GraphicsDevice* GetGraphicsDevice() const;
 
-    private:
-        GPUBufferUsage usage;
-        uint32 size;
-        uint32 stride;
+        /// Set the resource name.
+        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
+
+        /// Get the resource name
+        const std::string& GetName() const { return name; }
+
+    protected:
+        GraphicsResource(GraphicsDevice* device, Type type);
+
+        virtual void BackendSetName() {}
+
+    protected:
+        /// Graphics subsystem.
+        WeakPtr<GraphicsDevice> device;
+        Type type;
+
+        std::string name;
     };
 }

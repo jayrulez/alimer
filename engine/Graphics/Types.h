@@ -26,7 +26,7 @@
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     static constexpr uint32 kInflightFrameCount = 2u;
     static constexpr uint32 kMaxColorAttachments = 8u;
@@ -71,7 +71,7 @@ namespace Alimer::Graphics
         Count
     };
 
-    enum class PowerPreference : uint32_t
+    enum class GraphicsAdapterPreference : uint32_t
     {
         Default,
         LowPower,
@@ -129,6 +129,19 @@ namespace Alimer::Graphics
         Clear
     };
 
+    /// GraphicsDevice flags.
+    enum class GraphicsDeviceFlags : uint32_t
+    {
+        None = 0x0,
+        /// Enable debug runtime.
+        DebugRuntime = 0x1,
+        /// Enable GPU based validation.
+        GPUBasedValidation = 0x2,
+        /// Enable RenderDoc integration.
+        RenderDoc = 0x4,
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDeviceFlags, uint32_t);
+
     /* Structs */
     struct GPUBufferDescription
     {
@@ -165,6 +178,28 @@ namespace Alimer::Graphics
             return desc;
         }
     };
+
+    struct SwapChainDescription
+    {
+        void* windowHandle;
+        TextureUsage usage = TextureUsage::RenderTarget;
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+        /// The depth format.
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        uint32_t width;
+        uint32_t height;
+        bool verticalSync = false;
+        uint32 sampleCount = 1u;
+        const char* label;
+    };
+
+    struct GraphicsDeviceDescription
+    {
+        GraphicsDeviceFlags flags;
+        GraphicsAdapterPreference adapterPreference;
+        SwapChainDescription primarySwapChain;
+    };
+
 
     struct GraphicsDeviceCaps
     {

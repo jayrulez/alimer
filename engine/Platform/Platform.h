@@ -95,6 +95,7 @@ namespace Alimer
         static void SetArguments(const std::vector<std::string>& args);
 
     protected:
+        void InitApplication();
         virtual void Run() = 0;
 
         Application* application;

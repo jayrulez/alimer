@@ -28,11 +28,26 @@ struct GLFWwindow;
 
 namespace Alimer
 {
+    enum class WindowFlags : uint32_t
+    {
+        None = 0,
+        Fullscreen = 1 << 0,
+        FullscreenDesktop = 1 << 1,
+        Hidden = 1 << 2,
+        Borderless = 1 << 3,
+        Resizable = 1 << 4,
+        Minimized = 1 << 5,
+        Maximized = 1 << 6,
+        HighDpi = 1 << 7,
+        OpenGL = 1 << 8,
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
+
     class GLFW_Window final : public Window
     {
     public:
         /// Constructor.
-        GLFW_Window(const char* title, uint32 width, uint32 height, bool resizable, bool fullscreen);
+        GLFW_Window(const char* title, uint32 width, uint32 height, WindowFlags flags);
 
         /// Destructor.
         ~GLFW_Window() override;

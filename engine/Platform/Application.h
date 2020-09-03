@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Platform/Platform.h"
-#include "Graphics/gpu/gpu.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -36,14 +36,16 @@ namespace Alimer
         bool resizable = true;
         bool debug;
         int vsync;
-        uint32_t sample_count;
+        uint32_t sampleCount;
 
-        graphics::BackendType graphics_backend;
-        graphics::PowerPreference power_preference;
+        RendererType rendererType = RendererType::Count;
+        GraphicsAdapterPreference adapterPreference = GraphicsAdapterPreference::HighPerformance;
     };
 
     class ALIMER_API Application 
     {
+        friend class Platform;
+
     public:
         enum class State
         {
@@ -70,11 +72,15 @@ namespace Alimer
         /// Get the main window.
         Window& GetMainWindow() const;
 
-    private:
-        std::unique_ptr<Platform> platform;
-        Config _config;
-        State _state;
+        GraphicsDevice* GetGraphicsDevice() const noexcept { return graphics.Get(); }
 
+    private:
+        void InitBeforeRun();
+
+        std::unique_ptr<Platform> platform;
+        Config config;
+        State state;
+        RefPtr<GraphicsDevice> graphics;
     };
 
     extern Application* CreateApplication(void);

@@ -20,11 +20,27 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
+#include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/GPUResource.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/GraphicsResource.h"
+#include "Graphics/D3D/D3DHelpers.h"
 
-namespace Alimer::Graphics
+#include <d3d12.h>
+#include "D3D12MemAlloc.h"
+
+#define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
+#define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
+
+namespace Alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+#endif
 
+    class D3D12GraphicsDevice;
+
+    void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
 }

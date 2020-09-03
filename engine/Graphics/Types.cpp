@@ -22,7 +22,7 @@
 
 #include "Graphics/Types.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     const char* ToString(RendererType value)
     {

@@ -23,13 +23,13 @@
 #include "Core/Log.h"
 #include "Graphics/GPUBuffer.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
-    GPUBuffer::GPUBuffer(const std::string_view& name, const GPUBufferDescription* desc)
-        : GPUResource(Type::Buffer, name)
-        , usage(desc->usage)
-        , size(desc->size)
-        , stride(desc->stride)
+    GPUBuffer::GPUBuffer(GraphicsDevice* device, const GPUBufferDescription& desc)
+        : GraphicsResource(device, Type::Buffer)
+        , usage(desc.usage)
+        , size(desc.size)
+        , stride(desc.stride)
     {
 
     }

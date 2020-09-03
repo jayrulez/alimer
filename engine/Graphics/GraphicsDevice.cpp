@@ -25,19 +25,32 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_ENABLE_D3D11)
-#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#if defined(ALIMER_ENABLE_D3D12)
+#   include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     GraphicsDevice::GraphicsDevice()
     {
     }
 
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(Window* window, const GraphicsDeviceSettings& settings)
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(RendererType preferredRenderer, const GraphicsDeviceDescription& desc)
     {
-        return std::make_unique<D3D11GraphicsDevice>(window, settings);
+        return MakeRefPtr<D3D12GraphicsDevice>(desc);
+    }
+
+    void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
+    {
+        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
+        gpuObjects.push_back(resource);
+    }
+
+    void GraphicsDevice::RemoveGraphicsResource(GraphicsResource* resource)
+    {
+        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
+
+        //gpuObjects.erase_first(object);
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const

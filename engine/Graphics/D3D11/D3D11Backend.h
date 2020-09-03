@@ -24,7 +24,7 @@
 
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/GPUResource.h"
+#include "Graphics/GraphicsResource.h"
 #include "Graphics/D3D/D3DHelpers.h"
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
