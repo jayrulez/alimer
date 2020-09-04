@@ -30,6 +30,7 @@ namespace Alimer
         , colorFormat(desc.colorFormat)
         , width(desc.width)
         , height(desc.height)
+        , isFullscreen(desc.fullscreen)
     {
 
     }

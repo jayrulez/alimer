@@ -41,5 +41,12 @@ namespace Alimer
 
         IDXGISwapChain3* handle;
         bool isTearingSupported;
+
+        static constexpr uint32_t kMaxFrameCount = 3u;
+
+        uint32_t frameIndex = 0;
+        uint64_t fenceValues[kMaxFrameCount] = {};
+        ID3D12Fence* frameFence = nullptr;
+        HANDLE frameFenceEvent = INVALID_HANDLE_VALUE;
     };
 }

@@ -387,7 +387,19 @@ namespace Alimer
 
     void D3D12GraphicsDevice::HandleDeviceLost()
     {
+        HRESULT hr = d3dDevice->GetDeviceRemovedReason();
 
+        const char* reason = "?";
+        switch (hr)
+        {
+        case DXGI_ERROR_DEVICE_HUNG:			reason = "HUNG"; break;
+        case DXGI_ERROR_DEVICE_REMOVED:			reason = "REMOVED"; break;
+        case DXGI_ERROR_DEVICE_RESET:			reason = "RESET"; break;
+        case DXGI_ERROR_DRIVER_INTERNAL_ERROR:	reason = "INTERNAL_ERROR"; break;
+        case DXGI_ERROR_INVALID_CALL:			reason = "INVALID_CALL"; break;
+        }
+
+        LOGE("The Direct3D12 device Lost on Present: (Error:  0x%08X '%s')", hr,reason );
     }
 
 
@@ -536,7 +548,7 @@ namespace Alimer
 
     uint64 D3D12GraphicsDevice::Frame()
     {
-        if (!isLost)
+        if (isLost)
             return frameCount;
 
         // TODO: Manage upload
@@ -545,11 +557,13 @@ namespace Alimer
         ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
 
         uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+        LOGI("CPU Frame: %llu - GPU Frame: %llu", frameCount, GPUFrameCount);
 
         if ((frameCount - GPUFrameCount) >= kInflightFrameCount)
         {
+            LOGI("Waiting on fence value");
             frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
-            WaitForSingleObject(frameFenceEvent, INFINITE);
+            WaitForSingleObjectEx(frameFenceEvent, INFINITE, FALSE);
         }
 
         if (!dxgiFactory->IsCurrent())

@@ -40,5 +40,6 @@ namespace Alimer
         PixelFormat colorFormat;
         uint32 width;
         uint32 height;
+        bool isFullscreen;
     };
 }
