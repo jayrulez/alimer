@@ -26,6 +26,7 @@
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
+#include <EASTL/set.h>
 #include <mutex>
 
 namespace Alimer
@@ -38,16 +39,20 @@ namespace Alimer
     public:
         virtual ~GraphicsDevice() = default;
 
-        static RefPtr<GraphicsDevice> Create(RendererType preferredRenderer, const GraphicsDeviceDescription& desc);
+        static eastl::set<GPUBackendType> GetAvailableBackends();
+        static RefPtr<GraphicsDevice> Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
 
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
-        /// Total number of CPU frames completed.
-        virtual uint64 Frame() = 0;
+        /// Begin rendering frame.
+        virtual bool BeginFrame() = 0;
+
+        /// End current rendering frame.
+        virtual void EndFrame() = 0;
 
         /// Gets the device backend type.
-        RendererType GetRendererType() const { return caps.rendererType; }
+        GPUBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
         const GraphicsDeviceCaps& GetCaps() const;

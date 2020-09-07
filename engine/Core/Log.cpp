@@ -34,7 +34,7 @@
 #  include <unistd.h>
 #elif defined(_WIN32)
 #   include "Platform/Win32/WindowsPlatform.h"
-#   include <array>
+#   include <EASTL/array.h>
 #elif defined(__EMSCRIPTEN__)
 #  include <emscripten.h>
 #endif
@@ -47,7 +47,7 @@ namespace Alimer::Log
         "INFO",
         "WARN",
         "ERROR",
-        "CRITICAL",
+        "FATAL",
         "OFF"
     };
 
@@ -89,7 +89,7 @@ namespace Alimer::Log
         Level level;
 
 #if defined(_DEBUG) && defined(_WIN32)
-        std::array<WORD, size_t(Level::Count)> consoleColors;
+        eastl::array<WORD, size_t(Level::Count)> consoleColors;
 #endif
     };
 
@@ -114,7 +114,7 @@ namespace Alimer::Log
         consoleColors[(uint32_t)Level::Info] = GREEN;
         consoleColors[(uint32_t)Level::Warn] = YELLOW | BOLD;
         consoleColors[(uint32_t)Level::Error] = RED | BOLD;                         // red bold
-        consoleColors[(uint32_t)Level::Critical] = BACKGROUND_RED | WHITE | BOLD; // white bold on red background
+        consoleColors[(uint32_t)Level::Fatal] = BACKGROUND_RED | WHITE | BOLD; // white bold on red background
         consoleColors[(uint32_t)Level::Off] = 0;
 #endif
     }
@@ -134,7 +134,7 @@ namespace Alimer::Log
         case LogLevel::Info: priority = ANDROID_LOG_INFO; break;
         case LogLevel::Warn: priority = ANDROID_LOG_WARN; break;
         case LogLevel::Error: priority = ANDROID_LOG_ERROR; break;
-        case LogLevel::Critical: priority = ANDROID_LOG_FATAL; break;
+        case LogLevel::Fatal: priority = ANDROID_LOG_FATAL; break;
         default: return;
         }
         __android_log_print(priority, name.c_str(), "%s", message.c_str());
@@ -147,7 +147,7 @@ namespace Alimer::Log
         case LogLevel::Info: priority = LOG_INFO; break;
         case LogLevel::Warn: priority = LOG_WARNING; break;
         case LogLevel::Error: priority = LOG_ERR; break;
-        case LogLevel::Critical: priority = LOG_CRIT; break;
+        case LogLevel::Fatal: priority = LOG_CRIT; break;
         default: return;
         }
         syslog(priority, "%s", message.c_str());
@@ -157,7 +157,7 @@ namespace Alimer::Log
         {
         case LogLevel::Warn:
         case LogLevel::Error:
-        case LogLevel::Critical:
+        case LogLevel::Fatal:
             fd = STDERR_FILENO;
             break;
         case LogLevel::Verbose:
@@ -193,7 +193,7 @@ namespace Alimer::Log
         {
         case Level::Warn:
         case Level::Error:
-        case Level::Critical:
+        case Level::Fatal:
             consoleOutput = GetStdHandle(STD_ERROR_HANDLE);
             break;
         case Level::Verbose:
@@ -262,8 +262,8 @@ namespace Alimer::Log
         Logger::GetDefault()->Log(Level::Error, message);
     }
 
-    void Critical(const eastl::string& message)
+    void Fatal(const eastl::string& message)
     {
-        Logger::GetDefault()->Log(Level::Critical, message);
+        Logger::GetDefault()->Log(Level::Fatal, message);
     }
 }

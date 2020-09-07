@@ -22,25 +22,22 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
+#include "Graphics/GPUBuffer.h"
 #include "VulkanBackend.h"
 
 namespace Alimer
 {
-    class VulkanGPUTexture final : public Texture
+    class VulkanBuffer final : public GPUBuffer
     {
     public:
-        VulkanGPUTexture(VulkanGraphicsDevice* device_, const GPUTextureDescription& desc);
-        ~VulkanGPUTexture() override;
-
+        VulkanBuffer(VulkanGraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData);
+        ~VulkanBuffer() override;
         void Destroy() override;
 
     private:
         void BackendSetName() override;
 
-        VulkanGraphicsDevice* device;
-
-        VkImage handle{ VK_NULL_HANDLE };
+        VkBuffer handle{ VK_NULL_HANDLE };
         VmaAllocation allocation{ VK_NULL_HANDLE };
     };
 }

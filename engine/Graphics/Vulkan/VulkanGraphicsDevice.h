@@ -22,41 +22,21 @@
 
 #pragma once
 
-#include "Graphics/GraphicsImpl.h"
+#include "Graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
-#include "VulkanGPUAdapter.h"
 #include <mutex>
-#include <unordered_map>
+#include <EASTL/unordered_map.h>
 
 namespace Alimer
 {
-    class VulkanGPUContext;
-
-    struct VulkanTexture
-    {
-        enum { MAX_COUNT = 4096 };
-
-        VkImage handle;
-        VmaAllocation allocation;
-    };
-
-    struct VulkanBuffer
-    {
-        enum { MAX_COUNT = 4096 };
-
-        VkBuffer handle;
-        VmaAllocation allocation;
-    };
-
-    class VulkanGraphicsImpl final : public GraphicsImpl
+    class VulkanGraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
 
-        VulkanGraphicsImpl();
-        ~VulkanGraphicsImpl() override;
+        VulkanGraphicsDevice(const GraphicsDeviceDescription& desc);
+        ~VulkanGraphicsDevice() override;
 
-        bool Initialize(Window* window, const GraphicsDeviceSettings* settings) override;
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
@@ -65,31 +45,25 @@ namespace Alimer
         void ReturnSemaphore(VkSemaphore semaphore);
 
         /* Resource creation methods */
-        TextureHandle AllocTextureHandle();
-        BufferHandle AllocBufferHandle();
-
-        void SetObjectName(VkObjectType type, uint64_t handle, const String& name);
-        VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
-        VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
-
-
-        GPUAdapter* GetAdapter() const;
-        VulkanGPUContext* GetVulkanMainContext() const;
-
+        void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
+        //VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
+        //VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
 
         VkInstance GetVkInstance() const { return instance; }
         const VulkanInstanceExtensions& GetInstanceExtensions() const { return instanceExts; }
 
         VkDevice GetHandle() const { return device; }
         VmaAllocator GetAllocator() const { return allocator; }
-        VkPhysicalDevice GetVkPhysicalDevice() const { return adapter->GetHandle(); }
+        VkPhysicalDevice GetVkPhysicalDevice() const { return physicalDevice; }
         const PhysicalDeviceExtensions& GetPhysicalDeviceExtensions() const { return physicalDeviceExts; }
         VkQueue GetGraphicsQueue() const { return graphicsQueue; }
         uint32 GetGraphicsQueueFamilyIndex() const { return queueFamilies.graphicsQueueFamilyIndex; }
+        VkCommandBuffer GetPrimaryCommandBuffer() const { return frames[frameIndex].primaryCommandBuffer; }
 
     private:
         void Shutdown();
-        VkSurfaceKHR CreateSurface(Window* window);
+        VkSurfaceKHR CreateSurface(void* windowHandle);
+        bool InitInstance(const eastl::string& applicationName, bool headless);
         bool InitPhysicalDevice(VkSurfaceKHR surface);
         bool InitLogicalDevice();
         void InitCapabilities();
@@ -103,9 +77,11 @@ namespace Alimer
 
         /// Debug utils messenger callback for VK_EXT_Debug_Utils
         VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
-        
-        VulkanGPUAdapter* adapter = nullptr;
 
+        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
+        VkPhysicalDeviceFeatures physicalDeviceFeatures{};
+        VkPhysicalDeviceProperties physicalDeviceProperties{};
+        VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties{};
         QueueFamilyIndices queueFamilies;
         PhysicalDeviceExtensions physicalDeviceExts;
 
@@ -118,16 +94,15 @@ namespace Alimer
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
 
-        std::mutex handle_mutex;
-        GPUResourcePool<VulkanTexture, VulkanTexture::MAX_COUNT> textures;
-        GPUResourcePool<VulkanBuffer, VulkanBuffer::MAX_COUNT> buffers;
-
-        VulkanGPUContext* mainContext = nullptr;
+        /// Number of frame count
+        uint64_t frameIndex{ 0 };
+        uint64_t frameCount{ 0 };
+        eastl::vector<VulkanRenderFrame> frames;
 
         /// A set of semaphores that can be reused.
-        std::vector<VkSemaphore> recycledSemaphores;
+        eastl::vector<VkSemaphore> recycledSemaphores;
 
-        std::unordered_map<Hash, VkRenderPass> renderPasses;
-        std::unordered_map<Hash, VkFramebuffer> framebuffers;
+        eastl::unordered_map<Hash, VkRenderPass> renderPasses;
+        eastl::unordered_map<Hash, VkFramebuffer> framebuffers;
     };
 }

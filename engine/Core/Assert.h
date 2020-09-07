@@ -57,7 +57,7 @@ namespace Alimer
 			{ \
 				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
 					Alimer::AssertFailBehavior::Halt) \
-					ALIMER_FORCE_CRASH(); \
+					ALIMER_DEBUG_BREAK(); \
 			} \
 		} while(0)
 
@@ -68,7 +68,7 @@ namespace Alimer
 			{ \
 				if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
 					Alimer::AssertFailBehavior::Halt) \
-					ALIMER_FORCE_CRASH(); \
+					ALIMER_DEBUG_BREAK(); \
 			} \
 		} while(0)
 
@@ -77,7 +77,7 @@ namespace Alimer
 		{ \
 			if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
 				Alimer::AssertFailBehavior::Halt) \
-			    ALIMER_FORCE_CRASH(); \
+			    ALIMER_DEBUG_BREAK(); \
 		} while(0)
 
 #   define ALIMER_VERIFY(cond) ALIMER_ASSERT(cond)

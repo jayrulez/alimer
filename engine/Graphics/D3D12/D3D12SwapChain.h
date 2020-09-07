@@ -32,21 +32,15 @@ namespace Alimer
     public:
         D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
         ~D3D12SwapChain() override;
-        void Destroy() override;
+        void Destroy();
 
         bool Present(bool verticalSync) override;
 
     private:
-        void BackendSetName() override;
-
+        D3D12GraphicsDevice* device;
         IDXGISwapChain3* handle;
         bool isTearingSupported;
 
         static constexpr uint32_t kMaxFrameCount = 3u;
-
-        uint32_t frameIndex = 0;
-        uint64_t fenceValues[kMaxFrameCount] = {};
-        ID3D12Fence* frameFence = nullptr;
-        HANDLE frameFenceEvent = INVALID_HANDLE_VALUE;
     };
 }

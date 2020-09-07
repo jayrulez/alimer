@@ -296,7 +296,6 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #   define ALIMER_UNREACHABLE() __builtin_unreachable()
 #   define ALIMER_DEBUG_BREAK() __builtin_trap()
-#   define ALIMER_FORCE_CRASH() __builtin_trap()
 #elif defined(__GNUC__)
 #   define ALIMER_RESTRICT __restrict
 #   define ALIMER_THREADLOCAL __thread
@@ -309,7 +308,6 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #   define ALIMER_UNREACHABLE() __builtin_unreachable()
 #   define ALIMER_DEBUG_BREAK() __builtin_trap()
-#   define ALIMER_FORCE_CRASH() __builtin_trap()
 #elif defined(_MSC_VER)
 #   include <intrin.h>
 #   define ALIMER_RESTRICT __restrict
@@ -323,7 +321,6 @@ Architecture defines, see http://sourceforge.net/apps/mediawiki/predef/index.php
 #   define ALIMER_UNLIKELY(x) (x)
 #   define ALIMER_UNREACHABLE() __assume(false)
 #   define ALIMER_DEBUG_BREAK() __debugbreak()
-#   define ALIMER_FORCE_CRASH() __ud2()
 #endif
 
 #ifndef ALIMER_ALIGN

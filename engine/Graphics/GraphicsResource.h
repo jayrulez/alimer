@@ -39,8 +39,7 @@ namespace Alimer
         {
             Unknown,
             Buffer,
-            Texture,
-            SwapChain
+            Texture
         };
 
         ~GraphicsResource();

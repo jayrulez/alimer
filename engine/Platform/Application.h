@@ -38,7 +38,7 @@ namespace Alimer
         int vsync;
         uint32_t sampleCount;
 
-        RendererType rendererType = RendererType::Count;
+        GPUBackendType rendererType = GPUBackendType::Count;
         GraphicsAdapterPreference adapterPreference = GraphicsAdapterPreference::HighPerformance;
     };
 

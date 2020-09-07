@@ -25,12 +25,12 @@
 
 namespace Alimer
 {
-    SwapChain::SwapChain(GraphicsDevice* device, const SwapChainDescription& desc)
-        : GraphicsResource(device, Type::SwapChain)
-        , colorFormat(desc.colorFormat)
+    SwapChain::SwapChain(const SwapChainDescription& desc)
+        : colorFormat(desc.colorFormat)
         , width(desc.width)
         , height(desc.height)
         , isFullscreen(desc.fullscreen)
+        , currentBufferIndex(0)
     {
 
     }

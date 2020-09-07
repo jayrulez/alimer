@@ -25,23 +25,24 @@
 
 namespace Alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
-        : SwapChain(device, desc)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device_, const SwapChainDescription& desc)
+        : SwapChain(desc)
+        , device(device_)
         , isTearingSupported(device->IsTearingSupported())
     {
         IDXGISwapChain1* tempSwapChain = DXGICreateSwapChain(
             device->GetDXGIFactory(),
             device->GetDXGIFactoryCaps(),
             device->GetGraphicsQueue(),
+            Max(kInflightFrameCount, kMaxFrameCount),
             desc);
         ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
         SafeRelease(tempSwapChain);
 
-        // Frame fence.
-        ThrowIfFailed(device->GetD3DDevice()->CreateFence(fenceValues[frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-        fenceValues[frameIndex]++;
-
-        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
+        if (desc.label && strlen(desc.label))
+        {
+            DXGISetObjectName(handle, desc.label);
+        }
     }
 
     D3D12SwapChain::~D3D12SwapChain()
@@ -51,14 +52,7 @@ namespace Alimer
 
     void D3D12SwapChain::Destroy()
     {
-        CloseHandle(frameFenceEvent);
-        SafeRelease(frameFence);
         SafeRelease(handle);
-    }
-
-    void D3D12SwapChain::BackendSetName()
-    {
-        DXGISetObjectName(handle, name);
     }
 
     bool D3D12SwapChain::Present(bool verticalSync)
@@ -78,32 +72,9 @@ namespace Alimer
         // If the device was reset we must completely reinitialize the renderer.
         if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET || result == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
         {
-            static_cast<D3D12GraphicsDevice*>(device.Get())->HandleDeviceLost();
+            device->HandleDeviceLost();
             return false;
         }
-
-        /*auto d3dDevice = static_cast<D3D12GraphicsDevice*>(device.Get());
-
-        // Schedule a signal so that we know when the just-presented frame
-        // has finished rendering. This will be checked in GetNextRenderTarget.
-        uint64_t currentFenceValue = fenceValues[frameIndex];
-        d3dDevice->GetGraphicsQueue()->Signal(frameFence, currentFenceValue);
-
-        // Advance the frame index.
-        frameIndex = handle->GetCurrentBackBufferIndex();
-
-        // Check to see if the next frame is ready to start.
-        LOGI("CPU Frame: %llu - GPU Frame: %llu", fenceValues[frameIndex], frameFence->GetCompletedValue());
-
-        if (frameFence->GetCompletedValue() < fenceValues[frameIndex])
-        {
-            LOGI("Waiting on fence value");
-            frameFence->SetEventOnCompletion(fenceValues[frameIndex], frameFenceEvent);
-            WaitForSingleObjectEx(frameFenceEvent, INFINITE, FALSE);
-        }
-
-        // Set the fence value for the next frame.
-        fenceValues[frameIndex] = currentFenceValue + 1;*/
 
         return SUCCEEDED(result);
     }

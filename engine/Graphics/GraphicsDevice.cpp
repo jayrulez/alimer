@@ -28,6 +28,9 @@
 #if defined(ALIMER_ENABLE_D3D12)
 #   include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
+#if defined(ALIMER_ENABLE_VULKAN)
+#   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
+#endif
 
 namespace Alimer
 {
@@ -35,9 +38,72 @@ namespace Alimer
     {
     }
 
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(RendererType preferredRenderer, const GraphicsDeviceDescription& desc)
+    eastl::set<GPUBackendType> GraphicsDevice::GetAvailableBackends()
     {
-        return MakeRefPtr<D3D12GraphicsDevice>(desc);
+        static eastl::set<GPUBackendType> availableBackends;
+
+        if (availableBackends.empty())
+        {
+            availableBackends.insert(GPUBackendType::Null);
+
+#if defined(ALIMER_ENABLE_D3D12)
+            if(D3D12GraphicsDevice::IsAvailable())
+                availableBackends.insert(GPUBackendType::Direct3D12);
+#endif
+#if defined(ALIMER_ENABLE_VULKAN)
+            if (VulkanGraphicsDevice::IsAvailable())
+                availableBackends.insert(GPUBackendType::Vulkan);
+#endif
+        }
+
+        return availableBackends;
+    }
+
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc)
+    {
+        if (preferredBackend == GPUBackendType::Count)
+        {
+            const auto availableBackends = GetAvailableBackends();
+
+            if (availableBackends.find(GPUBackendType::Direct3D12) != availableBackends.end())
+                preferredBackend = GPUBackendType::Direct3D12;
+            else if (availableBackends.find(GPUBackendType::Metal) != availableBackends.end())
+                preferredBackend = GPUBackendType::Metal;
+            else if (availableBackends.find(GPUBackendType::Vulkan) != availableBackends.end())
+                preferredBackend = GPUBackendType::Vulkan;
+            else
+                preferredBackend = GPUBackendType::Null;
+        }
+
+        switch (preferredBackend)
+        {
+#if defined(ALIMER_ENABLE_D3D12)
+        case GPUBackendType::Direct3D12:
+            if (D3D12GraphicsDevice::IsAvailable())
+            {
+                return MakeRefPtr<D3D12GraphicsDevice>(desc);
+            }
+
+            LOGE("Direct3D12 backend is not supported on this platform");
+            return nullptr;
+#endif
+
+#if defined(ALIMER_ENABLE_VULKAN)
+        case GPUBackendType::Vulkan:
+            if (VulkanGraphicsDevice::IsAvailable())
+            {
+                return MakeRefPtr<VulkanGraphicsDevice>(desc);
+            }
+
+            LOGE("Vulkan backend is not supported on this platform");
+            return nullptr;
+#endif
+
+        default:
+            break;
+        }
+
+        return nullptr;
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)

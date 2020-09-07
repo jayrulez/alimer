@@ -54,7 +54,6 @@ namespace Alimer
             if (!glfwInit())
             {
                 LOGE("GLFW couldn't be initialized.");
-                ALIMER_FORCE_CRASH();
             }
         }
 
@@ -112,7 +111,6 @@ namespace Alimer
         if (!handle)
         {
             LOGE("Couldn't create glfw window.");
-            ALIMER_FORCE_CRASH();
         }
 
         glfwDefaultWindowHints();

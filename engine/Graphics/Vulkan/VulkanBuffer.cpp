@@ -20,8 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "VulkanGPUBuffer.h"
-#include "VulkanGraphicsImpl.h"
+#include "VulkanBuffer.h"
+#include "VulkanGraphicsDevice.h"
 
 namespace Alimer
 {
@@ -49,13 +49,15 @@ namespace Alimer
         }
     }
 
-    VulkanGPUBuffer::VulkanGPUBuffer(VulkanGraphicsDevice* device, const std::string_view& name)
-        : GPUBuffer(name)
-        , device{ device }
+    VulkanBuffer::VulkanBuffer(VulkanGraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData)
+        : GPUBuffer(device, desc)
     {
-        /*VkBufferCreateInfo createInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        createInfo.size = descriptor.size;
-        createInfo.usage = VulkanBufferUsage(descriptor.usage);
+        VkBufferCreateInfo createInfo;
+        createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        createInfo.pNext = nullptr;
+        createInfo.flags = 0;
+        createInfo.size = desc.size;
+        createInfo.usage = VulkanBufferUsage(desc.usage);
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.queueFamilyIndexCount = 0;
         createInfo.pQueueFamilyIndices = nullptr;
@@ -68,26 +70,32 @@ namespace Alimer
         VkResult result = vmaCreateBuffer(device->GetAllocator(),
             &createInfo, &memoryInfo,
             &handle, &allocation,
-            &allocationInfo);*/
+            &allocationInfo);
+
+        if (result != VK_SUCCESS)
+        {
+            LOGE("Vulkan: Failed to create buffer");
+        }
     }
 
-    VulkanGPUBuffer::~VulkanGPUBuffer()
+    VulkanBuffer::~VulkanBuffer()
     {
         Destroy();
     }
 
-    void VulkanGPUBuffer::Destroy()
+    void VulkanBuffer::Destroy()
     {
         if (handle != VK_NULL_HANDLE
             && allocation != VK_NULL_HANDLE)
         {
             //unmap();
+            // TODO: Deferred destroy
             //vmaDestroyBuffer(device->GetAllocator(), handle, allocation);
         }
     }
 
-    void VulkanGPUBuffer::BackendSetName()
+    void VulkanBuffer::BackendSetName()
     {
-       // device->SetObjectName(VK_OBJECT_TYPE_BUFFER, (uint64_t)handle, name);
+        // device->SetObjectName(VK_OBJECT_TYPE_BUFFER, (uint64_t)handle, name);
     }
 }

@@ -62,7 +62,7 @@ if (ALIMER_ENABLE_D3D12)
 endif()
 
 if (ALIMER_ENABLE_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
+    define_engine_source_files(Graphics/Vulkan)
 endif()
 
 group_sources()

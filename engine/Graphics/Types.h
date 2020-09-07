@@ -53,7 +53,7 @@ namespace Alimer
     };
 
     /// Enum describing the rendering backend.
-    enum class RendererType
+    enum class GPUBackendType
     {
         /// Null renderer.
         Null,
@@ -65,8 +65,6 @@ namespace Alimer
         Metal,
         /// Vulkan backend.
         Vulkan,
-        /// OpenGL backend.
-        OpenGL,
         /// Default best platform supported backend.
         Count
     };
@@ -129,19 +127,6 @@ namespace Alimer
         Clear
     };
 
-    /// GraphicsDevice flags.
-    enum class GraphicsDeviceFlags : uint32_t
-    {
-        None = 0x0,
-        /// Enable debug runtime.
-        DebugRuntime = 0x1,
-        /// Enable GPU based validation.
-        GPUBasedValidation = 0x2,
-        /// Enable RenderDoc integration.
-        RenderDoc = 0x4,
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDeviceFlags, uint32_t);
-
     /* Structs */
     struct GPUBufferDescription
     {
@@ -150,7 +135,7 @@ namespace Alimer
         uint32 stride;
     };
 
-    struct GPUTextureDescription
+    struct TextureDescription
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
@@ -163,9 +148,9 @@ namespace Alimer
         uint32 sampleCount = 1u;
         const char* label;
 
-        static GPUTextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
+        static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
         {
-            GPUTextureDescription desc = {};
+            TextureDescription desc = {};
             desc.type = TextureType::Type2D;
             desc.format = format;
             desc.usage = usage;
@@ -188,28 +173,26 @@ namespace Alimer
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         uint32_t width;
         uint32_t height;
-        bool verticalSync = false;
-        uint32 sampleCount = 1u;
         bool fullscreen = false;
         const char* label;
     };
 
     struct GraphicsDeviceDescription
     {
-        GraphicsDeviceFlags flags;
+        eastl::string applicationName;
         GraphicsAdapterPreference adapterPreference;
         SwapChainDescription primarySwapChain;
     };
 
     struct GraphicsDeviceCaps
     {
-        RendererType rendererType;
+        GPUBackendType backendType;
 
         /// Gets the GPU device identifier.
-        uint32 deviceId;
+        uint32_t deviceId;
 
         /// Gets the GPU vendor identifier.
-        uint32 vendorId;
+        uint32_t vendorId;
 
         /// Gets the adapter name.
         eastl::string adapterName;
@@ -276,7 +259,7 @@ namespace Alimer
         Limits limits;
     };
 
-    ALIMER_API const char* ToString(RendererType value);
+    ALIMER_API const char* ToString(GPUBackendType value);
 
     // Returns true if adapter's vendor is AMD.
     ALIMER_FORCE_INLINE bool IsAMD(uint32 vendorId)

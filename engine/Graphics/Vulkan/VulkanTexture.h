@@ -20,63 +20,27 @@
 // THE SOFTWARE.
 //
 
+#pragma once
 
-#include "core/Assert.h"
 #include "Graphics/Texture.h"
-#include "gpu_driver.h"
-#include "Platform/Application.h"
+#include "VulkanBackend.h"
 
-namespace gpu
+namespace Alimer
 {
-    static const agpu_driver* drivers[] = {
-       #if defined(ALIMER_ENABLE_D3D12)
-           &d3d12_driver,
-       #endif
-       #if defined(ALIMER_ENABLE_D3D11)
-           &d3d11_driver,
-       #endif
-       #if AGPU_DRIVER_METAL
-           & metal_driver,
-       #endif
-       #if AGPU_DRIVER_VULKAN && defined(TODO_VK)
-           &vulkan_driver,
-       #endif
-       #if defined(ALIMER_ENABLE_OPENGL)
-           &gl_driver,
-       #endif
-
-           NULL
-    };
-
-
-    agpu_api agpu_get_platform_api(void)
+    class VulkanTexture final : public Texture
     {
-        for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-        {
-            if (!drivers[i])
-                break;
+    public:
+        VulkanTexture(VulkanGraphicsDevice* device, const TextureDescription& desc, VkImage handle_, VkImageLayout layout_);
+        ~VulkanTexture() override;
 
-            if (drivers[i]->supported()) {
-                return drivers[i]->api;
-            }
-        }
+        void Destroy() override;
 
-        return AGPU_API_DEFAULT;
-    }
+    private:
+        void BackendSetName() override;
+        VulkanGraphicsDevice* GetVulkanGraphicsDevice() const;
 
-    bool agpu_init(agpu_api preferred_api, const agpu_config* config) {
-
-    }
-
-    void agpu_shutdown(void) {
-
-    }
-
-    void agpu_begin_frame(void) {
-
-    }
-
-    void agpu_end_frame(void) {
-
-    }
+        VkImage handle{ VK_NULL_HANDLE };
+        VkImageLayout layout{ VK_IMAGE_LAYOUT_UNDEFINED };
+        VmaAllocation allocation{ VK_NULL_HANDLE };
+    };
 }

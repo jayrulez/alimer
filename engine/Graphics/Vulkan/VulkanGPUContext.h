@@ -25,7 +25,7 @@
 #include "Graphics/GPUContext.h"
 #include "VulkanBackend.h"
 
-namespace alimer
+namespace Alimer
 {
     class VulkanGPUSwapChain;
 
@@ -66,6 +66,5 @@ namespace alimer
         VulkanGPUDevice* device;
         VkSurfaceKHR surface{ VK_NULL_HANDLE };
         VulkanGPUSwapChain* swapChain = nullptr;
-        std::vector<VulkanRenderFrame> frames;
     };
 }

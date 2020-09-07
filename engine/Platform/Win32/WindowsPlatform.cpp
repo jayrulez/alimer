@@ -86,11 +86,6 @@ namespace Alimer
             windowFlags |= WindowFlags::Fullscreen;
         }
 
-        if (config->rendererType == RendererType::OpenGL)
-        {
-            windowFlags |= WindowFlags::OpenGL;
-        }
-
         window = eastl::make_unique<GLFW_Window>(config->title, config->width, config->height, windowFlags);
     }
 

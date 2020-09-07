@@ -28,7 +28,7 @@
 
 #include <volk.h>
 #include "vk_mem_alloc.h"
-#include <queue>
+#include <EASTL/queue.h>
 
 namespace Alimer
 {
@@ -79,16 +79,25 @@ namespace Alimer
 
     struct VulkanRenderFrame
     {
-        VkFence fence = VK_NULL_HANDLE;
-
         VkCommandPool primaryCommandPool = VK_NULL_HANDLE;
         VkCommandBuffer primaryCommandBuffer = VK_NULL_HANDLE;
 
-        VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
-        VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
-
-        std::queue<VulkanResourceRelease> deferredReleases;
+        eastl::queue<VulkanResourceRelease> deferredReleases;
     };
+
+    struct VkFormatDesc
+    {
+        PixelFormat format;
+        VkFormat vkFormat;
+    };
+
+    extern const VkFormatDesc kVkFormatDesc[];
+
+    static inline VkFormat ToVkFormat(PixelFormat format)
+    {
+        ALIMER_ASSERT(kVkFormatDesc[(uint32_t)format].format == format);
+        return kVkFormatDesc[(uint32_t)format].vkFormat;
+    }
 
     using Hash = uint64_t;
 
@@ -151,7 +160,7 @@ namespace Alimer
                 u32(uint8_t(c));
         }
 
-        inline void string(const std::string& str)
+        inline void string(const eastl::string& str)
         {
             u32(0xff);
             for (auto& c : str)
@@ -168,7 +177,6 @@ namespace Alimer
     };
 }
 
-
 /// Helper macro to test the result of Vulkan calls which can return an error.
 #define VK_CHECK(x)                                                 \
 	do                                                              \
@@ -176,8 +184,8 @@ namespace Alimer
 		VkResult err = x;                                           \
 		if (err)                                                    \
 		{                                                           \
-			LOGE("Detected Vulkan error: {}", Alimer::ToString(err)); \
+			LOGE("Detected Vulkan error: %s", Alimer::ToString(err)); \
 		}                                                           \
 	} while (0)
 
-#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, Alimer::ToString(result));
+#define VK_LOG_ERROR(result, message) LOGE("%s - Vulkan error: %s", message, Alimer::ToString(result));

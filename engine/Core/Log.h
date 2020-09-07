@@ -34,7 +34,7 @@ namespace Alimer::Log
         Info,
         Warn,
         Error,
-        Critical,
+        Fatal,
         Off,
         Count
     };
@@ -44,13 +44,21 @@ namespace Alimer::Log
     ALIMER_API void Debug(const eastl::string& message);
     ALIMER_API void Info(const eastl::string& message);
     ALIMER_API void Warn(const eastl::string& message);
-    ALIMER_API void Critical(const eastl::string& message);
     ALIMER_API void Error(const eastl::string& message);
+    //ALIMER_API void Error(const char* format, ...);
+    ALIMER_API void Fatal(const eastl::string& message);
 }
 
 #define LOGV(...) Alimer::Log::Verbose(Alimer::Format(__VA_ARGS__));
 #define LOGD(...) Alimer::Log::Debug(Alimer::Format(__VA_ARGS__));
 #define LOGI(...) Alimer::Log::Info(Alimer::Format(__VA_ARGS__));
 #define LOGW(...) Alimer::Log::Warn(Alimer::Format(__VA_ARGS__));
-#define LOGE(...) Alimer::Log::Error(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__)));
-#define LOGC(...) Alimer::Log::Critical(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__)));
+#define LOGE(...) do { \
+    Alimer::Log::Error(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__))); \
+    ALIMER_DEBUG_BREAK(); \
+    } while(0)
+
+#define ALIMER_FATAL(...) do { \
+    Alimer::Log::Fatal(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__))); \
+    ALIMER_DEBUG_BREAK(); \
+    } while(0)

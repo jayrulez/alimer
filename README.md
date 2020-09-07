@@ -27,7 +27,7 @@ Uses the following open-source and third-party libraries:
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 - [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
 - [Dear ImGui](https://github.com/ocornut/imgui)
-- [fmt 7.0.0](https://fmt.dev)
+- [EASTL](https://github.com/electronicarts/EASTL)
 
 Additional inspiration, research or code used:
 

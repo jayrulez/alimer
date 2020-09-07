@@ -60,7 +60,8 @@ namespace Alimer
         void InitCapabilities(IDXGIAdapter1* adapter);
 
         void WaitForGPU() override;
-        uint64 Frame() override;
+        bool BeginFrame() override;
+        void EndFrame() override;
 
         DWORD dxgiFactoryFlags;
         ComPtr<IDXGIFactory4> dxgiFactory;

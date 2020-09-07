@@ -170,5 +170,5 @@ namespace Alimer
 
     void DXGISetObjectName(IDXGIObject* obj, const eastl::string& name);
 
-    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, const SwapChainDescription& desc);
+    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc);
 }

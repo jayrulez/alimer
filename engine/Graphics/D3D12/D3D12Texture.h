@@ -25,7 +25,7 @@
 #include "Graphics/Texture.h"
 #include "D3D12Backend.h"
 
-namespace alimer
+namespace Alimer
 {
     class D3D12Texture final : public Texture
     {

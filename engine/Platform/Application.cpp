@@ -35,7 +35,7 @@ namespace Alimer
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
         // Figure out the graphics backend API.
-        if (config.rendererType  == RendererType::Count)
+        if (config.rendererType  == GPUBackendType::Count)
         {
             //config.rendererType = gpu::getPlatformBackend();
         }
@@ -62,13 +62,14 @@ namespace Alimer
     {
         GraphicsDeviceDescription deviceDesc = {};
 #ifdef _DEBUG
-        deviceDesc.flags |= GraphicsDeviceFlags::DebugRuntime;
+        //deviceDesc.flags |= GraphicsDeviceFlags::DebugRuntime | GraphicsDeviceFlags::GPUBasedValidation;
 #endif
+        deviceDesc.adapterPreference = config.adapterPreference;
         deviceDesc.primarySwapChain.width = GetMainWindow().GetWidth();
         deviceDesc.primarySwapChain.height = GetMainWindow().GetHeight();
         deviceDesc.primarySwapChain.windowHandle = GetMainWindow().GetNativeHandle();
 
-        graphics = GraphicsDevice::Create(RendererType::Count, deviceDesc);
+        graphics = GraphicsDevice::Create(config.rendererType, deviceDesc);
     }
 
     void Application::Run()
@@ -78,8 +79,11 @@ namespace Alimer
 
     void Application::Tick()
     {
-        graphics->GetPrimarySwapChain()->Present(false);
-        graphics->Frame();
+        if (!graphics->BeginFrame())
+            return;
+
+        graphics->GetPrimarySwapChain()->Present(true);
+        graphics->EndFrame();
     }
 
     const Config* Application::GetConfig()

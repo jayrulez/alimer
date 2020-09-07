@@ -21,7 +21,7 @@
 //
 
 #include "D3D12GraphicsDevice.h"
-//#include "D3D12Texture.h"
+#include "D3D12Texture.h"
 #include "D3D12Buffer.h"
 #include "D3D12SwapChain.h"
 
@@ -74,10 +74,13 @@ namespace Alimer
     {
         ALIMER_VERIFY(IsAvailable());
 
+#if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
-        //
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
-        if (any(desc.flags & GraphicsDeviceFlags::DebugRuntime) || any(desc.flags & GraphicsDeviceFlags::GPUBasedValidation))
+
+        // TODO: Parse command line.
+        const bool debug = false;
+        if (debug)
         {
             ComPtr<ID3D12Debug> debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
@@ -88,7 +91,7 @@ namespace Alimer
                 HRESULT hr = debugController.As(&debugController1);
                 if (SUCCEEDED(hr))
                 {
-                    debugController1->SetEnableGPUBasedValidation(any(desc.flags & GraphicsDeviceFlags::GPUBasedValidation));
+                    debugController1->SetEnableGPUBasedValidation(TRUE);
                 }
             }
             else
@@ -96,8 +99,6 @@ namespace Alimer
                 OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
             }
 
-
-#if defined(_DEBUG)
             ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
@@ -115,8 +116,8 @@ namespace Alimer
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
             }
-#endif
         }
+#endif
 
         ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
@@ -339,7 +340,6 @@ namespace Alimer
             if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf()))))
             {
                 LOGE("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-                ALIMER_FORCE_CRASH();
             }
 
             OutputDebugStringA("Direct3D Adapter - WARP12\n");
@@ -349,7 +349,6 @@ namespace Alimer
         if (!adapter)
         {
             LOGE("No Direct3D 12 device found");
-            ALIMER_FORCE_CRASH();
         }
 
         *ppAdapter = adapter.Detach();
@@ -399,7 +398,8 @@ namespace Alimer
         case DXGI_ERROR_INVALID_CALL:			reason = "INVALID_CALL"; break;
         }
 
-        LOGE("The Direct3D12 device Lost on Present: (Error:  0x%08X '%s')", hr,reason );
+        LOGE("The Direct3D12 device Lost on Present: (Error:  0x%08X '%s')", hr, reason);
+        isLost = true;
     }
 
 
@@ -408,7 +408,7 @@ namespace Alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(adapter->GetDesc1(&desc));
 
-        caps.rendererType = RendererType::Direct3D12;
+        caps.backendType = GPUBackendType::Direct3D12;
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 
@@ -546,11 +546,13 @@ namespace Alimer
         WaitForSingleObject(frameFenceEvent, INFINITE);
     }
 
-    uint64 D3D12GraphicsDevice::Frame()
+    bool D3D12GraphicsDevice::BeginFrame()
     {
-        if (isLost)
-            return frameCount;
+        return !isLost;
+    }
 
+    void D3D12GraphicsDevice::EndFrame()
+    {
         // TODO: Manage upload
 
         // Signal the fence with the current frame number, so that we can check back on it
@@ -571,7 +573,5 @@ namespace Alimer
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
-
-        return frameCount;
     }
 }

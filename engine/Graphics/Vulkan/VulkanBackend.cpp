@@ -24,6 +24,79 @@
 
 namespace Alimer
 {
+    const VkFormatDesc kVkFormatDesc[] =
+    {
+        {PixelFormat::Invalid,                      VK_FORMAT_UNDEFINED},
+        // 8-bit pixel formats
+        {PixelFormat::R8Unorm,                      VK_FORMAT_R8_UNORM},
+        {PixelFormat::R8Snorm,                      VK_FORMAT_R8_SNORM},
+        {PixelFormat::R8Uint,                       VK_FORMAT_R8_UINT},
+        {PixelFormat::R8Sint,                       VK_FORMAT_R8_SINT},
+        // 16-bit pixel formats
+        {PixelFormat::R16Unorm,                     VK_FORMAT_R16_UNORM},
+        {PixelFormat::R16Snorm,                     VK_FORMAT_R16_SNORM},
+        {PixelFormat::R16Uint,                      VK_FORMAT_R16_UINT},
+        {PixelFormat::R16Sint,                      VK_FORMAT_R16_SINT},
+        {PixelFormat::R16Float,                     VK_FORMAT_R16_SFLOAT},
+        {PixelFormat::RG8Unorm,                     VK_FORMAT_R8G8_UNORM},
+        {PixelFormat::RG8Snorm,                     VK_FORMAT_R8G8_SNORM},
+        {PixelFormat::RG8Uint,                      VK_FORMAT_R8G8_UINT},
+        {PixelFormat::RG8Sint,                      VK_FORMAT_R8G8_SINT},
+        // 32-bit pixel formats
+        {PixelFormat::R32Uint,                      VK_FORMAT_R32_UINT},
+        {PixelFormat::R32Sint,                      VK_FORMAT_R32_SINT},
+        {PixelFormat::R32Float,                     VK_FORMAT_R32_SFLOAT},
+        {PixelFormat::RG16Unorm,                    VK_FORMAT_R16G16_UNORM},
+        {PixelFormat::RG16Snorm,                    VK_FORMAT_R16G16_SNORM},
+        {PixelFormat::RG16Uint,                     VK_FORMAT_R16G16_UINT},
+        {PixelFormat::RG16Sint,                     VK_FORMAT_R16G16_SINT},
+        {PixelFormat::RG16Float,                    VK_FORMAT_R16G16_SFLOAT},
+        {PixelFormat::RGBA8Unorm,                   VK_FORMAT_R8G8B8A8_UNORM},
+        {PixelFormat::RGBA8UnormSrgb,               VK_FORMAT_R8G8B8A8_SRGB},
+        {PixelFormat::RGBA8Snorm,                   VK_FORMAT_R8G8B8A8_SNORM},
+        {PixelFormat::RGBA8Uint,                    VK_FORMAT_R8G8B8A8_UINT},
+        {PixelFormat::RGBA8Sint,                    VK_FORMAT_R8G8B8A8_SINT},
+        {PixelFormat::BGRA8Unorm,                   VK_FORMAT_B8G8R8A8_UNORM},
+        {PixelFormat::BGRA8UnormSrgb,               VK_FORMAT_B8G8R8A8_SRGB},
+        // Packed 32-Bit Pixel formats
+        {PixelFormat::RGB10A2Unorm,                 VK_FORMAT_A2B10G10R10_UNORM_PACK32},
+        {PixelFormat::RG11B10Float,                 VK_FORMAT_B10G11R11_UFLOAT_PACK32},
+        {PixelFormat::RGB9E5Float,                  VK_FORMAT_E5B9G9R9_UFLOAT_PACK32},
+        // 64-Bit Pixel Formats
+        {PixelFormat::RG32Uint,                     VK_FORMAT_R32G32_UINT},
+        {PixelFormat::RG32Sint,                     VK_FORMAT_R32G32_SINT},
+        {PixelFormat::RG32Float,                    VK_FORMAT_R32G32_SFLOAT},
+        {PixelFormat::RGBA16Unorm,                  VK_FORMAT_R16G16B16A16_UNORM},
+        {PixelFormat::RGBA16Snorm,                  VK_FORMAT_R16G16B16A16_SNORM},
+        {PixelFormat::RGBA16Uint,                   VK_FORMAT_R16G16B16A16_UINT},
+        {PixelFormat::RGBA16Sint,                   VK_FORMAT_R16G16B16A16_SINT},
+        {PixelFormat::RGBA16Float,                  VK_FORMAT_R16G16B16A16_SFLOAT},
+        // 128-Bit Pixel Formats
+        {PixelFormat::RGBA32Uint,                   VK_FORMAT_R32G32B32A32_UINT},
+        {PixelFormat::RGBA32Sint,                   VK_FORMAT_R32G32B32A32_SINT},
+        {PixelFormat::RGBA32Float,                  VK_FORMAT_R32G32B32A32_SFLOAT},
+        // Depth-stencil formats
+        {PixelFormat::Depth16Unorm,                 VK_FORMAT_D16_UNORM},
+        {PixelFormat::Depth32Float,                 VK_FORMAT_D32_SFLOAT},
+        {PixelFormat::Depth24UnormStencil8,         VK_FORMAT_D24_UNORM_S8_UINT},
+        // Compressed BC formats
+        {PixelFormat::BC1RGBAUnorm,                 VK_FORMAT_BC1_RGB_UNORM_BLOCK},
+        {PixelFormat::BC1RGBAUnormSrgb,             VK_FORMAT_BC1_RGB_SRGB_BLOCK},
+        {PixelFormat::BC2RGBAUnorm,                 VK_FORMAT_BC2_UNORM_BLOCK},
+        {PixelFormat::BC2RGBAUnormSrgb,             VK_FORMAT_BC2_SRGB_BLOCK},
+        {PixelFormat::BC3RGBAUnorm,                 VK_FORMAT_BC3_UNORM_BLOCK},
+        {PixelFormat::BC3RGBAUnormSrgb,             VK_FORMAT_BC3_SRGB_BLOCK},
+        {PixelFormat::BC4RUnorm,                    VK_FORMAT_BC4_UNORM_BLOCK},
+        {PixelFormat::BC4RSnorm,                    VK_FORMAT_BC4_SNORM_BLOCK},
+        {PixelFormat::BC5RGUnorm,                   VK_FORMAT_BC5_UNORM_BLOCK},
+        {PixelFormat::BC5RGSnorm,                   VK_FORMAT_BC5_SNORM_BLOCK},
+        {PixelFormat::BC6HRGBUfloat,                VK_FORMAT_BC6H_UFLOAT_BLOCK },
+        {PixelFormat::BC6HRGBSfloat,                VK_FORMAT_BC6H_SFLOAT_BLOCK },
+        {PixelFormat::BC7RGBAUnorm,                 VK_FORMAT_BC7_UNORM_BLOCK},
+        {PixelFormat::BC7RGBAUnormSrgb,             VK_FORMAT_BC7_SRGB_BLOCK},
+    };
+    static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kVkFormatDesc), "Missmatch PixelFormat size");
+
     const char* ToString(VkResult result)
     {
         switch (result)

@@ -22,24 +22,37 @@
 
 #pragma once
 
-#include "Graphics/GPUBuffer.h"
+#include "Graphics/SwapChain.h"
 #include "VulkanBackend.h"
+#include <EASTL/vector.h>
 
 namespace Alimer
 {
-    class VulkanGPUBuffer final : public GPUBuffer
+    class VulkanSwapChain final : public SwapChain
     {
     public:
-        VulkanGPUBuffer(VulkanGraphicsDevice* device, const std::string_view& name);
-        ~VulkanGPUBuffer() override;
-        void Destroy() override;
+        VulkanSwapChain(VulkanGraphicsDevice* device, VkSurfaceKHR surface, const SwapChainDescription& desc);
+        ~VulkanSwapChain();
+        void Destroy();
+
+        bool Present(bool verticalSync) override;
+
+        uint32 GetImageCount() const { return imageCount; }
 
     private:
-        void BackendSetName() override;
+        bool RecreateSwapchain();
+        bool AcquireNextImage();
+
+        static constexpr uint32_t kInvalidImageIndex = ~(uint32_t)0;
 
         VulkanGraphicsDevice* device;
-
-        VkBuffer handle{ VK_NULL_HANDLE };
-        VmaAllocation allocation{ VK_NULL_HANDLE };
+        VkPresentModeKHR presentMode;
+        VkQueue presentQueue;
+        VkSurfaceKHR surface{ VK_NULL_HANDLE };
+        VkSwapchainKHR handle{ VK_NULL_HANDLE };
+        VkFence fence{ VK_NULL_HANDLE };
+        VkPresentModeKHR immediatePresentMode;
+        uint32_t imageIndex = kInvalidImageIndex;
+        uint32_t imageCount = 0;
     };
 }

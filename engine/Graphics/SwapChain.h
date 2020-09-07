@@ -23,16 +23,15 @@
 #pragma once
 
 #include "Graphics/Texture.h"
+#include <EASTL/vector.h>
 
 namespace Alimer
 {
-    class ALIMER_API SwapChain : public GraphicsResource
+    class ALIMER_API SwapChain : public RefCounted
     {
-        ALIMER_OBJECT(SwapChain, GraphicsResource);
-
     public:
         /// Constructor.
-        SwapChain(GraphicsDevice* device, const SwapChainDescription& desc);
+        SwapChain(const SwapChainDescription& desc);
 
         virtual bool Present(bool verticalSync) = 0;
 
@@ -41,5 +40,7 @@ namespace Alimer
         uint32 width;
         uint32 height;
         bool isFullscreen;
+        uint32_t currentBufferIndex;
+        eastl::vector<RefPtr<Texture>> colorTextures;
     };
 }

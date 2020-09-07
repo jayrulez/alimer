@@ -65,6 +65,7 @@ namespace Alimer
         // Packed 32-Bit Pixel formats
         RGB10A2Unorm,
         RG11B10Float,
+        RGB9E5Float,
         // 64-Bit Pixel Formats
         RG32Uint,
         RG32Sint,

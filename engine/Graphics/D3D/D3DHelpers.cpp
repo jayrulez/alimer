@@ -184,6 +184,7 @@ namespace Alimer
         // Packed 32-Bit Pixel formats
         {PixelFormat::RGB10A2Unorm,                 DXGI_FORMAT_R10G10B10A2_UNORM},
         {PixelFormat::RG11B10Float,                 DXGI_FORMAT_R11G11B10_FLOAT},
+        {PixelFormat::RGB9E5Float,                  DXGI_FORMAT_R9G9B9E5_SHAREDEXP},
         // 64-Bit Pixel Formats
         {PixelFormat::RG32Uint,                     DXGI_FORMAT_R32G32_UINT},
         {PixelFormat::RG32Sint,                     DXGI_FORMAT_R32G32_SINT},
@@ -217,7 +218,7 @@ namespace Alimer
         {PixelFormat::BC7RGBAUnorm,                 DXGI_FORMAT_BC7_UNORM},
         {PixelFormat::BC7RGBAUnormSrgb,             DXGI_FORMAT_BC7_UNORM_SRGB},
     };
-    static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kDxgiFormatDesc), "Invalid PixelFormat size");
+    static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kDxgiFormatDesc), "Missmatch PixelFormat size");
 
     void DXGISetObjectName(IDXGIObject* obj, const eastl::string& name)
     {
@@ -239,7 +240,7 @@ namespace Alimer
 #endif
     }
 
-    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, const SwapChainDescription& desc)
+    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc)
     {
         UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
@@ -266,7 +267,7 @@ namespace Alimer
         swapChainDesc.Height = desc.height;
         swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(desc.colorFormat));
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = kInflightFrameCount; // Should be 3? triple buffering? Configurable?
+        swapChainDesc.BufferCount = backbufferCount; // Should be 3? triple buffering? Configurable?
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.Scaling = scaling;
