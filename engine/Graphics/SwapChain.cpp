@@ -29,8 +29,8 @@ namespace Alimer
         : colorFormat(desc.colorFormat)
         , width(desc.width)
         , height(desc.height)
+        , presentMode(desc.presentMode)
         , isFullscreen(desc.fullscreen)
-        , currentBufferIndex(0)
     {
 
     }

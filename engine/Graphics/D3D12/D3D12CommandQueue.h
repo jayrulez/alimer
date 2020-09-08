@@ -22,16 +22,16 @@
 
 #pragma once
 
-#include "Graphics/CommandContext.h"
+#include "Graphics/CommandQueue.h"
 #include "D3D12Backend.h"
 #include <EASTL/vector.h>
-#include <queue>
+#include <EASTL/queue.h>
 #include <mutex>
 
-namespace alimer
-{
-    class D3D12CommandBuffer;
+#include "Core/ThreadSafeQueue.h"
 
+namespace Alimer
+{
     class D3D12CommandAllocatorPool final
     {
     public:
@@ -43,49 +43,48 @@ namespace alimer
         ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
         void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* allocator);
 
-        ALIMER_FORCEINLINE size_t Size() { return allocatorPool.size(); }
+        ALIMER_FORCE_INLINE size_t Size() { return allocatorPool.size(); }
 
     private:
         const D3D12_COMMAND_LIST_TYPE type;
 
         D3D12GraphicsDevice* device;
-        std::vector<ID3D12CommandAllocator*> allocatorPool;
-        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
+        eastl::vector<ID3D12CommandAllocator*> allocatorPool;
+        eastl::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
         std::mutex allocatorMutex;
     };
 
-    class D3D12CommandQueue final
+    class D3D12CommandBuffer;
+
+    class D3D12CommandQueue final : public CommandQueue
     {
     public:
-        D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType, const std::string_view& name);
+        D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType);
         ~D3D12CommandQueue();
 
-        void WaitIdle();
+        GraphicsDevice* GetGraphicsDevice() const override;
+        RefPtr<CommandBuffer> GetCommandBuffer() override;
 
         uint64_t Signal();
         bool IsFenceComplete(uint64_t fenceValue);
-        void WaitForFence(uint64_t fenceValue);
+        void WaitForFenceValue(uint64_t fenceValue);
+        void WaitIdle() override;
 
         uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
         ID3D12CommandAllocator* RequestAllocator();
         void DiscardAllocator(uint64_t fenceValueForReset, ID3D12CommandAllocator* commandAllocator);
 
-        ALIMER_FORCEINLINE ID3D12CommandQueue* GetCommandQueue() { return commandQueue; }
-        ALIMER_FORCEINLINE uint64_t GetNextFenceValue() { return nextFenceValue; }
+        ID3D12CommandQueue* GetHandle() { return handle.Get(); }
 
     private:
         D3D12GraphicsDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
-        ID3D12CommandQueue* commandQueue;
+        ComPtr<ID3D12CommandQueue> handle;
+        ComPtr<ID3D12Fence> fence;
+        std::atomic_uint64_t fenceValue;
+
+        ThreadSafeQueue<RefPtr<D3D12CommandBuffer>> availableCommandBuffers;
 
         D3D12CommandAllocatorPool allocatorPool;
-        std::mutex fenceMutex;
-        std::mutex eventMutex;
-
-        // Lifetime of these objects is managed by the descriptor cache
-        ID3D12Fence* fence;
-        HANDLE fenceEvent;
-        uint64_t nextFenceValue;
-        uint64_t lastCompletedFenceValue;
     };
 }

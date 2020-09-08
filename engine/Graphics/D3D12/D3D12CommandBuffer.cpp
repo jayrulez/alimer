@@ -20,12 +20,12 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D12CommandContext.h"
+#include "D3D12CommandBuffer.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -53,25 +53,14 @@ namespace alimer
         }*/
     }
 
-    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type)
-        : device{ device }
-        , type{ type }
+    D3D12CommandBuffer::D3D12CommandBuffer(D3D12CommandQueue* queue)
+        : CommandBuffer(0)
+        , queue{ queue }
     {
-        useRenderPass = device->SupportsRenderPass();
-
-        for (uint32_t i = 0; i < kInflightFrameCount; ++i)
-        {
-            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[i])));
-        }
-
-        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, type, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
-        if (FAILED(commandList->QueryInterface(&commandList4))) {
-            useRenderPass = false;
-        }
-        //useRenderPass = true;
+       
     }
 
-    D3D12CommandContext::~D3D12CommandContext()
+    D3D12CommandBuffer::~D3D12CommandBuffer()
     {
         for (uint32_t i = 0; i < kInflightFrameCount; ++i)
         {
@@ -81,6 +70,16 @@ namespace alimer
         SafeRelease(commandList4);
         SafeRelease(commandList);
     }
+
+    void D3D12CommandBuffer::CommitCore()
+    {
+    }
+
+    void D3D12CommandBuffer::WaitUntilCompletedCore()
+    {
+    }
+
+#if TODO
 
     void D3D12CommandContext::Reset(uint32_t frameIndex)
     {
@@ -327,6 +326,6 @@ namespace alimer
             numBarriersToFlush = 0;
         }
     }
-}
-
 #endif // TODO
+
+}

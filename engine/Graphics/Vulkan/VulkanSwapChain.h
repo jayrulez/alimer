@@ -35,7 +35,8 @@ namespace Alimer
         ~VulkanSwapChain();
         void Destroy();
 
-        bool Present(bool verticalSync) override;
+        VkResult AcquireNextImage(uint32_t& imageIndex, VkSemaphore imageAcquiredSemaphore, VkFence fence = VK_NULL_HANDLE);
+        bool Present() override;
 
         uint32 GetImageCount() const { return imageCount; }
 
@@ -46,12 +47,9 @@ namespace Alimer
         static constexpr uint32_t kInvalidImageIndex = ~(uint32_t)0;
 
         VulkanGraphicsDevice* device;
-        VkPresentModeKHR presentMode;
         VkQueue presentQueue;
         VkSurfaceKHR surface{ VK_NULL_HANDLE };
         VkSwapchainKHR handle{ VK_NULL_HANDLE };
-        VkFence fence{ VK_NULL_HANDLE };
-        VkPresentModeKHR immediatePresentMode;
         uint32_t imageIndex = kInvalidImageIndex;
         uint32_t imageCount = 0;
     };

@@ -21,6 +21,9 @@
 //
 
 #include "VulkanBackend.h"
+#include "VulkanCommandPool.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanGraphicsDevice.h"
 
 namespace Alimer
 {
@@ -131,5 +134,157 @@ namespace Alimer
         default:
             return "UNKNOWN_ERROR";
         }
+    }
+
+    /* VulkanFencePool */
+    VulkanFencePool::VulkanFencePool(VkDevice device)
+        : device{ device }
+    {
+    }
+
+    VulkanFencePool::~VulkanFencePool()
+    {
+        Wait();
+        Reset();
+
+        // Destroy all fences
+        for (VkFence fence : fences)
+        {
+            vkDestroyFence(device, fence, nullptr);
+        }
+
+        fences.clear();
+    }
+
+    VkFence VulkanFencePool::RequestFence()
+    {
+        // Check if there is an available fence
+        if (activeFenceCount < fences.size())
+        {
+            return fences.at(activeFenceCount++);
+        }
+
+        VkFenceCreateInfo createInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        VkFence fence{ VK_NULL_HANDLE };
+        VkResult result = vkCreateFence(device, &createInfo, nullptr, &fence);
+        if (result != VK_SUCCESS)
+        {
+            LOGE("Vulkan: Failed to create fence.");
+        }
+
+        fences.push_back(fence);
+        activeFenceCount++;
+        return fences.back();
+    }
+
+    VkResult VulkanFencePool::Wait(uint32_t timeout) const
+    {
+        if (activeFenceCount < 1 || fences.empty())
+        {
+            return VK_SUCCESS;
+        }
+
+        return vkWaitForFences(device, activeFenceCount, fences.data(), VK_TRUE, timeout);
+    }
+
+    VkResult VulkanFencePool::Reset()
+    {
+        if (activeFenceCount < 1 || fences.empty())
+        {
+            return VK_SUCCESS;
+        }
+
+        VkResult result = vkResetFences(device, activeFenceCount, fences.data());
+        if (result != VK_SUCCESS)
+        {
+            return result;
+        }
+
+        activeFenceCount = 0;
+        return VK_SUCCESS;
+    }
+
+    /* VulkanSemaphorePool */
+    VulkanSemaphorePool::VulkanSemaphorePool(VkDevice device)
+        : device{ device }
+    {
+    }
+
+    VulkanSemaphorePool::~VulkanSemaphorePool()
+    {
+        Reset();
+
+        // Destroy all semaphores
+        for (VkSemaphore semaphore : semaphores)
+        {
+            vkDestroySemaphore(device, semaphore, nullptr);
+        }
+
+        semaphores.clear();
+    }
+
+    VkSemaphore VulkanSemaphorePool::RequestSemaphore()
+    {
+        // Check if there is an available semaphore
+        if (activeSemaphoreCount < semaphores.size())
+        {
+            return semaphores.at(activeSemaphoreCount++);
+        }
+
+
+        VkSemaphoreCreateInfo createInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        VkSemaphore semaphore{ VK_NULL_HANDLE };
+        VkResult result = vkCreateSemaphore(device, &createInfo, nullptr, &semaphore);
+        if (result != VK_SUCCESS)
+        {
+            LOGE("Vulkan: Failed to create semaphore.");
+        }
+
+        semaphores.push_back(semaphore);
+        activeSemaphoreCount++;
+        return semaphore;
+    }
+
+    void VulkanSemaphorePool::Reset()
+    {
+        activeSemaphoreCount = 0;
+    }
+
+    uint32_t VulkanSemaphorePool::GetActiveSemaphoreCount() const
+    {
+        return activeSemaphoreCount;
+    }
+
+    /* VulkanRenderFrame */
+    VulkanRenderFrame::VulkanRenderFrame(VulkanGraphicsDevice& device)
+        : device{ device }
+        , fencePool{device.GetHandle()}
+        , semaphorePool{ device.GetHandle() }
+    {
+        commandPool = eastl::make_unique<VulkanCommandPool>(device, device.GetGraphicsQueueFamilyIndex());
+    }
+
+    void VulkanRenderFrame::Reset()
+    {
+        VK_CHECK(fencePool.Wait());
+        fencePool.Reset();
+        commandPool->Reset();
+
+        semaphorePool.Reset();
+    }
+
+    VkFence VulkanRenderFrame::RequestFence()
+    {
+        return fencePool.RequestFence();
+    }
+
+    VkSemaphore VulkanRenderFrame::RequestSemaphore()
+    {
+        return semaphorePool.RequestSemaphore();
+    }
+
+    CommandBuffer* VulkanRenderFrame::RequestCommandBuffer()
+    {
+        return commandPool->RequestCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY);
     }
 }

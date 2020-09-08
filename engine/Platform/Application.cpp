@@ -82,7 +82,9 @@ namespace Alimer
         if (!graphics->BeginFrame())
             return;
 
-        graphics->GetPrimarySwapChain()->Present(true);
+        /*auto& commandBuffer = graphics->Begin();
+        commandBuffer.Commit();*/
+        graphics->GetPrimarySwapChain()->Present();
         graphics->EndFrame();
     }
 

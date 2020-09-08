@@ -24,11 +24,15 @@
 
 #include "Core/Assert.h"
 #include "Core/Log.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Types.h"
 
 #include <volk.h>
 #include "vk_mem_alloc.h"
+#include <EASTL/vector.h>
 #include <EASTL/queue.h>
+#include <EASTL/unordered_map.h>
+#include <EASTL/unique_ptr.h>
 
 namespace Alimer
 {
@@ -70,21 +74,6 @@ namespace Alimer
         bool multiview;
     };
 
-    struct VulkanResourceRelease
-    {
-        VkObjectType type;
-        void* handle;
-        VmaAllocation memory;
-    };
-
-    struct VulkanRenderFrame
-    {
-        VkCommandPool primaryCommandPool = VK_NULL_HANDLE;
-        VkCommandBuffer primaryCommandBuffer = VK_NULL_HANDLE;
-
-        eastl::queue<VulkanResourceRelease> deferredReleases;
-    };
-
     struct VkFormatDesc
     {
         PixelFormat format;
@@ -98,6 +87,83 @@ namespace Alimer
         ALIMER_ASSERT(kVkFormatDesc[(uint32_t)format].format == format);
         return kVkFormatDesc[(uint32_t)format].vkFormat;
     }
+
+    class VulkanFencePool
+    {
+    public:
+        VulkanFencePool(VkDevice device);
+        ~VulkanFencePool();
+
+        VulkanFencePool(const VulkanFencePool&) = delete;
+        VulkanFencePool(VulkanFencePool&& other) = delete;
+        VulkanFencePool& operator=(const VulkanFencePool&) = delete;
+        VulkanFencePool& operator=(VulkanFencePool&&) = delete;
+
+        VkFence RequestFence();
+        VkResult Wait(uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
+        VkResult Reset();
+
+    private:
+        VkDevice device;
+
+        eastl::vector<VkFence> fences;
+        uint32_t activeFenceCount{ 0 };
+    };
+
+    class VulkanSemaphorePool
+    {
+    public:
+        VulkanSemaphorePool(VkDevice device);
+        ~VulkanSemaphorePool();
+
+        VulkanSemaphorePool(const VulkanSemaphorePool&) = delete;
+        VulkanSemaphorePool(VulkanSemaphorePool&& other) = delete;
+        VulkanSemaphorePool& operator=(const VulkanSemaphorePool&) = delete;
+        VulkanSemaphorePool& operator=(VulkanSemaphorePool&&) = delete;
+
+        VkSemaphore RequestSemaphore();
+        void Reset();
+        uint32_t GetActiveSemaphoreCount() const;
+
+    private:
+        VkDevice device;
+
+        eastl::vector<VkSemaphore> semaphores;
+        uint32_t activeSemaphoreCount{ 0 };
+    };
+
+    struct VulkanResourceRelease
+    {
+        VkObjectType type;
+        void* handle;
+        VmaAllocation memory;
+    };
+
+    class VulkanCommandPool;
+
+    class VulkanRenderFrame
+    {
+    public:
+        VulkanRenderFrame(VulkanGraphicsDevice& device);
+
+        VulkanRenderFrame(const VulkanRenderFrame&) = delete;
+        VulkanRenderFrame(VulkanRenderFrame&&) = delete;
+        VulkanRenderFrame& operator=(const VulkanRenderFrame&) = delete;
+        VulkanRenderFrame& operator=(VulkanRenderFrame&&) = delete;
+
+        void Reset();
+
+        VkFence RequestFence();
+        VkSemaphore RequestSemaphore();
+        CommandBuffer* RequestCommandBuffer();
+
+    private:
+        VulkanGraphicsDevice& device;
+        VulkanFencePool fencePool;
+        VulkanSemaphorePool semaphorePool;
+        eastl::unique_ptr<VulkanCommandPool> commandPool;
+        eastl::queue<VulkanResourceRelease> deferredReleases;
+    };
 
     using Hash = uint64_t;
 

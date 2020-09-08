@@ -25,7 +25,6 @@
 #include "Graphics/GraphicsDevice.h"
 #include "VulkanBackend.h"
 #include <mutex>
-#include <EASTL/unordered_map.h>
 
 namespace Alimer
 {
@@ -40,11 +39,11 @@ namespace Alimer
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
+        CommandBuffer* GetCommandBuffer() override;
 
+        void Submit(VkCommandBuffer buffer);
+        VkFence RequestFence();
         VkSemaphore RequestSemaphore();
-        void ReturnSemaphore(VkSemaphore semaphore);
-
-        /* Resource creation methods */
         void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
         //VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
         //VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
@@ -58,7 +57,6 @@ namespace Alimer
         const PhysicalDeviceExtensions& GetPhysicalDeviceExtensions() const { return physicalDeviceExts; }
         VkQueue GetGraphicsQueue() const { return graphicsQueue; }
         uint32 GetGraphicsQueueFamilyIndex() const { return queueFamilies.graphicsQueueFamilyIndex; }
-        VkCommandBuffer GetPrimaryCommandBuffer() const { return frames[frameIndex].primaryCommandBuffer; }
 
     private:
         void Shutdown();
@@ -67,7 +65,9 @@ namespace Alimer
         bool InitPhysicalDevice(VkSurfaceKHR surface);
         bool InitLogicalDevice();
         void InitCapabilities();
-       
+        VulkanRenderFrame& GetActiveFrame();
+        void WaitFrame();
+
         void ClearRenderPassCache();
         void ClearFramebufferCache();
 
@@ -94,13 +94,13 @@ namespace Alimer
         /* Memory allocator */
         VmaAllocator allocator{ VK_NULL_HANDLE };
 
-        /// Number of frame count
-        uint64_t frameIndex{ 0 };
-        uint64_t frameCount{ 0 };
-        eastl::vector<VulkanRenderFrame> frames;
+        /// Current active frame index
+        uint32_t activeFrameIndex{ 0 };
 
-        /// A set of semaphores that can be reused.
-        eastl::vector<VkSemaphore> recycledSemaphores;
+        /// Whether a frame is active or not
+        bool frameActive{ false };
+
+        eastl::vector<eastl::unique_ptr<VulkanRenderFrame>> frames;
 
         eastl::unordered_map<Hash, VkRenderPass> renderPasses;
         eastl::unordered_map<Hash, VkFramebuffer> framebuffers;

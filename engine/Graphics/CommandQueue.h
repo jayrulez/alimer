@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "Graphics/CommandBuffer.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    /// A queue that organizes command buffers for the GPU to execute.
+    class ALIMER_API CommandQueue
     {
+    protected:
+        /// Constructor.
+        CommandQueue(CommandQueueType queueType);
+
     public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        /// Destructor.
+        virtual ~CommandQueue() = default;
 
-        }
+        virtual void WaitIdle() = 0;
+
+        /// Return the device from which the command queue was created.
+        virtual GraphicsDevice* GetGraphicsDevice() const = 0;
+
+        // Get an available command buffer from the command queue.
+        virtual RefPtr<CommandBuffer> GetCommandBuffer() = 0;
+
+    protected:
+        CommandQueueType queueType;
     };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.rendererType = GPUBackendType::Vulkan;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
-    }
 }
-

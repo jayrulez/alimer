@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,30 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#pragma once
+
+#include "VulkanCommandBuffer.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    class VulkanCommandPool
     {
     public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
+        VulkanCommandPool(VulkanGraphicsDevice& device, uint32_t queueFamilyIndex);
+        ~VulkanCommandPool();
 
-        }
+        void Reset();
+        VulkanCommandBuffer* RequestCommandBuffer(VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+        VulkanGraphicsDevice& GetDevice() { return device; }
+        VkCommandPool GetHandle() const { return handle; }
+
+    private:
+        VulkanGraphicsDevice& device;
+        uint32_t queueFamilyIndex;
+        VkCommandPool handle;
+
+        uint32_t primaryCommandBufferCount{ 0 };
+        eastl::vector<eastl::unique_ptr<VulkanCommandBuffer>> primaryCommandBuffers;
     };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.rendererType = GPUBackendType::Vulkan;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
-    }
 }
-

@@ -31,16 +31,19 @@ namespace Alimer
     {
     public:
         D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
-        ~D3D12SwapChain() override;
-        void Destroy();
 
-        bool Present(bool verticalSync) override;
+        bool Present() override;
 
     private:
-        D3D12GraphicsDevice* device;
-        IDXGISwapChain3* handle;
-        bool isTearingSupported;
+        // Number of swapchain back buffers.
+        static constexpr uint32_t kBackBufferCount = 3;
 
-        static constexpr uint32_t kMaxFrameCount = 3u;
+        D3D12GraphicsDevice* device;
+        ComPtr<IDXGISwapChain3> handle;
+        bool isTearingSupported;
+        uint32_t syncInterval;
+
+        uint64_t fenceValues[kBackBufferCount];
+        uint64_t frameValues[kBackBufferCount];
     };
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,30 +20,14 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Application.h"
+#include "Core/Log.h"
+#include "Graphics/CommandQueue.h"
 
 namespace Alimer
 {
-    class HelloWorldApp final : public Application
+    CommandQueue::CommandQueue(CommandQueueType queueType)
+        : queueType{ queueType }
     {
-    public:
-        HelloWorldApp(const Config& config)
-            : Application(config)
-        {
-
-        }
-    };
-
-    Application* CreateApplication()
-    {
-        Config config{};
-        //config.rendererType = GPUBackendType::Vulkan;
-        config.title = "TestApp";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
-
-        return new HelloWorldApp(config);
     }
 }
 

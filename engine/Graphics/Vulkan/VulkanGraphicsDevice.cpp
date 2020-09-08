@@ -21,10 +21,12 @@
 //
 
 #include "config.h"
-#include "VulkanGraphicsDevice.h"
+#include "VulkanCommandPool.h"
+#include "VulkanCommandBuffer.h"
 #include "VulkanTexture.h"
 #include "VulkanBuffer.h"
 #include "VulkanSwapChain.h"
+#include "VulkanGraphicsDevice.h"
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
@@ -367,25 +369,11 @@ namespace Alimer
         // Create primary SwapChain.
         auto swapChain = new VulkanSwapChain(this, surface, desc.primarySwapChain);
         primarySwapChain.Reset(swapChain);
-        frames.resize(swapChain->GetImageCount());
 
         // Create frame data.
-        for (size_t i = 0, count = frames.size(); i < count; i++)
+        for (size_t i = 0, count = swapChain->GetImageCount(); i < count; i++)
         {
-            //VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-            //fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            //VK_CHECK(vkCreateFence(device->GetHandle(), &fenceInfo, nullptr, &frames[i].fence));
-
-            VkCommandPoolCreateInfo commandPoolInfo{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-            commandPoolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-            commandPoolInfo.queueFamilyIndex = GetGraphicsQueueFamilyIndex();
-            VK_CHECK(vkCreateCommandPool(device, &commandPoolInfo, nullptr, &frames[i].primaryCommandPool));
-
-            VkCommandBufferAllocateInfo cmdAllocateInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            cmdAllocateInfo.commandPool = frames[i].primaryCommandPool;
-            cmdAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            cmdAllocateInfo.commandBufferCount = 1;
-            VK_CHECK(vkAllocateCommandBuffers(device, &cmdAllocateInfo, &frames[i].primaryCommandBuffer));
+            frames.emplace_back(eastl::make_unique<VulkanRenderFrame>(*this));
         }
     }
 
@@ -399,11 +387,6 @@ namespace Alimer
         VK_CHECK(vkDeviceWaitIdle(device));
 
         primarySwapChain.Reset();
-
-        for (auto semaphore : recycledSemaphores)
-        {
-            vkDestroySemaphore(device, semaphore, nullptr);
-        }
 
         // Clear caches
         ClearRenderPassCache();
@@ -970,26 +953,16 @@ namespace Alimer
         caps.limits.maxComputeWorkGroupSizeZ = physicalDeviceProperties.limits.maxComputeWorkGroupSize[2];
     }
 
-    VkSemaphore VulkanGraphicsDevice::RequestSemaphore()
+    VkFence VulkanGraphicsDevice::RequestFence()
     {
-        VkSemaphore semaphore;
-        if (recycledSemaphores.empty())
-        {
-            VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore));
-        }
-        else
-        {
-            semaphore = recycledSemaphores.back();
-            recycledSemaphores.pop_back();
-        }
-
-        return semaphore;
+        VulkanRenderFrame& frame = GetActiveFrame();
+        return frame.RequestFence();
     }
 
-    void VulkanGraphicsDevice::ReturnSemaphore(VkSemaphore semaphore)
+    VkSemaphore VulkanGraphicsDevice::RequestSemaphore()
     {
-        recycledSemaphores.push_back(semaphore);
+        VulkanRenderFrame& frame = GetActiveFrame();
+        return frame.RequestSemaphore();
     }
 
     void VulkanGraphicsDevice::SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name)
@@ -1009,17 +982,45 @@ namespace Alimer
         VK_CHECK(vkDeviceWaitIdle(device));
     }
 
+    VulkanRenderFrame& VulkanGraphicsDevice::GetActiveFrame()
+    {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first.");
+        return *frames.at(activeFrameIndex);
+    }
+
+    void VulkanGraphicsDevice::WaitFrame()
+    {
+        VulkanRenderFrame& frame = GetActiveFrame();
+        frame.Reset();
+    }
+
     bool VulkanGraphicsDevice::BeginFrame()
     {
+        ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
+
+        // Now the frame is active again
+        frameActive = true;
+
+        // Wait on all resource to be freed from the previous render to this frame
+        WaitFrame();
+
         return true;
     }
 
     void VulkanGraphicsDevice::EndFrame()
     {
-        frameIndex = (frameIndex + 1) % frames.size();
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first");
+
+        // Frame is not active anymore
+        frameActive = false;
 
         // Increment frame count.
         ++frameCount;
+    }
+
+    CommandBuffer* VulkanGraphicsDevice::GetCommandBuffer()
+    {
+        return GetActiveFrame().RequestCommandBuffer();
     }
 
     /* Resource creation methods */

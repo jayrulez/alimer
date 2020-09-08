@@ -76,6 +76,13 @@ namespace Alimer
         HighPerformance
     };
 
+    enum class CommandQueueType
+    {
+        Graphics,
+        Compute,
+        Copy
+    };
+
     /// Describes the texture type.
     enum class TextureType
     {
@@ -127,6 +134,13 @@ namespace Alimer
         Clear
     };
 
+    enum class PresentMode : uint32_t
+    {
+        Immediate = 0,
+        Mailbox,
+        Fifo,
+    };
+
     /* Structs */
     struct GPUBufferDescription
     {
@@ -173,6 +187,7 @@ namespace Alimer
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         uint32_t width;
         uint32_t height;
+        PresentMode presentMode = PresentMode::Immediate;
         bool fullscreen = false;
         const char* label;
     };

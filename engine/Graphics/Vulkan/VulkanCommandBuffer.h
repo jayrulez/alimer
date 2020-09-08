@@ -22,23 +22,25 @@
 
 #pragma once
 
-#include "Graphics/GPUContext.h"
+#include "Graphics/CommandBuffer.h"
 #include "VulkanBackend.h"
 
 namespace Alimer
 {
-    class VulkanGPUSwapChain;
+    class VulkanCommandPool;
 
-    class VulkanGPUContext final : public GPUContext
+    class VulkanCommandBuffer final : public CommandBuffer
     {
     public:
-        VulkanGPUContext(VulkanGPUDevice* device_, const GPUContextDescription& desc, VkSurfaceKHR surface_, bool isMain_);
-        ~VulkanGPUContext() override;
+        VulkanCommandBuffer(VulkanCommandPool& commandPool, VkCommandBufferLevel level);
+        ~VulkanCommandBuffer() override;
 
-        bool BeginFrameImpl() override;
-        void EndFrameImpl() override;
+        void CommitCore() override;
+        void WaitUntilCompletedCore() override;
 
-        void PushDebugGroup(const String& name) override;
+        const VkCommandBuffer& GetHandle() const;
+
+        /*void PushDebugGroup(const String& name) override;
         void PopDebugGroup() override;
         void InsertDebugMarker(const String& name) override;
 
@@ -53,18 +55,11 @@ namespace Alimer
         void SetBlendColor(const Color& color) override;
 
         void BindBuffer(uint32_t slot, GPUBuffer* buffer) override;
-        void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
-
-        void TextureBarrier(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+        void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;*/
     private:
 
-        void CreateObjects();
-        void TeardownFrame(VulkanRenderFrame& frame);
-        void Purge(VulkanRenderFrame& frame);
-
     private:
-        VulkanGPUDevice* device;
-        VkSurfaceKHR surface{ VK_NULL_HANDLE };
-        VulkanGPUSwapChain* swapChain = nullptr;
+        VulkanCommandPool& commandPool;
+        VkCommandBuffer handle;
     };
 }

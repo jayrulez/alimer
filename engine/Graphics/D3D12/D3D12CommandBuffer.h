@@ -22,17 +22,23 @@
 
 #pragma once
 
-#include "Graphics/CommandContext.h"
+#include "Graphics/CommandBuffer.h"
 #include "D3D12Backend.h"
 
-namespace alimer
+namespace Alimer
 {
-    class D3D12CommandContext final : public CommandContext
+    class D3D12CommandQueue;
+
+    class D3D12CommandBuffer final : public CommandBuffer
     {
     public:
-        D3D12CommandContext(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type);
-        ~D3D12CommandContext() override;
-        void Reset(uint32_t frameIndex);
+        D3D12CommandBuffer(D3D12CommandQueue* queue);
+        ~D3D12CommandBuffer() override;
+
+        void CommitCore() override;
+        void WaitUntilCompletedCore() override;
+
+       /* void Reset(uint32_t frameIndex);
 
         void Commit(bool waitForCompletion) override;
 
@@ -51,16 +57,15 @@ namespace alimer
         void BindBuffer(uint32_t slot, Buffer* buffer) override;
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
-        /* Barriers */
+        // Barriers 
         void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
         void InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate = false);
         void FlushResourceBarriers(void);
 
-        ALIMER_FORCEINLINE ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }
+        ALIMER_FORCEINLINE ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }*/
 
     private:
-        D3D12GraphicsDevice* device;
-        const D3D12_COMMAND_LIST_TYPE type;
+        D3D12CommandQueue* queue;
 
         bool useRenderPass;
         ID3D12CommandAllocator* commandAllocators[kInflightFrameCount] = {};

@@ -240,7 +240,7 @@ namespace Alimer
 #endif
     }
 
-    IDXGISwapChain1* DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc)
+    Microsoft::WRL::ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc)
     {
         UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
@@ -275,7 +275,7 @@ namespace Alimer
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         swapChainDesc.Flags = flags;
 
-        IDXGISwapChain1* swapChain;
+        Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = (HWND)desc.windowHandle;

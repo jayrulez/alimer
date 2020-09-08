@@ -50,10 +50,6 @@ namespace Alimer
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
         D3D12MA::Allocator* GetAllocator() const { return allocator; }
 
-        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
-        ID3D12CommandQueue* GetComputeQueue() const { return computeQueue; }
-        ID3D12CommandQueue* GetCopyQueue() const { return copyQueue; }
-
     private:
         void GetAdapter(GraphicsAdapterPreference adapterPreference, IDXGIAdapter1** ppAdapter);
         void CreateCommandQueues();
@@ -62,6 +58,7 @@ namespace Alimer
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
+        CommandBuffer* GetCommandBuffer() override;
 
         DWORD dxgiFactoryFlags;
         ComPtr<IDXGIFactory4> dxgiFactory;
@@ -75,15 +72,5 @@ namespace Alimer
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
         bool supportsRenderPass = false;
         bool isLost = false;
-
-        ID3D12CommandQueue* graphicsQueue = nullptr;
-        ID3D12CommandQueue* computeQueue = nullptr;
-        ID3D12CommandQueue* copyQueue = nullptr;
-
-        ID3D12Fence* frameFence = nullptr;
-        HANDLE frameFenceEvent = INVALID_HANDLE_VALUE;
-
-        /// Number of frame count
-        uint64 frameCount{ 0 };
     };
 }

@@ -34,6 +34,7 @@ namespace Alimer
         ~VulkanTexture() override;
 
         void Destroy() override;
+        void Barrier(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
     private:
         void BackendSetName() override;

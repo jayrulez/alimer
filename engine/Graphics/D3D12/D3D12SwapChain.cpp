@@ -21,6 +21,7 @@
 //
 
 #include "D3D12SwapChain.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
@@ -29,36 +30,30 @@ namespace Alimer
         : SwapChain(desc)
         , device(device_)
         , isTearingSupported(device->IsTearingSupported())
+        , syncInterval(desc.presentMode == PresentMode::Immediate ? 0 : 1)
+        , fenceValues{}
+        , frameValues{}
     {
-        IDXGISwapChain1* tempSwapChain = DXGICreateSwapChain(
+        ComPtr<IDXGISwapChain1> swapChain1 = DXGICreateSwapChain(
             device->GetDXGIFactory(),
             device->GetDXGIFactoryCaps(),
-            device->GetGraphicsQueue(),
-            Max(kInflightFrameCount, kMaxFrameCount),
+            static_cast<D3D12CommandQueue*>(device->GetCommandQueue(CommandQueueType::Graphics))->GetHandle(),
+            kBackBufferCount,
             desc);
-        ThrowIfFailed(tempSwapChain->QueryInterface(IID_PPV_ARGS(&handle)));
-        SafeRelease(tempSwapChain);
+        ThrowIfFailed(swapChain1.As(&handle));
+        currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
 
         if (desc.label && strlen(desc.label))
         {
-            DXGISetObjectName(handle, desc.label);
+            DXGISetObjectName(handle.Get(), desc.label);
         }
     }
 
-    D3D12SwapChain::~D3D12SwapChain()
+    bool D3D12SwapChain::Present()
     {
-        Destroy();
-    }
+        auto commandQueue = static_cast<D3D12CommandQueue*>(device->GetCommandQueue(CommandQueueType::Graphics));
 
-    void D3D12SwapChain::Destroy()
-    {
-        SafeRelease(handle);
-    }
-
-    bool D3D12SwapChain::Present(bool verticalSync)
-    {
-        UINT syncInterval = verticalSync ? 1 : 0;
-        UINT presentFlags = 0;
+        uint32_t presentFlags = 0;
 
         // Recommended to always use tearing if supported when using a sync interval of 0.
         // Note this will fail if in true 'fullscreen' mode.
@@ -75,6 +70,12 @@ namespace Alimer
             device->HandleDeviceLost();
             return false;
         }
+
+        fenceValues[currentBackBufferIndex] = commandQueue->Signal();
+        frameValues[currentBackBufferIndex] = device->GetFrameCount();
+
+        currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
+        commandQueue->WaitForFenceValue(fenceValues[currentBackBufferIndex]);
 
         return SUCCEEDED(result);
     }

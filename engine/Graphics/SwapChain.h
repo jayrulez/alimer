@@ -33,14 +33,15 @@ namespace Alimer
         /// Constructor.
         SwapChain(const SwapChainDescription& desc);
 
-        virtual bool Present(bool verticalSync) = 0;
+        virtual bool Present() = 0;
 
     protected:
         PixelFormat colorFormat;
         uint32 width;
         uint32 height;
+        PresentMode presentMode;
         bool isFullscreen;
-        uint32_t currentBufferIndex;
+        uint32_t currentBackBufferIndex{ 0 };
         eastl::vector<RefPtr<Texture>> colorTextures;
     };
 }

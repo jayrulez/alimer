@@ -20,10 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
 #include "D3D12Buffer.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
+#include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -206,10 +207,6 @@ namespace Alimer
 
         // Create primary SwapChain.
         primarySwapChain.Reset(new D3D12SwapChain(this, desc.primarySwapChain));
-
-        // Frame fence.
-        ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
-        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
@@ -236,13 +233,9 @@ namespace Alimer
             allocator->Release(); allocator = nullptr;
         }
 
-        SafeRelease(copyQueue);
-        SafeRelease(computeQueue);
-        SafeRelease(graphicsQueue);
-
-        // Frame fence
-        CloseHandle(frameFenceEvent);
-        SafeRelease(frameFence);
+        graphicsCommandQueue.reset();
+        computeCommandQueue.reset();
+        copyCommandQueue.reset();
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -356,32 +349,9 @@ namespace Alimer
 
     void D3D12GraphicsDevice::CreateCommandQueues()
     {
-        SafeRelease(graphicsQueue);
-        SafeRelease(computeQueue);
-        SafeRelease(copyQueue);
-
-        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-        queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queueDesc.NodeMask = 0x0;
-
-        D3D12_COMMAND_QUEUE_DESC directDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
-        D3D12_COMMAND_QUEUE_DESC asyncDesc = { D3D12_COMMAND_LIST_TYPE_COMPUTE, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
-
-        // Direct/Graphics 
-        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
-        graphicsQueue->SetName(L"Direct Command Queue");
-
-        // Compute
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeQueue)));
-        computeQueue->SetName(L"Compute Command Queue");
-
-        // Copy
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-        ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&copyQueue)));
-        copyQueue->SetName(L"Copy Command Queue");
+        graphicsCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Graphics);
+        computeCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Compute);
+        copyCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Copy);
     }
 
     void D3D12GraphicsDevice::HandleDeviceLost()
@@ -541,9 +511,9 @@ namespace Alimer
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
-        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
-        frameFence->SetEventOnCompletion(frameCount, frameFenceEvent);
-        WaitForSingleObject(frameFenceEvent, INFINITE);
+        graphicsCommandQueue->WaitIdle();
+        computeCommandQueue->WaitIdle();
+        copyCommandQueue->WaitIdle();
     }
 
     bool D3D12GraphicsDevice::BeginFrame()
@@ -555,23 +525,18 @@ namespace Alimer
     {
         // TODO: Manage upload
 
-        // Signal the fence with the current frame number, so that we can check back on it
-        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
-
-        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
-        LOGI("CPU Frame: %llu - GPU Frame: %llu", frameCount, GPUFrameCount);
-
-        if ((frameCount - GPUFrameCount) >= kInflightFrameCount)
-        {
-            LOGI("Waiting on fence value");
-            frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
-            WaitForSingleObjectEx(frameFenceEvent, INFINITE, FALSE);
-        }
+        ++frameCount;
 
         if (!dxgiFactory->IsCurrent())
         {
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
+    }
+
+    CommandBuffer* D3D12GraphicsDevice::GetCommandBuffer()
+    {
+        CommandBuffer* cmd = nullptr;
+        return cmd;
     }
 }

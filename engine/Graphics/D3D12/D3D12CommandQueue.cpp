@@ -20,12 +20,34 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12CommandQueue.h"
+#include "D3D12CommandBuffer.h"
 #include "D3D12GraphicsDevice.h"
 
-namespace alimer
+namespace Alimer
 {
+    namespace
+    {
+        inline D3D12_COMMAND_LIST_TYPE D3D12CommandListType(CommandQueueType type)
+        {
+            switch (type)
+            {
+            case CommandQueueType::Graphics:
+                return D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+            case CommandQueueType::Compute:
+                return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+
+            case CommandQueueType::Copy:
+                return D3D12_COMMAND_LIST_TYPE_COPY;
+
+            default:
+                ALIMER_UNREACHABLE();
+                return D3D12_COMMAND_LIST_TYPE_DIRECT;
+            }
+        }
+    }
+
     D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_)
         : device(device_)
         , type(type_)
@@ -87,110 +109,108 @@ namespace alimer
         readyAllocators.push(std::make_pair(fenceValue, allocator));
     }
 
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType, const std::string_view& name)
-        : device{ device }
-        , type(D3D12GetCommandListType(queueType))
-        , nextFenceValue((uint64_t)type << 56 | 1)
-        , lastCompletedFenceValue((uint64_t)type << 56)
+    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType)
+        : CommandQueue(queueType)
+        , device{ device }
+        , type(D3D12CommandListType(queueType))
+        , fenceValue(0)
         , allocatorPool(device, type)
     {
-        D3D12_COMMAND_QUEUE_DESC desc = {};
-        desc.Type = type;
-        desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-        desc.NodeMask = 1;
-        ThrowIfFailed(device->GetD3DDevice()->CreateCommandQueue(&desc, IID_PPV_ARGS(&commandQueue)));
+        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        queueDesc.Type = type;
+        queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        queueDesc.NodeMask = 0;
 
-        // Create fence and event
+        ThrowIfFailed(device->GetD3DDevice()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&handle)));
         ThrowIfFailed(device->GetD3DDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
-        fence->Signal((uint64_t)type << 56);
 
-        fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
-        ALIMER_ASSERT(fenceEvent != 0);
-
-        if (name.empty())
+        switch (queueType)
         {
-            switch (queueType)
-            {
-            case CommandQueueType::Graphics:
-                commandQueue->SetName(L"Graphics Command Queue");
-                fence->SetName(L"Graphics Command Queue Fence");
-                break;
-            case CommandQueueType::Compute:
-                commandQueue->SetName(L"Compute Command Queue");
-                fence->SetName(L"Compute Command Queue Fence");
-                break;
-            case CommandQueueType::Copy:
-                commandQueue->SetName(L"Copy Command Queue");
-                fence->SetName(L"Copy Command Queue Fence");
-                break;
-            }
+        case CommandQueueType::Graphics:
+            handle->SetName(L"Graphics Command Queue");
+            fence->SetName(L"Graphics Command Queue Fence");
+            break;
+        case CommandQueueType::Compute:
+            handle->SetName(L"Compute Command Queue");
+            fence->SetName(L"Compute Command Queue Fence");
+            break;
+        case CommandQueueType::Copy:
+            handle->SetName(L"Copy Command Queue");
+            fence->SetName(L"Copy Command Queue Fence");
+            break;
         }
     }
 
     D3D12CommandQueue::~D3D12CommandQueue()
     {
         allocatorPool.Shutdown();
-        CloseHandle(fenceEvent);
-        SafeRelease(fence);
-        SafeRelease(commandQueue);
+    }
+
+    GraphicsDevice* D3D12CommandQueue::GetGraphicsDevice() const
+    {
+        return device;
+    }
+
+    RefPtr<CommandBuffer> D3D12CommandQueue::GetCommandBuffer()
+    {
+        RefPtr<D3D12CommandBuffer> commandBuffer;
+
+        // If there is a completed command buffer on the queue, return it.
+        if (!availableCommandBuffers.Empty())
+        {
+            availableCommandBuffers.TryPop(commandBuffer);
+        }
+        else
+        {
+            // Otherwise create a new command list.
+            commandBuffer = MakeRefPtr<D3D12CommandBuffer>(this);
+        }
+
+        return commandBuffer;
     }
 
     uint64_t D3D12CommandQueue::Signal()
     {
-        std::lock_guard<std::mutex> LockGuard(fenceMutex);
-        commandQueue->Signal(fence, nextFenceValue);
-        return nextFenceValue++;
+        uint64_t nextFenceValue = ++fenceValue;
+        handle->Signal(fence.Get(), nextFenceValue);
+        return nextFenceValue;
     }
 
     bool D3D12CommandQueue::IsFenceComplete(uint64_t fenceValue)
     {
-        // Avoid querying the fence value by testing against the last one seen.
-        // The max() is to protect against an unlikely race condition that could cause the last
-        // completed fence value to regress.
-        if (fenceValue > lastCompletedFenceValue)
-        {
-            lastCompletedFenceValue = Max(lastCompletedFenceValue, fence->GetCompletedValue());
-        }
-
-        return fenceValue <= lastCompletedFenceValue;
+        return fence->GetCompletedValue() >= fenceValue;
     }
 
-    void D3D12CommandQueue::WaitForFence(uint64_t fenceValue)
+    void D3D12CommandQueue::WaitForFenceValue(uint64_t fenceValue)
     {
         if (IsFenceComplete(fenceValue))
             return;
 
-        // TODO:  Think about how this might affect a multi-threaded situation.  Suppose thread A
-        // wants to wait for fence 100, then thread B comes along and wants to wait for 99.  If
-        // the fence can only have one event set on completion, then thread B has to wait for 
-        // 100 before it knows 99 is ready.  Maybe insert sequential events?
-        {
-            std::lock_guard<std::mutex> LockGuard(eventMutex);
+        LOGD("Waiting on fence value");
 
-            fence->SetEventOnCompletion(fenceValue, fenceEvent);
-            WaitForSingleObject(fenceEvent, INFINITE);
-            lastCompletedFenceValue = fenceValue;
-        }
+        HANDLE event = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT_MSG(event, "Failed to create fence event handle.");
+
+        // Is this function thread safe?
+        fence->SetEventOnCompletion(fenceValue, event);
+        WaitForSingleObjectEx(event, INFINITE, FALSE);
+        CloseHandle(event);
     }
 
     void D3D12CommandQueue::WaitIdle()
     {
-        WaitForFence(Signal());
+        WaitForFenceValue(fenceValue);
     }
 
     uint64_t D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
     {
-        std::lock_guard<std::mutex> LockGuard(fenceMutex);
-
         // Kickoff the command list.
         ID3D12CommandList* commandLists[] = { commandList };
-        commandQueue->ExecuteCommandLists(1, commandLists);
+        handle->ExecuteCommandLists(1, commandLists);
+        uint64_t fenceValue = Signal();
 
-        // Signal the next fence value (with the GPU)
-        commandQueue->Signal(fence, nextFenceValue);
-
-        // And increment the fence value.  
-        return nextFenceValue++;
+        return fenceValue;
     }
 
     ID3D12CommandAllocator* D3D12CommandQueue::RequestAllocator()
@@ -204,5 +224,4 @@ namespace alimer
         allocatorPool.DiscardAllocator(fenceValueForReset, commandAllocator);
     }
 }
-#endif // TODO
 

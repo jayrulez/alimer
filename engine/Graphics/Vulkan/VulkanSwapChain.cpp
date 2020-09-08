@@ -24,6 +24,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanTexture.h"
 #include "VulkanGraphicsDevice.h"
+#include "VulkanCommandBuffer.h"
 
 namespace Alimer
 {
@@ -134,17 +135,9 @@ namespace Alimer
     VulkanSwapChain::VulkanSwapChain(VulkanGraphicsDevice* device_, VkSurfaceKHR surface, const SwapChainDescription& desc)
         : SwapChain(desc)
         , device(device_)
-        , presentMode(VK_PRESENT_MODE_FIFO_KHR)
-        , immediatePresentMode(VK_PRESENT_MODE_FIFO_KHR)
         , presentQueue(device->GetGraphicsQueue())
         , surface{ surface }
     {
-        VkFenceCreateInfo fenceInfo;
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.pNext = nullptr;
-        fenceInfo.flags = 0;
-        VK_CHECK(vkCreateFence(device->GetHandle(), &fenceInfo, nullptr, &fence));
-
         RecreateSwapchain();
     }
 
@@ -160,7 +153,6 @@ namespace Alimer
 
         if (handle != VK_NULL_HANDLE)
         {
-            vkDestroyFence(device->GetHandle(), fence, nullptr);
             vkDestroySwapchainKHR(device->GetHandle(), handle, nullptr);
             handle = VK_NULL_HANDLE;
         }
@@ -254,7 +246,31 @@ namespace Alimer
             compositeMode = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR;
 
         // The immediate present mode is not necessarily supported.
-        immediatePresentMode = VK_PRESENT_MODE_FIFO_KHR;
+        VkPresentModeKHR vkPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+        /*if (presentMode == PresentMode::Mailbox)
+        {
+            for (auto& presentMode : surfaceCaps.presentModes)
+            {
+                if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+                {
+                    vkPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+                    break;
+                }
+            }
+
+            if (vkPresentMode != VK_PRESENT_MODE_MAILBOX_KHR)
+            {
+                for (auto& presentMode : surfaceCaps.presentModes)
+                {
+                    if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
+                    {
+                        vkPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+                        break;
+                    }
+                }
+            }
+        }
+
         for (auto& presentMode : surfaceCaps.presentModes)
         {
             if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -266,7 +282,7 @@ namespace Alimer
             {
                 immediatePresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
             }
-        }
+        }*/
 
         VkSwapchainKHR oldSwapchain = handle;
 
@@ -288,7 +304,7 @@ namespace Alimer
         createInfo.pQueueFamilyIndices = nullptr;
         createInfo.preTransform = preTransform;
         createInfo.compositeAlpha = compositeMode;
-        createInfo.presentMode = presentMode;
+        createInfo.presentMode = vkPresentMode;
         createInfo.clipped = VK_TRUE;
         createInfo.oldSwapchain = oldSwapchain;
 
@@ -327,14 +343,17 @@ namespace Alimer
             colorTextures[i]->SetName(Alimer::Format("Back Buffer %d", i));
         }
 
-        return AcquireNextImage();
+        return true;
+        //return AcquireNextImage();
     }
 
     bool VulkanSwapChain::AcquireNextImage()
     {
         imageIndex = kInvalidImageIndex;
 
-        VkResult result = vkAcquireNextImageKHR(device->GetHandle(), handle, UINT64_MAX, VK_NULL_HANDLE, fence, &imageIndex);
+        VkSemaphore aquiredSemaphore = device->RequestSemaphore();
+
+        VkResult result = AcquireNextImage(imageIndex, aquiredSemaphore, VK_NULL_HANDLE);
         if (result != VK_SUCCESS)
         {
             VK_LOG_ERROR(result, "Vulkan: Failed to acquire next Vulkan image");
@@ -347,33 +366,21 @@ namespace Alimer
             RecreateSwapchain();
         }
 
-        result = vkWaitForFences(device->GetHandle(), 1, &fence, VK_TRUE, UINT64_MAX);
-        if (result != VK_SUCCESS)
-        {
-            VK_LOG_ERROR(result, "Failed to wait for fence");
-            return false;
-        }
-
-        result = vkResetFences(device->GetHandle(), 1, &fence);
-        if (result != VK_SUCCESS)
-        {
-            VK_LOG_ERROR(result, "Failed to reset fence");
-            return false;
-        }
-
         return true;
     }
 
-    bool VulkanSwapChain::Present(bool verticalSync)
+    VkResult VulkanSwapChain::AcquireNextImage(uint32_t& imageIndex, VkSemaphore imageAcquiredSemaphore, VkFence fence)
     {
-        VkPresentModeKHR newPresentMode = verticalSync ? VK_PRESENT_MODE_FIFO_KHR : immediatePresentMode;
-        if (presentMode != newPresentMode)
-        {
-            if (!RecreateSwapchain())
-                return false;
+        return vkAcquireNextImageKHR(device->GetHandle(), handle, std::numeric_limits<uint64_t>::max(), imageAcquiredSemaphore, fence, &imageIndex);
+    }
 
-            presentMode = newPresentMode;
-        }
+    bool VulkanSwapChain::Present()
+    {
+        if (!AcquireNextImage())
+            return false;
+
+        VulkanCommandBuffer* commandBuffer = static_cast<VulkanCommandBuffer*>(device->GetCommandBuffer());
+        commandBuffer->Commit();
 
         VkPresentInfoKHR presentInfo;
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -382,7 +389,7 @@ namespace Alimer
         presentInfo.pWaitSemaphores = nullptr;
         presentInfo.swapchainCount = 1u;
         presentInfo.pSwapchains = &handle;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pImageIndices = &currentBackBufferIndex;
         presentInfo.pResults = nullptr;
         VkResult result = vkQueuePresentKHR(presentQueue, &presentInfo);
 

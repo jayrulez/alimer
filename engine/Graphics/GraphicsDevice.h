@@ -23,10 +23,11 @@
 #pragma once
 
 #include "Graphics/Types.h"
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandQueue.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <EASTL/set.h>
+#include <memory>
 #include <mutex>
 
 namespace Alimer
@@ -65,16 +66,28 @@ namespace Alimer
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
 
-        /* Resource creation methods. */
-        //virtual GPUBuffer* CreateBuffer(const std::string_view& name) = 0;
+        /**
+        * Get a command queue. Valid types are:
+        * - Graphics    : Can be used for draw, dispatch, or copy commands.
+        * - Compute     : Can be used for dispatch or copy commands.
+        * - Copy        : Can be used for copy commands.
+        */
+        CommandQueue* GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
+
+        virtual CommandBuffer* GetCommandBuffer() = 0;
+
+        uint64_t GetFrameCount() const { return frameCount;  }
 
     protected:
         GraphicsDevice();
 
-        //virtual CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) = 0;
-
         GraphicsDeviceCaps caps{};
         RefPtr<SwapChain> primarySwapChain;
+        std::shared_ptr<CommandQueue> graphicsCommandQueue;
+        std::shared_ptr<CommandQueue> computeCommandQueue;
+        std::shared_ptr<CommandQueue> copyCommandQueue;
+
+        uint64_t frameCount{ 0 };
 
     private:
         /// Mutex for accessing the GPU objects vector from several threads.
