@@ -63,8 +63,8 @@ namespace Alimer
         argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
         // Ignore the first argument containing the application full path
-        eastl::vector<eastl::wstring> arg_strings(argv + 1, argv + argc);
-        eastl::vector<eastl::string>  args;
+        std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
+        std::vector<std::string>  args;
 
         for (auto& arg : arg_strings)
         {
@@ -86,7 +86,7 @@ namespace Alimer
             windowFlags |= WindowFlags::Fullscreen;
         }
 
-        window = eastl::make_unique<GLFW_Window>(config->title, config->width, config->height, windowFlags);
+        window = std::make_unique<GLFW_Window>(config->title, config->width, config->height, windowFlags);
     }
 
     WindowsPlatform::~WindowsPlatform()
@@ -143,8 +143,8 @@ namespace Alimer
         }
     }
 
-    eastl::unique_ptr<Platform> Platform::Create(Application* application)
+    std::unique_ptr<Platform> Platform::Create(Application* application)
     {
-        return eastl::make_unique<WindowsPlatform>(application);
+        return std::make_unique<WindowsPlatform>(application);
     }
 }

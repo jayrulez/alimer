@@ -32,8 +32,8 @@ namespace Alimer
     {
         struct SwapChainSupportDetails {
             VkSurfaceCapabilitiesKHR capabilities;
-            eastl::vector<VkSurfaceFormatKHR> formats;
-            eastl::vector<VkPresentModeKHR> presentModes;
+            std::vector<VkSurfaceFormatKHR> formats;
+            std::vector<VkPresentModeKHR> presentModes;
         };
 
         SwapChainSupportDetails QuerySwapchainSupport(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface, bool getSurfaceCapabilities2, bool win32_full_screen_exclusive)
@@ -59,7 +59,7 @@ namespace Alimer
                     return details;
                 }
 
-                eastl::vector<VkSurfaceFormat2KHR> formats2(formatCount);
+                std::vector<VkSurfaceFormat2KHR> formats2(formatCount);
 
                 for (auto& format2 : formats2)
                 {
@@ -332,7 +332,7 @@ namespace Alimer
         }
 
         vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, nullptr);
-        eastl::vector<VkImage> images(imageCount);
+        std::vector<VkImage> images(imageCount);
         colorTextures.resize(imageCount);
         vkGetSwapchainImagesKHR(device->GetHandle(), handle, &imageCount, images.data());
 
@@ -340,7 +340,7 @@ namespace Alimer
         for (uint32_t i = 0; i < imageCount; i++)
         {
             colorTextures[i] = new VulkanTexture(device, textureDesc, images[i], VK_IMAGE_LAYOUT_UNDEFINED);
-            colorTextures[i]->SetName(Alimer::Format("Back Buffer %d", i));
+            colorTextures[i]->SetName(fmt::format("Back Buffer {}", i));
         }
 
         return true;
@@ -371,7 +371,7 @@ namespace Alimer
 
     VkResult VulkanSwapChain::AcquireNextImage(uint32_t& imageIndex, VkSemaphore imageAcquiredSemaphore, VkFence fence)
     {
-        return vkAcquireNextImageKHR(device->GetHandle(), handle, std::numeric_limits<uint64_t>::max(), imageAcquiredSemaphore, fence, &imageIndex);
+        return vkAcquireNextImageKHR(device->GetHandle(), handle, Limits<uint64_t>::Max, imageAcquiredSemaphore, fence, &imageIndex);
     }
 
     bool VulkanSwapChain::Present()

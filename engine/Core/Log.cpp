@@ -34,7 +34,7 @@
 #  include <unistd.h>
 #elif defined(_WIN32)
 #   include "Platform/Win32/WindowsPlatform.h"
-#   include <EASTL/array.h>
+#   include <array>
 #elif defined(__EMSCRIPTEN__)
 #  include <emscripten.h>
 #endif
@@ -68,7 +68,7 @@ namespace Alimer::Log
     class Logger
     {
     public:
-        Logger(const eastl::string& name);
+        Logger(const std::string& name);
         ~Logger() = default;
 
         static Logger* GetDefault()
@@ -77,7 +77,7 @@ namespace Alimer::Log
             return &defaultLogger;
         }
 
-        void Log(Level level, const eastl::string& message);
+        void Log(Level level, const std::string& message);
 
     private:
         bool ShouldLog(Level msgLevel) const
@@ -85,15 +85,15 @@ namespace Alimer::Log
             return msgLevel >= level;
         }
 
-        eastl::string name;
+        std::string name;
         Level level;
 
 #if defined(_DEBUG) && defined(_WIN32)
-        eastl::array<WORD, size_t(Level::Count)> consoleColors;
+        std::array<WORD, size_t(Level::Count)> consoleColors;
 #endif
     };
 
-    Logger::Logger(const eastl::string& name_)
+    Logger::Logger(const std::string& name_)
         : name(name_)
 #ifdef _DEBUG
         , level(Level::Debug)
@@ -119,7 +119,7 @@ namespace Alimer::Log
 #endif
     }
 
-    void Logger::Log(Level level, const eastl::string& message)
+    void Logger::Log(Level level, const std::string& message)
     {
         bool log_enabled = ShouldLog(level);
         if (!log_enabled)
@@ -184,7 +184,7 @@ namespace Alimer::Log
             offset += static_cast<std::size_t>(written);
         }
 #elif defined(_WIN32)
-        eastl::string fmt_str = Alimer::Format("[%s] %s\r\n", LogLevelPefixes[(uint32_t)level], message.c_str());
+        std::string fmt_str = fmt::format("[{}] {}\r\n", LogLevelPefixes[(uint32_t)level], message.c_str());
         OutputDebugStringA(fmt_str.c_str());
 
 #  ifdef _DEBUG
@@ -210,7 +210,7 @@ namespace Alimer::Log
         // reset to orig colors
         ::SetConsoleTextAttribute(consoleOutput, orig_attribs);
 
-        fmt_str = Alimer::Format("] %s\n", message.c_str());
+        fmt_str = fmt::format("] {}\n", message.c_str());
         WriteConsoleA(consoleOutput, fmt_str.c_str(), static_cast<DWORD>(fmt_str.length()), nullptr, nullptr);
 #  endif
 #elif defined(__EMSCRIPTEN__)
@@ -232,37 +232,37 @@ namespace Alimer::Log
 #endif
 }
 
-    void Write(Level level, const eastl::string& message)
+    void Write(Level level, const std::string& message)
     {
         Logger::GetDefault()->Log(level, message);
     }
 
-    void Verbose(const eastl::string& message)
+    void Verbose(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Verbose, message);
     }
 
-    void Debug(const eastl::string& message)
+    void Debug(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Debug, message);
     }
 
-    void Info(const eastl::string& message)
+    void Info(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Info, message);
     }
 
-    void Warn(const eastl::string& message)
+    void Warn(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Warn, message);
     }
 
-    void Error(const eastl::string& message)
+    void Error(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Error, message);
     }
 
-    void Fatal(const eastl::string& message)
+    void Fatal(const std::string& message)
     {
         Logger::GetDefault()->Log(Level::Fatal, message);
     }

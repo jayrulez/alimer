@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/Texture.h"
-#include <EASTL/vector.h>
+#include <vector>
 
 namespace Alimer
 {
@@ -37,11 +37,11 @@ namespace Alimer
 
     protected:
         PixelFormat colorFormat;
-        uint32 width;
-        uint32 height;
+        uint32_t width;
+        uint32_t height;
         PresentMode presentMode;
         bool isFullscreen;
         uint32_t currentBackBufferIndex{ 0 };
-        eastl::vector<RefPtr<Texture>> colorTextures;
+        std::vector<RefPtr<Texture>> colorTextures;
     };
 }

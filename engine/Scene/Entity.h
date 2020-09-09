@@ -37,7 +37,7 @@ namespace Alimer
         friend class EntityManager;
 
     public:
-        Entity(const eastl::string& name = "");
+        Entity(const std::string& name = "");
         ~Entity();
 
         /// Return parent entity.
@@ -49,7 +49,7 @@ namespace Alimer
     private:
         void SetEntityManager(EntityManager* newManager);
 
-        eastl::string  name;
+        std::string  name;
         /// Parent scene node.
         Entity* parent{ nullptr };
         EntityManager* manager{ nullptr };

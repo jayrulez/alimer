@@ -44,6 +44,6 @@ namespace Alimer
         VkCommandPool handle;
 
         uint32_t primaryCommandBufferCount{ 0 };
-        eastl::vector<eastl::unique_ptr<VulkanCommandBuffer>> primaryCommandBuffers;
+        std::vector<std::unique_ptr<VulkanCommandBuffer>> primaryCommandBuffers;
     };
 }

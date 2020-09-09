@@ -90,7 +90,7 @@ namespace Alimer
     {
         if (blocks.size() == 0 || writeBlock->allocation.size() - writeBlock->writeAddr < size)
         {
-            blocks.push_back({ eastl::vector<uint8_t>(blockSize), 0, 0 });
+            blocks.push_back({ std::vector<uint8_t>(blockSize), 0, 0 });
             writeBlock = blocks.end();
             --writeBlock;
 
@@ -116,7 +116,7 @@ namespace Alimer
         if (readBlock == blocks.end())
             return blocks.size() * blockSize;
 
-        return readBlock->readAddr + eastl::distance(blocks.begin(), readBlock) * blockSize;
+        return readBlock->readAddr + std::distance(blocks.begin(), readBlock) * blockSize;
     }
 
     uint64_t CommandBuffer::TellP()
@@ -124,7 +124,7 @@ namespace Alimer
         if (blocks.size() == 0)
             return 0;
 
-        return writeBlock->writeAddr + eastl::distance(blocks.begin(), writeBlock) * blockSize;
+        return writeBlock->writeAddr + std::distance(blocks.begin(), writeBlock) * blockSize;
     }
 
     void CommandBuffer::SeekP(uint64_t pos)
@@ -132,7 +132,7 @@ namespace Alimer
         auto blockIndex = static_cast<uint32_t>(floor(pos / blockSize));
         blockIndex = Min(blockIndex, static_cast<uint32_t>(blocks.size() - 1));
         writeBlock = blocks.begin();
-        eastl::advance(writeBlock, blockIndex);
+        std::advance(writeBlock, blockIndex);
         writeBlock->writeAddr = pos % blockSize;
     }
 
@@ -199,7 +199,7 @@ namespace Alimer
         auto blockIndex = static_cast<uint32_t>(floor(pos / blockSize));
         blockIndex = Min(blockIndex, static_cast<uint32_t>(blocks.size() - 1));
         readBlock = blocks.begin();
-        eastl::advance(readBlock, blockIndex);
+        std::advance(readBlock, blockIndex);
         readBlock->readAddr = pos % blockSize;
     }
 
@@ -320,11 +320,11 @@ namespace Alimer
         readBlock->readAddr += size;
     }
 
-    eastl::string CommandBuffer::ReadString()
+    std::string CommandBuffer::ReadString()
     {
         const uint32_t length = Read<uint32_t>();
         const char* str = ReadPtr<char>(length);
-        return eastl::string(str, length);
+        return std::string(str, length);
     }
 }
 

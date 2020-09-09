@@ -27,12 +27,17 @@
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/Types.h"
 
+#ifdef _WIN32
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <vk_mem_alloc.h>
 #include <volk.h>
-#include "vk_mem_alloc.h"
-#include <EASTL/vector.h>
-#include <EASTL/queue.h>
-#include <EASTL/unordered_map.h>
-#include <EASTL/unique_ptr.h>
+#include <vector>
+#include <queue>
+#include <unordered_map>
+#include <memory>
 
 namespace Alimer
 {
@@ -100,13 +105,13 @@ namespace Alimer
         VulkanFencePool& operator=(VulkanFencePool&&) = delete;
 
         VkFence RequestFence();
-        VkResult Wait(uint32_t timeout = std::numeric_limits<uint32_t>::max()) const;
+        VkResult Wait(uint32_t timeout = Limits<uint32_t>::Max) const;
         VkResult Reset();
 
     private:
         VkDevice device;
 
-        eastl::vector<VkFence> fences;
+        std::vector<VkFence> fences;
         uint32_t activeFenceCount{ 0 };
     };
 
@@ -128,7 +133,7 @@ namespace Alimer
     private:
         VkDevice device;
 
-        eastl::vector<VkSemaphore> semaphores;
+        std::vector<VkSemaphore> semaphores;
         uint32_t activeSemaphoreCount{ 0 };
     };
 
@@ -161,8 +166,8 @@ namespace Alimer
         VulkanGraphicsDevice& device;
         VulkanFencePool fencePool;
         VulkanSemaphorePool semaphorePool;
-        eastl::unique_ptr<VulkanCommandPool> commandPool;
-        eastl::queue<VulkanResourceRelease> deferredReleases;
+        std::unique_ptr<VulkanCommandPool> commandPool;
+        std::queue<VulkanResourceRelease> deferredReleases;
     };
 
     using Hash = uint64_t;
@@ -226,7 +231,7 @@ namespace Alimer
                 u32(uint8_t(c));
         }
 
-        inline void string(const eastl::string& str)
+        inline void string(const std::string& str)
         {
             u32(0xff);
             for (auto& c : str)

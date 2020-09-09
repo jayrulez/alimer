@@ -24,6 +24,10 @@
 #include "VulkanCommandPool.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanGraphicsDevice.h"
+#include <algorithm>
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 namespace Alimer
 {
@@ -261,7 +265,7 @@ namespace Alimer
         , fencePool{device.GetHandle()}
         , semaphorePool{ device.GetHandle() }
     {
-        commandPool = eastl::make_unique<VulkanCommandPool>(device, device.GetGraphicsQueueFamilyIndex());
+        commandPool = std::make_unique<VulkanCommandPool>(device, device.GetGraphicsQueueFamilyIndex());
     }
 
     void VulkanRenderFrame::Reset()

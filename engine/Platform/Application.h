@@ -77,7 +77,7 @@ namespace Alimer
     private:
         void InitBeforeRun();
 
-        eastl::unique_ptr<Platform> platform;
+        std::unique_ptr<Platform> platform;
         Config config;
         State state;
         RefPtr<GraphicsDevice> graphics;

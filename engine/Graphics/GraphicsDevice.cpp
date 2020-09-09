@@ -38,9 +38,9 @@ namespace Alimer
     {
     }
 
-    eastl::set<GPUBackendType> GraphicsDevice::GetAvailableBackends()
+    std::set<GPUBackendType> GraphicsDevice::GetAvailableBackends()
     {
-        static eastl::set<GPUBackendType> availableBackends;
+        static std::set<GPUBackendType> availableBackends;
 
         if (availableBackends.empty())
         {
@@ -118,7 +118,10 @@ namespace Alimer
     {
         ALIMER_ASSERT(resource);
         std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
-        gpuObjects.erase_first(resource);
+
+        auto it = std::find(gpuObjects.begin(), gpuObjects.end(), resource);
+        if (it != gpuObjects.end())
+            gpuObjects.erase(it);
     }
 
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const

@@ -189,12 +189,11 @@ namespace Alimer
         uint32_t height;
         PresentMode presentMode = PresentMode::Immediate;
         bool fullscreen = false;
-        const char* label;
     };
 
     struct GraphicsDeviceDescription
     {
-        eastl::string applicationName;
+        std::string applicationName;
         GraphicsAdapterPreference adapterPreference;
         SwapChainDescription primarySwapChain;
     };
@@ -210,7 +209,7 @@ namespace Alimer
         uint32_t vendorId;
 
         /// Gets the adapter name.
-        eastl::string adapterName;
+        std::string adapterName;
 
         /// Gets the adapter type.
         GPUAdapterType adapterType;

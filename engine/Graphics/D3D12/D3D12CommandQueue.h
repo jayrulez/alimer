@@ -24,36 +24,14 @@
 
 #include "Graphics/CommandQueue.h"
 #include "D3D12Backend.h"
-#include <EASTL/vector.h>
-#include <EASTL/queue.h>
+#include <vector>
+#include <queue>
 #include <mutex>
 
 #include "Core/ThreadSafeQueue.h"
 
 namespace Alimer
 {
-    class D3D12CommandAllocatorPool final
-    {
-    public:
-        D3D12CommandAllocatorPool(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_);
-        ~D3D12CommandAllocatorPool();
-
-        void Shutdown();
-
-        ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
-        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* allocator);
-
-        ALIMER_FORCE_INLINE size_t Size() { return allocatorPool.size(); }
-
-    private:
-        const D3D12_COMMAND_LIST_TYPE type;
-
-        D3D12GraphicsDevice* device;
-        eastl::vector<ID3D12CommandAllocator*> allocatorPool;
-        eastl::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
-        std::mutex allocatorMutex;
-    };
-
     class D3D12CommandBuffer;
 
     class D3D12CommandQueue final : public CommandQueue
@@ -71,8 +49,6 @@ namespace Alimer
         void WaitIdle() override;
 
         uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
-        ID3D12CommandAllocator* RequestAllocator();
-        void DiscardAllocator(uint64_t fenceValueForReset, ID3D12CommandAllocator* commandAllocator);
 
         ID3D12CommandQueue* GetHandle() { return handle.Get(); }
 
@@ -84,7 +60,5 @@ namespace Alimer
         std::atomic_uint64_t fenceValue;
 
         ThreadSafeQueue<RefPtr<D3D12CommandBuffer>> availableCommandBuffers;
-
-        D3D12CommandAllocatorPool allocatorPool;
     };
 }

@@ -24,7 +24,6 @@
 
 #include "Graphics/SwapChain.h"
 #include "VulkanBackend.h"
-#include <EASTL/vector.h>
 
 namespace Alimer
 {

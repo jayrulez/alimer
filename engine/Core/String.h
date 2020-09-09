@@ -23,22 +23,18 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
-#include <EASTL/string.h>
+#include <fmt/format.h>
 
 namespace Alimer
 {
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
-    static constexpr uint32_t kMatrixConversionBufferLength = 256u;
-    extern const eastl::string EMPTY_STRING;
-
-    /// Return a formatted string.
-    ALIMER_API eastl::string Format(const char* format, ...);
+    extern const std::string EMPTY_STRING;
 
 #ifdef _WIN32
-    ALIMER_API eastl::string ToUtf8(const wchar_t* wstr, eastl_size_t len);
-    ALIMER_API eastl::string ToUtf8(const eastl::wstring& wstr);
+    ALIMER_API std::string ToUtf8(const wchar_t* wstr, size_t len);
+    ALIMER_API std::string ToUtf8(const std::wstring& wstr);
 
-    ALIMER_API eastl::wstring ToUtf16(const char* str, eastl_size_t len);
-    ALIMER_API eastl::wstring ToUtf16(const eastl::string& str);
+    ALIMER_API std::wstring ToUtf16(const char* str, size_t len);
+    ALIMER_API std::wstring ToUtf16(const std::string& str);
 #endif
 }

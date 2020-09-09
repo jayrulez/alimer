@@ -66,7 +66,7 @@ namespace Alimer
                 return primaryCommandBuffers.at(primaryCommandBufferCount++).get();
             }
 
-            primaryCommandBuffers.emplace_back(eastl::make_unique<VulkanCommandBuffer>(*this, level));
+            primaryCommandBuffers.emplace_back(std::make_unique<VulkanCommandBuffer>(*this, level));
             primaryCommandBufferCount++;
             return primaryCommandBuffers.back().get();
         }

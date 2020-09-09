@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include <EASTL/unique_ptr.h>
-#include <EASTL/string.h>
-#include <EASTL/vector.h>
+#include <memory>
+#include <string>
+#include <vector>
 #include "Platform/Window.h"
 
 namespace Alimer
@@ -78,7 +78,7 @@ namespace Alimer
         virtual ~Platform() = default;
 
         /// Return the current platform name.
-        static eastl::string GetName();
+        static std::string GetName();
 
         /// Return the current platform ID.
         static PlatformId GetId();
@@ -87,20 +87,20 @@ namespace Alimer
         static PlatformFamily GetFamily();
 
         /// Create plaform logic with given application.
-        static eastl::unique_ptr<Platform> Create(Application* application);
+        static std::unique_ptr<Platform> Create(Application* application);
 
         Window& GetMainWindow() const;
 
-        static eastl::vector<eastl::string> GetArguments();
-        static void SetArguments(const eastl::vector<eastl::string>& args);
+        static std::vector<std::string> GetArguments();
+        static void SetArguments(const std::vector<std::string>& args);
 
     protected:
         void InitApplication();
         virtual void Run() = 0;
 
         Application* application;
-        static eastl::vector<eastl::string> arguments;
+        static std::vector<std::string> arguments;
     
-        eastl::unique_ptr<Window> window{ nullptr };
+        std::unique_ptr<Window> window{ nullptr };
     };
 }

@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Core/Object.h"
-#include <EASTL/vector.h>
-#include <EASTL/bitset.h>
+#include <vector>
+#include <bitset>
 
 namespace Alimer
 {
@@ -91,12 +91,12 @@ namespace Alimer
                 };
 
                 ModifierKeys modifiers{ ModifierKeys::None };
-                eastl::bitset<static_cast<uint32_t>(Bits::Count)> bits;
+                std::bitset<static_cast<uint32_t>(Bits::Count)> bits;
             };
 
             bool Test(uint32_t slot, ModifierKeys modifiers, ActionSlot::Bits bit) const;
             bool dirty{ false };
-            eastl::vector<ActionSlot> actionSlots;
+            std::vector<ActionSlot> actionSlots;
         };
 
         int32_t mousePositionX;

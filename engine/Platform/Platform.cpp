@@ -25,22 +25,9 @@
 #include "Platform/Platform.h"
 #include "Platform/Application.h"
 
-/* Needed by EASTL. */
-#if !defined(ALIMER_EXPORTS)
-ALIMER_API void* operator new[](size_t size, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return ::operator new(size);
-}
-
-ALIMER_API void* operator new[](size_t size, size_t alignment, size_t alignmentOffset, const char* pName, int flags, unsigned debugFlags, const char* file, int line)
-{
-    return ::operator new(size);
-}
-#endif
-
 namespace Alimer
 {
-    eastl::vector<eastl::string> Platform::arguments = {};
+    std::vector<std::string> Platform::arguments = {};
 
     Platform::Platform(Application* application)
         : application{ application }
@@ -58,7 +45,7 @@ namespace Alimer
         application->InitBeforeRun();
     }
 
-    eastl::string Platform::GetName()
+    std::string Platform::GetName()
     {
         return "Windows";
     }
@@ -73,12 +60,12 @@ namespace Alimer
         return PlatformFamily::Desktop;
     }
 
-    eastl::vector<eastl::string> Platform::GetArguments()
+    std::vector<std::string> Platform::GetArguments()
     {
         return Platform::arguments;
     }
 
-    void Platform::SetArguments(const eastl::vector<eastl::string>& args)
+    void Platform::SetArguments(const std::vector<std::string>& args)
     {
         arguments = args;
     }

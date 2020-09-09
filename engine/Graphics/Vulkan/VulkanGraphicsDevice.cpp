@@ -27,10 +27,8 @@
 #include "VulkanBuffer.h"
 #include "VulkanSwapChain.h"
 #include "VulkanGraphicsDevice.h"
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
 
-using namespace eastl;
+using namespace std;
 
 namespace Alimer
 {
@@ -373,7 +371,7 @@ namespace Alimer
         // Create frame data.
         for (size_t i = 0, count = swapChain->GetImageCount(); i < count; i++)
         {
-            frames.emplace_back(eastl::make_unique<VulkanRenderFrame>(*this));
+            frames.emplace_back(std::make_unique<VulkanRenderFrame>(*this));
         }
     }
 
@@ -446,10 +444,10 @@ namespace Alimer
         return surface;
     }
 
-    bool VulkanGraphicsDevice::InitInstance(const eastl::string& applicationName, bool headless)
+    bool VulkanGraphicsDevice::InitInstance(const std::string& applicationName, bool headless)
     {
-        eastl::vector<const char*> enabledExtensions;
-        eastl::vector<const char*> enabledLayers;
+        std::vector<const char*> enabledExtensions;
+        std::vector<const char*> enabledLayers;
 
         uint32_t instanceExtensionCount;
         VK_CHECK(vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr));
@@ -486,10 +484,10 @@ namespace Alimer
         uint32_t instanceLayerCount;
         VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr));
 
-        eastl::vector<VkLayerProperties> supportedInstanceLayers(instanceLayerCount);
+        std::vector<VkLayerProperties> supportedInstanceLayers(instanceLayerCount);
         VK_CHECK(vkEnumerateInstanceLayerProperties(&instanceLayerCount, supportedInstanceLayers.data()));
 
-        eastl::vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(supportedInstanceLayers);
+        std::vector<const char*> optimalValidationLayers = GetOptimalValidationLayers(supportedInstanceLayers);
         enabledLayers.insert(enabledLayers.end(), optimalValidationLayers.begin(), optimalValidationLayers.end());
 #endif
 
@@ -602,8 +600,7 @@ namespace Alimer
         VK_CHECK(vkEnumeratePhysicalDevices(instance, &physicalDevicesCount, nullptr));
 
         if (physicalDevicesCount == 0) {
-            LOGE("failed to find GPUs with Vulkan support!");
-            assert(0);
+            LOGE("Failed to find GPUs with Vulkan support!");
         }
 
         vector<VkPhysicalDevice> physicalDevices(physicalDevicesCount);
@@ -965,7 +962,7 @@ namespace Alimer
         return frame.RequestSemaphore();
     }
 
-    void VulkanGraphicsDevice::SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name)
+    void VulkanGraphicsDevice::SetObjectName(VkObjectType type, uint64_t handle, const std::string& name)
     {
         if (!instanceExts.debugUtils)
             return;

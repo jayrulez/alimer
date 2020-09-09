@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <EASTL/string.h>
+#include <string>
 
 namespace Alimer
 {
@@ -125,7 +125,7 @@ namespace Alimer
     struct PixelFormatDesc
     {
         PixelFormat format;
-        const eastl::string name;
+        const std::string name;
         PixelFormatType type;
         uint8_t                 bitsPerPixel;
         struct
@@ -211,7 +211,7 @@ namespace Alimer
         return kFormatDesc[(uint32_t)format].type;
     }
 
-    inline const eastl::string& to_string(PixelFormat format)
+    inline const std::string& to_string(PixelFormat format)
     {
         ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
         return kFormatDesc[(uint32_t)format].name;

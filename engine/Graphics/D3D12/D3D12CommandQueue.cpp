@@ -48,73 +48,11 @@ namespace Alimer
         }
     }
 
-    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(D3D12GraphicsDevice* device_, D3D12_COMMAND_LIST_TYPE type_)
-        : device(device_)
-        , type(type_)
-    {
-    }
-
-    D3D12CommandAllocatorPool::~D3D12CommandAllocatorPool()
-    {
-        Shutdown();
-    }
-
-    void D3D12CommandAllocatorPool::Shutdown()
-    {
-        for (size_t i = 0; i < allocatorPool.size(); ++i)
-            allocatorPool[i]->Release();
-
-        allocatorPool.clear();
-    }
-
-    ID3D12CommandAllocator* D3D12CommandAllocatorPool::RequestAllocator(uint64_t completedFenceValue)
-    {
-        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
-
-        ID3D12CommandAllocator* allocator = nullptr;
-
-        if (!readyAllocators.empty())
-        {
-            std::pair<uint64_t, ID3D12CommandAllocator*>& allocatorPair = readyAllocators.front();
-
-            if (allocatorPair.first <= completedFenceValue)
-            {
-                allocator = allocatorPair.second;
-                ThrowIfFailed(allocator->Reset());
-                readyAllocators.pop();
-            }
-        }
-
-        // If no allocator's were ready to be reused, create a new one
-        if (allocator == nullptr)
-        {
-            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(type, IID_PPV_ARGS(&allocator)));
-#ifdef _DEBUG
-            wchar_t AllocatorName[32];
-            swprintf(AllocatorName, 32, L"CommandAllocator %zu", allocatorPool.size());
-            LOGD("Direct3D12: Created new CommandAllocator: {}", allocatorPool.size());
-            allocator->SetName(AllocatorName);
-#endif
-            allocatorPool.push_back(allocator);
-        }
-
-        return allocator;
-    }
-
-    void D3D12CommandAllocatorPool::DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* allocator)
-    {
-        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
-
-        // That fence value indicates we are free to reset the allocator
-        readyAllocators.push(std::make_pair(fenceValue, allocator));
-    }
-
     D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType)
         : CommandQueue(queueType)
         , device{ device }
         , type(D3D12CommandListType(queueType))
         , fenceValue(0)
-        , allocatorPool(device, type)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Type = type;
@@ -144,7 +82,6 @@ namespace Alimer
 
     D3D12CommandQueue::~D3D12CommandQueue()
     {
-        allocatorPool.Shutdown();
     }
 
     GraphicsDevice* D3D12CommandQueue::GetGraphicsDevice() const
@@ -211,17 +148,6 @@ namespace Alimer
         uint64_t fenceValue = Signal();
 
         return fenceValue;
-    }
-
-    ID3D12CommandAllocator* D3D12CommandQueue::RequestAllocator()
-    {
-        uint64_t completedFenceValue = fence->GetCompletedValue();
-        return allocatorPool.RequestAllocator(completedFenceValue);
-    }
-
-    void D3D12CommandQueue::DiscardAllocator(uint64_t fenceValueForReset, ID3D12CommandAllocator* commandAllocator)
-    {
-        allocatorPool.DiscardAllocator(fenceValueForReset, commandAllocator);
     }
 }
 

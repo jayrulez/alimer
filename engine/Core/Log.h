@@ -39,26 +39,25 @@ namespace Alimer::Log
         Count
     };
 
-    ALIMER_API void Write(Level level, const eastl::string& message);
-    ALIMER_API void Verbose(const eastl::string& message);
-    ALIMER_API void Debug(const eastl::string& message);
-    ALIMER_API void Info(const eastl::string& message);
-    ALIMER_API void Warn(const eastl::string& message);
-    ALIMER_API void Error(const eastl::string& message);
-    //ALIMER_API void Error(const char* format, ...);
-    ALIMER_API void Fatal(const eastl::string& message);
+    ALIMER_API void Write(Level level, const std::string& message);
+    ALIMER_API void Verbose(const std::string& message);
+    ALIMER_API void Debug(const std::string& message);
+    ALIMER_API void Info(const std::string& message);
+    ALIMER_API void Warn(const std::string& message);
+    ALIMER_API void Error(const std::string& message);
+    ALIMER_API void Fatal(const std::string& message);
 }
 
-#define LOGV(...) Alimer::Log::Verbose(Alimer::Format(__VA_ARGS__));
-#define LOGD(...) Alimer::Log::Debug(Alimer::Format(__VA_ARGS__));
-#define LOGI(...) Alimer::Log::Info(Alimer::Format(__VA_ARGS__));
-#define LOGW(...) Alimer::Log::Warn(Alimer::Format(__VA_ARGS__));
+#define LOGV(...) Alimer::Log::Verbose(fmt::format(__VA_ARGS__));
+#define LOGD(...) Alimer::Log::Debug(fmt::format(__VA_ARGS__));
+#define LOGI(...) Alimer::Log::Info(fmt::format(__VA_ARGS__));
+#define LOGW(...) Alimer::Log::Warn(fmt::format(__VA_ARGS__));
 #define LOGE(...) do { \
-    Alimer::Log::Error(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__))); \
+    Alimer::Log::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
     ALIMER_DEBUG_BREAK(); \
     } while(0)
 
 #define ALIMER_FATAL(...) do { \
-    Alimer::Log::Fatal(Alimer::Format("[%s:%d] %s", __FILE__, __LINE__, Alimer::Format(__VA_ARGS__))); \
+    Alimer::Log::Fatal(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
     ALIMER_DEBUG_BREAK(); \
     } while(0)

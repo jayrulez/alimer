@@ -382,7 +382,7 @@ namespace Alimer
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 
-        eastl::wstring deviceName(desc.Description);
+        std::wstring deviceName(desc.Description);
         caps.adapterName = Alimer::ToUtf8(deviceName);
 
         // Detect adapter type.

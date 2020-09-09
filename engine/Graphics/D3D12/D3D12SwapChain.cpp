@@ -42,11 +42,6 @@ namespace Alimer
             desc);
         ThrowIfFailed(swapChain1.As(&handle));
         currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
-
-        if (desc.label && strlen(desc.label))
-        {
-            DXGISetObjectName(handle.Get(), desc.label);
-        }
     }
 
     bool D3D12SwapChain::Present()

@@ -81,7 +81,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
-    EASTL
+    fmt
     stb
     imgui
 )
@@ -174,7 +174,7 @@ endif()
 
 if (ALIMER_ENABLE_VULKAN)
     target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
-    target_link_libraries(${TARGET_NAME} PRIVATE volk)
+    target_link_libraries(${TARGET_NAME} PRIVATE vma volk)
 endif()
 
 # SDK installation

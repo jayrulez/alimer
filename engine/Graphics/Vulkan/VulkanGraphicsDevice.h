@@ -44,7 +44,7 @@ namespace Alimer
         void Submit(VkCommandBuffer buffer);
         VkFence RequestFence();
         VkSemaphore RequestSemaphore();
-        void SetObjectName(VkObjectType type, uint64_t handle, const eastl::string& name);
+        void SetObjectName(VkObjectType type, uint64_t handle, const std::string& name);
         //VkRenderPass GetRenderPass(uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
         //VkFramebuffer GetFramebuffer(VkRenderPass renderPass, uint32_t numColorAttachments, const RenderPassColorAttachment* colorAttachments, const RenderPassDepthStencilAttachment* depthStencil);
 
@@ -61,7 +61,7 @@ namespace Alimer
     private:
         void Shutdown();
         VkSurfaceKHR CreateSurface(void* windowHandle);
-        bool InitInstance(const eastl::string& applicationName, bool headless);
+        bool InitInstance(const std::string& applicationName, bool headless);
         bool InitPhysicalDevice(VkSurfaceKHR surface);
         bool InitLogicalDevice();
         void InitCapabilities();
@@ -100,9 +100,9 @@ namespace Alimer
         /// Whether a frame is active or not
         bool frameActive{ false };
 
-        eastl::vector<eastl::unique_ptr<VulkanRenderFrame>> frames;
+        std::vector<std::unique_ptr<VulkanRenderFrame>> frames;
 
-        eastl::unordered_map<Hash, VkRenderPass> renderPasses;
-        eastl::unordered_map<Hash, VkFramebuffer> framebuffers;
+        std::unordered_map<Hash, VkRenderPass> renderPasses;
+        std::unordered_map<Hash, VkFramebuffer> framebuffers;
     };
 }

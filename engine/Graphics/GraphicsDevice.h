@@ -26,7 +26,7 @@
 #include "Graphics/CommandQueue.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
-#include <EASTL/set.h>
+#include <set>
 #include <memory>
 #include <mutex>
 
@@ -40,7 +40,7 @@ namespace Alimer
     public:
         virtual ~GraphicsDevice() = default;
 
-        static eastl::set<GPUBackendType> GetAvailableBackends();
+        static std::set<GPUBackendType> GetAvailableBackends();
         static RefPtr<GraphicsDevice> Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
 
         /// Wait for GPU to finish pending operation and become idle.
@@ -94,7 +94,7 @@ namespace Alimer
         std::mutex gpuObjectMutex;
 
         /// GPU objects.
-        eastl::vector<GraphicsResource*> gpuObjects;
+        std::vector<GraphicsResource*> gpuObjects;
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };

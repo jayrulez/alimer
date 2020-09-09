@@ -220,7 +220,7 @@ namespace Alimer
     };
     static_assert((unsigned)PixelFormat::Count == ALIMER_STATIC_ARRAY_SIZE(kDxgiFormatDesc), "Missmatch PixelFormat size");
 
-    void DXGISetObjectName(IDXGIObject* obj, const eastl::string& name)
+    void DXGISetObjectName(IDXGIObject* obj, const std::string& name)
     {
 #ifdef _DEBUG
         if (obj != nullptr)

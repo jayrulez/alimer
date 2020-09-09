@@ -51,10 +51,10 @@ namespace Alimer
         GraphicsDevice* GetGraphicsDevice() const;
 
         /// Set the resource name.
-        void SetName(const eastl::string& newName) { name = newName; BackendSetName(); }
+        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
 
         /// Get the resource name
-        const eastl::string& GetName() const { return name; }
+        const std::string& GetName() const { return name; }
 
     protected:
         GraphicsResource(GraphicsDevice* device, Type type);
@@ -66,6 +66,6 @@ namespace Alimer
         WeakPtr<GraphicsDevice> device;
         Type type;
 
-        eastl::string name;
+        std::string name;
     };
 }
