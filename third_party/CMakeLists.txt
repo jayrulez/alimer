@@ -57,6 +57,13 @@ if (ALIMER_ENABLE_VULKAN)
         endif()
     endif()
 
+    # vma
+    add_library(vma INTERFACE)
+    set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma/src)
+    target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
+    target_include_directories(vma INTERFACE ${VMA_DIR})
+    target_link_libraries(vma INTERFACE vulkan)
+
     # volk
     set(VOLK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/volk")
     set(VOLK_FILES
