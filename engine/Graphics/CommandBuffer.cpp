@@ -35,17 +35,6 @@ namespace Alimer
         }
     }
 
-    void CommandBuffer::Commit()
-    {
-        CommitCore();
-        state = State::Committed;
-    }
-
-    void CommandBuffer::WaitUntilCompleted()
-    {
-        WaitUntilCompletedCore();
-    }
-
     void CommandBuffer::PushDebugGroup(const char* name)
     {
         Write(CommandID::PushDebugGroup);

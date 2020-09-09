@@ -33,7 +33,7 @@ namespace Alimer
 
     public:
         /// Constructor.
-        Texture(GraphicsDevice* device, const TextureDescription& desc);
+        Texture(const TextureDescription& desc);
 
         /// Get the texture pixel format.
         //PixelFormat GetFormat() const { return format; }

@@ -25,9 +25,10 @@
 
 namespace Alimer
 {
-    VulkanTexture::VulkanTexture(VulkanGraphicsDevice* device, const TextureDescription& desc, VkImage handle_, VkImageLayout layout_)
-        : Texture(device, desc)
-        , layout(layout_)
+    VulkanTexture::VulkanTexture(VulkanGraphicsDevice* device, const TextureDescription& desc, VkImage handle_, VkImageLayout layout)
+        : Texture(desc)
+        , device{ device }
+        , layout{ layout }
     {
         if (handle_ != VK_NULL_HANDLE)
         {
@@ -85,12 +86,7 @@ namespace Alimer
 
     void VulkanTexture::BackendSetName()
     {
-        GetVulkanGraphicsDevice()->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
-    }
-
-    VulkanGraphicsDevice* VulkanTexture::GetVulkanGraphicsDevice() const
-    {
-        return static_cast<VulkanGraphicsDevice*>(device.Get());
+        device->SetObjectName(VK_OBJECT_TYPE_IMAGE, (uint64_t)handle, name);
     }
 
     void VulkanTexture::Barrier(VkCommandBuffer commandBuffer, VkImageLayout newLayout)

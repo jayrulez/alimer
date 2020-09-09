@@ -21,6 +21,7 @@
 //
 
 #include "D3D12SwapChain.h"
+#include "D3D12Texture.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -41,11 +42,37 @@ namespace Alimer
             kBackBufferCount,
             desc);
         ThrowIfFailed(swapChain1.As(&handle));
+
+        handle->SetMaximumFrameLatency(kBackBufferCount);
+        swapChainEvent = handle->GetFrameLatencyWaitableObject();
+
+        AfterReset();
+    }
+
+    D3D12SwapChain::~D3D12SwapChain()
+    {
+        CloseHandle(swapChainEvent);
+    }
+
+    void D3D12SwapChain::AfterReset()
+    {
+        colorTextures.clear();
         currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
+
+        for (uint32_t i = 0; i < kBackBufferCount; ++i)
+        {
+            ComPtr<ID3D12Resource> backBuffer;
+            ThrowIfFailed(handle->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+            colorTextures.push_back(MakeRefPtr<D3D12Texture>(device, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT));
+        }
     }
 
     bool D3D12SwapChain::Present()
     {
+        // Wait for the swapchain to finish presenting
+        ::WaitForSingleObjectEx(swapChainEvent, 100, TRUE);
+
         auto commandQueue = static_cast<D3D12CommandQueue*>(device->GetCommandQueue(CommandQueueType::Graphics));
 
         uint32_t presentFlags = 0;
@@ -67,7 +94,7 @@ namespace Alimer
         }
 
         fenceValues[currentBackBufferIndex] = commandQueue->Signal();
-        frameValues[currentBackBufferIndex] = device->GetFrameCount();
+        frameValues[currentBackBufferIndex] = device->GetFrameCount()+1;
 
         currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
         commandQueue->WaitForFenceValue(fenceValues[currentBackBufferIndex]);

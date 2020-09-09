@@ -36,6 +36,7 @@ namespace Alimer
 {
     GraphicsDevice::GraphicsDevice()
     {
+        RegisterSubsystem(this);
     }
 
     std::set<GPUBackendType> GraphicsDevice::GetAvailableBackends()
@@ -59,8 +60,14 @@ namespace Alimer
         return availableBackends;
     }
 
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc)
+    GraphicsDevice* GraphicsDevice::Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc)
     {
+        if (GetGraphics() != nullptr)
+        {
+            LOGW("Cannot create more than one instance of GraphicsDevice");
+            return GetGraphics();
+        }
+
         if (preferredBackend == GPUBackendType::Count)
         {
             const auto availableBackends = GetAvailableBackends();
@@ -81,7 +88,7 @@ namespace Alimer
         case GPUBackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable())
             {
-                return MakeRefPtr<D3D12GraphicsDevice>(desc);
+                return new D3D12GraphicsDevice(desc);
             }
 
             LOGE("Direct3D12 backend is not supported on this platform");
@@ -92,7 +99,7 @@ namespace Alimer
         case GPUBackendType::Vulkan:
             if (VulkanGraphicsDevice::IsAvailable())
             {
-                return MakeRefPtr<VulkanGraphicsDevice>(desc);
+                return new VulkanGraphicsDevice(desc);
             }
 
             LOGE("Vulkan backend is not supported on this platform");

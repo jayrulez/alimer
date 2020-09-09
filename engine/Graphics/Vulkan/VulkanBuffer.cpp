@@ -50,7 +50,8 @@ namespace Alimer
     }
 
     VulkanBuffer::VulkanBuffer(VulkanGraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData)
-        : GPUBuffer(device, desc)
+        : GPUBuffer(desc)
+        , device{ device }
     {
         VkBufferCreateInfo createInfo;
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

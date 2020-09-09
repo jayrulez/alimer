@@ -20,11 +20,10 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 
-namespace alimer
+namespace Alimer
 {
     namespace
     {
@@ -32,11 +31,11 @@ namespace alimer
         {
             switch (type)
             {
-            case TextureType::Texture2D:
-            case TextureType::TextureCube:
+            case TextureType::Type2D:
+            case TextureType::TypeCube:
                 return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-            case TextureType::Texture3D:
+            case TextureType::Type3D:
                 return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
             default:
                 ALIMER_UNREACHABLE();
@@ -51,14 +50,14 @@ namespace alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_)
-        : Texture(ConvertResourceDesc(resource_->GetDesc()))
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES state_)
+        : Texture(ConvertResourceDesc(resource->GetDesc()))
         , device{ device }
-        , resource(resource_)
+        , resource{ resource }
         , state(state_)
     {
-        RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        device->GetD3DDevice()->CreateRenderTargetView(resource_, nullptr, RTV);
+        //RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
+        //device->GetD3DDevice()->CreateRenderTargetView(resource_, nullptr, RTV);
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
@@ -75,11 +74,11 @@ namespace alimer
         resourceDesc.Alignment = 0;
         resourceDesc.Width = desc.width;
         resourceDesc.Height = desc.height;
-        if (desc.type == TextureType::TextureCube)
+        if (desc.type == TextureType::TypeCube)
         {
             resourceDesc.DepthOrArraySize = desc.depth * 6;
         }
-        else if (desc.type == TextureType::Texture3D)
+        else if (desc.type == TextureType::Type3D)
         {
             resourceDesc.DepthOrArraySize = desc.depth;
         }
@@ -180,8 +179,8 @@ namespace alimer
 
     void D3D12Texture::Destroy()
     {
-        //SafeRelease(allocation);
-        //SafeRelease(resource);
+        resource = nullptr;
+        SafeRelease(allocation);
     }
 
     void D3D12Texture::BackendSetName()
@@ -262,5 +261,3 @@ namespace alimer
         }*/
     }
 }
-
-#endif // TODO

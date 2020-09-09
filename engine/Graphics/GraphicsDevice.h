@@ -41,7 +41,7 @@ namespace Alimer
         virtual ~GraphicsDevice() = default;
 
         static std::set<GPUBackendType> GetAvailableBackends();
-        static RefPtr<GraphicsDevice> Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
+        static GraphicsDevice* Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
 
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;

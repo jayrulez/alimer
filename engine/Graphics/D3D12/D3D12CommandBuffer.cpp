@@ -57,34 +57,22 @@ namespace Alimer
         : CommandBuffer(0)
         , queue{ queue }
     {
-       
+        auto d3dDevice = queue->GetDevice()->GetD3DDevice();
+        ThrowIfFailed(d3dDevice->CreateCommandAllocator(queue->GetCommandListType(), IID_PPV_ARGS(&commandAllocator)));
+        ThrowIfFailed(d3dDevice->CreateCommandList(0, queue->GetCommandListType(), commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+        commandList.As(&commandList4);
+
+        LOGD("Direct3D12: Created Command Buffer");
     }
 
     D3D12CommandBuffer::~D3D12CommandBuffer()
     {
-        for (uint32_t i = 0; i < kInflightFrameCount; ++i)
-        {
-            SafeRelease(commandAllocators[i]);
-        }
-
-        SafeRelease(commandList4);
-        SafeRelease(commandList);
     }
 
-    void D3D12CommandBuffer::CommitCore()
+    void D3D12CommandBuffer::Reset()
     {
-    }
-
-    void D3D12CommandBuffer::WaitUntilCompletedCore()
-    {
-    }
-
-#if TODO
-
-    void D3D12CommandContext::Reset(uint32_t frameIndex)
-    {
-        ThrowIfFailed(commandAllocators[frameIndex]->Reset());
-        ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
+        ThrowIfFailed(commandAllocator->Reset());
+        ThrowIfFailed(commandList->Reset(commandAllocator.Get(), nullptr));
 
         //currentGraphicsRootSignature = nullptr;
         //currentPipelineState = nullptr;
@@ -93,6 +81,10 @@ namespace Alimer
 
         //BindDescriptorHeaps();
     }
+
+#if TODO
+
+    
 
     void D3D12CommandContext::Commit(bool waitForCompletion)
     {

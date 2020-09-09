@@ -31,10 +31,13 @@ namespace Alimer
     {
     public:
         D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        ~D3D12SwapChain() override;
 
+        void AfterReset();
         bool Present() override;
 
     private:
+
         // Number of swapchain back buffers.
         static constexpr uint32_t kBackBufferCount = 3;
 
@@ -42,6 +45,8 @@ namespace Alimer
         ComPtr<IDXGISwapChain3> handle;
         bool isTearingSupported;
         uint32_t syncInterval;
+
+        HANDLE swapChainEvent;
 
         uint64_t fenceValues[kBackBufferCount];
         uint64_t frameValues[kBackBufferCount];

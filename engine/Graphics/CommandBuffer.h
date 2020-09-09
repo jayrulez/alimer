@@ -53,9 +53,6 @@ namespace Alimer
         /// Destructor.
         virtual ~CommandBuffer() = default;
 
-        void Commit();
-        void WaitUntilCompleted();
-
         virtual void PushDebugGroup(const char* name);
         virtual void PopDebugGroup();
         virtual void InsertDebugMarker(const char* name);
@@ -76,8 +73,6 @@ namespace Alimer
         void ResetState();
 
     private:
-        virtual void CommitCore() = 0;
-        virtual void WaitUntilCompletedCore() = 0;
 
         State state;
 

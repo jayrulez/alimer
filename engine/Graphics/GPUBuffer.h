@@ -33,7 +33,7 @@ namespace Alimer
 
     public:
         /// Constructor
-        GPUBuffer(GraphicsDevice* device, const GPUBufferDescription& desc);
+        GPUBuffer(const GPUBufferDescription& desc);
 
         /// Gets buffer usage.
         ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const

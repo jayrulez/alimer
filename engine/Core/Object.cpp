@@ -22,6 +22,7 @@
 
 #include "Core/Object.h"
 #include "Platform/Input.h"
+#include "Graphics/GraphicsDevice.h"
 #include <unordered_map>
 #include <memory>
 
@@ -36,16 +37,11 @@ namespace Alimer
             std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
 
             WeakPtr<Input> input;
+            WeakPtr<GraphicsDevice> graphics;
 
             void RegisterSubsystem(Object* subsystem)
             {
                 subsystems[subsystem->GetType()] = subsystem;
-            }
-
-            void RegisterSubsystem(Input* subsystem)
-            {
-                input = subsystem;
-                RegisterSubsystem((Object*)subsystem);
             }
 
             void RemoveSubsystem(StringId32 subsystemType)
@@ -137,6 +133,13 @@ namespace Alimer
 
     void Object::RegisterSubsystem(Input* subsystem)
     {
+        details::context().input = subsystem;
+        details::context().RegisterSubsystem(subsystem);
+    }
+
+    void Object::RegisterSubsystem(GraphicsDevice* subsystem)
+    {
+        details::context().graphics = subsystem;
         details::context().RegisterSubsystem(subsystem);
     }
 
@@ -161,6 +164,11 @@ namespace Alimer
     Input* Object::GetInput()
     {
         return details::context().input;
+    }
+
+    GraphicsDevice* Object::GetGraphics()
+    {
+        return details::context().graphics;
     }
 
     void Object::RegisterFactory(ObjectFactory* factory)

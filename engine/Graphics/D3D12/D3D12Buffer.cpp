@@ -26,7 +26,7 @@
 namespace Alimer
 {
     D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData)
-        : GPUBuffer(device, desc)
+        : GPUBuffer(desc)
     {
         if (name.empty()) {
             SetName(name);

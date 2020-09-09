@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Platform/Platform.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Types.h"
 
 namespace Alimer
 {
@@ -42,9 +42,11 @@ namespace Alimer
         GraphicsAdapterPreference adapterPreference = GraphicsAdapterPreference::HighPerformance;
     };
 
-    class ALIMER_API Application 
+    class ALIMER_API Application : public Object
     {
         friend class Platform;
+
+        ALIMER_OBJECT(Application, Object);
 
     public:
         enum class State
@@ -72,15 +74,12 @@ namespace Alimer
         /// Get the main window.
         Window& GetMainWindow() const;
 
-        GraphicsDevice* GetGraphicsDevice() const noexcept { return graphics.Get(); }
-
     private:
         void InitBeforeRun();
 
         std::unique_ptr<Platform> platform;
         Config config;
         State state;
-        RefPtr<GraphicsDevice> graphics;
     };
 
     extern Application* CreateApplication(void);

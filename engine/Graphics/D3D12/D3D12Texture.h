@@ -30,7 +30,7 @@ namespace Alimer
     class D3D12Texture final : public Texture
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource_, D3D12_RESOURCE_STATES state_);
+        D3D12Texture(D3D12GraphicsDevice* device, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES state);
         D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         ~D3D12Texture() override;
         void Destroy() override;
@@ -38,7 +38,13 @@ namespace Alimer
         void UploadTextureData(const void* initData);
         void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
 
-        ID3D12Resource* GetResource() const { return resource; }
+
+        ID3D12Resource* operator->() { return resource.Get(); }
+        const ID3D12Resource* operator->() const { return resource.Get(); }
+
+        ID3D12Resource* GetResource() { return resource.Get(); }
+        const ID3D12Resource* GetResource() const { return resource.Get(); }
+
         D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
         D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return RTV; }
 
@@ -46,7 +52,7 @@ namespace Alimer
         void BackendSetName() override;
 
         D3D12GraphicsDevice* device;
-        ID3D12Resource* resource = nullptr;
+        ComPtr<ID3D12Resource> resource;
         D3D12MA::Allocation* allocation = nullptr;
         D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
         D3D12_CPU_DESCRIPTOR_HANDLE SRV{};

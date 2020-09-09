@@ -379,8 +379,8 @@ namespace Alimer
         if (!AcquireNextImage())
             return false;
 
-        VulkanCommandBuffer* commandBuffer = static_cast<VulkanCommandBuffer*>(device->GetCommandBuffer());
-        commandBuffer->Commit();
+        //VulkanCommandBuffer* commandBuffer = static_cast<VulkanCommandBuffer*>(device->GetCommandBuffer());
+        //commandBuffer->Commit();
 
         VkPresentInfoKHR presentInfo;
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

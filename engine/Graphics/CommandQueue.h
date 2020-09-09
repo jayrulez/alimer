@@ -39,11 +39,17 @@ namespace Alimer
 
         virtual void WaitIdle() = 0;
 
-        /// Return the device from which the command queue was created.
-        virtual GraphicsDevice* GetGraphicsDevice() const = 0;
+        /// Submit command buffer for execution and optionally wait.
+        virtual void ExecuteCommandBuffer(const RefPtr<CommandBuffer>& commandBuffer, bool waitForCompletion = false) = 0;
 
-        // Get an available command buffer from the command queue.
+        /// Submit command buffers for execution and optionally wait.
+        virtual void ExecuteCommandBuffers(const std::vector<RefPtr<CommandBuffer>> commandBuffers, bool waitForCompletion = false) = 0;
+
+        /// Get an available command buffer from the command queue.
         virtual RefPtr<CommandBuffer> GetCommandBuffer() = 0;
+
+        /// Get the queue type.
+        CommandQueueType GetQueueType() const { return queueType; }
 
     protected:
         CommandQueueType queueType;

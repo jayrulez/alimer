@@ -25,8 +25,8 @@
 
 namespace Alimer
 {
-    GPUBuffer::GPUBuffer(GraphicsDevice* device, const GPUBufferDescription& desc)
-        : GraphicsResource(device, Type::Buffer)
+    GPUBuffer::GPUBuffer(const GPUBufferDescription& desc)
+        : GraphicsResource(Type::Buffer)
         , usage(desc.usage)
         , size(desc.size)
         , stride(desc.stride)

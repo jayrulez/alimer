@@ -24,10 +24,8 @@
 
 #include "Graphics/CommandQueue.h"
 #include "D3D12Backend.h"
-#include <vector>
-#include <queue>
-#include <mutex>
-
+#include <atomic>
+#include <condition_variable>
 #include "Core/ThreadSafeQueue.h"
 
 namespace Alimer
@@ -40,25 +38,37 @@ namespace Alimer
         D3D12CommandQueue(D3D12GraphicsDevice* device, CommandQueueType queueType);
         ~D3D12CommandQueue();
 
-        GraphicsDevice* GetGraphicsDevice() const override;
+        D3D12GraphicsDevice* GetDevice() const;
         RefPtr<CommandBuffer> GetCommandBuffer() override;
 
         uint64_t Signal();
         bool IsFenceComplete(uint64_t fenceValue);
         void WaitForFenceValue(uint64_t fenceValue);
         void WaitIdle() override;
-
-        uint64_t ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
+        void ExecuteCommandBuffer(const RefPtr<CommandBuffer>& commandBuffer, bool waitForCompletion) override;
+        void ExecuteCommandBuffers(const std::vector<RefPtr<CommandBuffer>> commandBuffers, bool waitForCompletion) override;
 
         ID3D12CommandQueue* GetHandle() { return handle.Get(); }
+        D3D12_COMMAND_LIST_TYPE GetCommandListType() const { return type; }
 
     private:
+        void ProccessInflightCommandBuffers();
+
         D3D12GraphicsDevice* device;
         const D3D12_COMMAND_LIST_TYPE type;
         ComPtr<ID3D12CommandQueue> handle;
         ComPtr<ID3D12Fence> fence;
-        std::atomic_uint64_t fenceValue;
+        std::atomic_uint64_t _fenceValue;
 
+        using CommandBufferEntry = std::tuple<uint64_t, RefPtr<D3D12CommandBuffer>>;
+
+        ThreadSafeQueue<CommandBufferEntry> inflightCommandBuffers;
         ThreadSafeQueue<RefPtr<D3D12CommandBuffer>> availableCommandBuffers;
+
+        // A thread to process in-flight command buffer.
+        std::atomic_bool processInflights;
+        std::thread processInFlightsThread;
+        std::mutex processInFlightCommandsThreadMutex;
+        std::condition_variable processInFlightCommandsThreadCV;
     };
 }

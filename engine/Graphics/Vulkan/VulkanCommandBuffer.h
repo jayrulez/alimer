@@ -35,9 +35,6 @@ namespace Alimer
         VulkanCommandBuffer(VulkanCommandPool& commandPool, VkCommandBufferLevel level);
         ~VulkanCommandBuffer() override;
 
-        void CommitCore() override;
-        void WaitUntilCompletedCore() override;
-
         const VkCommandBuffer& GetHandle() const;
 
         /*void PushDebugGroup(const String& name) override;

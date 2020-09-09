@@ -37,6 +37,7 @@ namespace Alimer
     private:
         void BackendSetName() override;
 
+        VulkanGraphicsDevice* device;
         VkBuffer handle{ VK_NULL_HANDLE };
         VmaAllocation allocation{ VK_NULL_HANDLE };
     };

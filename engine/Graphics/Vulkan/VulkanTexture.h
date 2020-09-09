@@ -38,8 +38,8 @@ namespace Alimer
 
     private:
         void BackendSetName() override;
-        VulkanGraphicsDevice* GetVulkanGraphicsDevice() const;
 
+        VulkanGraphicsDevice* device;
         VkImage handle{ VK_NULL_HANDLE };
         VkImageLayout layout{ VK_IMAGE_LAYOUT_UNDEFINED };
         VmaAllocation allocation{ VK_NULL_HANDLE };

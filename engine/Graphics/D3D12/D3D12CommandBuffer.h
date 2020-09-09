@@ -35,8 +35,7 @@ namespace Alimer
         D3D12CommandBuffer(D3D12CommandQueue* queue);
         ~D3D12CommandBuffer() override;
 
-        void CommitCore() override;
-        void WaitUntilCompletedCore() override;
+        void Reset();
 
        /* void Reset(uint32_t frameIndex);
 
@@ -60,18 +59,21 @@ namespace Alimer
         // Barriers 
         void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
         void InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate = false);
-        void FlushResourceBarriers(void);
+        void FlushResourceBarriers(void);*/
 
-        ALIMER_FORCEINLINE ID3D12GraphicsCommandList* GetCommandList() const { return commandList; }*/
+        ALIMER_FORCE_INLINE ID3D12GraphicsCommandList* GetCommandList() const
+        {
+            return commandList.Get();
+        }
 
     private:
         D3D12CommandQueue* queue;
 
         bool useRenderPass;
-        ID3D12CommandAllocator* commandAllocators[kInflightFrameCount] = {};
+        ComPtr<ID3D12CommandAllocator> commandAllocator;
 
-        ID3D12GraphicsCommandList* commandList;
-        ID3D12GraphicsCommandList4* commandList4 = nullptr;
+        ComPtr<ID3D12GraphicsCommandList> commandList;
+        ComPtr<ID3D12GraphicsCommandList4> commandList4;
 
         /* Barriers */
         static constexpr uint32_t kMaxResourceBarriers = 16;

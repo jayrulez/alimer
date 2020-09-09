@@ -23,6 +23,7 @@
 #include "Core/Log.h"
 #include "Platform/Application.h"
 #include "Platform/Platform.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -47,8 +48,8 @@ namespace Alimer
 
     Application::~Application()
     {
-        graphics->WaitForGPU();
-        graphics.Reset();
+        GetGraphics()->WaitForGPU();
+        RemoveSubsystem<GraphicsDevice>();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -68,8 +69,10 @@ namespace Alimer
         deviceDesc.primarySwapChain.width = GetMainWindow().GetWidth();
         deviceDesc.primarySwapChain.height = GetMainWindow().GetHeight();
         deviceDesc.primarySwapChain.windowHandle = GetMainWindow().GetNativeHandle();
+        //deviceDesc.primarySwapChain.presentMode = PresentMode::Fifo;
 
-        graphics = GraphicsDevice::Create(config.rendererType, deviceDesc);
+        GraphicsDevice::Create(config.rendererType, deviceDesc);
+        s_appCurrent = nullptr;
     }
 
     void Application::Run()
@@ -79,13 +82,13 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!graphics->BeginFrame())
+        if (!GetGraphics()->BeginFrame())
             return;
 
-        /*auto& commandBuffer = graphics->Begin();
-        commandBuffer.Commit();*/
-        graphics->GetPrimarySwapChain()->Present();
-        graphics->EndFrame();
+        auto commandBuffer = GetGraphics()->GetCommandQueue()->GetCommandBuffer();
+        GetGraphics()->GetCommandQueue()->ExecuteCommandBuffer(commandBuffer);
+        GetGraphics()->GetPrimarySwapChain()->Present();
+        GetGraphics()->EndFrame();
     }
 
     const Config* Application::GetConfig()

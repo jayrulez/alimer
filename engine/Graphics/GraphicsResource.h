@@ -42,13 +42,10 @@ namespace Alimer
             Texture
         };
 
-        ~GraphicsResource();
+        virtual ~GraphicsResource();
 
         /// Release the GPU resource.
         virtual void Destroy() {}
-
-        /// Return the graphics device associated with this GPU resource.
-        GraphicsDevice* GetGraphicsDevice() const;
 
         /// Set the resource name.
         void SetName(const std::string& newName) { name = newName; BackendSetName(); }
@@ -57,13 +54,11 @@ namespace Alimer
         const std::string& GetName() const { return name; }
 
     protected:
-        GraphicsResource(GraphicsDevice* device, Type type);
+        GraphicsResource(Type type);
 
         virtual void BackendSetName() {}
 
     protected:
-        /// Graphics subsystem.
-        WeakPtr<GraphicsDevice> device;
         Type type;
 
         std::string name;

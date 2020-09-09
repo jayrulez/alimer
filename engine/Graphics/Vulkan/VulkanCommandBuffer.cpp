@@ -53,16 +53,6 @@ namespace Alimer
         }
     }
 
-    void VulkanCommandBuffer::CommitCore()
-    {
-        //commandPool.GetDevice().Submit(handle);
-    }
-
-    void VulkanCommandBuffer::WaitUntilCompletedCore()
-    {
-
-    }
-
     const VkCommandBuffer& VulkanCommandBuffer::GetHandle() const
     {
         return handle;

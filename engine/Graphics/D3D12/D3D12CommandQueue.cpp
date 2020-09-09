@@ -52,7 +52,8 @@ namespace Alimer
         : CommandQueue(queueType)
         , device{ device }
         , type(D3D12CommandListType(queueType))
-        , fenceValue(0)
+        , _fenceValue(0)
+        , processInflights(true)
     {
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Type = type;
@@ -78,13 +79,17 @@ namespace Alimer
             fence->SetName(L"Copy Command Queue Fence");
             break;
         }
+
+        processInFlightsThread = std::thread(&D3D12CommandQueue::ProccessInflightCommandBuffers, this);
     }
 
     D3D12CommandQueue::~D3D12CommandQueue()
     {
+        processInflights = false;
+        processInFlightsThread.join();
     }
 
-    GraphicsDevice* D3D12CommandQueue::GetGraphicsDevice() const
+    D3D12GraphicsDevice* D3D12CommandQueue::GetDevice() const
     {
         return device;
     }
@@ -100,7 +105,7 @@ namespace Alimer
         }
         else
         {
-            // Otherwise create a new command list.
+            // Otherwise create a new command buffer.
             commandBuffer = MakeRefPtr<D3D12CommandBuffer>(this);
         }
 
@@ -109,9 +114,9 @@ namespace Alimer
 
     uint64_t D3D12CommandQueue::Signal()
     {
-        uint64_t nextFenceValue = ++fenceValue;
-        handle->Signal(fence.Get(), nextFenceValue);
-        return nextFenceValue;
+        uint64_t fenceValue = ++_fenceValue;
+        handle->Signal(fence.Get(), fenceValue);
+        return fenceValue;
     }
 
     bool D3D12CommandQueue::IsFenceComplete(uint64_t fenceValue)
@@ -123,8 +128,7 @@ namespace Alimer
     {
         if (IsFenceComplete(fenceValue))
             return;
-
-        LOGD("Waiting on fence value");
+        
 
         HANDLE event = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
         ALIMER_ASSERT_MSG(event, "Failed to create fence event handle.");
@@ -137,17 +141,60 @@ namespace Alimer
 
     void D3D12CommandQueue::WaitIdle()
     {
-        WaitForFenceValue(fenceValue);
+        std::unique_lock<std::mutex> lock(processInFlightCommandsThreadMutex);
+        processInFlightCommandsThreadCV.wait(lock, [this] { return inflightCommandBuffers.Empty(); });
+
+        WaitForFenceValue(_fenceValue);
     }
 
-    uint64_t D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
+    void D3D12CommandQueue::ExecuteCommandBuffer(const RefPtr<CommandBuffer>& commandBuffer, bool waitForCompletion)
     {
-        // Kickoff the command list.
-        ID3D12CommandList* commandLists[] = { commandList };
-        handle->ExecuteCommandLists(1, commandLists);
+        auto d3d12CommandBuffer = StaticCast<D3D12CommandBuffer>(commandBuffer);
+
+        ThrowIfFailed( d3d12CommandBuffer->GetCommandList()->Close());
+        ID3D12CommandList* commandList = d3d12CommandBuffer->GetCommandList();
+        handle->ExecuteCommandLists(1, &commandList);
         uint64_t fenceValue = Signal();
 
-        return fenceValue;
+        // Queue command lists for reuse.
+        inflightCommandBuffers.Push({ fenceValue, d3d12CommandBuffer });
+
+        if (waitForCompletion)
+        {
+            WaitForFenceValue(fenceValue);
+        }
+    }
+
+    void D3D12CommandQueue::ExecuteCommandBuffers(const std::vector<RefPtr<CommandBuffer>> commandBuffers, bool waitForCompletion)
+    {
+
+    }
+
+    void D3D12CommandQueue::ProccessInflightCommandBuffers()
+    {
+        std::unique_lock<std::mutex> lock(processInFlightCommandsThreadMutex, std::defer_lock);
+
+        while (processInflights)
+        {
+            CommandBufferEntry entry;
+
+            lock.lock();
+            while (inflightCommandBuffers.TryPop(entry))
+            {
+                uint64_t fenceValue = std::get<0>(entry);
+                auto commandBuffer = std::get<1>(entry);
+
+                WaitForFenceValue(fenceValue);
+
+                commandBuffer->Reset();
+
+                availableCommandBuffers.Push(commandBuffer);
+            }
+            lock.unlock();
+            processInFlightCommandsThreadCV.notify_one();
+
+            std::this_thread::yield();
+        }
     }
 }
 

@@ -242,12 +242,14 @@ namespace Alimer
 
     Microsoft::WRL::ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc)
     {
-        UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        UINT flags = 0;
 
         if (any(caps & DXGIFactoryCaps::Tearing))
         {
             flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
         }
+
+        flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         const DXGI_SCALING scaling = DXGI_SCALING_STRETCH;
