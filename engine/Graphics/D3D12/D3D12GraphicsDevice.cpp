@@ -22,7 +22,6 @@
 
 #include "D3D12Texture.h"
 #include "D3D12Buffer.h"
-#include "D3D12CommandQueue.h"
 #include "D3D12SwapChain.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -80,28 +79,35 @@ namespace Alimer
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
 
         // TODO: Parse command line.
-        const bool debug = false;
-        if (debug)
+        if (desc.enableDebugLayer)
         {
-            ComPtr<ID3D12Debug> debugController;
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
+            ID3D12Debug* debugController;
+            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
             {
                 debugController->EnableDebugLayer();
 
-                ComPtr<ID3D12Debug1> debugController1;
-                HRESULT hr = debugController.As(&debugController1);
-                if (SUCCEEDED(hr))
+                const bool enableGPUBasedValidation = false;
+                if (enableGPUBasedValidation)
                 {
-                    debugController1->SetEnableGPUBasedValidation(TRUE);
+                    ID3D12Debug1* debugController1 = nullptr;
+                    HRESULT hr = debugController->QueryInterface(&debugController1);
+                    if (SUCCEEDED(hr))
+                    {
+                        debugController1->SetEnableGPUBasedValidation(TRUE);
+                    }
+
+                    SafeRelease(debugController1);
                 }
+
+                debugController->Release();
             }
             else
             {
                 OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
             }
 
-            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+            IDXGIInfoQueue* dxgiInfoQueue;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
             {
                 dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
@@ -116,6 +122,7 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->Release();
             }
         }
 #endif
@@ -203,10 +210,60 @@ namespace Alimer
         }
 
         // Create Command queue's
-        CreateCommandQueues();
+        {
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 0;
+
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            graphicsQueue->SetName(L"Graphics Command Queue");
+
+            // Compute
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&computeQueue)));
+            computeQueue->SetName(L"Compute Command Queue");
+
+            // Copy
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&copyQueue)));
+            copyQueue->SetName(L"Copy Command Queue");
+        }
+
+        // Create descriptor heaps (TODO: Improve this)
+        // Render target descriptor heap (RTV).
+        {
+            RTVHeap.Capacity = 1024;
+
+            D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = {};
+            HeapDesc.NumDescriptors = RTVHeap.Capacity;
+            HeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+            HeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+            ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&RTVHeap.Heap)));
+            RTVHeap.DescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+            RTVHeap.CPUStart = RTVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
+        }
+
+        // Depth-stencil descriptor heap (DSV).
+        {
+            DSVHeap.Capacity = 1024;
+
+            D3D12_DESCRIPTOR_HEAP_DESC HeapDesc = {};
+            HeapDesc.NumDescriptors = DSVHeap.Capacity;
+            HeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+            HeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+            ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&DSVHeap.Heap)));
+            RTVHeap.DescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            DSVHeap.CPUStart = DSVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
+        }
 
         // Create primary SwapChain.
         primarySwapChain.Reset(new D3D12SwapChain(this, desc.primarySwapChain));
+
+        // Frame fence
+        frameFence.Init(this, 0);
+        frameFence.d3dFence->SetName(L"Frame Fence");
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
@@ -218,7 +275,30 @@ namespace Alimer
     {
         WaitForGPU();
 
+        ALIMER_ASSERT(frameCount == GPUFrameCount);
+        shuttingDown = true;
+
+        for (uint64 i = 0; i < ALIMER_STATIC_ARRAY_SIZE(deferredReleases); ++i)
+        {
+            ProcessDeferredReleases(i);
+        }
+
+        frameFence.Shutdown();
+
         primarySwapChain.Reset();
+
+        for (CommandList cmd = 0; cmd < kMaxCommandListCount; ++cmd)
+        {
+            if (!commandLists[cmd])
+                break;
+
+            for (uint32_t index = 0; index < kRenderLatency; ++index)
+            {
+                SafeRelease(frames[index].commandAllocators[cmd]);
+            }
+
+            SafeRelease(commandLists[cmd]);
+        }
 
         // Allocator.
         if (allocator != nullptr)
@@ -227,21 +307,27 @@ namespace Alimer
             allocator->CalculateStats(&stats);
 
             if (stats.Total.UsedBytes > 0) {
-                LOGE("Total device memory leaked: %llu bytes.", stats.Total.UsedBytes);
+                LOGE("Total device memory leaked: {} bytes.", stats.Total.UsedBytes);
             }
 
-            allocator->Release(); allocator = nullptr;
+            SafeRelease(allocator);
         }
 
-        graphicsCommandQueue.reset();
-        computeCommandQueue.reset();
-        copyCommandQueue.reset();
+        // Descriptor heaps
+        {
+            SafeRelease(RTVHeap.Heap);
+            SafeRelease(DSVHeap.Heap);
+        }
+
+        SafeRelease(graphicsQueue);
+        SafeRelease(computeQueue);
+        SafeRelease(copyQueue);
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
-            LOGD("Direct3D12: There are %d unreleased references left on the device", refCount);
+            LOGD("Direct3D12: There are {} unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
             if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
@@ -347,13 +433,6 @@ namespace Alimer
         *ppAdapter = adapter.Detach();
     }
 
-    void D3D12GraphicsDevice::CreateCommandQueues()
-    {
-        graphicsCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Graphics);
-        computeCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Compute);
-        copyCommandQueue = std::make_shared<D3D12CommandQueue>(this, CommandQueueType::Copy);
-    }
-
     void D3D12GraphicsDevice::HandleDeviceLost()
     {
         HRESULT hr = d3dDevice->GetDeviceRemovedReason();
@@ -422,6 +501,7 @@ namespace Alimer
         }
 
         // Features
+        caps.features.commandLists = true;
         caps.features.independentBlend = true;
         caps.features.computeShader = true;
         caps.features.geometryShader = true;
@@ -509,11 +589,45 @@ namespace Alimer
         }
     }
 
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t count)
+    {
+        D3D12DescriptorHeap* descriptorHeap = nullptr;
+
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+        {
+            descriptorHeap = &RTVHeap;
+        }
+        else if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+        {
+            descriptorHeap = &DSVHeap;
+        }
+
+        ALIMER_ASSERT(descriptorHeap);
+        ALIMER_ASSERT((descriptorHeap->Size + count) < descriptorHeap->Capacity);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUHandle;
+        CPUHandle.ptr = descriptorHeap->CPUStart.ptr + (size_t)descriptorHeap->Size * descriptorHeap->DescriptorSize;
+        descriptorHeap->Size += count;
+
+        return CPUHandle;
+    }
+
     void D3D12GraphicsDevice::WaitForGPU()
     {
-        graphicsCommandQueue->WaitIdle();
-        computeCommandQueue->WaitIdle();
-        copyCommandQueue->WaitIdle();
+        // Wait for the GPU to fully catch up with the CPU.
+        ALIMER_ASSERT(frameCount >= GPUFrameCount);
+        if (frameCount > GPUFrameCount)
+        {
+            frameFence.Wait(frameCount);
+            GPUFrameCount = frameCount;
+        }
+
+        // Clean up what we can now
+        for (uint64 i = 1; i < kRenderLatency; ++i)
+        {
+            uint64 index = (i + frameIndex) % kRenderLatency;
+            ProcessDeferredReleases(index);
+        }
     }
 
     bool D3D12GraphicsDevice::BeginFrame()
@@ -521,22 +635,223 @@ namespace Alimer
         return !isLost;
     }
 
-    void D3D12GraphicsDevice::EndFrame()
+    void D3D12GraphicsDevice::EndFrame(const std::vector<SwapChain*>& swapChains)
     {
         // TODO: Manage upload
 
-        ++frameCount;
+        // Execute deferred command lists.
+        {
+            ID3D12CommandList* execCommandLists[kMaxCommandListCount];
+            uint32_t counter = 0;
 
+            CommandList cmd_last = commandListCount.load();
+            commandListCount.store(0);
+            for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
+            {
+                // TODO: Perform query resolves
+                ThrowIfFailed(GetDirectCommandList(cmd)->Close());
+
+                execCommandLists[counter] = GetDirectCommandList(cmd);
+                counter++;
+            }
+
+            graphicsQueue->ExecuteCommandLists(counter, execCommandLists);
+        }
+
+        // Present swap chains.
+        HRESULT hr = S_OK;
+        for (size_t i = 0, count = swapChains.size(); i < count; i++)
+        {
+            D3D12SwapChain* swapChain = static_cast<D3D12SwapChain*>(swapChains[i]);
+            hr = swapChain->Present();
+
+            // If the device was reset we must completely reinitialize the renderer.
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+            {
+                HandleDeviceLost();
+                return;
+            }
+        }
+
+        // Increase frame count.
+        frameCount++;
+
+        // Signal the fence with the current frame number, so that we can check back on it.
+        frameFence.Signal(graphicsQueue, frameCount);
+
+        // Wait for the GPU to catch up before we stomp an executing command buffer
+        const uint64 gpuLag = frameCount - GPUFrameCount;
+        ALIMER_ASSERT(gpuLag <= kRenderLatency);
+        if (gpuLag >= kRenderLatency)
+        {
+            // Make sure that the previous frame is finished
+            frameFence.Wait(GPUFrameCount + 1);
+            ++GPUFrameCount;
+        }
+
+        frameIndex = frameCount % kRenderLatency;
+
+        // Perform deferred release for current frame index.
+        ProcessDeferredReleases(frameIndex);
+
+        // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
         if (!dxgiFactory->IsCurrent())
         {
-            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
     }
 
-    CommandBuffer* D3D12GraphicsDevice::GetCommandBuffer()
+    void D3D12GraphicsDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
     {
-        CommandBuffer* cmd = nullptr;
-        return cmd;
+        if (resource == nullptr)
+            return;
+
+        if ((frameCount == GPUFrameCount && forceDeferred == false) || shuttingDown || d3dDevice == nullptr)
+        {
+            // Safe to release.
+            resource->Release();
+            return;
+        }
+
+        deferredReleases[frameIndex].push_back(resource);
+    }
+
+    void D3D12GraphicsDevice::ProcessDeferredReleases(uint64 index)
+    {
+        for (uint64 i = 0, count = deferredReleases[index].size(); i < count; ++i)
+        {
+            deferredReleases[index][i]->Release();
+        }
+
+        deferredReleases[index].clear();
+    }
+
+    CommandList D3D12GraphicsDevice::BeginCommandList()
+    {
+        CommandList commandList = commandListCount.fetch_add(1);
+        if (GetDirectCommandList(commandList) == nullptr)
+        {
+            // need to create one more command list:
+            ALIMER_VERIFY_MSG(commandList < kMaxCommandListCount, "Cannot allocate more than '{}' command lists", kMaxCommandListCount);
+
+            for (uint32_t index = 0; index < kRenderLatency; ++index)
+            {
+                ThrowIfFailed(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[index].commandAllocators[commandList])));
+            }
+
+            ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[frameIndex].commandAllocators[commandList], nullptr, IID_PPV_ARGS(&commandLists[commandList])));
+            ThrowIfFailed(commandLists[commandList]->Close());
+
+            // Set Debug name
+            D3D12SetObjectName(commandLists[commandList], fmt::format("CommandList {}", commandList));
+        }
+
+        // Start the command list in a default state
+        ThrowIfFailed(GetFrameResources().commandAllocators[commandList]->Reset());
+        ThrowIfFailed(GetDirectCommandList(commandList)->Reset(GetFrameResources().commandAllocators[commandList], nullptr));
+
+        return commandList;
+    }
+
+    void D3D12GraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
+    {
+        PIXBeginEvent(GetDirectCommandList(commandList), PIX_COLOR_DEFAULT, name);
+    }
+
+    void D3D12GraphicsDevice::PopDebugGroup(CommandList commandList)
+    {
+        PIXEndEvent(GetDirectCommandList(commandList));
+    }
+
+    void D3D12GraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
+    {
+        PIXSetMarker(GetDirectCommandList(commandList), PIX_COLOR_DEFAULT, name);
+    }
+
+    void D3D12GraphicsDevice::BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass)
+    {
+        if (supportsRenderPass)
+        {
+        }
+        else
+        {
+            uint32 colorRTVSCount = 0;
+            D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[kMaxColorAttachments] = {};
+
+            for (uint32 i = 0; i < kMaxColorAttachments; i++)
+            {
+                const RenderPassColorAttachment& attachment = renderPass->colorAttachments[i];
+                if (attachment.texture == nullptr)
+                    continue;
+
+                D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
+                texture->TransitionBarrier(GetDirectCommandList(commandList), D3D12_RESOURCE_STATE_RENDER_TARGET);
+                //colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+                colorRTVS[colorRTVSCount] = texture->GetRTV();
+
+                switch (attachment.loadAction)
+                {
+                case LoadAction::Discard:
+                    GetDirectCommandList(commandList)->DiscardResource(texture->GetResource(), nullptr);
+                    break;
+
+                case LoadAction::Clear:
+                    GetDirectCommandList(commandList)->ClearRenderTargetView(colorRTVS[colorRTVSCount], &attachment.clearColor.r, 0, nullptr);
+                    break;
+
+                default:
+                    break;
+                }
+
+                renderPassTextures[commandList].push_back(texture);
+                colorRTVSCount++;
+            }
+
+            GetDirectCommandList(commandList)->OMSetRenderTargets(colorRTVSCount, colorRTVS, FALSE, nullptr);
+        }
+    }
+
+    void D3D12GraphicsDevice::EndRenderPass(CommandList commandList)
+    {
+        if (supportsRenderPass)
+        {
+            GetDirectCommandList(commandList)->EndRenderPass();
+        }
+        else
+        {
+            for (size_t i = 0, count = renderPassTextures[commandList].size(); i < count; ++i)
+            {
+                renderPassTextures[commandList][i]->TransitionBarrier(GetDirectCommandList(commandList), D3D12_RESOURCE_STATE_COMMON);
+            }
+
+            renderPassTextures[commandList].clear();
+        }
+    }
+
+    void D3D12GraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    {
+        D3D12_RECT d3dScissorRect;
+        d3dScissorRect.left = LONG(scissorRect.x);
+        d3dScissorRect.top = LONG(scissorRect.y);
+        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        GetDirectCommandList(commandList)->RSSetScissorRects(1, &d3dScissorRect);
+    }
+
+    void D3D12GraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    {
+    }
+
+    void D3D12GraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
+    {
+    }
+
+    void D3D12GraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
+    {
+    }
+
+    void D3D12GraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
+    {
+        GetDirectCommandList(commandList)->OMSetBlendFactor(&color.r);
     }
 }

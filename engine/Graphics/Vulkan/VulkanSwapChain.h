@@ -35,7 +35,7 @@ namespace Alimer
         void Destroy();
 
         VkResult AcquireNextImage(uint32_t& imageIndex, VkSemaphore imageAcquiredSemaphore, VkFence fence = VK_NULL_HANDLE);
-        bool Present() override;
+        bool Present();
 
         uint32 GetImageCount() const { return imageCount; }
 

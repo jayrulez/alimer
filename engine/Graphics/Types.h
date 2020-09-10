@@ -28,21 +28,24 @@
 
 namespace Alimer
 {
-    static constexpr uint32 kInflightFrameCount = 2u;
-    static constexpr uint32 kMaxColorAttachments = 8u;
-    static constexpr uint32 kMaxVertexBufferBindings = 8u;
-    static constexpr uint32 kMaxVertexAttributes = 16u;
-    static constexpr uint32 kMaxVertexAttributeOffset = 2047u;
-    static constexpr uint32 kMaxVertexBufferStride = 2048u;
-    static constexpr uint32 kMaxViewportAndScissorRects = 8u;
+    static constexpr uint32_t kRenderLatency = 2u;
+    static constexpr uint32_t kMaxColorAttachments = 8u;
+    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
+    static constexpr uint32_t kMaxVertexAttributes = 16u;
+    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+    static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
 
-    static constexpr uint32 KnownVendorId_AMD = 0x1002;
-    static constexpr uint32 KnownVendorId_Intel = 0x8086;
-    static constexpr uint32 KnownVendorId_Nvidia = 0x10DE;
-    static constexpr uint32 KnownVendorId_Microsoft = 0x1414;
-    static constexpr uint32 KnownVendorId_ARM = 0x13B5;
-    static constexpr uint32 KnownVendorId_ImgTec = 0x1010;
-    static constexpr uint32 KnownVendorId_Qualcomm = 0x5143;
+    static constexpr uint32_t KnownVendorId_AMD = 0x1002;
+    static constexpr uint32_t KnownVendorId_Intel = 0x8086;
+    static constexpr uint32_t KnownVendorId_Nvidia = 0x10DE;
+    static constexpr uint32_t KnownVendorId_Microsoft = 0x1414;
+    static constexpr uint32_t KnownVendorId_ARM = 0x13B5;
+    static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
+    static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
+
+    using CommandList = uint8_t;
+    static constexpr CommandList kMaxCommandListCount = 16;
 
     enum class GPUAdapterType
     {
@@ -74,13 +77,6 @@ namespace Alimer
         Default,
         LowPower,
         HighPerformance
-    };
-
-    enum class CommandQueueType
-    {
-        Graphics,
-        Compute,
-        Copy
     };
 
     /// Describes the texture type.
@@ -129,16 +125,9 @@ namespace Alimer
 
     enum class LoadAction : uint32_t
     {
-        DontCare,
+        Discard,
         Load,
         Clear
-    };
-
-    enum class PresentMode : uint32_t
-    {
-        Immediate = 0,
-        Mailbox,
-        Fifo,
     };
 
     /* Structs */
@@ -187,12 +176,51 @@ namespace Alimer
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         uint32_t width;
         uint32_t height;
-        PresentMode presentMode = PresentMode::Immediate;
+        bool vsync = false;
         bool fullscreen = false;
+    };
+
+    class Texture;
+    struct RenderPassColorAttachment
+    {
+        Texture* texture = nullptr;
+        uint32_t mipLevel = 0;
+        union {
+            TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction loadAction = LoadAction::Clear;
+        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+    };
+
+    struct RenderPassDepthStencilAttachment
+    {
+        Texture* texture = nullptr;
+        uint32_t mipLevel = 0;
+        union {
+            TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction depthLoadAction = LoadAction::Clear;
+        LoadAction stencilLoadOp = LoadAction::Discard;
+        float clearDepth = 1.0f;
+        uint8_t clearStencil = 0;
+    };
+
+    struct RenderPassDescription
+    {
+        // Render area will be clipped to the actual framebuffer.
+        //RectU renderArea = { UINT32_MAX, UINT32_MAX };
+
+        RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
+        RenderPassDepthStencilAttachment depthStencilAttachment;
     };
 
     struct GraphicsDeviceDescription
     {
+        bool enableDebugLayer = false;
         std::string applicationName;
         GraphicsAdapterPreference adapterPreference;
         SwapChainDescription primarySwapChain;
@@ -216,6 +244,7 @@ namespace Alimer
 
         struct Features
         {
+            bool commandLists = false;
             bool independentBlend = false;
             bool computeShader = false;
             bool geometryShader = false;

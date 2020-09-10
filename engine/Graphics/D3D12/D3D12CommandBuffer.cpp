@@ -21,7 +21,6 @@
 //
 
 #include "D3D12CommandBuffer.h"
-#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
 
@@ -57,10 +56,10 @@ namespace Alimer
         : CommandBuffer(0)
         , queue{ queue }
     {
-        auto d3dDevice = queue->GetDevice()->GetD3DDevice();
+        /*auto d3dDevice = queue->GetDevice()->GetD3DDevice();
         ThrowIfFailed(d3dDevice->CreateCommandAllocator(queue->GetCommandListType(), IID_PPV_ARGS(&commandAllocator)));
         ThrowIfFailed(d3dDevice->CreateCommandList(0, queue->GetCommandListType(), commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
-        commandList.As(&commandList4);
+        commandList.As(&commandList4);*/
 
         LOGD("Direct3D12: Created Command Buffer");
     }
@@ -104,6 +103,7 @@ namespace Alimer
 
     void D3D12CommandContext::PopDebugGroup()
     {
+
         commandList->EndEvent();
     }
 

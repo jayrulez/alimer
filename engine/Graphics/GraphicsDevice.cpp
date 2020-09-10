@@ -141,22 +141,11 @@ namespace Alimer
         return primarySwapChain.Get();
     }
 
-    CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType type) const
+    void GraphicsDevice::EndFrame(SwapChain* swapChain)
     {
-        std::shared_ptr<CommandQueue> commandQueue;
-        switch (type)
-        {
-        case CommandQueueType::Graphics:
-            return graphicsCommandQueue.get();
-        case CommandQueueType::Compute:
-            return computeCommandQueue.get();
-        case CommandQueueType::Copy:
-            return copyCommandQueue.get();
-        default:
-            ALIMER_ASSERT_FAIL("Invalid command queue type.");
-        }
+        ALIMER_ASSERT(swapChain);
 
-        return nullptr;
+        EndFrame(std::vector<SwapChain*>({ swapChain }));
     }
 }
 

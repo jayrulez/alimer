@@ -35,6 +35,8 @@ namespace Alimer
         ~D3D12Texture() override;
         void Destroy() override;
 
+        void TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState);
+
         void UploadTextureData(const void* initData);
         void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
 

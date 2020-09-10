@@ -289,7 +289,7 @@ namespace Alimer
         VkAttachmentLoadOp VulkanAttachmentLoadOp(LoadAction action)
         {
             switch (action) {
-            case LoadAction::DontCare:
+            case LoadAction::Discard:
                 return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             case LoadAction::Load:
                 return VK_ATTACHMENT_LOAD_OP_LOAD;
@@ -1004,7 +1004,7 @@ namespace Alimer
         return true;
     }
 
-    void VulkanGraphicsDevice::EndFrame()
+    void VulkanGraphicsDevice::EndFrame(const std::vector<SwapChain*>& swapChains)
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first");
 
@@ -1015,9 +1015,55 @@ namespace Alimer
         ++frameCount;
     }
 
-    CommandBuffer* VulkanGraphicsDevice::GetCommandBuffer()
+    CommandList VulkanGraphicsDevice::BeginCommandList()
     {
-        return GetActiveFrame().RequestCommandBuffer();
+        return 0;
+    }
+
+    void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
+    {
+
+    }
+
+    void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
+    {
+
+    }
+
+    void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
+    {
+
+    }
+
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass)
+    {
+
+    }
+
+    void VulkanGraphicsDevice::EndRenderPass(CommandList commandList)
+    {
+
+    }
+
+
+    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
+    {
+    }
+    
+    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
+    {
+    }
+
+    void VulkanGraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
+    {
+    }
+
+    void VulkanGraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
+    {
+    }
+
+    void VulkanGraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
+    {
     }
 
     /* Resource creation methods */

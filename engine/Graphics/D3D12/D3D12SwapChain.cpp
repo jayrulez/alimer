@@ -22,7 +22,6 @@
 
 #include "D3D12SwapChain.h"
 #include "D3D12Texture.h"
-#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
@@ -31,27 +30,22 @@ namespace Alimer
         : SwapChain(desc)
         , device(device_)
         , isTearingSupported(device->IsTearingSupported())
-        , syncInterval(desc.presentMode == PresentMode::Immediate ? 0 : 1)
-        , fenceValues{}
-        , frameValues{}
+        , syncInterval(desc.vsync ? 1 : 0)
     {
         ComPtr<IDXGISwapChain1> swapChain1 = DXGICreateSwapChain(
             device->GetDXGIFactory(),
             device->GetDXGIFactoryCaps(),
-            static_cast<D3D12CommandQueue*>(device->GetCommandQueue(CommandQueueType::Graphics))->GetHandle(),
+            device->GetGraphicsQueue(),
             kBackBufferCount,
             desc);
         ThrowIfFailed(swapChain1.As(&handle));
-
-        handle->SetMaximumFrameLatency(kBackBufferCount);
-        swapChainEvent = handle->GetFrameLatencyWaitableObject();
 
         AfterReset();
     }
 
     D3D12SwapChain::~D3D12SwapChain()
     {
-        CloseHandle(swapChainEvent);
+        //CloseHandle(swapChainEvent);
     }
 
     void D3D12SwapChain::AfterReset()
@@ -68,13 +62,8 @@ namespace Alimer
         }
     }
 
-    bool D3D12SwapChain::Present()
+    HRESULT D3D12SwapChain::Present()
     {
-        // Wait for the swapchain to finish presenting
-        ::WaitForSingleObjectEx(swapChainEvent, 100, TRUE);
-
-        auto commandQueue = static_cast<D3D12CommandQueue*>(device->GetCommandQueue(CommandQueueType::Graphics));
-
         uint32_t presentFlags = 0;
 
         // Recommended to always use tearing if supported when using a sync interval of 0.
@@ -84,21 +73,12 @@ namespace Alimer
             presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
         }
 
-        HRESULT result = handle->Present(syncInterval, presentFlags);
-
-        // If the device was reset we must completely reinitialize the renderer.
-        if (result == DXGI_ERROR_DEVICE_REMOVED || result == DXGI_ERROR_DEVICE_RESET || result == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
+        if (SUCCEEDED(hr))
         {
-            device->HandleDeviceLost();
-            return false;
+            currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
         }
 
-        fenceValues[currentBackBufferIndex] = commandQueue->Signal();
-        frameValues[currentBackBufferIndex] = device->GetFrameCount()+1;
-
-        currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
-        commandQueue->WaitForFenceValue(fenceValues[currentBackBufferIndex]);
-
-        return SUCCEEDED(result);
+        return hr;
     }
 }

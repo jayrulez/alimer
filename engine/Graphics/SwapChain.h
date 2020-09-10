@@ -33,13 +33,13 @@ namespace Alimer
         /// Constructor.
         SwapChain(const SwapChainDescription& desc);
 
-        virtual bool Present() = 0;
+        Texture* GetColorTexture() const;
 
     protected:
         PixelFormat colorFormat;
         uint32_t width;
         uint32_t height;
-        PresentMode presentMode;
+        bool vsync;
         bool isFullscreen;
         uint32_t currentBackBufferIndex{ 0 };
         std::vector<RefPtr<Texture>> colorTextures;

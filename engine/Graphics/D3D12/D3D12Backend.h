@@ -30,6 +30,10 @@
 #include <d3d12.h>
 #include "D3D12MemAlloc.h"
 
+// To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
+// then add the NuGet package WinPixEventRuntime to the project.
+#include <pix.h>
+
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
@@ -43,4 +47,32 @@ namespace Alimer
     class D3D12GraphicsDevice;
 
     void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
+
+    struct D3D12Fence
+    {
+        D3D12GraphicsDevice* device = nullptr;
+        ID3D12Fence* d3dFence = nullptr;
+        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+
+        ~D3D12Fence();
+
+        void Init(D3D12GraphicsDevice* device, uint64 initialValue = 0);
+        void Shutdown();
+
+        void Signal(ID3D12CommandQueue* queue, uint64 fenceValue);
+        void Wait(uint64 fenceValue);
+        bool IsSignaled(uint64 fenceValue);
+        void Clear(uint64 fenceValue);
+    };
+
+    struct D3D12DescriptorHeap
+    {
+        ID3D12DescriptorHeap* Heap;
+        uint32 DescriptorSize;
+        D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
+        D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
+        uint32 Size;
+        uint32 Capacity;
+    };
+
 }

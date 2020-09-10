@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/Types.h"
-#include "Graphics/CommandQueue.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <set>
@@ -49,8 +49,11 @@ namespace Alimer
         /// Begin rendering frame.
         virtual bool BeginFrame() = 0;
 
-        /// End current rendering frame.
-        virtual void EndFrame() = 0;
+        /// End current rendering frame and present swap chain on screen.
+        void EndFrame(SwapChain* swapChain);
+
+        /// End current rendering frame and present swap chains on screen.
+        virtual void EndFrame(const std::vector<SwapChain*>& swapChains) = 0;
 
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
@@ -61,31 +64,34 @@ namespace Alimer
         /// Get the main/primary SwapChain.
         SwapChain* GetPrimarySwapChain() const;
 
+        inline uint64_t GetFrameCount() const { return frameCount;  }
+
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
 
-        /**
-        * Get a command queue. Valid types are:
-        * - Graphics    : Can be used for draw, dispatch, or copy commands.
-        * - Compute     : Can be used for dispatch or copy commands.
-        * - Copy        : Can be used for copy commands.
-        */
-        CommandQueue* GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
+        /// Begin command list recording (Check GraphicsDeviceCaps.features.commandLists for support, if false this method will always return 0).
+        virtual CommandList BeginCommandList() = 0;
 
-        virtual CommandBuffer* GetCommandBuffer() = 0;
+        virtual void PushDebugGroup(CommandList commandList, const char* name) = 0;
+        virtual void PopDebugGroup(CommandList commandList) = 0;
+        virtual void InsertDebugMarker(CommandList commandList, const char* name) = 0;
 
-        uint64_t GetFrameCount() const { return frameCount;  }
+        virtual void BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass) = 0;
+        virtual void EndRenderPass(CommandList commandList) = 0;
+
+        virtual void SetScissorRect(CommandList commandList, const RectI& scissorRect) = 0;
+        virtual void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) = 0;
+        virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
+        virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
+        virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
 
     protected:
         GraphicsDevice();
 
         GraphicsDeviceCaps caps{};
         RefPtr<SwapChain> primarySwapChain;
-        std::shared_ptr<CommandQueue> graphicsCommandQueue;
-        std::shared_ptr<CommandQueue> computeCommandQueue;
-        std::shared_ptr<CommandQueue> copyCommandQueue;
 
         uint64_t frameCount{ 0 };
 

@@ -53,19 +53,6 @@ namespace Alimer
         /// Destructor.
         virtual ~CommandBuffer() = default;
 
-        virtual void PushDebugGroup(const char* name);
-        virtual void PopDebugGroup();
-        virtual void InsertDebugMarker(const char* name);
-
-        //virtual void BeginRenderPass(uint32_t numColorAttachments, const gpu::RenderPassColorAttachment* colorAttachments, const gpu::RenderPassDepthStencilAttachment* depthStencil);
-        //virtual void EndRenderPass();
-
-        //virtual void SetScissorRect(const URect& scissorRect) = 0;
-        //virtual void SetScissorRects(const URect* scissorRects, uint32_t count) = 0;
-        //virtual void SetViewport(const Viewport& viewport) = 0;
-        //virtual void SetViewports(const Viewport* viewports, uint32_t count) = 0;
-        //virtual void SetBlendColor(const Color& color) = 0;
-
         //virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
         //virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
 

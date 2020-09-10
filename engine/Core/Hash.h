@@ -23,9 +23,18 @@
 #pragma once
 
 #include "Core/Preprocessor.h"
+#include <functional>
 
 namespace Alimer
 {
+    // Source: https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
+    template <typename T>
+    inline void hash_combine(size_t& seed, const T& v)
+    {
+        std::hash<T> hasher;
+        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
     ALIMER_API uint32 Murmur32(const void* key, uint32 len, uint32 seed);
     ALIMER_API uint64 Murmur64(const void* key, uint64 len, uint64 seed);
 }

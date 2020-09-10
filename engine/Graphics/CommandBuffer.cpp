@@ -35,23 +35,6 @@ namespace Alimer
         }
     }
 
-    void CommandBuffer::PushDebugGroup(const char* name)
-    {
-        Write(CommandID::PushDebugGroup);
-        Write(name);
-    }
-
-    void CommandBuffer::PopDebugGroup()
-    {
-        Write(CommandID::PopDebugGroup);
-    }
-
-    void CommandBuffer::InsertDebugMarker(const char* name)
-    {
-        Write(CommandID::InsertDebugMarker);
-        Write(name);
-    }
-
     /*void CommandBuffer::BeginRenderPass(uint32_t numColorAttachments, const gpu::RenderPassColorAttachment* colorAttachments, const gpu::RenderPassDepthStencilAttachment* depthStencil)
     {
         Write(CommandID::BeginRenderPass);

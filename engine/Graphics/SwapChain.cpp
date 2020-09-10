@@ -29,10 +29,15 @@ namespace Alimer
         : colorFormat(desc.colorFormat)
         , width(desc.width)
         , height(desc.height)
-        , presentMode(desc.presentMode)
+        , vsync(desc.vsync)
         , isFullscreen(desc.fullscreen)
     {
 
+    }
+
+    Texture* SwapChain::GetColorTexture() const
+    {
+        return colorTextures[currentBackBufferIndex].Get();
     }
 }
 

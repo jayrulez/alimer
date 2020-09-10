@@ -38,8 +38,7 @@ namespace Alimer
 
         void WaitForGPU() override;
         bool BeginFrame() override;
-        void EndFrame() override;
-        CommandBuffer* GetCommandBuffer() override;
+        void EndFrame(const std::vector<SwapChain*>& swapChains) override;
 
         void Submit(VkCommandBuffer buffer);
         VkFence RequestFence();
@@ -67,6 +66,21 @@ namespace Alimer
         void InitCapabilities();
         VulkanRenderFrame& GetActiveFrame();
         void WaitFrame();
+
+        /* CommandList */
+        CommandList BeginCommandList() override;
+        void PushDebugGroup(CommandList commandList, const char* name) override;
+        void PopDebugGroup(CommandList commandList) override;
+        void InsertDebugMarker(CommandList commandList, const char* name) override;
+
+        void BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass) override;
+        void EndRenderPass(CommandList commandList) override;
+
+        void SetScissorRect(CommandList commandList, const RectI& scissorRect) override;
+        void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) override;
+        void SetViewport(CommandList commandList, const Viewport& viewport) override;
+        void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) override;
+        void SetBlendColor(CommandList commandList, const Color& color) override;
 
         void ClearRenderPassCache();
         void ClearFramebufferCache();

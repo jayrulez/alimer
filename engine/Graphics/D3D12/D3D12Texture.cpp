@@ -56,8 +56,8 @@ namespace Alimer
         , resource{ resource }
         , state(state_)
     {
-        //RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        //device->GetD3DDevice()->CreateRenderTargetView(resource_, nullptr, RTV);
+        RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
+        device->GetD3DDevice()->CreateRenderTargetView(resource.Get(), nullptr, RTV);
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
@@ -187,6 +187,24 @@ namespace Alimer
     {
         auto wideName = ToUtf16(name);
         resource->SetName(wideName.c_str());
+    }
+
+    void D3D12Texture::TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState)
+    {
+        if (state == newState)
+            return;
+
+        D3D12_RESOURCE_BARRIER barrierDesc{};
+        barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrierDesc.Transition.pResource = resource.Get();
+        barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barrierDesc.Transition.StateBefore = state;
+        barrierDesc.Transition.StateAfter = newState;
+
+        commandList->ResourceBarrier(1, &barrierDesc);
+
+        state = newState;
     }
 
     void D3D12Texture::UploadTextureData(const void* initData)

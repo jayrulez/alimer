@@ -63,7 +63,7 @@ namespace Alimer
     {
         GraphicsDeviceDescription deviceDesc = {};
 #ifdef _DEBUG
-        //deviceDesc.flags |= GraphicsDeviceFlags::DebugRuntime | GraphicsDeviceFlags::GPUBasedValidation;
+        deviceDesc.enableDebugLayer = true;
 #endif
         deviceDesc.adapterPreference = config.adapterPreference;
         deviceDesc.primarySwapChain.width = GetMainWindow().GetWidth();
@@ -85,10 +85,20 @@ namespace Alimer
         if (!GetGraphics()->BeginFrame())
             return;
 
-        auto commandBuffer = GetGraphics()->GetCommandQueue()->GetCommandBuffer();
-        GetGraphics()->GetCommandQueue()->ExecuteCommandBuffer(commandBuffer);
-        GetGraphics()->GetPrimarySwapChain()->Present();
-        GetGraphics()->EndFrame();
+        auto commandList = GetGraphics()->BeginCommandList();
+        GetGraphics()->PushDebugGroup(commandList, "Frame");
+
+        RenderPassDescription renderPass{};
+        renderPass.colorAttachments[0].texture = GetGraphics()->GetPrimarySwapChain()->GetColorTexture();
+        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+
+        GetGraphics()->BeginRenderPass(commandList, &renderPass);
+        GetGraphics()->EndRenderPass(commandList);
+
+        GetGraphics()->PopDebugGroup(commandList);
+
+        // Present to main swap chain.
+        GetGraphics()->EndFrame(GetGraphics()->GetPrimarySwapChain());
     }
 
     const Config* Application::GetConfig()
