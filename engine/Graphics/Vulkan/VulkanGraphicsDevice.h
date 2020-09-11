@@ -67,6 +67,8 @@ namespace Alimer
         VulkanRenderFrame& GetActiveFrame();
         void WaitFrame();
 
+        RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) override;
+
         /* CommandList */
         CommandList BeginCommandList() override;
         void PushDebugGroup(CommandList commandList, const char* name) override;

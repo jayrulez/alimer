@@ -100,7 +100,7 @@ namespace Alimer
         { PixelFormat::BC5RGUnorm,              "BC5RGUnorm",               PixelFormatType::UNorm,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
         { PixelFormat::BC5RGSnorm,              "BC5RGSnorm",               PixelFormatType::SNorm,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
         { PixelFormat::BC6HRGBUfloat,           "BC6HRGBUfloat",            PixelFormatType::Float,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
-        { PixelFormat::BC6HRGBSfloat,           "BC6HRGBSfloat",            PixelFormatType::Float,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
+        { PixelFormat::BC6HRGBFloat,            "BC6HRGBFloat",             PixelFormatType::Float,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
         { PixelFormat::BC7RGBAUnorm,            "BC7RGBAUnorm",             PixelFormatType::UNorm,         8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
         { PixelFormat::BC7RGBAUnormSrgb,        "BC7RGBAUnormSrgb",         PixelFormatType::UnormSrgb,     8,          {4, 4, 16, 1, 1},       {0, 0, 0, 0, 0, 0}},
     };

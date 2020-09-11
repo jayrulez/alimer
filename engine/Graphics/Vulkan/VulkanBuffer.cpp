@@ -27,29 +27,36 @@ namespace Alimer
 {
     namespace
     {
-        VkBufferUsageFlags VulkanBufferUsage(GPUBufferUsage usage)
+        VkBufferUsageFlags VulkanBufferUsage(BufferUsage usage)
         {
-            VkBufferUsageFlags flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-            if (any(usage & GPUBufferUsage::Vertex)) {
-                flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            VkBufferUsageFlags flags = 0;
+            if (any(usage & BufferUsage::CopySrc)) {
+                flags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             }
-            if (any(usage & GPUBufferUsage::Index)) {
+            if (any(usage & BufferUsage::CopyDst)) {
+                flags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            }
+
+            if (any(usage & BufferUsage::Index)) {
                 flags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
             }
-            if (any(usage & GPUBufferUsage::Uniform)) {
+            if (any(usage & BufferUsage::Vertex)) {
+                flags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            }
+            if (any(usage & BufferUsage::Uniform)) {
                 flags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
             }
-            if (any(usage & GPUBufferUsage::Storage)) {
+            if (any(usage & BufferUsage::Storage)) {
                 flags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
-            if (any(usage & GPUBufferUsage::Indirect)) {
+            if (any(usage & BufferUsage::Indirect)) {
                 flags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
             }
             return flags;
         }
     }
 
-    VulkanBuffer::VulkanBuffer(VulkanGraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData)
+    VulkanBuffer::VulkanBuffer(VulkanGraphicsDevice* device, const BufferDescription& desc, const void* initialData)
         : GPUBuffer(desc)
         , device{ device }
     {

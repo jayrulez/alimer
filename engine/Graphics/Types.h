@@ -101,18 +101,21 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
-    enum class GPUBufferUsage : uint32_t
+    enum class BufferUsage : uint32_t
     {
         None = 0,
-        Vertex = 1 << 0,
-        Index = 1 << 1,
-        Uniform = 1 << 2,
-        Storage = 1 << 3,
-        Indirect = 1 << 4,
-        Dynamic = 1 << 5,
-        Staging = 1 << 6,
+        MapRead = 0x00000001,
+        MapWrite = 0x00000002,
+        CopySrc = 0x00000004,
+        CopyDst = 0x00000008,
+        Index = 0x00000010,
+        Vertex = 0x00000020,
+        Uniform = 0x00000040,
+        Storage = 0x00000080,
+        Indirect = 0x00000100,
+        QueryResolve = 0x00000200,
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GPUBufferUsage, uint32_t);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
     enum class TextureCubemapFace : uint8_t {
         PositiveX = 0, //!< +x face
@@ -131,9 +134,9 @@ namespace Alimer
     };
 
     /* Structs */
-    struct GPUBufferDescription
+    struct BufferDescription
     {
-        GPUBufferUsage usage;
+        BufferUsage usage;
         uint32 size;
         uint32 stride;
     };

@@ -98,7 +98,7 @@ namespace Alimer
         {PixelFormat::BC5RGUnorm,                   VK_FORMAT_BC5_UNORM_BLOCK},
         {PixelFormat::BC5RGSnorm,                   VK_FORMAT_BC5_SNORM_BLOCK},
         {PixelFormat::BC6HRGBUfloat,                VK_FORMAT_BC6H_UFLOAT_BLOCK },
-        {PixelFormat::BC6HRGBSfloat,                VK_FORMAT_BC6H_SFLOAT_BLOCK },
+        {PixelFormat::BC6HRGBFloat,                 VK_FORMAT_BC6H_SFLOAT_BLOCK },
         {PixelFormat::BC7RGBAUnorm,                 VK_FORMAT_BC7_UNORM_BLOCK},
         {PixelFormat::BC7RGBAUnormSrgb,             VK_FORMAT_BC7_SRGB_BLOCK},
     };

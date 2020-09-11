@@ -147,5 +147,12 @@ namespace Alimer
 
         EndFrame(std::vector<SwapChain*>({ swapChain }));
     }
+
+    RefPtr<GPUBuffer> GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
+    {
+        // TODO: Validate
+
+        return CreateBufferCore(desc, initialData);
+    }
 }
 

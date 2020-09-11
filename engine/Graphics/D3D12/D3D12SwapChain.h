@@ -38,7 +38,7 @@ namespace Alimer
 
     private:
         // Number of swapchain back buffers.
-        static constexpr uint32_t kBackBufferCount = 3;
+        static constexpr uint32_t kBackBufferCount = 2u;
 
         D3D12GraphicsDevice* device;
         ComPtr<IDXGISwapChain3> handle;

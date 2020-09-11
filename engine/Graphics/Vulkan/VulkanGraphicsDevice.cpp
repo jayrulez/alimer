@@ -1015,6 +1015,11 @@ namespace Alimer
         ++frameCount;
     }
 
+    RefPtr<GPUBuffer> VulkanGraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
+    {
+        return MakeRefPtr<VulkanBuffer>(this, desc, initialData);
+    }
+
     CommandList VulkanGraphicsDevice::BeginCommandList()
     {
         return 0;

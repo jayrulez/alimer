@@ -30,7 +30,7 @@ namespace Alimer
     class D3D12Buffer final : public GPUBuffer
     {
     public:
-        D3D12Buffer(D3D12GraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData);
+        D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
         ~D3D12Buffer() override;
         void Destroy();
 

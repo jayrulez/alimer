@@ -254,7 +254,7 @@ namespace Alimer
             HeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
             HeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
             ThrowIfFailed(d3dDevice->CreateDescriptorHeap(&HeapDesc, IID_PPV_ARGS(&DSVHeap.Heap)));
-            RTVHeap.DescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+            DSVHeap.DescriptorSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
             DSVHeap.CPUStart = DSVHeap.Heap->GetCPUDescriptorHandleForHeapStart();
         }
 
@@ -724,6 +724,11 @@ namespace Alimer
         }
 
         deferredReleases[index].clear();
+    }
+
+    RefPtr<GPUBuffer> D3D12GraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
+    {
+        return MakeRefPtr<D3D12Buffer>(this, desc, initialData);
     }
 
     CommandList D3D12GraphicsDevice::BeginCommandList()

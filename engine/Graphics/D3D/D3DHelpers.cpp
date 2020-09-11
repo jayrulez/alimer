@@ -214,7 +214,7 @@ namespace Alimer
         {PixelFormat::BC5RGUnorm,                   DXGI_FORMAT_BC5_UNORM},
         {PixelFormat::BC5RGSnorm,                   DXGI_FORMAT_BC5_SNORM},
         {PixelFormat::BC6HRGBUfloat,                DXGI_FORMAT_BC6H_UF16},
-        {PixelFormat::BC6HRGBSfloat,                DXGI_FORMAT_BC6H_SF16},
+        {PixelFormat::BC6HRGBFloat,                 DXGI_FORMAT_BC6H_SF16},
         {PixelFormat::BC7RGBAUnorm,                 DXGI_FORMAT_BC7_UNORM},
         {PixelFormat::BC7RGBAUnormSrgb,             DXGI_FORMAT_BC7_UNORM_SRGB},
     };

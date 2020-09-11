@@ -30,7 +30,7 @@ namespace Alimer
     class VulkanBuffer final : public GPUBuffer
     {
     public:
-        VulkanBuffer(VulkanGraphicsDevice* device, const GPUBufferDescription& desc, const void* initialData);
+        VulkanBuffer(VulkanGraphicsDevice* device, const BufferDescription& desc, const void* initialData);
         ~VulkanBuffer() override;
         void Destroy() override;
 

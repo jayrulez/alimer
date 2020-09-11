@@ -95,7 +95,7 @@ namespace Alimer
         BC5RGUnorm,
         BC5RGSnorm,
         BC6HRGBUfloat,
-        BC6HRGBSfloat,
+        BC6HRGBFloat,
         BC7RGBAUnorm,
         BC7RGBAUnormSrgb,
         Count

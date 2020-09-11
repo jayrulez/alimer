@@ -71,6 +71,9 @@ namespace Alimer
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
 
+        // Resource creation
+        virtual RefPtr<GPUBuffer> CreateBuffer(const BufferDescription& desc, const void* initialData = nullptr);
+
         /// Begin command list recording (Check GraphicsDeviceCaps.features.commandLists for support, if false this method will always return 0).
         virtual CommandList BeginCommandList() = 0;
 
@@ -86,6 +89,9 @@ namespace Alimer
         virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
         virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
         virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
+
+    private:
+        virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
 
     protected:
         GraphicsDevice();

@@ -25,7 +25,7 @@
 
 namespace Alimer
 {
-    GPUBuffer::GPUBuffer(const GPUBufferDescription& desc)
+    GPUBuffer::GPUBuffer(const BufferDescription& desc)
         : GraphicsResource(Type::Buffer)
         , usage(desc.usage)
         , size(desc.size)

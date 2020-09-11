@@ -69,6 +69,8 @@ namespace Alimer
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
         void ProcessDeferredReleases(uint64 index);
 
+        RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) override;
+
         /* CommandList */
         struct FrameResources
         {

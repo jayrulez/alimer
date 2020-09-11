@@ -33,10 +33,10 @@ namespace Alimer
 
     public:
         /// Constructor
-        GPUBuffer(const GPUBufferDescription& desc);
+        GPUBuffer(const BufferDescription& desc);
 
         /// Gets buffer usage.
-        ALIMER_FORCE_INLINE GPUBufferUsage GetUsage() const
+        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
         {
             return usage;
         }
@@ -61,7 +61,7 @@ namespace Alimer
         }
 
     private:
-        GPUBufferUsage usage;
+        BufferUsage usage;
         uint32 size;
         uint32 stride;
     };
