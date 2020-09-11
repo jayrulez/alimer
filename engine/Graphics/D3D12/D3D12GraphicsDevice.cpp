@@ -61,6 +61,19 @@ namespace Alimer
         if (!D3D12CreateDevice) {
             return false;
         }
+
+        static HMODULE dxilDLL = LoadLibraryA("dxil.dll");
+        if (dxilDLL) {
+            FreeLibrary(dxilDLL);
+        }
+
+        static HMODULE dxcompilerDLL = LoadLibraryA("dxcompiler.dll");
+        if (!dxcompilerDLL) {
+            return false;
+        }
+
+        DxcCreateInstance = (PFN_DXC_CREATE_INSTANCE)GetProcAddress(dxcompilerDLL, "DxcCreateInstance");
+        //FreeLibrary(dxcompilerDLL);
 #endif
 
         available = true;
@@ -859,4 +872,38 @@ namespace Alimer
     {
         GetDirectCommandList(commandList)->OMSetBlendFactor(&color.r);
     }
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+    IDxcLibrary* D3D12GraphicsDevice::GetOrCreateDxcLibrary()
+    {
+        if (dxcLibrary == nullptr)
+        {
+            HRESULT hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary));
+            if (FAILED(hr))
+            {
+                LOGE("DXC: Failed to create library");
+            }
+
+            ALIMER_ASSERT(dxcLibrary != nullptr);
+        }
+
+        return dxcLibrary.Get();
+    }
+
+    IDxcCompiler* D3D12GraphicsDevice::GetOrCreateDxcCompiler()
+    {
+        if (dxcCompiler == nullptr)
+        {
+            HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+            if (FAILED(hr))
+            {
+                LOGE("DXC: Failed to create compiler");
+            }
+
+            ALIMER_ASSERT(dxcCompiler != nullptr);
+        }
+
+        return dxcCompiler.Get();
+    }
+#endif
 }

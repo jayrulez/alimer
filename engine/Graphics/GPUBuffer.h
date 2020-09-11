@@ -60,7 +60,7 @@ namespace Alimer
             return size / stride;
         }
 
-    private:
+    protected:
         BufferUsage usage;
         uint32 size;
         uint32 stride;

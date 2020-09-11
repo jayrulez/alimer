@@ -72,7 +72,27 @@ namespace Alimer
         //deviceDesc.primarySwapChain.presentMode = PresentMode::Fifo;
 
         GraphicsDevice::Create(config.rendererType, deviceDesc);
-        s_appCurrent = nullptr;
+
+        // Define the geometry for a triangle.
+        struct Vertex
+        {
+            Float3 position;
+            Color color;
+        };
+
+        Vertex triangleVertices[] =
+        {
+            { { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { -0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+        };
+
+        BufferDescription bufferDesc{};
+        bufferDesc.usage = BufferUsage::Vertex;
+        bufferDesc.size = sizeof(triangleVertices);
+        bufferDesc.stride = sizeof(Vertex);
+
+        auto buffer = GetGraphics()->CreateBuffer(bufferDesc, triangleVertices);
     }
 
     void Application::Run()

@@ -27,6 +27,10 @@
 #include <queue>
 #include <mutex>
 
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+#include <dxcapi.h>
+#endif
+
 namespace Alimer
 {
     class D3D12Texture;
@@ -126,5 +130,16 @@ namespace Alimer
         std::atomic<CommandList> commandListCount{ 0 };
         ID3D12GraphicsCommandList4* commandLists[kMaxCommandListCount] = {};
         std::vector<D3D12Texture*> renderPassTextures[kMaxCommandListCount] = {};
+
+        /* Compiler */
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+    public:
+        IDxcLibrary* GetOrCreateDxcLibrary();
+        IDxcCompiler* GetOrCreateDxcCompiler();
+
+    private:
+        ComPtr<IDxcLibrary> dxcLibrary;
+        ComPtr<IDxcCompiler> dxcCompiler;
+#endif
     };
 }
