@@ -26,7 +26,8 @@
 namespace Alimer
 {
     SwapChain::SwapChain(const SwapChainDescription& desc)
-        : colorFormat(desc.colorFormat)
+        : GraphicsResource(Type::SwapChain)
+        , colorFormat(desc.colorFormat)
         , width(desc.width)
         , height(desc.height)
         , vsync(desc.vsync)

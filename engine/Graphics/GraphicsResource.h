@@ -37,21 +37,26 @@ namespace Alimer
     public:
         enum class Type
         {
-            Unknown,
             Buffer,
-            Texture
+            Texture,
+            Sampler,
+            SwapChain,
         };
 
         virtual ~GraphicsResource();
 
         /// Release the GPU resource.
-        virtual void Destroy() {}
+        virtual void Destroy() = 0;
+
+        inline uint64 GetID() { return id; }
 
         /// Set the resource name.
-        void SetName(const std::string& newName) { name = newName; BackendSetName(); }
+        void SetName(const std::string& newName);
 
         /// Get the resource name
         const std::string& GetName() const { return name; }
+        /// Return name id of the resource.
+        const StringId32& GetNameId() const { return nameId; }
 
     protected:
         GraphicsResource(Type type);
@@ -62,5 +67,10 @@ namespace Alimer
         Type type;
 
         std::string name;
+        StringId32 nameId;
+        uint64 id;
+
+    private:
+        static uint64 s_objectID;
     };
 }

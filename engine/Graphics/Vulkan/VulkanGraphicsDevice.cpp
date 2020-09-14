@@ -897,24 +897,6 @@ namespace Alimer
             break;
         }
 
-        // Init features
-        caps.features.independentBlend = physicalDeviceFeatures.independentBlend;
-        caps.features.computeShader = true;
-        caps.features.geometryShader = physicalDeviceFeatures.geometryShader;
-        caps.features.tessellationShader = physicalDeviceFeatures.tessellationShader;
-        caps.features.multiViewport = physicalDeviceFeatures.multiViewport;
-        caps.features.fullDrawIndexUint32 = physicalDeviceFeatures.fullDrawIndexUint32;
-        caps.features.multiDrawIndirect = physicalDeviceFeatures.multiDrawIndirect;
-        caps.features.fillModeNonSolid = physicalDeviceFeatures.fillModeNonSolid;
-        caps.features.samplerAnisotropy = physicalDeviceFeatures.samplerAnisotropy;
-        caps.features.textureCompressionETC2 = physicalDeviceFeatures.textureCompressionETC2;
-        caps.features.textureCompressionASTC_LDR = physicalDeviceFeatures.textureCompressionASTC_LDR;
-        caps.features.textureCompressionBC = physicalDeviceFeatures.textureCompressionBC;
-        caps.features.textureCubeArray = physicalDeviceFeatures.imageCubeArray;
-        //renderer->features.raytracing = vk.KHR_get_physical_device_properties2
-        //    && renderer->device_features.get_memory_requirements2
-        //    || HasExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
-
         // Limits
         caps.limits.maxVertexAttributes = physicalDeviceProperties.limits.maxVertexInputAttributes;
         caps.limits.maxVertexBindings = physicalDeviceProperties.limits.maxVertexInputBindings;
@@ -974,6 +956,52 @@ namespace Alimer
         VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &info));
     }
 
+    bool VulkanGraphicsDevice::IsFeatureSupported(Feature feature) const
+    {
+        switch (feature)
+        {
+        case Feature::Instancing:
+            return true;
+        case Feature::IndependentBlend:
+            return physicalDeviceFeatures.independentBlend;
+        case Feature::ComputeShader:
+            return true;
+        case Feature::LogicOp:
+            return physicalDeviceFeatures.logicOp;
+        case Feature::MultiViewport:
+            return physicalDeviceFeatures.multiViewport;
+        case Feature::IndexUInt32:
+            return physicalDeviceFeatures.fullDrawIndexUint32;
+        case Feature::MultiDrawIndirect:
+            return physicalDeviceFeatures.multiDrawIndirect;
+        case Feature::FillModeNonSolid:
+            return physicalDeviceFeatures.fillModeNonSolid;
+        case Feature::SamplerAnisotropy:
+            return physicalDeviceFeatures.samplerAnisotropy;
+        case Feature::TextureCompressionETC2:
+            return physicalDeviceFeatures.textureCompressionETC2;
+        case Feature::TextureCompressionASTC_LDR:
+            return physicalDeviceFeatures.textureCompressionASTC_LDR;
+        case Feature::TextureCompressionBC:
+            return physicalDeviceFeatures.textureCompressionBC;
+        case Feature::TextureMultisample:
+            return true;
+        case Feature::TextureCubeArray:
+            return physicalDeviceFeatures.imageCubeArray;
+        case Feature::Raytracing:
+        {
+            //renderer->features.raytracing = vk.KHR_get_physical_device_properties2
+      //    && renderer->device_features.get_memory_requirements2
+      //    || HasExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            return false;
+        }
+
+        default:
+            ALIMER_UNREACHABLE();
+            return false;
+        }
+    }
+
     void VulkanGraphicsDevice::WaitForGPU()
     {
         VK_CHECK(vkDeviceWaitIdle(device));
@@ -991,7 +1019,7 @@ namespace Alimer
         frame.Reset();
     }
 
-    bool VulkanGraphicsDevice::BeginFrame()
+    FrameOpResult VulkanGraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
     {
         ALIMER_ASSERT_MSG(!frameActive, "Frame is still active, please call EndFrame first");
 
@@ -1001,10 +1029,10 @@ namespace Alimer
         // Wait on all resource to be freed from the previous render to this frame
         WaitFrame();
 
-        return true;
+        return FrameOpResult::Success;
     }
 
-    void VulkanGraphicsDevice::EndFrame(const std::vector<SwapChain*>& swapChains)
+    FrameOpResult VulkanGraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
     {
         ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first");
 
@@ -1013,62 +1041,13 @@ namespace Alimer
 
         // Increment frame count.
         ++frameCount;
+
+        return FrameOpResult::Success;
     }
 
     RefPtr<GPUBuffer> VulkanGraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
     {
         return MakeRefPtr<VulkanBuffer>(this, desc, initialData);
-    }
-
-    CommandList VulkanGraphicsDevice::BeginCommandList()
-    {
-        return 0;
-    }
-
-    void VulkanGraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
-    {
-
-    }
-
-    void VulkanGraphicsDevice::PopDebugGroup(CommandList commandList)
-    {
-
-    }
-
-    void VulkanGraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
-    {
-
-    }
-
-    void VulkanGraphicsDevice::BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass)
-    {
-
-    }
-
-    void VulkanGraphicsDevice::EndRenderPass(CommandList commandList)
-    {
-
-    }
-
-
-    void VulkanGraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
-    {
-    }
-    
-    void VulkanGraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
-    {
-    }
-
-    void VulkanGraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
-    {
-    }
-
-    void VulkanGraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
-    {
-    }
-
-    void VulkanGraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
-    {
     }
 
     /* Resource creation methods */

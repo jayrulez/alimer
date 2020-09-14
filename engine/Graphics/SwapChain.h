@@ -22,17 +22,19 @@
 
 #pragma once
 
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Texture.h"
 #include <vector>
 
 namespace Alimer
 {
-    class ALIMER_API SwapChain : public RefCounted
+    class ALIMER_API SwapChain : public GraphicsResource
     {
     public:
         /// Constructor.
         SwapChain(const SwapChainDescription& desc);
 
+        virtual CommandBuffer* CurrentFrameCommandBuffer() = 0;
         Texture* GetColorTexture() const;
 
     protected:

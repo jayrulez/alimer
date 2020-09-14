@@ -133,6 +133,24 @@ namespace Alimer
         Clear
     };
 
+    enum class FrameOpResult : uint32_t {
+        Success = 0,
+        Error,
+        OutOfDate,
+        DeviceLost
+    };
+
+    enum class BeginFrameFlags : uint32_t {
+        None = 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
+
+    enum class EndFrameFlags : uint32_t {
+        None = 0,
+        SkipPresent = 1 << 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
+
     /* Structs */
     struct BufferDescription
     {
@@ -245,28 +263,6 @@ namespace Alimer
         /// Gets the adapter type.
         GPUAdapterType adapterType;
 
-        struct Features
-        {
-            bool commandLists = false;
-            bool independentBlend = false;
-            bool computeShader = false;
-            bool geometryShader = false;
-            bool tessellationShader = false;
-            bool logicOp = false;
-            bool multiViewport = false;
-            bool fullDrawIndexUint32 = false;
-            bool multiDrawIndirect = false;
-            bool fillModeNonSolid = false;
-            bool samplerAnisotropy = false;
-            bool textureCompressionETC2 = false;
-            bool textureCompressionASTC_LDR = false;
-            bool textureCompressionBC = false;
-            /// Specifies whether cube array textures are supported.
-            bool textureCubeArray = false;
-            /// Specifies whether raytracing is supported.
-            bool raytracing = false;
-        };
-
         struct Limits
         {
             uint32_t maxVertexAttributes;
@@ -301,7 +297,6 @@ namespace Alimer
             uint32_t maxComputeWorkGroupSizeZ;
         };
 
-        Features features;
         Limits limits;
     };
 

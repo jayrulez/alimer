@@ -300,19 +300,6 @@ namespace Alimer
 
         primarySwapChain.Reset();
 
-        for (CommandList cmd = 0; cmd < kMaxCommandListCount; ++cmd)
-        {
-            if (!commandLists[cmd])
-                break;
-
-            for (uint32_t index = 0; index < kRenderLatency; ++index)
-            {
-                SafeRelease(frames[index].commandAllocators[cmd]);
-            }
-
-            SafeRelease(commandLists[cmd]);
-        }
-
         // Allocator.
         if (allocator != nullptr)
         {
@@ -514,41 +501,12 @@ namespace Alimer
         }
 
         // Features
-        caps.features.commandLists = true;
-        caps.features.independentBlend = true;
-        caps.features.computeShader = true;
-        caps.features.geometryShader = true;
-        caps.features.tessellationShader = true;
-        caps.features.logicOp = true;
-        caps.features.multiViewport = true;
-        caps.features.fullDrawIndexUint32 = true;
-        caps.features.multiDrawIndirect = true;
-        caps.features.fillModeNonSolid = true;
-        caps.features.samplerAnisotropy = true;
-        caps.features.textureCompressionETC2 = false;
-        caps.features.textureCompressionASTC_LDR = false;
-        caps.features.textureCompressionBC = true;
-        caps.features.textureCubeArray = true;
-
-        D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
-        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(
-            D3D12_FEATURE_D3D12_OPTIONS5,
-            &d3d12options5, sizeof(d3d12options5)))
-            && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
-        {
-            caps.features.raytracing = true;
-        }
-        else
-        {
-            caps.features.raytracing = false;
-        }
-
-        supportsRenderPass = false;
+        /*supportsRenderPass = false;
         if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
             caps.vendorId != KnownVendorId_Intel)
         {
             supportsRenderPass = true;
-        }
+        }*/
 
         // Limits
         caps.limits.maxVertexAttributes = kMaxVertexAttributes;
@@ -625,6 +583,58 @@ namespace Alimer
         return CPUHandle;
     }
 
+    bool D3D12GraphicsDevice::IsFeatureSupported(Feature feature) const
+    {
+        switch (feature)
+        {
+        case Feature::Instancing:
+            return true;
+        case Feature::IndependentBlend:
+            return true;
+        case Feature::ComputeShader:
+            return true;
+        case Feature::LogicOp:
+            return true;
+        case Feature::MultiViewport:
+            return true;
+        case Feature::IndexUInt32:
+            return true;
+        case Feature::MultiDrawIndirect:
+            return true;
+        case Feature::FillModeNonSolid:
+            return true;
+        case Feature::SamplerAnisotropy:
+            return true;
+        case Feature::TextureCompressionETC2:
+            return false;
+        case Feature::TextureCompressionASTC_LDR:
+            return false;
+        case Feature::TextureCompressionBC:
+            return true;
+        case Feature::TextureMultisample:
+            return true;
+        case Feature::TextureCubeArray:
+            return true;
+        case Feature::Raytracing:
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12options5 = {};
+            if (SUCCEEDED(d3dDevice->CheckFeatureSupport(
+                D3D12_FEATURE_D3D12_OPTIONS5,
+                &d3d12options5, sizeof(d3d12options5)))
+                && d3d12options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        default:
+            ALIMER_UNREACHABLE();
+            return false;
+        }
+    }
+
     void D3D12GraphicsDevice::WaitForGPU()
     {
         // Wait for the GPU to fully catch up with the CPU.
@@ -643,48 +653,24 @@ namespace Alimer
         }
     }
 
-    bool D3D12GraphicsDevice::BeginFrame()
+    FrameOpResult D3D12GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
     {
-        return !isLost;
+        ALIMER_UNUSED(flags);
+
+        D3D12SwapChain* d3d11SwapChain = static_cast<D3D12SwapChain*>(swapChain);
+        d3d11SwapChain->BeginFrame();
+        return FrameOpResult::Success;
     }
 
-    void D3D12GraphicsDevice::EndFrame(const std::vector<SwapChain*>& swapChains)
+    FrameOpResult D3D12GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
     {
         // TODO: Manage upload
 
         // Execute deferred command lists.
-        {
-            ID3D12CommandList* execCommandLists[kMaxCommandListCount];
-            uint32_t counter = 0;
-
-            CommandList cmd_last = commandListCount.load();
-            commandListCount.store(0);
-            for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
-            {
-                // TODO: Perform query resolves
-                ThrowIfFailed(GetDirectCommandList(cmd)->Close());
-
-                execCommandLists[counter] = GetDirectCommandList(cmd);
-                counter++;
-            }
-
-            graphicsQueue->ExecuteCommandLists(counter, execCommandLists);
-        }
-
-        // Present swap chains.
-        HRESULT hr = S_OK;
-        for (size_t i = 0, count = swapChains.size(); i < count; i++)
-        {
-            D3D12SwapChain* swapChain = static_cast<D3D12SwapChain*>(swapChains[i]);
-            hr = swapChain->Present();
-
-            // If the device was reset we must completely reinitialize the renderer.
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
-            {
-                HandleDeviceLost();
-                return;
-            }
-        }
+        D3D12SwapChain* d3d11SwapChain = static_cast<D3D12SwapChain*>(swapChain);
+        FrameOpResult result = d3d11SwapChain->EndFrame(graphicsQueue, flags);
+        if (result != FrameOpResult::Success)
+            return result;
 
         // Increase frame count.
         frameCount++;
@@ -712,6 +698,8 @@ namespace Alimer
         {
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
+
+        return FrameOpResult::Success;
     }
 
     void D3D12GraphicsDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
@@ -742,135 +730,6 @@ namespace Alimer
     RefPtr<GPUBuffer> D3D12GraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
     {
         return MakeRefPtr<D3D12Buffer>(this, desc, initialData);
-    }
-
-    CommandList D3D12GraphicsDevice::BeginCommandList()
-    {
-        CommandList commandList = commandListCount.fetch_add(1);
-        if (GetDirectCommandList(commandList) == nullptr)
-        {
-            // need to create one more command list:
-            ALIMER_VERIFY_MSG(commandList < kMaxCommandListCount, "Cannot allocate more than '{}' command lists", kMaxCommandListCount);
-
-            for (uint32_t index = 0; index < kRenderLatency; ++index)
-            {
-                ThrowIfFailed(d3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[index].commandAllocators[commandList])));
-            }
-
-            ThrowIfFailed(d3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[frameIndex].commandAllocators[commandList], nullptr, IID_PPV_ARGS(&commandLists[commandList])));
-            ThrowIfFailed(commandLists[commandList]->Close());
-
-            // Set Debug name
-            D3D12SetObjectName(commandLists[commandList], fmt::format("CommandList {}", commandList));
-        }
-
-        // Start the command list in a default state
-        ThrowIfFailed(GetFrameResources().commandAllocators[commandList]->Reset());
-        ThrowIfFailed(GetDirectCommandList(commandList)->Reset(GetFrameResources().commandAllocators[commandList], nullptr));
-
-        return commandList;
-    }
-
-    void D3D12GraphicsDevice::PushDebugGroup(CommandList commandList, const char* name)
-    {
-        PIXBeginEvent(GetDirectCommandList(commandList), PIX_COLOR_DEFAULT, name);
-    }
-
-    void D3D12GraphicsDevice::PopDebugGroup(CommandList commandList)
-    {
-        PIXEndEvent(GetDirectCommandList(commandList));
-    }
-
-    void D3D12GraphicsDevice::InsertDebugMarker(CommandList commandList, const char* name)
-    {
-        PIXSetMarker(GetDirectCommandList(commandList), PIX_COLOR_DEFAULT, name);
-    }
-
-    void D3D12GraphicsDevice::BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass)
-    {
-        if (supportsRenderPass)
-        {
-        }
-        else
-        {
-            uint32 colorRTVSCount = 0;
-            D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[kMaxColorAttachments] = {};
-
-            for (uint32 i = 0; i < kMaxColorAttachments; i++)
-            {
-                const RenderPassColorAttachment& attachment = renderPass->colorAttachments[i];
-                if (attachment.texture == nullptr)
-                    continue;
-
-                D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
-                texture->TransitionBarrier(GetDirectCommandList(commandList), D3D12_RESOURCE_STATE_RENDER_TARGET);
-                //colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
-                colorRTVS[colorRTVSCount] = texture->GetRTV();
-
-                switch (attachment.loadAction)
-                {
-                case LoadAction::Discard:
-                    GetDirectCommandList(commandList)->DiscardResource(texture->GetResource(), nullptr);
-                    break;
-
-                case LoadAction::Clear:
-                    GetDirectCommandList(commandList)->ClearRenderTargetView(colorRTVS[colorRTVSCount], &attachment.clearColor.r, 0, nullptr);
-                    break;
-
-                default:
-                    break;
-                }
-
-                renderPassTextures[commandList].push_back(texture);
-                colorRTVSCount++;
-            }
-
-            GetDirectCommandList(commandList)->OMSetRenderTargets(colorRTVSCount, colorRTVS, FALSE, nullptr);
-        }
-    }
-
-    void D3D12GraphicsDevice::EndRenderPass(CommandList commandList)
-    {
-        if (supportsRenderPass)
-        {
-            GetDirectCommandList(commandList)->EndRenderPass();
-        }
-        else
-        {
-            for (size_t i = 0, count = renderPassTextures[commandList].size(); i < count; ++i)
-            {
-                renderPassTextures[commandList][i]->TransitionBarrier(GetDirectCommandList(commandList), D3D12_RESOURCE_STATE_COMMON);
-            }
-
-            renderPassTextures[commandList].clear();
-        }
-    }
-
-    void D3D12GraphicsDevice::SetScissorRect(CommandList commandList, const RectI& scissorRect)
-    {
-        D3D12_RECT d3dScissorRect;
-        d3dScissorRect.left = LONG(scissorRect.x);
-        d3dScissorRect.top = LONG(scissorRect.y);
-        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
-        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
-        GetDirectCommandList(commandList)->RSSetScissorRects(1, &d3dScissorRect);
-    }
-
-    void D3D12GraphicsDevice::SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count)
-    {
-    }
-
-    void D3D12GraphicsDevice::SetViewport(CommandList commandList, const Viewport& viewport)
-    {
-    }
-
-    void D3D12GraphicsDevice::SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count)
-    {
-    }
-
-    void D3D12GraphicsDevice::SetBlendColor(CommandList commandList, const Color& color)
-    {
-        GetDirectCommandList(commandList)->OMSetBlendFactor(&color.r);
     }
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)

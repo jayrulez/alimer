@@ -405,4 +405,9 @@ namespace Alimer
 
         return AcquireNextImage();
     }
+
+    CommandBuffer* VulkanSwapChain::CurrentFrameCommandBuffer()
+    {
+        return nullptr;
+    }
 }

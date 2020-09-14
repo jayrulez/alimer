@@ -43,17 +43,37 @@ namespace Alimer
         static std::set<GPUBackendType> GetAvailableBackends();
         static GraphicsDevice* Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
 
+        enum class Feature {
+            Instancing,
+            IndependentBlend,
+            ComputeShader,
+            LogicOp,
+            MultiViewport,
+            IndexUInt32,
+            MultiDrawIndirect,
+            FillModeNonSolid,
+            SamplerAnisotropy,
+            TextureCompressionETC2,
+            TextureCompressionASTC_LDR,
+            TextureCompressionBC,
+            /// Multisample texture.
+            TextureMultisample,
+            /// Specifies whether cube array textures are supported.
+            TextureCubeArray,
+            /// Specifies whether raytracing is supported.
+            Raytracing,
+        };
+
+        virtual bool IsFeatureSupported(Feature feature) const = 0;
+
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
         /// Begin rendering frame.
-        virtual bool BeginFrame() = 0;
+        virtual FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags = BeginFrameFlags::None) = 0;
 
         /// End current rendering frame and present swap chain on screen.
-        void EndFrame(SwapChain* swapChain);
-
-        /// End current rendering frame and present swap chains on screen.
-        virtual void EndFrame(const std::vector<SwapChain*>& swapChains) = 0;
+        virtual FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags = EndFrameFlags::None) = 0;
 
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
@@ -74,22 +94,7 @@ namespace Alimer
         // Resource creation
         virtual RefPtr<GPUBuffer> CreateBuffer(const BufferDescription& desc, const void* initialData = nullptr);
 
-        /// Begin command list recording (Check GraphicsDeviceCaps.features.commandLists for support, if false this method will always return 0).
-        virtual CommandList BeginCommandList() = 0;
-
-        virtual void PushDebugGroup(CommandList commandList, const char* name) = 0;
-        virtual void PopDebugGroup(CommandList commandList) = 0;
-        virtual void InsertDebugMarker(CommandList commandList, const char* name) = 0;
-
-        virtual void BeginRenderPass(CommandList commandList, const RenderPassDescription* renderPass) = 0;
-        virtual void EndRenderPass(CommandList commandList) = 0;
-
-        virtual void SetScissorRect(CommandList commandList, const RectI& scissorRect) = 0;
-        virtual void SetScissorRects(CommandList commandList, const RectI* scissorRects, uint32_t count) = 0;
-        virtual void SetViewport(CommandList commandList, const Viewport& viewport) = 0;
-        virtual void SetViewports(CommandList commandList, const Viewport* viewports, uint32_t count) = 0;
-        virtual void SetBlendColor(CommandList commandList, const Color& color) = 0;
-
+       
     private:
         virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
 
@@ -110,5 +115,6 @@ namespace Alimer
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
+
 }
 

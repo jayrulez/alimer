@@ -27,33 +27,28 @@
 
 namespace Alimer
 {
-    class D3D12CommandQueue;
-
     class D3D12CommandBuffer final : public CommandBuffer
     {
     public:
-        D3D12CommandBuffer(D3D12CommandQueue* queue);
+        D3D12CommandBuffer(D3D12GraphicsDevice* device);
         ~D3D12CommandBuffer() override;
 
-        void Reset();
+        void Reset(uint32_t frameIndex);
 
-       /* void Reset(uint32_t frameIndex);
-
-        void Commit(bool waitForCompletion) override;
-
-        void PushDebugGroup(const String& name) override;
+        void PushDebugGroup(const char* name) override;
         void PopDebugGroup() override;
-        void InsertDebugMarker(const String& name) override;
+        void InsertDebugMarker(const char* name) override;
 
-        void BeginRenderPass(const RenderPassDescription& renderPass) override;
+        void BeginRenderPass(const RenderPassDescription* renderPass) override;
         void EndRenderPass() override;
 
-        void SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height) override;
-        void SetScissorRects(const Rect* scissorRects, uint32_t count) override;
-        void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) override;
+        void SetScissorRect(const RectI& scissorRect)  override;
+        void SetScissorRects(const RectI* scissorRects, uint32_t count) override;
+        void SetViewport(const Viewport& viewport) override;
+        void SetViewports(const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(const Color& color) override;
 
-        void BindBuffer(uint32_t slot, Buffer* buffer) override;
+        /*void BindBuffer(uint32_t slot, Buffer* buffer) override;
         void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
         // Barriers 
@@ -63,17 +58,17 @@ namespace Alimer
 
         ALIMER_FORCE_INLINE ID3D12GraphicsCommandList* GetCommandList() const
         {
-            return commandList.Get();
+            return commandList;
         }
 
     private:
-        D3D12CommandQueue* queue;
+        D3D12GraphicsDevice* device;
 
         bool useRenderPass;
-        ComPtr<ID3D12CommandAllocator> commandAllocator;
+        ID3D12CommandAllocator* commandAllocators[kRenderLatency];
 
-        ComPtr<ID3D12GraphicsCommandList> commandList;
-        ComPtr<ID3D12GraphicsCommandList4> commandList4;
+        ID3D12GraphicsCommandList* commandList = nullptr;
+        ID3D12GraphicsCommandList4* commandList4 = nullptr;
 
         /* Barriers */
         static constexpr uint32_t kMaxResourceBarriers = 16;

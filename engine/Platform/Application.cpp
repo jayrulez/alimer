@@ -102,23 +102,24 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!GetGraphics()->BeginFrame())
+        auto swapChain = GetGraphics()->GetPrimarySwapChain();
+        if (GetGraphics()->BeginFrame(swapChain) != FrameOpResult::Success)
             return;
 
-        auto commandList = GetGraphics()->BeginCommandList();
-        GetGraphics()->PushDebugGroup(commandList, "Frame");
+        auto commandBuffer = swapChain->CurrentFrameCommandBuffer();
+        commandBuffer->PushDebugGroup("Frame");
 
         RenderPassDescription renderPass{};
         renderPass.colorAttachments[0].texture = GetGraphics()->GetPrimarySwapChain()->GetColorTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
 
-        GetGraphics()->BeginRenderPass(commandList, &renderPass);
-        GetGraphics()->EndRenderPass(commandList);
+        commandBuffer->BeginRenderPass(&renderPass);
+        commandBuffer->EndRenderPass();
 
-        GetGraphics()->PopDebugGroup(commandList);
+        commandBuffer->PopDebugGroup();
 
         // Present to main swap chain.
-        GetGraphics()->EndFrame(GetGraphics()->GetPrimarySwapChain());
+        GetGraphics()->EndFrame(swapChain);
     }
 
     const Config* Application::GetConfig()

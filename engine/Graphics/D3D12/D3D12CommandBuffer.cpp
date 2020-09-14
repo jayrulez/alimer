@@ -52,26 +52,36 @@ namespace Alimer
         }*/
     }
 
-    D3D12CommandBuffer::D3D12CommandBuffer(D3D12CommandQueue* queue)
-        : CommandBuffer(0)
-        , queue{ queue }
+    D3D12CommandBuffer::D3D12CommandBuffer(D3D12GraphicsDevice* device)
+        : CommandBuffer()
+        , device{ device }
     {
-        /*auto d3dDevice = queue->GetDevice()->GetD3DDevice();
-        ThrowIfFailed(d3dDevice->CreateCommandAllocator(queue->GetCommandListType(), IID_PPV_ARGS(&commandAllocator)));
-        ThrowIfFailed(d3dDevice->CreateCommandList(0, queue->GetCommandListType(), commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
-        commandList.As(&commandList4);*/
+        for (uint32_t index = 0; index < kRenderLatency; ++index)
+        {
+            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[index])));
+        }
 
-        LOGD("Direct3D12: Created Command Buffer");
+        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
+        useRenderPass = SUCCEEDED(commandList->QueryInterface(IID_PPV_ARGS(&commandList4)));
+        useRenderPass = false;
+        ThrowIfFailed(commandList->Close());
     }
 
     D3D12CommandBuffer::~D3D12CommandBuffer()
     {
+        for (uint32_t index = 0; index < kRenderLatency; ++index)
+        {
+            SafeRelease(commandAllocators[index]);
+        }
+
+        SafeRelease(commandList);
+        SafeRelease(commandList4);
     }
 
-    void D3D12CommandBuffer::Reset()
+    void D3D12CommandBuffer::Reset(uint32_t frameIndex)
     {
-        ThrowIfFailed(commandAllocator->Reset());
-        ThrowIfFailed(commandList->Reset(commandAllocator.Get(), nullptr));
+        ThrowIfFailed(commandAllocators[frameIndex]->Reset());
+        ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
 
         //currentGraphicsRootSignature = nullptr;
         //currentPipelineState = nullptr;
@@ -81,109 +91,35 @@ namespace Alimer
         //BindDescriptorHeaps();
     }
 
-#if TODO
-
-    
-
-    void D3D12CommandContext::Commit(bool waitForCompletion)
+    void D3D12CommandBuffer::PushDebugGroup(const char* name)
     {
-        FlushResourceBarriers();
-
-        //if (m_ID.length() > 0)
-        //    EngineProfiling::EndBlock(this);
-
-        //device->CommitCommandBuffer(this, waitForCompletion);
+        PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, name);
     }
 
-    void D3D12CommandContext::PushDebugGroup(const String& name)
+    void D3D12CommandBuffer::PopDebugGroup()
     {
-        auto wideName = ToUtf16(name);
-        PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
+        PIXEndEvent(commandList);
     }
 
-    void D3D12CommandContext::PopDebugGroup()
+    void D3D12CommandBuffer::InsertDebugMarker(const char* name)
     {
-
-        commandList->EndEvent();
+        PIXSetMarker(commandList, PIX_COLOR_DEFAULT, name);
     }
 
-    void D3D12CommandContext::InsertDebugMarker(const String& name)
-    {
-        auto wideName = ToUtf16(name);
-        PIXSetMarker(commandList, PIX_COLOR_DEFAULT, wideName.c_str());
-    }
 
-    void D3D12CommandContext::BeginRenderPass(const RenderPassDescription& renderPass)
-    {
-    }
-
-    void D3D12CommandContext::EndRenderPass()
-    {
-
-    }
-
-    void D3D12CommandContext::SetScissorRect(uint32 x, uint32 y, uint32 width, uint32 height)
-    {
-        D3D12_RECT d3dScissorRect;
-        d3dScissorRect.left = LONG(x);
-        d3dScissorRect.top = LONG(y);
-        d3dScissorRect.right = LONG(x + width);
-        d3dScissorRect.bottom = LONG(y + height);
-        commandList->RSSetScissorRects(1, &d3dScissorRect);
-    }
-
-    void D3D12CommandContext::SetScissorRects(const Rect* scissorRects, uint32_t count)
-    {
-        D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
-        for (uint32_t i = 0; i < count; ++i)
-        {
-            d3dScissorRects[i].left = LONG(scissorRects[i].x);
-            d3dScissorRects[i].top = LONG(scissorRects[i].y);
-            d3dScissorRects[i].right = LONG(scissorRects[i].x + scissorRects[i].width);
-            d3dScissorRects[i].bottom = LONG(scissorRects[i].y + scissorRects[i].height);
-        }
-        commandList->RSSetScissorRects(count, d3dScissorRects);
-    }
-
-    void D3D12CommandContext::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
-    {
-        D3D12_VIEWPORT viewport;
-        viewport.TopLeftX = x;
-        viewport.TopLeftY = y;
-        viewport.Width = width;
-        viewport.Height = height;
-        viewport.MinDepth = minDepth;
-        viewport.MaxDepth = maxDepth;
-        commandList->RSSetViewports(1, &viewport);
-    }
-
-    void D3D12CommandContext::SetBlendColor(const Color& color)
-    {
-        commandList->OMSetBlendFactor(&color.r);
-    }
-
-    void D3D12CommandContext::BindBuffer(uint32_t slot, Buffer* buffer)
-    {
-    }
-
-    void D3D12CommandContext::BindBufferData(uint32_t slot, const void* data, uint32_t size)
-    {
-    }
-
-#ifdef TODO
-    void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescriptor* descriptor)
+    void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescription* renderPass)
     {
         if (useRenderPass)
         {
-            u32 colorRTVSCount = 0;
-            for (u32 i = 0; i < kMaxColorAttachments; i++)
+            /*uint32 colorRTVSCount = 0;
+            for (uint32 i = 0; i < kMaxColorAttachments; i++)
             {
-                const RenderPassColorAttachmentDescriptor& attachment = descriptor->colorAttachments[i];
+                const RenderPassColorAttachment& attachment = renderPass->colorAttachments[i];
                 if (attachment.texture == nullptr)
                     continue;
 
                 D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
-                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+                texture->TransitionBarrier(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
                 colorRenderPassTargets[colorRTVSCount].cpuDescriptor = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
                 colorRenderPassTargets[colorRTVSCount].BeginningAccess.Type = D3D12BeginningAccessType(attachment.loadAction);
                 if (attachment.loadAction == LoadAction::Clear) {
@@ -199,30 +135,42 @@ namespace Alimer
             }
 
             D3D12_RENDER_PASS_FLAGS renderPassFlags = D3D12_RENDER_PASS_FLAG_NONE;
-            commandList4->BeginRenderPass(colorRTVSCount, colorRenderPassTargets, nullptr, renderPassFlags);
+            commandList4->BeginRenderPass(colorRTVSCount, colorRenderPassTargets, nullptr, renderPassFlags);*/
         }
         else
         {
-            u32 colorRTVSCount = 0;
-            for (u32 i = 0; i < kMaxColorAttachments; i++)
+            uint32 colorRTVSCount = 0;
+            D3D12_CPU_DESCRIPTOR_HANDLE colorRTVS[kMaxColorAttachments] = {};
+
+            for (uint32 i = 0; i < kMaxColorAttachments; i++)
             {
-                const RenderPassColorAttachmentDescriptor& attachment = descriptor->colorAttachments[i];
+                const RenderPassColorAttachment& attachment = renderPass->colorAttachments[i];
                 if (attachment.texture == nullptr)
                     continue;
 
                 D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
-                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
-                colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
-                if (attachment.loadAction == LoadAction::Clear)
+                texture->TransitionBarrier(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+                //colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+                colorRTVS[colorRTVSCount] = texture->GetRTV();
+
+                switch (attachment.loadAction)
                 {
+                case LoadAction::Discard:
+                    commandList->DiscardResource(texture->GetResource(), nullptr);
+                    break;
+
+                case LoadAction::Clear:
                     commandList->ClearRenderTargetView(colorRTVS[colorRTVSCount], &attachment.clearColor.r, 0, nullptr);
+                    break;
+
+                default:
+                    break;
                 }
 
-                //swapchainTexture = texture;
                 colorRTVSCount++;
             }
 
-            commandList->OMSetRenderTargets(colorRTVSCount, colorRTVS, FALSE, NULL);
+            commandList->OMSetRenderTargets(colorRTVSCount, colorRTVS, FALSE, nullptr);
         }
 
         // Set up default dynamic state
@@ -248,11 +196,65 @@ namespace Alimer
         }
     }
 
+    void D3D12CommandBuffer::SetScissorRect(const RectI& scissorRect)
+    {
+        D3D12_RECT d3dScissorRect;
+        d3dScissorRect.left = LONG(scissorRect.x);
+        d3dScissorRect.top = LONG(scissorRect.y);
+        d3dScissorRect.right = LONG(scissorRect.x + scissorRect.width);
+        d3dScissorRect.bottom = LONG(scissorRect.y + scissorRect.height);
+        commandList->RSSetScissorRects(1, &d3dScissorRect);
+    }
+
+    void D3D12CommandBuffer::SetScissorRects(const RectI* scissorRects, uint32_t count)
+    {
+        count = Max<uint32_t>(count, D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
+        D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dScissorRects[i].left = LONG(scissorRects[i].x);
+            d3dScissorRects[i].top = LONG(scissorRects[i].y);
+            d3dScissorRects[i].right = LONG(scissorRects[i].x + scissorRects[i].width);
+            d3dScissorRects[i].bottom = LONG(scissorRects[i].y + scissorRects[i].height);
+        }
+        commandList->RSSetScissorRects(count, d3dScissorRects);
+    }
+
+    void D3D12CommandBuffer::SetViewport(const Viewport& viewport)
+    {
+        D3D12_VIEWPORT d3dViewport;
+        d3dViewport.TopLeftX = viewport.x;
+        d3dViewport.TopLeftY = viewport.y;
+        d3dViewport.Width = viewport.width;
+        d3dViewport.Height = viewport.height;
+        d3dViewport.MinDepth = viewport.minDepth;
+        d3dViewport.MaxDepth = viewport.maxDepth;
+        commandList->RSSetViewports(1, &d3dViewport);
+    }
+
+    void D3D12CommandBuffer::SetViewports(const Viewport* viewports, uint32_t count)
+    {
+        count = Max<uint32_t>(count, D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
+
+        D3D12_VIEWPORT d3dViewports[D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            d3dViewports[i].TopLeftX = viewports[i].x;
+            d3dViewports[i].TopLeftY = viewports[i].y;
+            d3dViewports[i].Width = viewports[i].width;
+            d3dViewports[i].Height = viewports[i].height;
+            d3dViewports[i].MinDepth = viewports[i].minDepth;
+            d3dViewports[i].MaxDepth = viewports[i].maxDepth;
+        }
+        commandList->RSSetViewports(count, d3dViewports);
+    }
+
     void D3D12CommandBuffer::SetBlendColor(const Color& color)
     {
         commandList->OMSetBlendFactor(&color.r);
-}
-#endif // TODO
+    }
+
+#if TODO
 
 
     void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)

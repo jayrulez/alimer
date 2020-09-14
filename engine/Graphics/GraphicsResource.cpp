@@ -26,8 +26,11 @@
 
 namespace Alimer
 {
+    uint64 GraphicsResource::s_objectID = 1;
+
     GraphicsResource::GraphicsResource(Type type)
         : type{ type }
+        , id(s_objectID++)
     {
         GetGraphics()->AddGraphicsResource(this);
     }
@@ -35,5 +38,12 @@ namespace Alimer
     GraphicsResource::~GraphicsResource()
     {
         GetGraphics()->RemoveGraphicsResource(this);
+    }
+
+    void GraphicsResource::SetName(const std::string& newName)
+    {
+        name = newName;
+        nameId = StringId32(newName);
+        BackendSetName();
     }
 }

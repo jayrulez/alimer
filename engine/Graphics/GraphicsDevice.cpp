@@ -141,13 +141,6 @@ namespace Alimer
         return primarySwapChain.Get();
     }
 
-    void GraphicsDevice::EndFrame(SwapChain* swapChain)
-    {
-        ALIMER_ASSERT(swapChain);
-
-        EndFrame(std::vector<SwapChain*>({ swapChain }));
-    }
-
     RefPtr<GPUBuffer> GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
     {
         // TODO: Validate

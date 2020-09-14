@@ -42,6 +42,7 @@ namespace Alimer
     private:
         bool RecreateSwapchain();
         bool AcquireNextImage();
+        CommandBuffer* CurrentFrameCommandBuffer() override;
 
         static constexpr uint32_t kInvalidImageIndex = ~(uint32_t)0;
 

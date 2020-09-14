@@ -27,7 +27,7 @@
 namespace Alimer
 {
     VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandPool& commandPool, VkCommandBufferLevel level)
-        : CommandBuffer(0)
+        : CommandBuffer()
         , commandPool{ commandPool }
     {
         VkCommandBufferAllocateInfo allocate_info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
