@@ -24,7 +24,7 @@
 
 #include "D3D11Backend.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     class Window;
     class D3D11Texture;

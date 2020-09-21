@@ -27,7 +27,7 @@
 #include <queue>
 #include <mutex>
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     class D3D11CommandBuffer;
     class D3D11SwapChain;
@@ -35,21 +35,8 @@ namespace Alimer::Graphics
     class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        // Functions from dxgi.dll
-        using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
-        using PFN_CREATE_DXGI_FACTORY1 = HRESULT(WINAPI*)(REFIID riid, _COM_Outptr_ void** ppFactory);
-        using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
-
-        PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1 = nullptr;
-        PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1 = nullptr;
-        PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2 = nullptr;
-
-        // Functions from d3d11.dll
-        PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
-#endif
-
-        D3D11GraphicsDevice(Window* window, const GraphicsDeviceSettings& settings);
+        static bool IsAvailable();
+        D3D11GraphicsDevice(Window* window, const GraphicsDeviceDescription& desc);
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
@@ -74,13 +61,8 @@ namespace Alimer::Graphics
 
         void InitCapabilities(IDXGIAdapter1* adapter);
         void WaitForGPU() override;
-        uint64 Frame() override;
-        //CommandBuffer* RequestCommandBufferCore(const char* name, bool profile) override;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HMODULE dxgiDLL = nullptr;
-        HMODULE d3d11DLL = nullptr;
-#endif
+        FrameOpResult BeginFrame() override;
+        FrameOpResult EndFrame(EndFrameFlags flags) override;
 
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;

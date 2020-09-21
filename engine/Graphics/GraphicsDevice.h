@@ -38,42 +38,23 @@ namespace Alimer
         ALIMER_OBJECT(GraphicsDevice, Object);
 
     public:
+        /// The single instance of the graphics device.
+        static GraphicsDevice* Instance;
+
+        /// Destructor.
         virtual ~GraphicsDevice() = default;
 
         static std::set<GPUBackendType> GetAvailableBackends();
         static GraphicsDevice* Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
 
-        enum class Feature {
-            Instancing,
-            IndependentBlend,
-            ComputeShader,
-            LogicOp,
-            MultiViewport,
-            IndexUInt32,
-            MultiDrawIndirect,
-            FillModeNonSolid,
-            SamplerAnisotropy,
-            TextureCompressionETC2,
-            TextureCompressionASTC_LDR,
-            TextureCompressionBC,
-            /// Multisample texture.
-            TextureMultisample,
-            /// Specifies whether cube array textures are supported.
-            TextureCubeArray,
-            /// Specifies whether raytracing is supported.
-            Raytracing,
-        };
-
-        virtual bool IsFeatureSupported(Feature feature) const = 0;
-
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
         /// Begin rendering frame.
-        virtual FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags = BeginFrameFlags::None) = 0;
+        virtual FrameOpResult BeginFrame() = 0;
 
         /// End current rendering frame and present swap chain on screen.
-        virtual FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags = EndFrameFlags::None) = 0;
+        virtual FrameOpResult EndFrame(EndFrameFlags flags = EndFrameFlags::None) = 0;
 
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
@@ -84,7 +65,7 @@ namespace Alimer
         /// Get the main/primary SwapChain.
         SwapChain* GetPrimarySwapChain() const;
 
-        inline uint64_t GetFrameCount() const { return frameCount;  }
+        inline uint64_t GetFrameCount() const { return frameCount; }
 
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
@@ -94,7 +75,7 @@ namespace Alimer
         // Resource creation
         virtual RefPtr<GPUBuffer> CreateBuffer(const BufferDescription& desc, const void* initialData = nullptr);
 
-       
+
     private:
         virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
 

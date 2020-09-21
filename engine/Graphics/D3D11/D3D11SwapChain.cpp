@@ -28,7 +28,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync)
         : device{ device }

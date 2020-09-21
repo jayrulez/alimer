@@ -25,7 +25,7 @@
 #include "Graphics/Texture.h"
 #include "D3D11Backend.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     class ALIMER_API D3D11Texture final : public Texture
     {
@@ -33,7 +33,7 @@ namespace Alimer::Graphics
         /// Constructor.
         D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11Texture(D3D11GraphicsDevice* device, const GPUTextureDescription& desc, const void* initialData);
+        D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         /// Destructor
         ~D3D11Texture() override;
 

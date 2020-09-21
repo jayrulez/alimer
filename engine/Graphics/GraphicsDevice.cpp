@@ -25,15 +25,20 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_ENABLE_D3D12)
+#if defined(ALIMER_ENABLE_D3D11)
+#   include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+#if defined(ALIMER_ENABLE_D3D12) && defined(TODO_D3D12)
 #   include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
-#if defined(ALIMER_ENABLE_VULKAN)
+#if defined(ALIMER_ENABLE_VULKAN) && defined(TODO_VK)
 #   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
 
 namespace Alimer
 {
+    GraphicsDevice* GraphicsDevice::Instance = nullptr;
+
     GraphicsDevice::GraphicsDevice()
     {
         RegisterSubsystem(this);
@@ -47,11 +52,15 @@ namespace Alimer
         {
             availableBackends.insert(GPUBackendType::Null);
 
-#if defined(ALIMER_ENABLE_D3D12)
-            if(D3D12GraphicsDevice::IsAvailable())
+#if defined(ALIMER_ENABLE_D3D11)
+            if (D3D11GraphicsDevice::IsAvailable())
                 availableBackends.insert(GPUBackendType::Direct3D12);
 #endif
-#if defined(ALIMER_ENABLE_VULKAN)
+#if defined(ALIMER_ENABLE_D3D12) && defined(TODO_D3D12)
+            if (D3D12GraphicsDevice::IsAvailable())
+                availableBackends.insert(GPUBackendType::Direct3D12);
+#endif
+#if defined(ALIMER_ENABLE_VULKAN) && defined(TODO_VK)
             if (VulkanGraphicsDevice::IsAvailable())
                 availableBackends.insert(GPUBackendType::Vulkan);
 #endif
@@ -62,10 +71,10 @@ namespace Alimer
 
     GraphicsDevice* GraphicsDevice::Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc)
     {
-        if (GetGraphics() != nullptr)
+        if (Instance != nullptr)
         {
             LOGW("Cannot create more than one instance of GraphicsDevice");
-            return GetGraphics();
+            return Instance;
         }
 
         if (preferredBackend == GPUBackendType::Count)
@@ -84,7 +93,20 @@ namespace Alimer
 
         switch (preferredBackend)
         {
-#if defined(ALIMER_ENABLE_D3D12)
+#if defined(ALIMER_ENABLE_D3D11) 
+        case GPUBackendType::Direct3D11:
+            if (D3D11GraphicsDevice::IsAvailable())
+            {
+                Instance = new D3D11GraphicsDevice(desc);
+            }
+            else
+            {
+                LOGE("Direct3D11 backend is not supported on this platform");
+                return nullptr;
+            }
+#endif
+
+#if defined(ALIMER_ENABLE_D3D12) && defined(TODO_D3D12)
         case GPUBackendType::Direct3D12:
             if (D3D12GraphicsDevice::IsAvailable())
             {
@@ -95,7 +117,7 @@ namespace Alimer
             return nullptr;
 #endif
 
-#if defined(ALIMER_ENABLE_VULKAN)
+#if defined(ALIMER_ENABLE_VULKAN) && defined(TODO_VK)
         case GPUBackendType::Vulkan:
             if (VulkanGraphicsDevice::IsAvailable())
             {
@@ -110,7 +132,11 @@ namespace Alimer
             break;
         }
 
-        return nullptr;
+        if (Instance == nullptr)
+            return nullptr;
+
+        LOGI("Successfully created {} GraphicsDevice", ToString(Instance->GetCaps().backendType));
+        return Instance;
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)

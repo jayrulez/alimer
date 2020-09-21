@@ -104,16 +104,14 @@ namespace Alimer
     enum class BufferUsage : uint32_t
     {
         None = 0,
-        MapRead = 0x00000001,
-        MapWrite = 0x00000002,
-        CopySrc = 0x00000004,
-        CopyDst = 0x00000008,
-        Index = 0x00000010,
-        Vertex = 0x00000020,
-        Uniform = 0x00000040,
-        Storage = 0x00000080,
-        Indirect = 0x00000100,
-        QueryResolve = 0x00000200,
+        Vertex = 1 << 0,
+        Index = 1 << 1,
+        Uniform = 1 << 2,
+        StorageReadOnly = 1 << 3,
+        StorageReadWrite = 1 << 4,
+        Indirect = 1 << 5,
+        Dynamic = 1 << 6,
+        Staging = 1 << 7,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
@@ -139,11 +137,6 @@ namespace Alimer
         OutOfDate,
         DeviceLost
     };
-
-    enum class BeginFrameFlags : uint32_t {
-        None = 0
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
 
     enum class EndFrameFlags : uint32_t {
         None = 0,
@@ -247,6 +240,62 @@ namespace Alimer
         SwapChainDescription primarySwapChain;
     };
 
+    struct GraphicsDeviceFeatures
+    {
+        bool baseVertex = false;
+        bool independentBlend = false;
+        bool computeShader = false;
+        bool geometryShader = false;
+        bool tessellationShader = false;
+        bool logicOp = false;
+        bool multiViewport = false;
+        bool fullDrawIndexUint32 = false;
+        bool multiDrawIndirect = false;
+        bool fillModeNonSolid = false;
+        bool samplerAnisotropy = false;
+        bool textureCompressionETC2 = false;
+        bool textureCompressionASTC_LDR = false;
+        bool textureCompressionBC = false;
+        /// Specifies whether cube array textures are supported.
+        bool textureCubeArray = false;
+        /// Specifies whether raytracing is supported.
+        bool raytracing = false;
+    };
+
+    struct GraphicsDeviceLimits
+    {
+        uint32_t maxVertexAttributes;
+        uint32_t maxVertexBindings;
+        uint32_t maxVertexAttributeOffset;
+        uint32_t maxVertexBindingStride;
+        uint32_t maxTextureDimension2D;
+        uint32_t maxTextureDimension3D;
+        uint32_t maxTextureDimensionCube;
+        uint32_t maxTextureArrayLayers;
+        uint32_t maxColorAttachments;
+        uint32_t maxUniformBufferSize;
+        uint32_t minUniformBufferOffsetAlignment;
+        uint32_t maxStorageBufferSize;
+        uint32_t minStorageBufferOffsetAlignment;
+        uint32_t maxSamplerAnisotropy;
+        uint32_t maxViewports;
+        uint32_t maxViewportWidth;
+        uint32_t maxViewportHeight;
+        uint32_t maxTessellationPatchSize;
+        float pointSizeRangeMin;
+        float pointSizeRangeMax;
+        float lineWidthRangeMin;
+        float lineWidthRangeMax;
+        uint32_t maxComputeSharedMemorySize;
+        uint32_t maxComputeWorkGroupCountX;
+        uint32_t maxComputeWorkGroupCountY;
+        uint32_t maxComputeWorkGroupCountZ;
+        uint32_t maxComputeWorkGroupInvocations;
+        uint32_t maxComputeWorkGroupSizeX;
+        uint32_t maxComputeWorkGroupSizeY;
+        uint32_t maxComputeWorkGroupSizeZ;
+    };
+
     struct GraphicsDeviceCaps
     {
         GPUBackendType backendType;
@@ -263,41 +312,8 @@ namespace Alimer
         /// Gets the adapter type.
         GPUAdapterType adapterType;
 
-        struct Limits
-        {
-            uint32_t maxVertexAttributes;
-            uint32_t maxVertexBindings;
-            uint32_t maxVertexAttributeOffset;
-            uint32_t maxVertexBindingStride;
-            uint32_t maxTextureDimension2D;
-            uint32_t maxTextureDimension3D;
-            uint32_t maxTextureDimensionCube;
-            uint32_t maxTextureArrayLayers;
-            uint32_t maxColorAttachments;
-            uint32_t maxUniformBufferSize;
-            uint32_t minUniformBufferOffsetAlignment;
-            uint32_t maxStorageBufferSize;
-            uint32_t minStorageBufferOffsetAlignment;
-            uint32_t maxSamplerAnisotropy;
-            uint32_t maxViewports;
-            uint32_t maxViewportWidth;
-            uint32_t maxViewportHeight;
-            uint32_t maxTessellationPatchSize;
-            float pointSizeRangeMin;
-            float pointSizeRangeMax;
-            float lineWidthRangeMin;
-            float lineWidthRangeMax;
-            uint32_t maxComputeSharedMemorySize;
-            uint32_t maxComputeWorkGroupCountX;
-            uint32_t maxComputeWorkGroupCountY;
-            uint32_t maxComputeWorkGroupCountZ;
-            uint32_t maxComputeWorkGroupInvocations;
-            uint32_t maxComputeWorkGroupSizeX;
-            uint32_t maxComputeWorkGroupSizeY;
-            uint32_t maxComputeWorkGroupSizeZ;
-        };
-
-        Limits limits;
+        GraphicsDeviceFeatures features;
+        GraphicsDeviceLimits limits;
     };
 
     ALIMER_API const char* ToString(GPUBackendType value);

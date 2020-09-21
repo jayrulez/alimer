@@ -24,29 +24,29 @@
 #include "D3D11Texture.h"
 #include "D3D11GraphicsDevice.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
     namespace
     {
-        GPUTextureDescription Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
+        TextureDescription Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
         {
             D3D11_TEXTURE2D_DESC d3dDesc;
             texture->GetDesc(&d3dDesc);
 
-            return GPUTextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
+            return TextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
         }
     }
 
     D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : Texture("", Convert2DDesc(externalTexture, format))
+        : Texture(Convert2DDesc(externalTexture, format))
         , device{ device }
         , handle(externalTexture)
     {
         handle->AddRef();
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, const GPUTextureDescription& desc, const void* initialData)
-        : Texture("", desc)
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
+        : Texture(desc)
         , device{ device }
     {
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
@@ -138,7 +138,7 @@ namespace Alimer::Graphics
         }
         break;
         default:
-            ALIMER_FORCE_CRASH();
+            ALIMER_UNREACHABLE();
             break;
         }
     }

@@ -29,21 +29,52 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace Alimer::Graphics
+namespace Alimer
 {
-    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const GraphicsDeviceSettings& settings)
-        : GraphicsDevice()
+    bool D3D11GraphicsDevice::IsAvailable()
     {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        dxgiDLL = LoadLibraryW(L"dxgi.dll");
-        d3d11DLL = LoadLibraryW(L"d3d11.dll");
+        static bool available = false;
+        static bool available_initialized = false;
 
-        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
+        if (available_initialized) {
+            return available;
+        }
+
+        available_initialized = true;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        static HMODULE dxgiDLL = LoadLibraryA("dxgi.dll");
+        if (!dxgiDLL) {
+            return false;
+        }
         CreateDXGIFactory1 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY1>(GetProcAddress(dxgiDLL, "CreateDXGIFactory1"));
+
+        if (!CreateDXGIFactory1)
+        {
+            return false;
+        }
+
         CreateDXGIFactory2 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY2>(GetProcAddress(dxgiDLL, "CreateDXGIFactory2"));
-        D3D11CreateDevice = reinterpret_cast<PFN_D3D11_CREATE_DEVICE>(GetProcAddress(d3d11DLL, "D3D11CreateDevice"));
+        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
+
+        static HMODULE d3d11DLL = LoadLibraryA("d3d11.dll");
+        if (!d3d11DLL) {
+            return false;
+        }
+
+        D3D11CreateDevice = (PFN_D3D11_CREATE_DEVICE)GetProcAddress(d3d11DLL, "D3D11CreateDevice");
+        if (!D3D11CreateDevice) {
+            return false;
+        }
 #endif
 
+        available = true;
+        return true;
+    }
+
+    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const GraphicsDeviceDescription& desc)
+        : GraphicsDevice()
+    {
         CreateFactory();
 
         // Get adapter and create device.
@@ -217,19 +248,11 @@ namespace Alimer::Graphics
 
         // Create SwapChain.
         //swapChain = new D3D11SwapChain(this, window, settings.colorFormatSrgb, settings.verticalSync);
-
-        // 
-        LOGI("Successfully created {} GraphicsDevice", ToString(caps.rendererType));
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
     {
         Shutdown();
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        FreeLibrary(dxgiDLL);
-        FreeLibrary(d3d11DLL);
-#endif
     }
 
     void D3D11GraphicsDevice::Shutdown()
@@ -269,8 +292,8 @@ namespace Alimer::Graphics
 
                 ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
-                dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
-                dxgiInfoQueue->SetBreakOnSeverity(g_DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
 
                 DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
                 {
@@ -279,7 +302,7 @@ namespace Alimer::Graphics
                 DXGI_INFO_QUEUE_FILTER filter = {};
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
-                dxgiInfoQueue->AddStorageFilterEntries(g_DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
             }
         }
 
@@ -373,7 +396,7 @@ namespace Alimer::Graphics
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(adapter->GetDesc1(&desc));
 
-        caps.rendererType = RendererType::Direct3D11;
+        caps.backendType = GPUBackendType::Direct3D11;
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 
@@ -394,6 +417,7 @@ namespace Alimer::Graphics
         ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingSupport, sizeof(threadingSupport)));
 
         // Features
+        caps.features.baseVertex = true;
         caps.features.independentBlend = true;
         caps.features.computeShader = true;
         caps.features.geometryShader = true;
@@ -471,7 +495,12 @@ namespace Alimer::Graphics
         immediateContext->Flush();
     }
 
-    uint64 D3D11GraphicsDevice::Frame()
+    FrameOpResult D3D11GraphicsDevice::BeginFrame()
+    {
+        return FrameOpResult::Success;
+    }
+
+    FrameOpResult D3D11GraphicsDevice::EndFrame(EndFrameFlags flags)
     {
         //SubmitCommandBuffers();
 
@@ -498,10 +527,9 @@ namespace Alimer::Graphics
                 // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
                 CreateFactory();
             }
-
         }
 
-        return frameCount++;
+        return FrameOpResult::Success;
     }
 
     void D3D11GraphicsDevice::HandleDeviceLost()

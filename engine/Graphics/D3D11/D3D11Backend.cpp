@@ -22,9 +22,13 @@
 
 #include "D3D11Backend.h"
 
-namespace Alimer::Graphics
+namespace Alimer
 {
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const String& name)
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_D3D11_CREATE_DEVICE D3D11CreateDevice = nullptr;
+#endif
+
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name)
     {
 #ifdef _DEBUG
         if (obj != nullptr)

@@ -103,7 +103,7 @@ namespace Alimer
     void Application::Tick()
     {
         auto swapChain = GetGraphics()->GetPrimarySwapChain();
-        if (GetGraphics()->BeginFrame(swapChain) != FrameOpResult::Success)
+        if (GetGraphics()->BeginFrame() != FrameOpResult::Success)
             return;
 
         auto commandBuffer = swapChain->CurrentFrameCommandBuffer();
@@ -119,7 +119,7 @@ namespace Alimer
         commandBuffer->PopDebugGroup();
 
         // Present to main swap chain.
-        GetGraphics()->EndFrame(swapChain);
+        GetGraphics()->EndFrame();
     }
 
     const Config* Application::GetConfig()
