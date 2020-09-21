@@ -86,6 +86,7 @@ target_include_directories(${TARGET_NAME} PUBLIC
 )
 
 target_link_libraries(${TARGET_NAME} PUBLIC
+    agpu
     fmt
     stb
     imgui

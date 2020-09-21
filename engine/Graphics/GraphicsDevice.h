@@ -77,7 +77,7 @@ namespace Alimer
 
 
     private:
-        virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
+        //virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
 
     protected:
         GraphicsDevice();

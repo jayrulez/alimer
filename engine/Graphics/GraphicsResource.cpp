@@ -32,12 +32,12 @@ namespace Alimer
         : type{ type }
         , id(s_objectID++)
     {
-        GetGraphics()->AddGraphicsResource(this);
+        //GetGraphics()->AddGraphicsResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        GetGraphics()->RemoveGraphicsResource(this);
+       // GetGraphics()->RemoveGraphicsResource(this);
     }
 
     void GraphicsResource::SetName(const std::string& newName)

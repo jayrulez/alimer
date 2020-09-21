@@ -24,6 +24,7 @@
 #include "Platform/Application.h"
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
+#include <agpu.h>
 
 namespace Alimer
 {
@@ -48,8 +49,7 @@ namespace Alimer
 
     Application::~Application()
     {
-        GetGraphics()->WaitForGPU();
-        RemoveSubsystem<GraphicsDevice>();
+        agpu::shutdown();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -61,20 +61,19 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        GraphicsDeviceDescription deviceDesc = {};
-#ifdef _DEBUG
-        deviceDesc.enableDebugLayer = true;
-#endif
-        deviceDesc.adapterPreference = config.adapterPreference;
-        deviceDesc.primarySwapChain.width = GetMainWindow().GetWidth();
-        deviceDesc.primarySwapChain.height = GetMainWindow().GetHeight();
-        deviceDesc.primarySwapChain.windowHandle = GetMainWindow().GetNativeHandle();
-        //deviceDesc.primarySwapChain.presentMode = PresentMode::Fifo;
+        agpu::InitFlags initFlags = agpu::InitFlags::None;
 
-        GraphicsDevice::Create(config.rendererType, deviceDesc);
+#ifdef _DEBUG
+        initFlags |= agpu::InitFlags::DebugRuntime;
+#endif
+
+        agpu::PresentationParameters presentationParameters = {};
+        presentationParameters.windowHandle = GetMainWindow().GetNativeHandle();
+
+        agpu::init(initFlags, &presentationParameters);
 
         // Define the geometry for a triangle.
-        struct Vertex
+        /*struct Vertex
         {
             Float3 position;
             Color color;
@@ -92,7 +91,7 @@ namespace Alimer
         bufferDesc.size = sizeof(triangleVertices);
         bufferDesc.stride = sizeof(Vertex);
 
-        auto buffer = GetGraphics()->CreateBuffer(bufferDesc, triangleVertices);
+        auto buffer = GetGraphics()->CreateBuffer(bufferDesc, triangleVertices);*/
     }
 
     void Application::Run()
@@ -102,11 +101,10 @@ namespace Alimer
 
     void Application::Tick()
     {
-        auto swapChain = GetGraphics()->GetPrimarySwapChain();
-        if (GetGraphics()->BeginFrame() != FrameOpResult::Success)
+        if (!agpu::beginFrame())
             return;
 
-        auto commandBuffer = swapChain->CurrentFrameCommandBuffer();
+        /*auto commandBuffer = swapChain->CurrentFrameCommandBuffer();
         commandBuffer->PushDebugGroup("Frame");
 
         RenderPassDescription renderPass{};
@@ -116,10 +114,9 @@ namespace Alimer
         commandBuffer->BeginRenderPass(&renderPass);
         commandBuffer->EndRenderPass();
 
-        commandBuffer->PopDebugGroup();
+        commandBuffer->PopDebugGroup();*/
 
-        // Present to main swap chain.
-        GetGraphics()->EndFrame();
+        agpu::endFrame();
     }
 
     const Config* Application::GetConfig()

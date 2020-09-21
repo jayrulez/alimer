@@ -97,7 +97,7 @@ namespace Alimer
         case GPUBackendType::Direct3D11:
             if (D3D11GraphicsDevice::IsAvailable())
             {
-                Instance = new D3D11GraphicsDevice(desc);
+                Instance = new D3D11GraphicsDevice(nullptr, desc);
             }
             else
             {
@@ -170,8 +170,8 @@ namespace Alimer
     RefPtr<GPUBuffer> GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
     {
         // TODO: Validate
-
-        return CreateBufferCore(desc, initialData);
+        return nullptr;
+        //return CreateBufferCore(desc, initialData);
     }
 }
 
