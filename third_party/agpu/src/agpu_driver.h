@@ -107,10 +107,15 @@ namespace agpu
         bool (*beginFrame)(void);
         void (*endFrame)(void);
 
-        const Caps* (*queryCaps)(void);
+        const Caps* (*QueryCaps)(void);
 
-        BufferHandle(*createBuffer)(uint32_t count, uint32_t stride, const void* initialData);
-        void(*destroyBuffer)(BufferHandle handle);
+        BufferHandle(*CreateBuffer)(uint32_t count, uint32_t stride, const void* initialData);
+        void(*DestroyBuffer)(BufferHandle handle);
+
+        /* Commands */
+        void (*PushDebugGroup)(const char* name);
+        void (*PopDebugGroup)(void) = 0;
+        void (*InsertDebugMarker)(const char* name);
     };
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
@@ -120,9 +125,12 @@ namespace agpu
     ASSIGN_DRIVER_FUNC(resize, name)\
     ASSIGN_DRIVER_FUNC(beginFrame, name)\
     ASSIGN_DRIVER_FUNC(endFrame, name)\
-    ASSIGN_DRIVER_FUNC(queryCaps, name)\
-    ASSIGN_DRIVER_FUNC(createBuffer, name)\
-    ASSIGN_DRIVER_FUNC(destroyBuffer, name)
+    ASSIGN_DRIVER_FUNC(QueryCaps, name)\
+    ASSIGN_DRIVER_FUNC(CreateBuffer, name)\
+    ASSIGN_DRIVER_FUNC(DestroyBuffer, name)\
+    ASSIGN_DRIVER_FUNC(PushDebugGroup, name)\
+    ASSIGN_DRIVER_FUNC(PopDebugGroup, name)\
+    ASSIGN_DRIVER_FUNC(InsertDebugMarker, name)
 
     struct agpu_driver
     {

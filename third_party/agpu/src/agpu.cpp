@@ -167,28 +167,44 @@ namespace agpu
         gpu_renderer->endFrame();
     }
 
-    const Caps* getCaps(void)
+    const Caps* QueryCaps(void)
     {
         AGPU_ASSERT(gpu_renderer);
-        return gpu_renderer->queryCaps();
+        return gpu_renderer->QueryCaps();
     }
 
-    BufferHandle createBuffer(uint32_t count, uint32_t stride, const void* initialData)
+    BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
         if (!gpu_renderer || !count || !stride)
         {
             return kInvalidBuffer;
         }
 
-        return gpu_renderer->createBuffer(count, stride, initialData);
+        return gpu_renderer->CreateBuffer(count, stride, initialData);
     }
 
-    void destroyBuffer(BufferHandle handle)
+    void DestroyBuffer(BufferHandle handle)
     {
         if (handle.isValid())
         {
-            gpu_renderer->destroyBuffer(handle);
+            gpu_renderer->DestroyBuffer(handle);
         }
+    }
+
+    /* Commands */
+    void PushDebugGroup(const char* name)
+    {
+        gpu_renderer->PushDebugGroup(name);
+    }
+
+    void PopDebugGroup(void)
+    {
+        gpu_renderer->PopDebugGroup();
+    }
+
+    void InsertDebugMarker(const char* name)
+    {
+        gpu_renderer->InsertDebugMarker(name);
     }
 }
 

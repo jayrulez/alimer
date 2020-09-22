@@ -101,18 +101,32 @@ namespace agpu
     static void gl_endFrame(void) {
     }
 
-    static const Caps* gl_queryCaps(void) {
+    static const Caps* gl_QueryCaps(void) {
         return &gl.caps;
     }
 
-    static BufferHandle gl_createBuffer(uint32_t count, uint32_t stride, const void* initialData)
+    static BufferHandle gl_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
         return kInvalidBuffer;
     }
 
-    static void gl_destroyBuffer(BufferHandle handle)
+    static void gl_DestroyBuffer(BufferHandle handle)
     {
 
+    }
+
+    static void gl_PushDebugGroup(const char* name)
+    {
+        AGPU_UNUSED(name);
+    }
+
+    static void gl_PopDebugGroup(void)
+    {
+    }
+
+    static void gl_InsertDebugMarker(const char* name)
+    {
+        AGPU_UNUSED(name);
     }
 
     /* Driver */

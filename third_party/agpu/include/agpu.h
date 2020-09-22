@@ -72,9 +72,11 @@ namespace agpu
     /* Handles */
     struct BufferHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
     struct TextureHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
+    struct SharedHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleValue };
     static constexpr TextureHandle kInvalidTexture = { kInvalidHandleValue };
+    static constexpr SharedHandle kInvalidShared = { kInvalidHandleValue };
 
     /* Enums */
     enum BackendType : uint32_t {
@@ -270,9 +272,14 @@ namespace agpu
     AGPU_API bool beginFrame(void);
     AGPU_API void endFrame(void);
 
-    AGPU_API const Caps* getCaps(void);
+    AGPU_API const Caps* QueryCaps(void);
     //AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
 
-    AGPU_API BufferHandle createBuffer(uint32_t count, uint32_t stride, const void* initialData);
-    AGPU_API void destroyBuffer(BufferHandle handle);
+    AGPU_API BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData);
+    AGPU_API void DestroyBuffer(BufferHandle handle);
+
+    /* Commands */
+    AGPU_API void PushDebugGroup(const char* name);
+    AGPU_API void PopDebugGroup(void);
+    AGPU_API void InsertDebugMarker(const char* name);
 }

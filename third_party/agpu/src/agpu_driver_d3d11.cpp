@@ -93,7 +93,7 @@ namespace agpu
 
         ID3D11Device1* device;
         ID3D11DeviceContext1* context;
-        ID3DUserDefinedAnnotation* d3d_annotation;
+        ID3DUserDefinedAnnotation* annotation;
         D3D_FEATURE_LEVEL feature_level;
         bool is_lost;
 
@@ -101,7 +101,7 @@ namespace agpu
 
         D3D11SwapChain swapChain;
 
-        std::mutex handle_mutex;
+        std::mutex handle_mutex{};
         Pool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
         Pool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
     } d3d11;
@@ -124,7 +124,7 @@ namespace agpu
         return SUCCEEDED(hr);
     }
 
-    static bool d3d11_create_factory(void)
+    static bool d3d11_CreateFactory(void)
     {
         SAFE_RELEASE(d3d11.factory);
 
@@ -288,7 +288,7 @@ namespace agpu
     {
         d3d11.debug = any(flags & InitFlags::DebugRuntime) || any(flags & InitFlags::GPUBasedValidation);
 
-        if (!d3d11_create_factory()) {
+        if (!d3d11_CreateFactory()) {
             return false;
         }
 
@@ -297,12 +297,12 @@ namespace agpu
 
         /* Create d3d11 device */
         {
-            UINT creation_flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+            UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
             if (d3d11.debug && _agpu_d3d11_sdk_layers_available())
             {
                 // If the project is in a debug build, enable debugging via SDK Layers with this flag.
-                creation_flags |= D3D11_CREATE_DEVICE_DEBUG;
+                creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
             }
 #if defined(_DEBUG)
             else
@@ -332,7 +332,7 @@ namespace agpu
                     (IDXGIAdapter*)dxgi_adapter,
                     D3D_DRIVER_TYPE_UNKNOWN,
                     NULL,
-                    creation_flags,
+                    creationFlags,
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
@@ -344,7 +344,7 @@ namespace agpu
 #if defined(NDEBUG)
             else
             {
-                agpu_log_error("No Direct3D hardware device found");
+                logError("No Direct3D hardware device found");
                 AGPU_UNREACHABLE();
             }
 #else
@@ -357,7 +357,7 @@ namespace agpu
                     NULL,
                     D3D_DRIVER_TYPE_WARP, // Create a WARP device instead of a hardware device.
                     NULL,
-                    creation_flags,
+                    creationFlags,
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
@@ -405,7 +405,7 @@ namespace agpu
 
             VHR(temp_d3d_device->QueryInterface(IID_PPV_ARGS(&d3d11.device)));
             VHR(temp_d3d_context->QueryInterface(IID_PPV_ARGS(&d3d11.context)));
-            VHR(temp_d3d_context->QueryInterface(IID_PPV_ARGS(&d3d11.d3d_annotation)));
+            VHR(temp_d3d_context->QueryInterface(IID_PPV_ARGS(&d3d11.annotation)));
             temp_d3d_context->Release();
             temp_d3d_device->Release();
         }
@@ -520,8 +520,8 @@ namespace agpu
             d3d11_DestroySwapChain(&d3d11.swapChain);
         }
 
+        SAFE_RELEASE(d3d11.annotation);
         SAFE_RELEASE(d3d11.context);
-        SAFE_RELEASE(d3d11.d3d_annotation);
 
         ULONG refCount = d3d11.device->Release();
 #if !defined(NDEBUG)
@@ -555,8 +555,6 @@ namespace agpu
             dxgiDebug1->Release();
         }
 #endif
-
-        memset(&d3d11, 0, sizeof(d3d11));
     }
 
     static void d3d11_update_color_space(D3D11SwapChain* context)
@@ -719,27 +717,22 @@ namespace agpu
             }
         }
 
-        /*if (d3d11_current_context->swapchain)
-        {
-            HRESULT hr = d3d11_current_context->swapchain->Present(d3d11_current_context->sync_interval, d3d11_current_context->present_flags);
-        }*/
-
         if (!d3d11.is_lost)
         {
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
             if (!d3d11.factory->IsCurrent())
             {
-                d3d11_create_factory();
+                d3d11_CreateFactory();
             }
         }
     }
 
-    static const Caps* d3d11_queryCaps(void)
+    static const Caps* d3d11_QueryCaps(void)
     {
         return &d3d11.caps;
     }
 
-    static BufferHandle d3d11_createBuffer(uint32_t count, uint32_t stride, const void* initialData)
+    static BufferHandle d3d11_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
         /* Verify resource limits first. */
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
@@ -827,9 +820,32 @@ namespace agpu
         return { (uint32_t)id };
     }
 
-    static void d3d11_destroyBuffer(BufferHandle handle)
+    static void d3d11_DestroyBuffer(BufferHandle handle)
     {
 
+    }
+
+    static void d3d11_PushDebugGroup(const char* name)
+    {
+        wchar_t wName[128];
+        if (StringConvert(name, wName) > 0)
+        {
+            d3d11.annotation->BeginEvent(wName);
+        }
+    }
+
+    static void d3d11_PopDebugGroup(void)
+    {
+        d3d11.annotation->EndEvent();
+    }
+
+    static void d3d11_InsertDebugMarker(const char* name)
+    {
+        wchar_t wName[128];
+        if (StringConvert(name, wName) > 0)
+        {
+            d3d11.annotation->SetMarker(wName);
+        }
     }
 
     /* Driver */
