@@ -104,7 +104,7 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!agpu::beginFrame())
+        if (!agpu::BeginFrame())
             return;
 
         agpu::PushDebugGroup("Frame");
@@ -118,7 +118,7 @@ namespace Alimer
 
         agpu::PopDebugGroup();
 
-        agpu::endFrame();
+        agpu::EndFrame();
     }
 
     const Config* Application::GetConfig()
