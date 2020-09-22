@@ -43,6 +43,7 @@ define_engine_source_files(
     Core
     Platform
     Math
+    IO
     Assets
     Graphics
     Scene

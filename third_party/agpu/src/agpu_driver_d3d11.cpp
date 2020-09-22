@@ -76,6 +76,15 @@ namespace agpu
         };
     };
 
+    struct D3D11RenderPass
+    {
+        enum { MAX_COUNT = 512 };
+
+        uint32_t rtvsCount;
+        ID3D11RenderTargetView* rtvs[kMaxColorAttachments];
+        ID3D11DepthStencilView* dsv;
+    };
+
     /* Global data */
     static struct {
         bool available_initialized;
@@ -104,6 +113,7 @@ namespace agpu
         std::mutex handle_mutex{};
         Pool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
         Pool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
+        Pool<D3D11RenderPass, D3D11RenderPass::MAX_COUNT> renderPasses;
     } d3d11;
 
     /* Device/Renderer */
@@ -509,6 +519,7 @@ namespace agpu
         /* Init pools*/
         d3d11.buffers.init();
         d3d11.textures.init();
+        d3d11.renderPasses.init();
 
         return true;
     }
@@ -704,7 +715,7 @@ namespace agpu
 
     static void d3d11_endFrame(void)
     {
-        if(d3d11.swapChain.handle != nullptr)
+        if (d3d11.swapChain.handle != nullptr)
         {
             HRESULT hr = d3d11.swapChain.handle->Present(d3d11.swapChain.syncInterval, d3d11.swapChain.presentFlags);
             if (hr == DXGI_ERROR_DEVICE_REMOVED
@@ -730,6 +741,50 @@ namespace agpu
     static const Caps* d3d11_QueryCaps(void)
     {
         return &d3d11.caps;
+    }
+
+    static RenderPassHandle d3d11_CreateRenderPass(const PassDescription& desc)
+    {
+        std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
+
+        if (d3d11.renderPasses.isFull())
+        {
+            logError("D3D11: Not enough free render pass slots.");
+            return kInvalidRenderPass;
+        }
+
+        const int id = d3d11.renderPasses.alloc();
+        if (id < 0) {
+            return kInvalidRenderPass;
+        }
+
+        D3D11RenderPass& renderPass = d3d11.renderPasses[id];
+        renderPass = {};
+
+        HRESULT hr = S_OK;
+        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
+        {
+            if (!desc.colorAttachments[i].texture.isValid())
+                continue;
+
+            D3D11Texture& texture = d3d11.textures[desc.colorAttachments[i].texture.value];
+
+            hr = d3d11.device->CreateRenderTargetView(texture.handle, nullptr, &renderPass.rtvs[renderPass.rtvsCount]);
+            if (FAILED(hr))
+            {
+                logError("Direct3D11: Failed to create RenderTargetView");
+                d3d11.renderPasses.dealloc((uint32_t)id);
+                return kInvalidRenderPass;
+            }
+
+            renderPass.rtvsCount++;
+        }
+        return { (uint32_t)id };
+    }
+
+    static void d3d11_DestroyRenderPass(RenderPassHandle handle)
+    {
+
     }
 
     static BufferHandle d3d11_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
@@ -758,7 +813,7 @@ namespace agpu
         if (id < 0) {
             return kInvalidBuffer;
         }
-        
+
         /*if (any(desc.usage & BufferUsage::Uniform))
         {
             sizeInBytes = AlignTo(sizeInBytes, device->GetCaps().limits.minUniformBufferOffsetAlignment);

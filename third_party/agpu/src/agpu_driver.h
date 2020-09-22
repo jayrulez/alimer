@@ -109,6 +109,9 @@ namespace agpu
 
         const Caps* (*QueryCaps)(void);
 
+        RenderPassHandle(*CreateRenderPass)(const PassDescription& description);
+        void(*DestroyRenderPass)(RenderPassHandle handle);
+
         BufferHandle(*CreateBuffer)(uint32_t count, uint32_t stride, const void* initialData);
         void(*DestroyBuffer)(BufferHandle handle);
 
@@ -126,6 +129,8 @@ namespace agpu
     ASSIGN_DRIVER_FUNC(beginFrame, name)\
     ASSIGN_DRIVER_FUNC(endFrame, name)\
     ASSIGN_DRIVER_FUNC(QueryCaps, name)\
+    ASSIGN_DRIVER_FUNC(CreateRenderPass, name)\
+    ASSIGN_DRIVER_FUNC(DestroyRenderPass, name)\
     ASSIGN_DRIVER_FUNC(CreateBuffer, name)\
     ASSIGN_DRIVER_FUNC(DestroyBuffer, name)\
     ASSIGN_DRIVER_FUNC(PushDebugGroup, name)\

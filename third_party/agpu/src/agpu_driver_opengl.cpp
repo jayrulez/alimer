@@ -105,6 +105,16 @@ namespace agpu
         return &gl.caps;
     }
 
+    static RenderPassHandle gl_CreateRenderPass(const PassDescription& description)
+    {
+        return kInvalidRenderPass;
+    }
+
+    static void gl_DestroyRenderPass(RenderPassHandle handle)
+    {
+
+    }
+
     static BufferHandle gl_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
         return kInvalidBuffer;

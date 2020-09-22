@@ -62,7 +62,7 @@ namespace agpu
 {
     /* Constants */
     static constexpr uint32_t kMaxLogMessageLength = 4096u;
-    static constexpr uint32_t kInvalidHandleValue = 0xFFffFFff;
+    static constexpr uint32_t kInvalidHandleValue = 0xFFFFFFFF;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -73,13 +73,16 @@ namespace agpu
     struct BufferHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
     struct TextureHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
     struct SharedHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
+    struct RenderPassHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleValue };
     static constexpr TextureHandle kInvalidTexture = { kInvalidHandleValue };
-    static constexpr SharedHandle kInvalidShared = { kInvalidHandleValue };
+    static constexpr SharedHandle kInvalidShader = { kInvalidHandleValue };
+    static constexpr RenderPassHandle kInvalidRenderPass = { kInvalidHandleValue };
 
     /* Enums */
-    enum BackendType : uint32_t {
+    enum BackendType : uint32_t
+    {
         /// Null renderer.
         Null,
         /// Direct3D 11 backend.
@@ -96,7 +99,8 @@ namespace agpu
         Count
     };
 
-    enum class InitFlags : uint32_t {
+    enum class InitFlags : uint32_t
+    {
         None = 0,
         DebugRuntime = 1 << 0,
         LowPowerGPUPreference = 1 << 1,
@@ -187,7 +191,22 @@ namespace agpu
         Count
     };
 
+    enum class LoadAction : uint32_t
+    {
+        Discard,
+        Load,
+        Clear
+    };
+
     /* Struct */
+    struct Color
+    {
+        float r;
+        float g;
+        float b;
+        float a;
+    };
+
     struct Features {
         bool independent_blend;
         bool compute_shader;
@@ -256,6 +275,23 @@ namespace agpu
         bool isFullscreen = false;
     };
 
+    struct PassAttachmentDescription
+    {
+        TextureHandle texture;
+        uint32_t mipLevel = 0;
+        union {
+            uint32_t face;
+            uint32_t layer;
+            uint32_t slice;
+        };
+    };
+
+    struct PassDescription
+    {
+        PassAttachmentDescription colorAttachments[kMaxColorAttachments];
+        PassAttachmentDescription depthStencilAttachment;
+    };
+
     /* Callbacks */
     typedef void(AGPU_API_CALL* logCallback)(void* userData, LogLevel level, const char* message);
 
@@ -269,11 +305,15 @@ namespace agpu
     AGPU_API bool init(InitFlags flags, const PresentationParameters* presentationParameters);
     AGPU_API void shutdown(void);
     AGPU_API void resize(uint32_t width, uint32_t height);
-    AGPU_API bool beginFrame(void);
-    AGPU_API void endFrame(void);
+    AGPU_API bool BeginFrame(void);
+    AGPU_API void EndFrame(void);
 
     AGPU_API const Caps* QueryCaps(void);
     //AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
+
+    /* Resource creation methods*/
+    AGPU_API RenderPassHandle CreateRenderPass(const PassDescription& description);
+    AGPU_API void DestroyRenderPass(RenderPassHandle handle);
 
     AGPU_API BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData);
     AGPU_API void DestroyBuffer(BufferHandle handle);

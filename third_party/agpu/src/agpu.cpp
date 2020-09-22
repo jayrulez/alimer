@@ -157,12 +157,12 @@ namespace agpu
         gpu_renderer->resize(width, height);
     }
 
-    bool beginFrame(void)
+    bool BeginFrame(void)
     {
         return gpu_renderer->beginFrame();
     }
 
-    void endFrame(void)
+    void EndFrame(void)
     {
         gpu_renderer->endFrame();
     }
@@ -171,6 +171,19 @@ namespace agpu
     {
         AGPU_ASSERT(gpu_renderer);
         return gpu_renderer->QueryCaps();
+    }
+
+    RenderPassHandle CreateRenderPass(const PassDescription& description)
+    {
+        return gpu_renderer->CreateRenderPass(description);
+    }
+
+    void DestroyRenderPass(RenderPassHandle handle)
+    {
+        if (handle.isValid())
+        {
+            gpu_renderer->DestroyRenderPass(handle);
+        }
     }
 
     BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
