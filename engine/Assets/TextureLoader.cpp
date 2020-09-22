@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,28 +20,14 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Object.h"
+#include "TextureLoader.h"
+#include "AssetManager.h"
+#include "Graphics/Texture.h"
 
 namespace Alimer
 {
-    /// Defines a GPU Resource created by device.
-    class ALIMER_API Resource : public Object
+    TextureLoader::TextureLoader(AssetManager& assets_)
+        : AssetLoader(assets_, Texture::GetTypeStatic())
     {
-        ALIMER_OBJECT(Resource, Object);
-
-    public:
-        /// Set the resource name.
-        void set_name(const std::string& new_name);
-
-        /// Get the resource name.
-        const std::string& get_name() const { return name; }
-        /// Return name id of the resource.
-        const StringId32& get_name_id() const { return name_id; }
-
-    protected:
-        std::string name;
-        StringId32 name_id;
-    };
+    }
 }

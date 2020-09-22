@@ -43,7 +43,7 @@ define_engine_source_files(
     Core
     Platform
     Math
-    resource
+    Assets
     Graphics
     Scene
     UI

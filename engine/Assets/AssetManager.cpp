@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,54 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
-#include <agpu.h>
+#include "AssetManager.h"
+#include "AssetLoader.h"
+
+/* Built-in loaders */
+#include "TextureLoader.h"
 
 namespace Alimer
 {
-    uint64 GraphicsResource::s_objectID = 1;
-
-    GraphicsResource::GraphicsResource(Type type)
-        : type{ type }
-        , id(s_objectID++)
+    AssetManager::AssetManager(const std::string& rootDirectory)
+        : rootDirectory{ rootDirectory }
     {
-        //GetGraphics()->AddGraphicsResource(this);
+        AddLoader(std::make_unique<TextureLoader>(*this));
     }
 
-    GraphicsResource::~GraphicsResource()
+    AssetManager::~AssetManager()
     {
-       // GetGraphics()->RemoveGraphicsResource(this);
+
     }
 
-    void GraphicsResource::SetName(const std::string& newName)
+    void AssetManager::AddLoader(std::unique_ptr<AssetLoader> loader)
     {
-        name = newName;
-        nameId = StringId32(newName);
-        BackendSetName();
+        loaders[loader->GetType()] = std::move(loader);
+    }
+
+    void AssetManager::RemoveLoader(const AssetLoader* loader)
+    {
+        if (!loader)
+            return;
+
+        auto it = loaders.find(loader->GetType());
+        if (it != loaders.end())
+        {
+            loaders.erase(it);
+        }
+    }
+
+    AssetLoader* AssetManager::GetLoader(StringId32 type)
+    {
+        auto it = loaders.find(type);
+        if (it != loaders.end())
+            return it->second.get();
+
+        return nullptr;
+    }
+
+    RefPtr<Object> AssetManager::Load(StringId32 type, const std::string& name)
+    {
+        AssetLoader* loader = GetLoader(type);
+        return nullptr;
     }
 }

@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Platform/Platform.h"
+#include "Assets/AssetManager.h"
 #include "Graphics/Types.h"
 
 namespace Alimer
@@ -37,6 +38,8 @@ namespace Alimer
         bool debug;
         int vsync;
         uint32_t sampleCount;
+
+        std::string rootDirectory = "Assets";
 
         GPUBackendType rendererType = GPUBackendType::Count;
         GraphicsAdapterPreference adapterPreference = GraphicsAdapterPreference::HighPerformance;
@@ -74,12 +77,16 @@ namespace Alimer
         /// Get the main window.
         Window& GetMainWindow() const;
 
+        AssetManager& GetAssets() { return assets; }
+        const AssetManager& GetAssets() const { return assets; }
+
     private:
         void InitBeforeRun();
 
         std::unique_ptr<Platform> platform;
         Config config;
         State state;
+        AssetManager assets;
     };
 
     extern Application* CreateApplication(void);

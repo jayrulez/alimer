@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
-#include <agpu.h>
+#pragma once
+
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    uint64 GraphicsResource::s_objectID = 1;
-
-    GraphicsResource::GraphicsResource(Type type)
-        : type{ type }
-        , id(s_objectID++)
+    class ALIMER_API AssetImporter : public Object
     {
-        //GetGraphics()->AddGraphicsResource(this);
-    }
+        ALIMER_OBJECT(AssetImporter, Object);
 
-    GraphicsResource::~GraphicsResource()
-    {
-       // GetGraphics()->RemoveGraphicsResource(this);
-    }
+    public:
+        /// Destructor.
+        virtual ~AssetImporter() = default;
 
-    void GraphicsResource::SetName(const std::string& newName)
-    {
-        name = newName;
-        nameId = StringId32(newName);
-        BackendSetName();
-    }
+        /// Return type of the loaded object.
+        virtual StringId32 GetTargetType() const = 0;
+    };
 }

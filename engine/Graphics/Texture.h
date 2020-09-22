@@ -22,7 +22,6 @@
 
 #pragma once
 
-
 #include "Graphics/GraphicsResource.h"
 
 namespace Alimer
@@ -32,11 +31,21 @@ namespace Alimer
         ALIMER_OBJECT(Texture, GraphicsResource);
 
     public:
+        /// Register object factory.
+        static void RegisterObject();
+
+        /// Construct.
+        Texture();
+        /// Destruct.
+        ~Texture();
+
         /// Constructor.
         Texture(const TextureDescription& desc);
 
+        void Destroy() override;
+
         /// Get the texture pixel format.
-        //PixelFormat GetFormat() const { return format; }
+        PixelFormat GetFormat() const { return format; }
 
         /// Get a mip-level width.
         uint32 GetWidth(uint32 mipLevel = 0) const;
@@ -54,7 +63,7 @@ namespace Alimer
         uint32 GetArrayLayers() const { return arrayLayers; }
 
         /// Get the texture usage.
-        //TextureUsage GetUsage() const { return usage; }
+        TextureUsage GetUsage() const { return usage; }
 
         /// Get the array index of a subresource.
         uint32 GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
@@ -74,7 +83,8 @@ namespace Alimer
 
         static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
-    protected:
+    private:
+        agpu::TextureHandle handle = agpu::kInvalidTexture;
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;

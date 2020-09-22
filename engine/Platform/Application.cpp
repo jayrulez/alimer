@@ -30,9 +30,10 @@ namespace Alimer
 {
     static Application* s_appCurrent = nullptr;
 
-    Application::Application(const Config& config_)
-        : config(config_)
+    Application::Application(const Config& config)
+        : config{ config }
         , state(State::Uninitialized)
+        , assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
@@ -72,6 +73,8 @@ namespace Alimer
 
         agpu::init(initFlags, &presentationParameters);
 
+        assets.Load<Texture>("texture.png");
+
         // Define the geometry for a triangle.
         /*struct Vertex
         {
@@ -104,17 +107,16 @@ namespace Alimer
         if (!agpu::beginFrame())
             return;
 
-        /*auto commandBuffer = swapChain->CurrentFrameCommandBuffer();
-        commandBuffer->PushDebugGroup("Frame");
+        agpu::PushDebugGroup("Frame");
 
-        RenderPassDescription renderPass{};
+        /*RenderPassDescription renderPass{};
         renderPass.colorAttachments[0].texture = GetGraphics()->GetPrimarySwapChain()->GetColorTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
 
         commandBuffer->BeginRenderPass(&renderPass);
-        commandBuffer->EndRenderPass();
+        commandBuffer->EndRenderPass();*/
 
-        commandBuffer->PopDebugGroup();*/
+        agpu::PopDebugGroup();
 
         agpu::endFrame();
     }

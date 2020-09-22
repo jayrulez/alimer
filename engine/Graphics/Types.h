@@ -25,6 +25,7 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+#include <agpu.h>
 
 namespace Alimer
 {
@@ -341,4 +342,7 @@ namespace Alimer
     {
         return vendorId == KnownVendorId_Microsoft;
     }
+
+    /// Register Graphics related object factories and attributes.
+    ALIMER_API void RegisterGraphicsLibrary();
 }

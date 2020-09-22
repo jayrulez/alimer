@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,31 +20,37 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
-#include <agpu.h>
+#pragma once
+
+#include "Core/Object.h"
 
 namespace Alimer
 {
-    uint64 GraphicsResource::s_objectID = 1;
+    class AssetLoader;
 
-    GraphicsResource::GraphicsResource(Type type)
-        : type{ type }
-        , id(s_objectID++)
+    class ALIMER_API AssetManager : public Object
     {
-        //GetGraphics()->AddGraphicsResource(this);
-    }
+        ALIMER_OBJECT(AssetManager, Object);
 
-    GraphicsResource::~GraphicsResource()
-    {
-       // GetGraphics()->RemoveGraphicsResource(this);
-    }
+    public:
+        /// Constructor.
+        AssetManager(const std::string& rootDirectory);
+        /// Destructor.
+        ~AssetManager();
 
-    void GraphicsResource::SetName(const std::string& newName)
-    {
-        name = newName;
-        nameId = StringId32(newName);
-        BackendSetName();
-    }
+        void AddLoader(std::unique_ptr<AssetLoader> loader);
+        void RemoveLoader(const AssetLoader* loader);
+        AssetLoader* GetLoader(StringId32 type);
+
+        /// Load content from name.
+        RefPtr<Object> Load(StringId32 type, const std::string& name);
+
+        /// Load content from name, template version.
+        template <class T> RefPtr<T> Load(const std::string& name) { return StaticCast<T>(Load(T::GetTypeStatic(), name)); }
+
+    protected:
+        std::string rootDirectory;
+
+        std::unordered_map<StringId32, std::unique_ptr<AssetLoader>> loaders;
+    };
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,16 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "resource/resource.h"
+#pragma once
+
+#include "Assets/AssetLoader.h"
 
 namespace Alimer
 {
-    void Resource::set_name(const std::string& new_name)
+    class ALIMER_API TextureLoader final : public AssetLoader
     {
-        name = new_name;
-        name_id = StringId32(new_name);
-    }
+    public:
+        /// Constructor.
+        explicit TextureLoader(AssetManager& assets_);
+    };
 }
