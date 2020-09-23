@@ -975,7 +975,7 @@ namespace agpu
         return &renderer;
     }
 
-    agpu_driver d3d11_driver = {
+    Driver D3D11_Driver = {
         BackendType::Direct3D11,
         d3d11_is_supported,
         d3d11_create_renderer

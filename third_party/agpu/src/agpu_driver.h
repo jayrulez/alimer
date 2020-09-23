@@ -137,17 +137,18 @@ namespace agpu
     ASSIGN_DRIVER_FUNC(PopDebugGroup, name)\
     ASSIGN_DRIVER_FUNC(InsertDebugMarker, name)
 
-    struct agpu_driver
+    struct Driver
     {
         BackendType backend;
         bool (*isSupported)(void);
         agpu_renderer* (*createRenderer)(void);
     };
 
-    extern agpu_driver d3d11_driver;
-    extern agpu_driver vulkan_driver;
-    extern agpu_driver metal_driver;
-    extern agpu_driver gl_driver;
+    extern Driver D3D12_Driver;
+    extern Driver D3D11_Driver;
+    extern Driver vulkan_driver;
+    extern Driver metal_driver;
+    extern Driver GL_Driver;
 }
 
 

@@ -158,7 +158,7 @@ namespace agpu
         return &renderer;
     }
 
-    agpu_driver gl_driver = {
+    Driver GL_Driver = {
         BackendType::OpenGL,
         gl_is_supported,
         gl_create_renderer

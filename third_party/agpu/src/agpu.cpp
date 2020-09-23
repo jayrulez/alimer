@@ -72,9 +72,12 @@ namespace agpu
         }
     }
 
-    static const agpu_driver* drivers[] = {
+    static const Driver* drivers[] = {
+    #if AGPU_DRIVER_D3D12
+        &D3D12_Driver,
+    #endif
     #if AGPU_DRIVER_D3D11
-        & d3d11_driver,
+        &D3D11_Driver,
     #endif
     #if AGPU_DRIVER_METAL
         & metal_driver,
@@ -83,7 +86,7 @@ namespace agpu
         &vulkan_driver,
     #endif
     #if AGPU_DRIVER_OPENGL
-        & gl_driver,
+        &GL_Driver,
     #endif
 
         nullptr
