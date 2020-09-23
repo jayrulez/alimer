@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(Alimer)
-set(TARGET_NAME Alimer)
 
 macro (define_engine_source_files)
     cmake_parse_arguments(DEFINE_SRC_FILES "" "" "" ${ARGN})
@@ -57,16 +56,6 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     define_engine_source_files(Platform/glfw)
 endif()
 
-if (ALIMER_ENABLE_D3D11)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D11)
-endif()
-
-if (ALIMER_ENABLE_D3D12)
-    define_engine_source_files(Graphics/D3D)
-    #define_engine_source_files(Graphics/D3D12)
-endif()
-
 if (ALIMER_ENABLE_VULKAN)
     #define_engine_source_files(Graphics/Vulkan)
 endif()
@@ -74,19 +63,19 @@ endif()
 group_sources()
 
 if (ALIMER_BUILD_SHARED)
-    add_library(${TARGET_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
-    target_compile_definitions(${TARGET_NAME} PUBLIC ALIMER_SHARED_LIBRARY)
+    add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${HEADER_FILES})
+    target_compile_definitions(${PROJECT_NAME} PUBLIC ALIMER_SHARED_LIBRARY)
 else ()
-    add_library(${TARGET_NAME} ${SOURCE_FILES} ${HEADER_FILES})
+    add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
-target_compile_definitions(${TARGET_NAME} PRIVATE ALIMER_COMPILE)
+target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_COMPILE)
 
-target_include_directories(${TARGET_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 )
 
-target_link_libraries(${TARGET_NAME} PUBLIC
+target_link_libraries(${PROJECT_NAME} PUBLIC
     agpu
     fmt
     stb
@@ -143,46 +132,33 @@ elseif(ANDROID)
     target_link_libraries(${PROJECT_NAME} PRIVATE log android native_app_glue)
 elseif(APPLE)
 elseif(WINDOWS_STORE)
-    set_target_properties(${TARGET_NAME} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
+    set_target_properties(${PROJECT_NAME} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
 
-    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
-    target_compile_options(${TARGET_NAME} PUBLIC "/Zc:__cplusplus")
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:__cplusplus")
     # we need this when using /permissive
-    target_compile_options(${TARGET_NAME} PUBLIC "/Zc:twoPhase-")
+    target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:twoPhase-")
 
     if (ALIMER_ENABLE_D3D12)
-        target_link_libraries(${TARGET_NAME} PRIVATE d3d12 dxgi)
+        target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
     endif()
 
     if (ALIMER_ENABLE_D3D11)
-        target_link_libraries(${TARGET_NAME} PRIVATE d3d11 dxgi)
+        target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi)
     endif()
 elseif (WIN32)
-    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
-    target_compile_definitions(${TARGET_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
-    target_compile_definitions(${TARGET_NAME} PUBLIC UNICODE _UNICODE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC UNICODE _UNICODE)
 
-    set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
-    target_link_libraries(${TARGET_NAME} PRIVATE ws2_32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
+    target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 elseif(UNIX)
 endif ()
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
-    target_link_libraries(${TARGET_NAME} PRIVATE glfw)
+    target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 endif ()
-
-if (ALIMER_ENABLE_D3D12)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D12")
-endif()
-
-if (ALIMER_ENABLE_D3D11)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_D3D11")
-endif()
-
-if (ALIMER_ENABLE_VULKAN)
-    target_compile_definitions(${TARGET_NAME} PRIVATE "ALIMER_ENABLE_VULKAN")
-    target_link_libraries(${TARGET_NAME} PRIVATE vma volk)
-endif()
 
 # SDK installation
 install(TARGETS ${PROJECT_NAME}

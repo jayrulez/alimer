@@ -69,13 +69,10 @@ include(alimer)
 option(BUILD_SHARED_LIBS  "Build shared libraries" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
-if (ANDROID OR IOS OR EMSCRIPTEN OR WINDOWS_STORE)
-    set(ALIMER_BUILD_TOOLS OFF CACHE INTERNAL "Disable tools" FORCE)
-    set(ALIMER_BUILD_EDITOR OFF CACHE INTERNAL "Disable editor" FORCE)
-else ()
-    option(ALIMER_BUILD_TOOLS "Build tools" ON)
+if (NOT ANDROID AND NOT EMSCRIPTEN AND NOT IOS AND NOT WINDOWS_STORE)
+    option(ALIMER_BUILD_TOOLS "Build tools" TRUE)
     option(ALIMER_BUILD_EDITOR "Build Editor" ON)
-endif ()
+endif()
 
 # Default values for the backend-enabling options
 set(ENABLE_D3D12 OFF)
@@ -128,6 +125,10 @@ endif()
 
 # Third Party 
 add_subdirectory(third_party)
+
+if (ALIMER_BUILD_TOOLS)
+    add_subdirectory(tools/ShaderCompiler)
+endif()
 
 # Engine
 add_subdirectory(engine)
