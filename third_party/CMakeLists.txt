@@ -66,3 +66,9 @@ if (ALIMER_ENABLE_VULKAN)
     target_include_directories(volk PUBLIC ${VOLK_DIR})
     set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
 endif()
+
+# cxxopts
+add_library(cxxopts INTERFACE)
+set(CXXOPTS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cxxopts/include)
+target_sources(cxxopts INTERFACE ${CXXOPTS_INCLUDE_DIR}/cxxopts.hpp)
+target_include_directories(cxxopts INTERFACE ${CXXOPTS_INCLUDE_DIR})

@@ -28,6 +28,7 @@ Uses the following open-source and third-party libraries:
 - [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
 - [Dear ImGui](https://github.com/ocornut/imgui)
 - [fmt 7.0.3](https://fmt.dev)
+- [cxxopts](https://github.com/jarro2783/cxxopts)
 
 Additional inspiration, research or code used:
 
