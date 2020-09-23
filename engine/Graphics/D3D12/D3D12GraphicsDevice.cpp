@@ -272,7 +272,7 @@ namespace Alimer
         }
 
         // Create primary SwapChain.
-        primarySwapChain.Reset(new D3D12SwapChain(this, desc.primarySwapChain));
+        //primarySwapChain.Reset(new D3D12SwapChain(this, desc.primarySwapChain));
 
         // Frame fence
         frameFence.Init(this, 0);
@@ -583,7 +583,7 @@ namespace Alimer
         return CPUHandle;
     }
 
-    bool D3D12GraphicsDevice::IsFeatureSupported(Feature feature) const
+    /*bool D3D12GraphicsDevice::IsFeatureSupported(Feature feature) const
     {
         switch (feature)
         {
@@ -633,7 +633,7 @@ namespace Alimer
             ALIMER_UNREACHABLE();
             return false;
         }
-    }
+    }*/
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
@@ -653,24 +653,25 @@ namespace Alimer
         }
     }
 
-    FrameOpResult D3D12GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
+    FrameOpResult D3D12GraphicsDevice::BeginFrame()
     {
-        ALIMER_UNUSED(flags);
+       /* ALIMER_UNUSED(flags);
 
         D3D12SwapChain* d3d11SwapChain = static_cast<D3D12SwapChain*>(swapChain);
-        d3d11SwapChain->BeginFrame();
+        d3d11SwapChain->BeginFrame();*/
         return FrameOpResult::Success;
     }
 
-    FrameOpResult D3D12GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
+    FrameOpResult D3D12GraphicsDevice::EndFrame(EndFrameFlags flags)
     {
         // TODO: Manage upload
 
         // Execute deferred command lists.
-        D3D12SwapChain* d3d11SwapChain = static_cast<D3D12SwapChain*>(swapChain);
+        /*D3D12SwapChain* d3d11SwapChain = static_cast<D3D12SwapChain*>(swapChain);
         FrameOpResult result = d3d11SwapChain->EndFrame(graphicsQueue, flags);
         if (result != FrameOpResult::Success)
             return result;
+        */
 
         // Increase frame count.
         frameCount++;
@@ -727,10 +728,10 @@ namespace Alimer
         deferredReleases[index].clear();
     }
 
-    RefPtr<GPUBuffer> D3D12GraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
+    /*RefPtr<GPUBuffer> D3D12GraphicsDevice::CreateBufferCore(const BufferDescription& desc, const void* initialData)
     {
         return MakeRefPtr<D3D12Buffer>(this, desc, initialData);
-    }
+    }*/
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
     IDxcLibrary* D3D12GraphicsDevice::GetOrCreateDxcLibrary()

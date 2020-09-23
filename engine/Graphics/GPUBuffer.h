@@ -61,6 +61,7 @@ namespace Alimer
         }
 
     protected:
+        BufferHandle handle{};
         BufferUsage usage;
         uint32 size;
         uint32 stride;

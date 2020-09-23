@@ -83,8 +83,8 @@ namespace Alimer
 
         static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
-    private:
-        agpu::TextureHandle handle = agpu::kInvalidTexture;
+    protected:
+        TextureHandle handle{};
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;

@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Graphics/Types.h"
+#include "Graphics/BackendTypes.h"
 
 namespace Alimer
 {
@@ -69,6 +69,7 @@ namespace Alimer
         std::string name;
         StringId32 nameId;
         uint64 id;
+        GPUAllocation allocation{};
 
     private:
         static uint64 s_objectID;

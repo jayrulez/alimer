@@ -24,7 +24,6 @@
 #include "Platform/Application.h"
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
-#include <agpu.h>
 
 namespace Alimer
 {
@@ -50,7 +49,8 @@ namespace Alimer
 
     Application::~Application()
     {
-        agpu::shutdown();
+        GraphicsDevice::Instance->WaitForGPU();
+        SafeDelete(GraphicsDevice::Instance);
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -62,18 +62,13 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        agpu::InitFlags initFlags = agpu::InitFlags::None;
-
+        GraphicsDeviceDescription graphicsDesc = {};
 #ifdef _DEBUG
-        initFlags |= agpu::InitFlags::DebugRuntime;
+        graphicsDesc.enableDebugLayer = true;
 #endif
 
-        agpu::PresentationParameters presentationParameters = {};
-        presentationParameters.windowHandle = GetMainWindow().GetNativeHandle();
-
-        agpu::init(initFlags, &presentationParameters);
-
-        assets.Load<Texture>("texture.png");
+        GraphicsDevice::Create(graphicsDesc);
+        //assets.Load<Texture>("texture.png");
 
         // Define the geometry for a triangle.
         /*struct Vertex
@@ -104,21 +99,22 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!agpu::BeginFrame())
+        /*if (!agpu::BeginFrame())
             return;
 
         agpu::PushDebugGroup("Frame");
 
-        /*RenderPassDescription renderPass{};
+        RenderPassDescription renderPass{};
         renderPass.colorAttachments[0].texture = GetGraphics()->GetPrimarySwapChain()->GetColorTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
 
         commandBuffer->BeginRenderPass(&renderPass);
-        commandBuffer->EndRenderPass();*/
+        commandBuffer->EndRenderPass();
 
         agpu::PopDebugGroup();
 
         agpu::EndFrame();
+        */
     }
 
     const Config* Application::GetConfig()

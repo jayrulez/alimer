@@ -67,14 +67,13 @@ namespace Alimer
         void GetAdapter(GraphicsAdapterPreference adapterPreference, IDXGIAdapter1** ppAdapter);
         void InitCapabilities(IDXGIAdapter1* adapter);
 
-        bool IsFeatureSupported(Feature feature) const override;
         void WaitForGPU() override;
-        FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags) override;
-        FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
+        FrameOpResult BeginFrame() override;
+        FrameOpResult EndFrame(EndFrameFlags flags) override;
         void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
         void ProcessDeferredReleases(uint64 index);
 
-        RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) override;
+        //RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) override;
 
         DWORD dxgiFactoryFlags;
         ComPtr<IDXGIFactory4> dxgiFactory;

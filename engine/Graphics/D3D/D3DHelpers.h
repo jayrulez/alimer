@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"
+#include "AlimerConfig.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
 #include "Graphics/Types.h"

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,21 +20,42 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#pragma once
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
+#include "AlimerConfig.h"
+#include "Graphics/Types.h"
 
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PLUGINS
+#if defined(ALIMER_D3D12)
+struct ID3D12Resource;
 
+namespace D3D12MA
+{
+    class Allocator;
+    class Allocation;
+};
+
+#elif defined(ALIMER_VULKAN)
+#   if defined(__LP64__) || defined(_WIN64) || (defined(__x86_64__) && !defined(__ILP32__) ) || defined(_M_X64) || defined(__ia64) || defined (_M_IA64) || defined(__aarch64__) || defined(__powerpc64__)
+typedef struct VkImage_T* VkImage;
+typedef struct VkBuffer_T* VkBuffer;
+#   else
+typedef uint64_t VkImage;
+typedef uint64_t VkBuffer;
+#   endif
+
+typedef struct VmaAllocation_T* VmaAllocation;
 #endif
+
+
+namespace Alimer
+{
+#if defined(ALIMER_D3D12)
+    using GPUAllocation = D3D12MA::Allocation*;
+    using TextureHandle = ID3D12Resource*;
+    using BufferHandle = ID3D12Resource*;
+#elif defined(ALIMER_VULKAN)
+    using GPUAllocation = VmaAllocation;
+    using TextureHandle = VkImage;
+    using BufferHandle = VkBuffer;
+#endif
+}

@@ -156,7 +156,7 @@ namespace Alimer
                 switch (attachment.loadAction)
                 {
                 case LoadAction::Discard:
-                    commandList->DiscardResource(texture->GetResource(), nullptr);
+                    //commandList->DiscardResource(texture->GetResource(), nullptr);
                     break;
 
                 case LoadAction::Clear:

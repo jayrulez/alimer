@@ -53,9 +53,9 @@ namespace Alimer
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES state_)
         : Texture(ConvertResourceDesc(resource->GetDesc()))
         , device{ device }
-        , resource{ resource }
         , state(state_)
     {
+        handle = resource.Get();
         RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
         device->GetD3DDevice()->CreateRenderTargetView(resource.Get(), nullptr, RTV);
     }
@@ -134,21 +134,22 @@ namespace Alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
-        /*HRESULT hr = device->GetAllocator()->CreateResource(
+        HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
             &resourceDesc,
             state,
             pClearValue,
             &allocation,
-            IID_PPV_ARGS(&resource)
+            IID_PPV_ARGS(&handle)
         );
 
-        if (FAILED(hr)) {
-            LOG_ERROR("Direct3D12: Failed to create texture");
+        if (FAILED(hr))
+        {
+            LOGE("Direct3D12: Failed to create texture");
             return;
         }
 
-        const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
+        /*const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
         device->GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);
 
         if (initialData != nullptr)
@@ -179,14 +180,14 @@ namespace Alimer
 
     void D3D12Texture::Destroy()
     {
-        resource = nullptr;
+        SafeRelease(handle);
         SafeRelease(allocation);
     }
 
     void D3D12Texture::BackendSetName()
     {
         auto wideName = ToUtf16(name);
-        resource->SetName(wideName.c_str());
+        handle->SetName(wideName.c_str());
     }
 
     void D3D12Texture::TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState)
@@ -197,7 +198,7 @@ namespace Alimer
         D3D12_RESOURCE_BARRIER barrierDesc{};
         barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrierDesc.Transition.pResource = resource.Get();
+        barrierDesc.Transition.pResource = handle;
         barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrierDesc.Transition.StateBefore = state;
         barrierDesc.Transition.StateAfter = newState;

@@ -26,12 +26,13 @@
 #include "Graphics/CommandBuffer.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
-#include <set>
 #include <memory>
 #include <mutex>
 
 namespace Alimer
 {
+    struct DeviceApiData;
+
     /// Defines the graphics subsystem.
     class ALIMER_API GraphicsDevice : public Object
     {
@@ -44,8 +45,7 @@ namespace Alimer
         /// Destructor.
         virtual ~GraphicsDevice() = default;
 
-        static std::set<GPUBackendType> GetAvailableBackends();
-        static GraphicsDevice* Create(GPUBackendType preferredBackend, const GraphicsDeviceDescription& desc);
+        static GraphicsDevice* Create( const GraphicsDeviceDescription& desc);
 
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
@@ -88,6 +88,8 @@ namespace Alimer
         uint64_t frameCount{ 0 };
 
     private:
+        DeviceApiData* apiData = nullptr;
+
         /// Mutex for accessing the GPU objects vector from several threads.
         std::mutex gpuObjectMutex;
 

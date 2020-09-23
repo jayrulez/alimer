@@ -36,7 +36,8 @@ macro(group_sources)
     endforeach ()
 endmacro()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/AlimerConfig.h.in ${CMAKE_CURRENT_BINARY_DIR}/AlimerConfig.h)
+set(SOURCE_FILES ${CMAKE_CURRENT_BINARY_DIR}/AlimerConfig.h)
 
 define_engine_source_files(
     Core
@@ -54,6 +55,11 @@ define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     define_engine_source_files(Platform/glfw)
+endif()
+
+if(ALIMER_D3D12)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_ENABLE_VULKAN)
@@ -76,7 +82,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    agpu
     fmt
     stb
     imgui
@@ -138,14 +143,6 @@ elseif(WINDOWS_STORE)
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:__cplusplus")
     # we need this when using /permissive
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:twoPhase-")
-
-    if (ALIMER_ENABLE_D3D12)
-        target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
-    endif()
-
-    if (ALIMER_ENABLE_D3D11)
-        target_link_libraries(${PROJECT_NAME} PRIVATE d3d11 dxgi)
-    endif()
 elseif (WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
     target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
@@ -158,6 +155,10 @@ endif ()
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+endif ()
+
+if (ALIMER_D3D12)
+    target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator d3d12 d3d11 dxgi dxguid)
 endif ()
 
 # SDK installation

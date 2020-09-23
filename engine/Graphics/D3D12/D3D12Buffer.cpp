@@ -55,7 +55,7 @@ namespace Alimer
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-        HRESULT hr = device->GetAllocator()->CreateResource(&allocationDesc, &resourceDesc, state, nullptr, &allocation, IID_PPV_ARGS(&resource));
+        HRESULT hr = device->GetAllocator()->CreateResource(&allocationDesc, &resourceDesc, state, nullptr, &allocation, IID_PPV_ARGS(&handle));
 
         if (FAILED(hr)) {
             LOGE("Direct3D12: Failed to create buffer");
@@ -75,11 +75,11 @@ namespace Alimer
     void D3D12Buffer::Destroy()
     {
         SafeRelease(allocation);
-        device->DeferredRelease(resource);
+        device->DeferredRelease(handle);
     }
 
     void D3D12Buffer::BackendSetName()
     {
-        D3D12SetObjectName(resource, name);
+        D3D12SetObjectName(handle, name);
     }
 }

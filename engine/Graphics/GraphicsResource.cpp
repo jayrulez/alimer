@@ -23,7 +23,6 @@
 #include "Core/Log.h"
 #include "Graphics/GraphicsResource.h"
 #include "Graphics/GraphicsDevice.h"
-#include <agpu.h>
 
 namespace Alimer
 {
@@ -33,12 +32,12 @@ namespace Alimer
         : type{ type }
         , id(s_objectID++)
     {
-        //GetGraphics()->AddGraphicsResource(this);
+        //GraphicsDevice::Instance->AddGraphicsResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-       // GetGraphics()->RemoveGraphicsResource(this);
+        //GraphicsDevice::Instance->RemoveGraphicsResource(this);
     }
 
     void GraphicsResource::SetName(const std::string& newName)
