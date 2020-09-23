@@ -89,10 +89,6 @@ namespace agpu
         memset(&gl, 0, sizeof(gl));
     }
 
-    static void gl_resize(uint32_t width, uint32_t height)
-    {
-    }
-
     static bool gl_beginFrame(void)
     {
         return true;
@@ -105,12 +101,17 @@ namespace agpu
         return &gl.caps;
     }
 
-    static RenderPassHandle gl_CreateRenderPass(const PassDescription& description)
+    static Framebuffer gl_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
     {
-        return kInvalidRenderPass;
+        return kInvalidFramebuffer;
     }
 
-    static void gl_DestroyRenderPass(RenderPassHandle handle)
+    static Framebuffer gl_CreateRenderPass(const PassDescription& description)
+    {
+        return kInvalidFramebuffer;
+    }
+
+    static void gl_DestroyRenderPass(Framebuffer handle)
     {
 
     }

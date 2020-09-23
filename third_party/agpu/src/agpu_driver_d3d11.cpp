@@ -433,27 +433,23 @@ namespace agpu
             d3d11.caps.vendorID = adapter_desc.VendorId;
             d3d11.caps.deviceID = adapter_desc.DeviceId;
 
-            d3d11.caps.features.independent_blend = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_0);
-            d3d11.caps.features.compute_shader = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_0);
-            d3d11.caps.features.tessellation_shader = (d3d11.feature_level >= D3D_FEATURE_LEVEL_11_0);
-            d3d11.caps.features.multi_viewport = true;
-            d3d11.caps.features.index_uint32 = true;
-            d3d11.caps.features.multi_draw_indirect = (d3d11.feature_level >= D3D_FEATURE_LEVEL_11_0);
-            d3d11.caps.features.fill_mode_non_solid = true;
-            d3d11.caps.features.sampler_anisotropy = true;
-            d3d11.caps.features.texture_compression_ETC2 = false;
-            d3d11.caps.features.texture_compression_ASTC_LDR = false;
-            d3d11.caps.features.texture_compression_BC = true;
-            d3d11.caps.features.texture_cube_array = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_1);
+            d3d11.caps.features.independentBlend = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_0);
+            d3d11.caps.features.computeShader = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_0);
+            d3d11.caps.features.indexUInt32 = true;
+            d3d11.caps.features.fillModeNonSolid = true;
+            d3d11.caps.features.samplerAnisotropy = true;
+            d3d11.caps.features.textureCompressionETC2 = false;
+            d3d11.caps.features.textureCompressionASTC_LDR = false;
+            d3d11.caps.features.textureCompressionBC = true;
+            d3d11.caps.features.textureCubeArray = (d3d11.feature_level >= D3D_FEATURE_LEVEL_10_1);
             d3d11.caps.features.raytracing = false;
 
             // Limits
-            d3d11.caps.limits.max_vertex_attributes = kMaxVertexAttributes;
-            d3d11.caps.limits.max_vertex_bindings = kMaxVertexAttributes;
-            d3d11.caps.limits.max_vertex_attribute_offset = kMaxVertexAttributeOffset;
-            d3d11.caps.limits.max_vertex_binding_stride = kMaxVertexBufferStride;
+            d3d11.caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+            d3d11.caps.limits.maxVertexBindings = kMaxVertexAttributes;
+            d3d11.caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+            d3d11.caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
 
-            d3d11.caps.limits.maxTextureDimension1D = D3D11_REQ_TEXTURE1D_U_DIMENSION;
             d3d11.caps.limits.maxTextureDimension2D = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
             d3d11.caps.limits.maxTextureDimension3D = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
             d3d11.caps.limits.maxTextureDimensionCube = D3D11_REQ_TEXTURECUBE_DIMENSION;
@@ -694,11 +690,6 @@ namespace agpu
         SAFE_RELEASE(swapChain->rtv);
     }
 
-    static void d3d11_resize(uint32_t width, uint32_t height)
-    {
-
-    }
-
     static bool d3d11_beginFrame(void) {
         float clear_color[4] = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
 
@@ -743,19 +734,24 @@ namespace agpu
         return &d3d11.caps;
     }
 
-    static RenderPassHandle d3d11_CreateRenderPass(const PassDescription& desc)
+    static Framebuffer d3d11_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
+    {
+        return kInvalidFramebuffer;
+    }
+
+    static Framebuffer d3d11_CreateRenderPass(const PassDescription& desc)
     {
         std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
 
         if (d3d11.renderPasses.isFull())
         {
             logError("D3D11: Not enough free render pass slots.");
-            return kInvalidRenderPass;
+            return kInvalidFramebuffer;
         }
 
         const int id = d3d11.renderPasses.alloc();
         if (id < 0) {
-            return kInvalidRenderPass;
+            return kInvalidFramebuffer;
         }
 
         D3D11RenderPass& renderPass = d3d11.renderPasses[id];
@@ -774,7 +770,7 @@ namespace agpu
             {
                 logError("Direct3D11: Failed to create RenderTargetView");
                 d3d11.renderPasses.dealloc((uint32_t)id);
-                return kInvalidRenderPass;
+                return kInvalidFramebuffer;
             }
 
             renderPass.rtvsCount++;
@@ -782,7 +778,7 @@ namespace agpu
         return { (uint32_t)id };
     }
 
-    static void d3d11_DestroyRenderPass(RenderPassHandle handle)
+    static void d3d11_DestroyRenderPass(Framebuffer handle)
     {
 
     }

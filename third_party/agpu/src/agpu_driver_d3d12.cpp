@@ -88,18 +88,17 @@ namespace agpu
 
         bool debug;
         bool GPUBasedValidation;
+        Caps caps;
 
         DWORD dxgiFactoryFlags;
         IDXGIFactory4* factory;
         DXGIFactoryCaps factoryCaps;
-
         D3D_FEATURE_LEVEL minFeatureLevel;
 
         ID3D12Device* device;
+        D3D12MA::Allocator* allocator;
         D3D_FEATURE_LEVEL feature_level;
         bool is_lost;
-
-        Caps caps;
 
         D3D12SwapChain swapChain;
 
@@ -306,42 +305,89 @@ namespace agpu
         }
 
         const bool lowPower = any(flags & InitFlags::LowPowerGPUPreference);
-        IDXGIAdapter1* dxgi_adapter = d3d12_GetAdapter(lowPower);
+        IDXGIAdapter1* adapter = d3d12_GetAdapter(lowPower);
+
+        // Create the DX12 API device object.
+        {
+            VHR(D3D12CreateDevice(adapter, d3d12.minFeatureLevel, IID_PPV_ARGS(&d3d12.device)));
+
+#ifndef NDEBUG
+            // Configure debug device (if active).
+            ID3D12InfoQueue* d3dInfoQueue;
+            if (SUCCEEDED(d3d12.device->QueryInterface(&d3dInfoQueue)))
+            {
+#ifdef _DEBUG
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+                d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+#endif
+                D3D12_MESSAGE_ID hide[] =
+                {
+                    D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+                    D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
+                    D3D12_MESSAGE_ID_EXECUTECOMMANDLISTS_WRONGSWAPCHAINBUFFERREFERENCE
+                };
+                D3D12_INFO_QUEUE_FILTER filter = {};
+                filter.DenyList.NumIDs = _countof(hide);
+                filter.DenyList.pIDList = hide;
+                d3dInfoQueue->AddStorageFilterEntries(&filter);
+                d3dInfoQueue->Release();
+            }
+#endif
+        }
+
+        // Create memory allocator.
+        {
+            D3D12MA::ALLOCATOR_DESC desc = {};
+            desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+            desc.pDevice = d3d12.device;
+            desc.pAdapter = adapter;
+
+            VHR(D3D12MA::CreateAllocator(&desc, &d3d12.allocator));
+            switch (d3d12.allocator->GetD3D12Options().ResourceHeapTier)
+            {
+            case D3D12_RESOURCE_HEAP_TIER_1:
+                //logDebug("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
+                break;
+            case D3D12_RESOURCE_HEAP_TIER_2:
+                //logDebug("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
+                break;
+            default:
+                break;
+            }
+        }
 
         /* Init caps first. */
         {
-            DXGI_ADAPTER_DESC1 adapter_desc;
-            VHR(dxgi_adapter->GetDesc1(&adapter_desc));
+            DXGI_ADAPTER_DESC1 adapterDesc;
+            VHR(adapter->GetDesc1(&adapterDesc));
 
             /* Log some info */
             logInfo("GPU driver: D3D12");
-            logInfo("Direct3D Adapter: VID:%04X, PID:%04X - %ls", adapter_desc.VendorId, adapter_desc.DeviceId, adapter_desc.Description);
+            logInfo("Direct3D Adapter: VID:%04X, PID:%04X - %ls", adapterDesc.VendorId, adapterDesc.DeviceId, adapterDesc.Description);
 
             d3d12.caps.backend = BackendType::Direct3D12;
-            d3d12.caps.vendorID = adapter_desc.VendorId;
-            d3d12.caps.deviceID = adapter_desc.DeviceId;
+            d3d12.caps.vendorID = adapterDesc.VendorId;
+            d3d12.caps.deviceID = adapterDesc.DeviceId;
 
-            d3d12.caps.features.independent_blend = true;
-            d3d12.caps.features.compute_shader = true;
-            d3d12.caps.features.tessellation_shader = true;
-            d3d12.caps.features.multi_viewport = true;
-            d3d12.caps.features.index_uint32 = true;
-            d3d12.caps.features.multi_draw_indirect = true;
-            d3d12.caps.features.fill_mode_non_solid = true;
-            d3d12.caps.features.sampler_anisotropy = true;
-            d3d12.caps.features.texture_compression_ETC2 = false;
-            d3d12.caps.features.texture_compression_ASTC_LDR = false;
-            d3d12.caps.features.texture_compression_BC = true;
-            d3d12.caps.features.texture_cube_array = true;
+            d3d12.caps.features.independentBlend = true;
+            d3d12.caps.features.computeShader = true;
+            d3d12.caps.features.indexUInt32 = true;
+            d3d12.caps.features.fillModeNonSolid = true;
+            d3d12.caps.features.samplerAnisotropy = true;
+            d3d12.caps.features.textureCompressionETC2 = false;
+            d3d12.caps.features.textureCompressionASTC_LDR = false;
+            d3d12.caps.features.textureCompressionBC = true;
+            d3d12.caps.features.textureCubeArray = true;
             d3d12.caps.features.raytracing = false;
 
             // Limits
-            d3d12.caps.limits.max_vertex_attributes = kMaxVertexAttributes;
-            d3d12.caps.limits.max_vertex_bindings = kMaxVertexAttributes;
-            d3d12.caps.limits.max_vertex_attribute_offset = kMaxVertexAttributeOffset;
-            d3d12.caps.limits.max_vertex_binding_stride = kMaxVertexBufferStride;
+            d3d12.caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+            d3d12.caps.limits.maxVertexBindings = kMaxVertexAttributes;
+            d3d12.caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+            d3d12.caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
 
-            d3d12.caps.limits.maxTextureDimension1D = D3D12_REQ_TEXTURE1D_U_DIMENSION;
             d3d12.caps.limits.maxTextureDimension2D = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
             d3d12.caps.limits.maxTextureDimension3D = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
             d3d12.caps.limits.maxTextureDimensionCube = D3D12_REQ_TEXTURECUBE_DIMENSION;
@@ -393,7 +439,7 @@ namespace agpu
         }
 
         /* Release adapter */
-        dxgi_adapter->Release();
+        SAFE_RELEASE(adapter);
 
         /* Create swap chain if required. */
         if (presentationParameters != nullptr)
@@ -410,7 +456,7 @@ namespace agpu
         d3d12.renderPasses.init();
 
         return true;
-        }
+    }
 
     static void d3d12_shutdown(void)
     {
@@ -550,13 +596,15 @@ namespace agpu
                 }
             }
 
-            /*swapChain->handle = d3dCreateSwapChain(
+            IDXGISwapChain* tempSwapChain = d3dCreateSwapChain(
                 d3d12.factory, d3d12.factoryCaps, d3d12.device,
                 presentationParameters->windowHandle,
                 ToDXGISwapChainFormat(presentationParameters->colorFormat),
                 presentationParameters->backBufferWidth, presentationParameters->backBufferHeight,
                 backbufferCount,
-                presentationParameters->isFullscreen);*/
+                presentationParameters->isFullscreen);
+            VHR(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain->handle)));
+            SAFE_RELEASE(tempSwapChain);
         }
         else
         {
@@ -571,11 +619,6 @@ namespace agpu
     static void d3d12_DestroySwapChain(D3D12SwapChain* swapChain)
     {
         SAFE_RELEASE(swapChain->handle);
-    }
-
-    static void d3d12_resize(uint32_t width, uint32_t height)
-    {
-
     }
 
     static bool d3d12_beginFrame(void) {
@@ -622,19 +665,24 @@ namespace agpu
         return &d3d12.caps;
     }
 
-    static RenderPassHandle d3d12_CreateRenderPass(const PassDescription& desc)
+    static Framebuffer d3d12_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
+    {
+        return kInvalidFramebuffer;
+    }
+
+    static Framebuffer d3d12_CreateRenderPass(const PassDescription& desc)
     {
         std::lock_guard<std::mutex> lock(d3d12.handle_mutex);
 
         if (d3d12.renderPasses.isFull())
         {
             logError("D3D12: Not enough free render pass slots.");
-            return kInvalidRenderPass;
+            return kInvalidFramebuffer;
         }
 
         const int id = d3d12.renderPasses.alloc();
         if (id < 0) {
-            return kInvalidRenderPass;
+            return kInvalidFramebuffer;
         }
 
         D3D12RenderPass& renderPass = d3d12.renderPasses[id];
@@ -662,7 +710,7 @@ namespace agpu
         return { (uint32_t)id };
     }
 
-    static void d3d12_DestroyRenderPass(RenderPassHandle handle)
+    static void d3d12_DestroyRenderPass(Framebuffer handle)
     {
 
     }
@@ -773,6 +821,6 @@ namespace agpu
         d3d12_IsSupported,
         d3d12_CreateRenderer
     };
-    }
+}
 
 #endif /* defined(AGPU_DRIVER_D3D11)  */

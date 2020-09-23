@@ -73,7 +73,7 @@ namespace agpu
     }
 
     static const Driver* drivers[] = {
-    #if AGPU_DRIVER_D3D12
+    #if AGPU_DRIVER_D3D12 && defined(TODO )
         &D3D12_Driver,
     #endif
     #if AGPU_DRIVER_D3D11
@@ -93,11 +93,11 @@ namespace agpu
     };
 
     static BackendType s_backend = BackendType::Count;
-    static agpu_renderer* gpu_renderer = nullptr;
+    static agpu_renderer* renderer = nullptr;
 
-    bool setPreferredBackend(BackendType backend)
+    bool SetPreferredBackend(BackendType backend)
     {
-        if (gpu_renderer != nullptr)
+        if (renderer != nullptr)
             return false;
 
         s_backend = backend;
@@ -108,7 +108,7 @@ namespace agpu
     {
         AGPU_ASSERT(presentationParameters);
 
-        if (gpu_renderer) {
+        if (renderer) {
             return true;
         }
 
@@ -120,7 +120,7 @@ namespace agpu
                     break;
 
                 if (drivers[i]->isSupported()) {
-                    gpu_renderer = drivers[i]->createRenderer();
+                    renderer = drivers[i]->createRenderer();
                     break;
                 }
             }
@@ -134,13 +134,13 @@ namespace agpu
 
                 if (drivers[i]->backend == s_backend && drivers[i]->isSupported())
                 {
-                    gpu_renderer = drivers[i]->createRenderer();
+                    renderer = drivers[i]->createRenderer();
                     break;
                 }
             }
         }
 
-        if (!gpu_renderer || !gpu_renderer->init(flags, presentationParameters)) {
+        if (!renderer || !renderer->init(flags, presentationParameters)) {
             return false;
         }
 
@@ -148,79 +148,83 @@ namespace agpu
     }
 
     void shutdown(void) {
-        if (gpu_renderer == nullptr)
+        if (renderer == nullptr)
             return;
 
-        gpu_renderer->shutdown();
-        gpu_renderer = nullptr;
-    }
-
-    void resize(uint32_t width, uint32_t height)
-    {
-        gpu_renderer->resize(width, height);
+        renderer->shutdown();
+        renderer = nullptr;
     }
 
     bool BeginFrame(void)
     {
-        return gpu_renderer->beginFrame();
+        return renderer->beginFrame();
     }
 
     void EndFrame(void)
     {
-        gpu_renderer->endFrame();
+        renderer->endFrame();
     }
 
     const Caps* QueryCaps(void)
     {
-        AGPU_ASSERT(gpu_renderer);
-        return gpu_renderer->QueryCaps();
+        AGPU_ASSERT(renderer);
+        return renderer->QueryCaps();
     }
 
-    RenderPassHandle CreateRenderPass(const PassDescription& description)
+    Framebuffer CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
     {
-        return gpu_renderer->CreateRenderPass(description);
+        AGPU_ASSERT(windowHandle);
+        AGPU_ASSERT(width > 0);
+        AGPU_ASSERT(height > 0);
+
+        return renderer->CreateFramebuffer(windowHandle, width, height, colorFormat, depthStencilFormat);
     }
 
-    void DestroyRenderPass(RenderPassHandle handle)
+    Framebuffer CreateFramebuffer(const PassDescription& description)
+    {
+        return renderer->CreateRenderPass(description);
+    }
+
+    void DestroyFramebuffer(Framebuffer handle)
     {
         if (handle.isValid())
         {
-            gpu_renderer->DestroyRenderPass(handle);
+            renderer->DestroyRenderPass(handle);
         }
     }
 
     BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
-        if (!gpu_renderer || !count || !stride)
+        if (!count || !stride)
         {
             return kInvalidBuffer;
         }
 
-        return gpu_renderer->CreateBuffer(count, stride, initialData);
+        return renderer->CreateBuffer(count, stride, initialData);
     }
 
     void DestroyBuffer(BufferHandle handle)
     {
         if (handle.isValid())
         {
-            gpu_renderer->DestroyBuffer(handle);
+            renderer->DestroyBuffer(handle);
         }
     }
 
     /* Commands */
     void PushDebugGroup(const char* name)
     {
-        gpu_renderer->PushDebugGroup(name);
+        renderer->PushDebugGroup(name);
     }
 
     void PopDebugGroup(void)
     {
-        gpu_renderer->PopDebugGroup();
+        renderer->PopDebugGroup();
     }
 
     void InsertDebugMarker(const char* name)
     {
-        gpu_renderer->InsertDebugMarker(name);
+        renderer->InsertDebugMarker(name);
     }
 }
 

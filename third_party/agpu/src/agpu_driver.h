@@ -103,14 +103,14 @@ namespace agpu
     struct agpu_renderer {
         bool (*init)(InitFlags flags, const PresentationParameters* presentationParameters);
         void (*shutdown)(void);
-        void (*resize)(uint32_t width, uint32_t height);
         bool (*beginFrame)(void);
         void (*endFrame)(void);
 
         const Caps* (*QueryCaps)(void);
 
-        RenderPassHandle(*CreateRenderPass)(const PassDescription& description);
-        void(*DestroyRenderPass)(RenderPassHandle handle);
+        Framebuffer(*CreateFramebuffer)(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat);
+        Framebuffer(*CreateRenderPass)(const PassDescription& description);
+        void(*DestroyRenderPass)(Framebuffer handle);
 
         BufferHandle(*CreateBuffer)(uint32_t count, uint32_t stride, const void* initialData);
         void(*DestroyBuffer)(BufferHandle handle);
@@ -125,10 +125,10 @@ namespace agpu
 #define ASSIGN_DRIVER(name) \
     ASSIGN_DRIVER_FUNC(init, name)\
 	ASSIGN_DRIVER_FUNC(shutdown, name)\
-    ASSIGN_DRIVER_FUNC(resize, name)\
     ASSIGN_DRIVER_FUNC(beginFrame, name)\
     ASSIGN_DRIVER_FUNC(endFrame, name)\
     ASSIGN_DRIVER_FUNC(QueryCaps, name)\
+    ASSIGN_DRIVER_FUNC(CreateFramebuffer, name)\
     ASSIGN_DRIVER_FUNC(CreateRenderPass, name)\
     ASSIGN_DRIVER_FUNC(DestroyRenderPass, name)\
     ASSIGN_DRIVER_FUNC(CreateBuffer, name)\

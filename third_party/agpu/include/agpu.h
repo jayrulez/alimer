@@ -73,12 +73,12 @@ namespace agpu
     struct BufferHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
     struct TextureHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
     struct SharedHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
-    struct RenderPassHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
+    struct Framebuffer { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
 
     static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleValue };
     static constexpr TextureHandle kInvalidTexture = { kInvalidHandleValue };
     static constexpr SharedHandle kInvalidShader = { kInvalidHandleValue };
-    static constexpr RenderPassHandle kInvalidRenderPass = { kInvalidHandleValue };
+    static constexpr Framebuffer kInvalidFramebuffer = { kInvalidHandleValue };
 
     /* Enums */
     enum BackendType : uint32_t
@@ -170,9 +170,11 @@ namespace agpu
         RGBA32Sint,
         RGBA32Float,
         // Depth-stencil formats
+        Stencil8,
         Depth16Unorm,
+        Depth24Plus,
+        Depth24PlusStencil8,
         Depth32Float,
-        Depth24UnormStencil8,
         // Compressed BC formats
         BC1RGBAUnorm,
         BC1RGBAUnormSrgb,
@@ -208,27 +210,23 @@ namespace agpu
     };
 
     struct Features {
-        bool independent_blend;
-        bool compute_shader;
-        bool tessellation_shader;
-        bool multi_viewport;
-        bool index_uint32;
-        bool multi_draw_indirect;
-        bool fill_mode_non_solid;
-        bool sampler_anisotropy;
-        bool texture_compression_ETC2;
-        bool texture_compression_ASTC_LDR;
-        bool texture_compression_BC;
-        bool texture_cube_array;
+        bool independentBlend;
+        bool computeShader;
+        bool indexUInt32;
+        bool fillModeNonSolid;
+        bool samplerAnisotropy;
+        bool textureCompressionETC2;
+        bool textureCompressionASTC_LDR;
+        bool textureCompressionBC;
+        bool textureCubeArray;
         bool raytracing;
     };
 
     struct Limits {
-        uint32_t        max_vertex_attributes;
-        uint32_t        max_vertex_bindings;
-        uint32_t        max_vertex_attribute_offset;
-        uint32_t        max_vertex_binding_stride;
-        uint32_t        maxTextureDimension1D;
+        uint32_t        maxVertexAttributes;
+        uint32_t        maxVertexBindings;
+        uint32_t        maxVertexAttributeOffset;
+        uint32_t        maxVertexBindingStride;
         uint32_t        maxTextureDimension2D;
         uint32_t        maxTextureDimension3D;
         uint32_t        maxTextureDimensionCube;
@@ -301,10 +299,9 @@ namespace agpu
     AGPU_API void logWarn(const char* format, ...);
     AGPU_API void logInfo(const char* format, ...);
 
-    AGPU_API bool setPreferredBackend(BackendType backend);
+    AGPU_API bool SetPreferredBackend(BackendType backend);
     AGPU_API bool init(InitFlags flags, const PresentationParameters* presentationParameters);
     AGPU_API void shutdown(void);
-    AGPU_API void resize(uint32_t width, uint32_t height);
     AGPU_API bool BeginFrame(void);
     AGPU_API void EndFrame(void);
 
@@ -312,8 +309,9 @@ namespace agpu
     //AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
 
     /* Resource creation methods*/
-    AGPU_API RenderPassHandle CreateRenderPass(const PassDescription& description);
-    AGPU_API void DestroyRenderPass(RenderPassHandle handle);
+    AGPU_API Framebuffer CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat = PixelFormat::BGRA8Unorm, PixelFormat depthStencilFormat = PixelFormat::Invalid);
+    AGPU_API Framebuffer CreateFramebuffer(const PassDescription& description);
+    AGPU_API void DestroyFramebuffer(Framebuffer handle);
 
     AGPU_API BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData);
     AGPU_API void DestroyBuffer(BufferHandle handle);
