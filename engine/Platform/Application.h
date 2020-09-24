@@ -41,9 +41,10 @@ namespace Alimer
 
         std::string rootDirectory = "Assets";
 
-        GPUBackendType rendererType = GPUBackendType::Count;
-        GraphicsAdapterPreference adapterPreference = GraphicsAdapterPreference::HighPerformance;
+        PhysicalDevicePreference powerPreference = PhysicalDevicePreference::HighPerformance;
     };
+
+    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -87,6 +88,7 @@ namespace Alimer
         Config config;
         State state;
         AssetManager assets;
+        std::unique_ptr<GraphicsDevice> graphics;
     };
 
     extern Application* CreateApplication(void);

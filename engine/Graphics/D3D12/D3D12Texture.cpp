@@ -55,9 +55,9 @@ namespace Alimer
         , device{ device }
         , state(state_)
     {
-        handle = resource.Get();
+        /*handle = resource.Get();
         RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        device->GetD3DDevice()->CreateRenderTargetView(resource.Get(), nullptr, RTV);
+        device->GetD3DDevice()->CreateRenderTargetView(resource.Get(), nullptr, RTV);*/
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
@@ -134,7 +134,7 @@ namespace Alimer
 
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
-        HRESULT hr = device->GetAllocator()->CreateResource(
+        /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
             &resourceDesc,
             state,
@@ -147,7 +147,7 @@ namespace Alimer
         {
             LOGE("Direct3D12: Failed to create texture");
             return;
-        }
+        }*/
 
         /*const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
         device->GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);

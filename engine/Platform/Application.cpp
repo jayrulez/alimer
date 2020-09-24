@@ -36,23 +36,18 @@ namespace Alimer
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
-        // Figure out the graphics backend API.
-        if (config.rendererType  == GPUBackendType::Count)
-        {
-            //config.rendererType = gpu::getPlatformBackend();
-        }
-
         platform = Platform::Create(this);
-
         s_appCurrent = this;
     }
 
     Application::~Application()
     {
-        GraphicsDevice::Instance->WaitForGPU();
-        SafeDelete(GraphicsDevice::Instance);
+        graphics.reset();
         s_appCurrent = nullptr;
         platform.reset();
+#ifdef _DEBUG
+        GraphicsDevice::ReportLeaks();
+#endif
     }
 
     Application* Application::Current()
@@ -62,12 +57,12 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        GraphicsDeviceDescription graphicsDesc = {};
+        GraphicsDebugFlags debugFlags = {};
 #ifdef _DEBUG
-        graphicsDesc.enableDebugLayer = true;
+        debugFlags |= GraphicsDebugFlags::DebugRuntime;
 #endif
 
-        GraphicsDevice::Create(graphicsDesc);
+        graphics = std::make_unique<GraphicsDevice>(debugFlags);
         //assets.Load<Texture>("texture.png");
 
         // Define the geometry for a triangle.
@@ -115,6 +110,7 @@ namespace Alimer
 
         agpu::EndFrame();
         */
+        //graphicsDevice->Frame();
     }
 
     const Config* Application::GetConfig()

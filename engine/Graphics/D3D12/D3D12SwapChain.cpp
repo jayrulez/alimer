@@ -30,7 +30,7 @@ namespace Alimer
     D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
         : SwapChain(desc)
         , device{ device }
-        , isTearingSupported(device->IsTearingSupported())
+       // , isTearingSupported(device->IsTearingSupported())
         , syncInterval(desc.vsync ? 1 : 0)
     {
         UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
@@ -70,7 +70,7 @@ namespace Alimer
         fsSwapChainDesc.Windowed = !desc.fullscreen;
 
         // Create a swap chain for the window.
-        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+        /*ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
             device->GetGraphicsQueue(),
             window,
             &swapChainDesc,
@@ -80,7 +80,7 @@ namespace Alimer
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+        ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));*/
 #else
         IUnknown* window = (IUnknown*)desc.windowHandle;
         ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
@@ -133,7 +133,7 @@ namespace Alimer
         StaticCast<D3D12Texture>(colorTextures[currentBackBufferIndex])->TransitionBarrier(commandBuffer->GetCommandList(), D3D12_RESOURCE_STATE_RENDER_TARGET);
     }
 
-    FrameOpResult D3D12SwapChain::EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags)
+   /* FrameOpResult D3D12SwapChain::EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags)
     {
         // Indicate that the back buffer will now be used to present.
         StaticCast<D3D12Texture>(colorTextures[currentBackBufferIndex])->TransitionBarrier(commandBuffer->GetCommandList(), D3D12_RESOURCE_STATE_PRESENT);
@@ -172,7 +172,7 @@ namespace Alimer
         }
 
         return FrameOpResult::Success;
-    }
+    }*/
 
     CommandBuffer* D3D12SwapChain::CurrentFrameCommandBuffer()
     {

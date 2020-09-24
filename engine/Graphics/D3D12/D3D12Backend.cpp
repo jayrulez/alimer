@@ -26,8 +26,6 @@
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
-    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
     PFN_DXC_CREATE_INSTANCE DxcCreateInstance = nullptr;
 #endif
 
@@ -59,7 +57,7 @@ namespace Alimer
     void D3D12Fence::Init(D3D12GraphicsDevice* device, uint64 initialValue)
     {
         this->device = device;
-        ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3dFence)));
+        //ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3dFence)));
         fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
         ALIMER_ASSERT(fenceEvent != 0);
     }
@@ -70,7 +68,7 @@ namespace Alimer
             return;
 
         CloseHandle(fenceEvent);
-        device->DeferredRelease(d3dFence);
+        //device->DeferredRelease(d3dFence);
     }
 
     void D3D12Fence::Signal(ID3D12CommandQueue* queue, uint64 fenceValue)

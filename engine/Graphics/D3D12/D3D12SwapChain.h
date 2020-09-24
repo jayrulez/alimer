@@ -38,7 +38,7 @@ namespace Alimer
 
         void AfterReset();
         void BeginFrame();
-        FrameOpResult EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags);
+        //FrameOpResult EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags);
 
         CommandBuffer* CurrentFrameCommandBuffer() override;
 

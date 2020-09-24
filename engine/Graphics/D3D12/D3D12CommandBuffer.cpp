@@ -56,7 +56,7 @@ namespace Alimer
         : CommandBuffer()
         , device{ device }
     {
-        for (uint32_t index = 0; index < kRenderLatency; ++index)
+        /*for (uint32_t index = 0; index < kRenderLatency; ++index)
         {
             ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[index])));
         }
@@ -64,7 +64,7 @@ namespace Alimer
         ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
         useRenderPass = SUCCEEDED(commandList->QueryInterface(IID_PPV_ARGS(&commandList4)));
         useRenderPass = false;
-        ThrowIfFailed(commandList->Close());
+        ThrowIfFailed(commandList->Close());*/
     }
 
     D3D12CommandBuffer::~D3D12CommandBuffer()

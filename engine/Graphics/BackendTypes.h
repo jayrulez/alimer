@@ -27,6 +27,8 @@
 
 #if defined(ALIMER_D3D12)
 struct ID3D12Resource;
+struct ID3D12Device;
+struct IDXGIAdapter1;
 
 namespace D3D12MA
 {
@@ -53,9 +55,13 @@ namespace Alimer
     using GPUAllocation = D3D12MA::Allocation*;
     using TextureHandle = ID3D12Resource*;
     using BufferHandle = ID3D12Resource*;
+    using PhysicalDevice = IDXGIAdapter1*;
+    using DeviceHandle = ID3D12Device*;
 #elif defined(ALIMER_VULKAN)
     using GPUAllocation = VmaAllocation;
     using TextureHandle = VkImage;
     using BufferHandle = VkBuffer;
+    using PhysicalDevice = VkPhysicalDevice;
+    using DeviceHandle = VkDevice;
 #endif
 }

@@ -34,36 +34,34 @@ namespace Alimer
     struct DeviceApiData;
 
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice : public Object
+    class ALIMER_API GraphicsDevice final
     {
-        ALIMER_OBJECT(GraphicsDevice, Object);
-
     public:
-        /// The single instance of the graphics device.
-        static GraphicsDevice* Instance;
+        using SharedPtr = std::shared_ptr<GraphicsDevice>;
+
+        /// Constructor.
+        GraphicsDevice(GraphicsDebugFlags flags = GraphicsDebugFlags::None, PhysicalDevicePreference adapterPreference = PhysicalDevicePreference::HighPerformance);
 
         /// Destructor.
-        virtual ~GraphicsDevice() = default;
-
-        static GraphicsDevice* Create( const GraphicsDeviceDescription& desc);
+        ~GraphicsDevice();
 
         /// Wait for GPU to finish pending operation and become idle.
-        virtual void WaitForGPU() = 0;
-
-        /// Begin rendering frame.
-        virtual FrameOpResult BeginFrame() = 0;
+        void WaitForGPU();
 
         /// End current rendering frame and present swap chain on screen.
-        virtual FrameOpResult EndFrame(EndFrameFlags flags = EndFrameFlags::None) = 0;
+        void Frame();
+
+        /// Get the native API handle.
+        DeviceHandle GetApiHandle() const;
+
+        /// Get the native physical device/adapter.
+        PhysicalDevice GetPhysicalDevice() const;
 
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
         const GraphicsDeviceCaps& GetCaps() const;
-
-        /// Get the main/primary SwapChain.
-        SwapChain* GetPrimarySwapChain() const;
 
         inline uint64_t GetFrameCount() const { return frameCount; }
 
@@ -72,18 +70,15 @@ namespace Alimer
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
 
-        // Resource creation
-        virtual RefPtr<GPUBuffer> CreateBuffer(const BufferDescription& desc, const void* initialData = nullptr);
-
+#ifdef _DEBUG
+        static void ReportLeaks();
+#endif
 
     private:
-        //virtual RefPtr<GPUBuffer> CreateBufferCore(const BufferDescription& desc, const void* initialData) = 0;
-
-    protected:
-        GraphicsDevice();
+        void Shutdown();
+        void InitCapabilities();
 
         GraphicsDeviceCaps caps{};
-        RefPtr<SwapChain> primarySwapChain;
 
         uint64_t frameCount{ 0 };
 
@@ -98,6 +93,5 @@ namespace Alimer
 
         ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
-
 }
 

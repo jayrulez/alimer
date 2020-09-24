@@ -35,30 +35,10 @@
 
 namespace Alimer
 {
-    GraphicsDevice* GraphicsDevice::Instance = nullptr;
-
-    GraphicsDevice::GraphicsDevice()
+    GraphicsDevice::~GraphicsDevice()
     {
-        RegisterSubsystem(this);
-    }
-
-    GraphicsDevice* GraphicsDevice::Create(const GraphicsDeviceDescription& desc)
-    {
-        if (Instance != nullptr)
-        {
-            LOGW("Cannot create more than one instance of GraphicsDevice");
-            return Instance;
-        }
-
-#if defined(ALIMER_D3D12)
-        Instance = new D3D12GraphicsDevice(desc);
-#endif
-
-        if (Instance == nullptr)
-            return nullptr;
-
-        LOGI("Successfully created {} GraphicsDevice", ToString(Instance->GetCaps().backendType));
-        return Instance;
+        WaitForGPU();
+        Shutdown();
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
@@ -82,18 +62,6 @@ namespace Alimer
     const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
     {
         return caps;
-    }
-
-    SwapChain* GraphicsDevice::GetPrimarySwapChain() const
-    {
-        return primarySwapChain.Get();
-    }
-
-    RefPtr<GPUBuffer> GraphicsDevice::CreateBuffer(const BufferDescription& desc, const void* initialData)
-    {
-        // TODO: Validate
-        return nullptr;
-        //return CreateBufferCore(desc, initialData);
     }
 }
 
