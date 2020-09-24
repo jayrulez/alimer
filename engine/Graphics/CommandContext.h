@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/GPUBuffer.h"
-#include "Graphics/Texture.h"
+#include "Graphics/SwapChain.h"
 #include "Math/Size.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"
@@ -33,15 +33,15 @@
 namespace Alimer
 {
     /// A container that stores commands for the GPU to execute.
-    class ALIMER_API CommandBuffer 
+    class ALIMER_API CommandContext
     {
     protected:
         /// Constructor.
-        CommandBuffer();
+        CommandContext();
 
     public:
         /// Destructor.
-        virtual ~CommandBuffer() = default;
+        virtual ~CommandContext() = default;
 
         virtual void PushDebugGroup(const char* name) = 0;
         virtual void PopDebugGroup() = 0;

@@ -22,26 +22,31 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
 #include "Graphics/Texture.h"
 #include <vector>
 
 namespace Alimer
 {
-    class ALIMER_API SwapChain : public GraphicsResource
+    class GraphicsDevice;
+
+    class ALIMER_API SwapChain : public RefCounted
     {
     public:
         /// Constructor.
-        SwapChain(const SwapChainDescription& desc);
+        SwapChain(const SwapChainDesc& desc);
 
-        virtual CommandBuffer* CurrentFrameCommandBuffer() = 0;
-        Texture* GetColorTexture() const;
+        virtual void Present(bool verticalSync = true) = 0;
+
+        virtual GraphicsDevice& GetDevice() = 0;
+        Texture* GetCurrentTexture() const;
 
     protected:
+        static constexpr uint32 kBackBufferCount = 2u;
+
         PixelFormat colorFormat;
         uint32_t width;
         uint32_t height;
-        bool vsync;
+        bool isPrimary;
         bool isFullscreen;
         uint32_t currentBackBufferIndex{ 0 };
         std::vector<RefPtr<Texture>> colorTextures;

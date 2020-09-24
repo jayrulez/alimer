@@ -50,7 +50,7 @@ namespace Alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES state_)
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state_)
         : Texture(ConvertResourceDesc(resource->GetDesc()))
         , device{ device }
         , state(state_)
@@ -180,19 +180,19 @@ namespace Alimer
 
     void D3D12Texture::Destroy()
     {
-        SafeRelease(handle);
-        SafeRelease(allocation);
+        //SafeRelease(handle);
+        //SafeRelease(allocation);
     }
 
     void D3D12Texture::BackendSetName()
     {
-        auto wideName = ToUtf16(name);
-        handle->SetName(wideName.c_str());
+        //auto wideName = ToUtf16(name);
+        //handle->SetName(wideName.c_str());
     }
 
     void D3D12Texture::TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState)
     {
-        if (state == newState)
+        /*if (state == newState)
             return;
 
         D3D12_RESOURCE_BARRIER barrierDesc{};
@@ -205,7 +205,7 @@ namespace Alimer
 
         commandList->ResourceBarrier(1, &barrierDesc);
 
-        state = newState;
+        state = newState;*/
     }
 
     void D3D12Texture::UploadTextureData(const void* initData)

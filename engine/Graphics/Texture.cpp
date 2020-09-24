@@ -25,26 +25,9 @@
 
 namespace Alimer
 {
-    void Texture::RegisterObject()
-    {
-        RegisterFactory<Texture>();
-    }
-
     Texture::Texture()
         : GraphicsResource(Type::Texture)
     {
-    }
-
-    Texture::~Texture()
-    {
-        Destroy();
-    }
-
-    void Texture::Destroy()
-    {
-        if (handle.isValid()) {
-            //agpu::DestroyBuffer();
-        }
     }
 
     Texture::Texture(const TextureDescription& desc)

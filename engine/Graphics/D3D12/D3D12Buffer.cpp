@@ -74,7 +74,7 @@ namespace Alimer
 
     void D3D12Buffer::Destroy()
     {
-        SafeRelease(allocation);
+        //SafeRelease(allocation);
         //device->DeferredRelease(handle);
     }
 

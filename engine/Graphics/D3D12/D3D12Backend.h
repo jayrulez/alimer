@@ -44,6 +44,8 @@ namespace Alimer
     extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
 
+    static constexpr D3D_FEATURE_LEVEL kD3D12MinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
+
     class D3D12GraphicsDevice;
 
     void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);

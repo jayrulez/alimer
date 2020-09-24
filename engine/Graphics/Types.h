@@ -179,19 +179,6 @@ namespace Alimer
         }
     };
 
-    struct SwapChainDescription
-    {
-        void* windowHandle;
-        /// The color format.
-        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-        /// The depth format.
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        uint32_t width;
-        uint32_t height;
-        bool vsync = false;
-        bool fullscreen = false;
-    };
-
     class Texture;
     struct RenderPassColorAttachment
     {
@@ -228,6 +215,23 @@ namespace Alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
+    };
+
+    struct SwapChainDesc
+    {
+        uint32 width = 0;
+        uint32 height = 0;
+
+        /// The color format.
+        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
+
+        /// The depth format.
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+
+        uint32 bufferCount = 2u;
+
+        bool isPrimary = false;
+        bool isFullscreen = false;
     };
 
     struct GraphicsDeviceFeatures
@@ -331,7 +335,4 @@ namespace Alimer
     {
         return vendorId == KnownVendorId_Microsoft;
     }
-
-    /// Register Graphics related object factories and attributes.
-    ALIMER_API void RegisterGraphicsLibrary();
 }

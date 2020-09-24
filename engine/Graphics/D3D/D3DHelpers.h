@@ -33,8 +33,6 @@
 #define NOMINMAX
 #endif
 
-#include <wrl/client.h>
-
 #if defined(NTDDI_WIN10_RS2)
 #include <dxgi1_6.h>
 #else
@@ -47,10 +45,6 @@
 
 namespace Alimer
 {
-    // Type alias for ComPtr template.
-    template <typename T>
-    using ComPtr = Microsoft::WRL::ComPtr<T>;
-
     template<typename T> void SafeRelease(T*& resource)
     {
         if (resource != nullptr) {
@@ -158,6 +152,4 @@ namespace Alimer
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps, uint8);
 
     void DXGISetObjectName(IDXGIObject* obj, const std::string& name);
-
-    Microsoft::WRL::ComPtr<IDXGISwapChain1> DXGICreateSwapChain(IDXGIFactory2* dxgiFactory, DXGIFactoryCaps caps, IUnknown* deviceOrCommandQueue, uint32_t backbufferCount, const SwapChainDescription& desc);
 }

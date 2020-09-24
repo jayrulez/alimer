@@ -34,4 +34,38 @@
 namespace Alimer
 {
     class D3D12Texture;
+    class D3D12CommandContext;
+
+    class D3D12GraphicsDevice final : public GraphicsDevice
+    {
+    public:
+        D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference);
+        ~D3D12GraphicsDevice() override;
+
+        void SetDeviceLost();
+        void FinishFrame();
+        void WaitForGPU() override;
+        CommandContext* GetImmediateContext() const override;
+        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) override;
+
+        auto GetDXGIFactory() const noexcept { return dxgiFactory; }
+        bool IsTearingSupported() const noexcept { return isTearingSupported; }
+        auto GetD3DDevice() const noexcept { return d3dDevice; }
+        auto GetGraphicsQueue() const noexcept { return graphicsQueue; }
+
+    private:
+        void Shutdown();
+        void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
+        void GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter);
+
+        DWORD dxgiFactoryFlags = 0;
+        IDXGIFactory4* dxgiFactory = nullptr;
+        bool isTearingSupported = false;
+
+        ID3D12Device* d3dDevice = nullptr;
+        D3D12MA::Allocator* allocator = nullptr;
+        D3D_FEATURE_LEVEL featureLevel = kD3D12MinFeatureLevel;
+        ID3D12CommandQueue* graphicsQueue;
+        D3D12CommandContext* immediateContext;
+    };
 }

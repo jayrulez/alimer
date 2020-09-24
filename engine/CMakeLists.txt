@@ -57,7 +57,7 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     define_engine_source_files(Platform/glfw)
 endif()
 
-if(ALIMER_D3D12)
+if(WIN32 OR WINDOWS_STORE)
     define_engine_source_files(Graphics/D3D)
     define_engine_source_files(Graphics/D3D12)
 endif()

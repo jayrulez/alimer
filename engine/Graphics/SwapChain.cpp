@@ -25,18 +25,17 @@
 
 namespace Alimer
 {
-    SwapChain::SwapChain(const SwapChainDescription& desc)
-        : GraphicsResource(Type::SwapChain)
-        , colorFormat(desc.colorFormat)
-        , width(desc.width)
-        , height(desc.height)
-        , vsync(desc.vsync)
-        , isFullscreen(desc.fullscreen)
+    SwapChain::SwapChain(const SwapChainDesc& desc)
+        : colorFormat{ desc.colorFormat }
+        , width{ desc.width }
+        , height{ desc.height }
+        , isPrimary{desc.isPrimary }
+        , isFullscreen{ desc.isFullscreen }
     {
 
     }
 
-    Texture* SwapChain::GetColorTexture() const
+    Texture* SwapChain::GetCurrentTexture() const
     {
         return colorTextures[currentBackBufferIndex].Get();
     }

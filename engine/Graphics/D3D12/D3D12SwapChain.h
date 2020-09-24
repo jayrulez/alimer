@@ -27,30 +27,22 @@
 
 namespace Alimer
 {
-    class D3D12CommandBuffer;
-
     class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc);
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc);
         ~D3D12SwapChain() override;
-        void Destroy() override;
+        void Destroy();
 
         void AfterReset();
-        void BeginFrame();
-        //FrameOpResult EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags);
-
-        CommandBuffer* CurrentFrameCommandBuffer() override;
+        void Present(bool verticalSync) override;
+        GraphicsDevice& GetDevice() override;
 
     private:
-        // Number of swapchain back buffers.
-        static constexpr uint32_t kBackBufferCount = 2u;
-
         D3D12GraphicsDevice* device;
-        IDXGISwapChain3* dxgiSwapChain3 = nullptr;
+        IDXGISwapChain3* handle = nullptr;
         bool isTearingSupported;
         uint32_t syncInterval;
-        D3D12CommandBuffer* commandBuffer;
         uint64_t frameCount{ 0 };
     };
 }

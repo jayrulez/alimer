@@ -42,6 +42,7 @@ namespace Alimer
 
     Application::~Application()
     {
+        swapChain.Reset();
         graphics.reset();
         s_appCurrent = nullptr;
         platform.reset();
@@ -59,11 +60,16 @@ namespace Alimer
     {
         GraphicsDebugFlags debugFlags = {};
 #ifdef _DEBUG
-        debugFlags |= GraphicsDebugFlags::DebugRuntime;
+        //debugFlags |= GraphicsDebugFlags::DebugRuntime;
 #endif
 
-        graphics = std::make_unique<GraphicsDevice>(debugFlags);
-        //assets.Load<Texture>("texture.png");
+        graphics = GraphicsDevice::Create(debugFlags);
+
+        SwapChainDesc swapChainDesc = {};
+        swapChainDesc.isPrimary = true;
+        swapChain = graphics->CreateSwapChain(GetMainWindow().GetNativeHandle(), swapChainDesc);
+
+        assets.Load<Texture>("texture.png");
 
         // Define the geometry for a triangle.
         /*struct Vertex
@@ -110,6 +116,7 @@ namespace Alimer
 
         agpu::EndFrame();
         */
+        swapChain->Present();
         //graphicsDevice->Frame();
     }
 

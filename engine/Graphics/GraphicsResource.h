@@ -39,8 +39,7 @@ namespace Alimer
         {
             Buffer,
             Texture,
-            Sampler,
-            SwapChain,
+            Sampler
         };
 
         virtual ~GraphicsResource();
@@ -69,7 +68,6 @@ namespace Alimer
         std::string name;
         StringId32 nameId;
         uint64 id;
-        GPUAllocation allocation{};
 
     private:
         static uint64 s_objectID;

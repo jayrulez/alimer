@@ -33,15 +33,4 @@ namespace Alimer
 
         return names[(unsigned)value];
     }
-
-    void RegisterGraphicsLibrary()
-    {
-        static bool registered = false;
-        if (registered)
-            return;
-        registered = true;
-
-        //Shader::RegisterObject();
-        Texture::RegisterObject();
-    }
 }

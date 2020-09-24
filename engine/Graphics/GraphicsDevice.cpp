@@ -35,10 +35,9 @@
 
 namespace Alimer
 {
-    GraphicsDevice::~GraphicsDevice()
+    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
     {
-        WaitForGPU();
-        Shutdown();
+        return std::make_unique<D3D12GraphicsDevice>(flags, adapterPreference);
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
@@ -57,11 +56,6 @@ namespace Alimer
         auto it = std::find(gpuObjects.begin(), gpuObjects.end(), resource);
         if (it != gpuObjects.end())
             gpuObjects.erase(it);
-    }
-
-    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
-    {
-        return caps;
     }
 }
 

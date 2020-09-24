@@ -21,11 +21,11 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 
 namespace Alimer
 {
-    CommandBuffer::CommandBuffer()
+    CommandContext::CommandContext()
     {
     }
 }

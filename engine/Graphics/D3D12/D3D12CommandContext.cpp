@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12CommandBuffer.h"
+#include "D3D12CommandContext.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
 
@@ -52,9 +52,8 @@ namespace Alimer
         }*/
     }
 
-    D3D12CommandBuffer::D3D12CommandBuffer(D3D12GraphicsDevice* device)
-        : CommandBuffer()
-        , device{ device }
+    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsDevice* device)
+        : device{ device }
     {
         /*for (uint32_t index = 0; index < kRenderLatency; ++index)
         {
@@ -67,7 +66,7 @@ namespace Alimer
         ThrowIfFailed(commandList->Close());*/
     }
 
-    D3D12CommandBuffer::~D3D12CommandBuffer()
+    D3D12CommandContext::~D3D12CommandContext()
     {
         for (uint32_t index = 0; index < kRenderLatency; ++index)
         {
@@ -78,7 +77,7 @@ namespace Alimer
         SafeRelease(commandList4);
     }
 
-    void D3D12CommandBuffer::Reset(uint32_t frameIndex)
+    void D3D12CommandContext::Reset(uint32_t frameIndex)
     {
         ThrowIfFailed(commandAllocators[frameIndex]->Reset());
         ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
@@ -91,23 +90,23 @@ namespace Alimer
         //BindDescriptorHeaps();
     }
 
-    void D3D12CommandBuffer::PushDebugGroup(const char* name)
+    void D3D12CommandContext::PushDebugGroup(const char* name)
     {
         PIXBeginEvent(commandList, PIX_COLOR_DEFAULT, name);
     }
 
-    void D3D12CommandBuffer::PopDebugGroup()
+    void D3D12CommandContext::PopDebugGroup()
     {
         PIXEndEvent(commandList);
     }
 
-    void D3D12CommandBuffer::InsertDebugMarker(const char* name)
+    void D3D12CommandContext::InsertDebugMarker(const char* name)
     {
         PIXSetMarker(commandList, PIX_COLOR_DEFAULT, name);
     }
 
 
-    void D3D12CommandBuffer::BeginRenderPass(const RenderPassDescription* renderPass)
+    void D3D12CommandContext::BeginRenderPass(const RenderPassDescription* renderPass)
     {
         if (useRenderPass)
         {
@@ -188,7 +187,7 @@ namespace Alimer
         }
     }
 
-    void D3D12CommandBuffer::EndRenderPass()
+    void D3D12CommandContext::EndRenderPass()
     {
         if (useRenderPass)
         {
@@ -196,7 +195,7 @@ namespace Alimer
         }
     }
 
-    void D3D12CommandBuffer::SetScissorRect(const RectI& scissorRect)
+    void D3D12CommandContext::SetScissorRect(const RectI& scissorRect)
     {
         D3D12_RECT d3dScissorRect;
         d3dScissorRect.left = LONG(scissorRect.x);
@@ -206,7 +205,7 @@ namespace Alimer
         commandList->RSSetScissorRects(1, &d3dScissorRect);
     }
 
-    void D3D12CommandBuffer::SetScissorRects(const RectI* scissorRects, uint32_t count)
+    void D3D12CommandContext::SetScissorRects(const RectI* scissorRects, uint32_t count)
     {
         count = Max<uint32_t>(count, D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
         D3D12_RECT d3dScissorRects[kMaxViewportAndScissorRects];
@@ -220,7 +219,7 @@ namespace Alimer
         commandList->RSSetScissorRects(count, d3dScissorRects);
     }
 
-    void D3D12CommandBuffer::SetViewport(const Viewport& viewport)
+    void D3D12CommandContext::SetViewport(const Viewport& viewport)
     {
         D3D12_VIEWPORT d3dViewport;
         d3dViewport.TopLeftX = viewport.x;
@@ -232,7 +231,7 @@ namespace Alimer
         commandList->RSSetViewports(1, &d3dViewport);
     }
 
-    void D3D12CommandBuffer::SetViewports(const Viewport* viewports, uint32_t count)
+    void D3D12CommandContext::SetViewports(const Viewport* viewports, uint32_t count)
     {
         count = Max<uint32_t>(count, D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE);
 
@@ -249,7 +248,7 @@ namespace Alimer
         commandList->RSSetViewports(count, d3dViewports);
     }
 
-    void D3D12CommandBuffer::SetBlendColor(const Color& color)
+    void D3D12CommandContext::SetBlendColor(const Color& color)
     {
         commandList->OMSetBlendFactor(&color.r);
     }

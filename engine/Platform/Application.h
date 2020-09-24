@@ -45,6 +45,7 @@ namespace Alimer
     };
 
     class GraphicsDevice;
+    class SwapChain;
 
     class ALIMER_API Application : public Object
     {
@@ -89,6 +90,7 @@ namespace Alimer
         State state;
         AssetManager assets;
         std::unique_ptr<GraphicsDevice> graphics;
+        RefPtr<SwapChain> swapChain;
     };
 
     extern Application* CreateApplication(void);

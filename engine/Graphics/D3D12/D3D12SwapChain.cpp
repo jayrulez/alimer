@@ -21,24 +21,21 @@
 //
 
 #include "D3D12SwapChain.h"
-#include "D3D12CommandBuffer.h"
+#include "D3D12CommandContext.h"
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, const SwapChainDescription& desc)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc)
         : SwapChain(desc)
         , device{ device }
-       // , isTearingSupported(device->IsTearingSupported())
-        , syncInterval(desc.vsync ? 1 : 0)
+        , isTearingSupported(device->IsTearingSupported())
     {
-        UINT swapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        UINT swapChainFlags = 0;
 
         if (isTearingSupported)
-        {
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-        }
 
         // Create a descriptor for the swap chain.
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -49,42 +46,42 @@ namespace Alimer
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = kBackBufferCount;
+        swapChainDesc.BufferCount = Max(desc.bufferCount, 2u);
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 #else
         swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 #endif
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         swapChainDesc.Flags = swapChainFlags;
 
-        ComPtr<IDXGISwapChain1> swapChain1;
+        IDXGISwapChain1* tempSwapChain;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND window = (HWND)desc.windowHandle;
+        HWND window = (HWND)windowHandle;
         ALIMER_ASSERT(IsWindow(window));
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !desc.fullscreen;
+        fsSwapChainDesc.Windowed = !desc.isFullscreen;
 
         // Create a swap chain for the window.
-        /*ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
             device->GetGraphicsQueue(),
             window,
             &swapChainDesc,
             &fsSwapChainDesc,
             nullptr,
-            swapChain1.GetAddressOf()
+            &tempSwapChain
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));*/
+        ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
         IUnknown* window = (IUnknown*)desc.windowHandle;
-        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
-            device->GetGraphicsQueue(),
+        ThrowIfFailed(device.GetApiData()->dxgiFactory->CreateSwapChainForCoreWindow(
+            device.GetGraphicsQueue()->GetApiHandle(),
             window,
             &swapChainDesc,
             nullptr,
@@ -92,9 +89,9 @@ namespace Alimer
         ));
 #endif
 
-        ThrowIfFailed(swapChain1->QueryInterface(&dxgiSwapChain3));
+        ThrowIfFailed(tempSwapChain->QueryInterface(&handle));
+        tempSwapChain->Release();
 
-        commandBuffer = new D3D12CommandBuffer(device);
         AfterReset();
     }
 
@@ -105,77 +102,47 @@ namespace Alimer
 
     void D3D12SwapChain::Destroy()
     {
-        SafeDelete(commandBuffer);
-        SafeRelease(dxgiSwapChain3);
+        SafeRelease(handle);
     }
 
     void D3D12SwapChain::AfterReset()
     {
-        colorTextures.clear();
-        currentBackBufferIndex = dxgiSwapChain3->GetCurrentBackBufferIndex();
 
-        for (uint32_t i = 0; i < kBackBufferCount; ++i)
-        {
-            ComPtr<ID3D12Resource> backBuffer;
-            ThrowIfFailed(dxgiSwapChain3->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-            colorTextures.push_back(MakeRefPtr<D3D12Texture>(device, backBuffer.Get(), D3D12_RESOURCE_STATE_PRESENT));
-        }
     }
 
-    void D3D12SwapChain::BeginFrame()
+    void D3D12SwapChain::Present(bool verticalSync)
     {
-        currentBackBufferIndex = dxgiSwapChain3->GetCurrentBackBufferIndex();
+        UINT syncInterval = 1;
+        UINT presentFlags = 0;
 
-        commandBuffer->Reset(currentBackBufferIndex);
-
-        // Indicate that the back buffer will be used as a render target.
-        StaticCast<D3D12Texture>(colorTextures[currentBackBufferIndex])->TransitionBarrier(commandBuffer->GetCommandList(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-    }
-
-   /* FrameOpResult D3D12SwapChain::EndFrame(ID3D12CommandQueue* queue, EndFrameFlags flags)
-    {
-        // Indicate that the back buffer will now be used to present.
-        StaticCast<D3D12Texture>(colorTextures[currentBackBufferIndex])->TransitionBarrier(commandBuffer->GetCommandList(), D3D12_RESOURCE_STATE_PRESENT);
-
-        ThrowIfFailed(commandBuffer->GetCommandList()->Close());
-
-        ID3D12CommandList* commandLists[] = { commandBuffer->GetCommandList() };
-        queue->ExecuteCommandLists(1, commandLists);
-
-
-        // Present swap chains.
-        HRESULT hr = S_OK;
-        if (!any(flags & EndFrameFlags::SkipPresent))
+        if (!verticalSync)
         {
-            uint32_t presentFlags = 0;
+            syncInterval = 0;
 
-            // Recommended to always use tearing if supported when using a sync interval of 0.
-            // Note this will fail if in true 'fullscreen' mode.
-            if (!syncInterval && !isFullscreen && isTearingSupported)
+            if (!isFullscreen && isTearingSupported)
             {
                 presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
             }
-
-            hr = dxgiSwapChain3->Present(syncInterval, presentFlags);
-
-            // If the device was reset we must completely reinitialize the renderer.
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-            {
-                device->HandleDeviceLost();
-                return FrameOpResult::DeviceLost;
-            }
-            else if (FAILED(hr))
-            {
-                return FrameOpResult::Error;
-            }
         }
 
-        return FrameOpResult::Success;
-    }*/
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
 
-    CommandBuffer* D3D12SwapChain::CurrentFrameCommandBuffer()
+        // Handle device lost result.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+        {
+            device->SetDeviceLost();
+        }
+
+        ThrowIfFailed(hr);
+
+        if (isPrimary)
+        {
+            device->FinishFrame();
+        }
+    }
+
+    GraphicsDevice& D3D12SwapChain::GetDevice()
     {
-        return commandBuffer;
+        return *device;
     }
 }

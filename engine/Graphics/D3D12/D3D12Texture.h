@@ -30,7 +30,7 @@ namespace Alimer
     class D3D12Texture final : public Texture
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, ComPtr<ID3D12Resource> resource, D3D12_RESOURCE_STATES state);
+        D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state);
         D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         ~D3D12Texture() override;
         void Destroy() override;

@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/Types.h"
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "Graphics/GPUBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <memory>
@@ -31,39 +31,27 @@
 
 namespace Alimer
 {
-    struct DeviceApiData;
-
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice final
+    class ALIMER_API GraphicsDevice
     {
     public:
-        using SharedPtr = std::shared_ptr<GraphicsDevice>;
-
-        /// Constructor.
-        GraphicsDevice(GraphicsDebugFlags flags = GraphicsDebugFlags::None, PhysicalDevicePreference adapterPreference = PhysicalDevicePreference::HighPerformance);
-
         /// Destructor.
-        ~GraphicsDevice();
+        virtual ~GraphicsDevice() = default;
+
+        static std::unique_ptr<GraphicsDevice> Create(GraphicsDebugFlags flags = GraphicsDebugFlags::None, PhysicalDevicePreference adapterPreference = PhysicalDevicePreference::HighPerformance);
 
         /// Wait for GPU to finish pending operation and become idle.
-        void WaitForGPU();
-
-        /// End current rendering frame and present swap chain on screen.
-        void Frame();
-
-        /// Get the native API handle.
-        DeviceHandle GetApiHandle() const;
-
-        /// Get the native physical device/adapter.
-        PhysicalDevice GetPhysicalDevice() const;
+        virtual void WaitForGPU() = 0;
 
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
-        const GraphicsDeviceCaps& GetCaps() const;
+        const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
-        inline uint64_t GetFrameCount() const { return frameCount; }
+        virtual CommandContext* GetImmediateContext() const = 0;
+
+        virtual RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) = 0;
 
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
@@ -74,17 +62,12 @@ namespace Alimer
         static void ReportLeaks();
 #endif
 
-    private:
-        void Shutdown();
-        void InitCapabilities();
+    protected:
+        GraphicsDevice() = default;
 
         GraphicsDeviceCaps caps{};
 
-        uint64_t frameCount{ 0 };
-
     private:
-        DeviceApiData* apiData = nullptr;
-
         /// Mutex for accessing the GPU objects vector from several threads.
         std::mutex gpuObjectMutex;
 

@@ -31,18 +31,11 @@ namespace Alimer
         ALIMER_OBJECT(Texture, GraphicsResource);
 
     public:
-        /// Register object factory.
-        static void RegisterObject();
-
         /// Construct.
         Texture();
-        /// Destruct.
-        ~Texture();
 
         /// Constructor.
         Texture(const TextureDescription& desc);
-
-        void Destroy() override;
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }
@@ -84,7 +77,6 @@ namespace Alimer
         static uint32_t CalculateMipLevels(uint32 width, uint32 height, uint32 depth = 1u);
 
     protected:
-        TextureHandle handle{};
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
         TextureUsage usage = TextureUsage::Sampled;

@@ -22,16 +22,16 @@
 
 #pragma once
 
-#include "Graphics/CommandBuffer.h"
+#include "Graphics/CommandContext.h"
 #include "D3D12Backend.h"
 
 namespace Alimer
 {
-    class D3D12CommandBuffer final : public CommandBuffer
+    class D3D12CommandContext final : public CommandContext
     {
     public:
-        D3D12CommandBuffer(D3D12GraphicsDevice* device);
-        ~D3D12CommandBuffer() override;
+        D3D12CommandContext(D3D12GraphicsDevice* device);
+        ~D3D12CommandContext() override;
 
         void Reset(uint32_t frameIndex);
 
