@@ -25,11 +25,6 @@
 
 namespace Alimer
 {
-    Texture::Texture()
-        : GraphicsResource(Type::Texture)
-    {
-    }
-
     Texture::Texture(const TextureDescription& desc)
         : GraphicsResource(Type::Texture)
         , type(desc.type)
@@ -37,8 +32,7 @@ namespace Alimer
         , usage(desc.usage)
         , width(desc.width)
         , height(desc.height)
-        , depth(desc.depth)
-        , arrayLayers(desc.arrayLayers)
+        , depthOrArraySize(desc.depthOrArraySize)
         , mipLevels(desc.mipLevels)
         , sampleCount(desc.sampleCount)
     {
@@ -57,10 +51,10 @@ namespace Alimer
 
     uint32 Texture::GetDepth(uint32 mipLevel) const
     {
-        if (type == TextureType::Type3D)
+        if (type != TextureType::Type3D)
             return 1u;
 
-        return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1U, depth >> mipLevel) : 0;
+        return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, depthOrArraySize >> mipLevel) : 0;
     }
 
     uint32 Texture::CalculateMipLevels(uint32 width, uint32 height, uint32 depth)

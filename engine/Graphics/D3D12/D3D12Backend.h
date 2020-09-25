@@ -34,6 +34,9 @@
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
+#include <queue>
+#include <mutex>
+
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
@@ -50,21 +53,80 @@ namespace Alimer
 
     void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
 
-    struct D3D12Fence
+    class D3D12GpuResource
     {
-        D3D12GraphicsDevice* device = nullptr;
-        ID3D12Fence* d3dFence = nullptr;
-        HANDLE fenceEvent = INVALID_HANDLE_VALUE;
+        friend class D3D12CommandContext;
 
+    public:
+        D3D12GpuResource()
+            : resource(nullptr)
+            , usageState(D3D12_RESOURCE_STATE_COMMON)
+            , transitioningState((D3D12_RESOURCE_STATES)-1)
+            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
+        {}
+
+        D3D12GpuResource(ID3D12Resource* resource, D3D12_RESOURCE_STATES currentState)
+            : resource{ resource }
+            , usageState(currentState)
+            , transitioningState((D3D12_RESOURCE_STATES)-1)
+            , gpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL)
+        {
+        }
+
+        ID3D12Resource* operator->() { return resource; }
+        const ID3D12Resource* operator->() const { return resource; }
+        ID3D12Resource* GetResource() { return resource; }
+        const ID3D12Resource* GetResource() const { return resource; }
+
+        D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
+
+    protected:
+        ID3D12Resource* resource;
+        D3D12_RESOURCE_STATES usageState;
+        D3D12_RESOURCE_STATES transitioningState;
+        D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
+    };
+
+    class D3D12Fence
+    {
+    public:
+        D3D12Fence(D3D12GraphicsDevice* device);
         ~D3D12Fence();
 
-        void Init(D3D12GraphicsDevice* device, uint64 initialValue = 0);
         void Shutdown();
 
-        void Signal(ID3D12CommandQueue* queue, uint64 fenceValue);
-        void Wait(uint64 fenceValue);
-        bool IsSignaled(uint64 fenceValue);
-        void Clear(uint64 fenceValue);
+        uint64_t GpuSignal(ID3D12CommandQueue* queue);
+        void SyncGpu(ID3D12CommandQueue* queue);
+        void SyncCpu();
+        void SyncCpu(uint64_t value);
+
+        uint64_t GetCpuValue() const { return cpuValue; }
+        uint64_t GetGpuValue() const;
+
+    private:
+        D3D12GraphicsDevice* device;
+        ID3D12Fence* handle;
+        HANDLE fenceEvent;
+        uint64_t cpuValue;
+    };
+
+    class D3D12CommandAllocatorPool
+    {
+    public:
+        D3D12CommandAllocatorPool(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE type);
+        ~D3D12CommandAllocatorPool();
+        void Shutdown();
+
+        ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
+        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
+
+    private:
+        ID3D12Device* device;
+        const D3D12_COMMAND_LIST_TYPE type;
+
+        std::vector<ID3D12CommandAllocator*> allocatorPool;
+        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
+        std::mutex allocatorMutex;
     };
 
     struct D3D12DescriptorHeap

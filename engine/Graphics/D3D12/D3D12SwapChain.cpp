@@ -27,7 +27,7 @@
 
 namespace Alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc)
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc, uint32_t bufferCount)
         : SwapChain(desc)
         , device{ device }
         , isTearingSupported(device->IsTearingSupported())
@@ -46,7 +46,7 @@ namespace Alimer
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = Max(desc.bufferCount, 2u);
+        swapChainDesc.BufferCount = Max(bufferCount, 2u);
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -68,7 +68,7 @@ namespace Alimer
 
         // Create a swap chain for the window.
         ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
-            device->GetGraphicsQueue(),
+            device->GetD3D12GraphicsQueue(),
             window,
             &swapChainDesc,
             &fsSwapChainDesc,
@@ -80,8 +80,8 @@ namespace Alimer
         ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
         IUnknown* window = (IUnknown*)desc.windowHandle;
-        ThrowIfFailed(device.GetApiData()->dxgiFactory->CreateSwapChainForCoreWindow(
-            device.GetGraphicsQueue()->GetApiHandle(),
+        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+            device->GetD3D12GraphicsQueue(),
             window,
             &swapChainDesc,
             nullptr,
@@ -107,11 +107,27 @@ namespace Alimer
 
     void D3D12SwapChain::AfterReset()
     {
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+        ThrowIfFailed(handle->GetDesc1(&swapChainDesc));
 
+        width = swapChainDesc.Width;
+        height = swapChainDesc.Height;
+
+        colorTextures.resize(swapChainDesc.BufferCount);
+        for (uint32 index = 0; index < swapChainDesc.BufferCount; ++index)
+        {
+            ID3D12Resource* backBuffer;
+            ThrowIfFailed(handle->GetBuffer(index, IID_PPV_ARGS(&backBuffer)));
+            colorTextures[index].Reset(new D3D12Texture(device, backBuffer, TextureLayout::General));
+        }
+
+        backBufferIndex = handle->GetCurrentBackBufferIndex();
     }
 
     void D3D12SwapChain::Present(bool verticalSync)
     {
+        device->GetImmediateContext()->Flush();
+
         UINT syncInterval = 1;
         UINT presentFlags = 0;
 
@@ -134,6 +150,8 @@ namespace Alimer
         }
 
         ThrowIfFailed(hr);
+
+        backBufferIndex = handle->GetCurrentBackBufferIndex();
 
         if (isPrimary)
         {

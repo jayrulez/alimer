@@ -187,8 +187,7 @@ namespace agpu
         void* window_handle,
         DXGI_FORMAT format,
         uint32_t width, uint32_t height,
-        uint32_t image_count,
-        bool fullscreen)
+        uint32_t bufferCount)
     {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HWND window = (HWND)window_handle;
@@ -225,7 +224,7 @@ namespace agpu
         swapChainDesc.Width = width;
         swapChainDesc.Height = height;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = image_count;
+        swapChainDesc.BufferCount = bufferCount;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
@@ -237,7 +236,7 @@ namespace agpu
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !fullscreen;
+        fsSwapChainDesc.Windowed = TRUE;
 
         // Create a SwapChain from a Win32 window.
         VHR(dxgiFactory->CreateSwapChainForHwnd(

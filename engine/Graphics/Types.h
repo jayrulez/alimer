@@ -28,7 +28,6 @@
 
 namespace Alimer
 {
-    static constexpr uint32_t kRenderLatency = 2u;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -106,6 +105,7 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
+
     enum class BufferUsage : uint32_t
     {
         None = 0,
@@ -135,13 +135,6 @@ namespace Alimer
         Clear
     };
 
-    enum class FrameOpResult : uint32_t {
-        Success = 0,
-        Error,
-        OutOfDate,
-        DeviceLost
-    };
-
     /* Structs */
     struct BufferDescription
     {
@@ -157,9 +150,8 @@ namespace Alimer
         TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
         uint32 height = 1u;
-        uint32 depth = 1u;
+        uint32 depthOrArraySize = 1u;
         uint32 mipLevels = 1u;
-        uint32 arrayLayers = 1u;
         uint32 sampleCount = 1u;
         const char* label;
 
@@ -171,9 +163,8 @@ namespace Alimer
             desc.usage = usage;
             desc.width = width;
             desc.height = height;
-            desc.depth = 1u;
+            desc.depthOrArraySize = 1u;
             desc.mipLevels = mipmapped ? 0u : 1u;
-            desc.arrayLayers = 1u;
             desc.sampleCount = 1u;
             return desc;
         }
@@ -227,8 +218,6 @@ namespace Alimer
 
         /// The depth format.
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-
-        uint32 bufferCount = 2u;
 
         bool isPrimary = false;
         bool isFullscreen = false;

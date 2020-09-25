@@ -62,7 +62,7 @@ namespace agpu
 {
     /* Constants */
     static constexpr uint32_t kMaxLogMessageLength = 4096u;
-    static constexpr uint32_t kInvalidHandleValue = 0xFFFFFFFF;
+    static constexpr uint16_t kInvalidHandleId = 0xffff;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;
@@ -70,15 +70,15 @@ namespace agpu
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
 
     /* Handles */
-    struct BufferHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
-    struct TextureHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
-    struct SharedHandle { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
-    struct Framebuffer { uint32_t value; bool isValid() const { return value != kInvalidHandleValue; } };
+    struct BufferHandle { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct Texture { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct Shader { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
+    struct Swapchain { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
 
-    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleValue };
-    static constexpr TextureHandle kInvalidTexture = { kInvalidHandleValue };
-    static constexpr SharedHandle kInvalidShader = { kInvalidHandleValue };
-    static constexpr Framebuffer kInvalidFramebuffer = { kInvalidHandleValue };
+    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
+    static constexpr Texture kInvalidTexture = { kInvalidHandleId };
+    static constexpr Shader kInvalidShader = { kInvalidHandleId };
+    static constexpr Swapchain kInvalidSwapchain = { kInvalidHandleId };
 
     /* Enums */
     enum BackendType : uint32_t
@@ -200,6 +200,22 @@ namespace agpu
         Clear
     };
 
+    enum class FrameOpResult : uint32_t
+    {
+        Success = 0,
+        Error,
+        SwapChainOutOfDate,
+        DeviceLost
+    };
+
+    enum class EndFrameFlags : uint32_t
+    {
+        None = 0,
+        NoVerticalSync = 1 << 0,
+        SkipPresent = 1 << 1,
+    };
+    AGPU_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
+
     /* Struct */
     struct Color
     {
@@ -263,31 +279,40 @@ namespace agpu
         Limits limits;
     };
 
-    struct PresentationParameters
+    struct RenderPassColorAttachment
     {
-        void* windowHandle;
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
-        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
-        bool enableVSync = false;
-        bool isFullscreen = false;
-    };
-
-    struct PassAttachmentDescription
-    {
-        TextureHandle texture;
+        Texture texture;
         uint32_t mipLevel = 0;
         union {
-            uint32_t face;
+            uint32_t face = 0;
             uint32_t layer;
             uint32_t slice;
         };
+        LoadAction loadAction = LoadAction::Clear;
+        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
-    struct PassDescription
+    struct RenderPassDepthStencilAttachment
     {
-        PassAttachmentDescription colorAttachments[kMaxColorAttachments];
-        PassAttachmentDescription depthStencilAttachment;
+        Texture texture;
+        uint32_t mipLevel = 0;
+        union {
+            //TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t face = 0;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction depthLoadAction = LoadAction::Clear;
+        LoadAction stencilLoadOp = LoadAction::Discard;
+        float clearDepth = 1.0f;
+        uint8_t clearStencil = 0;
+    };
+
+    struct RenderPassDescription
+    {
+        uint32_t                                colorAttachmentsCount;
+        const RenderPassColorAttachment*        colorAttachments;
+        const RenderPassDepthStencilAttachment* depthStencilAttachment = nullptr;
     };
 
     /* Callbacks */
@@ -300,24 +325,34 @@ namespace agpu
     AGPU_API void logInfo(const char* format, ...);
 
     AGPU_API bool SetPreferredBackend(BackendType backend);
-    AGPU_API bool init(InitFlags flags, const PresentationParameters* presentationParameters);
-    AGPU_API void shutdown(void);
-    AGPU_API bool BeginFrame(void);
-    AGPU_API void EndFrame(void);
+    AGPU_API bool Init(InitFlags flags, void* windowHandle);
+    AGPU_API void Shutdown(void);
+
+    AGPU_API Swapchain GetPrimarySwapchain(void);
+    AGPU_API FrameOpResult BeginFrame(Swapchain swapchain);
+    AGPU_API FrameOpResult EndFrame(Swapchain swapchain, EndFrameFlags flags = EndFrameFlags::None);
 
     AGPU_API const Caps* QueryCaps(void);
     //AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
 
     /* Resource creation methods*/
-    AGPU_API Framebuffer CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat = PixelFormat::BGRA8Unorm, PixelFormat depthStencilFormat = PixelFormat::Invalid);
-    AGPU_API Framebuffer CreateFramebuffer(const PassDescription& description);
-    AGPU_API void DestroyFramebuffer(Framebuffer handle);
+    AGPU_API Swapchain CreateSwapchain(void* windowHandle);
+    AGPU_API void DestroySwapchain(Swapchain handle);
+    AGPU_API Texture GetCurrentTexture(Swapchain handle);
 
     AGPU_API BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData);
     AGPU_API void DestroyBuffer(BufferHandle handle);
+
+    AGPU_API Texture CreateExternalTexture2D(intptr_t handle, uint32_t width, uint32_t height, PixelFormat format, bool mipmaps);
+    AGPU_API void DestroyTexture(Texture handle);
 
     /* Commands */
     AGPU_API void PushDebugGroup(const char* name);
     AGPU_API void PopDebugGroup(void);
     AGPU_API void InsertDebugMarker(const char* name);
+    AGPU_API void BeginRenderPass(const RenderPassDescription* renderPass);
+    AGPU_API void EndRenderPass(void);
+
+    /* Util methods */
+    AGPU_API uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
 }

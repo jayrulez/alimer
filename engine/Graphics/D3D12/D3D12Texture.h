@@ -27,10 +27,10 @@
 
 namespace Alimer
 {
-    class D3D12Texture final : public Texture
+    class D3D12Texture final : public Texture, public D3D12GpuResource
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state);
+        D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, Resource initialLayout);
         D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         ~D3D12Texture() override;
         void Destroy() override;
@@ -47,7 +47,8 @@ namespace Alimer
         void BackendSetName() override;
 
         D3D12GraphicsDevice* device;
-        D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
+        D3D12MA::Allocation* allocation = nullptr;
+
         D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
         D3D12_CPU_DESCRIPTOR_HANDLE RTV{};
         UINT64 sizeInBytes{ 0 };

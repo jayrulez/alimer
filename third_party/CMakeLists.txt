@@ -5,6 +5,10 @@ target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 add_subdirectory(fmt)
 add_subdirectory(imgui)
 
+# agpu
+add_subdirectory(agpu)
+set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
+
 # GLFW
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     set (GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -15,20 +19,6 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     #set (GLFW_USE_WAYLAND ${VGPU_USE_WAYLAND} CACHE BOOL "" FORCE)
     add_subdirectory(glfw)
     set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
-endif ()
-
-if (ALIMER_D3D12)
-     # D3D12MemoryAllocator
-    set(D3D12MA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/D3D12MemoryAllocator")
-    set(D3D12MA_FILES
-        "${D3D12MA_DIR}/D3D12MemAlloc.cpp"
-        "${D3D12MA_DIR}/D3D12MemAlloc.h"
-        "${D3D12MA_DIR}/D3D12MemAlloc.natvis"
-    )
-
-    add_library(D3D12MemoryAllocator STATIC ${D3D12MA_FILES})
-    target_include_directories(D3D12MemoryAllocator PUBLIC ${D3D12MA_DIR})
-    set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
 endif ()
 
 if (ALIMER_ENABLE_VULKAN)

@@ -24,6 +24,8 @@
 #include "Platform/Application.h"
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
+#include "UI/ImGuiLayer.h"
+#include <agpu.h>
 
 namespace Alimer
 {
@@ -44,11 +46,10 @@ namespace Alimer
     {
         swapChain.Reset();
         graphics.reset();
+        ImGuiLayer::Shutdown();
+        agpu::Shutdown();
         s_appCurrent = nullptr;
         platform.reset();
-#ifdef _DEBUG
-        GraphicsDevice::ReportLeaks();
-#endif
     }
 
     Application* Application::Current()
@@ -58,16 +59,14 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        GraphicsDebugFlags debugFlags = {};
+        agpu::InitFlags initFlags = {};
 #ifdef _DEBUG
-        //debugFlags |= GraphicsDebugFlags::DebugRuntime;
+        initFlags |= agpu::InitFlags::DebugRuntime;
 #endif
 
-        graphics = GraphicsDevice::Create(debugFlags);
+        agpu::Init(initFlags, GetMainWindow().GetNativeHandle());
 
-        SwapChainDesc swapChainDesc = {};
-        swapChainDesc.isPrimary = true;
-        swapChain = graphics->CreateSwapChain(GetMainWindow().GetNativeHandle(), swapChainDesc);
+        ImGuiLayer::Initialize();
 
         assets.Load<Texture>("texture.png");
 
@@ -100,24 +99,27 @@ namespace Alimer
 
     void Application::Tick()
     {
-        /*if (!agpu::BeginFrame())
+        auto swapchain = agpu::GetPrimarySwapchain();
+
+        if (agpu::BeginFrame(swapchain) != agpu::FrameOpResult::Success)
             return;
 
         agpu::PushDebugGroup("Frame");
 
-        RenderPassDescription renderPass{};
-        renderPass.colorAttachments[0].texture = GetGraphics()->GetPrimarySwapChain()->GetColorTexture();
-        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        agpu::RenderPassColorAttachment colorAttachment{};
+        colorAttachment.texture = agpu::GetCurrentTexture(swapchain);
+        //renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        colorAttachment.clearColor = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
 
-        commandBuffer->BeginRenderPass(&renderPass);
-        commandBuffer->EndRenderPass();
+        agpu::RenderPassDescription renderPass{};
+        renderPass.colorAttachmentsCount = 1u;
+        renderPass.colorAttachments = &colorAttachment;
+
+        agpu::BeginRenderPass(&renderPass);
+        agpu::EndRenderPass();
 
         agpu::PopDebugGroup();
-
-        agpu::EndFrame();
-        */
-        swapChain->Present();
-        //graphicsDevice->Frame();
+        agpu::EndFrame(swapchain);
     }
 
     const Config* Application::GetConfig()

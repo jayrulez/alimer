@@ -27,14 +27,16 @@
 
 namespace Alimer
 {
+    class D3D12CommandQueue;
+
     class D3D12CommandContext final : public CommandContext
     {
     public:
-        D3D12CommandContext(D3D12GraphicsDevice* device);
+        D3D12CommandContext(D3D12GraphicsDevice* device, D3D12CommandQueue* queue);
         ~D3D12CommandContext() override;
 
-        void Reset(uint32_t frameIndex);
-
+        void Reset();
+        void Flush(bool waitForCompletion) override;
         void PushDebugGroup(const char* name) override;
         void PopDebugGroup() override;
         void InsertDebugMarker(const char* name) override;
@@ -48,13 +50,13 @@ namespace Alimer
         void SetViewports(const Viewport* viewports, uint32_t count) override;
         void SetBlendColor(const Color& color) override;
 
-        /*void BindBuffer(uint32_t slot, Buffer* buffer) override;
-        void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
+        //void BindBuffer(uint32_t slot, Buffer* buffer) override;
+        //void BindBufferData(uint32_t slot, const void* data, uint32_t size) override;
 
         // Barriers 
-        void TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate = false);
+        void TransitionResource(D3D12Texture* resource, TextureLayout newLayout, bool flushImmediate = false);
         void InsertUAVBarrier(D3D12GpuResource* resource, bool flushImmediate = false);
-        void FlushResourceBarriers(void);*/
+        void FlushResourceBarriers(void);
 
         ALIMER_FORCE_INLINE ID3D12GraphicsCommandList* GetCommandList() const
         {
@@ -63,10 +65,10 @@ namespace Alimer
 
     private:
         D3D12GraphicsDevice* device;
+        D3D12CommandQueue* queue;
 
         bool useRenderPass;
-        ID3D12CommandAllocator* commandAllocators[kRenderLatency];
-
+        ID3D12CommandAllocator* currentAllocator = nullptr;
         ID3D12GraphicsCommandList* commandList = nullptr;
         ID3D12GraphicsCommandList4* commandList4 = nullptr;
 

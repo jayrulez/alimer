@@ -21,6 +21,7 @@
 //
 
 #include "D3D12CommandContext.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 #include "D3D12Texture.h"
 
@@ -28,7 +29,27 @@ namespace Alimer
 {
     namespace
     {
-        D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE D3D12BeginningAccessType(LoadAction action) {
+        constexpr D3D12_RESOURCE_STATES D3D12ResourceState(ResourceState:: value)
+        {
+            switch (value)
+            {
+            case TextureLayout::Undefined:
+            case TextureLayout::General:
+                return D3D12_RESOURCE_STATE_COMMON;
+
+            case TextureLayout::RenderTarget:
+                return D3D12_RESOURCE_STATE_RENDER_TARGET;
+            case TextureLayout::DepthStencil:
+                return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+            case TextureLayout::DepthStencilReadOnly:
+                return D3D12_RESOURCE_STATE_DEPTH_READ;
+
+            default:
+                return D3D12_RESOURCE_STATE_COMMON;
+            }
+        }
+
+        constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE D3D12BeginningAccessType(LoadAction action) {
             switch (action) {
             case LoadAction::Clear:
                 return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
@@ -52,35 +73,27 @@ namespace Alimer
         }*/
     }
 
-    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsDevice* device)
+    D3D12CommandContext::D3D12CommandContext(D3D12GraphicsDevice* device, D3D12CommandQueue* queue)
         : device{ device }
+        , queue{ queue }
     {
-        /*for (uint32_t index = 0; index < kRenderLatency; ++index)
-        {
-            ThrowIfFailed(device->GetD3DDevice()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocators[index])));
-        }
-
-        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocators[0], nullptr, IID_PPV_ARGS(&commandList)));
+        currentAllocator = queue->RequestAllocator();
+        ThrowIfFailed(device->GetD3DDevice()->CreateCommandList(0, queue->GetType(), currentAllocator, nullptr, IID_PPV_ARGS(&commandList)));
         useRenderPass = SUCCEEDED(commandList->QueryInterface(IID_PPV_ARGS(&commandList4)));
         useRenderPass = false;
-        ThrowIfFailed(commandList->Close());*/
     }
 
     D3D12CommandContext::~D3D12CommandContext()
     {
-        for (uint32_t index = 0; index < kRenderLatency; ++index)
-        {
-            SafeRelease(commandAllocators[index]);
-        }
-
         SafeRelease(commandList);
         SafeRelease(commandList4);
     }
 
-    void D3D12CommandContext::Reset(uint32_t frameIndex)
+    void D3D12CommandContext::Reset()
     {
-        ThrowIfFailed(commandAllocators[frameIndex]->Reset());
-        ThrowIfFailed(commandList->Reset(commandAllocators[frameIndex], nullptr));
+        ALIMER_ASSERT(commandList != nullptr && currentAllocator == nullptr);
+        currentAllocator = queue->RequestAllocator();
+        commandList->Reset(currentAllocator, nullptr);
 
         //currentGraphicsRootSignature = nullptr;
         //currentPipelineState = nullptr;
@@ -88,6 +101,27 @@ namespace Alimer
         numBarriersToFlush = 0;
 
         //BindDescriptorHeaps();
+    }
+
+    void D3D12CommandContext::Flush(bool waitForCompletion)
+    {
+        //FlushResourceBarriers();
+
+        //if (m_ID.length() > 0)
+        //    EngineProfiling::EndBlock(this);
+
+        ALIMER_ASSERT(currentAllocator != nullptr);
+
+        uint64_t fenceValue = queue->ExecuteCommandList(commandList);
+        queue->DiscardAllocator(fenceValue, currentAllocator);
+        currentAllocator = nullptr;
+
+        if (waitForCompletion)
+        {
+            device->WaitForFence(fenceValue);
+        }
+
+        Reset();
     }
 
     void D3D12CommandContext::PushDebugGroup(const char* name)
@@ -148,8 +182,7 @@ namespace Alimer
                     continue;
 
                 D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
-                texture->TransitionBarrier(commandList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-                //colorRTVS[colorRTVSCount] = texture->GetRenderTargetView(attachment.mipLevel, attachment.slice);
+                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
                 colorRTVS[colorRTVSCount] = texture->GetRTV();
 
                 switch (attachment.loadAction)
@@ -253,12 +286,9 @@ namespace Alimer
         commandList->OMSetBlendFactor(&color.r);
     }
 
-#if TODO
-
-
-    void D3D12CommandContext::TransitionResource(D3D12GpuResource* resource, D3D12_RESOURCE_STATES newState, bool flushImmediate)
+    void D3D12CommandContext::TransitionResource(D3D12Texture* resource, TextureLayout newLayout, bool flushImmediate)
     {
-        D3D12_RESOURCE_STATES currentState = resource->GetState();
+        TextureLayout currentLayout = resource->GetLayout();
 
         /*if (type == D3D12_COMMAND_LIST_TYPE_COMPUTE)
         {
@@ -266,7 +296,7 @@ namespace Alimer
             ALIMER_ASSERT((newState & VALID_COMPUTE_QUEUE_RESOURCE_STATES) == newState);
         }*/
 
-        if (currentState != newState)
+        if (currentLayout != newLayout)
         {
             ALIMER_ASSERT_MSG(numBarriersToFlush < kMaxResourceBarriers, "Exceeded arbitrary limit on buffered barriers");
             D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
@@ -278,17 +308,17 @@ namespace Alimer
             barrierDesc.Transition.StateAfter = newState;
 
             // Check to see if we already started the transition
-            if (newState == resource->GetTransitioningState())
+            if (newState == resource->transitioningState)
             {
                 barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-                resource->SetTransitioningState((D3D12_RESOURCE_STATES)-1);
+                resource->transitioningState = (D3D12_RESOURCE_STATES)-1;
             }
             else
             {
                 barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             }
 
-            resource->SetState(newState);
+            resource->usageState = newState;
         }
         else if (newState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
         {
@@ -319,6 +349,4 @@ namespace Alimer
             numBarriersToFlush = 0;
         }
     }
-#endif // TODO
-
 }

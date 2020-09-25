@@ -31,13 +31,14 @@ namespace Alimer
         , height{ desc.height }
         , isPrimary{desc.isPrimary }
         , isFullscreen{ desc.isFullscreen }
+        , backBufferIndex(0)
     {
 
     }
 
     Texture* SwapChain::GetCurrentTexture() const
     {
-        return colorTextures[currentBackBufferIndex].Get();
+        return colorTextures[backBufferIndex].Get();
     }
 }
 

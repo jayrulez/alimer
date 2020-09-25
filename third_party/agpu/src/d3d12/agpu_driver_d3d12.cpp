@@ -40,17 +40,26 @@ namespace agpu
     static PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 #endif
 
-    struct D3D12SwapChain {
+    struct D3D12SwapChain
+    {
+        enum { MAX_COUNT = 32 };
+
         uint32_t width;
         uint32_t height;
         PixelFormat colorFormat;
+        bool isFullscreen;
 
-        uint32_t syncInterval;
-        uint32_t presentFlags;
         // HDR Support
         DXGI_COLOR_SPACE_TYPE colorSpace;
 
         IDXGISwapChain3* handle;
+        ID3D12Fence* fence;
+        HANDLE fenceEvent;
+        uint64_t frameCount;
+
+        uint32_t backbufferIndex;
+        Texture backbufferTexture[3];
+        Texture depthStencilTexture;
     };
 
     struct D3D12Buffer
@@ -65,15 +74,6 @@ namespace agpu
         enum { MAX_COUNT = 4096 };
 
         ID3D12Resource* handle;
-    };
-
-    struct D3D12RenderPass
-    {
-        enum { MAX_COUNT = 512 };
-
-        uint32_t rtvsCount;
-        D3D12_CPU_DESCRIPTOR_HANDLE rtvs[kMaxColorAttachments];
-        const D3D12_CPU_DESCRIPTOR_HANDLE* dsv;
     };
 
     /* Global data */
@@ -93,6 +93,7 @@ namespace agpu
         DWORD dxgiFactoryFlags;
         IDXGIFactory4* factory;
         DXGIFactoryCaps factoryCaps;
+        bool isTearingSupported = false;
         D3D_FEATURE_LEVEL minFeatureLevel;
 
         ID3D12Device* device;
@@ -100,12 +101,14 @@ namespace agpu
         D3D_FEATURE_LEVEL feature_level;
         bool is_lost;
 
-        D3D12SwapChain swapChain;
+        ID3D12CommandQueue* graphicsQueue;
+
+        Swapchain primarySwapChain{ kInvalidHandleId };
 
         std::mutex handle_mutex{};
+        Pool<D3D12SwapChain, D3D12SwapChain::MAX_COUNT> swapchains;
         Pool<D3D12Buffer, D3D12Buffer::MAX_COUNT> buffers;
         Pool<D3D12Texture, D3D12Texture::MAX_COUNT> textures;
-        Pool<D3D12RenderPass, D3D12RenderPass::MAX_COUNT> renderPasses;
     } d3d12;
 
     /* Device/Renderer */
@@ -188,6 +191,7 @@ namespace agpu
             else
             {
                 d3d12.factoryCaps |= DXGIFactoryCaps::Tearing;
+                d3d12.isTearingSupported = true;
             }
         }
 
@@ -290,10 +294,9 @@ namespace agpu
     }
 
     /* SwapChain functions. */
-    static bool d3d12_UpdateSwapChain(D3D12SwapChain* swapChain, const PresentationParameters* presentationParameters);
-    static void d3d12_DestroySwapChain(D3D12SwapChain* swapChain);
+    //static bool d3d12_UpdateSwapChain(D3D12SwapChain* swapChain, const PresentationParameters* presentationParameters);
 
-    static bool d3d12_init(InitFlags flags, const PresentationParameters* presentationParameters)
+    static bool d3d12_init(InitFlags flags, void* windowHandle)
     {
         d3d12.debug = any(flags & InitFlags::DebugRuntime) || any(flags & InitFlags::GPUBasedValidation);
         d3d12.GPUBasedValidation = any(flags & InitFlags::GPUBasedValidation);
@@ -441,35 +444,45 @@ namespace agpu
         /* Release adapter */
         SAFE_RELEASE(adapter);
 
-        /* Create swap chain if required. */
-        if (presentationParameters != nullptr)
+        /* Create command queue's. */
         {
-            if (!d3d12_UpdateSwapChain(&d3d12.swapChain, presentationParameters))
-            {
-                return false;
-            }
+            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+            queueDesc.NodeMask = 0;
+            VHR(d3d12.device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&d3d12.graphicsQueue)));
+            d3d12.graphicsQueue->SetName(L"Graphics Command Queue");
         }
 
         /* Init pools*/
+        d3d12.swapchains.init();
         d3d12.buffers.init();
         d3d12.textures.init();
-        d3d12.renderPasses.init();
+
+        /* Create swap chain if required. */
+        if (windowHandle != nullptr)
+        {
+            d3d12.primarySwapChain = CreateSwapchain(windowHandle);
+        }
 
         return true;
     }
 
-    static void d3d12_shutdown(void)
+    static void d3d12_Shutdown(void)
     {
-        if (d3d12.swapChain.handle)
+        if (d3d12.primarySwapChain.isValid())
         {
-            d3d12_DestroySwapChain(&d3d12.swapChain);
+            DestroySwapchain(d3d12.primarySwapChain);
         }
+
+        SAFE_RELEASE(d3d12.graphicsQueue);
 
         ULONG refCount = d3d12.device->Release();
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
-            logError("Direct3D11: There are %d unreleased references left on the device", refCount);
+            logError("Direct3D12: There are %d unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice = nullptr;
             if (SUCCEEDED(d3d12.device->QueryInterface(IID_PPV_ARGS(&debugDevice))))
@@ -494,15 +507,15 @@ namespace agpu
 #endif
     }
 
-    static void d3d12_update_color_space(D3D12SwapChain* context)
+    static void d3d12_update_color_space(D3D12SwapChain& swapchain)
     {
-        context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+        swapchain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
 
         bool isDisplayHDR10 = false;
 
 #if defined(NTDDI_WIN10_RS2)
         IDXGIOutput* output;
-        if (SUCCEEDED(context->handle->GetContainingOutput(&output)))
+        if (SUCCEEDED(swapchain.handle->GetContainingOutput(&output)))
         {
             IDXGIOutput6* output6;
             if (SUCCEEDED(output->QueryInterface(IID_PPV_ARGS(&output6))))
@@ -525,16 +538,16 @@ namespace agpu
 
         if (isDisplayHDR10)
         {
-            switch (context->colorFormat)
+            switch (swapchain.colorFormat)
             {
             case PixelFormat::RGBA16Unorm:
                 // The application creates the HDR10 signal.
-                context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+                swapchain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
                 break;
 
             case PixelFormat::RGBA32Float:
                 // The system creates the HDR10 signal; application uses linear values.
-                context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+                swapchain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
                 break;
 
             default:
@@ -542,28 +555,22 @@ namespace agpu
             }
         }
 
-        IDXGISwapChain3* swapChain3;
-        if (SUCCEEDED(context->handle->QueryInterface(IID_PPV_ARGS(&swapChain3))))
+        UINT colorSpaceSupport = 0;
+        if (SUCCEEDED(swapchain.handle->CheckColorSpaceSupport(swapchain.colorSpace, &colorSpaceSupport))
+            && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
         {
-            UINT colorSpaceSupport = 0;
-            if (SUCCEEDED(swapChain3->CheckColorSpaceSupport(context->colorSpace, &colorSpaceSupport))
-                && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
-            {
-                VHR(swapChain3->SetColorSpace1(context->colorSpace));
-            }
-
-            swapChain3->Release();
+            VHR(swapchain.handle->SetColorSpace1(swapchain.colorSpace));
         }
     }
 
-    static void d3d11_AfterReset(D3D12SwapChain* swapChain)
+    static void d3d11_AfterReset(D3D12SwapChain& swapChain)
     {
         d3d12_update_color_space(swapChain);
 
         DXGI_SWAP_CHAIN_DESC1 swapchain_desc;
-        VHR(swapChain->handle->GetDesc1(&swapchain_desc));
-        swapChain->width = swapchain_desc.Width;
-        swapChain->height = swapchain_desc.Height;
+        VHR(swapChain.handle->GetDesc1(&swapchain_desc));
+        swapChain.width = swapchain_desc.Width;
+        swapChain.height = swapchain_desc.Height;
 
         /* TODO: Until we support textures. */
         // ID3D11Texture2D* backbuffer;
@@ -571,75 +578,39 @@ namespace agpu
 
         //ID3D11Device1_CreateRenderTargetView(d3d11.device, (ID3D11Resource*)backbuffer, NULL, &context->rtv);
         //ID3D11Texture2D_Release(backbuffer);
+
+        swapChain.backbufferIndex = swapChain.handle->GetCurrentBackBufferIndex();
     }
 
-    static bool d3d12_UpdateSwapChain(D3D12SwapChain* swapChain, const PresentationParameters* presentationParameters)
+    static Swapchain d3d12_GetPrimarySwapchain(void)
     {
-        const uint32_t backbufferCount = 2u;
-        swapChain->colorFormat = presentationParameters->colorFormat;
-        swapChain->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+        return d3d12.primarySwapChain;
+    }
 
-        /* TODO: Multisample */
+    static FrameOpResult d3d12_BeginFrame(Swapchain handle)
+    {
+        return FrameOpResult::Success;
+    }
 
-        // Create swapchain if required.
-        if (swapChain->handle == nullptr)
+    static FrameOpResult d3d12_EndFrame(Swapchain handle, EndFrameFlags flags)
+    {
+        D3D12SwapChain& swapchain = d3d12.swapchains[handle.id];
+
+        if (!any(flags & EndFrameFlags::SkipPresent))
         {
-            /* Setup sync interval and present flags. */
-            swapChain->syncInterval = 1;
-            swapChain->presentFlags = 0;
-            if (!presentationParameters->enableVSync)
+            UINT syncInterval = 1;
+            UINT presentFlags = 0;
+
+            if (any(flags & EndFrameFlags::NoVerticalSync))
             {
-                swapChain->syncInterval = 0;
-                if (any(d3d12.factoryCaps & DXGIFactoryCaps::Tearing))
+                syncInterval = 0;
+                if (!swapchain.isFullscreen && d3d12.isTearingSupported)
                 {
-                    swapChain->presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+                    presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
                 }
             }
 
-            IDXGISwapChain* tempSwapChain = d3dCreateSwapChain(
-                d3d12.factory, d3d12.factoryCaps, d3d12.device,
-                presentationParameters->windowHandle,
-                ToDXGISwapChainFormat(presentationParameters->colorFormat),
-                presentationParameters->backBufferWidth, presentationParameters->backBufferHeight,
-                backbufferCount,
-                presentationParameters->isFullscreen);
-            VHR(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain->handle)));
-            SAFE_RELEASE(tempSwapChain);
-        }
-        else
-        {
-            // TODO: Resize.
-        }
-
-        d3d11_AfterReset(swapChain);
-
-        return true;
-    }
-
-    static void d3d12_DestroySwapChain(D3D12SwapChain* swapChain)
-    {
-        SAFE_RELEASE(swapChain->handle);
-    }
-
-    static bool d3d12_beginFrame(void) {
-        float clear_color[4] = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
-
-        //ID3D11DeviceContext1_ClearRenderTargetView(d3d11.context, d3d11_current_context->rtv, clear_color);
-        //ID3D11DeviceContext1_ClearDepthStencilView(d3d11.context, d3d11_current_context->dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        //ID3D11DeviceContext1_OMSetRenderTargets(d3d11.context, 1, &d3d11_current_context->rtv, d3d11_current_context->dsv);
-
-        // Set the viewport.
-        //auto viewport = m_deviceResources->GetScreenViewport();
-        //context->RSSetViewports(1, &viewport);
-
-        return true;
-    }
-
-    static void d3d12_endFrame(void)
-    {
-        if (d3d12.swapChain.handle != nullptr)
-        {
-            HRESULT hr = d3d12.swapChain.handle->Present(d3d12.swapChain.syncInterval, d3d12.swapChain.presentFlags);
+            HRESULT hr = swapchain.handle->Present(syncInterval, presentFlags);
             if (hr == DXGI_ERROR_DEVICE_REMOVED
                 || hr == DXGI_ERROR_DEVICE_HUNG
                 || hr == DXGI_ERROR_DEVICE_RESET
@@ -647,8 +618,21 @@ namespace agpu
                 || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
             {
                 d3d12.is_lost = true;
+                return FrameOpResult::DeviceLost;
             }
         }
+
+        VHR(d3d12.graphicsQueue->Signal(swapchain.fence, ++swapchain.frameCount));
+
+        uint64_t GPUFrameCount = swapchain.fence->GetCompletedValue();
+
+        if ((swapchain.frameCount - GPUFrameCount) >= 2)
+        {
+            swapchain.fence->SetEventOnCompletion(GPUFrameCount + 1, swapchain.fenceEvent);
+            WaitForSingleObject(swapchain.fenceEvent, INFINITE);
+        }
+
+        swapchain.backbufferIndex = swapchain.handle->GetCurrentBackBufferIndex();
 
         if (!d3d12.is_lost)
         {
@@ -658,6 +642,8 @@ namespace agpu
                 d3d12_CreateFactory();
             }
         }
+
+        return FrameOpResult::Success;
     }
 
     static const Caps* d3d12_QueryCaps(void)
@@ -665,54 +651,78 @@ namespace agpu
         return &d3d12.caps;
     }
 
-    static Framebuffer d3d12_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
+    /* Swapchain */
+    static Swapchain d3d12_CreateSwapchain(void* windowHandle)
     {
-        return kInvalidFramebuffer;
-    }
+        uint16_t id = kInvalidPoolId;
 
-    static Framebuffer d3d12_CreateRenderPass(const PassDescription& desc)
-    {
-        std::lock_guard<std::mutex> lock(d3d12.handle_mutex);
-
-        if (d3d12.renderPasses.isFull())
         {
-            logError("D3D12: Not enough free render pass slots.");
-            return kInvalidFramebuffer;
-        }
+            std::lock_guard<std::mutex> lock(d3d12.handle_mutex);
 
-        const int id = d3d12.renderPasses.alloc();
-        if (id < 0) {
-            return kInvalidFramebuffer;
-        }
-
-        D3D12RenderPass& renderPass = d3d12.renderPasses[id];
-        renderPass = {};
-
-        HRESULT hr = S_OK;
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
-        {
-            if (!desc.colorAttachments[i].texture.isValid())
-                continue;
-
-            D3D12Texture& texture = d3d12.textures[desc.colorAttachments[i].texture.value];
-
-            /*hr = d3d12.device->CreateRenderTargetView(texture.handle, nullptr, &renderPass.rtvs[renderPass.rtvsCount]);
-            if (FAILED(hr))
+            if (d3d12.swapchains.isFull())
             {
-                logError("Direct3D11: Failed to create RenderTargetView");
-                d3d11.renderPasses.dealloc((uint32_t)id);
-                return kInvalidRenderPass;
+                logError("D3D12: Not enough free swapchains slots.");
+                return kInvalidSwapchain;
             }
 
-            renderPass.rtvsCount++;*/
+            id = d3d12.swapchains.alloc();
+            if (id == kInvalidPoolId) {
+                return kInvalidSwapchain;
+            }
+
+            D3D12SwapChain& swapChain = d3d12.swapchains[id];
+            swapChain = {};
+            swapChain.depthStencilTexture = kInvalidTexture;
+
+            const uint32_t backbufferCount = 2u;
+            swapChain.colorFormat = PixelFormat::BGRA8Unorm;
+            swapChain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+
+            /* TODO: Multisample */
+
+            // Create swapchain if required.
+            IDXGISwapChain* tempSwapChain = d3dCreateSwapChain(
+                d3d12.factory, d3d12.factoryCaps, d3d12.graphicsQueue,
+                windowHandle,
+                ToDXGISwapChainFormat(PixelFormat::BGRA8Unorm),
+                0, 0,
+                backbufferCount);
+
+            VHR(tempSwapChain->QueryInterface(IID_PPV_ARGS(&swapChain.handle)));
+            SAFE_RELEASE(tempSwapChain);
         }
 
-        return { (uint32_t)id };
+        d3d11_AfterReset(d3d12.swapchains[id]);
+
+        VHR(d3d12.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3d12.swapchains[id].fence)));
+        d3d12.swapchains[id].fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+
+        return { id };
     }
 
-    static void d3d12_DestroyRenderPass(Framebuffer handle)
+    static void d3d12_DestroySwapchain(Swapchain handle)
     {
+        D3D12SwapChain& swapchain = d3d12.swapchains[handle.id];
+        DestroyTexture(swapchain.backbufferTexture[0]);
+        DestroyTexture(swapchain.depthStencilTexture);
 
+        CloseHandle(swapchain.fenceEvent);
+        SAFE_RELEASE(swapchain.fence);
+        SAFE_RELEASE(swapchain.handle);
+
+        std::lock_guard<std::mutex> lock(d3d12.handle_mutex);
+        d3d12.swapchains.dealloc(handle.id);
+
+        // Unset primary id
+        if (handle.id == d3d12.primarySwapChain.id)
+        {
+            d3d12.primarySwapChain.id = kInvalidHandleId;
+        }
+    }
+
+    static Texture d3d12_GetCurrentTexture(Swapchain handle)
+    {
+        return kInvalidTexture;
     }
 
     static BufferHandle d3d12_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
@@ -739,10 +749,20 @@ namespace agpu
             return kInvalidBuffer;
         }*/
 
-        return { (uint32_t)id };
+        return { (uint16_t)id };
     }
 
     static void d3d12_DestroyBuffer(BufferHandle handle)
+    {
+
+    }
+
+    static Texture d3d12_CreateTexture(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle)
+    {
+        return kInvalidTexture;
+    }
+
+    static void d3d12_DestroyTexture(Texture handle)
     {
 
     }
@@ -768,6 +788,15 @@ namespace agpu
         {
             //d3d11.annotation->SetMarker(wName);
         }
+    }
+
+    static void d3d12_BeginRenderPass(const RenderPassDescription* renderPass)
+    {
+    }
+
+    static void d3d12_EndRenderPass(void)
+    {
+
     }
 
     /* Driver */
@@ -809,9 +838,9 @@ namespace agpu
         return true;
     };
 
-    static agpu_renderer* d3d12_CreateRenderer(void)
+    static Renderer* d3d12_CreateRenderer(void)
     {
-        static agpu_renderer renderer = { 0 };
+        static Renderer renderer = { 0 };
         ASSIGN_DRIVER(d3d12);
         return &renderer;
     }

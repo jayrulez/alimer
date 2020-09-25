@@ -47,7 +47,7 @@ add_library(agpu
 	src/agpu.cpp
     src/agpu_driver_d3d_common.h
     src/agpu_driver_d3d11.cpp
-    src/agpu_driver_d3d12.cpp
+    
     src/agpu_driver_opengl.cpp
 )
 
@@ -64,9 +64,10 @@ set_target_properties(agpu PROPERTIES OUTPUT_NAME "agpu"
 
 if(WIN32 OR WINDOWS_STORE)
     target_sources(agpu PRIVATE
-        ${AGPU_THIRD_PARTY_DIR}/D3D12MemoryAllocator/D3D12MemAlloc.cpp
-        ${AGPU_THIRD_PARTY_DIR}/D3D12MemoryAllocator/D3D12MemAlloc.h
-        ${AGPU_THIRD_PARTY_DIR}/D3D12MemoryAllocator/D3D12MemAlloc.natvis
+        src/d3d12/agpu_driver_d3d12.cpp
+        src/d3d12/D3D12MemAlloc.cpp
+        src/d3d12/D3D12MemAlloc.h
+        src/d3d12/D3D12MemAlloc.natvis
     )
 
     target_include_directories(agpu PRIVATE

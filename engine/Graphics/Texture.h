@@ -31,9 +31,6 @@ namespace Alimer
         ALIMER_OBJECT(Texture, GraphicsResource);
 
     public:
-        /// Construct.
-        Texture();
-
         /// Constructor.
         Texture(const TextureDescription& desc);
 
@@ -53,7 +50,7 @@ namespace Alimer
         uint32 GetMipLevels() const { return mipLevels; }
 
         /// Get the array layers of the texture.
-        uint32 GetArrayLayers() const { return arrayLayers; }
+        uint32 GetArrayLayers() const { return depthOrArraySize; }
 
         /// Get the texture usage.
         TextureUsage GetUsage() const { return usage; }
@@ -82,9 +79,8 @@ namespace Alimer
         TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
         uint32 height = 1u;
-        uint32 depth = 1u;
+        uint32 depthOrArraySize = 1u;
         uint32 mipLevels = 1u;
-        uint32 arrayLayers = 1u;
         uint32 sampleCount = 1u;
     };
 }

@@ -30,7 +30,7 @@ namespace Alimer
     class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc);
+        D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc, uint32_t bufferCount);
         ~D3D12SwapChain() override;
         void Destroy();
 
@@ -40,9 +40,7 @@ namespace Alimer
 
     private:
         D3D12GraphicsDevice* device;
-        IDXGISwapChain3* handle = nullptr;
+        IDXGISwapChain3* handle;
         bool isTearingSupported;
-        uint32_t syncInterval;
-        uint64_t frameCount{ 0 };
     };
 }

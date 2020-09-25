@@ -73,7 +73,7 @@ namespace agpu
     }
 
     static const Driver* drivers[] = {
-    #if AGPU_DRIVER_D3D12 && defined(TODO )
+    #if AGPU_DRIVER_D3D12
         &D3D12_Driver,
     #endif
     #if AGPU_DRIVER_D3D11
@@ -93,7 +93,7 @@ namespace agpu
     };
 
     static BackendType s_backend = BackendType::Count;
-    static agpu_renderer* renderer = nullptr;
+    static Renderer* renderer = nullptr;
 
     bool SetPreferredBackend(BackendType backend)
     {
@@ -104,10 +104,8 @@ namespace agpu
         return true;
     }
 
-    bool init(InitFlags flags, const PresentationParameters* presentationParameters)
+    bool Init(InitFlags flags, void* windowHandle)
     {
-        AGPU_ASSERT(presentationParameters);
-
         if (renderer) {
             return true;
         }
@@ -140,29 +138,38 @@ namespace agpu
             }
         }
 
-        if (!renderer || !renderer->init(flags, presentationParameters)) {
+        if (!renderer || !renderer->init(flags, windowHandle)) {
             return false;
         }
 
         return true;
     }
 
-    void shutdown(void) {
+    void Shutdown(void) {
         if (renderer == nullptr)
             return;
 
-        renderer->shutdown();
+        renderer->Shutdown();
         renderer = nullptr;
     }
 
-    bool BeginFrame(void)
+    Swapchain GetPrimarySwapchain(void)
     {
-        return renderer->beginFrame();
+        return renderer->GetPrimarySwapchain();
     }
 
-    void EndFrame(void)
+    FrameOpResult BeginFrame(Swapchain swapchain)
     {
-        renderer->endFrame();
+        AGPU_ASSERT(swapchain.isValid());
+
+        return renderer->BeginFrame(swapchain);
+    }
+
+    FrameOpResult EndFrame(Swapchain swapchain, EndFrameFlags flags)
+    {
+        AGPU_ASSERT(swapchain.isValid());
+
+        return renderer->EndFrame(swapchain, flags);
     }
 
     const Caps* QueryCaps(void)
@@ -171,26 +178,26 @@ namespace agpu
         return renderer->QueryCaps();
     }
 
-    Framebuffer CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
+    Swapchain CreateSwapchain(void* windowHandle)
     {
         AGPU_ASSERT(windowHandle);
-        AGPU_ASSERT(width > 0);
-        AGPU_ASSERT(height > 0);
 
-        return renderer->CreateFramebuffer(windowHandle, width, height, colorFormat, depthStencilFormat);
+        return renderer->CreateSwapchain(windowHandle);
     }
 
-    Framebuffer CreateFramebuffer(const PassDescription& description)
-    {
-        return renderer->CreateRenderPass(description);
-    }
-
-    void DestroyFramebuffer(Framebuffer handle)
+    void DestroySwapchain(Swapchain handle)
     {
         if (handle.isValid())
         {
-            renderer->DestroyRenderPass(handle);
+            renderer->DestroySwapchain(handle);
         }
+    }
+
+    Texture GetCurrentTexture(Swapchain handle)
+    {
+        AGPU_ASSERT(handle.isValid());
+
+        return renderer->GetCurrentTexture(handle);
     }
 
     BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
@@ -211,6 +218,21 @@ namespace agpu
         }
     }
 
+
+    Texture CreateExternalTexture2D(intptr_t handle, uint32_t width, uint32_t height, PixelFormat format, bool mipmaps)
+    {
+        uint32_t mipLevels = mipmaps ? CalculateMipLevels(width, height, 1u) : 1u;
+        return renderer->CreateTexture(width, height, format, mipLevels, handle);
+    }
+
+    void DestroyTexture(Texture handle)
+    {
+        if (handle.isValid())
+        {
+            renderer->DestroyTexture(handle);
+        }
+    }
+
     /* Commands */
     void PushDebugGroup(const char* name)
     {
@@ -225,6 +247,34 @@ namespace agpu
     void InsertDebugMarker(const char* name)
     {
         renderer->InsertDebugMarker(name);
+    }
+
+    void BeginRenderPass(const RenderPassDescription* renderPass)
+    {
+        AGPU_ASSERT(renderPass);
+
+        renderer->BeginRenderPass(renderPass);
+    }
+
+    void EndRenderPass(void)
+    {
+        renderer->EndRenderPass();
+    }
+
+    /* Util methods */
+    uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
+    {
+        uint32_t mipLevels = 0u;
+        uint32_t size = AGPU_MAX(AGPU_MAX(width, height), depth);
+        while (1u << mipLevels <= size) {
+            ++mipLevels;
+        }
+
+        if (1u << mipLevels < size) {
+            ++mipLevels;
+        }
+
+        return mipLevels;
     }
 }
 

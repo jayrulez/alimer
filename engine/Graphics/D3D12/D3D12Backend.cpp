@@ -48,55 +48,126 @@ namespace Alimer
 #endif
     }
 
-    // ========= Fence =========
+    D3D12Fence::D3D12Fence(D3D12GraphicsDevice* device)
+        : device{ device }
+        , cpuValue(0)
+    {
+        ThrowIfFailed(device->GetD3DDevice()->CreateFence(cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
+        cpuValue++;
+
+        fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(fenceEvent != 0);
+    }
+
     D3D12Fence::~D3D12Fence()
     {
         Shutdown();
     }
 
-    void D3D12Fence::Init(D3D12GraphicsDevice* device, uint64 initialValue)
-    {
-        this->device = device;
-        //ThrowIfFailed(device->GetD3DDevice()->CreateFence(initialValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&d3dFence)));
-        fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
-        ALIMER_ASSERT(fenceEvent != 0);
-    }
-
     void D3D12Fence::Shutdown()
     {
-        if (!d3dFence)
+        if (!handle)
             return;
 
         CloseHandle(fenceEvent);
-        //device->DeferredRelease(d3dFence);
+        device->ReleaseResource(handle);
     }
 
-    void D3D12Fence::Signal(ID3D12CommandQueue* queue, uint64 fenceValue)
+    uint64_t D3D12Fence::GpuSignal(ID3D12CommandQueue* queue)
     {
-        ALIMER_ASSERT(d3dFence != nullptr);
-        ThrowIfFailed(queue->Signal(d3dFence, fenceValue));
+        ThrowIfFailed(queue->Signal(handle, cpuValue));
+        cpuValue++;
+        return cpuValue - 1;
     }
 
-    void D3D12Fence::Wait(uint64_t fenceValue)
+    void D3D12Fence::SyncGpu(ID3D12CommandQueue* queue)
     {
-        ALIMER_ASSERT(d3dFence != nullptr);
-        if (d3dFence->GetCompletedValue() < fenceValue)
+        ThrowIfFailed(queue->Wait(handle, cpuValue - 1));
+    }
+
+    void D3D12Fence::SyncCpu()
+    {
+        SyncCpu(cpuValue - 1);
+    }
+
+    void D3D12Fence::SyncCpu(uint64_t value)
+    {
+        ALIMER_ASSERT(value <= cpuValue - 1);
+
+        uint64_t gpuVal = GetGpuValue();
+        if (gpuVal < value)
         {
-            ThrowIfFailed(d3dFence->SetEventOnCompletion(fenceValue, fenceEvent));
+            ThrowIfFailed(handle->SetEventOnCompletion(value, fenceEvent));
             WaitForSingleObject(fenceEvent, INFINITE);
         }
     }
 
-    bool D3D12Fence::IsSignaled(uint64 fenceValue)
+    uint64_t D3D12Fence::GetGpuValue() const
     {
-        ALIMER_ASSERT(d3dFence != nullptr);
-        return d3dFence->GetCompletedValue() >= fenceValue;
+        return handle->GetCompletedValue();
     }
 
-    void D3D12Fence::Clear(uint64 fenceValue)
+    /* D3D12CommandAllocatorPool */
+    D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE type)
+        : device{ device }
+        , type{ type }
     {
-        ALIMER_ASSERT(d3dFence != nullptr);
-        d3dFence->Signal(fenceValue);
+
     }
 
+    D3D12CommandAllocatorPool::~D3D12CommandAllocatorPool()
+    {
+        Shutdown();
+    }
+
+    void D3D12CommandAllocatorPool::Shutdown()
+    {
+        for (size_t i = 0; i < allocatorPool.size(); ++i)
+            allocatorPool[i]->Release();
+
+        allocatorPool.clear();
+    }
+
+    ID3D12CommandAllocator* D3D12CommandAllocatorPool::RequestAllocator(uint64_t completedFenceValue)
+    {
+        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
+
+        ID3D12CommandAllocator* commandAllocator = nullptr;
+
+        if (!readyAllocators.empty())
+        {
+            std::pair<uint64_t, ID3D12CommandAllocator*>& allocatorPair = readyAllocators.front();
+
+            if (allocatorPair.first <= completedFenceValue)
+            {
+                commandAllocator = allocatorPair.second;
+                ThrowIfFailed(commandAllocator->Reset());
+                readyAllocators.pop();
+            }
+        }
+
+        // If no allocator's were ready to be reused, create a new one
+        if (commandAllocator == nullptr)
+        {
+            ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+
+#ifdef _DEBUG
+            wchar_t allocatorName[32];
+            swprintf(allocatorName, 32, L"CommandAllocator %zu", allocatorPool.size());
+            commandAllocator->SetName(allocatorName);
+#endif
+
+            allocatorPool.push_back(commandAllocator);
+        }
+
+        return commandAllocator;
+    }
+
+    void D3D12CommandAllocatorPool::DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator)
+    {
+        std::lock_guard<std::mutex> LockGuard(allocatorMutex);
+
+        // That fence value indicates we are free to reset the allocator
+        readyAllocators.push(std::make_pair(fenceValue, commandAllocator));
+    }
 }

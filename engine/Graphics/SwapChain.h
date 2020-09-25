@@ -48,7 +48,7 @@ namespace Alimer
         uint32_t height;
         bool isPrimary;
         bool isFullscreen;
-        uint32_t currentBackBufferIndex{ 0 };
+        uint32_t backBufferIndex;
         std::vector<RefPtr<Texture>> colorTextures;
     };
 }

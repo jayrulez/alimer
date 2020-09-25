@@ -43,19 +43,21 @@ namespace agpu
     static const IID D3D11_WKPDID_D3DDebugObjectName = { 0x429b8c22, 0x9188, 0x4b0c, { 0x87,0x42,0xac,0xb0,0xbf,0x85,0xc2,0x00 } };
 #endif
 
-    struct D3D11SwapChain {
+    struct D3D11SwapChain
+    {
+        enum { MAX_COUNT = 32 };
+
         uint32_t width;
         uint32_t height;
         PixelFormat colorFormat;
+        bool isFullscreen;
 
-        uint32_t syncInterval;
-        uint32_t presentFlags;
         // HDR Support
         DXGI_COLOR_SPACE_TYPE colorSpace;
 
         IDXGISwapChain1* handle;
-        ID3D11RenderTargetView* rtv;
-        ID3D11DepthStencilView* dsv;
+        Texture backbufferTexture;
+        Texture depthStencilTexture;
     };
 
     struct D3D11Buffer
@@ -74,15 +76,11 @@ namespace agpu
             ID3D11Texture2D* tex2D;
             ID3D11Texture3D* tex3D;
         };
-    };
 
-    struct D3D11RenderPass
-    {
-        enum { MAX_COUNT = 512 };
-
-        uint32_t rtvsCount;
-        ID3D11RenderTargetView* rtvs[kMaxColorAttachments];
-        ID3D11DepthStencilView* dsv;
+        union {
+            ID3D11RenderTargetView* rtv;
+            ID3D11DepthStencilView* dsv;
+        };
     };
 
     /* Global data */
@@ -99,6 +97,7 @@ namespace agpu
 
         IDXGIFactory2* factory;
         DXGIFactoryCaps factoryCaps;
+        bool isTearingSupported;
 
         ID3D11Device1* device;
         ID3D11DeviceContext1* context;
@@ -108,12 +107,15 @@ namespace agpu
 
         Caps caps;
 
-        D3D11SwapChain swapChain;
+        Swapchain primarySwapChain{ kInvalidHandleId };
 
         std::mutex handle_mutex{};
+        Pool<D3D11SwapChain, D3D11SwapChain::MAX_COUNT> swapchains;
         Pool<D3D11Buffer, D3D11Buffer::MAX_COUNT> buffers;
         Pool<D3D11Texture, D3D11Texture::MAX_COUNT> textures;
-        Pool<D3D11RenderPass, D3D11RenderPass::MAX_COUNT> renderPasses;
+
+        /* Helper fields*/
+        ID3D11RenderTargetView* zero_rtvs[kMaxColorAttachments];
     } d3d11;
 
     /* Device/Renderer */
@@ -227,6 +229,7 @@ namespace agpu
             else
             {
                 d3d11.factoryCaps |= DXGIFactoryCaps::Tearing;
+                d3d11.isTearingSupported = true;
             }
         }
 
@@ -291,10 +294,8 @@ namespace agpu
     }
 
     /* SwapChain functions. */
-    static bool d3d11_UpdateSwapChain(D3D11SwapChain* swapChain, const PresentationParameters* presentationParameters);
-    static void d3d11_DestroySwapChain(D3D11SwapChain* swapChain);
 
-    static bool d3d11_init(InitFlags flags, const PresentationParameters* presentationParameters)
+    static bool d3d11_init(InitFlags flags, void* windowHandle)
     {
         d3d11.debug = any(flags & InitFlags::DebugRuntime) || any(flags & InitFlags::GPUBasedValidation);
 
@@ -303,7 +304,7 @@ namespace agpu
         }
 
         const bool lowPower = any(flags & InitFlags::LowPowerGPUPreference);
-        IDXGIAdapter1* dxgi_adapter = d3d11_get_adapter(lowPower);
+        IDXGIAdapter1* dxgiAdapter = d3d11_get_adapter(lowPower);
 
         /* Create d3d11 device */
         {
@@ -336,10 +337,10 @@ namespace agpu
             ID3D11DeviceContext* temp_d3d_context;
 
             HRESULT hr = E_FAIL;
-            if (dxgi_adapter)
+            if (dxgiAdapter)
             {
                 hr = D3D11CreateDevice(
-                    (IDXGIAdapter*)dxgi_adapter,
+                    (IDXGIAdapter*)dxgiAdapter,
                     D3D_DRIVER_TYPE_UNKNOWN,
                     NULL,
                     creationFlags,
@@ -423,7 +424,7 @@ namespace agpu
         /* Init caps first. */
         {
             DXGI_ADAPTER_DESC1 adapter_desc;
-            VHR(dxgi_adapter->GetDesc1(&adapter_desc));
+            VHR(dxgiAdapter->GetDesc1(&adapter_desc));
 
             /* Log some info */
             logInfo("GPU driver: D3D11");
@@ -501,30 +502,27 @@ namespace agpu
         }
 
         /* Release adapter */
-        dxgi_adapter->Release();
-
-        /* Create swap chain if required. */
-        if (presentationParameters != nullptr)
-        {
-            if (!d3d11_UpdateSwapChain(&d3d11.swapChain, presentationParameters))
-            {
-                return false;
-            }
-        }
+        dxgiAdapter->Release();
 
         /* Init pools*/
+        d3d11.swapchains.init();
         d3d11.buffers.init();
         d3d11.textures.init();
-        d3d11.renderPasses.init();
+
+        /* Create swap chain if required. */
+        if (windowHandle != nullptr)
+        {
+            d3d11.primarySwapChain = CreateSwapchain(windowHandle);
+        }
 
         return true;
     }
 
-    static void d3d11_shutdown(void)
+    static void d3d11_Shutdown(void)
     {
-        if (d3d11.swapChain.handle)
+        if (d3d11.primarySwapChain.isValid())
         {
-            d3d11_DestroySwapChain(&d3d11.swapChain);
+            DestroySwapchain(d3d11.primarySwapChain);
         }
 
         SAFE_RELEASE(d3d11.annotation);
@@ -564,15 +562,73 @@ namespace agpu
 #endif
     }
 
-    static void d3d11_update_color_space(D3D11SwapChain* context)
+    static Swapchain d3d11_GetPrimarySwapchain(void)
     {
-        context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+        return d3d11.primarySwapChain;
+    }
+
+    static FrameOpResult d3d11_BeginFrame(Swapchain swapchain)
+    {
+        return FrameOpResult::Success;
+    }
+
+    static FrameOpResult d3d11_EndFrame(Swapchain swapchain, EndFrameFlags flags)
+    {
+        if (!any(flags & EndFrameFlags::SkipPresent))
+        {
+            UINT syncInterval = 1;
+            UINT presentFlags = 0;
+
+            if (any(flags & EndFrameFlags::NoVerticalSync))
+            {
+                syncInterval = 0;
+                if (!d3d11.swapchains[swapchain.id].isFullscreen && d3d11.isTearingSupported)
+                {
+                    presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+                }
+            }
+
+            HRESULT hr = d3d11.swapchains[swapchain.id].handle->Present(syncInterval, presentFlags);
+            if (hr == DXGI_ERROR_DEVICE_REMOVED
+                || hr == DXGI_ERROR_DEVICE_HUNG
+                || hr == DXGI_ERROR_DEVICE_RESET
+                || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
+                || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+            {
+                d3d11.is_lost = true;
+                return FrameOpResult::DeviceLost;
+            }
+        }
+
+        if (!d3d11.is_lost)
+        {
+            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+            if (!d3d11.factory->IsCurrent())
+            {
+                d3d11_CreateFactory();
+            }
+        }
+
+        return FrameOpResult::Success;
+    }
+
+    static const Caps* d3d11_QueryCaps(void)
+    {
+        return &d3d11.caps;
+    }
+
+    /* Swapchain */
+
+
+    static void d3d11_updateColorSpace(D3D11SwapChain& swapChain)
+    {
+        swapChain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
 
         bool isDisplayHDR10 = false;
 
 #if defined(NTDDI_WIN10_RS2)
         IDXGIOutput* output;
-        if (SUCCEEDED(context->handle->GetContainingOutput(&output)))
+        if (SUCCEEDED(swapChain.handle->GetContainingOutput(&output)))
         {
             IDXGIOutput6* output6;
             if (SUCCEEDED(output->QueryInterface(IID_PPV_ARGS(&output6))))
@@ -595,16 +651,16 @@ namespace agpu
 
         if (isDisplayHDR10)
         {
-            switch (context->colorFormat)
+            switch (swapChain.colorFormat)
             {
             case PixelFormat::RGBA16Unorm:
                 // The application creates the HDR10 signal.
-                context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
+                swapChain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
                 break;
 
             case PixelFormat::RGBA32Float:
                 // The system creates the HDR10 signal; application uses linear values.
-                context->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
+                swapChain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
                 break;
 
             default:
@@ -613,176 +669,100 @@ namespace agpu
         }
 
         IDXGISwapChain3* swapChain3;
-        if (SUCCEEDED(context->handle->QueryInterface(IID_PPV_ARGS(&swapChain3))))
+        if (SUCCEEDED(swapChain.handle->QueryInterface(IID_PPV_ARGS(&swapChain3))))
         {
             UINT colorSpaceSupport = 0;
-            if (SUCCEEDED(swapChain3->CheckColorSpaceSupport(context->colorSpace, &colorSpaceSupport))
+            if (SUCCEEDED(swapChain3->CheckColorSpaceSupport(swapChain.colorSpace, &colorSpaceSupport))
                 && (colorSpaceSupport & DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT))
             {
-                VHR(swapChain3->SetColorSpace1(context->colorSpace));
+                VHR(swapChain3->SetColorSpace1(swapChain.colorSpace));
             }
 
             swapChain3->Release();
         }
     }
 
-    static void d3d11_AfterReset(D3D11SwapChain* swapChain)
+    static void d3d11_AfterReset(D3D11SwapChain& swapChain)
     {
-        d3d11_update_color_space(swapChain);
+        d3d11_updateColorSpace(swapChain);
 
         DXGI_SWAP_CHAIN_DESC1 swapchain_desc;
-        VHR(swapChain->handle->GetDesc1(&swapchain_desc));
-        swapChain->width = swapchain_desc.Width;
-        swapChain->height = swapchain_desc.Height;
+        VHR(swapChain.handle->GetDesc1(&swapchain_desc));
 
-        /* TODO: Until we support textures. */
-        // ID3D11Texture2D* backbuffer;
-        //VHR(swapChain->handle->GetBuffer(0, IID_PPV_ARGS(&backbuffer)));
+        swapChain.width = swapchain_desc.Width;
+        swapChain.height = swapchain_desc.Height;
 
-        //ID3D11Device1_CreateRenderTargetView(d3d11.device, (ID3D11Resource*)backbuffer, NULL, &context->rtv);
-        //ID3D11Texture2D_Release(backbuffer);
+        // Setup backbuffer texture.
+        ID3D11Texture2D* backbuffer;
+        VHR(swapChain.handle->GetBuffer(0, IID_PPV_ARGS(&backbuffer)));
+        swapChain.backbufferTexture = CreateExternalTexture2D((intptr_t)backbuffer, swapChain.width, swapChain.height, PixelFormat::BGRA8Unorm, false);
+        backbuffer->Release();
     }
 
-    static bool d3d11_UpdateSwapChain(D3D11SwapChain* swapChain, const PresentationParameters* presentationParameters)
+    static Swapchain d3d11_CreateSwapchain(void* windowHandle)
     {
-        const uint32_t backbufferCount = 2u;
-        swapChain->colorFormat = presentationParameters->colorFormat;
-        swapChain->colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+        uint16_t id = kInvalidPoolId;
 
-        /* TODO: Multisample */
-
-        // Create swapchain if required.
-        if (swapChain->handle == nullptr)
         {
-            /* Setup sync interval and present flags. */
-            swapChain->syncInterval = 1;
-            swapChain->presentFlags = 0;
-            if (!presentationParameters->enableVSync)
+            std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
+
+            if (d3d11.swapchains.isFull())
             {
-                swapChain->syncInterval = 0;
-                if (any(d3d11.factoryCaps & DXGIFactoryCaps::Tearing))
-                {
-                    swapChain->presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-                }
+                logError("D3D11: Not enough free swapchains slots.");
+                return kInvalidSwapchain;
             }
 
-            swapChain->handle = d3dCreateSwapChain(
+            id = d3d11.swapchains.alloc();
+            if (id == kInvalidPoolId) {
+                return kInvalidSwapchain;
+            }
+
+            D3D11SwapChain& swapChain = d3d11.swapchains[id];
+            swapChain = {};
+            swapChain.depthStencilTexture = kInvalidTexture;
+
+            const uint32_t backbufferCount = 2u;
+            swapChain.colorFormat = PixelFormat::BGRA8Unorm;
+            swapChain.colorSpace = DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
+
+            /* TODO: Multisample */
+
+            // Create swapchain if required.
+            swapChain.handle = d3dCreateSwapChain(
                 d3d11.factory, d3d11.factoryCaps, d3d11.device,
-                presentationParameters->windowHandle,
-                ToDXGISwapChainFormat(presentationParameters->colorFormat),
-                presentationParameters->backBufferWidth, presentationParameters->backBufferHeight,
-                backbufferCount,
-                presentationParameters->isFullscreen);
-        }
-        else
-        {
-            // TODO: Resize.
+                windowHandle,
+                ToDXGISwapChainFormat(PixelFormat::BGRA8Unorm),
+                0, 0,
+                backbufferCount);
         }
 
-        d3d11_AfterReset(swapChain);
-
-        return true;
+        d3d11_AfterReset(d3d11.swapchains[id]);
+        return { id };
     }
 
-    static void d3d11_DestroySwapChain(D3D11SwapChain* swapChain)
+
+    static void d3d11_DestroySwapchain(Swapchain handle)
     {
-        SAFE_RELEASE(swapChain->handle);
-        SAFE_RELEASE(swapChain->rtv);
-    }
+        DestroyTexture(d3d11.swapchains[handle.id].backbufferTexture);
+        DestroyTexture(d3d11.swapchains[handle.id].depthStencilTexture);
+        SAFE_RELEASE(d3d11.swapchains[handle.id].handle);
 
-    static bool d3d11_beginFrame(void) {
-        float clear_color[4] = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
-
-        //ID3D11DeviceContext1_ClearRenderTargetView(d3d11.context, d3d11_current_context->rtv, clear_color);
-        //ID3D11DeviceContext1_ClearDepthStencilView(d3d11.context, d3d11_current_context->dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-        //ID3D11DeviceContext1_OMSetRenderTargets(d3d11.context, 1, &d3d11_current_context->rtv, d3d11_current_context->dsv);
-
-        // Set the viewport.
-        //auto viewport = m_deviceResources->GetScreenViewport();
-        //context->RSSetViewports(1, &viewport);
-
-        return true;
-    }
-
-    static void d3d11_endFrame(void)
-    {
-        if (d3d11.swapChain.handle != nullptr)
-        {
-            HRESULT hr = d3d11.swapChain.handle->Present(d3d11.swapChain.syncInterval, d3d11.swapChain.presentFlags);
-            if (hr == DXGI_ERROR_DEVICE_REMOVED
-                || hr == DXGI_ERROR_DEVICE_HUNG
-                || hr == DXGI_ERROR_DEVICE_RESET
-                || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR
-                || hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
-            {
-                d3d11.is_lost = true;
-            }
-        }
-
-        if (!d3d11.is_lost)
-        {
-            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-            if (!d3d11.factory->IsCurrent())
-            {
-                d3d11_CreateFactory();
-            }
-        }
-    }
-
-    static const Caps* d3d11_QueryCaps(void)
-    {
-        return &d3d11.caps;
-    }
-
-    static Framebuffer d3d11_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
-    {
-        return kInvalidFramebuffer;
-    }
-
-    static Framebuffer d3d11_CreateRenderPass(const PassDescription& desc)
-    {
         std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
+        d3d11.swapchains.dealloc(handle.id);
 
-        if (d3d11.renderPasses.isFull())
+        // Unset primary id
+        if (handle.id == d3d11.primarySwapChain.id)
         {
-            logError("D3D11: Not enough free render pass slots.");
-            return kInvalidFramebuffer;
+            d3d11.primarySwapChain.id = kInvalidHandleId;
         }
-
-        const int id = d3d11.renderPasses.alloc();
-        if (id < 0) {
-            return kInvalidFramebuffer;
-        }
-
-        D3D11RenderPass& renderPass = d3d11.renderPasses[id];
-        renderPass = {};
-
-        HRESULT hr = S_OK;
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
-        {
-            if (!desc.colorAttachments[i].texture.isValid())
-                continue;
-
-            D3D11Texture& texture = d3d11.textures[desc.colorAttachments[i].texture.value];
-
-            hr = d3d11.device->CreateRenderTargetView(texture.handle, nullptr, &renderPass.rtvs[renderPass.rtvsCount]);
-            if (FAILED(hr))
-            {
-                logError("Direct3D11: Failed to create RenderTargetView");
-                d3d11.renderPasses.dealloc((uint32_t)id);
-                return kInvalidFramebuffer;
-            }
-
-            renderPass.rtvsCount++;
-        }
-        return { (uint32_t)id };
     }
 
-    static void d3d11_DestroyRenderPass(Framebuffer handle)
+    static Texture d3d11_GetCurrentTexture(Swapchain handle)
     {
-
+        return d3d11.swapchains[handle.id].backbufferTexture;
     }
 
+    /* Buffer */
     static BufferHandle d3d11_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
     {
         /* Verify resource limits first. */
@@ -868,12 +848,54 @@ namespace agpu
             return kInvalidBuffer;
         }
 
-        return { (uint32_t)id };
+        return { (uint16_t)id };
     }
 
     static void d3d11_DestroyBuffer(BufferHandle handle)
     {
 
+    }
+
+    static Texture d3d11_CreateTexture(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle)
+    {
+        std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
+
+        if (d3d11.textures.isFull())
+        {
+            logError("D3D11: Not enough free textures slots.");
+            return kInvalidTexture;
+        }
+
+        const uint16_t id = d3d11.textures.alloc();
+        if (id == kInvalidPoolId) {
+            return kInvalidTexture;
+        }
+
+        D3D11Texture& texture = d3d11.textures[id];
+        texture = {};
+
+        if (handle)
+        {
+            texture.handle = (ID3D11Resource*)handle;
+            texture.handle->AddRef();
+        }
+        else
+        {
+
+        }
+
+        HRESULT hr = d3d11.device->CreateRenderTargetView(texture.handle, nullptr, &texture.rtv);
+
+        return { id };
+    }
+
+    static void d3d11_DestroyTexture(Texture handle)
+    {
+        SAFE_RELEASE(d3d11.textures[handle.id].rtv);
+        SAFE_RELEASE(d3d11.textures[handle.id].handle);
+
+        std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
+        d3d11.textures.dealloc(handle.id);
     }
 
     static void d3d11_PushDebugGroup(const char* name)
@@ -897,6 +919,39 @@ namespace agpu
         {
             d3d11.annotation->SetMarker(wName);
         }
+    }
+
+    static void d3d11_BeginRenderPass(const RenderPassDescription* renderPass)
+    {
+        for (uint32_t i = 0; i < renderPass->colorAttachmentsCount; i++)
+        {
+            AGPU_ASSERT(renderPass->colorAttachments[i].texture.isValid());
+
+            D3D11Texture& texture = d3d11.textures[renderPass->colorAttachments[i].texture.id];
+
+            switch (renderPass->colorAttachments[i].loadAction)
+            {
+            case LoadAction::Clear:
+                d3d11.context->ClearRenderTargetView(texture.rtv, &renderPass->colorAttachments[i].clearColor.r);
+                break;
+
+            default:
+                break;
+            }
+
+        }
+
+        //ID3D11DeviceContext1_ClearDepthStencilView(d3d11.context, d3d11_current_context->dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+        //ID3D11DeviceContext1_OMSetRenderTargets(d3d11.context, 1, &d3d11_current_context->rtv, d3d11_current_context->dsv);
+
+        // Set the viewport.
+        //auto viewport = m_deviceResources->GetScreenViewport();
+        //context->RSSetViewports(1, &viewport);
+    }
+
+    static void d3d11_EndRenderPass(void)
+    {
+        d3d11.context->OMSetRenderTargets(kMaxColorAttachments, d3d11.zero_rtvs, nullptr);
     }
 
     /* Driver */
@@ -964,9 +1019,9 @@ namespace agpu
         return true;
     };
 
-    static agpu_renderer* d3d11_create_renderer(void)
+    static Renderer* d3d11_create_renderer(void)
     {
-        static agpu_renderer renderer = { 0 };
+        static Renderer renderer = { 0 };
         ASSIGN_DRIVER(d3d11);
         return &renderer;
     }

@@ -23,6 +23,7 @@
 #include "D3D12Texture.h"
 #include "D3D12Buffer.h"
 #include "D3D12SwapChain.h"
+#include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -166,29 +167,33 @@ namespace Alimer
 
         // Create Command queue's
         {
-            D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-            queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-            queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-            queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            queueDesc.NodeMask = 0;
-
-            ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&graphicsQueue)));
-            graphicsQueue->SetName(L"Graphics Command Queue");
+            graphicsQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT);
+            computeQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
+            copyQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY);
         }
 
         // Create immediate context.
-        immediateContext = new D3D12CommandContext(this);
+        immediateContext = new D3D12CommandContext(this, graphicsQueue);
 
         LOGI("Successfully create {} Graphics Device", ToString(caps.backendType));
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
+        WaitForGPU();
         Shutdown();
     }
 
     void D3D12GraphicsDevice::Shutdown()
     {
+        shuttingDown = true;
+        ExecuteDeferredReleases();
+        SafeDelete(immediateContext);
+
+        SafeDelete(graphicsQueue);
+        SafeDelete(computeQueue);
+        SafeDelete(copyQueue);
+
         // Allocator.
         if (allocator != nullptr)
         {
@@ -202,8 +207,6 @@ namespace Alimer
             SafeRelease(allocator);
         }
 
-        SafeRelease(graphicsQueue);
-
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
         if (refCount > 0)
@@ -211,11 +214,15 @@ namespace Alimer
             LOGD("Direct3D12: There are {} unreleased references left on the device", refCount);
 
             ID3D12DebugDevice* debugDevice;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&debugDevice)))
+            if (SUCCEEDED(d3dDevice->QueryInterface<ID3D12DebugDevice>(&debugDevice)))
             {
-                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_SUMMARY | D3D12_RLDO_IGNORE_INTERNAL);
+                debugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
                 debugDevice->Release();
             }
+        }
+        else
+        {
+            LOGD("Direct3D12: No leaks detected");
         }
 #else
         (void)refCount; // avoid warning
@@ -442,7 +449,43 @@ namespace Alimer
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
+        immediateContext->Flush(true);
+        graphicsQueue->WaitForIdle();
+        computeQueue->WaitForIdle();
+        copyQueue->WaitForIdle();
+        ExecuteDeferredReleases();
+    }
 
+    void D3D12GraphicsDevice::WaitForFence(uint64_t fenceValue)
+    {
+        auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
+        producer->WaitForFence(fenceValue);
+    }
+
+    void D3D12GraphicsDevice::ReleaseResource(IUnknown* resource)
+    {
+        if (resource == nullptr)
+            return;
+
+        if (shuttingDown || d3dDevice == nullptr) {
+            resource->Release();
+            return;
+        }
+
+        deferredReleases.push({ frameCount, resource });
+    }
+
+    void D3D12GraphicsDevice::ExecuteDeferredReleases()
+    {
+        uint64_t gpuValue = graphicsQueue->GetFenceCompletedValue();
+        while (deferredReleases.size())
+        {
+            if (shuttingDown || deferredReleases.front().frameID <= gpuValue)
+            {
+                deferredReleases.front().resource->Release();
+                deferredReleases.pop();
+            }
+        }
     }
 
     void D3D12GraphicsDevice::SetDeviceLost()
@@ -464,7 +507,9 @@ namespace Alimer
 
     void D3D12GraphicsDevice::FinishFrame()
     {
-        // TODO: Add frame fence.
+        frameCount++;
+
+        ExecuteDeferredReleases();
 
         if (!dxgiFactory->IsCurrent())
         {
@@ -481,6 +526,6 @@ namespace Alimer
 
     RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(void* windowHandle, const SwapChainDesc& desc)
     {
-        return RefPtr<SwapChain>(new D3D12SwapChain(this, windowHandle, desc));
+        return RefPtr<SwapChain>(new D3D12SwapChain(this, windowHandle, desc, kRenderLatency));
     }
 }

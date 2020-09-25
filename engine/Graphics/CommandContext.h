@@ -43,6 +43,7 @@ namespace Alimer
         /// Destructor.
         virtual ~CommandContext() = default;
 
+        virtual void Flush(bool waitForCompletion = false) = 0;
         virtual void PushDebugGroup(const char* name) = 0;
         virtual void PopDebugGroup() = 0;
         virtual void InsertDebugMarker( const char* name) = 0;

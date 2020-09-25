@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/GraphicsDevice.h"
-#include "D3D12Backend.h"
+#include "D3D12CommandQueue.h"
 #include <queue>
 #include <mutex>
 
@@ -45,27 +45,71 @@ namespace Alimer
         void SetDeviceLost();
         void FinishFrame();
         void WaitForGPU() override;
+        // The CPU will wait for a fence to reach a specified value
+        void WaitForFence(uint64_t fenceValue);
+
         CommandContext* GetImmediateContext() const override;
         RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) override;
 
         auto GetDXGIFactory() const noexcept { return dxgiFactory; }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
         auto GetD3DDevice() const noexcept { return d3dDevice; }
-        auto GetGraphicsQueue() const noexcept { return graphicsQueue; }
+
+        D3D12CommandQueue* GetQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT)
+        {
+            switch (type)
+            {
+            case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+                return computeQueue;
+            case D3D12_COMMAND_LIST_TYPE_COPY:
+                return copyQueue;
+
+            default:
+                return graphicsQueue;
+            }
+        }
+
+        D3D12CommandQueue* GetGraphicsQueue() const noexcept { return graphicsQueue; }
+        ID3D12CommandQueue* GetD3D12GraphicsQueue() const noexcept { return graphicsQueue->GetHandle(); }
+
+        void ReleaseResource(IUnknown* resource);
+        template<typename T> void ReleaseResource(T*& resource)
+        {
+            IUnknown* base = resource;
+            ReleaseResource(base);
+            resource = nullptr;
+        }
 
     private:
         void Shutdown();
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter);
+        void ExecuteDeferredReleases();
+
+        static constexpr uint32_t kRenderLatency = 2u;
 
         DWORD dxgiFactoryFlags = 0;
         IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
-
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         D3D_FEATURE_LEVEL featureLevel = kD3D12MinFeatureLevel;
-        ID3D12CommandQueue* graphicsQueue;
+
+        D3D12CommandQueue* graphicsQueue;
+        D3D12CommandQueue* computeQueue = nullptr;
+        D3D12CommandQueue* copyQueue = nullptr;
+
         D3D12CommandContext* immediateContext;
+        bool isLost = false;
+        bool shuttingDown = false;
+
+        struct ResourceRelease
+        {
+            uint64 frameID;
+            IUnknown* resource;
+        };
+        std::queue<ResourceRelease> deferredReleases;
+        D3D12Fence* frameFence;
+        uint64_t frameCount = 0;
     };
 }

@@ -79,41 +79,48 @@ namespace agpu
     } gl;
 
     /* Device/Renderer */
-    static bool gl_init(InitFlags flags, const PresentationParameters* presentationParameters)
+    static bool gl_init(InitFlags flags, void* windowHandle)
     {
         return true;
     }
 
-    static void gl_shutdown(void)
+    static void gl_Shutdown(void)
     {
         memset(&gl, 0, sizeof(gl));
     }
 
-    static bool gl_beginFrame(void)
+    static Swapchain gl_GetPrimarySwapchain(void)
     {
-        return true;
+        return kInvalidSwapchain;
     }
 
-    static void gl_endFrame(void) {
+    static FrameOpResult gl_BeginFrame(Swapchain swapchain)
+    {
+        return FrameOpResult::Success;
+    }
+
+    static FrameOpResult gl_EndFrame(Swapchain swapchain, EndFrameFlags flags)
+    {
+        return FrameOpResult::Success;
     }
 
     static const Caps* gl_QueryCaps(void) {
         return &gl.caps;
     }
 
-    static Framebuffer gl_CreateFramebuffer(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat)
+    static Swapchain gl_CreateSwapchain(void* windowHandle)
     {
-        return kInvalidFramebuffer;
+        return kInvalidSwapchain;
     }
 
-    static Framebuffer gl_CreateRenderPass(const PassDescription& description)
+    static void gl_DestroySwapchain(Swapchain handle)
     {
-        return kInvalidFramebuffer;
+
     }
 
-    static void gl_DestroyRenderPass(Framebuffer handle)
+    static Texture gl_GetCurrentTexture(Swapchain handle)
     {
-
+        return kInvalidTexture;
     }
 
     static BufferHandle gl_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
@@ -122,6 +129,16 @@ namespace agpu
     }
 
     static void gl_DestroyBuffer(BufferHandle handle)
+    {
+
+    }
+
+    static Texture gl_CreateTexture(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle)
+    {
+        return kInvalidTexture;
+    }
+
+    static void gl_DestroyTexture(Texture handle)
     {
 
     }
@@ -140,6 +157,15 @@ namespace agpu
         AGPU_UNUSED(name);
     }
 
+    static void gl_BeginRenderPass(const RenderPassDescription* renderPass)
+    {
+    }
+
+    static void gl_EndRenderPass(void)
+    {
+
+    }
+
     /* Driver */
     static bool gl_is_supported(void)
     {
@@ -152,9 +178,9 @@ namespace agpu
         return true;
     };
 
-    static agpu_renderer* gl_create_renderer(void)
+    static Renderer* gl_create_renderer(void)
     {
-        static agpu_renderer renderer = { 0 };
+        static Renderer renderer = { 0 };
         ASSIGN_DRIVER(gl);
         return &renderer;
     }

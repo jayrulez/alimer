@@ -42,6 +42,15 @@ namespace Alimer
             Sampler
         };
 
+        enum class State
+        {
+            Undefined,
+            General,
+            RenderTarget,
+            DepthStencil,
+            DepthStencilReadOnly,
+        };
+
         virtual ~GraphicsResource();
 
         /// Release the GPU resource.
@@ -57,6 +66,9 @@ namespace Alimer
         /// Return name id of the resource.
         const StringId32& GetNameId() const { return nameId; }
 
+        /// Get the current resource state.
+        State GetState() const { return state; }
+
     protected:
         GraphicsResource(Type type);
 
@@ -64,6 +76,7 @@ namespace Alimer
 
     protected:
         Type type;
+        State state = State::Undefined;
 
         std::string name;
         StringId32 nameId;

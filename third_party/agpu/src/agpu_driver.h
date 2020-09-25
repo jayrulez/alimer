@@ -62,86 +62,103 @@ extern void __cdecl __debugbreak(void);
 
 namespace agpu
 {
-    template <typename T, uint32_t MAX_COUNT>
+    static constexpr uint16_t kInvalidPoolId = static_cast<uint16_t>(-1);
+
+    template <typename T, uint16_t MAX_COUNT>
     struct Pool
     {
         void init()
         {
             values = (T*)mem;
-            for (int i = 0; i < MAX_COUNT; ++i) {
-                new (&values[i]) int(i + 1);
+            for (uint16_t i = 0; i < MAX_COUNT; ++i) {
+                new (&values[i]) uint16_t(i + 1);
             }
-            new (&values[MAX_COUNT - 1]) int(-1);
+            new (&values[MAX_COUNT - 1]) uint16_t(-1);
             first_free = 0;
         }
 
-        int alloc()
+        uint16_t alloc()
         {
-            if (first_free == -1) return -1;
+            if (first_free == kInvalidPoolId) {
+                return kInvalidPoolId;
+            }
 
-            const int id = first_free;
+            const uint16_t id = first_free;
             first_free = *((int*)&values[id]);
             new (&values[id]) T;
             return id;
         }
 
-        void dealloc(uint32_t idx)
+        void dealloc(uint16_t index)
         {
-            values[idx].~T();
-            new (&values[idx]) int(first_free);
-            first_free = idx;
+            values[index].~T();
+            new (&values[index]) int(first_free);
+            first_free = index;
         }
 
         alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
         T* values;
-        int first_free;
+        uint16_t first_free;
 
-        T& operator[](int idx) { return values[idx]; }
-        bool isFull() const { return first_free == -1; }
+        T& operator[](uint16_t index) { return values[index]; }
+        bool isFull() const { return first_free == kInvalidPoolId; }
     };
 
-    struct agpu_renderer {
-        bool (*init)(InitFlags flags, const PresentationParameters* presentationParameters);
-        void (*shutdown)(void);
-        bool (*beginFrame)(void);
-        void (*endFrame)(void);
+    struct Renderer {
+        bool (*init)(InitFlags flags, void* windowHandle);
+        void (*Shutdown)(void);
+
+        Swapchain(*GetPrimarySwapchain)(void);
+        FrameOpResult(*BeginFrame)(Swapchain handle);
+        FrameOpResult(*EndFrame)(Swapchain handle, EndFrameFlags flags);
 
         const Caps* (*QueryCaps)(void);
 
-        Framebuffer(*CreateFramebuffer)(void* windowHandle, uint32_t width, uint32_t height, PixelFormat colorFormat, PixelFormat depthStencilFormat);
-        Framebuffer(*CreateRenderPass)(const PassDescription& description);
-        void(*DestroyRenderPass)(Framebuffer handle);
+        Swapchain(*CreateSwapchain)(void* windowHandle);
+        void(*DestroySwapchain)(Swapchain handle);
+        Texture(*GetCurrentTexture)(Swapchain handle);
 
         BufferHandle(*CreateBuffer)(uint32_t count, uint32_t stride, const void* initialData);
         void(*DestroyBuffer)(BufferHandle handle);
+
+        Texture(*CreateTexture)(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle);
+        void(*DestroyTexture)(Texture handle);
 
         /* Commands */
         void (*PushDebugGroup)(const char* name);
         void (*PopDebugGroup)(void) = 0;
         void (*InsertDebugMarker)(const char* name);
+        void(*BeginRenderPass)(const RenderPassDescription* renderPass);
+        void(*EndRenderPass)(void);
     };
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
     ASSIGN_DRIVER_FUNC(init, name)\
-	ASSIGN_DRIVER_FUNC(shutdown, name)\
-    ASSIGN_DRIVER_FUNC(beginFrame, name)\
-    ASSIGN_DRIVER_FUNC(endFrame, name)\
+    ASSIGN_DRIVER_FUNC(Shutdown, name)\
+	ASSIGN_DRIVER_FUNC(GetPrimarySwapchain, name)\
+    ASSIGN_DRIVER_FUNC(BeginFrame, name)\
+    ASSIGN_DRIVER_FUNC(BeginFrame, name)\
+    ASSIGN_DRIVER_FUNC(EndFrame, name)\
     ASSIGN_DRIVER_FUNC(QueryCaps, name)\
-    ASSIGN_DRIVER_FUNC(CreateFramebuffer, name)\
-    ASSIGN_DRIVER_FUNC(CreateRenderPass, name)\
-    ASSIGN_DRIVER_FUNC(DestroyRenderPass, name)\
+    ASSIGN_DRIVER_FUNC(CreateSwapchain, name)\
+    ASSIGN_DRIVER_FUNC(DestroySwapchain, name)\
+    ASSIGN_DRIVER_FUNC(GetCurrentTexture, name)\
     ASSIGN_DRIVER_FUNC(CreateBuffer, name)\
     ASSIGN_DRIVER_FUNC(DestroyBuffer, name)\
+    ASSIGN_DRIVER_FUNC(CreateTexture, name)\
+    ASSIGN_DRIVER_FUNC(DestroyTexture, name)\
     ASSIGN_DRIVER_FUNC(PushDebugGroup, name)\
     ASSIGN_DRIVER_FUNC(PopDebugGroup, name)\
-    ASSIGN_DRIVER_FUNC(InsertDebugMarker, name)
+    ASSIGN_DRIVER_FUNC(InsertDebugMarker, name)\
+    ASSIGN_DRIVER_FUNC(BeginRenderPass, name)\
+    ASSIGN_DRIVER_FUNC(EndRenderPass, name)
 
     struct Driver
     {
         BackendType backend;
         bool (*isSupported)(void);
-        agpu_renderer* (*createRenderer)(void);
+        Renderer* (*createRenderer)(void);
     };
 
     extern Driver D3D12_Driver;

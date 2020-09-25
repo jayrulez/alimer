@@ -43,21 +43,41 @@ namespace Alimer
             }
         }
 
-        inline TextureDescription ConvertResourceDesc(D3D12_RESOURCE_DESC resourceDesc)
+        inline TextureType D3D12GetTextureType(D3D12_RESOURCE_DIMENSION dimension)
+        {
+            switch (dimension)
+            {
+            case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+                return TextureType::Type2D;
+
+            case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+                return TextureType::Type3D;
+
+            default:
+                ALIMER_UNREACHABLE();
+                return TextureType::Type2D;
+            }
+        }
+
+        inline TextureDescription ConvertResourceDesc(D3D12_RESOURCE_DESC resourceDesc, TextureLayout initialLayout)
         {
             TextureDescription description = {};
+            description.type = D3D12GetTextureType(resourceDesc.Dimension);
+            description.width = resourceDesc.Width;
+            description.height = resourceDesc.Height;
+            description.depthOrArraySize = resourceDesc.DepthOrArraySize;
+            description.initialLayout = initialLayout;
             return description;
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, D3D12_RESOURCE_STATES state_)
-        : Texture(ConvertResourceDesc(resource->GetDesc()))
+    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, TextureLayout initialLayout)
+        : Texture(ConvertResourceDesc(resource->GetDesc(), initialLayout))
+        , D3D12GpuResource(resource)
         , device{ device }
-        , state(state_)
     {
-        /*handle = resource.Get();
-        RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        device->GetD3DDevice()->CreateRenderTargetView(resource.Get(), nullptr, RTV);*/
+        //RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
+        //device->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, RTV);
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
@@ -76,15 +96,11 @@ namespace Alimer
         resourceDesc.Height = desc.height;
         if (desc.type == TextureType::TypeCube)
         {
-            resourceDesc.DepthOrArraySize = desc.depth * 6;
-        }
-        else if (desc.type == TextureType::Type3D)
-        {
-            resourceDesc.DepthOrArraySize = desc.depth;
+            resourceDesc.DepthOrArraySize = desc.depthOrArraySize * 6;
         }
         else
         {
-            resourceDesc.DepthOrArraySize = desc.depth;
+            resourceDesc.DepthOrArraySize = desc.depthOrArraySize;
         }
 
         resourceDesc.MipLevels = desc.mipLevels;
@@ -132,7 +148,7 @@ namespace Alimer
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-        state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
+        usageState = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
         /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
@@ -180,14 +196,15 @@ namespace Alimer
 
     void D3D12Texture::Destroy()
     {
-        //SafeRelease(handle);
-        //SafeRelease(allocation);
+        device->ReleaseResource(resource);
+        SafeRelease(allocation);
+        gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
     }
 
     void D3D12Texture::BackendSetName()
     {
-        //auto wideName = ToUtf16(name);
-        //handle->SetName(wideName.c_str());
+        auto wideName = ToUtf16(name);
+        resource->SetName(wideName.c_str());
     }
 
     void D3D12Texture::TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState)
