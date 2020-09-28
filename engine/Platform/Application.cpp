@@ -31,6 +31,24 @@ namespace Alimer
 {
     static Application* s_appCurrent = nullptr;
 
+    static void GpuLogCallback(void* userData, agpu_log_level level, const char* message)
+    {
+        switch (level)
+        {
+        case AGPU_LOG_LEVEL_ERROR:
+            LOGE(message);
+            break;
+        case AGPU_LOG_LEVEL_WARN:
+            LOGW(message);
+            break;
+        case AGPU_LOG_LEVEL_INFO:
+            LOGI(message);
+            break;
+        default:
+            break;
+        }
+    }
+
     Application::Application(const Config& config)
         : config{ config }
         , state(State::Uninitialized)
@@ -47,7 +65,7 @@ namespace Alimer
         swapChain.Reset();
         graphics.reset();
         ImGuiLayer::Shutdown();
-        agpu::Shutdown();
+        agpu_shutdown();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -59,12 +77,15 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        agpu::InitFlags initFlags = {};
-#ifdef _DEBUG
-        initFlags |= agpu::InitFlags::DebugRuntime;
-#endif
+        agpu_set_log_callback(GpuLogCallback, this);
 
-        agpu::Init(initFlags, GetMainWindow().GetNativeHandle());
+        agpu_init_flags gpu_init_flags = {};
+#ifdef _DEBUG
+        gpu_init_flags |= AGPU_INIT_FLAGS_DEBUG;
+#endif
+        agpu_swapchain_info swapchainInfo{};
+        swapchainInfo.window_handle = GetMainWindow().GetNativeHandle();
+        agpu_init(gpu_init_flags, &swapchainInfo);
 
         ImGuiLayer::Initialize();
 
@@ -99,14 +120,12 @@ namespace Alimer
 
     void Application::Tick()
     {
-        auto swapchain = agpu::GetPrimarySwapchain();
-
-        if (agpu::BeginFrame(swapchain) != agpu::FrameOpResult::Success)
+        if (!agpu_frame_begin())
             return;
 
-        agpu::PushDebugGroup("Frame");
+        agpu_push_debug_group("Frame");
 
-        agpu::RenderPassColorAttachment colorAttachment{};
+        /*agpu::RenderPassColorAttachment colorAttachment{};
         colorAttachment.texture = agpu::GetCurrentTexture(swapchain);
         //renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         colorAttachment.clearColor = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
@@ -116,10 +135,10 @@ namespace Alimer
         renderPass.colorAttachments = &colorAttachment;
 
         agpu::BeginRenderPass(&renderPass);
-        agpu::EndRenderPass();
+        agpu::EndRenderPass();*/
 
-        agpu::PopDebugGroup();
-        agpu::EndFrame(swapchain);
+        agpu_pop_debug_group();
+        agpu_frame_end();
     }
 
     const Config* Application::GetConfig()

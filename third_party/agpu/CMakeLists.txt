@@ -46,8 +46,8 @@ add_library(agpu
     # Source Files
 	src/agpu.cpp
     src/agpu_driver_d3d_common.h
-    src/agpu_driver_d3d11.cpp
-    
+    #src/agpu_driver_d3d11.cpp
+    src/d3d12/agpu_driver_d3d12.cpp
     src/agpu_driver_opengl.cpp
 )
 
@@ -64,7 +64,6 @@ set_target_properties(agpu PROPERTIES OUTPUT_NAME "agpu"
 
 if(WIN32 OR WINDOWS_STORE)
     target_sources(agpu PRIVATE
-        src/d3d12/agpu_driver_d3d12.cpp
         src/d3d12/D3D12MemAlloc.cpp
         src/d3d12/D3D12MemAlloc.h
         src/d3d12/D3D12MemAlloc.natvis
@@ -74,7 +73,7 @@ if(WIN32 OR WINDOWS_STORE)
 	    $<BUILD_INTERFACE:${AGPU_THIRD_PARTY_DIR}/D3D12MemoryAllocator>
     )
 
-    target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
+    #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
     target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D12)
 endif ()
 
@@ -84,13 +83,13 @@ if (WIN32 OR ANDROID OR LINUX)
 endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)
-    target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
+    #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
 
-    if(EMSCRIPTEN)
-      target_compile_definitions(agpu PRIVATE -DAGPU_WEBGL)
-    else()
-      target_link_libraries(agpu PRIVATE opengl_headers)
-    endif ()
+    #if(EMSCRIPTEN)
+    #  target_compile_definitions(agpu PRIVATE -DAGPU_WEBGL)
+    #else()
+    #  target_link_libraries(agpu PRIVATE opengl_headers)
+    #endif ()
 endif ()
 
 if (MSVC)

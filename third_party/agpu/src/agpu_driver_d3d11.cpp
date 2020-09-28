@@ -427,8 +427,8 @@ namespace agpu
             VHR(dxgiAdapter->GetDesc1(&adapter_desc));
 
             /* Log some info */
-            logInfo("GPU driver: D3D11");
-            logInfo("Direct3D Adapter: VID:%04X, PID:%04X - %ls", adapter_desc.VendorId, adapter_desc.DeviceId, adapter_desc.Description);
+            log(LogLevel::Info, "GPU driver: D3D11");
+            log(LogLevel::Info, "Direct3D Adapter: VID:%04X, PID:%04X - %ls", adapter_desc.VendorId, adapter_desc.DeviceId, adapter_desc.Description);
 
             d3d11.caps.backend = BackendType::Direct3D11;
             d3d11.caps.vendorID = adapter_desc.VendorId;
@@ -532,7 +532,7 @@ namespace agpu
 #if !defined(NDEBUG)
         if (refCount > 0)
         {
-            logError("Direct3D11: There are %d unreleased references left on the device", refCount);
+            log(LogLevel::Error, "Direct3D11: There are %d unreleased references left on the device", refCount);
 
             ID3D11Debug* d3d11_debug = NULL;
             if (SUCCEEDED(d3d11.device->QueryInterface(IID_PPV_ARGS(&d3d11_debug))))
@@ -540,6 +540,10 @@ namespace agpu
                 d3d11_debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
                 d3d11_debug->Release();
             }
+        }
+        else
+        {
+            log(LogLevel::Debug, "Direct3D11: No leaks detected");
         }
 #else
         (void)refCount; // avoid warning
@@ -567,7 +571,7 @@ namespace agpu
         return d3d11.primarySwapChain;
     }
 
-    static FrameOpResult d3d11_BeginFrame(Swapchain swapchain)
+    static FrameOpResult d3d11_beginFrame(void)
     {
         return FrameOpResult::Success;
     }
@@ -708,7 +712,7 @@ namespace agpu
 
             if (d3d11.swapchains.isFull())
             {
-                logError("D3D11: Not enough free swapchains slots.");
+                log(LogLevel::Error, "D3D11: Not enough free swapchains slots.");
                 return kInvalidSwapchain;
             }
 
@@ -743,8 +747,8 @@ namespace agpu
 
     static void d3d11_DestroySwapchain(Swapchain handle)
     {
-        DestroyTexture(d3d11.swapchains[handle.id].backbufferTexture);
-        DestroyTexture(d3d11.swapchains[handle.id].depthStencilTexture);
+        destroyTexture(d3d11.swapchains[handle.id].backbufferTexture);
+        destroyTexture(d3d11.swapchains[handle.id].depthStencilTexture);
         SAFE_RELEASE(d3d11.swapchains[handle.id].handle);
 
         std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
@@ -757,37 +761,37 @@ namespace agpu
         }
     }
 
-    static Texture d3d11_GetCurrentTexture(Swapchain handle)
+    static agpu_texture d3d11_GetCurrentTexture(Swapchain handle)
     {
         return d3d11.swapchains[handle.id].backbufferTexture;
     }
 
     /* Buffer */
-    static BufferHandle d3d11_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
+    static agpu_buffer d3d11_createBuffer(const agpu_buffer_info* info)
     {
         /* Verify resource limits first. */
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
 
-        uint64_t sizeInBytes = uint64_t(count) * uint64_t(stride);
+        uint64_t sizeInBytes = info->size;
 
         if (sizeInBytes > c_maxBytes)
         {
-            logError("Direct3D11: Resource size too large for DirectX 11 (size {})", sizeInBytes);
-            return kInvalidBuffer;
+            log(LogLevel::Error, "Direct3D11: Resource size too large for DirectX 11 (size {})", sizeInBytes);
+            return { AGPU_INVALID_ID };
         }
 
         std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
 
         if (d3d11.buffers.isFull())
         {
-            logError("D3D11: Not enough free buffer slots.");
-            return kInvalidBuffer;
+            log(LogLevel::Error, "D3D11: Not enough free buffer slots.");
+            return { AGPU_INVALID_ID };
         }
 
         const int id = d3d11.buffers.alloc();
         if (id < 0) {
-            return kInvalidBuffer;
+            return { AGPU_INVALID_ID };
         }
 
         /*if (any(desc.usage & BufferUsage::Uniform))
@@ -833,9 +837,9 @@ namespace agpu
 
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialResourceData = {};
-        if (initialData != nullptr)
+        if (info->data != nullptr)
         {
-            initialResourceData.pSysMem = initialData;
+            initialResourceData.pSysMem = info->data;
             initialDataPtr = &initialResourceData;
         }
 
@@ -844,25 +848,25 @@ namespace agpu
         HRESULT hr = d3d11.device->CreateBuffer(&bufferDesc, initialDataPtr, &buffer.handle);
         if (FAILED(hr))
         {
-            logError("Direct3D11: Failed to create buffer");
-            return kInvalidBuffer;
+            log(LogLevel::Error, "Direct3D11: Failed to create buffer");
+            return { AGPU_INVALID_ID };
         }
 
         return { (uint16_t)id };
     }
 
-    static void d3d11_DestroyBuffer(BufferHandle handle)
+    static void d3d11_destroyBuffer(agpu_buffer handle)
     {
 
     }
 
-    static Texture d3d11_CreateTexture(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle)
+    static agpu_texture d3d11_CreateTexture(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle)
     {
         std::lock_guard<std::mutex> lock(d3d11.handle_mutex);
 
         if (d3d11.textures.isFull())
         {
-            logError("D3D11: Not enough free textures slots.");
+            log(LogLevel::Error, "D3D11: Not enough free textures slots.");
             return kInvalidTexture;
         }
 
@@ -889,7 +893,7 @@ namespace agpu
         return { id };
     }
 
-    static void d3d11_DestroyTexture(Texture handle)
+    static void d3d11_DestroyTexture(agpu_texture handle)
     {
         SAFE_RELEASE(d3d11.textures[handle.id].rtv);
         SAFE_RELEASE(d3d11.textures[handle.id].handle);

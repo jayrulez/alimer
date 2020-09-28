@@ -94,7 +94,7 @@ namespace agpu
         return kInvalidSwapchain;
     }
 
-    static FrameOpResult gl_BeginFrame(Swapchain swapchain)
+    static FrameOpResult gl_beginFrame(void)
     {
         return FrameOpResult::Success;
     }
@@ -123,12 +123,12 @@ namespace agpu
         return kInvalidTexture;
     }
 
-    static BufferHandle gl_CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
+    static Buffer gl_createBuffer(const BufferInfo* info)
     {
         return kInvalidBuffer;
     }
 
-    static void gl_DestroyBuffer(BufferHandle handle)
+    static void gl_destroyBuffer(Buffer handle)
     {
 
     }

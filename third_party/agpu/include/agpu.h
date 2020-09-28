@@ -46,81 +46,76 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#if !defined(AGPU_DEFINE_ENUM_FLAG_OPERATORS)
-#define AGPU_DEFINE_ENUM_FLAG_OPERATORS(EnumType, UnderlyingEnumType) \
-inline constexpr EnumType operator | (EnumType a, EnumType b) { return (EnumType)((UnderlyingEnumType)(a) | (UnderlyingEnumType)(b)); } \
-inline constexpr EnumType& operator |= (EnumType &a, EnumType b) { return a = a | b; } \
-inline constexpr EnumType operator & (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) & ((UnderlyingEnumType)b)); } \
-inline constexpr EnumType& operator &= (EnumType &a, EnumType b) { return a = a & b; } \
-inline constexpr EnumType operator ~ (EnumType a) { return EnumType(~((UnderlyingEnumType)a)); } \
-inline constexpr EnumType operator ^ (EnumType a, EnumType b) { return EnumType(((UnderlyingEnumType)a) ^ ((UnderlyingEnumType)b)); } \
-inline constexpr EnumType& operator ^= (EnumType &a, EnumType b) { return a = a ^ b; } \
-inline constexpr bool any(EnumType a) { return ((UnderlyingEnumType)a) != 0; }
-#endif /* !defined(AGPU_DEFINE_ENUM_FLAG_OPERATORS) */
+#ifdef __cplusplus
+extern "C" {
+#endif
+    typedef struct agpu_buffer { uint32_t id; } agpu_buffer;
+    typedef struct agpu_texture { uint32_t id; } agpu_texture;
+    typedef struct agpu_swapchain { uint32_t id; } agpu_swapchain;
 
-namespace agpu
-{
     /* Constants */
-    static constexpr uint32_t kMaxLogMessageLength = 4096u;
-    static constexpr uint16_t kInvalidHandleId = 0xffff;
-    static constexpr uint32_t kMaxColorAttachments = 8u;
-    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
-    static constexpr uint32_t kMaxVertexAttributes = 16u;
-    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
-    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
-
-    /* Handles */
-    struct BufferHandle { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct Texture { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct Shader { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
-    struct Swapchain { uint16_t id; bool isValid() const { return id != kInvalidHandleId; } };
-
-    static constexpr BufferHandle kInvalidBuffer = { kInvalidHandleId };
-    static constexpr Texture kInvalidTexture = { kInvalidHandleId };
-    static constexpr Shader kInvalidShader = { kInvalidHandleId };
-    static constexpr Swapchain kInvalidSwapchain = { kInvalidHandleId };
+    enum {
+        AGPU_INVALID_ID = 0,
+        AGPU_NUM_INFLIGHT_FRAMES = 2u,
+        AGPU_MAX_INFLIGHT_FRAMES = 3u,
+        AGPU_MAX_LOG_MESSAGE_LENGTH = 4096u,
+        AGPU_MAX_COLOR_ATTACHMENTS = 8u,
+        AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+        AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+        AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+        AGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u
+    };
 
     /* Enums */
-    enum BackendType : uint32_t
-    {
+    typedef enum agpu_log_level {
+        AGPU_LOG_LEVEL_ERROR = 0,
+        AGPU_LOG_LEVEL_WARN = 1,
+        AGPU_LOG_LEVEL_INFO = 2,
+        _AGPU_LOG_LEVEL_COUNT,
+        _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+    } agpu_log_level;
+
+    typedef enum agpu_backend_type {
         /// Null renderer.
-        Null,
+        AGPU_BACKEND_TYPE_NULL,
         /// Direct3D 11 backend.
-        Direct3D11,
+        AGPU_BACKEND_TYPE_D3D11,
         /// Direct3D 12 backend.
-        Direct3D12,
+        AGPU_BACKEND_TYPE_D3D12,
         /// Metal backend.
-        Metal,
+        AGPU_BACKEND_TYPE_METAL,
         /// Vulkan backend.
-        Vulkan,
+        AGPU_BACKEND_TYPE_VULKAN,
         /// OpenGL 3.3+ or GLES 3.0+ backend.
-        OpenGL,
+        AGPU_BACKEND_TYPE_OPENGL,
         /// Default best platform supported backend.
-        Count
-    };
+        AGPU_BACKEND_TYPE_COUNT,
+        _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_backend_type;
 
-    enum class InitFlags : uint32_t
+    typedef enum agpu_init_flags
     {
-        None = 0,
-        DebugRuntime = 1 << 0,
-        LowPowerGPUPreference = 1 << 1,
-        GPUBasedValidation = 1 << 2,
-        RenderDoc = 1 << 3,
-    };
-    AGPU_DEFINE_ENUM_FLAG_OPERATORS(InitFlags, uint32_t);
+        AGPU_INIT_FLAGS_NONE = 0,
+        AGPU_INIT_FLAGS_DEBUG = (1 << 0),
+        AGPU_INIT_FLAGS_LOW_POWER_GPU = (1 << 1),
+        AGPU_INIT_FLAGS_GPU_VALIDATION = (1 << 2),
+        AGPU_INIT_FLAGS_RENDERDOC = (1 << 3),
+        _AGPU_INIT_FLAGS_FORCE_U32 = 0x7FFFFFFF
+    } agpu_init_flags;
 
-    enum class LogLevel : uint32_t {
-        Error = 0,
-        Warn = 1,
-        Info = 2,
-        Debug = 3,
-        Count
-    };
+    typedef enum agpu_buffer_usage {
+        AGPU_BUFFER_USAGE_NONE = 0,
+        AGPU_BUFFER_USAGE_UNIFORM = (1 << 0),
+        AGPU_BUFFER_USAGE_STORAGE = (1 << 1),
+        AGPU_BUFFER_USAGE_INDEX = (1 << 2),
+        AGPU_BUFFER_USAGE_VERTEX = (1 << 3),
+        AGPU_BUFFER_USAGE_INDIRECT = (1 << 4),
+        _AGPU_BUFFER_USAGE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_buffer_usage;
 
     /// Defines pixel format.
-    enum class PixelFormat : uint32_t
-    {
-        Invalid = 0,
+    typedef enum agpu_texture_format {
+        AGPU_TEXTURE_FORMAT_INVALID = 0,
         // 8-bit pixel formats
         R8Unorm,
         R8Snorm,
@@ -145,22 +140,22 @@ namespace agpu
         RG16Uint,
         RG16Sint,
         RG16Float,
-        RGBA8Unorm,
-        RGBA8UnormSrgb,
-        RGBA8Snorm,
-        RGBA8Uint,
-        RGBA8Sint,
-        BGRA8Unorm,
-        BGRA8UnormSrgb,
+        AGPU_TEXTURE_FORMAT_RGBA8_UNORM,
+        AGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB,
+        AGPU_TEXTURE_FORMAT_RGBA8_SNORM,
+        AGPU_TEXTURE_FORMAT_RGBA8_UINT,
+        AGPU_TEXTURE_FORMAT_RGBA8_SINT,
+        AGPU_TEXTURE_FORMAT_BGRA8_UNORM,
+        AGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB,
         // Packed 32-Bit Pixel formats
-        RGB10A2Unorm,
+        AGPU_TEXTURE_FORMAT_RGB10A2_UNORM,
         RG11B10Float,
         RGB9E5Float,
         // 64-Bit Pixel Formats
         RG32Uint,
         RG32Sint,
         RG32Float,
-        RGBA16Unorm,
+        AGPU_TEXTURE_FORMAT_RGBA16_UNORM,
         RGBA16Snorm,
         RGBA16Uint,
         RGBA16Sint,
@@ -168,7 +163,7 @@ namespace agpu
         // 128-Bit Pixel Formats
         RGBA32Uint,
         RGBA32Sint,
-        RGBA32Float,
+        AGPU_TEXTURE_FORMAT_RGBA32_FLOAT,
         // Depth-stencil formats
         Stencil8,
         Depth16Unorm,
@@ -190,8 +185,17 @@ namespace agpu
         BC6HRGBFloat,
         BC7RGBAUnorm,
         BC7RGBAUnormSrgb,
-        Count
-    };
+        _AGPU_TEXTURE_FORMAT_COUNT,
+        _AGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
+    } agpu_texture_format;
+
+    typedef enum agpu_texture_type {
+        AGPU_TEXTURE_TYPE_2D,
+        AGPU_TEXTURE_TYPE_3D,
+        AGPU_TEXTURE_TYPE_CUBE,
+        AGPU_TEXTURE_TYPE_ARRAY,
+        _AGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_texture_type;
 
     enum class LoadAction : uint32_t
     {
@@ -200,32 +204,77 @@ namespace agpu
         Clear
     };
 
-    enum class FrameOpResult : uint32_t
-    {
-        Success = 0,
-        Error,
-        SwapChainOutOfDate,
-        DeviceLost
-    };
-
-    enum class EndFrameFlags : uint32_t
-    {
-        None = 0,
-        NoVerticalSync = 1 << 0,
-        SkipPresent = 1 << 1,
-    };
-    AGPU_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
-
-    /* Struct */
-    struct Color
-    {
+    /* Structs */
+    typedef struct agpu_color {
         float r;
         float g;
         float b;
         float a;
+    } agpu_color;
+
+    typedef struct agpu_buffer_info {
+        uint64_t size;
+        agpu_buffer_usage usage;
+        void* data;
+        const char* label;
+    } agpu_buffer_info;
+
+    typedef struct agpu_texture_info {
+        agpu_texture_type type;
+        agpu_texture_format format;
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+        uint32_t mipmaps;
+        const void* external_handle;
+        const char* label;
+    } agpu_texture_info;
+
+    typedef struct agpu_swapchain_info {
+        uint32_t width;
+        uint32_t height;
+        agpu_texture_format color_format;
+        void* window_handle;
+        const char* label;
+    } agpu_swapchain_info;
+
+    struct RenderPassColorAttachment
+    {
+        agpu_texture texture;
+        uint32_t mipLevel = 0;
+        union {
+            uint32_t face = 0;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction loadAction;
+        agpu_color clear_color;
     };
 
-    struct Features {
+    struct RenderPassDepthStencilAttachment
+    {
+        agpu_texture texture;
+        uint32_t mipLevel = 0;
+        union {
+            //TextureCubemapFace face = TextureCubemapFace::PositiveX;
+            uint32_t face = 0;
+            uint32_t layer;
+            uint32_t slice;
+        };
+        LoadAction depthLoadAction = LoadAction::Clear;
+        LoadAction stencilLoadOp = LoadAction::Discard;
+        float clearDepth = 1.0f;
+        uint8_t clearStencil = 0;
+    };
+
+    struct RenderPassDescription
+    {
+        uint32_t                                colorAttachmentsCount;
+        const RenderPassColorAttachment* colorAttachments;
+        const RenderPassDepthStencilAttachment* depthStencilAttachment = nullptr;
+    };
+
+    typedef struct agpu_features {
         bool independentBlend;
         bool computeShader;
         bool indexUInt32;
@@ -236,9 +285,9 @@ namespace agpu
         bool textureCompressionBC;
         bool textureCubeArray;
         bool raytracing;
-    };
+    } agpu_features;
 
-    struct Limits {
+    typedef struct agpu_limits {
         uint32_t        maxVertexAttributes;
         uint32_t        maxVertexBindings;
         uint32_t        maxVertexAttributeOffset;
@@ -269,90 +318,54 @@ namespace agpu
         uint32_t        max_compute_work_group_size_x;
         uint32_t        max_compute_work_group_size_y;
         uint32_t        max_compute_work_group_size_z;
-    };
+    } agpu_limits;
 
-    struct Caps {
-        BackendType backend;
+    typedef struct agpu_caps {
+        agpu_backend_type backend;
         uint32_t vendorID;
         uint32_t deviceID;
-        Features features;
-        Limits limits;
-    };
-
-    struct RenderPassColorAttachment
-    {
-        Texture texture;
-        uint32_t mipLevel = 0;
-        union {
-            uint32_t face = 0;
-            uint32_t layer;
-            uint32_t slice;
-        };
-        LoadAction loadAction = LoadAction::Clear;
-        Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    };
-
-    struct RenderPassDepthStencilAttachment
-    {
-        Texture texture;
-        uint32_t mipLevel = 0;
-        union {
-            //TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t face = 0;
-            uint32_t layer;
-            uint32_t slice;
-        };
-        LoadAction depthLoadAction = LoadAction::Clear;
-        LoadAction stencilLoadOp = LoadAction::Discard;
-        float clearDepth = 1.0f;
-        uint8_t clearStencil = 0;
-    };
-
-    struct RenderPassDescription
-    {
-        uint32_t                                colorAttachmentsCount;
-        const RenderPassColorAttachment*        colorAttachments;
-        const RenderPassDepthStencilAttachment* depthStencilAttachment = nullptr;
-    };
-
-    /* Callbacks */
-    typedef void(AGPU_API_CALL* logCallback)(void* userData, LogLevel level, const char* message);
+        agpu_features features;
+        agpu_limits limits;
+    } agpu_caps;
 
     /* Log functions */
-    AGPU_API void setLogCallback(logCallback callback, void* user_data);
-    AGPU_API void logError(const char* format, ...);
-    AGPU_API void logWarn(const char* format, ...);
-    AGPU_API void logInfo(const char* format, ...);
+    typedef void(AGPU_API_CALL* logCallback)(void* userData, agpu_log_level level, const char* message);
+    AGPU_API void agpu_set_log_callback(logCallback callback, void* user_data);
+    AGPU_API void agpu_log(agpu_log_level level, const char* format, ...);
 
-    AGPU_API bool SetPreferredBackend(BackendType backend);
-    AGPU_API bool Init(InitFlags flags, void* windowHandle);
-    AGPU_API void Shutdown(void);
+    /* Frame logic */
+    AGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
+    AGPU_API bool agpu_init(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
+    AGPU_API void agpu_shutdown(void);
+    AGPU_API void aqpu_query_caps(agpu_caps* caps);
+    AGPU_API bool agpu_frame_begin(void);
+    AGPU_API void agpu_frame_end(void);
 
-    AGPU_API Swapchain GetPrimarySwapchain(void);
-    AGPU_API FrameOpResult BeginFrame(Swapchain swapchain);
-    AGPU_API FrameOpResult EndFrame(Swapchain swapchain, EndFrameFlags flags = EndFrameFlags::None);
+    /* Resource creation methods */
+    AGPU_API agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info);
+    AGPU_API void agpu_destroy_swapchain(agpu_swapchain swapchain);
 
-    AGPU_API const Caps* QueryCaps(void);
-    //AGPU_API agpu_texture_format_info agpu_query_texture_format_info(agpu_texture_format format);
+    AGPU_API agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
+    AGPU_API void agpu_destroy_buffer(agpu_buffer buffer);
 
-    /* Resource creation methods*/
-    AGPU_API Swapchain CreateSwapchain(void* windowHandle);
-    AGPU_API void DestroySwapchain(Swapchain handle);
-    AGPU_API Texture GetCurrentTexture(Swapchain handle);
-
-    AGPU_API BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData);
-    AGPU_API void DestroyBuffer(BufferHandle handle);
-
-    AGPU_API Texture CreateExternalTexture2D(intptr_t handle, uint32_t width, uint32_t height, PixelFormat format, bool mipmaps);
-    AGPU_API void DestroyTexture(Texture handle);
+    AGPU_API agpu_texture agpu_create_texture(const agpu_texture_info* info);
+    AGPU_API void agpu_destroy_texture(agpu_texture handle);
 
     /* Commands */
-    AGPU_API void PushDebugGroup(const char* name);
-    AGPU_API void PopDebugGroup(void);
-    AGPU_API void InsertDebugMarker(const char* name);
-    AGPU_API void BeginRenderPass(const RenderPassDescription* renderPass);
-    AGPU_API void EndRenderPass(void);
+    AGPU_API void agpu_push_debug_group(const char* name);
+    AGPU_API void agpu_pop_debug_group(void);
+    AGPU_API void agpu_insert_debug_marker(const char* name);
+    AGPU_API void agpu_begin_render_pass(const RenderPassDescription* renderPass);
+    AGPU_API void agpu_end_render_pass(void);
 
-    /* Util methods */
-    AGPU_API uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u);
+    /* Utility methods */
+    AGPU_API uint32_t agpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth = 1u);
+
+#ifdef __cplusplus
 }
+#endif
+
+#ifdef __cplusplus
+inline constexpr agpu_init_flags operator | (agpu_init_flags a, agpu_init_flags b) { return agpu_init_flags(uint32_t(a) | uint32_t(b)); }
+inline constexpr agpu_init_flags& operator |= (agpu_init_flags& a, agpu_init_flags b) { return a = a | b; }
+#endif

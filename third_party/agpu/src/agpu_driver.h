@@ -62,90 +62,124 @@ extern void __cdecl __debugbreak(void);
 
 namespace agpu
 {
-    static constexpr uint16_t kInvalidPoolId = static_cast<uint16_t>(-1);
-
-    template <typename T, uint16_t MAX_COUNT>
-    struct Pool
+    template<typename T>
+    struct Array
     {
-        void init()
+        uint32_t Size;
+        uint32_t capacity;
+        T* data;
+
+        constexpr Array() { Size = capacity = 0; data = nullptr; }
+
+        constexpr Array(const Array<T>& src) { Size = capacity = 0; data = nullptr; operator=(src); }
+        inline Array<T>& operator=(const Array<T>& src)
         {
-            values = (T*)mem;
-            for (uint16_t i = 0; i < MAX_COUNT; ++i) {
-                new (&values[i]) uint16_t(i + 1);
+            Clear();
+            Resize(src.Size);
+            memcpy(data, src.data, (size_t)Size * sizeof(T));
+            return *this;
+        }
+
+        inline ~Array()
+        {
+            if (data)
+                free(data);
+        }
+
+        inline bool     IsEmpty() const { return Size == 0; }
+        inline uint32_t MemorySize() const { return Size * (uint32_t)sizeof(T); }
+        inline uint32_t Capacity() const { return capacity; }
+        inline T& operator[](uint32_t i) { AGPU_ASSERT(i < Size); return data[i]; }
+        inline const T& operator[](uint32_t i) const { AGPU_ASSERT(i < Size); return data[i]; }
+
+        inline void Clear()
+        {
+            if (data) {
+                Size = capacity = 0; free(data);
+                data = nullptr;
             }
-            new (&values[MAX_COUNT - 1]) uint16_t(-1);
-            first_free = 0;
         }
 
-        uint16_t alloc()
+        constexpr uint32_t getGrowCapacity(uint32_t size) const
         {
-            if (first_free == kInvalidPoolId) {
-                return kInvalidPoolId;
+            uint32_t newCapacity = capacity ? (capacity + capacity / 2) : 8;
+            return newCapacity > size ? newCapacity : size;
+        }
+
+        inline void Resize(uint32_t newSize)
+        {
+            if (newSize > capacity)
+            {
+                Reserve(getGrowCapacity(newSize));
             }
 
-            const uint16_t id = first_free;
-            first_free = *((int*)&values[id]);
-            new (&values[id]) T;
-            return id;
+            Size = newSize;
         }
 
-        void dealloc(uint16_t index)
+        inline void Reserve(uint32_t newCapacity)
         {
-            values[index].~T();
-            new (&values[index]) int(first_free);
-            first_free = index;
+            if (newCapacity <= capacity)
+                return;
+
+            T* new_data = (T*)malloc((size_t)newCapacity * sizeof(T));
+            if (data) {
+                memcpy(new_data, data, (size_t)Size * sizeof(T));
+                free(data);
+            }
+
+            data = new_data;
+            capacity = newCapacity;
         }
 
-        alignas(T) uint8_t mem[sizeof(T) * MAX_COUNT];
-        T* values;
-        uint16_t first_free;
+        inline void Add(const T& v)
+        {
+            if (Size == capacity)
+            {
+                Reserve(getGrowCapacity(Size + 1));
+            }
 
-        T& operator[](uint16_t index) { return values[index]; }
-        bool isFull() const { return first_free == kInvalidPoolId; }
+            memcpy(&data[Size], &v, sizeof(v));
+            Size++;
+        }
     };
+}
 
-    struct Renderer {
-        bool (*init)(InitFlags flags, void* windowHandle);
-        void (*Shutdown)(void);
+struct agpu_renderer {
+    bool (*init)(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
+    void (*shutdown)(void);
+    bool(*frame_begin)(void);
+    void(*frame_finish)(void);
 
-        Swapchain(*GetPrimarySwapchain)(void);
-        FrameOpResult(*BeginFrame)(Swapchain handle);
-        FrameOpResult(*EndFrame)(Swapchain handle, EndFrameFlags flags);
+    void (*query_caps)(agpu_caps* caps);
 
-        const Caps* (*QueryCaps)(void);
+    agpu_swapchain(*create_swapchain)(const agpu_swapchain_info* info);
+    void(*destroy_swapchain)(agpu_swapchain handle);
 
-        Swapchain(*CreateSwapchain)(void* windowHandle);
-        void(*DestroySwapchain)(Swapchain handle);
-        Texture(*GetCurrentTexture)(Swapchain handle);
+    agpu_buffer(*createBuffer)(const agpu_buffer_info* info);
+    void(*destroyBuffer)(agpu_buffer handle);
 
-        BufferHandle(*CreateBuffer)(uint32_t count, uint32_t stride, const void* initialData);
-        void(*DestroyBuffer)(BufferHandle handle);
+    agpu_texture(*CreateTexture)(const agpu_texture_info* info);
+    void(*DestroyTexture)(agpu_texture handle);
 
-        Texture(*CreateTexture)(uint32_t width, uint32_t height, PixelFormat format, uint32_t mipLevels, intptr_t handle);
-        void(*DestroyTexture)(Texture handle);
-
-        /* Commands */
-        void (*PushDebugGroup)(const char* name);
-        void (*PopDebugGroup)(void) = 0;
-        void (*InsertDebugMarker)(const char* name);
-        void(*BeginRenderPass)(const RenderPassDescription* renderPass);
-        void(*EndRenderPass)(void);
-    };
+    /* Commands */
+    void(*PushDebugGroup)(const char* name);
+    void(*PopDebugGroup)(void) = 0;
+    void(*InsertDebugMarker)(const char* name);
+    void(*BeginRenderPass)(const RenderPassDescription* renderPass);
+    void(*EndRenderPass)(void);
+};
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
     ASSIGN_DRIVER_FUNC(init, name)\
-    ASSIGN_DRIVER_FUNC(Shutdown, name)\
-	ASSIGN_DRIVER_FUNC(GetPrimarySwapchain, name)\
-    ASSIGN_DRIVER_FUNC(BeginFrame, name)\
-    ASSIGN_DRIVER_FUNC(BeginFrame, name)\
-    ASSIGN_DRIVER_FUNC(EndFrame, name)\
-    ASSIGN_DRIVER_FUNC(QueryCaps, name)\
-    ASSIGN_DRIVER_FUNC(CreateSwapchain, name)\
-    ASSIGN_DRIVER_FUNC(DestroySwapchain, name)\
-    ASSIGN_DRIVER_FUNC(GetCurrentTexture, name)\
-    ASSIGN_DRIVER_FUNC(CreateBuffer, name)\
-    ASSIGN_DRIVER_FUNC(DestroyBuffer, name)\
+    ASSIGN_DRIVER_FUNC(shutdown, name)\
+    ASSIGN_DRIVER_FUNC(frame_begin, name)\
+    ASSIGN_DRIVER_FUNC(frame_finish, name)\
+    ASSIGN_DRIVER_FUNC(query_caps, name)\
+    ASSIGN_DRIVER_FUNC(create_swapchain, name)\
+    ASSIGN_DRIVER_FUNC(destroy_swapchain, name)\
+    ASSIGN_DRIVER_FUNC(createBuffer, name)\
+    ASSIGN_DRIVER_FUNC(destroyBuffer, name)\
     ASSIGN_DRIVER_FUNC(CreateTexture, name)\
     ASSIGN_DRIVER_FUNC(DestroyTexture, name)\
     ASSIGN_DRIVER_FUNC(PushDebugGroup, name)\
@@ -154,19 +188,17 @@ namespace agpu
     ASSIGN_DRIVER_FUNC(BeginRenderPass, name)\
     ASSIGN_DRIVER_FUNC(EndRenderPass, name)
 
-    struct Driver
-    {
-        BackendType backend;
-        bool (*isSupported)(void);
-        Renderer* (*createRenderer)(void);
-    };
+struct agpu_driver
+{
+    agpu_backend_type backend;
+    bool (*is_supported)(void);
+    agpu_renderer* (*create_renderer)(void);
+};
 
-    extern Driver D3D12_Driver;
-    extern Driver D3D11_Driver;
-    extern Driver vulkan_driver;
-    extern Driver metal_driver;
-    extern Driver GL_Driver;
-}
-
+extern agpu_driver d3d12_driver;
+extern agpu_driver D3D11_Driver;
+extern agpu_driver vulkan_driver;
+extern agpu_driver metal_driver;
+extern agpu_driver GL_Driver;
 
 #endif /* AGPU_DRIVER_H */

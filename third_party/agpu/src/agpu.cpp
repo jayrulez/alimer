@@ -24,257 +24,228 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-namespace agpu
+/* Logging */
+static logCallback s_log_function = nullptr;
+static void* s_log_user_data = nullptr;
+
+void agpu_set_log_callback(logCallback callback, void* user_data)
 {
-    /* Logging */
-    static logCallback s_log_function = nullptr;
-    static void* s_log_user_data = nullptr;
+    s_log_function = callback;
+    s_log_user_data = user_data;
+}
 
-    void setLogCallback(logCallback callback, void* user_data)
-    {
-        s_log_function = callback;
-        s_log_user_data = user_data;
-    }
-
-    void logError(const char* format, ...)
-    {
-        if (s_log_function) {
-            va_list args;
-            va_start(args, format);
-            char message[kMaxLogMessageLength];
-            vsnprintf(message, kMaxLogMessageLength, format, args);
-            s_log_function(s_log_user_data, LogLevel::Error, message);
-            va_end(args);
-        }
-    }
-
-    void logWarn(const char* format, ...)
-    {
-        if (s_log_function) {
-            va_list args;
-            va_start(args, format);
-            char message[kMaxLogMessageLength];
-            vsnprintf(message, kMaxLogMessageLength, format, args);
-            s_log_function(s_log_user_data, LogLevel::Warn, message);
-            va_end(args);
-        }
-    }
-
-    void logInfo(const char* format, ...)
-    {
-        if (s_log_function) {
-            va_list args;
-            va_start(args, format);
-            char message[kMaxLogMessageLength];
-            vsnprintf(message, kMaxLogMessageLength, format, args);
-            s_log_function(s_log_user_data, LogLevel::Info, message);
-            va_end(args);
-        }
-    }
-
-    static const Driver* drivers[] = {
-    #if AGPU_DRIVER_D3D12
-        &D3D12_Driver,
-    #endif
-    #if AGPU_DRIVER_D3D11
-        &D3D11_Driver,
-    #endif
-    #if AGPU_DRIVER_METAL
-        & metal_driver,
-    #endif
-    #if AGPU_DRIVER_VULKAN && defined(TODO_VK)
-        &vulkan_driver,
-    #endif
-    #if AGPU_DRIVER_OPENGL
-        &GL_Driver,
-    #endif
-
-        nullptr
-    };
-
-    static BackendType s_backend = BackendType::Count;
-    static Renderer* renderer = nullptr;
-
-    bool SetPreferredBackend(BackendType backend)
-    {
-        if (renderer != nullptr)
-            return false;
-
-        s_backend = backend;
-        return true;
-    }
-
-    bool Init(InitFlags flags, void* windowHandle)
-    {
-        if (renderer) {
-            return true;
-        }
-
-        if (s_backend == BackendType::Count)
-        {
-            for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-            {
-                if (!drivers[i])
-                    break;
-
-                if (drivers[i]->isSupported()) {
-                    renderer = drivers[i]->createRenderer();
-                    break;
-                }
-            }
-        }
-        else
-        {
-            for (uint32_t i = 0; AGPU_COUNT_OF(drivers); i++)
-            {
-                if (!drivers[i])
-                    break;
-
-                if (drivers[i]->backend == s_backend && drivers[i]->isSupported())
-                {
-                    renderer = drivers[i]->createRenderer();
-                    break;
-                }
-            }
-        }
-
-        if (!renderer || !renderer->init(flags, windowHandle)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    void Shutdown(void) {
-        if (renderer == nullptr)
-            return;
-
-        renderer->Shutdown();
-        renderer = nullptr;
-    }
-
-    Swapchain GetPrimarySwapchain(void)
-    {
-        return renderer->GetPrimarySwapchain();
-    }
-
-    FrameOpResult BeginFrame(Swapchain swapchain)
-    {
-        AGPU_ASSERT(swapchain.isValid());
-
-        return renderer->BeginFrame(swapchain);
-    }
-
-    FrameOpResult EndFrame(Swapchain swapchain, EndFrameFlags flags)
-    {
-        AGPU_ASSERT(swapchain.isValid());
-
-        return renderer->EndFrame(swapchain, flags);
-    }
-
-    const Caps* QueryCaps(void)
-    {
-        AGPU_ASSERT(renderer);
-        return renderer->QueryCaps();
-    }
-
-    Swapchain CreateSwapchain(void* windowHandle)
-    {
-        AGPU_ASSERT(windowHandle);
-
-        return renderer->CreateSwapchain(windowHandle);
-    }
-
-    void DestroySwapchain(Swapchain handle)
-    {
-        if (handle.isValid())
-        {
-            renderer->DestroySwapchain(handle);
-        }
-    }
-
-    Texture GetCurrentTexture(Swapchain handle)
-    {
-        AGPU_ASSERT(handle.isValid());
-
-        return renderer->GetCurrentTexture(handle);
-    }
-
-    BufferHandle CreateBuffer(uint32_t count, uint32_t stride, const void* initialData)
-    {
-        if (!count || !stride)
-        {
-            return kInvalidBuffer;
-        }
-
-        return renderer->CreateBuffer(count, stride, initialData);
-    }
-
-    void DestroyBuffer(BufferHandle handle)
-    {
-        if (handle.isValid())
-        {
-            renderer->DestroyBuffer(handle);
-        }
-    }
-
-
-    Texture CreateExternalTexture2D(intptr_t handle, uint32_t width, uint32_t height, PixelFormat format, bool mipmaps)
-    {
-        uint32_t mipLevels = mipmaps ? CalculateMipLevels(width, height, 1u) : 1u;
-        return renderer->CreateTexture(width, height, format, mipLevels, handle);
-    }
-
-    void DestroyTexture(Texture handle)
-    {
-        if (handle.isValid())
-        {
-            renderer->DestroyTexture(handle);
-        }
-    }
-
-    /* Commands */
-    void PushDebugGroup(const char* name)
-    {
-        renderer->PushDebugGroup(name);
-    }
-
-    void PopDebugGroup(void)
-    {
-        renderer->PopDebugGroup();
-    }
-
-    void InsertDebugMarker(const char* name)
-    {
-        renderer->InsertDebugMarker(name);
-    }
-
-    void BeginRenderPass(const RenderPassDescription* renderPass)
-    {
-        AGPU_ASSERT(renderPass);
-
-        renderer->BeginRenderPass(renderPass);
-    }
-
-    void EndRenderPass(void)
-    {
-        renderer->EndRenderPass();
-    }
-
-    /* Util methods */
-    uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
-    {
-        uint32_t mipLevels = 0u;
-        uint32_t size = AGPU_MAX(AGPU_MAX(width, height), depth);
-        while (1u << mipLevels <= size) {
-            ++mipLevels;
-        }
-
-        if (1u << mipLevels < size) {
-            ++mipLevels;
-        }
-
-        return mipLevels;
+void agpu_log(agpu_log_level level, const char* format, ...)
+{
+    if (s_log_function) {
+        va_list args;
+        va_start(args, format);
+        char message[AGPU_MAX_LOG_MESSAGE_LENGTH];
+        vsnprintf(message, AGPU_MAX_LOG_MESSAGE_LENGTH, format, args);
+        s_log_function(s_log_user_data, level, message);
+        va_end(args);
     }
 }
 
+static const agpu_driver* drivers[] = {
+#if AGPU_DRIVER_D3D12
+    & d3d12_driver,
+#endif
+#if AGPU_DRIVER_D3D11
+    & D3D11_Driver,
+#endif
+#if AGPU_DRIVER_METAL
+    & metal_driver,
+#endif
+#if AGPU_DRIVER_VULKAN && defined(TODO_VK)
+    &vulkan_driver,
+#endif
+#if AGPU_DRIVER_OPENGL
+    & GL_Driver,
+#endif
+
+    nullptr
+};
+
+static agpu_backend_type s_backend = AGPU_BACKEND_TYPE_COUNT;
+static agpu_renderer* renderer = nullptr;
+
+bool agpu_set_preferred_backend(agpu_backend_type backend)
+{
+    if (renderer != nullptr)
+        return false;
+
+    s_backend = backend;
+    return true;
+}
+
+bool agpu_init(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info)
+{
+    if (renderer) {
+        return true;
+    }
+
+    if (s_backend == AGPU_BACKEND_TYPE_COUNT)
+    {
+        for (uint32_t i = 0; i < AGPU_COUNT_OF(drivers); i++)
+        {
+            if (!drivers[i])
+                break;
+
+            if (drivers[i]->is_supported()) {
+                renderer = drivers[i]->create_renderer();
+                break;
+            }
+        }
+    }
+    else
+    {
+        for (uint32_t i = 0; i < AGPU_COUNT_OF(drivers); i++)
+        {
+            if (!drivers[i])
+                break;
+
+            if (drivers[i]->backend == s_backend && drivers[i]->is_supported())
+            {
+                renderer = drivers[i]->create_renderer();
+                break;
+            }
+        }
+    }
+
+    if (!renderer || !renderer->init(flags, swapchain_info)) {
+        return false;
+    }
+
+    return true;
+}
+
+void agpu_shutdown(void) {
+    if (renderer == nullptr)
+        return;
+
+    renderer->shutdown();
+    renderer = nullptr;
+}
+
+void aqpu_query_caps(agpu_caps* caps)
+{
+    AGPU_ASSERT(caps);
+    AGPU_ASSERT(renderer);
+
+    return renderer->query_caps(caps);
+}
+
+bool agpu_frame_begin(void)
+{
+    return renderer->frame_begin();
+}
+
+void agpu_frame_end(void)
+{
+    return renderer->frame_finish();
+}
+
+/* Resource creation methods */
+static agpu_swapchain_info _agpu_swapchain_info_defaults(const agpu_swapchain_info* info) {
+    agpu_swapchain_info def = *info;
+    def.color_format = _agpu_def(def.color_format, AGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    return def;
+};
+
+agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info)
+{
+    AGPU_ASSERT(info);
+
+    agpu_swapchain_info def = _agpu_swapchain_info_defaults(info);
+    return renderer->create_swapchain(&def);
+}
+
+void agpu_destroy_swapchain(agpu_swapchain swapchain)
+{
+    return renderer->destroy_swapchain(swapchain);
+}
+
+agpu_buffer agpu_create_buffer(const agpu_buffer_info* info)
+{
+    AGPU_ASSERT(info);
+    AGPU_ASSERT(info->size);
+    AGPU_ASSERT(info->usage);
+
+    return renderer->createBuffer(info);
+}
+
+void agpu_destroy_buffer(agpu_buffer buffer)
+{
+    if (buffer.id != AGPU_INVALID_ID)
+    {
+        renderer->destroyBuffer(buffer);
+    }
+}
+
+static agpu_texture_info _agpu_texture_info_defaults(const agpu_texture_info* info) {
+    agpu_texture_info def = *info;
+    def.type = _agpu_def(def.type, AGPU_TEXTURE_TYPE_2D);
+    def.format = _agpu_def(def.format, AGPU_TEXTURE_FORMAT_RGBA8_UNORM);
+    def.depth = _agpu_def(def.depth, 1);
+    def.mipmaps = _agpu_def(def.mipmaps, 1);
+    return def;
+};
+
+agpu_texture agpu_create_texture(const agpu_texture_info* info)
+{
+    AGPU_ASSERT(info);
+    agpu_texture_info def = _agpu_texture_info_defaults(info);
+    return renderer->CreateTexture(&def);
+}
+
+void agpu_destroy_texture(agpu_texture handle)
+{
+    if (handle.id != AGPU_INVALID_ID)
+    {
+        renderer->DestroyTexture(handle);
+    }
+}
+
+/* Commands */
+void agpu_push_debug_group(const char* name)
+{
+    renderer->PushDebugGroup(name);
+}
+
+void agpu_pop_debug_group(void)
+{
+    renderer->PopDebugGroup();
+}
+
+void agpu_insert_debug_marker(const char* name)
+{
+    renderer->InsertDebugMarker(name);
+}
+
+void agpu_begin_render_pass(const RenderPassDescription* renderPass)
+{
+    AGPU_ASSERT(renderPass);
+
+    renderer->BeginRenderPass(renderPass);
+}
+
+void agpu_end_render_pass(void)
+{
+    renderer->EndRenderPass();
+}
+
+/* Utility methods */
+uint32_t agpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth)
+{
+    uint32_t mipLevels = 0u;
+    uint32_t size = AGPU_MAX(AGPU_MAX(width, height), depth);
+    while (1u << mipLevels <= size) {
+        ++mipLevels;
+    }
+
+    if (1u << mipLevels < size) {
+        ++mipLevels;
+    }
+
+    return mipLevels;
+}
