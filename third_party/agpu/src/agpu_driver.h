@@ -147,8 +147,8 @@ namespace agpu
 struct agpu_renderer {
     bool (*init)(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
     void (*shutdown)(void);
-    bool(*frame_begin)(agpu_swapchain handle);
-    void(*frame_finish)(agpu_swapchain handle);
+    bool(*frame_begin)(void);
+    void(*frame_finish)(void);
 
     void (*query_caps)(agpu_caps* caps);
 
@@ -156,6 +156,7 @@ struct agpu_renderer {
     void(*destroy_swapchain)(agpu_swapchain handle);
     agpu_swapchain(*get_main_swapchain)(void);
     agpu_texture(*get_current_texture)(agpu_swapchain handle);
+    void(*present)(agpu_swapchain swapchain, bool vsync);
 
     agpu_buffer(*createBuffer)(const agpu_buffer_info* info);
     void(*destroyBuffer)(agpu_buffer handle);
@@ -182,6 +183,7 @@ struct agpu_renderer {
     ASSIGN_DRIVER_FUNC(destroy_swapchain, name)\
     ASSIGN_DRIVER_FUNC(get_main_swapchain, name)\
     ASSIGN_DRIVER_FUNC(get_current_texture, name)\
+    ASSIGN_DRIVER_FUNC(present, name)\
     ASSIGN_DRIVER_FUNC(createBuffer, name)\
     ASSIGN_DRIVER_FUNC(destroyBuffer, name)\
     ASSIGN_DRIVER_FUNC(create_texture, name)\

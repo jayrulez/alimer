@@ -135,18 +135,14 @@ void agpuQueryCaps(agpu_caps* caps)
     return renderer->query_caps(caps);
 }
 
-bool agpu_begin_frame(agpu_swapchain swapchain)
+bool agpu_begin_frame(void)
 {
-    AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
-
-    return renderer->frame_begin(swapchain);
+    return renderer->frame_begin();
 }
 
-void agpu_end_frame(agpu_swapchain swapchain)
+void agpu_end_frame(void)
 {
-    AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
-
-    return renderer->frame_finish(swapchain);
+    return renderer->frame_finish();
 }
 
 /* Resource creation methods */
@@ -178,6 +174,11 @@ agpu_texture agpu_get_current_texture(agpu_swapchain swapchain)
 {
     AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
     return renderer->get_current_texture(swapchain);
+}
+
+void agpu_present(agpu_swapchain swapchain, bool vsync)
+{
+    return renderer->present(swapchain, vsync);
 }
 
 agpu_buffer agpu_create_buffer(const agpu_buffer_info* info)

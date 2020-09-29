@@ -349,14 +349,15 @@ extern "C" {
     AGPU_API bool agpu_init(const char* app_name, agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
     AGPU_API void agpuShutdown(void);
     AGPU_API void agpuQueryCaps(agpu_caps* caps);
-    AGPU_API bool agpu_begin_frame(agpu_swapchain swapchain);
-    AGPU_API void agpu_end_frame(agpu_swapchain swapchain);
+    AGPU_API bool agpu_begin_frame(void);
+    AGPU_API void agpu_end_frame(void);
 
     /* Resource creation methods */
     AGPU_API agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info);
     AGPU_API void agpu_destroy_swapchain(agpu_swapchain swapchain);
     AGPU_API agpu_swapchain agpu_get_main_swapchain(void);
     AGPU_API agpu_texture agpu_get_current_texture(agpu_swapchain swapchain);
+    AGPU_API void agpu_present(agpu_swapchain swapchain, bool vsync);
 
     AGPU_API agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
     AGPU_API void agpu_destroy_buffer(agpu_buffer buffer);

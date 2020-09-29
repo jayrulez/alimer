@@ -123,23 +123,23 @@ namespace Alimer
 
     void Application::Tick()
     {
-        agpu_swapchain main_swapchain = agpu_get_main_swapchain();
-
-        if (!agpu_begin_frame(main_swapchain))
+        if (!agpu_begin_frame())
             return;
+
+        agpu_swapchain main_swapchain = agpu_get_main_swapchain();
+        agpu_texture backbuffer_texture = agpu_get_current_texture(main_swapchain);
 
         agpu_push_debug_group("Frame");
 
         agpu_render_pass_info renderPass{};
         renderPass.num_color_attachments = 1u;
-        renderPass.color_attachments[0].texture = agpu_get_current_texture(main_swapchain);
+        renderPass.color_attachments[0].texture = backbuffer_texture;
         renderPass.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };  //Colors::CornflowerBlue;
-        //beginInfo.framebuffer = agpuGetCurrentFramebuffer();
-
         agpu_begin_render_pass(&renderPass);
         agpu_end_render_pass();
         agpu_pop_debug_group();
-        agpu_end_frame(main_swapchain);
+        agpu_present(main_swapchain, true);
+        agpu_end_frame();
     }
 
     const Config* Application::GetConfig()
