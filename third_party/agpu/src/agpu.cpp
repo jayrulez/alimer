@@ -78,7 +78,7 @@ bool agpu_set_preferred_backend(agpu_backend_type backend)
     return true;
 }
 
-bool agpu_init(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info)
+bool agpu_init(const char* app_name, agpu_init_flags flags, const agpu_swapchain_info* swapchain_info)
 {
     if (renderer) {
         return true;
@@ -119,7 +119,7 @@ bool agpu_init(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info)
     return true;
 }
 
-void agpu_shutdown(void) {
+void agpuShutdown(void) {
     if (renderer == nullptr)
         return;
 
@@ -127,7 +127,7 @@ void agpu_shutdown(void) {
     renderer = nullptr;
 }
 
-void aqpu_query_caps(agpu_caps* caps)
+void agpuQueryCaps(agpu_caps* caps)
 {
     AGPU_ASSERT(caps);
     AGPU_ASSERT(renderer);
@@ -135,14 +135,18 @@ void aqpu_query_caps(agpu_caps* caps)
     return renderer->query_caps(caps);
 }
 
-bool agpu_frame_begin(void)
+bool agpu_begin_frame(agpu_swapchain swapchain)
 {
-    return renderer->frame_begin();
+    AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
+
+    return renderer->frame_begin(swapchain);
 }
 
-void agpu_frame_end(void)
+void agpu_end_frame(agpu_swapchain swapchain)
 {
-    return renderer->frame_finish();
+    AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
+
+    return renderer->frame_finish(swapchain);
 }
 
 /* Resource creation methods */
@@ -163,6 +167,17 @@ agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info)
 void agpu_destroy_swapchain(agpu_swapchain swapchain)
 {
     return renderer->destroy_swapchain(swapchain);
+}
+
+agpu_swapchain agpu_get_main_swapchain(void)
+{
+    return renderer->get_main_swapchain();
+}
+
+agpu_texture agpu_get_current_texture(agpu_swapchain swapchain)
+{
+    AGPU_ASSERT(swapchain.id != AGPU_INVALID_ID);
+    return renderer->get_current_texture(swapchain);
 }
 
 agpu_buffer agpu_create_buffer(const agpu_buffer_info* info)
@@ -195,14 +210,14 @@ agpu_texture agpu_create_texture(const agpu_texture_info* info)
 {
     AGPU_ASSERT(info);
     agpu_texture_info def = _agpu_texture_info_defaults(info);
-    return renderer->CreateTexture(&def);
+    return renderer->create_texture(&def);
 }
 
 void agpu_destroy_texture(agpu_texture handle)
 {
     if (handle.id != AGPU_INVALID_ID)
     {
-        renderer->DestroyTexture(handle);
+        renderer->destroy_texture(handle);
     }
 }
 
@@ -222,20 +237,21 @@ void agpu_insert_debug_marker(const char* name)
     renderer->InsertDebugMarker(name);
 }
 
-void agpu_begin_render_pass(const RenderPassDescription* renderPass)
+void agpu_begin_render_pass(const agpu_render_pass_info* info)
 {
-    AGPU_ASSERT(renderPass);
+    AGPU_ASSERT(info);
+    AGPU_ASSERT(info->num_color_attachments || info->depth_stencil.texture.id != AGPU_INVALID_ID);
 
-    renderer->BeginRenderPass(renderPass);
+    renderer->begin_render_pass(info);
 }
 
 void agpu_end_render_pass(void)
 {
-    renderer->EndRenderPass();
+    renderer->end_render_pass();
 }
 
 /* Utility methods */
-uint32_t agpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth)
+uint32_t agpuCalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
 {
     uint32_t mipLevels = 0u;
     uint32_t size = AGPU_MAX(AGPU_MAX(width, height), depth);

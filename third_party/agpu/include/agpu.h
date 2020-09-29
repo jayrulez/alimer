@@ -197,12 +197,19 @@ extern "C" {
         _AGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
     } agpu_texture_type;
 
-    enum class LoadAction : uint32_t
-    {
-        Discard,
-        Load,
-        Clear
-    };
+    typedef enum agpu_texture_usage {
+        AGPU_TEXTURE_USAGE_NONE = 0,
+        AGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
+        AGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
+        AGPU_TEXTURE_USAGE_RENDER_TARGET = (1 << 2),
+        _AGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_texture_usage;
+
+    typedef enum agpu_load_op {
+        AGPU_LOAD_OP_CLEAR = 0,
+        AGPU_LOAD_OP_LOAD = 1,
+        _AGPU_LOAD_OP_FORCE_U32 = 0x7FFFFFFF
+    } agpu_load_op;
 
     /* Structs */
     typedef struct agpu_color {
@@ -221,6 +228,7 @@ extern "C" {
 
     typedef struct agpu_texture_info {
         agpu_texture_type type;
+        agpu_texture_usage usage;
         agpu_texture_format format;
         uint32_t width;
         uint32_t height;
@@ -235,23 +243,25 @@ extern "C" {
         uint32_t height;
         agpu_texture_format color_format;
         void* window_handle;
+        bool is_primary;
+        bool is_fullscreen;
         const char* label;
     } agpu_swapchain_info;
 
-    struct RenderPassColorAttachment
+    typedef struct agpu_color_attachment
     {
         agpu_texture texture;
-        uint32_t mipLevel = 0;
+        uint32_t mip_level;
         union {
             uint32_t face = 0;
             uint32_t layer;
             uint32_t slice;
         };
-        LoadAction loadAction;
+        agpu_load_op load_op;
         agpu_color clear_color;
-    };
+    } agpu_color_attachment;
 
-    struct RenderPassDepthStencilAttachment
+    typedef struct agpu_depth_stencil_attachment
     {
         agpu_texture texture;
         uint32_t mipLevel = 0;
@@ -261,18 +271,19 @@ extern "C" {
             uint32_t layer;
             uint32_t slice;
         };
-        LoadAction depthLoadAction = LoadAction::Clear;
-        LoadAction stencilLoadOp = LoadAction::Discard;
-        float clearDepth = 1.0f;
-        uint8_t clearStencil = 0;
-    };
 
-    struct RenderPassDescription
+        agpu_load_op depth_load_op;
+        agpu_load_op stencil_load_op;
+        float clear_depth;
+        uint8_t clear_stencil;
+    } agpu_depth_stencil_attachment;
+
+    typedef struct agpu_render_pass_info
     {
-        uint32_t                                colorAttachmentsCount;
-        const RenderPassColorAttachment* colorAttachments;
-        const RenderPassDepthStencilAttachment* depthStencilAttachment = nullptr;
-    };
+        uint32_t num_color_attachments = 0;
+        agpu_color_attachment color_attachments[AGPU_MAX_COLOR_ATTACHMENTS];
+        agpu_depth_stencil_attachment depth_stencil;
+    } agpu_render_pass_info;
 
     typedef struct agpu_features {
         bool independentBlend;
@@ -335,15 +346,17 @@ extern "C" {
 
     /* Frame logic */
     AGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
-    AGPU_API bool agpu_init(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
-    AGPU_API void agpu_shutdown(void);
-    AGPU_API void aqpu_query_caps(agpu_caps* caps);
-    AGPU_API bool agpu_frame_begin(void);
-    AGPU_API void agpu_frame_end(void);
+    AGPU_API bool agpu_init(const char* app_name, agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
+    AGPU_API void agpuShutdown(void);
+    AGPU_API void agpuQueryCaps(agpu_caps* caps);
+    AGPU_API bool agpu_begin_frame(agpu_swapchain swapchain);
+    AGPU_API void agpu_end_frame(agpu_swapchain swapchain);
 
     /* Resource creation methods */
     AGPU_API agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info);
     AGPU_API void agpu_destroy_swapchain(agpu_swapchain swapchain);
+    AGPU_API agpu_swapchain agpu_get_main_swapchain(void);
+    AGPU_API agpu_texture agpu_get_current_texture(agpu_swapchain swapchain);
 
     AGPU_API agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
     AGPU_API void agpu_destroy_buffer(agpu_buffer buffer);
@@ -355,11 +368,11 @@ extern "C" {
     AGPU_API void agpu_push_debug_group(const char* name);
     AGPU_API void agpu_pop_debug_group(void);
     AGPU_API void agpu_insert_debug_marker(const char* name);
-    AGPU_API void agpu_begin_render_pass(const RenderPassDescription* renderPass);
+    AGPU_API void agpu_begin_render_pass(const agpu_render_pass_info* info);
     AGPU_API void agpu_end_render_pass(void);
 
     /* Utility methods */
-    AGPU_API uint32_t agpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth = 1u);
+    AGPU_API uint32_t agpuCalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth);
 
 #ifdef __cplusplus
 }

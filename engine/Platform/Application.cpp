@@ -65,7 +65,7 @@ namespace Alimer
         swapChain.Reset();
         graphics.reset();
         ImGuiLayer::Shutdown();
-        agpu_shutdown();
+        agpuShutdown();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -83,9 +83,12 @@ namespace Alimer
 #ifdef _DEBUG
         gpu_init_flags |= AGPU_INIT_FLAGS_DEBUG;
 #endif
-        agpu_swapchain_info swapchainInfo{};
-        swapchainInfo.window_handle = GetMainWindow().GetNativeHandle();
-        agpu_init(gpu_init_flags, &swapchainInfo);
+        agpu_swapchain_info swapchain_info{};
+        swapchain_info.width = GetMainWindow().GetWidth();
+        swapchain_info.height = GetMainWindow().GetHeight();
+        swapchain_info.window_handle = GetMainWindow().GetNativeHandle();
+        swapchain_info.is_primary = true;
+        agpu_init("Alimer", gpu_init_flags, &swapchain_info);
 
         ImGuiLayer::Initialize();
 
@@ -120,25 +123,23 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!agpu_frame_begin())
+        agpu_swapchain main_swapchain = agpu_get_main_swapchain();
+
+        if (!agpu_begin_frame(main_swapchain))
             return;
 
         agpu_push_debug_group("Frame");
 
-        /*agpu::RenderPassColorAttachment colorAttachment{};
-        colorAttachment.texture = agpu::GetCurrentTexture(swapchain);
-        //renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
-        colorAttachment.clearColor = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };
+        agpu_render_pass_info renderPass{};
+        renderPass.num_color_attachments = 1u;
+        renderPass.color_attachments[0].texture = agpu_get_current_texture(main_swapchain);
+        renderPass.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };  //Colors::CornflowerBlue;
+        //beginInfo.framebuffer = agpuGetCurrentFramebuffer();
 
-        agpu::RenderPassDescription renderPass{};
-        renderPass.colorAttachmentsCount = 1u;
-        renderPass.colorAttachments = &colorAttachment;
-
-        agpu::BeginRenderPass(&renderPass);
-        agpu::EndRenderPass();*/
-
+        agpu_begin_render_pass(&renderPass);
+        agpu_end_render_pass();
         agpu_pop_debug_group();
-        agpu_frame_end();
+        agpu_end_frame(main_swapchain);
     }
 
     const Config* Application::GetConfig()
