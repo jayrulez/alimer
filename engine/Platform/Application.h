@@ -89,7 +89,7 @@ namespace Alimer
         Config config;
         State state;
         AssetManager assets;
-        std::unique_ptr<GraphicsDevice> graphics;
+        std::unique_ptr<GraphicsDevice> graphicsDevice;
         RefPtr<SwapChain> swapChain;
     };
 

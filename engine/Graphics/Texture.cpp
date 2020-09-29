@@ -35,6 +35,7 @@ namespace Alimer
         , depthOrArraySize(desc.depthOrArraySize)
         , mipLevels(desc.mipLevels)
         , sampleCount(desc.sampleCount)
+        , layout(desc.initialLayout)
     {
 
     }

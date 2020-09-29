@@ -105,6 +105,15 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
+    enum class TextureLayout : uint32
+    {
+        Undefined,
+        General,
+        RenderTarget,
+        DepthStencil,
+        DepthStencilReadOnly,
+        Present
+    };
 
     enum class BufferUsage : uint32_t
     {
@@ -119,20 +128,17 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
 
-    enum class TextureCubemapFace : uint8_t {
-        PositiveX = 0, //!< +x face
-        NegativeX = 1, //!< -x face
-        PositiveY = 2, //!< +y face
-        NegativeY = 3, //!< -y face
-        PositiveZ = 4, //!< +z face
-        NegativeZ = 5, //!< -z face
-    };
-
     enum class LoadAction : uint32_t
     {
-        Discard,
+        DontCare,
         Load,
         Clear
+    };
+
+    enum class StoreAction : uint32_t
+    {
+        DontCare,
+        Store,
     };
 
     /* Structs */
@@ -153,7 +159,7 @@ namespace Alimer
         uint32 depthOrArraySize = 1u;
         uint32 mipLevels = 1u;
         uint32 sampleCount = 1u;
-        const char* label;
+        TextureLayout initialLayout = TextureLayout::Undefined;
 
         static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
         {
@@ -175,12 +181,9 @@ namespace Alimer
     {
         Texture* texture = nullptr;
         uint32_t mipLevel = 0;
-        union {
-            TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t layer;
-            uint32_t slice;
-        };
+        uint32_t slice;
         LoadAction loadAction = LoadAction::Clear;
+        StoreAction storeAction = StoreAction::Store;
         Color clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
@@ -188,18 +191,16 @@ namespace Alimer
     {
         Texture* texture = nullptr;
         uint32_t mipLevel = 0;
-        union {
-            TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t layer;
-            uint32_t slice;
-        };
+        uint32_t slice;
         LoadAction depthLoadAction = LoadAction::Clear;
-        LoadAction stencilLoadOp = LoadAction::Discard;
+        StoreAction depthStoreAction = StoreAction::Store;
+        LoadAction stencilLoadAction = LoadAction::DontCare;
+        StoreAction stencilStoreAction = StoreAction::DontCare;
         float clearDepth = 1.0f;
         uint8_t clearStencil = 0;
     };
 
-    struct RenderPassDescription
+    struct RenderPassDesc
     {
         // Render area will be clipped to the actual framebuffer.
         //RectU renderArea = { UINT32_MAX, UINT32_MAX };

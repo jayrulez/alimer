@@ -35,23 +35,29 @@ namespace Alimer
 {
     class D3D12Texture;
     class D3D12CommandContext;
+    class D3D12DescriptorHeap;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
+        static bool IsAvailable();
+
         D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference);
         ~D3D12GraphicsDevice() override;
 
         void SetDeviceLost();
-        void FinishFrame();
         void WaitForGPU() override;
+        void FinishFrame() override;
+
         // The CPU will wait for a fence to reach a specified value
         void WaitForFence(uint64_t fenceValue);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 
         CommandContext* GetImmediateContext() const override;
         RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) override;
 
-        auto GetDXGIFactory() const noexcept { return dxgiFactory; }
+        IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
         auto GetD3DDevice() const noexcept { return d3dDevice; }
 
@@ -89,7 +95,7 @@ namespace Alimer
         static constexpr uint32_t kRenderLatency = 2u;
 
         DWORD dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
+        ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
@@ -102,6 +108,10 @@ namespace Alimer
         D3D12CommandContext* immediateContext;
         bool isLost = false;
         bool shuttingDown = false;
+
+        D3D12DescriptorHeap* rtvHeap;
+        D3D12DescriptorHeap* dsvHeap;
+        D3D12DescriptorHeap* cbvSrvUavCpuHeap;
 
         struct ResourceRelease
         {

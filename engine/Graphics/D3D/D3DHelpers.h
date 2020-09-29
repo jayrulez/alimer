@@ -39,12 +39,29 @@
 #include <dxgi1_5.h>
 #endif
 
+#include <wrl/client.h>
+
 #ifdef _DEBUG
 #include <dxgidebug.h>
 #endif
 
 namespace Alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    // Functions from dxgi.dll
+    using PFN_CREATE_DXGI_FACTORY1 = HRESULT(WINAPI*)(REFIID riid, _COM_Outptr_ void** ppFactory);
+    using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
+    using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
+
+    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
+
+    // Type alias for ComPtr template.
+    template <typename T>
+    using ComPtr = Microsoft::WRL::ComPtr<T>;
+
     template<typename T> void SafeRelease(T*& resource)
     {
         if (resource != nullptr) {
@@ -108,7 +125,7 @@ namespace Alimer
 
     extern const DxgiFormatDesc kDxgiFormatDesc[];
 
-    static inline DXGI_FORMAT ToDXGIFormat(PixelFormat format)
+    static constexpr DXGI_FORMAT ToDXGIFormat(PixelFormat format)
     {
         ALIMER_ASSERT(kDxgiFormatDesc[(uint32_t)format].format == format);
         return kDxgiFormatDesc[(uint32_t)format].dxgiFormat;

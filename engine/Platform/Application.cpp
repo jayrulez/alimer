@@ -25,29 +25,10 @@
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
-#include <agpu.h>
 
 namespace Alimer
 {
     static Application* s_appCurrent = nullptr;
-
-    static void GpuLogCallback(void* userData, agpu_log_level level, const char* message)
-    {
-        switch (level)
-        {
-        case AGPU_LOG_LEVEL_ERROR:
-            LOGE(message);
-            break;
-        case AGPU_LOG_LEVEL_WARN:
-            LOGW(message);
-            break;
-        case AGPU_LOG_LEVEL_INFO:
-            LOGI(message);
-            break;
-        default:
-            break;
-        }
-    }
 
     Application::Application(const Config& config)
         : config{ config }
@@ -63,9 +44,8 @@ namespace Alimer
     Application::~Application()
     {
         swapChain.Reset();
-        graphics.reset();
         ImGuiLayer::Shutdown();
-        agpuShutdown();
+        graphicsDevice.reset();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -77,18 +57,16 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        agpu_set_log_callback(GpuLogCallback, this);
-
-        agpu_init_flags gpu_init_flags = {};
+        GraphicsDebugFlags graphicsDebugFlags = GraphicsDebugFlags::None;
 #ifdef _DEBUG
-        gpu_init_flags |= AGPU_INIT_FLAGS_DEBUG;
+        //graphicsDebugFlags |= GraphicsDebugFlags::DebugRuntime;
 #endif
-        agpu_swapchain_info swapchain_info{};
-        swapchain_info.width = GetMainWindow().GetWidth();
-        swapchain_info.height = GetMainWindow().GetHeight();
-        swapchain_info.window_handle = GetMainWindow().GetNativeHandle();
-        swapchain_info.is_primary = true;
-        agpu_init("Alimer", gpu_init_flags, &swapchain_info);
+
+        graphicsDevice = GraphicsDevice::Create(graphicsDebugFlags);
+
+        SwapChainDesc swapChainDesc = {};
+        swapChainDesc.isPrimary = true;
+        swapChain = graphicsDevice->CreateSwapChain(GetMainWindow().GetNativeHandle(), swapChainDesc);
 
         ImGuiLayer::Initialize();
 
@@ -123,23 +101,17 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!agpu_begin_frame())
-            return;
+        auto context = graphicsDevice->GetImmediateContext();
 
-        agpu_swapchain main_swapchain = agpu_get_main_swapchain();
-        agpu_texture backbuffer_texture = agpu_get_current_texture(main_swapchain);
+        context->PushDebugGroup("Frame");
 
-        agpu_push_debug_group("Frame");
-
-        agpu_render_pass_info renderPass{};
-        renderPass.num_color_attachments = 1u;
-        renderPass.color_attachments[0].texture = backbuffer_texture;
-        renderPass.color_attachments[0].clear_color = { 0.392156899f, 0.584313750f, 0.929411829f, 1.0f };  //Colors::CornflowerBlue;
-        agpu_begin_render_pass(&renderPass);
-        agpu_end_render_pass();
-        agpu_pop_debug_group();
-        agpu_present(main_swapchain, true);
-        agpu_end_frame();
+        RenderPassDesc renderPass{};
+        renderPass.colorAttachments[0].texture = swapChain->GetCurrentTexture();
+        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        context->BeginRenderPass(renderPass);
+        context->EndRenderPass();
+        context->PopDebugGroup();
+        swapChain->Present();
     }
 
     const Config* Application::GetConfig()

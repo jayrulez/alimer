@@ -43,6 +43,8 @@ namespace Alimer
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
+        virtual void FinishFrame() = 0;
+
         /// Gets the device backend type.
         GPUBackendType GetBackendType() const { return caps.backendType; }
 
@@ -57,10 +59,6 @@ namespace Alimer
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
-
-#ifdef _DEBUG
-        static void ReportLeaks();
-#endif
 
     protected:
         GraphicsDevice() = default;

@@ -48,7 +48,7 @@ namespace Alimer
         virtual void PopDebugGroup() = 0;
         virtual void InsertDebugMarker( const char* name) = 0;
 
-        virtual void BeginRenderPass(const RenderPassDescription* renderPass) = 0;
+        virtual void BeginRenderPass(const RenderPassDesc& renderPass) = 0;
         virtual void EndRenderPass() = 0;
 
         virtual void SetScissorRect(const RectI& scissorRect) = 0;

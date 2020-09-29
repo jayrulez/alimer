@@ -26,7 +26,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define D3D11_NO_HELPERS
 #include <d3d12.h>
-#include "D3D12MemAlloc.h"
+#include <D3D12MemAlloc.h>
 #include "agpu_driver_d3d_common.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>

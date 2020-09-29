@@ -63,15 +63,7 @@ set_target_properties(agpu PROPERTIES OUTPUT_NAME "agpu"
 )
 
 if(WIN32 OR WINDOWS_STORE)
-    target_sources(agpu PRIVATE
-        src/d3d12/D3D12MemAlloc.cpp
-        src/d3d12/D3D12MemAlloc.h
-        src/d3d12/D3D12MemAlloc.natvis
-    )
-
-    target_include_directories(agpu PRIVATE
-	    $<BUILD_INTERFACE:${AGPU_THIRD_PARTY_DIR}/D3D12MemoryAllocator>
-    )
+    target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
 
     #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
     target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D12)

@@ -73,11 +73,11 @@ namespace Alimer
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, TextureLayout initialLayout)
         : Texture(ConvertResourceDesc(resource->GetDesc(), initialLayout))
-        , D3D12GpuResource(resource)
         , device{ device }
+        , resource{ resource }
     {
-        //RTV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        //device->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, RTV);
+        RTV = device->AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
+        device->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, RTV);
     }
 
     D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
@@ -139,7 +139,6 @@ namespace Alimer
             }
 
             pClearValue = &clearValue;
-            //allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
 
         if (any(desc.usage & TextureUsage::Storage))
@@ -148,7 +147,7 @@ namespace Alimer
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-        usageState = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
+       // usageState = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
         /*HRESULT hr = device->GetAllocator()->CreateResource(
             &allocationDesc,
@@ -198,7 +197,6 @@ namespace Alimer
     {
         device->ReleaseResource(resource);
         SafeRelease(allocation);
-        gpuVirtualAddress = D3D12_GPU_VIRTUAL_ADDRESS_NULL;
     }
 
     void D3D12Texture::BackendSetName()
@@ -207,22 +205,9 @@ namespace Alimer
         resource->SetName(wideName.c_str());
     }
 
-    void D3D12Texture::TransitionBarrier(ID3D12GraphicsCommandList* commandList, D3D12_RESOURCE_STATES newState)
+    void D3D12Texture::SetLayout(TextureLayout newLayout)
     {
-        /*if (state == newState)
-            return;
-
-        D3D12_RESOURCE_BARRIER barrierDesc{};
-        barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrierDesc.Transition.pResource = handle;
-        barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrierDesc.Transition.StateBefore = state;
-        barrierDesc.Transition.StateAfter = newState;
-
-        commandList->ResourceBarrier(1, &barrierDesc);
-
-        state = newState;*/
+        layout = newLayout;
     }
 
     void D3D12Texture::UploadTextureData(const void* initData)

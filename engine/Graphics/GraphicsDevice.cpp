@@ -26,7 +26,7 @@
 #include "Graphics/GraphicsDevice.h"
 
 #if defined(ALIMER_D3D12)
-//#   include "Graphics/D3D12/D3D12GraphicsDevice.h"
+#   include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 
 #if defined(ALIMER_ENABLE_VULKAN) && defined(TODO_VK)
@@ -37,8 +37,7 @@ namespace Alimer
 {
     std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
     {
-        return nullptr;
-        //return std::make_unique<D3D12GraphicsDevice>(flags, adapterPreference);
+        return std::make_unique<D3D12GraphicsDevice>(flags, adapterPreference);
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)

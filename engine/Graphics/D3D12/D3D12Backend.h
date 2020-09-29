@@ -43,7 +43,11 @@
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
+    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
+
     using PFN_DXC_CREATE_INSTANCE = HRESULT(WINAPI*)(REFCLSID rclsid, REFIID riid, _COM_Outptr_ void** ppCompiler);
+
     extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
 
@@ -52,6 +56,28 @@ namespace Alimer
     class D3D12GraphicsDevice;
 
     void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
+
+    static constexpr D3D12_RESOURCE_STATES D3D12ResourceState(TextureLayout value)
+    {
+        switch (value)
+        {
+        case TextureLayout::Undefined:
+        case TextureLayout::General:
+            return D3D12_RESOURCE_STATE_COMMON;
+
+        case TextureLayout::RenderTarget:
+            return D3D12_RESOURCE_STATE_RENDER_TARGET;
+        case TextureLayout::DepthStencil:
+            return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        case TextureLayout::DepthStencilReadOnly:
+            return D3D12_RESOURCE_STATE_DEPTH_READ;
+        case TextureLayout::Present:
+            return D3D12_RESOURCE_STATE_PRESENT;
+
+        default:
+            return D3D12_RESOURCE_STATE_COMMON;
+        }
+    }
 
     class D3D12GpuResource
     {
@@ -127,16 +153,6 @@ namespace Alimer
         std::vector<ID3D12CommandAllocator*> allocatorPool;
         std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
         std::mutex allocatorMutex;
-    };
-
-    struct D3D12DescriptorHeap
-    {
-        ID3D12DescriptorHeap* Heap;
-        uint32 DescriptorSize;
-        D3D12_CPU_DESCRIPTOR_HANDLE CPUStart;
-        D3D12_GPU_DESCRIPTOR_HANDLE GPUStart;
-        uint32 Size;
-        uint32 Capacity;
     };
 
 }

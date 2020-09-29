@@ -25,31 +25,72 @@
 #include "D3D12SwapChain.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
+#include "D3D12DescriptorHeap.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
+    bool D3D12GraphicsDevice::IsAvailable()
+    {
+        static bool available = false;
+        static bool available_initialized = false;
+
+        if (available_initialized) {
+            return available;
+        }
+
+        available_initialized = true;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        static HMODULE dxgiDLL = LoadLibraryA("dxgi.dll");
+        if (!dxgiDLL) {
+            return false;
+        }
+
+        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiDLL, "CreateDXGIFactory2");
+        if (!CreateDXGIFactory2)
+        {
+            return false;
+        }
+        DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1");
+
+        static HMODULE d3d12DLL = LoadLibraryA("d3d12.dll");
+        if (!d3d12DLL) {
+            return false;
+        }
+
+        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12DLL, "D3D12GetDebugInterface");
+        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12DLL, "D3D12CreateDevice");
+        if (!D3D12CreateDevice)
+            return false;
+#endif
+
+        available = true;
+        return true;
+    }
+
     D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
     {
+        ALIMER_VERIFY(IsAvailable());
+
+#if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
 
-        // TODO: Parse command line.
         const bool debugRuntime = any(flags & GraphicsDebugFlags::DebugRuntime);
         const bool GPUBasedValidation = any(flags & GraphicsDebugFlags::GPUBasedValidation);
 
         if (debugRuntime || GPUBasedValidation)
         {
-            ID3D12Debug* debugController = nullptr;;
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+            ComPtr<ID3D12Debug> debugController;
+            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
             {
                 debugController->EnableDebugLayer();
 
-                ID3D12Debug1* debugController1;
-                if (SUCCEEDED(debugController->QueryInterface(&debugController1)))
+                ComPtr<ID3D12Debug1> debugController1;
+                if (SUCCEEDED(debugController.As(&debugController1)))
                 {
                     debugController1->SetEnableGPUBasedValidation(GPUBasedValidation);
-                    debugController1->Release();
                 }
             }
             else
@@ -57,11 +98,8 @@ namespace Alimer
                 OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
             }
 
-            SafeRelease(debugController);
-
-#if defined(_DEBUG)
-            IDXGIInfoQueue* dxgiInfoQueue;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
                 dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
@@ -76,12 +114,11 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
-                dxgiInfoQueue->Release();
             }
-#endif
         }
+#endif
 
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
+        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
         // Determines whether tearing support is available for fullscreen borderless windows.
         {
@@ -110,12 +147,11 @@ namespace Alimer
 
         // Get adapter and create device
         {
-            IDXGIAdapter1* dxgiAdapter;
-            GetAdapter(adapterPreference == PhysicalDevicePreference::LowPower, &dxgiAdapter);
+            ComPtr<IDXGIAdapter1> dxgiAdapter;
+            GetAdapter(adapterPreference == PhysicalDevicePreference::LowPower, dxgiAdapter.GetAddressOf());
 
             // Create the DX12 API device object.
-            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter, kD3D12MinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
-            d3dDevice->SetName(L"AlimerDevice");
+            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), kD3D12MinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
 
 #ifndef NDEBUG
             // Configure debug device (if active).
@@ -146,23 +182,10 @@ namespace Alimer
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
             desc.pDevice = d3dDevice;
-            desc.pAdapter = dxgiAdapter;
-
+            desc.pAdapter = dxgiAdapter.Get();
             ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
-            switch (allocator->GetD3D12Options().ResourceHeapTier)
-            {
-            case D3D12_RESOURCE_HEAP_TIER_1:
-                LOGD("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1");
-                break;
-            case D3D12_RESOURCE_HEAP_TIER_2:
-                LOGD("ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2");
-                break;
-            default:
-                break;
-            }
-
-            InitCapabilities(dxgiAdapter);
-            dxgiAdapter->Release();
+            
+            InitCapabilities(dxgiAdapter.Get());
         }
 
         // Create Command queue's
@@ -170,6 +193,13 @@ namespace Alimer
             graphicsQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_DIRECT);
             computeQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COMPUTE);
             copyQueue = new D3D12CommandQueue(this, D3D12_COMMAND_LIST_TYPE_COPY);
+        }
+
+        // Heaps
+        {
+            rtvHeap = new D3D12DescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
+            dsvHeap = new D3D12DescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
+            cbvSrvUavCpuHeap = new D3D12DescriptorHeap(this, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
         }
 
         // Create immediate context.
@@ -193,6 +223,10 @@ namespace Alimer
         SafeDelete(graphicsQueue);
         SafeDelete(computeQueue);
         SafeDelete(copyQueue);
+
+        SafeDelete(rtvHeap);
+        SafeDelete(dsvHeap);
+        SafeDelete(cbvSrvUavCpuHeap);
 
         // Allocator.
         if (allocator != nullptr)
@@ -227,8 +261,6 @@ namespace Alimer
 #else
         (void)refCount; // avoid warning
 #endif
-
-        SafeRelease(dxgiFactory);
     }
 
     void D3D12GraphicsDevice::GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter)
@@ -238,8 +270,8 @@ namespace Alimer
         IDXGIAdapter1* adapter;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        IDXGIFactory6* factory6 = nullptr;
-        HRESULT hr = dxgiFactory->QueryInterface(&factory6);
+        ComPtr<IDXGIFactory6> factory6;
+        HRESULT hr = dxgiFactory.As(&factory6);
         if (SUCCEEDED(hr))
         {
             const DXGI_GPU_PREFERENCE gpuPreference = lowPower ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
@@ -274,8 +306,6 @@ namespace Alimer
                 }
             }
         }
-
-        SafeRelease(factory6);
 #endif
 
         if (!adapter)
@@ -305,19 +335,6 @@ namespace Alimer
                 }
             }
         }
-
-#if !defined(NDEBUG)
-        if (!adapter)
-        {
-            // Try WARP12 instead
-            if (FAILED(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&adapter))))
-            {
-                LOGE("WARP12 not available. Enable the 'Graphics Tools' optional feature");
-            }
-
-            OutputDebugStringA("Direct3D Adapter - WARP12\n");
-        }
-#endif
 
         if (!adapter)
         {
@@ -435,18 +452,6 @@ namespace Alimer
         }
     }
 
-#ifdef _DEBUG
-    void GraphicsDevice::ReportLeaks()
-    {
-        IDXGIDebug1* dxgiDebug;
-        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug))))
-        {
-            dxgiDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_IGNORE_INTERNAL);
-            dxgiDebug->Release();
-        }
-    }
-#endif
-
     void D3D12GraphicsDevice::WaitForGPU()
     {
         immediateContext->Flush(true);
@@ -460,6 +465,25 @@ namespace Alimer
     {
         auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
         producer->WaitForFence(fenceValue);
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
+    {
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+        {
+            return rtvHeap->Allocate(count);
+        }
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_DSV)
+        {
+            return dsvHeap->Allocate(count);
+        }
+        if (type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+        {
+            return cbvSrvUavCpuHeap->Allocate(count);
+        }
+
+        ALIMER_FATAL("Invalid heap type");
+        return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
     }
 
     void D3D12GraphicsDevice::ReleaseResource(IUnknown* resource)
@@ -514,8 +538,7 @@ namespace Alimer
         if (!dxgiFactory->IsCurrent())
         {
             // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-            dxgiFactory->Release();
-            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
+            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
     }
 

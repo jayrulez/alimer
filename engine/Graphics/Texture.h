@@ -55,6 +55,9 @@ namespace Alimer
         /// Get the texture usage.
         TextureUsage GetUsage() const { return usage; }
 
+        /// Get the current texture layout.
+        TextureLayout GetLayout() const { return layout; }
+
         /// Get the array index of a subresource.
         uint32 GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
 
@@ -82,5 +85,6 @@ namespace Alimer
         uint32 depthOrArraySize = 1u;
         uint32 mipLevels = 1u;
         uint32 sampleCount = 1u;
+        TextureLayout layout = TextureLayout::Undefined;
     };
 }

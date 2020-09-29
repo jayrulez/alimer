@@ -27,6 +27,7 @@
 
 namespace Alimer
 {
+    class D3D12Texture;
     class D3D12CommandQueue;
 
     class D3D12CommandContext final : public CommandContext
@@ -41,7 +42,7 @@ namespace Alimer
         void PopDebugGroup() override;
         void InsertDebugMarker(const char* name) override;
 
-        void BeginRenderPass(const RenderPassDescription* renderPass) override;
+        void BeginRenderPass(const RenderPassDesc& renderPass) override;
         void EndRenderPass() override;
 
         void SetScissorRect(const RectI& scissorRect)  override;

@@ -118,7 +118,7 @@ namespace Alimer
         {
             ID3D12Resource* backBuffer;
             ThrowIfFailed(handle->GetBuffer(index, IID_PPV_ARGS(&backBuffer)));
-            colorTextures[index].Reset(new D3D12Texture(device, backBuffer, TextureLayout::General));
+            colorTextures[index].Reset(new D3D12Texture(device, backBuffer, TextureLayout::Present));
         }
 
         backBufferIndex = handle->GetCurrentBackBufferIndex();
@@ -126,6 +126,9 @@ namespace Alimer
 
     void D3D12SwapChain::Present(bool verticalSync)
     {
+        auto d3dContext = static_cast<D3D12CommandContext*>(device->GetImmediateContext());
+        d3dContext->TransitionResource(StaticCast<D3D12Texture>(colorTextures[backBufferIndex]).Get(), TextureLayout::Present);
+
         device->GetImmediateContext()->Flush();
 
         UINT syncInterval = 1;

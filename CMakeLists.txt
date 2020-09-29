@@ -70,17 +70,17 @@ option(BUILD_SHARED_LIBS  "Build shared libraries" OFF)
 option(ALIMER_BUILD_SAMPLES "Build sample projects" ON)
 
 if (WIN32)
-    set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Select Graphics API [D3D12 | Vulkan]")
-    set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 Vulkan)
+    option(ALIMER_D3D12 "Enable D3D12 backend" ON)
+    option(ALIMER_D3D11 "Enable D3D11 backend" ON)
+    option(ALIMER_VULKAN "Enable Vulkan backend" ON)
 elseif (WINDOWS_STORE)
-    set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use D3D12 Graphics API" FORCE)
+    option(ALIMER_D3D12 "Enable D3D12 backend" ON)
+    option(ALIMER_D3D11 "Enable D3D11 backend" ON)
 elseif (IOS)
-    set(ALIMER_GRAPHICS_API Metal CACHE STRING "Use Metal Graphics API" FORCE)
+    set(ALIMER_METAL ON CACHE STRING "Use Metal Graphics API" FORCE)
 else ()
-    set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Use Vulkan Graphics API" FORCE)
+    set(ALIMER_VULKAN ON CACHE STRING "Use Vulkan Graphics API" FORCE)
 endif ()
-string(TOUPPER "${ALIMER_GRAPHICS_API}" ALIMER_GRAPHICS_API_UPPER)
-set (ALIMER_${ALIMER_GRAPHICS_API_UPPER} ON)
 
 if (NOT ANDROID AND NOT EMSCRIPTEN AND NOT IOS AND NOT WINDOWS_STORE)
     option(ALIMER_BUILD_TOOLS "Build tools" TRUE)
@@ -147,7 +147,9 @@ if(ALIMER_WARNINGS_AS_ERRORS)
 endif()
 
 # Print graphics backends.
-message (STATUS "  Graphics API:   ${ALIMER_GRAPHICS_API} (ALIMER_${ALIMER_GRAPHICS_API_UPPER})")
+if(ALIMER_D3D12)
+    message (STATUS "  Graphics API:   Direct3D12 (ALIMER_D3D12)")
+endif()
 
 # Install files
 # README.md and license

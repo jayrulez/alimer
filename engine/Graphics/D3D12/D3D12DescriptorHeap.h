@@ -22,39 +22,29 @@
 
 #pragma once
 
-#include "Graphics/Texture.h"
 #include "D3D12Backend.h"
 
 namespace Alimer
 {
-    class D3D12Texture final : public Texture
+    class D3D12DescriptorHeap final 
     {
     public:
-        D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, TextureLayout initialLayout);
-        D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
-        ~D3D12Texture() override;
-        void Destroy() override;
+        D3D12DescriptorHeap(D3D12GraphicsDevice* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptorsPerHeap = 256);
+        ~D3D12DescriptorHeap();
 
-        void SetLayout(TextureLayout newLayout);
+        D3D12_CPU_DESCRIPTOR_HANDLE Allocate(uint32_t count);
 
-        void UploadTextureData(const void* initData);
-        void UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset);
-
-        ID3D12Resource* GetResource() { return resource; }
-        const ID3D12Resource* GetResource() const { return resource; }
-
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return SRV; }
-        D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const { return RTV; }
 
     private:
-        void BackendSetName() override;
-
         D3D12GraphicsDevice* device;
-        ID3D12Resource* resource;
-        D3D12MA::Allocation* allocation = nullptr;
+        D3D12_DESCRIPTOR_HEAP_TYPE type;
+        uint32 numDescriptorsPerHeap;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE SRV{};
-        D3D12_CPU_DESCRIPTOR_HANDLE RTV{};
-        UINT64 sizeInBytes{ 0 };
+        ID3D12DescriptorHeap* currentHeap = nullptr;
+        D3D12_CPU_DESCRIPTOR_HANDLE currentHandle{};
+        uint32 descriptorSize = 0;
+        uint32 remainingFreeHandles = 0;
+
+        std::vector<ComPtr<ID3D12DescriptorHeap>> descriptorHeaps;
     };
 }

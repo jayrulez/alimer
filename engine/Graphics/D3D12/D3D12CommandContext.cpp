@@ -29,26 +29,6 @@ namespace Alimer
 {
     namespace
     {
-        constexpr D3D12_RESOURCE_STATES D3D12ResourceState(ResourceState:: value)
-        {
-            switch (value)
-            {
-            case TextureLayout::Undefined:
-            case TextureLayout::General:
-                return D3D12_RESOURCE_STATE_COMMON;
-
-            case TextureLayout::RenderTarget:
-                return D3D12_RESOURCE_STATE_RENDER_TARGET;
-            case TextureLayout::DepthStencil:
-                return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-            case TextureLayout::DepthStencilReadOnly:
-                return D3D12_RESOURCE_STATE_DEPTH_READ;
-
-            default:
-                return D3D12_RESOURCE_STATE_COMMON;
-            }
-        }
-
         constexpr D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE D3D12BeginningAccessType(LoadAction action) {
             switch (action) {
             case LoadAction::Clear:
@@ -105,7 +85,7 @@ namespace Alimer
 
     void D3D12CommandContext::Flush(bool waitForCompletion)
     {
-        //FlushResourceBarriers();
+        FlushResourceBarriers();
 
         //if (m_ID.length() > 0)
         //    EngineProfiling::EndBlock(this);
@@ -139,8 +119,7 @@ namespace Alimer
         PIXSetMarker(commandList, PIX_COLOR_DEFAULT, name);
     }
 
-
-    void D3D12CommandContext::BeginRenderPass(const RenderPassDescription* renderPass)
+    void D3D12CommandContext::BeginRenderPass(const RenderPassDesc& renderPass)
     {
         if (useRenderPass)
         {
@@ -177,18 +156,18 @@ namespace Alimer
 
             for (uint32 i = 0; i < kMaxColorAttachments; i++)
             {
-                const RenderPassColorAttachment& attachment = renderPass->colorAttachments[i];
+                const RenderPassColorAttachment& attachment = renderPass.colorAttachments[i];
                 if (attachment.texture == nullptr)
                     continue;
 
                 D3D12Texture* texture = static_cast<D3D12Texture*>(attachment.texture);
-                TransitionResource(texture, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+                TransitionResource(texture, TextureLayout::RenderTarget, true);
                 colorRTVS[colorRTVSCount] = texture->GetRTV();
 
                 switch (attachment.loadAction)
                 {
-                case LoadAction::Discard:
-                    //commandList->DiscardResource(texture->GetResource(), nullptr);
+                case LoadAction::DontCare:
+                    commandList->DiscardResource(texture->GetResource(), nullptr);
                     break;
 
                 case LoadAction::Clear:
@@ -302,28 +281,18 @@ namespace Alimer
             D3D12_RESOURCE_BARRIER& barrierDesc = resourceBarriers[numBarriersToFlush++];
 
             barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
             barrierDesc.Transition.pResource = resource->GetResource();
             barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            barrierDesc.Transition.StateBefore = currentState;
-            barrierDesc.Transition.StateAfter = newState;
+            barrierDesc.Transition.StateBefore = D3D12ResourceState(currentLayout);
+            barrierDesc.Transition.StateAfter = D3D12ResourceState(newLayout);
 
-            // Check to see if we already started the transition
-            if (newState == resource->transitioningState)
-            {
-                barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-                resource->transitioningState = (D3D12_RESOURCE_STATES)-1;
-            }
-            else
-            {
-                barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            }
-
-            resource->usageState = newState;
+            resource->SetLayout(newLayout);
         }
-        else if (newState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+        /*else if (newState == D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
         {
             InsertUAVBarrier(resource, flushImmediate);
-        }
+        }*/
 
         if (flushImmediate || numBarriersToFlush == kMaxResourceBarriers)
             FlushResourceBarriers();
