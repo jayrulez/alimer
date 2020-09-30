@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Graphics/BackendTypes.h"
 #include "Graphics/Texture.h"
 #include <vector>
 
@@ -29,26 +30,38 @@ namespace Alimer
 {
     class GraphicsDevice;
 
-    class ALIMER_API SwapChain : public RefCounted
+    struct PresentationParameters
+    {
+        uint32 backBufferWidth = 0;
+        uint32 backBufferHeight = 0;
+        PixelFormat backBufferFormat = PixelFormat::BGRA8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen = false;
+        bool verticalSync = true;
+    };
+
+    class ALIMER_API SwapChain final 
     {
     public:
         /// Constructor.
-        SwapChain(const SwapChainDesc& desc);
+        SwapChain(GraphicsDevice* device, void* windowHandle, const PresentationParameters& presentationParameters);
 
-        virtual void Present(bool verticalSync = true) = 0;
+        void Present();
 
-        virtual GraphicsDevice& GetDevice() = 0;
+        GraphicsDevice* GetDevice() const;
         Texture* GetCurrentTexture() const;
 
-    protected:
-        static constexpr uint32 kBackBufferCount = 2u;
+        /// Get the API handle.
+        SwapChainHandle GetHandle() const;
 
-        PixelFormat colorFormat;
-        uint32_t width;
-        uint32_t height;
-        bool isPrimary;
-        bool isFullscreen;
-        uint32_t backBufferIndex;
+    protected:
+        static constexpr uint32 kBufferCount = 2u;
+
+        GraphicsDevice* device;
+        PresentationParameters presentationParameters;
+        SwapChainHandle handle;
+
+        uint32_t backBufferIndex = 0;
         std::vector<RefPtr<Texture>> colorTextures;
     };
 }

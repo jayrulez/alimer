@@ -22,25 +22,48 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
-#include "D3D12Backend.h"
+#include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    class D3D12Buffer final : public GraphicsBuffer
+    /// 
+    class GraphicsBuffer : public GraphicsResource
     {
+        ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
+
     public:
-        D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData);
-        ~D3D12Buffer() override;
-        void Destroy();
+        /// Constructor
+        GraphicsBuffer(const BufferDescription& desc);
 
-        D3D12_GPU_VIRTUAL_ADDRESS GetGpuVirtualAddress() const { return gpuVirtualAddress; }
+        /// Gets buffer usage.
+        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
+        {
+            return usage;
+        }
 
-    private:
-        void BackendSetName() override;
+        /// Gets buffer size in bytes.
+        ALIMER_FORCE_INLINE uint32_t GetSize() const
+        {
+            return size;
+        }
 
-        D3D12GraphicsDevice* device;
-        D3D12_RESOURCE_STATES state{ D3D12_RESOURCE_STATE_COMMON };
-        D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress{ D3D12_GPU_VIRTUAL_ADDRESS_NULL };
+        /// Gets buffer elements count.
+        ALIMER_FORCE_INLINE uint32_t GetStride() const
+        {
+            return stride;
+        }
+
+        /// Gets the number of elements.
+        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
+        {
+            ALIMER_ASSERT(stride > 0);
+            return size / stride;
+        }
+
+    protected:
+        BufferHandle handle{};
+        BufferUsage usage;
+        uint32 size;
+        uint32 stride;
     };
 }

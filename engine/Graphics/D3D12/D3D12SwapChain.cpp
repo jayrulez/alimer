@@ -20,33 +20,32 @@
 // THE SOFTWARE.
 //
 
-#include "D3D12SwapChain.h"
+#include "Graphics/SwapChain.h"
 #include "D3D12CommandContext.h"
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc, uint32_t bufferCount)
-        : SwapChain(desc)
-        , device{ device }
-        , isTearingSupported(device->IsTearingSupported())
+    SwapChain::SwapChain(GraphicsDevice* device, void* windowHandle, const PresentationParameters& presentationParameters)
+        : device{ device }
+        , presentationParameters{ presentationParameters }
     {
         UINT swapChainFlags = 0;
 
-        if (isTearingSupported)
+        if (device->GetImpl()->IsTearingSupported())
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
         // Create a descriptor for the swap chain.
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = desc.width;
-        swapChainDesc.Height = desc.height;
-        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(desc.colorFormat));
+        swapChainDesc.Width = presentationParameters.backBufferWidth;
+        swapChainDesc.Height = presentationParameters.backBufferHeight;
+        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(presentationParameters.backBufferFormat));
         swapChainDesc.Stereo = FALSE;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = Max(bufferCount, 2u);
+        swapChainDesc.BufferCount = kBufferCount;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -64,11 +63,11 @@ namespace Alimer
         ALIMER_ASSERT(IsWindow(window));
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !desc.isFullscreen;
+        fsSwapChainDesc.Windowed = !presentationParameters.isFullscreen;
 
         // Create a swap chain for the window.
-        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
-            device->GetD3D12GraphicsQueue(),
+        ThrowIfFailed(device->GetImpl()->GetDXGIFactory()->CreateSwapChainForHwnd(
+            device->GetCommandQueue()->GetHandle(),
             window,
             &swapChainDesc,
             &fsSwapChainDesc,
@@ -77,7 +76,7 @@ namespace Alimer
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
+        ThrowIfFailed(device->GetImpl()->GetDXGIFactory()->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER));
 #else
         IUnknown* window = (IUnknown*)desc.windowHandle;
         ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
@@ -91,6 +90,49 @@ namespace Alimer
 
         ThrowIfFailed(tempSwapChain->QueryInterface(&handle));
         tempSwapChain->Release();
+    }
+
+    void SwapChain::Present()
+    {
+        UINT syncInterval = 1;
+        UINT presentFlags = 0;
+
+        if (!presentationParameters.verticalSync)
+        {
+            syncInterval = 0;
+
+            if (!presentationParameters.isFullscreen && device->GetImpl()->IsTearingSupported())
+            {
+                presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
+            }
+        }
+
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
+
+        // Handle device lost result.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+        {
+            //device->SetDeviceLost();
+        }
+
+        ThrowIfFailed(hr);
+
+        backBufferIndex = handle->GetCurrentBackBufferIndex();
+    }
+
+    SwapChainHandle SwapChain::GetHandle() const
+    {
+        return handle;
+    }
+
+#if TODO
+
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc, uint32_t bufferCount)
+        : SwapChain(desc)
+        , device{ device }
+        , isTearingSupported(device->IsTearingSupported())
+    {
+
 
         AfterReset();
     }
@@ -131,30 +173,7 @@ namespace Alimer
 
         device->GetImmediateContext()->Flush();
 
-        UINT syncInterval = 1;
-        UINT presentFlags = 0;
-
-        if (!verticalSync)
-        {
-            syncInterval = 0;
-
-            if (!isFullscreen && isTearingSupported)
-            {
-                presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-            }
-        }
-
-        HRESULT hr = handle->Present(syncInterval, presentFlags);
-
-        // Handle device lost result.
-        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
-        {
-            device->SetDeviceLost();
-        }
-
-        ThrowIfFailed(hr);
-
-        backBufferIndex = handle->GetCurrentBackBufferIndex();
+        
 
         if (isPrimary)
         {
@@ -166,4 +185,6 @@ namespace Alimer
     {
         return *device;
     }
+#endif // TODO
 }
+

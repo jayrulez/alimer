@@ -20,50 +20,13 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Graphics/GraphicsResource.h"
+#include "Scene/EntityComponent.h"
+#include "Scene/Entity.h"
+#include "Scene/EntityManager.h"
 
 namespace Alimer
 {
-    /// 
-    class GPUBuffer : public GraphicsResource
+    EntityComponent::EntityComponent()
     {
-        ALIMER_OBJECT(GPUBuffer, GraphicsResource);
-
-    public:
-        /// Constructor
-        GPUBuffer(const BufferDescription& desc);
-
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE BufferUsage GetUsage() const
-        {
-            return usage;
-        }
-
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetSize() const
-        {
-            return size;
-        }
-
-        /// Gets buffer elements count.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const
-        {
-            return stride;
-        }
-
-        /// Gets the number of elements.
-        ALIMER_FORCE_INLINE uint32_t GetElementsCount() const
-        {
-            ALIMER_ASSERT(stride > 0);
-            return size / stride;
-        }
-
-    protected:
-        BufferHandle handle{};
-        BufferUsage usage;
-        uint32 size;
-        uint32 stride;
-    };
+    }
 }

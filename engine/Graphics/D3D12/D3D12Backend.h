@@ -43,15 +43,10 @@
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-
     using PFN_DXC_CREATE_INSTANCE = HRESULT(WINAPI*)(REFCLSID rclsid, REFIID riid, _COM_Outptr_ void** ppCompiler);
 
     extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
-
-    static constexpr D3D_FEATURE_LEVEL kD3D12MinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
     class D3D12GraphicsDevice;
 

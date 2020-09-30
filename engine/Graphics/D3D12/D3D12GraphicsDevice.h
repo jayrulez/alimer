@@ -37,29 +37,26 @@ namespace Alimer
     class D3D12CommandContext;
     class D3D12DescriptorHeap;
 
-    class D3D12GraphicsDevice final : public GraphicsDevice
+    class GraphicsDeviceImpl final
     {
     public:
-        static bool IsAvailable();
+        FeatureLevel featureLevel;
+        GraphicsDeviceCaps Caps{};
 
-        D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference);
-        ~D3D12GraphicsDevice() override;
+        GraphicsDeviceImpl(FeatureLevel minFeatureLevel, bool enableDebugLayer);
+        ~GraphicsDeviceImpl();
 
         void SetDeviceLost();
-        void WaitForGPU() override;
-        void FinishFrame() override;
+        void FinishFrame();
 
         // The CPU will wait for a fence to reach a specified value
         void WaitForFence(uint64_t fenceValue);
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 
-        CommandContext* GetImmediateContext() const override;
-        RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) override;
-
         IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
-        auto GetD3DDevice() const noexcept { return d3dDevice; }
+        auto GetD3DDevice() const noexcept { return d3dDevice.Get(); }
 
         D3D12CommandQueue* GetQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT)
         {
@@ -94,12 +91,13 @@ namespace Alimer
 
         static constexpr uint32_t kRenderLatency = 2u;
 
+        D3D_FEATURE_LEVEL d3dMinFeatureLevel;
+
         DWORD dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
-        ID3D12Device* d3dDevice = nullptr;
+        ComPtr<ID3D12Device> d3dDevice;
         D3D12MA::Allocator* allocator = nullptr;
-        D3D_FEATURE_LEVEL featureLevel = kD3D12MinFeatureLevel;
 
         D3D12CommandQueue* graphicsQueue;
         D3D12CommandQueue* computeQueue = nullptr;

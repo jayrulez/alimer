@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,26 +20,21 @@
 // THE SOFTWARE.
 //
 
-#ifndef ALIMER_API_H
-#define ALIMER_API_H
+#pragma once
 
-/* Version */
-#define ALIMER_VERSION_MAJOR   @ALIMER_VERSION_MAJOR@
-#define ALIMER_VERSION_MINOR   @ALIMER_VERSION_MINOR@
-#define ALIMER_VERSION_PATCH   @ALIMER_VERSION_PATCH@
-#define ALIMER_VERSION_STR     "@ALIMER_VERSION_MAJOR@.@ALIMER_VERSION_MINOR@.@ALIMER_VERSION_PATCH@"
-#define ALIMER_VERSION_ALIAS "WIP"
+#include "Scene/EntityComponent.h"
 
-/* Build configuration */
-#cmakedefine ALIMER_LOGGING
-#cmakedefine ALIMER_PROFILING
-#cmakedefine ALIMER_THREADING
-#cmakedefine ALIMER_NETWORK
-#cmakedefine ALIMER_PHYSICS
+namespace Alimer
+{
+    class ALIMER_API RigidBodyComponent : public EntityComponent
+    {
+        ALIMER_OBJECT(RigidBodyComponent, EntityComponent);
 
-/* Graphics API */
-#cmakedefine ALIMER_D3D12
-#cmakedefine ALIMER_VULKAN
-#cmakedefine ALIMER_METAL
+    public:
+        RigidBodyComponent();
+        ~RigidBodyComponent() override;
 
-#endif
+
+    private:
+    };
+}

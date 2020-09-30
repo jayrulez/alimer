@@ -48,6 +48,10 @@ define_engine_source_files(
     UI
 )
 
+if (ALIMER_PHYSICS)
+    define_engine_source_files(Physics)
+endif()
+
 # Include platform files.
 define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
 
@@ -157,7 +161,7 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
 endif ()
 
 if (ALIMER_D3D12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator)
+    target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator d3d12 dxgi)
 endif ()
 
 # SDK installation

@@ -40,8 +40,6 @@ namespace Alimer
         uint32_t sampleCount;
 
         std::string rootDirectory = "Assets";
-
-        PhysicalDevicePreference powerPreference = PhysicalDevicePreference::HighPerformance;
     };
 
     class GraphicsDevice;
@@ -90,7 +88,7 @@ namespace Alimer
         State state;
         AssetManager assets;
         std::unique_ptr<GraphicsDevice> graphicsDevice;
-        RefPtr<SwapChain> swapChain;
+        std::unique_ptr<SwapChain> swapChain;
     };
 
     extern Application* CreateApplication(void);

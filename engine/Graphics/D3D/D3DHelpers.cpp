@@ -24,12 +24,6 @@
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-
 #ifdef ALIMER_ENABLE_ASSERT
 #define CHK_ERRA(hrchk) case hrchk: wcscpy_s( desc, count, L#hrchk )
 #define CHK_ERR(hrchk, strOut) case hrchk: wcscpy_s( desc, count, L##strOut )

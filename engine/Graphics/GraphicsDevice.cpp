@@ -27,17 +27,68 @@
 
 #if defined(ALIMER_D3D12)
 #   include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-
-#if defined(ALIMER_ENABLE_VULKAN) && defined(TODO_VK)
+#elif defined(ALIMER_VULKAN)
 #   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
 
 namespace Alimer
 {
-    std::unique_ptr<GraphicsDevice> GraphicsDevice::Create(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
+    GraphicsDevice::GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer)
+        : impl(new GraphicsDeviceImpl(minFeatureLevel, enableDebugLayer))
     {
-        return std::make_unique<D3D12GraphicsDevice>(flags, adapterPreference);
+        graphicsQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Graphics);
+        computeQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Compute);
+        copyQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Copy);
+    }
+
+    GraphicsDevice::~GraphicsDevice()
+    {
+        WaitForGPU();
+        graphicsQueue.reset();
+        computeQueue.reset();
+        copyQueue.reset();
+        SafeDelete(impl);
+    }
+
+    void GraphicsDevice::WaitForGPU()
+    {
+        graphicsQueue->WaitIdle();
+        computeQueue->WaitIdle();
+        copyQueue->WaitIdle();
+    }
+
+    CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType type) const
+    {
+        switch (type)
+        {
+        case CommandQueueType::Graphics:
+            return graphicsQueue.get();
+
+        case CommandQueueType::Compute:
+            return computeQueue.get();
+
+        case CommandQueueType::Copy:
+            return copyQueue.get();
+
+        default:
+            ALIMER_ASSERT_FAIL("Invalid command queue type.");
+            ALIMER_UNREACHABLE();
+        }
+    }
+
+    GPUBackendType GraphicsDevice::GetBackendType() const
+    {
+        return impl->Caps.backendType;
+    }
+
+    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
+    {
+        return impl->Caps;
+    }
+
+    FeatureLevel GraphicsDevice::GetFeatureLevel() const
+    {
+        return impl->featureLevel;
     }
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)

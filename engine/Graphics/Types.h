@@ -43,14 +43,13 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
-    enum class GraphicsDebugFlags : uint32_t
+    enum class FeatureLevel
     {
-        None = 0,
-        DebugRuntime = 1 << 0,
-        GPUBasedValidation = 1 << 2,
-        RenderDoc = 1 << 3,
+        Level_11_0 = 0xb000,
+        Level_11_1 = 0xb100,
+        Level_12_0 = 0xc000,
+        Level_12_1 = 0xc100
     };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDebugFlags, uint32_t);
 
     enum class GPUAdapterType
     {
@@ -77,10 +76,11 @@ namespace Alimer
         Count
     };
 
-    enum class PhysicalDevicePreference : uint32_t
+    enum class CommandQueueType
     {
-        HighPerformance,
-        LowPower
+        Graphics,
+        Compute,
+        Copy
     };
 
     /// Describes the texture type.
@@ -207,21 +207,6 @@ namespace Alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
-    };
-
-    struct SwapChainDesc
-    {
-        uint32 width = 0;
-        uint32 height = 0;
-
-        /// The color format.
-        PixelFormat colorFormat = PixelFormat::BGRA8UnormSrgb;
-
-        /// The depth format.
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-
-        bool isPrimary = false;
-        bool isFullscreen = false;
     };
 
     struct GraphicsDeviceFeatures

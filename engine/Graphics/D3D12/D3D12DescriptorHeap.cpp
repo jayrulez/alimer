@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12DescriptorHeap.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -66,3 +67,5 @@ namespace Alimer
         return ret;
     }
 }
+
+#endif // TODO

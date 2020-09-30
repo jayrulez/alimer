@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Texture.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -147,45 +148,45 @@ namespace Alimer
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-       // usageState = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
+        // usageState = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : initialState;
 
-        /*HRESULT hr = device->GetAllocator()->CreateResource(
-            &allocationDesc,
-            &resourceDesc,
-            state,
-            pClearValue,
-            &allocation,
-            IID_PPV_ARGS(&handle)
-        );
+         /*HRESULT hr = device->GetAllocator()->CreateResource(
+             &allocationDesc,
+             &resourceDesc,
+             state,
+             pClearValue,
+             &allocation,
+             IID_PPV_ARGS(&handle)
+         );
 
-        if (FAILED(hr))
-        {
-            LOGE("Direct3D12: Failed to create texture");
-            return;
-        }*/
+         if (FAILED(hr))
+         {
+             LOGE("Direct3D12: Failed to create texture");
+             return;
+         }*/
 
-        /*const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
-        device->GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);
+         /*const UINT NumSubresources = max(1u, desc.depth) * max(1u, desc.mipLevels);
+         device->GetD3DDevice()->GetCopyableFootprints(&resourceDesc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &sizeInBytes);
 
-        if (initialData != nullptr)
-        {
-            UploadTextureData(initialData);
-        }
+         if (initialData != nullptr)
+         {
+             UploadTextureData(initialData);
+         }
 
-        if (!IsDepthStencilFormat(desc.format))
-        {
-            D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-            srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-            srvDesc.Texture2D.MostDetailedMip = 0;
-            srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
-            srvDesc.Texture2D.PlaneSlice = 0;
-            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+         if (!IsDepthStencilFormat(desc.format))
+         {
+             D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+             srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+             srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+             srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+             srvDesc.Texture2D.MostDetailedMip = 0;
+             srvDesc.Texture2D.MipLevels = resourceDesc.MipLevels;
+             srvDesc.Texture2D.PlaneSlice = 0;
+             srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-            SRV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
-            device->GetD3DDevice()->CreateShaderResourceView(resource, &srvDesc, SRV);
-        }*/
+             SRV = device->AllocateDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, false);
+             device->GetD3DDevice()->CreateShaderResourceView(resource, &srvDesc, SRV);
+         }*/
     }
 
     D3D12Texture::~D3D12Texture()
@@ -282,3 +283,5 @@ namespace Alimer
         }*/
     }
 }
+
+#endif // TODO

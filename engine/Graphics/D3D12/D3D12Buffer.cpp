@@ -20,13 +20,14 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12Buffer.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
     D3D12Buffer::D3D12Buffer(D3D12GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
-        : GPUBuffer(desc)
+        : GraphicsBuffer(desc)
         , device{ device }
     {
         state = initialData != nullptr ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
@@ -83,3 +84,5 @@ namespace Alimer
         D3D12SetObjectName(handle, name);
     }
 }
+
+#endif // TODO

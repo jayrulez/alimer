@@ -20,18 +20,40 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Graphics/GPUBuffer.h"
+#pragma once
+
+#include "Graphics/BackendTypes.h"
 
 namespace Alimer
 {
-    GPUBuffer::GPUBuffer(const BufferDescription& desc)
-        : GraphicsResource(Type::Buffer)
-        , usage(desc.usage)
-        , size(desc.size)
-        , stride(desc.stride)
+    class GraphicsDevice;
+    struct CommandQueueApiData;
+
+    class ALIMER_API CommandQueue final
     {
+    public:
+        /// Constructor.
+        CommandQueue(GraphicsDevice* device, CommandQueueType type);
 
-    }
+        /// Destructor.
+        ~CommandQueue();
+
+        void WaitIdle();
+
+        /// Get the API handle.
+        CommandQueueHandle GetHandle() const;
+
+    private:
+#if defined(ALIMER_D3D12)
+        uint64 Signal();
+        bool IsFenceComplete(uint64 fenceValue);
+        void WaitForFence(uint64 fenceValue);
+#endif
+
+    private:
+        GraphicsDevice* device;
+        CommandQueueType type;
+
+        CommandQueueApiData* apiData = nullptr;
+    };
 }
-

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "D3D12CommandContext.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
@@ -319,3 +320,5 @@ namespace Alimer
         }
     }
 }
+
+#endif // TODO

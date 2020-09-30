@@ -22,7 +22,6 @@
 
 #include "D3D12Texture.h"
 #include "D3D12Buffer.h"
-#include "D3D12SwapChain.h"
 #include "D3D12CommandQueue.h"
 #include "D3D12CommandContext.h"
 #include "D3D12DescriptorHeap.h"
@@ -30,57 +29,49 @@
 
 namespace Alimer
 {
-    bool D3D12GraphicsDevice::IsAvailable()
+    namespace
     {
-        static bool available = false;
-        static bool available_initialized = false;
-
-        if (available_initialized) {
-            return available;
-        }
-
-        available_initialized = true;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-        static HMODULE dxgiDLL = LoadLibraryA("dxgi.dll");
-        if (!dxgiDLL) {
-            return false;
-        }
-
-        CreateDXGIFactory2 = (PFN_CREATE_DXGI_FACTORY2)GetProcAddress(dxgiDLL, "CreateDXGIFactory2");
-        if (!CreateDXGIFactory2)
+        constexpr D3D_FEATURE_LEVEL GetD3DFeatureLevel(FeatureLevel featureLevel)
         {
-            return false;
+            switch (featureLevel)
+            {
+            case FeatureLevel::Level_11_1:
+                return D3D_FEATURE_LEVEL_11_1;
+            case FeatureLevel::Level_12_0:
+                return D3D_FEATURE_LEVEL_12_0;
+            case FeatureLevel::Level_12_1:
+                return D3D_FEATURE_LEVEL_12_1;
+            default:
+                return D3D_FEATURE_LEVEL_11_0;
+            }
         }
-        DXGIGetDebugInterface1 = (PFN_DXGI_GET_DEBUG_INTERFACE1)GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1");
 
-        static HMODULE d3d12DLL = LoadLibraryA("d3d12.dll");
-        if (!d3d12DLL) {
-            return false;
+        constexpr FeatureLevel FromD3DFeatureLevel(D3D_FEATURE_LEVEL featureLevel)
+        {
+            switch (featureLevel)
+            {
+            case D3D_FEATURE_LEVEL_11_1:
+                return FeatureLevel::Level_11_1;
+            case D3D_FEATURE_LEVEL_12_0:
+                return FeatureLevel::Level_12_0;
+            case D3D_FEATURE_LEVEL_12_1:
+                return FeatureLevel::Level_12_1;
+            default:
+                return FeatureLevel::Level_11_0;
+            }
         }
-
-        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12DLL, "D3D12GetDebugInterface");
-        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12DLL, "D3D12CreateDevice");
-        if (!D3D12CreateDevice)
-            return false;
-#endif
-
-        available = true;
-        return true;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
+    GraphicsDeviceImpl::GraphicsDeviceImpl(FeatureLevel minFeatureLevel, bool enableDebugLayer)
+        : featureLevel(minFeatureLevel)
+        , d3dMinFeatureLevel(GetD3DFeatureLevel(minFeatureLevel))
     {
-        ALIMER_VERIFY(IsAvailable());
-
-#if defined(_DEBUG)
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
 
-        const bool debugRuntime = any(flags & GraphicsDebugFlags::DebugRuntime);
-        const bool GPUBasedValidation = any(flags & GraphicsDebugFlags::GPUBasedValidation);
+        const bool GPUBasedValidation = false;
 
-        if (debugRuntime || GPUBasedValidation)
+        if (enableDebugLayer)
         {
             ComPtr<ID3D12Debug> debugController;
             if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
@@ -98,6 +89,7 @@ namespace Alimer
                 OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
             }
 
+#if defined(_DEBUG)
             ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
             {
@@ -115,8 +107,8 @@ namespace Alimer
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
             }
-        }
 #endif
+        }
 
         ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
 
@@ -124,11 +116,11 @@ namespace Alimer
         {
             BOOL allowTearing = FALSE;
 
-            IDXGIFactory5* factory5;
-            HRESULT hr = dxgiFactory->QueryInterface(&factory5);
+            ComPtr<IDXGIFactory5> dxgiFactory5;
+            HRESULT hr = dxgiFactory.As(&dxgiFactory5);
             if (SUCCEEDED(hr))
             {
-                hr = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+                hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
             }
 
             if (FAILED(hr) || !allowTearing)
@@ -141,22 +133,20 @@ namespace Alimer
             {
                 isTearingSupported = true;
             }
-
-            SafeRelease(factory5);
         }
 
         // Get adapter and create device
         {
             ComPtr<IDXGIAdapter1> dxgiAdapter;
-            GetAdapter(adapterPreference == PhysicalDevicePreference::LowPower, dxgiAdapter.GetAddressOf());
+            GetAdapter(false, dxgiAdapter.GetAddressOf());
 
             // Create the DX12 API device object.
-            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), kD3D12MinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
+            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), d3dMinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
 
 #ifndef NDEBUG
             // Configure debug device (if active).
-            ID3D12InfoQueue* d3dInfoQueue;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3dInfoQueue)))
+            ComPtr<ID3D12InfoQueue> d3dInfoQueue;
+            if (SUCCEEDED(d3dDevice.As(&d3dInfoQueue)))
             {
 #ifdef _DEBUG
                 d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -174,19 +164,228 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 d3dInfoQueue->AddStorageFilterEntries(&filter);
-                d3dInfoQueue->Release();
             }
 #endif
 
             // Create memory allocator.
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            desc.pDevice = d3dDevice;
+            desc.pDevice = d3dDevice.Get();
             desc.pAdapter = dxgiAdapter.Get();
             ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
-            
+
             InitCapabilities(dxgiAdapter.Get());
         }
+    }
+
+    GraphicsDeviceImpl::~GraphicsDeviceImpl()
+    {
+        // Allocator.
+        if (allocator != nullptr)
+        {
+            D3D12MA::Stats stats;
+            allocator->CalculateStats(&stats);
+
+            if (stats.Total.UsedBytes > 0) {
+                LOGE("Total device memory leaked: {} bytes.", stats.Total.UsedBytes);
+            }
+
+            SafeRelease(allocator);
+        }
+    }
+
+    void GraphicsDeviceImpl::GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter)
+    {
+        *ppAdapter = nullptr;
+
+        ComPtr<IDXGIAdapter1> adapter = nullptr;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        ComPtr<IDXGIFactory6> dxgiFactory6;
+        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
+        if (SUCCEEDED(hr))
+        {
+            const DXGI_GPU_PREFERENCE gpuPreference = lowPower ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
+
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
+                    adapterIndex,
+                    gpuPreference,
+                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+        }
+#endif
+
+        if (!adapter)
+        {
+            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, adapter.ReleaseAndGetAddressOf())); ++adapterIndex)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    adapter->Release();
+
+                    continue;
+                }
+
+                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+                if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), d3dMinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
+                {
+#ifdef _DEBUG
+                    wchar_t buff[256] = {};
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                    OutputDebugStringW(buff);
+#endif
+                    break;
+                }
+            }
+        }
+
+        if (!adapter)
+        {
+            LOGE("No Direct3D 12 device found");
+        }
+
+        *ppAdapter = adapter.Detach();
+    }
+
+    void GraphicsDeviceImpl::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
+
+        Caps.backendType = GPUBackendType::Direct3D12;
+        Caps.deviceId = desc.DeviceId;
+        Caps.vendorId = desc.VendorId;
+
+        std::wstring deviceName(desc.Description);
+        Caps.adapterName = Alimer::ToUtf8(deviceName);
+
+        // Detect adapter type.
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        {
+            Caps.adapterType = GPUAdapterType::CPU;
+        }
+        else
+        {
+            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
+
+            Caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
+        }
+
+        // Determine maximum supported feature level for this device
+        static const D3D_FEATURE_LEVEL s_featureLevels[] =
+        {
+            D3D_FEATURE_LEVEL_12_1,
+            D3D_FEATURE_LEVEL_12_0,
+            D3D_FEATURE_LEVEL_11_1,
+            D3D_FEATURE_LEVEL_11_0,
+        };
+
+        D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
+        {
+            _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
+        };
+
+        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels))))
+        {
+            featureLevel = FromD3DFeatureLevel(featLevels.MaxSupportedFeatureLevel);
+        }
+        else
+        {
+            featureLevel = FromD3DFeatureLevel(d3dMinFeatureLevel);
+        }
+
+        // Features
+        /*supportsRenderPass = false;
+        if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
+            caps.vendorId != KnownVendorId_Intel)
+        {
+            supportsRenderPass = true;
+        }*/
+
+        // Limits
+        Caps.limits.maxVertexAttributes = kMaxVertexAttributes;
+        Caps.limits.maxVertexBindings = kMaxVertexAttributes;
+        Caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
+        Caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
+
+        //caps.limits.maxTextureDimension1D = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        Caps.limits.maxTextureDimension2D = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        Caps.limits.maxTextureDimension3D = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        Caps.limits.maxTextureDimensionCube = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        Caps.limits.maxTextureArrayLayers = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        Caps.limits.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+        Caps.limits.maxUniformBufferSize = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+        Caps.limits.minUniformBufferOffsetAlignment = 256u;
+        Caps.limits.maxStorageBufferSize = UINT32_MAX;
+        Caps.limits.minStorageBufferOffsetAlignment = 16;
+        Caps.limits.maxSamplerAnisotropy = D3D12_MAX_MAXANISOTROPY;
+        Caps.limits.maxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        if (Caps.limits.maxViewports > kMaxViewportAndScissorRects) {
+            Caps.limits.maxViewports = kMaxViewportAndScissorRects;
+        }
+
+        Caps.limits.maxViewportWidth = D3D12_VIEWPORT_BOUNDS_MAX;
+        Caps.limits.maxViewportHeight = D3D12_VIEWPORT_BOUNDS_MAX;
+        Caps.limits.maxTessellationPatchSize = D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT;
+        Caps.limits.pointSizeRangeMin = 1.0f;
+        Caps.limits.pointSizeRangeMax = 1.0f;
+        Caps.limits.lineWidthRangeMin = 1.0f;
+        Caps.limits.lineWidthRangeMax = 1.0f;
+        Caps.limits.maxComputeSharedMemorySize = D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
+        Caps.limits.maxComputeWorkGroupCountX = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        Caps.limits.maxComputeWorkGroupCountY = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        Caps.limits.maxComputeWorkGroupCountZ = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+        Caps.limits.maxComputeWorkGroupInvocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+        Caps.limits.maxComputeWorkGroupSizeX = D3D12_CS_THREAD_GROUP_MAX_X;
+        Caps.limits.maxComputeWorkGroupSizeY = D3D12_CS_THREAD_GROUP_MAX_Y;
+        Caps.limits.maxComputeWorkGroupSizeZ = D3D12_CS_THREAD_GROUP_MAX_Z;
+
+        /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
+        UINT dxgi_fmt_caps = 0;
+        for (uint32_t format = (static_cast<uint32_t>(PixelFormat::Invalid) + 1); format < static_cast<uint32_t>(PixelFormat::Count); format++)
+        {
+            D3D12_FEATURE_DATA_FORMAT_SUPPORT support;
+            support.Format = ToDXGIFormat((PixelFormat)format);
+
+            if (support.Format == DXGI_FORMAT_UNKNOWN)
+                continue;
+
+            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
+        }
+    }
+
+
+#if TODO
+    D3D12GraphicsDevice::D3D12GraphicsDevice(GraphicsDebugFlags flags, PhysicalDevicePreference adapterPreference)
+    {
+        
 
         // Create Command queue's
         {
@@ -228,18 +427,7 @@ namespace Alimer
         SafeDelete(dsvHeap);
         SafeDelete(cbvSrvUavCpuHeap);
 
-        // Allocator.
-        if (allocator != nullptr)
-        {
-            D3D12MA::Stats stats;
-            allocator->CalculateStats(&stats);
-
-            if (stats.Total.UsedBytes > 0) {
-                LOGE("Total device memory leaked: {} bytes.", stats.Total.UsedBytes);
-            }
-
-            SafeRelease(allocator);
-        }
+        
 
         ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
@@ -263,195 +451,7 @@ namespace Alimer
 #endif
     }
 
-    void D3D12GraphicsDevice::GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter)
-    {
-        *ppAdapter = nullptr;
-
-        IDXGIAdapter1* adapter;
-
-#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> factory6;
-        HRESULT hr = dxgiFactory.As(&factory6);
-        if (SUCCEEDED(hr))
-        {
-            const DXGI_GPU_PREFERENCE gpuPreference = lowPower ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-
-            for (UINT adapterIndex = 0;
-                SUCCEEDED(factory6->EnumAdapterByGpuPreference(
-                    adapterIndex,
-                    gpuPreference,
-                    IID_PPV_ARGS(&adapter)));
-                adapterIndex++)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    adapter->Release();
-
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter, kD3D12MinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
-        }
-#endif
-
-        if (!adapter)
-        {
-            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, &adapter)); ++adapterIndex)
-            {
-                DXGI_ADAPTER_DESC1 desc;
-                ThrowIfFailed(adapter->GetDesc1(&desc));
-
-                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-                {
-                    // Don't select the Basic Render Driver adapter.
-                    adapter->Release();
-
-                    continue;
-                }
-
-                // Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-                if (SUCCEEDED(D3D12CreateDevice(adapter, kD3D12MinFeatureLevel, _uuidof(ID3D12Device), nullptr)))
-                {
-#ifdef _DEBUG
-                    wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
-                    OutputDebugStringW(buff);
-#endif
-                    break;
-                }
-            }
-        }
-
-        if (!adapter)
-        {
-            LOGE("No Direct3D 12 device found");
-        }
-
-        *ppAdapter = adapter;
-    }
-
-    void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
-    {
-        DXGI_ADAPTER_DESC1 desc;
-        ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
-
-        caps.backendType = GPUBackendType::Direct3D12;
-        caps.deviceId = desc.DeviceId;
-        caps.vendorId = desc.VendorId;
-
-        std::wstring deviceName(desc.Description);
-        caps.adapterName = Alimer::ToUtf8(deviceName);
-
-        // Detect adapter type.
-        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-        {
-            caps.adapterType = GPUAdapterType::CPU;
-        }
-        else
-        {
-            D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
-            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch)));
-
-            caps.adapterType = arch.UMA ? GPUAdapterType::IntegratedGPU : GPUAdapterType::DiscreteGPU;
-        }
-
-        // Determine maximum supported feature level for this device
-        static const D3D_FEATURE_LEVEL s_featureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_12_1,
-            D3D_FEATURE_LEVEL_12_0,
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-        };
-
-        D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
-        {
-            _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
-        };
-
-        if (SUCCEEDED(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels))))
-        {
-            featureLevel = featLevels.MaxSupportedFeatureLevel;
-        }
-        else
-        {
-            featureLevel = kD3D12MinFeatureLevel;
-        }
-
-        // Features
-        /*supportsRenderPass = false;
-        if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
-            caps.vendorId != KnownVendorId_Intel)
-        {
-            supportsRenderPass = true;
-        }*/
-
-        // Limits
-        caps.limits.maxVertexAttributes = kMaxVertexAttributes;
-        caps.limits.maxVertexBindings = kMaxVertexAttributes;
-        caps.limits.maxVertexAttributeOffset = kMaxVertexAttributeOffset;
-        caps.limits.maxVertexBindingStride = kMaxVertexBufferStride;
-
-        //caps.limits.maxTextureDimension1D = D3D12_REQ_TEXTURE1D_U_DIMENSION;
-        caps.limits.maxTextureDimension2D = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-        caps.limits.maxTextureDimension3D = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-        caps.limits.maxTextureDimensionCube = D3D12_REQ_TEXTURECUBE_DIMENSION;
-        caps.limits.maxTextureArrayLayers = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-        caps.limits.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
-        caps.limits.maxUniformBufferSize = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
-        caps.limits.minUniformBufferOffsetAlignment = 256u;
-        caps.limits.maxStorageBufferSize = UINT32_MAX;
-        caps.limits.minStorageBufferOffsetAlignment = 16;
-        caps.limits.maxSamplerAnisotropy = D3D12_MAX_MAXANISOTROPY;
-        caps.limits.maxViewports = D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-        if (caps.limits.maxViewports > kMaxViewportAndScissorRects) {
-            caps.limits.maxViewports = kMaxViewportAndScissorRects;
-        }
-
-        caps.limits.maxViewportWidth = D3D12_VIEWPORT_BOUNDS_MAX;
-        caps.limits.maxViewportHeight = D3D12_VIEWPORT_BOUNDS_MAX;
-        caps.limits.maxTessellationPatchSize = D3D12_IA_PATCH_MAX_CONTROL_POINT_COUNT;
-        caps.limits.pointSizeRangeMin = 1.0f;
-        caps.limits.pointSizeRangeMax = 1.0f;
-        caps.limits.lineWidthRangeMin = 1.0f;
-        caps.limits.lineWidthRangeMax = 1.0f;
-        caps.limits.maxComputeSharedMemorySize = D3D12_CS_THREAD_LOCAL_TEMP_REGISTER_POOL;
-        caps.limits.maxComputeWorkGroupCountX = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupCountY = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupCountZ = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
-        caps.limits.maxComputeWorkGroupInvocations = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
-        caps.limits.maxComputeWorkGroupSizeX = D3D12_CS_THREAD_GROUP_MAX_X;
-        caps.limits.maxComputeWorkGroupSizeY = D3D12_CS_THREAD_GROUP_MAX_Y;
-        caps.limits.maxComputeWorkGroupSizeZ = D3D12_CS_THREAD_GROUP_MAX_Z;
-
-        /* see: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_format_support */
-        UINT dxgi_fmt_caps = 0;
-        for (uint32_t format = (static_cast<uint32_t>(PixelFormat::Invalid) + 1); format < static_cast<uint32_t>(PixelFormat::Count); format++)
-        {
-            D3D12_FEATURE_DATA_FORMAT_SUPPORT support;
-            support.Format = ToDXGIFormat((PixelFormat)format);
-
-            if (support.Format == DXGI_FORMAT_UNKNOWN)
-                continue;
-
-            ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &support, sizeof(support)));
-        }
-    }
-
+    
     void D3D12GraphicsDevice::WaitForGPU()
     {
         immediateContext->Flush(true);
@@ -541,14 +541,6 @@ namespace Alimer
             ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
         }
     }
+#endif // TODO
 
-    CommandContext* D3D12GraphicsDevice::GetImmediateContext() const
-    {
-        return immediateContext;
-    }
-
-    RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(void* windowHandle, const SwapChainDesc& desc)
-    {
-        return RefPtr<SwapChain>(new D3D12SwapChain(this, windowHandle, desc, kRenderLatency));
-    }
 }

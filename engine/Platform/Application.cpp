@@ -43,8 +43,8 @@ namespace Alimer
 
     Application::~Application()
     {
-        swapChain.Reset();
         ImGuiLayer::Shutdown();
+        swapChain.reset();
         graphicsDevice.reset();
         s_appCurrent = nullptr;
         platform.reset();
@@ -57,16 +57,20 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        GraphicsDebugFlags graphicsDebugFlags = GraphicsDebugFlags::None;
+        bool enableDebugLayer = false;
+
 #ifdef _DEBUG
-        //graphicsDebugFlags |= GraphicsDebugFlags::DebugRuntime;
+        //enableDebugLayer = true;
 #endif
 
-        graphicsDevice = GraphicsDevice::Create(graphicsDebugFlags);
+        graphicsDevice.reset(new GraphicsDevice(FeatureLevel::Level_11_0, enableDebugLayer));
 
-        SwapChainDesc swapChainDesc = {};
-        swapChainDesc.isPrimary = true;
-        swapChain = graphicsDevice->CreateSwapChain(GetMainWindow().GetNativeHandle(), swapChainDesc);
+        // Create SwapChain
+        PresentationParameters presentationParameters = {};
+        presentationParameters.backBufferWidth = GetMainWindow().GetWidth();
+        presentationParameters.backBufferHeight = GetMainWindow().GetHeight();
+        presentationParameters.verticalSync = false;
+        swapChain.reset(new SwapChain(graphicsDevice.get(), GetMainWindow().GetNativeHandle(), presentationParameters));
 
         ImGuiLayer::Initialize();
 
@@ -101,7 +105,7 @@ namespace Alimer
 
     void Application::Tick()
     {
-        auto context = graphicsDevice->GetImmediateContext();
+        /*auto context = graphicsDevice->GetImmediateContext();
 
         context->PushDebugGroup("Frame");
 
@@ -110,7 +114,7 @@ namespace Alimer
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
-        context->PopDebugGroup();
+        context->PopDebugGroup();*/
         swapChain->Present();
     }
 

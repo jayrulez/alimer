@@ -20,20 +20,14 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
 #include "Graphics/SwapChain.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
-    SwapChain::SwapChain(const SwapChainDesc& desc)
-        : colorFormat{ desc.colorFormat }
-        , width{ desc.width }
-        , height{ desc.height }
-        , isPrimary{desc.isPrimary }
-        , isFullscreen{ desc.isFullscreen }
-        , backBufferIndex(0)
+    GraphicsDevice* SwapChain::GetDevice() const
     {
-
+        return device;
     }
 
     Texture* SwapChain::GetCurrentTexture() const

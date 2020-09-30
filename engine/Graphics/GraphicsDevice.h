@@ -22,57 +22,62 @@
 
 #pragma once
 
-#include "Graphics/Types.h"
+#include "Graphics/CommandQueue.h"
 #include "Graphics/CommandContext.h"
-#include "Graphics/GPUBuffer.h"
+#include "Graphics/GraphicsBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <memory>
 #include <mutex>
 
 namespace Alimer
 {
+    class GraphicsDeviceImpl;
+
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice
+    class ALIMER_API GraphicsDevice final
     {
     public:
-        /// Destructor.
-        virtual ~GraphicsDevice() = default;
+        /// Constructor.
+        GraphicsDevice(FeatureLevel minFeatureLevel = FeatureLevel::Level_11_0, bool enableDebugLayer = false);
 
-        static std::unique_ptr<GraphicsDevice> Create(GraphicsDebugFlags flags = GraphicsDebugFlags::None, PhysicalDevicePreference adapterPreference = PhysicalDevicePreference::HighPerformance);
+        /// Destructor.
+        ~GraphicsDevice();
 
         /// Wait for GPU to finish pending operation and become idle.
-        virtual void WaitForGPU() = 0;
+        void WaitForGPU();
 
-        virtual void FinishFrame() = 0;
+        CommandQueue* GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
 
         /// Gets the device backend type.
-        GPUBackendType GetBackendType() const { return caps.backendType; }
+        GPUBackendType GetBackendType() const;
 
         /// Get the device caps.
-        const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        const GraphicsDeviceCaps& GetCaps() const;
 
-        virtual CommandContext* GetImmediateContext() const = 0;
+        /// Get the device feature level.
+        FeatureLevel GetFeatureLevel() const;
 
-        virtual RefPtr<SwapChain> CreateSwapChain(void* windowHandle, const SwapChainDesc& desc) = 0;
+        /// Return graphics implementation, which holds the actual API-specific resources.
+        GraphicsDeviceImpl* GetImpl() const { return impl; }
 
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
 
-    protected:
-        GraphicsDevice() = default;
-
-        GraphicsDeviceCaps caps{};
-
     private:
+        /// Implementation.
+        GraphicsDeviceImpl* impl;
+
+        std::unique_ptr<CommandQueue> graphicsQueue;
+        std::unique_ptr<CommandQueue> computeQueue;
+        std::unique_ptr<CommandQueue> copyQueue;
+
         /// Mutex for accessing the GPU objects vector from several threads.
         std::mutex gpuObjectMutex;
 
         /// GPU objects.
         std::vector<GraphicsResource*> gpuObjects;
-
-        ALIMER_DISABLE_COPY_MOVE(GraphicsDevice);
     };
 }
 

@@ -57,6 +57,7 @@ namespace Alimer
     using BufferHandle = ID3D12Resource*;
     using PhysicalDevice = IDXGIAdapter1*;
     using CommandQueueHandle = ID3D12CommandQueue*;
+    using SwapChainHandle = IDXGISwapChain3*;
 #elif defined(ALIMER_VULKAN)
     using BufferHandle = VkBuffer;
     using PhysicalDevice = VkPhysicalDevice;
