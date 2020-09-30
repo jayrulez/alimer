@@ -1,5 +1,5 @@
 # CMake version
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required (VERSION 3.14)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -101,11 +101,21 @@ if(EMSCRIPTEN)
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 elseif(ANDROID)
   find_package(Java REQUIRED)
+elseif(APPLE)
+elseif(WINDOWS_STORE)
+elseif(WIN32)
+    option(ALIMER_USE_STATIC_CRT "Link against the static runtime libraries." ON)
+
+    # Select static/dynamic runtime library
+	if (ALIMER_USE_STATIC_CRT)
+        replace_compile_flags("/MDd" "/MTd" Debug)
+        replace_compile_flags("/MD" "/MT" Dev Release)
+	else()
+        replace_compile_flags("/MTd" "/MDd" Debug)
+        replace_compile_flags("/MT" "/MD" Dev Release)
+	endif()
 elseif(UNIX)
   find_package(PkgConfig)
-  if(NOT APPLE)
-    set(CMAKE_SKIP_RPATH OFF)
-  endif()
 endif()
 
 # Third Party 

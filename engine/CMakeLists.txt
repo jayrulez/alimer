@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
 project(Alimer)
 
 macro (define_engine_source_files)

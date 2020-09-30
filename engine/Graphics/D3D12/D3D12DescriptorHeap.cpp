@@ -61,7 +61,7 @@ namespace Alimer
         }
 
         D3D12_CPU_DESCRIPTOR_HANDLE ret = currentHandle;
-        currentHandle.ptr += count * descriptorSize;
+        currentHandle.ptr += (SIZE_T)count * descriptorSize;
         remainingFreeHandles -= count;
         return ret;
     }

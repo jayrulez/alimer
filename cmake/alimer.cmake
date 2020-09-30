@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
 include(alimer_macros)
 
 # Compiler check
@@ -50,15 +49,6 @@ set(CMAKE_MODULE_LINKER_FLAGS_DEV "${CMAKE_MODULE_LINKER_FLAGS_RELEASE}")
 set(CMAKE_EXE_LINKER_FLAGS_DEV "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
 if (WIN32 OR WINDOWS_STORE)
-    # Select static/dynamic runtime library
-	#if (WIN32)
-    #    replace_compile_flags("/MDd" "/MTd" Debug)
-    #    replace_compile_flags("/MD" "/MT" Dev Release)
-	#elseif (WINDOWS_STORE)
-    #    replace_compile_flags("/MTd" "/MDd" Debug)
-    #    replace_compile_flags("/MT" "/MD" Dev Release)
-	#endif()
-
     # Use security checks only in debug
 	if(WINDOWS_STORE)
         add_compile_options($<$<CONFIG:DEBUG>:/sdl> $<$<NOT:$<CONFIG:DEBUG>>:/sdl->)

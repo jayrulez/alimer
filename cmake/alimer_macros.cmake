@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-
 # Replace compilation flags, configuration type is optional
 macro(replace_compile_flags pSearch pReplace)
 	set(MacroArgs "${ARGN}")
