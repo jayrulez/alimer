@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Graphics/GraphicsDevice.h"
-#include "D3D12CommandQueue.h"
+#include "D3D12Backend.h"
 #include <queue>
 #include <mutex>
 
@@ -34,20 +34,17 @@
 namespace Alimer
 {
     class D3D12Texture;
-    class D3D12CommandContext;
     class D3D12DescriptorHeap;
 
     class GraphicsDeviceImpl final
     {
     public:
-        FeatureLevel featureLevel;
-        GraphicsDeviceCaps Caps{};
-
-        GraphicsDeviceImpl(FeatureLevel minFeatureLevel, bool enableDebugLayer);
+        GraphicsDeviceImpl(FeatureLevel minFeatureLevel, GraphicsDevice::DebugFlags debugFlags);
         ~GraphicsDeviceImpl();
 
+        void BeginFrame();
+        void EndFrame();
         void SetDeviceLost();
-        void FinishFrame();
 
         // The CPU will wait for a fence to reach a specified value
         void WaitForFence(uint64_t fenceValue);
@@ -56,24 +53,7 @@ namespace Alimer
 
         IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
-        auto GetD3DDevice() const noexcept { return d3dDevice.Get(); }
-
-        D3D12CommandQueue* GetQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT)
-        {
-            switch (type)
-            {
-            case D3D12_COMMAND_LIST_TYPE_COMPUTE:
-                return computeQueue;
-            case D3D12_COMMAND_LIST_TYPE_COPY:
-                return copyQueue;
-
-            default:
-                return graphicsQueue;
-            }
-        }
-
-        D3D12CommandQueue* GetGraphicsQueue() const noexcept { return graphicsQueue; }
-        ID3D12CommandQueue* GetD3D12GraphicsQueue() const noexcept { return graphicsQueue->GetHandle(); }
+        DeviceHandle GetHandle() const noexcept { return d3dDevice; }
 
         void ReleaseResource(IUnknown* resource);
         template<typename T> void ReleaseResource(T*& resource)
@@ -83,30 +63,26 @@ namespace Alimer
             resource = nullptr;
         }
 
+        GraphicsDeviceCaps caps{};
+
     private:
-        void Shutdown();
         void InitCapabilities(IDXGIAdapter1* dxgiAdapter);
         void GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter);
         void ExecuteDeferredReleases();
 
         static constexpr uint32_t kRenderLatency = 2u;
 
-        D3D_FEATURE_LEVEL d3dMinFeatureLevel;
+        D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         DWORD dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
-        ComPtr<ID3D12Device> d3dDevice;
+        ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
-
-        D3D12CommandQueue* graphicsQueue;
-        D3D12CommandQueue* computeQueue = nullptr;
-        D3D12CommandQueue* copyQueue = nullptr;
-
-        D3D12CommandContext* immediateContext;
         bool isLost = false;
         bool shuttingDown = false;
 
+        FeatureLevel featureLevel = FeatureLevel::Level_11_0;
         D3D12DescriptorHeap* rtvHeap;
         D3D12DescriptorHeap* dsvHeap;
         D3D12DescriptorHeap* cbvSrvUavCpuHeap;
@@ -118,6 +94,6 @@ namespace Alimer
         };
         std::queue<ResourceRelease> deferredReleases;
         D3D12Fence* frameFence;
-        uint64_t frameCount = 0;
+        uint64 frameCount = 0;
     };
 }

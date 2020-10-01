@@ -20,13 +20,12 @@
 // THE SOFTWARE.
 //
 
-#if TODO
 #include "D3D12DescriptorHeap.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
-    D3D12DescriptorHeap::D3D12DescriptorHeap(D3D12GraphicsDevice* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptorsPerHeap)
+    D3D12DescriptorHeap::D3D12DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptorsPerHeap)
         : device{ device }
         , type{ type }
         , numDescriptorsPerHeap{ numDescriptorsPerHeap }
@@ -47,8 +46,8 @@ namespace Alimer
             heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
             heapDesc.NodeMask = 1;
 
-            Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
-            ThrowIfFailed(device->GetD3DDevice()->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(heap.GetAddressOf())));
+            ComPtr<ID3D12DescriptorHeap> heap;
+            ThrowIfFailed(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(heap.GetAddressOf())));
             descriptorHeaps.emplace_back(heap);
 
             currentHeap = heap.Get();
@@ -57,7 +56,7 @@ namespace Alimer
 
             if (descriptorSize == 0)
             {
-                descriptorSize = device->GetD3DDevice()->GetDescriptorHandleIncrementSize(type);
+                descriptorSize = device->GetDescriptorHandleIncrementSize(type);
             }
         }
 
@@ -67,5 +66,3 @@ namespace Alimer
         return ret;
     }
 }
-
-#endif // TODO

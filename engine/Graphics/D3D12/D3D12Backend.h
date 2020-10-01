@@ -48,8 +48,6 @@ namespace Alimer
     extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
 
-    class D3D12GraphicsDevice;
-
     void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
 
     static constexpr D3D12_RESOURCE_STATES D3D12ResourceState(TextureLayout value)
@@ -111,7 +109,7 @@ namespace Alimer
     class D3D12Fence
     {
     public:
-        D3D12Fence(D3D12GraphicsDevice* device);
+        D3D12Fence(GraphicsDevice* device);
         ~D3D12Fence();
 
         void Shutdown();
@@ -125,7 +123,7 @@ namespace Alimer
         uint64_t GetGpuValue() const;
 
     private:
-        D3D12GraphicsDevice* device;
+        GraphicsDevice* device;
         ID3D12Fence* handle;
         HANDLE fenceEvent;
         uint64_t cpuValue;

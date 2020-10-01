@@ -26,18 +26,21 @@
 
 namespace Alimer
 {
-    uint64 GraphicsResource::s_objectID = 1;
-
-    GraphicsResource::GraphicsResource(Type type)
-        : type{ type }
-        , id(s_objectID++)
+    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
+        : device{ device }
+        , type{ type }
     {
-        //GraphicsDevice::Instance->AddGraphicsResource(this);
+        device->AddGraphicsResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        //GraphicsDevice::Instance->RemoveGraphicsResource(this);
+        device->RemoveGraphicsResource(this);
+    }
+
+    GraphicsDevice* GraphicsResource::GetDevice() const
+    {
+        return device;
     }
 
     void GraphicsResource::SetName(const std::string& newName)

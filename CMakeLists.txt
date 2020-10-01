@@ -73,6 +73,7 @@ option(ALIMER_PROFILING "Enable performance profiling" ON)
 option(ALIMER_THREADING "Enable multithreading" ON)
 option(ALIMER_NETWORK "Enable Networking system " ON)
 option(ALIMER_PHYSICS "Enable Physics system" ON)
+option(ALIMER_IMGUI "Enable ImGui system" ON)
 
 if (WIN32)
     set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Select Graphics API [D3D12 | Vulkan]")

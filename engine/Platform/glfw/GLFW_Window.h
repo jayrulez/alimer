@@ -55,9 +55,8 @@ namespace Alimer
         static void PollEvents();
 
         bool IsOpen() const override;
-        void* GetNativeHandle() const override;
 
     private:
-        GLFWwindow* handle{ nullptr };
+        GLFWwindow* window{ nullptr };
     };
 } 

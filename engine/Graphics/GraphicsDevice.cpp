@@ -33,8 +33,8 @@
 
 namespace Alimer
 {
-    GraphicsDevice::GraphicsDevice(FeatureLevel minFeatureLevel, bool enableDebugLayer)
-        : impl(new GraphicsDeviceImpl(minFeatureLevel, enableDebugLayer))
+    GraphicsDevice::GraphicsDevice(FeatureLevel minFeatureLevel, DebugFlags debugFlags)
+        : impl(new GraphicsDeviceImpl(minFeatureLevel, debugFlags))
     {
         graphicsQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Graphics);
         computeQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Compute);
@@ -57,6 +57,21 @@ namespace Alimer
         copyQueue->WaitIdle();
     }
 
+    void GraphicsDevice::BeginFrame()
+    {
+        impl->BeginFrame();
+    }
+
+    void GraphicsDevice::EndFrame()
+    {
+        impl->EndFrame();
+    }
+
+    void GraphicsDevice::SetDeviceLost()
+    {
+        impl->SetDeviceLost();
+    }
+
     CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType type) const
     {
         switch (type)
@@ -76,21 +91,6 @@ namespace Alimer
         }
     }
 
-    GPUBackendType GraphicsDevice::GetBackendType() const
-    {
-        return impl->Caps.backendType;
-    }
-
-    const GraphicsDeviceCaps& GraphicsDevice::GetCaps() const
-    {
-        return impl->Caps;
-    }
-
-    FeatureLevel GraphicsDevice::GetFeatureLevel() const
-    {
-        return impl->featureLevel;
-    }
-
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
     {
         ALIMER_ASSERT(resource);
@@ -106,7 +106,14 @@ namespace Alimer
 
         auto it = std::find(gpuObjects.begin(), gpuObjects.end(), resource);
         if (it != gpuObjects.end())
+        {
             gpuObjects.erase(it);
+        }
+    }
+
+    DeviceHandle GraphicsDevice::GetHandle() const
+    {
+        return impl->GetHandle();
     }
 }
 

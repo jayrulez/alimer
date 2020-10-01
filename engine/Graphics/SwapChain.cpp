@@ -25,9 +25,9 @@
 
 namespace Alimer
 {
-    GraphicsDevice* SwapChain::GetDevice() const
+    SwapChain::~SwapChain()
     {
-        return device;
+        Destroy();
     }
 
     Texture* SwapChain::GetCurrentTexture() const

@@ -26,8 +26,8 @@
 
 namespace Alimer
 {
-    TextureLoader::TextureLoader(AssetManager& assets_)
-        : AssetLoader(assets_, Texture::GetTypeStatic())
+    TextureLoader::TextureLoader(AssetManager& assets)
+        : AssetLoader(assets, Texture::GetTypeStatic())
     {
     }
 }

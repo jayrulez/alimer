@@ -22,24 +22,23 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/BackendTypes.h"
+#include "Core/StringId.h"
+#include "Graphics/Types.h"
 
 namespace Alimer
 {
     class GraphicsDevice;
 
     /// Defines a GPU Resource created by device.
-    class ALIMER_API GraphicsResource : public Object
+    class ALIMER_API GraphicsResource 
     {
-        ALIMER_OBJECT(GraphicsResource, Object);
-
     public:
         enum class Type
         {
             Buffer,
             Texture,
-            Sampler
+            Sampler,
+            SwapChain
         };
 
         virtual ~GraphicsResource();
@@ -47,7 +46,8 @@ namespace Alimer
         /// Release the GPU resource.
         virtual void Destroy() = 0;
 
-        inline uint64 GetID() { return id; }
+        /// Gets the device object that created the resource.
+        GraphicsDevice* GetDevice() const;
 
         /// Set the resource name.
         void SetName(const std::string& newName);
@@ -58,18 +58,15 @@ namespace Alimer
         const StringId32& GetNameId() const { return nameId; }
 
     protected:
-        GraphicsResource(Type type);
+        GraphicsResource(GraphicsDevice* device, Type type);
 
         virtual void BackendSetName() {}
 
     protected:
+        GraphicsDevice* device;
         Type type;
 
         std::string name;
         StringId32 nameId;
-        uint64 id;
-
-    private:
-        static uint64 s_objectID;
     };
 }

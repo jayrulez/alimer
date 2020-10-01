@@ -43,6 +43,7 @@ namespace Alimer
 
     Application::~Application()
     {
+        graphicsDevice->WaitForGPU();
         ImGuiLayer::Shutdown();
         swapChain.reset();
         graphicsDevice.reset();
@@ -57,21 +58,23 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        bool enableDebugLayer = false;
+        GraphicsDevice::DebugFlags debugFlags = GraphicsDevice::DebugFlags::None;
 
 #ifdef _DEBUG
         //enableDebugLayer = true;
 #endif
 
-        graphicsDevice.reset(new GraphicsDevice(FeatureLevel::Level_11_0, enableDebugLayer));
+        graphicsDevice.reset(new GraphicsDevice(FeatureLevel::Level_11_0, debugFlags));
 
-        // Create SwapChain
+        // Create Main SwapChain
         PresentationParameters presentationParameters = {};
+        presentationParameters.handle = GetMainWindow().GetHandle();
         presentationParameters.backBufferWidth = GetMainWindow().GetWidth();
         presentationParameters.backBufferHeight = GetMainWindow().GetHeight();
         presentationParameters.verticalSync = false;
-        swapChain.reset(new SwapChain(graphicsDevice.get(), GetMainWindow().GetNativeHandle(), presentationParameters));
+        swapChain.reset(new SwapChain(graphicsDevice.get(), presentationParameters));
 
+        // Create SwapChain
         ImGuiLayer::Initialize();
 
         assets.Load<Texture>("texture.png");
@@ -105,6 +108,8 @@ namespace Alimer
 
     void Application::Tick()
     {
+        graphicsDevice->BeginFrame();
+
         /*auto context = graphicsDevice->GetImmediateContext();
 
         context->PushDebugGroup("Frame");
@@ -116,6 +121,7 @@ namespace Alimer
         context->EndRenderPass();
         context->PopDebugGroup();*/
         swapChain->Present();
+        graphicsDevice->EndFrame();
     }
 
     const Config* Application::GetConfig()

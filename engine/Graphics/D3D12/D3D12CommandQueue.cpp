@@ -43,10 +43,11 @@ namespace Alimer
 
     struct CommandQueueApiData
     {
-        ComPtr<ID3D12CommandQueue> handle;
+        ID3D12CommandQueue* handle;
         ID3D12Fence* fence;
-        HANDLE fenceEvent;
         uint64 nextFenceValue;
+        uint64 lastCompletedFenceValue;
+        HANDLE fenceEvent;
         std::mutex fenceMutex;
         std::mutex eventMutex;
     };
@@ -55,7 +56,7 @@ namespace Alimer
         : device{ device }
         , type{ type }
     {
-        auto d3dDevice = device->GetImpl()->GetD3DDevice();
+        auto d3dDevice = device->GetHandle();
         apiData = new CommandQueueApiData();
 
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -65,13 +66,14 @@ namespace Alimer
         queueDesc.NodeMask = 0;
         ThrowIfFailed(d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&apiData->handle)));
 
-        // Fence
-        apiData->nextFenceValue = ((uint64_t)queueDesc.Type << 56 | 1);
+        apiData->nextFenceValue = ((uint64)queueDesc.Type << 56 | 1);
+        apiData->lastCompletedFenceValue = ((uint64)queueDesc.Type << 56);
+
         ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&apiData->fence)));
         apiData->fence->Signal((uint64_t)queueDesc.Type << 56);
 
-        apiData->fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
-        ALIMER_ASSERT(apiData->fenceEvent != NULL);
+        apiData->fenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+        ALIMER_ASSERT(apiData->fenceEvent != INVALID_HANDLE_VALUE);
 
         switch (type)
         {
@@ -97,12 +99,18 @@ namespace Alimer
         WaitIdle();
         CloseHandle(apiData->fenceEvent);
         SafeRelease(apiData->fence);
+        SafeRelease(apiData->handle);
         SafeDelete(apiData);
     }
 
     void CommandQueue::WaitIdle()
     {
         WaitForFence(Signal());
+    }
+
+    CommandQueueHandle CommandQueue::GetHandle() const
+    {
+        return apiData->handle;
     }
 
     uint64 CommandQueue::Signal()
@@ -114,7 +122,13 @@ namespace Alimer
 
     bool CommandQueue::IsFenceComplete(uint64 fenceValue)
     {
-        return apiData->fence->GetCompletedValue() >= fenceValue;
+        // Avoid querying the fence value by testing against the last one seen.
+        // The max() is to protect against an unlikely race condition that could cause the last
+        // completed fence value to regress.
+        if (fenceValue > apiData->lastCompletedFenceValue)
+            apiData->lastCompletedFenceValue = Max(apiData->lastCompletedFenceValue, apiData->fence->GetCompletedValue());
+
+        return fenceValue <= apiData->lastCompletedFenceValue;
     }
 
     void CommandQueue::WaitForFence(uint64 fenceValue)
@@ -126,47 +140,10 @@ namespace Alimer
 
         apiData->fence->SetEventOnCompletion(fenceValue, apiData->fenceEvent);
         WaitForSingleObject(apiData->fenceEvent, INFINITE);
-        //m_LastCompletedFenceValue = FenceValue;
-    }
-
-    CommandQueueHandle CommandQueue::GetHandle() const
-    {
-        return apiData->handle.Get();
+        apiData->lastCompletedFenceValue = fenceValue;
     }
 
 #if TODO
-    D3D12CommandQueue::D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type)
-        : device{ device }
-        , type{ type }
-        , nextFenceValue((uint64_t)type << 56 | 1)
-        , lastCompletedFenceValue((uint64_t)type << 56)
-        , allocatorPool(device->GetD3DDevice(), type)
-    {
-
-    }
-
-    D3D12CommandQueue::~D3D12CommandQueue()
-    {
-        allocatorPool.Shutdown();
-
-        CloseHandle(fenceEvent);
-        fence->Release(); fence = nullptr;
-        handle->Release(); handle = nullptr;
-    }
-
-    bool D3D12CommandQueue::IsFenceComplete(uint64 fenceValue)
-    {
-        // Avoid querying the fence value by testing against the last one seen.
-        // The max() is to protect against an unlikely race condition that could cause the last
-        // completed fence value to regress.
-        if (fenceValue > lastCompletedFenceValue)
-        {
-            lastCompletedFenceValue = Max(lastCompletedFenceValue, fence->GetCompletedValue());
-        }
-
-        return fenceValue <= lastCompletedFenceValue;
-    }
-
     void D3D12CommandQueue::StallForFence(uint64 fenceValue)
     {
         auto producer = device->GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
@@ -177,24 +154,6 @@ namespace Alimer
     {
         ALIMER_ASSERT(Producer.nextFenceValue > 0);
         handle->Wait(Producer.fence, Producer.nextFenceValue - 1);
-    }
-
-    void D3D12CommandQueue::WaitForFence(uint64 fenceValue)
-    {
-        if (IsFenceComplete(fenceValue))
-            return;
-
-        // TODO:  Think about how this might affect a multi-threaded situation.  Suppose thread A
-        // wants to wait for fence 100, then thread B comes along and wants to wait for 99.  If
-        // the fence can only have one event set on completion, then thread B has to wait for 
-        // 100 before it knows 99 is ready.  Maybe insert sequential events?
-        {
-            std::lock_guard<std::mutex> LockGuard(eventMutex);
-
-            fence->SetEventOnCompletion(fenceValue, fenceEvent);
-            WaitForSingleObject(fenceEvent, INFINITE);
-            lastCompletedFenceValue = fenceValue;
-        }
     }
 
     uint64 D3D12CommandQueue::ExecuteCommandList(ID3D12GraphicsCommandList* commandList)
@@ -225,4 +184,5 @@ namespace Alimer
         allocatorPool.DiscardAllocator(fenceValue, commandAllocator);
     }
 #endif // TODO
+
 }

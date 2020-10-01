@@ -25,6 +25,7 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
+#include "Platform/WindowHandle.h"
 
 namespace Alimer
 {
@@ -207,6 +208,17 @@ namespace Alimer
 
         RenderPassColorAttachment colorAttachments[kMaxColorAttachments];
         RenderPassDepthStencilAttachment depthStencilAttachment;
+    };
+
+    struct PresentationParameters
+    {
+        WindowHandle handle;
+        uint32 backBufferWidth = 0;
+        uint32 backBufferHeight = 0;
+        PixelFormat backBufferFormat = PixelFormat::BGRA8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool isFullscreen = false;
+        bool verticalSync = true;
     };
 
     struct GraphicsDeviceFeatures

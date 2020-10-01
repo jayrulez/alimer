@@ -29,11 +29,9 @@ namespace Alimer
     /// 
     class GraphicsBuffer : public GraphicsResource
     {
-        ALIMER_OBJECT(GraphicsBuffer, GraphicsResource);
-
     public:
         /// Constructor
-        GraphicsBuffer(const BufferDescription& desc);
+        GraphicsBuffer(GraphicsDevice* device, const BufferDescription& desc);
 
         /// Gets buffer usage.
         ALIMER_FORCE_INLINE BufferUsage GetUsage() const
@@ -61,7 +59,6 @@ namespace Alimer
         }
 
     protected:
-        BufferHandle handle{};
         BufferUsage usage;
         uint32 size;
         uint32 stride;

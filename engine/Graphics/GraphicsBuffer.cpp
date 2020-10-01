@@ -25,8 +25,8 @@
 
 namespace Alimer
 {
-    GraphicsBuffer::GraphicsBuffer(const BufferDescription& desc)
-        : GraphicsResource(Type::Buffer)
+    GraphicsBuffer::GraphicsBuffer(GraphicsDevice* device, const BufferDescription& desc)
+        : GraphicsResource(device, Type::Buffer)
         , usage(desc.usage)
         , size(desc.size)
         , stride(desc.stride)

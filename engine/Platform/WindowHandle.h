@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,25 @@
 
 #pragma once
 
-#include "Graphics/SwapChain.h"
-#include "D3D12Backend.h"
+#include "Core/Preprocessor.h"
+
+#if ALIMER_PLATFORM_WINDOWS
+struct HWND__;
+#elif ALIMER_PLATFORM_UWP
+struct IUnknown;
+#endif
 
 namespace Alimer
 {
-    class D3D12SwapChain final : public SwapChain
+#if ALIMER_PLATFORM_WINDOWS
+    using WindowHandle = HWND__*;
+#elif ALIMER_PLATFORM_UWP
+    using WindowHandle = IUnknown*;
+#else
+    struct WindowHandle
     {
-    public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, void* windowHandle, const SwapChainDesc& desc, uint32_t bufferCount);
-        ~D3D12SwapChain() override;
-        void Destroy();
-
-        void AfterReset();
-        void Present(bool verticalSync) override;
-        GraphicsDevice& GetDevice() override;
-
-    private:
-        D3D12GraphicsDevice* device;
-        IDXGISwapChain3* handle;
-        bool isTearingSupported;
+        Display* display;
+        Window window;
     };
-}
+#endif
+} 

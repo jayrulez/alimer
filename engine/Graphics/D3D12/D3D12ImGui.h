@@ -23,27 +23,18 @@
 #pragma once
 
 #include "D3D12Backend.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace Alimer
 {
-    class D3D12DescriptorHeap final 
+    class D3D12ImGui final 
     {
     public:
-        D3D12DescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptorsPerHeap = 256);
-        ~D3D12DescriptorHeap();
-
-        D3D12_CPU_DESCRIPTOR_HANDLE Allocate(uint32_t count);
+        D3D12ImGui(GraphicsDevice* device);
+        ~D3D12ImGui();
 
     private:
-        ID3D12Device* device;
-        D3D12_DESCRIPTOR_HEAP_TYPE type;
-        uint32 numDescriptorsPerHeap;
-
-        ID3D12DescriptorHeap* currentHeap = nullptr;
-        D3D12_CPU_DESCRIPTOR_HANDLE currentHandle{};
-        uint32 descriptorSize = 0;
-        uint32 remainingFreeHandles = 0;
-
-        std::vector<ComPtr<ID3D12DescriptorHeap>> descriptorHeaps;
+        GraphicsDevice* device;
     };
 }

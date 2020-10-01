@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
+#include "Platform/WindowHandle.h"
 
 namespace Alimer
 {
@@ -41,10 +42,13 @@ namespace Alimer
 
         uint32 GetWidth() const { return width; }
         uint32 GetHeight() const { return height; }
-        virtual void* GetNativeHandle() const = 0;
 
-    private:
+        /// Get the native window handle.
+        const WindowHandle& GetHandle() const { return handle; }
+
+    protected:
         uint32 width;
         uint32 height;
+        WindowHandle handle;
     };
 } 

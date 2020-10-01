@@ -33,12 +33,12 @@ namespace Alimer
         D3D12CommandQueue(D3D12GraphicsDevice* device, D3D12_COMMAND_LIST_TYPE type);
         ~D3D12CommandQueue();
 
-        uint64 IncrementFence(void);
+        uint64 Signal();
         bool IsFenceComplete(uint64 fenceValue);
         void StallForFence(uint64 fenceValue);
         void StallForProducer(D3D12CommandQueue& Producer);
         void WaitForFence(uint64 fenceValue);
-        void WaitForIdle(void) { WaitForFence(IncrementFence()); }
+        void WaitIdle();
 
         uint64 ExecuteCommandList(ID3D12GraphicsCommandList* commandList);
         ID3D12CommandAllocator* RequestAllocator();

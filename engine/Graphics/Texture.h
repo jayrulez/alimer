@@ -22,17 +22,19 @@
 
 #pragma once
 
+#include "Core/Object.h"
 #include "Graphics/GraphicsResource.h"
+#include "Graphics/BackendTypes.h"
 
 namespace Alimer
 {
-    class ALIMER_API Texture : public GraphicsResource
+    class ALIMER_API Texture : public Object, public GraphicsResource
     {
-        ALIMER_OBJECT(Texture, GraphicsResource);
+        ALIMER_OBJECT(Texture, Object);
 
     public:
         /// Constructor.
-        Texture(const TextureDescription& desc);
+        Texture(GraphicsDevice* device, const TextureDescription& desc);
 
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return format; }

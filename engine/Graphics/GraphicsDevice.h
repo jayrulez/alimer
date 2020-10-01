@@ -23,7 +23,6 @@
 #pragma once
 
 #include "Graphics/CommandQueue.h"
-#include "Graphics/CommandContext.h"
 #include "Graphics/GraphicsBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <memory>
@@ -36,9 +35,20 @@ namespace Alimer
     /// Defines the graphics subsystem.
     class ALIMER_API GraphicsDevice final
     {
+        friend class GraphicsResource;
+        friend class SwapChain;
+
     public:
+        enum class DebugFlags : uint32_t
+        {
+            None = 0,
+            DebugRuntime = 1 << 0,
+            GPUBasedValidation = 1 << 2,
+            RenderDoc = 1 << 3,
+        };
+
         /// Constructor.
-        GraphicsDevice(FeatureLevel minFeatureLevel = FeatureLevel::Level_11_0, bool enableDebugLayer = false);
+        GraphicsDevice(FeatureLevel minFeatureLevel = FeatureLevel::Level_11_0, DebugFlags debugFlags = DebugFlags::None);
 
         /// Destructor.
         ~GraphicsDevice();
@@ -46,13 +56,16 @@ namespace Alimer
         /// Wait for GPU to finish pending operation and become idle.
         void WaitForGPU();
 
+        void BeginFrame();
+        void EndFrame();
+
         CommandQueue* GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
 
         /// Gets the device backend type.
-        GPUBackendType GetBackendType() const;
+        //GPUBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
-        const GraphicsDeviceCaps& GetCaps() const;
+        //const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
         /// Get the device feature level.
         FeatureLevel GetFeatureLevel() const;
@@ -60,12 +73,17 @@ namespace Alimer
         /// Return graphics implementation, which holds the actual API-specific resources.
         GraphicsDeviceImpl* GetImpl() const { return impl; }
 
+        /// Get the API handle.
+        DeviceHandle GetHandle() const;
+
+    private:
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
+        /// Set device in lost state (called by SwapChain).
+        void SetDeviceLost();
 
-    private:
         /// Implementation.
         GraphicsDeviceImpl* impl;
 
@@ -79,5 +97,8 @@ namespace Alimer
         /// GPU objects.
         std::vector<GraphicsResource*> gpuObjects;
     };
+
+
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDevice::DebugFlags, uint32_t);
 }
 

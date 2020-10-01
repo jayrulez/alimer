@@ -26,7 +26,6 @@
 #include "Graphics/Types.h"
 
 #if defined(ALIMER_D3D12)
-struct IDXGIAdapter1;
 struct IDXGISwapChain3;
 struct ID3D12Device;
 struct ID3D12Resource;
@@ -54,14 +53,13 @@ typedef struct VmaAllocation_T* VmaAllocation;
 namespace Alimer
 {
 #if defined(ALIMER_D3D12)
+    using DeviceHandle = ID3D12Device*;
     using BufferHandle = ID3D12Resource*;
-    using PhysicalDevice = IDXGIAdapter1*;
     using CommandQueueHandle = ID3D12CommandQueue*;
     using SwapChainHandle = IDXGISwapChain3*;
 #elif defined(ALIMER_VULKAN)
-    using BufferHandle = VkBuffer;
-    using PhysicalDevice = VkPhysicalDevice;
-    using CommandQueueHandle = VkQueue;
     using DeviceHandle = VkDevice;
+    using BufferHandle = VkBuffer;
+    using CommandQueueHandle = VkQueue;
 #endif
 }

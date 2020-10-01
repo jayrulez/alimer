@@ -36,6 +36,7 @@
 #cmakedefine ALIMER_THREADING
 #cmakedefine ALIMER_NETWORK
 #cmakedefine ALIMER_PHYSICS
+#cmakedefine ALIMER_IMGUI
 
 /* Graphics API */
 #cmakedefine ALIMER_D3D12

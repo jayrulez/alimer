@@ -31,9 +31,9 @@ namespace Alimer
     class ALIMER_API AssetLoader 
     {
     public:
-        AssetLoader(AssetManager& assets_, StringId32 type_)
-            : assets(assets_)
-            , type(type_)
+        AssetLoader(AssetManager& assets, StringId32 type)
+            : assets{ assets }
+            , type{ type }
         {
         }
 

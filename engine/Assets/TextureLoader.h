@@ -30,6 +30,6 @@ namespace Alimer
     {
     public:
         /// Constructor.
-        explicit TextureLoader(AssetManager& assets_);
+        explicit TextureLoader(AssetManager& assets);
     };
 }

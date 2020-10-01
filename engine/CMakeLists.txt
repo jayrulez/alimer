@@ -45,8 +45,11 @@ define_engine_source_files(
     Assets
     Graphics
     Scene
-    UI
 )
+
+if (ALIMER_IMGUI)
+    define_engine_source_files(UI)
+endif ()
 
 if (ALIMER_PHYSICS)
     define_engine_source_files(Physics)
@@ -84,10 +87,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    agpu
     fmt
     stb
-    imgui
 )
 
 if (MSVC)
@@ -158,6 +159,10 @@ endif ()
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+endif ()
+
+if (ALIMER_IMGUI)
+    target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 endif ()
 
 if (ALIMER_D3D12)

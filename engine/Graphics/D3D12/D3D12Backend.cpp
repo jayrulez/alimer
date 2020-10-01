@@ -48,11 +48,11 @@ namespace Alimer
 #endif
     }
 
-    D3D12Fence::D3D12Fence(D3D12GraphicsDevice* device)
+    D3D12Fence::D3D12Fence(GraphicsDevice* device)
         : device{ device }
         , cpuValue(0)
     {
-        //ThrowIfFailed(device->GetD3DDevice()->CreateFence(cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
+        ThrowIfFailed(device->GetHandle()->CreateFence(cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
         cpuValue++;
 
         fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
@@ -70,7 +70,7 @@ namespace Alimer
             return;
 
         CloseHandle(fenceEvent);
-        //device->ReleaseResource(handle);
+        device->GetImpl()->ReleaseResource(handle);
     }
 
     uint64_t D3D12Fence::GpuSignal(ID3D12CommandQueue* queue)

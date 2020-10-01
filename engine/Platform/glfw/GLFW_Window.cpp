@@ -106,18 +106,31 @@ namespace Alimer
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        handle = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title, monitor, nullptr);
+        window = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title, monitor, nullptr);
 
-        if (!handle)
+        if (!window)
         {
             LOGE("Couldn't create glfw window.");
         }
+
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        handle = glfwGetWin32Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        handle.display = glfwGetX11Display();
+        handle.window = glfwGetX11Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        handle = glfwGetCocoaWindow(window);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        //return glfwGetWaylandWindow(window);
+#endif
+
+        glfwSetWindowUserPointer(window, this);
 
         glfwDefaultWindowHints();
 
         if (any(flags & WindowFlags::OpenGL))
         {
-            glfwMakeContextCurrent(handle);
+            glfwMakeContextCurrent(window);
             //glfwSwapInterval(config->vsync ? 1 : 0);
         }
 
@@ -140,21 +153,6 @@ namespace Alimer
 
     bool GLFW_Window::IsOpen() const
     {
-        return !glfwWindowShouldClose(handle);
-    }
-
-    void* GLFW_Window::GetNativeHandle() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return glfwGetWin32Window(handle);
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Window(handle);
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return glfwGetCocoaWindow(handle);
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandWindow(handle);
-#else
-        return nullptr;
-#endif
+        return !glfwWindowShouldClose(window);
     }
 }
