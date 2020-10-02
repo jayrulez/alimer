@@ -5,8 +5,8 @@ target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 add_subdirectory(fmt)
 
 # agpu
-#add_subdirectory(agpu)
-#set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
+add_subdirectory(agpu)
+set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
 
 if (ALIMER_IMGUI)
     add_subdirectory(imgui)

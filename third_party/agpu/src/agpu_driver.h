@@ -145,31 +145,33 @@ namespace agpu
 }
 
 struct agpu_renderer {
-    bool (*init)(agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
+    bool (*init)(const char* app_name, const agpu_config* config);
     void (*shutdown)(void);
     bool(*frame_begin)(void);
     void(*frame_finish)(void);
 
     void (*query_caps)(agpu_caps* caps);
 
-    agpu_swapchain(*create_swapchain)(const agpu_swapchain_info* info);
-    void(*destroy_swapchain)(agpu_swapchain handle);
-    agpu_swapchain(*get_main_swapchain)(void);
-    agpu_texture(*get_current_texture)(agpu_swapchain handle);
-    void(*present)(agpu_swapchain swapchain, bool vsync);
+    agpu_buffer(*buffer_create)(const agpu_buffer_info* info);
+    void(*buffer_destroy)(agpu_buffer handle);
 
-    agpu_buffer(*createBuffer)(const agpu_buffer_info* info);
-    void(*destroyBuffer)(agpu_buffer handle);
+    agpu_shader(*shader_create)(const agpu_shader_info* info);
+    void(*shader_destroy)(agpu_shader handle);
 
-    agpu_texture(*create_texture)(const agpu_texture_info* info);
-    void(*destroy_texture)(agpu_texture handle);
+    agpu_texture(*texture_create)(const agpu_texture_info* info);
+    void(*texture_destroy)(agpu_texture handle);
+
+    agpu_pipeline(*pipeline_create)(const agpu_pipeline_info* info);
+    void(*pipeline_destroy)(agpu_pipeline handle);
 
     /* Commands */
-    void(*PushDebugGroup)(const char* name);
-    void(*PopDebugGroup)(void) = 0;
-    void(*InsertDebugMarker)(const char* name);
+    void(*push_debug_group)(const char* name);
+    void(*pop_debug_group)(void) = 0;
+    void(*insert_debug_marker)(const char* name);
     void(*begin_render_pass)(const agpu_render_pass_info* info);
     void(*end_render_pass)(void);
+    void(*bind_pipeline)(agpu_pipeline handle);
+    void(*draw)(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 };
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
@@ -179,20 +181,21 @@ struct agpu_renderer {
     ASSIGN_DRIVER_FUNC(frame_begin, name)\
     ASSIGN_DRIVER_FUNC(frame_finish, name)\
     ASSIGN_DRIVER_FUNC(query_caps, name)\
-    ASSIGN_DRIVER_FUNC(create_swapchain, name)\
-    ASSIGN_DRIVER_FUNC(destroy_swapchain, name)\
-    ASSIGN_DRIVER_FUNC(get_main_swapchain, name)\
-    ASSIGN_DRIVER_FUNC(get_current_texture, name)\
-    ASSIGN_DRIVER_FUNC(present, name)\
-    ASSIGN_DRIVER_FUNC(createBuffer, name)\
-    ASSIGN_DRIVER_FUNC(destroyBuffer, name)\
-    ASSIGN_DRIVER_FUNC(create_texture, name)\
-    ASSIGN_DRIVER_FUNC(destroy_texture, name)\
-    ASSIGN_DRIVER_FUNC(PushDebugGroup, name)\
-    ASSIGN_DRIVER_FUNC(PopDebugGroup, name)\
-    ASSIGN_DRIVER_FUNC(InsertDebugMarker, name)\
+    ASSIGN_DRIVER_FUNC(buffer_create, name)\
+    ASSIGN_DRIVER_FUNC(buffer_destroy, name)\
+    ASSIGN_DRIVER_FUNC(shader_create, name)\
+    ASSIGN_DRIVER_FUNC(shader_destroy, name)\
+    ASSIGN_DRIVER_FUNC(texture_create, name)\
+    ASSIGN_DRIVER_FUNC(texture_destroy, name)\
+    ASSIGN_DRIVER_FUNC(pipeline_create, name)\
+    ASSIGN_DRIVER_FUNC(pipeline_destroy, name)\
+    ASSIGN_DRIVER_FUNC(push_debug_group, name)\
+    ASSIGN_DRIVER_FUNC(pop_debug_group, name)\
+    ASSIGN_DRIVER_FUNC(insert_debug_marker, name)\
     ASSIGN_DRIVER_FUNC(begin_render_pass, name)\
-    ASSIGN_DRIVER_FUNC(end_render_pass, name)
+    ASSIGN_DRIVER_FUNC(end_render_pass, name) \
+    ASSIGN_DRIVER_FUNC(bind_pipeline, name) \
+    ASSIGN_DRIVER_FUNC(draw, name) \
 
 struct agpu_driver
 {

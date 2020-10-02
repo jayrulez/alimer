@@ -25,10 +25,33 @@
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
+#include <agpu.h>
 
 namespace Alimer
 {
     static Application* s_appCurrent = nullptr;
+    static agpu_buffer vertex_buffer;
+    static agpu_pipeline render_pipeline;
+
+    static void agpu_callback(void* context, agpu_log_level level, const char* message)
+    {
+        ALIMER_UNUSED(context);
+
+        switch (level)
+        {
+        case AGPU_LOG_LEVEL_INFO:
+            LOGI(message);
+            break;
+        case AGPU_LOG_LEVEL_WARN:
+            LOGW(message);
+            break;
+        case AGPU_LOG_LEVEL_ERROR:
+            LOGE(message);
+            break;
+        default:
+            break;
+        }
+    }
 
     Application::Application(const Config& config)
         : config{ config }
@@ -43,10 +66,8 @@ namespace Alimer
 
     Application::~Application()
     {
-        graphicsDevice->WaitForGPU();
         ImGuiLayer::Shutdown();
-        swapChain.reset();
-        graphicsDevice.reset();
+        agpu_shutdown();
         s_appCurrent = nullptr;
         platform.reset();
     }
@@ -58,21 +79,23 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
-        GraphicsDevice::DebugFlags debugFlags = GraphicsDevice::DebugFlags::None;
+        agpu_set_preferred_backend(AGPU_BACKEND_TYPE_OPENGL);
+        agpu_set_log_callback(agpu_callback, this);
+        agpu_config config = {};
 
 #ifdef _DEBUG
-        //enableDebugLayer = true;
+        config.debug = true;
 #endif
 
-        graphicsDevice.reset(new GraphicsDevice(FeatureLevel::Level_11_0, debugFlags));
+        // Setup swapchain info.
+        config.swapchain_info.window_handle = GetMainWindow().GetHandle();
+        config.swapchain_info.width = GetMainWindow().GetWidth();
+        config.swapchain_info.height = GetMainWindow().GetHeight();
 
-        // Create Main SwapChain
-        PresentationParameters presentationParameters = {};
-        presentationParameters.handle = GetMainWindow().GetHandle();
-        presentationParameters.backBufferWidth = GetMainWindow().GetWidth();
-        presentationParameters.backBufferHeight = GetMainWindow().GetHeight();
-        presentationParameters.verticalSync = false;
-        swapChain.reset(new SwapChain(graphicsDevice.get(), presentationParameters));
+        if (!agpu_init("Alimer", &config))
+        {
+            headless = true;
+        }
 
         // Create SwapChain
         ImGuiLayer::Initialize();
@@ -80,6 +103,42 @@ namespace Alimer
         assets.Load<Texture>("texture.png");
 
         // Define the geometry for a triangle.
+        float vertices[] = {
+            -0.5f, -0.5f, 0.0f,
+            0.5f, -0.5f, 0.0f,
+            0.0f,  0.5f, 0.0f
+        };
+
+        agpu_buffer_info buffer_info = {};
+        buffer_info.size = sizeof(vertices);
+        buffer_info.type = AGPU_BUFFER_TYPE_VERTEX;
+        buffer_info.data = vertices;
+
+        vertex_buffer = agpu_create_buffer(&buffer_info);
+
+        const char* vertexShaderSource = "layout (location = 0) in vec3 aPos;\n"
+            "void main()\n"
+            "{\n"
+            "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+            "}\0";
+        const char* fragmentShaderSource = "out vec4 FragColor;\n"
+            "void main()\n"
+            "{\n"
+            "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
+            "}\n\0";
+
+        agpu_shader_info shader_info = {};
+        shader_info.vertex.code = vertexShaderSource;
+        shader_info.vertex.size = strlen(vertexShaderSource);
+        shader_info.fragment.code = fragmentShaderSource;
+        shader_info.fragment.size = strlen(fragmentShaderSource);
+        agpu_shader shader = agpu_create_shader(&shader_info);
+
+        // Create pipeline
+        agpu_pipeline_info pipeline_info{};
+        pipeline_info.shader = shader;
+        render_pipeline = agpu_create_pipeline(&pipeline_info);
+
         /*struct Vertex
         {
             Float3 position;
@@ -108,20 +167,20 @@ namespace Alimer
 
     void Application::Tick()
     {
-        graphicsDevice->BeginFrame();
+        if (!agpu_begin_frame())
+            return;
 
-        /*auto context = graphicsDevice->GetImmediateContext();
+        agpu_push_debug_group("Frame");
 
-        context->PushDebugGroup("Frame");
-
-        RenderPassDesc renderPass{};
+        /*RenderPassDesc renderPass{};
         renderPass.colorAttachments[0].texture = swapChain->GetCurrentTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         context->BeginRenderPass(renderPass);
-        context->EndRenderPass();
-        context->PopDebugGroup();*/
-        swapChain->Present();
-        graphicsDevice->EndFrame();
+        context->EndRenderPass();*/
+        agpu_bind_pipeline(render_pipeline);
+        agpu_draw(3, 1, 0);
+        agpu_pop_debug_group();
+        agpu_end_frame();
     }
 
     const Config* Application::GetConfig()

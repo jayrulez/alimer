@@ -57,7 +57,7 @@ enum class DXGIFactoryCaps : uint8_t
 };
 DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps);
 
-static inline DXGI_FORMAT ToDXGIFormat(agpu_texture_format format) {
+static inline DXGI_FORMAT _agpu_d3d11_dxgi_format(agpu_texture_format format) {
     switch (format)
     {
         // 8-bit pixel formats
@@ -153,11 +153,11 @@ static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(agpu_texture_for
 
     default:
         //AGPU_ASSERT(IsDepthFormat(format) == false);
-        return ToDXGIFormat(format);
+        return _agpu_d3d11_dxgi_format(format);
     }
 }
 
-static inline DXGI_FORMAT agpu_ToDXGISwapChainFormat(agpu_texture_format format)
+static inline DXGI_FORMAT _agpu_d3d_swapchain_format(agpu_texture_format format)
 {
     switch (format)
     {
@@ -179,13 +179,14 @@ static inline DXGI_FORMAT agpu_ToDXGISwapChainFormat(agpu_texture_format format)
     return DXGI_FORMAT_B8G8R8A8_UNORM;
 }
 
-static inline IDXGISwapChain1* agpu_d3dCreateSwapChain(
+static inline IDXGISwapChain1* agpu_d3d_create_swapchain(
     IDXGIFactory2* dxgiFactory, DXGIFactoryCaps factoryCaps,
     IUnknown* deviceOrCommandQueue,
     void* window_handle,
     DXGI_FORMAT format,
     uint32_t width, uint32_t height,
-    uint32_t bufferCount)
+    uint32_t buffer_count,
+    bool is_fullscreen)
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     HWND window = (HWND)window_handle;
@@ -222,7 +223,7 @@ static inline IDXGISwapChain1* agpu_d3dCreateSwapChain(
     swapChainDesc.Width = width;
     swapChainDesc.Height = height;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = bufferCount;
+    swapChainDesc.BufferCount = buffer_count;
     swapChainDesc.SampleDesc.Count = 1;
     swapChainDesc.SampleDesc.Quality = 0;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
@@ -234,7 +235,7 @@ static inline IDXGISwapChain1* agpu_d3dCreateSwapChain(
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-    fsSwapChainDesc.Windowed = TRUE;
+    fsSwapChainDesc.Windowed = !is_fullscreen;
 
     // Create a SwapChain from a Win32 window.
     VHR(dxgiFactory->CreateSwapChainForHwnd(

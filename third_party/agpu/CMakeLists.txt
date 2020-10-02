@@ -24,17 +24,6 @@ endif()
 
 # Third party deps
 set(AGPU_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
-set(KHRONOS_DIR "${AGPU_THIRD_PARTY_DIR}/khronos")
-
-if(NOT EMSCRIPTEN)
-    add_library(opengl_headers  INTERFACE)
-    target_sources(opengl_headers INTERFACE 
-        "${KHRONOS_DIR}/KHR/khrplatform.h"
-        "${KHRONOS_DIR}/GL/glcorearb.h"
-        "${KHRONOS_DIR}/GL/glext.h"
-    )
-    target_include_directories(opengl_headers INTERFACE "${KHRONOS_DIR}")
-endif ()
 
 # Library
 add_library(agpu
@@ -45,9 +34,10 @@ add_library(agpu
     # Source Files
 	src/agpu.cpp
     src/agpu_driver_d3d_common.h
-    #src/agpu_driver_d3d11.cpp
-    src/d3d12/agpu_driver_d3d12.cpp
+    src/agpu_driver_d3d11.cpp
+    src/agpu_driver_d3d12.cpp
     src/agpu_driver_opengl.cpp
+    src/agpu_test.c
 )
 
 target_include_directories(agpu PUBLIC
@@ -64,8 +54,8 @@ set_target_properties(agpu PROPERTIES OUTPUT_NAME "agpu"
 if(WIN32 OR WINDOWS_STORE)
     target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
 
-    #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
-    target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D12)
+    target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
+    #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D12)
 endif ()
 
 if (WIN32 OR ANDROID OR LINUX)
@@ -74,13 +64,7 @@ if (WIN32 OR ANDROID OR LINUX)
 endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)
-    #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
-
-    #if(EMSCRIPTEN)
-    #  target_compile_definitions(agpu PRIVATE -DAGPU_WEBGL)
-    #else()
-    #  target_link_libraries(agpu PRIVATE opengl_headers)
-    #endif ()
+    target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
 endif ()
 
 if (MSVC)

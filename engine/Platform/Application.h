@@ -42,9 +42,6 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
-    class GraphicsDevice;
-    class SwapChain;
-
     class ALIMER_API Application : public Object
     {
         friend class Platform;
@@ -87,8 +84,7 @@ namespace Alimer
         Config config;
         State state;
         AssetManager assets;
-        std::unique_ptr<GraphicsDevice> graphicsDevice;
-        std::unique_ptr<SwapChain> swapChain;
+        bool headless = false;
     };
 
     extern Application* CreateApplication(void);

@@ -43,16 +43,18 @@
 #   define AGPU_API
 #endif  // defined(AGPU_SHARED_LIBRARY)
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    typedef struct agpu_buffer { uint32_t id; } agpu_buffer;
-    typedef struct agpu_texture { uint32_t id; } agpu_texture;
-    typedef struct agpu_swapchain { uint32_t id; } agpu_swapchain;
-
+    typedef struct agpu_buffer_t* agpu_buffer;
+    typedef struct agpu_shader_t* agpu_shader;
+    typedef struct agpu_texture_t* agpu_texture;
+    typedef struct agpu_pipeline_t* agpu_pipeline;
+    
     /* Constants */
     enum {
         AGPU_INVALID_ID = 0,
@@ -68,10 +70,9 @@ extern "C" {
 
     /* Enums */
     typedef enum agpu_log_level {
-        AGPU_LOG_LEVEL_ERROR = 0,
-        AGPU_LOG_LEVEL_WARN = 1,
-        AGPU_LOG_LEVEL_INFO = 2,
-        _AGPU_LOG_LEVEL_COUNT,
+        AGPU_LOG_LEVEL_INFO,
+        AGPU_LOG_LEVEL_WARN,
+        AGPU_LOG_LEVEL_ERROR,
         _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
     } agpu_log_level;
 
@@ -92,26 +93,6 @@ extern "C" {
         AGPU_BACKEND_TYPE_COUNT,
         _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } agpu_backend_type;
-
-    typedef enum agpu_init_flags
-    {
-        AGPU_INIT_FLAGS_NONE = 0,
-        AGPU_INIT_FLAGS_DEBUG = (1 << 0),
-        AGPU_INIT_FLAGS_LOW_POWER_GPU = (1 << 1),
-        AGPU_INIT_FLAGS_GPU_VALIDATION = (1 << 2),
-        AGPU_INIT_FLAGS_RENDERDOC = (1 << 3),
-        _AGPU_INIT_FLAGS_FORCE_U32 = 0x7FFFFFFF
-    } agpu_init_flags;
-
-    typedef enum agpu_buffer_usage {
-        AGPU_BUFFER_USAGE_NONE = 0,
-        AGPU_BUFFER_USAGE_UNIFORM = (1 << 0),
-        AGPU_BUFFER_USAGE_STORAGE = (1 << 1),
-        AGPU_BUFFER_USAGE_INDEX = (1 << 2),
-        AGPU_BUFFER_USAGE_VERTEX = (1 << 3),
-        AGPU_BUFFER_USAGE_INDIRECT = (1 << 4),
-        _AGPU_BUFFER_USAGE_FORCE_U32 = 0x7FFFFFFF
-    } agpu_buffer_usage;
 
     /// Defines pixel format.
     typedef enum agpu_texture_format {
@@ -219,13 +200,6 @@ extern "C" {
         float a;
     } agpu_color;
 
-    typedef struct agpu_buffer_info {
-        uint64_t size;
-        agpu_buffer_usage usage;
-        void* data;
-        const char* label;
-    } agpu_buffer_info;
-
     typedef struct agpu_texture_info {
         agpu_texture_type type;
         agpu_texture_usage usage;
@@ -238,22 +212,12 @@ extern "C" {
         const char* label;
     } agpu_texture_info;
 
-    typedef struct agpu_swapchain_info {
-        uint32_t width;
-        uint32_t height;
-        agpu_texture_format color_format;
-        void* window_handle;
-        bool is_primary;
-        bool is_fullscreen;
-        const char* label;
-    } agpu_swapchain_info;
-
     typedef struct agpu_color_attachment
     {
         agpu_texture texture;
         uint32_t mip_level;
         union {
-            uint32_t face = 0;
+            uint32_t face;
             uint32_t layer;
             uint32_t slice;
         };
@@ -264,10 +228,9 @@ extern "C" {
     typedef struct agpu_depth_stencil_attachment
     {
         agpu_texture texture;
-        uint32_t mipLevel = 0;
+        uint32_t mip_level;
         union {
-            //TextureCubemapFace face = TextureCubemapFace::PositiveX;
-            uint32_t face = 0;
+            uint32_t face;
             uint32_t layer;
             uint32_t slice;
         };
@@ -280,7 +243,7 @@ extern "C" {
 
     typedef struct agpu_render_pass_info
     {
-        uint32_t num_color_attachments = 0;
+        uint32_t num_color_attachments;
         agpu_color_attachment color_attachments[AGPU_MAX_COLOR_ATTACHMENTS];
         agpu_depth_stencil_attachment depth_stencil;
     } agpu_render_pass_info;
@@ -339,31 +302,90 @@ extern "C" {
         agpu_limits limits;
     } agpu_caps;
 
+    typedef struct agpu_swapchain_info {
+        void* window_handle;
+        uint32_t width;
+        uint32_t height;
+        agpu_texture_format color_format;
+        agpu_texture_format depth_stencil_format;
+        bool vsync;
+        bool is_fullscreen;
+        uint32_t sample_count;
+    } agpu_swapchain_info;
+
+    typedef struct agpu_config {
+        bool debug;
+        agpu_swapchain_info swapchain_info;
+    } agpu_config;
+
     /* Log functions */
-    typedef void(AGPU_API_CALL* logCallback)(void* userData, agpu_log_level level, const char* message);
-    AGPU_API void agpu_set_log_callback(logCallback callback, void* user_data);
+    typedef void(AGPU_API_CALL* agpu_log_callback)(void* userData, agpu_log_level level, const char* message);
+    AGPU_API void agpu_set_log_callback(agpu_log_callback callback, void* user_data);
     AGPU_API void agpu_log(agpu_log_level level, const char* format, ...);
 
     /* Frame logic */
     AGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
-    AGPU_API bool agpu_init(const char* app_name, agpu_init_flags flags, const agpu_swapchain_info* swapchain_info);
-    AGPU_API void agpuShutdown(void);
+    AGPU_API bool agpu_init(const char* app_name, const agpu_config* config);
+    AGPU_API void agpu_shutdown(void);
     AGPU_API void agpuQueryCaps(agpu_caps* caps);
     AGPU_API bool agpu_begin_frame(void);
     AGPU_API void agpu_end_frame(void);
 
-    /* Resource creation methods */
-    AGPU_API agpu_swapchain agpu_create_swapchain(const agpu_swapchain_info* info);
-    AGPU_API void agpu_destroy_swapchain(agpu_swapchain swapchain);
-    AGPU_API agpu_swapchain agpu_get_main_swapchain(void);
-    AGPU_API agpu_texture agpu_get_current_texture(agpu_swapchain swapchain);
-    AGPU_API void agpu_present(agpu_swapchain swapchain, bool vsync);
+    /* Buffer */
+    typedef enum agpu_buffer_type {
+        AGPU_BUFFER_TYPE_VERTEX,
+        AGPU_BUFFER_TYPE_INDEX,
+        AGPU_BUFFER_TYPE_UNIFORM,
+        _AGPU_BUFFER_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_buffer_type;
+
+    typedef enum agpu_buffer_usage {
+        AGPU_BUFFER_USAGE_IMMUTABLE,
+        AGPU_BUFFER_USAGE_DYNAMIC,
+        AGPU_BUFFER_USAGE_STREAM,
+        _AGPU_BUFFER_USAGE_FORCE_U32 = 0x7FFFFFFF
+    } agpu_buffer_usage;
+
+    typedef struct agpu_buffer_info {
+        uint64_t size;
+        agpu_buffer_type type;
+        agpu_buffer_usage usage;
+        const void* data;
+        const char* label;
+    } agpu_buffer_info;
 
     AGPU_API agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
     AGPU_API void agpu_destroy_buffer(agpu_buffer buffer);
 
+    /* Shader */
+    typedef struct {
+        const void* code;
+        size_t size;
+        const char* entry;
+    } agpu_shader_source;
+
+    typedef struct {
+        agpu_shader_source vertex;
+        agpu_shader_source fragment;
+        agpu_shader_source compute;
+        const char* label;
+    } agpu_shader_info;
+
+    AGPU_API agpu_shader agpu_create_shader(const agpu_shader_info* info);
+    AGPU_API void agpu_destroy_shader(agpu_shader shader);
+
+    /* Texture */
     AGPU_API agpu_texture agpu_create_texture(const agpu_texture_info* info);
     AGPU_API void agpu_destroy_texture(agpu_texture handle);
+
+    /* Pipeline */
+    typedef struct {
+        agpu_shader shader;
+        const char* label;
+    } agpu_pipeline_info;
+
+    AGPU_API agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info);
+    AGPU_API void agpu_destroy_pipeline(agpu_pipeline pipeline);
 
     /* Commands */
     AGPU_API void agpu_push_debug_group(const char* name);
@@ -371,15 +393,12 @@ extern "C" {
     AGPU_API void agpu_insert_debug_marker(const char* name);
     AGPU_API void agpu_begin_render_pass(const agpu_render_pass_info* info);
     AGPU_API void agpu_end_render_pass(void);
+    AGPU_API void agpu_bind_pipeline(agpu_pipeline pipeline);
+    AGPU_API void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 
     /* Utility methods */
     AGPU_API uint32_t agpuCalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth);
 
 #ifdef __cplusplus
 }
-#endif
-
-#ifdef __cplusplus
-inline constexpr agpu_init_flags operator | (agpu_init_flags a, agpu_init_flags b) { return agpu_init_flags(uint32_t(a) | uint32_t(b)); }
-inline constexpr agpu_init_flags& operator |= (agpu_init_flags& a, agpu_init_flags b) { return a = a | b; }
 #endif
