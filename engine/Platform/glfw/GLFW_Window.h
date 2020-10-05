@@ -23,8 +23,8 @@
 #pragma once
 
 #include "Platform/Window.h"
-
-struct GLFWwindow;
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 namespace Alimer
 {
@@ -39,7 +39,27 @@ namespace Alimer
 
         NativeHandle GetNativeHandle() const;
         NativeDisplay GetNativeDisplay() const;
-        GLFWwindow* GetGLFWwindow() const noexcept  { return window; }
+        GLFWwindow* GetGLFWwindow() const noexcept { return window; }
+
+        float GetBrightness() const noexcept { return 1.0f; }
+        void SetBrightness(float) { }
+
+        void SetSize(const SizeI& size) noexcept
+        {
+            glfwSetWindowSize(window, static_cast<int>(size.width), static_cast<int>(size.height));
+        }
+
+        SizeI GetSize() const noexcept
+        {
+            SizeI result{};
+            int w{};
+            int h{};
+            glfwGetWindowSize(window, &w, &h);
+            result.width = static_cast<int32_t>(w);
+            result.height = static_cast<int32_t>(h);
+            return result;
+        }
+
 
     private:
         GLFWwindow* window{ nullptr };

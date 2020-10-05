@@ -58,4 +58,29 @@ namespace Alimer
     {
         return impl->GetNativeDisplay();
     }
+
+    void Window::SetBrightness(float value)
+    {
+        return impl->SetBrightness(value);
+    }
+
+    float Window::GetBrightness() const noexcept
+    {
+        return impl->GetBrightness();
+    }
+
+    void Window::SetSize(uint32_t width, uint32_t height) noexcept
+    {
+        impl->SetSize(SizeI(width, height));
+    }
+
+    void Window::SetSize(const SizeI& size) noexcept
+    {
+        impl->SetSize(size);
+    }
+
+    SizeI Window::GetSize() const noexcept
+    {
+        return impl->GetSize();
+    }
 }

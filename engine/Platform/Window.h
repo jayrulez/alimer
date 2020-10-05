@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
+#include "Math/Size.h"
 
 namespace Alimer
 {
@@ -60,14 +61,18 @@ namespace Alimer
         bool IsOpen() const noexcept;
         uint32_t GetId() const noexcept;
 
-        uint32 GetWidth() const { return width; }
-        uint32 GetHeight() const { return height; }
-
         /// Get the native window handle.
         NativeHandle GetNativeHandle() const;
 
         /// Get the native display handle.
         NativeDisplay GetNativeDisplay() const;
+
+        void SetBrightness(float value);
+        float GetBrightness() const noexcept;
+
+        void SetSize(uint32_t width, uint32_t height) noexcept;
+        void SetSize(const SizeI& size) noexcept;
+        SizeI GetSize() const noexcept;
 
     protected:
         uint32 width;

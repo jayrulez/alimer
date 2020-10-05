@@ -18,10 +18,6 @@ set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-msl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-util PROPERTY FOLDER "ThirdParty")
 
-# agpu
-add_subdirectory(agpu)
-set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")
-
 if (ALIMER_IMGUI)
     add_subdirectory(imgui)
 endif ()
