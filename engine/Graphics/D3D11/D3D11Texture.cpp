@@ -100,7 +100,7 @@ namespace Alimer
             d3dDesc.Width = desc.width;
             d3dDesc.Height = desc.height;
             d3dDesc.MipLevels = desc.mipLevels;
-            d3dDesc.ArraySize = desc.arrayLayers;
+            d3dDesc.ArraySize = desc.depthOrArraySize;
             d3dDesc.Format = dxgiFormat;
             d3dDesc.SampleDesc.Count = desc.sampleCount;
             d3dDesc.SampleDesc.Quality = 0;
@@ -122,7 +122,7 @@ namespace Alimer
             D3D11_TEXTURE3D_DESC d3dDesc = {};
             d3dDesc.Width = desc.width;
             d3dDesc.Height = desc.height;
-            d3dDesc.Depth = desc.depth;
+            d3dDesc.Depth = desc.depthOrArraySize;
             d3dDesc.MipLevels = desc.mipLevels;
             d3dDesc.Format = dxgiFormat;
             d3dDesc.Usage = usage;

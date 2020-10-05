@@ -36,7 +36,7 @@ namespace Alimer
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsDevice(Window* window, const GraphicsDeviceDescription& desc);
+        D3D11GraphicsDevice(GraphicsDeviceFlags flags);
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
@@ -55,15 +55,17 @@ namespace Alimer
 
     private:
         void CreateFactory();
+
 #if defined(_DEBUG)
         bool IsSdkLayersAvailable() noexcept;
 #endif
 
         void InitCapabilities(IDXGIAdapter1* adapter);
         void WaitForGPU() override;
-        FrameOpResult BeginFrame() override;
-        FrameOpResult EndFrame(EndFrameFlags flags) override;
+        bool BeginFrame() override;
+        void EndFrame() override;
 
+        bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 

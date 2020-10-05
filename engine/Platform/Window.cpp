@@ -21,12 +21,41 @@
 //
 
 #include "Platform/Window.h"
+#if defined(GLFW_BACKEND)
+#   include "Platform/glfw/GLFW_Window.h"
+#endif
 
 namespace Alimer
 {
-    Window::Window(uint32 width, uint32 height)
-        : width{ width }
+    Window::Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
+        : impl(new WindowImpl(title, x, y, width, height, flags))
+        , width{ width }
         , height{ height }
     {
+    }
+
+    Window::~Window()
+    {
+        SafeDelete(impl);
+    }
+
+    bool Window::IsOpen() const noexcept
+    {
+        return impl != nullptr && impl->IsOpen();
+    }
+
+    uint32_t Window::GetId() const noexcept
+    {
+        return impl->GetId();
+    }
+
+    NativeHandle Window::GetNativeHandle() const
+    {
+        return impl->GetNativeHandle();
+    }
+
+    NativeDisplay Window::GetNativeDisplay() const
+    {
+        return impl->GetNativeDisplay();
     }
 }

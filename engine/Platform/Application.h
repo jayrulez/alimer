@@ -22,9 +22,10 @@
 
 #pragma once
 
-#include "Platform/Platform.h"
+#include "Platform/Window.h"
 #include "Assets/AssetManager.h"
 #include "Graphics/Types.h"
+#include <memory>
 
 namespace Alimer
 {
@@ -39,13 +40,13 @@ namespace Alimer
         int vsync;
         uint32_t sampleCount;
 
+        GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
+
         std::string rootDirectory = "Assets";
     };
 
     class ALIMER_API Application : public Object
     {
-        friend class Platform;
-
         ALIMER_OBJECT(Application, Object);
 
     public:
@@ -72,7 +73,7 @@ namespace Alimer
         const Config* GetConfig();
 
         /// Get the main window.
-        Window& GetMainWindow() const;
+        Window* GetMainWindow() const { return window.get(); }
 
         AssetManager& GetAssets() { return assets; }
         const AssetManager& GetAssets() const { return assets; }
@@ -80,11 +81,12 @@ namespace Alimer
     private:
         void InitBeforeRun();
 
-        std::unique_ptr<Platform> platform;
+        std::unique_ptr<Window> window{ nullptr };
         Config config;
         State state;
         AssetManager assets;
         bool headless = false;
+        bool running = false;
     };
 
     extern Application* CreateApplication(void);

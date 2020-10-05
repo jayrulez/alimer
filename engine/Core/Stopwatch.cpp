@@ -23,7 +23,7 @@
 #include "Core/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
-#   include "Platform/Win32/WindowsPlatform.h"
+#include "PlatformIncl.h"
 #elif defined(__APPLE__)
 #include <TargetConditionals.h>
 #include <mach/mach_time.h>

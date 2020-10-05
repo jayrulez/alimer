@@ -34,8 +34,17 @@ void android_main(android_app* state)
 {
 }
 #elif ALIMER_PLATFORM_WINDOWS 
-#   include "Platform/Win32/WindowsPlatform.h"
+#   include "PlatformIncl.h"
 #   include <DirectXMath.h>
+#   include <objbase.h>
+
+// Indicates to hybrid graphics systems to prefer the discrete part by default
+extern "C"
+{
+    __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+}
+
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
@@ -47,7 +56,20 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
         return EXIT_FAILURE;
     }
 
-    Alimer::WindowsPlatform::hInstance = hInstance;
+    HRESULT hr = CoInitializeEx(nullptr, COINITBASE_MULTITHREADED);
+    if (FAILED(hr))
+        return EXIT_FAILURE;
+
+#ifdef _DEBUG
+    if (AllocConsole()) {
+        FILE* fp;
+        freopen_s(&fp, "conin$", "r", stdin);
+        freopen_s(&fp, "conout$", "w", stdout);
+        freopen_s(&fp, "conout$", "w", stderr);
+    }
+#endif
+
+    Alimer::Platform::ParseArguments(GetCommandLineW());
 
     // Only error handle in release
 #ifndef DEBUG
@@ -71,6 +93,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
         LOGE(e.what());
         return EXIT_FAILURE;
     }
+#endif
+
+#if ALIMER_PLATFORM_WINDOWS 
+    CoUninitialize();
 #endif
 
     return EXIT_SUCCESS;

@@ -33,7 +33,7 @@
 #elif TARGET_OS_MAC || defined(__linux__)
 #  include <unistd.h>
 #elif defined(_WIN32)
-#   include "Platform/Win32/WindowsPlatform.h"
+#   include "PlatformIncl.h"
 #   include <array>
 #elif defined(__EMSCRIPTEN__)
 #  include <emscripten.h>

@@ -27,7 +27,7 @@
 #include <vector>
 #include "Platform/Window.h"
 
-namespace Alimer
+namespace Alimer::Platform
 {
     /// Identifiers the running platform type.
     enum class PlatformId
@@ -67,40 +67,31 @@ namespace Alimer
         Console
     };
 
-    class Application;
+    /// Return the current platform name.
+    ALIMER_API std::string GetName();
 
-    class ALIMER_API Platform
+    /// Return the current platform ID.
+    ALIMER_API PlatformId GetId();
+
+    /// Return the current platform family.
+    ALIMER_API PlatformFamily GetFamily();
+
+    ALIMER_API const std::vector<std::string>& GetArguments();
+
+#ifdef _WIN32
+    enum class WindowsVersion
     {
-        friend class Application;
-
-    public:
-        Platform(Application* application);
-        virtual ~Platform() = default;
-
-        /// Return the current platform name.
-        static std::string GetName();
-
-        /// Return the current platform ID.
-        static PlatformId GetId();
-
-        /// Return the current platform family.
-        static PlatformFamily GetFamily();
-
-        /// Create plaform logic with given application.
-        static std::unique_ptr<Platform> Create(Application* application);
-
-        Window& GetMainWindow() const;
-
-        static std::vector<std::string> GetArguments();
-        static void SetArguments(const std::vector<std::string>& args);
-
-    protected:
-        void InitApplication();
-        virtual void Run() = 0;
-
-        Application* application;
-        static std::vector<std::string> arguments;
-    
-        std::unique_ptr<Window> window{ nullptr };
+        Unknown,
+        Win7,
+        Win8,
+        Win81,
+        Win10
     };
+
+    /// Parse arguments from the command line.
+    ALIMER_API const std::vector<std::string>& ParseArguments(const wchar_t* cmdLine);
+
+    /// Return the current windows version.
+    ALIMER_API WindowsVersion GetWindowsVersion();
+#endif
 }

@@ -72,9 +72,11 @@ namespace Alimer
         return true;
     }
 
-    D3D11GraphicsDevice::D3D11GraphicsDevice(Window* window, const GraphicsDeviceDescription& desc)
-        : GraphicsDevice()
+    D3D11GraphicsDevice::D3D11GraphicsDevice(GraphicsDeviceFlags flags)
+        : debugRuntime(any(flags& GraphicsDeviceFlags::DebugRuntime) || any(flags & GraphicsDeviceFlags::GPUBasedValidation))
     {
+        ALIMER_VERIFY(IsAvailable());
+
         CreateFactory();
 
         // Get adapter and create device.
@@ -86,9 +88,8 @@ namespace Alimer
             HRESULT hr = dxgiFactory.As(&dxgiFactory6);
             if (SUCCEEDED(hr))
             {
-                const bool lowPower = false;
                 DXGI_GPU_PREFERENCE gpuPreference = DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
-                if (lowPower)
+                if (any(flags & GraphicsDeviceFlags::LowPowerPreference))
                 {
                     gpuPreference = DXGI_GPU_PREFERENCE_MINIMUM_POWER;
                 }
@@ -278,15 +279,37 @@ namespace Alimer
 #else
         (void)refCount; // avoid warning
 #endif
+
+        dxgiFactory.Reset();
+
+#ifdef _DEBUG
+        IDXGIDebug1* dxgiDebug1;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        if (DXGIGetDebugInterface1 &&
+            SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#else
+        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#endif
+        {
+            dxgiDebug1->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            dxgiDebug1->Release();
+        }
+#endif
     }
 
     void D3D11GraphicsDevice::CreateFactory()
     {
 #if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
         bool debugDXGI = false;
+
+        if (debugRuntime)
         {
             ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            if (DXGIGetDebugInterface1 != nullptr && SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+#else
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+#endif
             {
                 debugDXGI = true;
 
@@ -368,7 +391,7 @@ namespace Alimer
 #else
         dxgiFactoryCaps |= DXGIFactoryCaps::FlipPresent;
 #endif
-    }
+        }
 
 #if defined(_DEBUG)
     bool D3D11GraphicsDevice::IsSdkLayersAvailable() noexcept
@@ -396,7 +419,7 @@ namespace Alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(adapter->GetDesc1(&desc));
 
-        caps.backendType = GPUBackendType::Direct3D11;
+        caps.backendType = GraphicsBackendType::Direct3D11;
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 
@@ -495,16 +518,16 @@ namespace Alimer
         immediateContext->Flush();
     }
 
-    FrameOpResult D3D11GraphicsDevice::BeginFrame()
+    bool D3D11GraphicsDevice::BeginFrame()
     {
-        return FrameOpResult::Success;
+        return !isLost;
     }
 
-    FrameOpResult D3D11GraphicsDevice::EndFrame(EndFrameFlags flags)
+    void D3D11GraphicsDevice::EndFrame()
     {
         //SubmitCommandBuffers();
 
-        HRESULT  hr = swapChain->Present();
+        HRESULT  hr = S_OK; // swapChain->Present();
 
         // If the device was removed either by a disconnection or a driver upgrade, we
         // must recreate all device resources.
@@ -528,8 +551,6 @@ namespace Alimer
                 CreateFactory();
             }
         }
-
-        return FrameOpResult::Success;
     }
 
     void D3D11GraphicsDevice::HandleDeviceLost()
@@ -590,4 +611,4 @@ namespace Alimer
 
         immediateContext->ClearState();
     }
-}
+    }

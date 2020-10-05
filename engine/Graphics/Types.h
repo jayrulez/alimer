@@ -25,7 +25,6 @@
 #include "Math/Color.h"
 #include "Math/Rect.h"
 #include "Graphics/PixelFormat.h"
-#include "Platform/WindowHandle.h"
 
 namespace Alimer
 {
@@ -44,13 +43,15 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
-    enum class FeatureLevel
+    enum class GraphicsDeviceFlags : uint32
     {
-        Level_11_0 = 0xb000,
-        Level_11_1 = 0xb100,
-        Level_12_0 = 0xc000,
-        Level_12_1 = 0xc100
+        None = 0,
+        DebugRuntime = 1 << 0,
+        GPUBasedValidation = 1 << 2,
+        RenderDoc = 1 << 3,
+        LowPowerPreference = 1 << 4,
     };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDeviceFlags, uint32);
 
     enum class GPUAdapterType
     {
@@ -61,7 +62,7 @@ namespace Alimer
     };
 
     /// Enum describing the rendering backend.
-    enum class GPUBackendType
+    enum class GraphicsBackendType : uint32
     {
         /// Null renderer.
         Null,
@@ -75,13 +76,6 @@ namespace Alimer
         Vulkan,
         /// Default best platform supported backend.
         Count
-    };
-
-    enum class CommandQueueType
-    {
-        Graphics,
-        Compute,
-        Copy
     };
 
     /// Describes the texture type.
@@ -212,9 +206,9 @@ namespace Alimer
 
     struct PresentationParameters
     {
-        WindowHandle handle;
-        uint32 backBufferWidth = 0;
-        uint32 backBufferHeight = 0;
+        void* windowHandle;
+        uint32_t backBufferWidth = 0;
+        uint32_t backBufferHeight = 0;
         PixelFormat backBufferFormat = PixelFormat::BGRA8UnormSrgb;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         bool isFullscreen = false;
@@ -279,7 +273,7 @@ namespace Alimer
 
     struct GraphicsDeviceCaps
     {
-        GPUBackendType backendType;
+        GraphicsBackendType backendType;
 
         /// Gets the GPU device identifier.
         uint32_t deviceId;
@@ -297,7 +291,7 @@ namespace Alimer
         GraphicsDeviceLimits limits;
     };
 
-    ALIMER_API const char* ToString(GPUBackendType value);
+    ALIMER_API const char* ToString(GraphicsBackendType value);
 
     // Returns true if adapter's vendor is AMD.
     ALIMER_FORCE_INLINE bool IsAMD(uint32 vendorId)

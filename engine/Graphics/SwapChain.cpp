@@ -25,9 +25,11 @@
 
 namespace Alimer
 {
-    SwapChain::~SwapChain()
+    SwapChain::SwapChain(const PresentationParameters& presentationParameters)
+        : GraphicsResource(Type::SwapChain)
+        , backBufferWidth(presentationParameters.backBufferWidth)
     {
-        Destroy();
+
     }
 
     Texture* SwapChain::GetCurrentTexture() const

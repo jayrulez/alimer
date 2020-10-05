@@ -28,35 +28,24 @@ struct GLFWwindow;
 
 namespace Alimer
 {
-    enum class WindowFlags : uint32_t
-    {
-        None = 0,
-        Fullscreen = 1 << 0,
-        FullscreenDesktop = 1 << 1,
-        Hidden = 1 << 2,
-        Borderless = 1 << 3,
-        Resizable = 1 << 4,
-        Minimized = 1 << 5,
-        Maximized = 1 << 6,
-        HighDpi = 1 << 7,
-        OpenGL = 1 << 8,
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
-
-    class GLFW_Window final : public Window
+    class WindowImpl final
     {
     public:
-        /// Constructor.
-        GLFW_Window(const char* title, uint32 width, uint32 height, WindowFlags flags);
+        WindowImpl(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags);
+        ~WindowImpl();
 
-        /// Destructor.
-        ~GLFW_Window() override;
+        bool IsOpen() const noexcept;
+        uint32_t GetId() const noexcept { return id; }
 
-        static void PollEvents();
-
-        bool IsOpen() const override;
+        NativeHandle GetNativeHandle() const;
+        NativeDisplay GetNativeDisplay() const;
+        GLFWwindow* GetGLFWwindow() const noexcept  { return window; }
 
     private:
         GLFWwindow* window{ nullptr };
+        std::string title{};
+        uint32_t id;
     };
-} 
+
+    void PumpEvents() noexcept;
+}

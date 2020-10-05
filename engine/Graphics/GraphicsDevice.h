@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/CommandQueue.h"
+#include "Graphics/CommandContext.h"
 #include "Graphics/GraphicsBuffer.h"
 #include "Graphics/SwapChain.h"
 #include <memory>
@@ -30,75 +30,48 @@
 
 namespace Alimer
 {
-    class GraphicsDeviceImpl;
-
     /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice final
+    class ALIMER_API GraphicsDevice
     {
         friend class GraphicsResource;
         friend class SwapChain;
 
     public:
-        enum class DebugFlags : uint32_t
-        {
-            None = 0,
-            DebugRuntime = 1 << 0,
-            GPUBasedValidation = 1 << 2,
-            RenderDoc = 1 << 3,
-        };
 
-        /// Constructor.
-        GraphicsDevice(FeatureLevel minFeatureLevel = FeatureLevel::Level_11_0, DebugFlags debugFlags = DebugFlags::None);
+        /// The single instance of the graphics device.
+        static GraphicsDevice* Instance;
 
-        /// Destructor.
-        ~GraphicsDevice();
+        static bool Initialize(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static void Shutdown();
 
         /// Wait for GPU to finish pending operation and become idle.
-        void WaitForGPU();
+        virtual void WaitForGPU() = 0;
 
-        void BeginFrame();
-        void EndFrame();
-
-        CommandQueue* GetCommandQueue(CommandQueueType type = CommandQueueType::Graphics) const;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
         /// Gets the device backend type.
-        //GPUBackendType GetBackendType() const { return caps.backendType; }
+        GraphicsBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
-        //const GraphicsDeviceCaps& GetCaps() const { return caps; }
+        const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
-        /// Get the device feature level.
-        FeatureLevel GetFeatureLevel() const;
+    protected:
+        GraphicsDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
-        /// Return graphics implementation, which holds the actual API-specific resources.
-        GraphicsDeviceImpl* GetImpl() const { return impl; }
-
-        /// Get the API handle.
-        DeviceHandle GetHandle() const;
-
-    private:
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         void AddGraphicsResource(GraphicsResource* resource);
         /// Remove a GPU object. Called by GraphicsResource.
         void RemoveGraphicsResource(GraphicsResource* resource);
-        /// Set device in lost state (called by SwapChain).
-        void SetDeviceLost();
 
-        /// Implementation.
-        GraphicsDeviceImpl* impl;
-
-        std::unique_ptr<CommandQueue> graphicsQueue;
-        std::unique_ptr<CommandQueue> computeQueue;
-        std::unique_ptr<CommandQueue> copyQueue;
+        GraphicsDeviceCaps caps{};
 
         /// Mutex for accessing the GPU objects vector from several threads.
         std::mutex gpuObjectMutex;
-
         /// GPU objects.
         std::vector<GraphicsResource*> gpuObjects;
     };
 
-
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(GraphicsDevice::DebugFlags, uint32_t);
 }
 

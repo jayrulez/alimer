@@ -25,12 +25,12 @@
 
 namespace Alimer
 {
-    const char* ToString(GPUBackendType value)
+    const char* ToString(GraphicsBackendType value)
     {
         static const char* names[] = {
             "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "Count"
         };
 
-        return names[(unsigned)value];
+        return names[static_cast<uint32>(value)];
     }
 }

@@ -28,9 +28,9 @@
 #include "Graphics/Types.h"
 
 #if ALIMER_PLATFORM_WINDOWS
-#include "Platform/Win32/WindowsPlatform.h"
+#   include "PlatformIncl.h"
 #else
-#define NOMINMAX
+#   define NOMINMAX
 #endif
 
 #if defined(NTDDI_WIN10_RS2)
@@ -47,6 +47,17 @@
 
 namespace Alimer
 {
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    // Functions from dxgi.dll
+    using PFN_CREATE_DXGI_FACTORY1 = HRESULT(WINAPI*)(REFIID riid, _COM_Outptr_ void** ppFactory);
+    using PFN_CREATE_DXGI_FACTORY2 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** ppFactory);
+    using PFN_DXGI_GET_DEBUG_INTERFACE1 = HRESULT(WINAPI*)(UINT Flags, REFIID riid, _COM_Outptr_ void** pDebug);
+
+    extern PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    extern PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    extern PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
+
     // Type alias for ComPtr template.
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;

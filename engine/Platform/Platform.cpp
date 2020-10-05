@@ -24,33 +24,21 @@
 #include "Core/Log.h"
 #include "Platform/Platform.h"
 #include "Platform/Application.h"
+#include "PlatformIncl.h"
+#if ALIMER_PLATFORM_WINDOWS
+#   include <shellapi.h>
+#endif
 
-namespace Alimer
+namespace Alimer::Platform
 {
-    std::vector<std::string> Platform::arguments = {};
+    static std::vector<std::string> arguments;
 
-    Platform::Platform(Application* application)
-        : application{ application }
+    std::string GetName()
     {
-        ALIMER_ASSERT(application);
+        return ALIMER_PLATFORM_NAME;
     }
 
-    Window& Platform::GetMainWindow() const
-    {
-        return *window;
-    }
-
-    void Platform::InitApplication()
-    {
-        application->InitBeforeRun();
-    }
-
-    std::string Platform::GetName()
-    {
-        return "Windows";
-    }
-
-    PlatformId Platform::GetId()
+    PlatformId GetId()
     {
         return PlatformId::Windows;
     }
@@ -60,13 +48,69 @@ namespace Alimer
         return PlatformFamily::Desktop;
     }
 
-    std::vector<std::string> Platform::GetArguments()
+    const std::vector<std::string>& Platform::GetArguments()
     {
-        return Platform::arguments;
+        return arguments;
     }
 
-    void Platform::SetArguments(const std::vector<std::string>& args)
+#if ALIMER_PLATFORM_WINDOWS
+    const std::vector<std::string>& ParseArguments(const wchar_t* cmdLine)
     {
-        arguments = args;
+        arguments.clear();
+
+        // Parse command line
+        LPWSTR* argv;
+        int     argc;
+
+        argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+        // Ignore the first argument containing the application full path
+        std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
+        std::vector<std::string>  args;
+
+        for (auto& arg : arg_strings)
+        {
+            args.push_back(Alimer::ToUtf8(arg));
+        }
+
+        return arguments;
     }
+
+    Platform::WindowsVersion Platform::GetWindowsVersion()
+    {
+        WindowsVersion version = WindowsVersion::Unknown;
+        auto RtlGetVersion = reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
+        ALIMER_VERIFY_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
+
+        RTL_OSVERSIONINFOEXW osinfo;
+        osinfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
+        if (RtlGetVersion(&osinfo) == 0)
+        {
+            if (osinfo.dwPlatformId == VER_PLATFORM_WIN32_NT)
+            {
+                if (osinfo.dwMajorVersion == 6)
+                {
+                    if (osinfo.dwMinorVersion == 1)
+                    {
+                        version = WindowsVersion::Win7;
+                    }
+                    else if (osinfo.dwMinorVersion == 2)
+                    {
+                        version = WindowsVersion::Win8;
+                    }
+                    else if (osinfo.dwMinorVersion == 3)
+                    {
+                        version = WindowsVersion::Win81;
+                    }
+                }
+                else if (osinfo.dwMajorVersion == 10)
+                {
+                    version = WindowsVersion::Win10;
+                }
+            }
+        }
+
+        return version;
+    }
+#endif
 }

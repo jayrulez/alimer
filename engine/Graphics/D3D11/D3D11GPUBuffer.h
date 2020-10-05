@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "Graphics/GPUBuffer.h"
+#include "Graphics/GraphicsBuffer.h"
 #include "D3D11Backend.h"
 
 namespace Alimer
 {
-    class ALIMER_API D3D11GPUBuffer final : public GPUBuffer
+    class ALIMER_API D3D11GPUBuffer final : public GraphicsBuffer
     {
     public:
         /// Constructor.

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,25 +22,34 @@
 
 #pragma once
 
-#include "Core/Preprocessor.h"
+#include "PlatformDef.h"
 
 #if ALIMER_PLATFORM_WINDOWS
-struct HWND__;
+#define NOMINMAX
+#define NODRAWTEXT
+#define NOGDI
+#define NOBITMAP
+#define NOMCX
+#define NOSERVICE
+#define NOHELP
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #elif ALIMER_PLATFORM_UWP
-struct IUnknown;
+#pragma warning(push)
+#pragma warning(disable: 4471)
+#include <Windows.UI.Core.h>
+#pragma warning(pop)
+#elif ALIMER_PLATFORM_ANDROID || ALIMER_PLATFORM_LINUX || ALIMER_PLATFORM_WEB
+#include <unistd.h>
+#include <signal.h>
+#include <dlfcn.h>
+
+#if ALIMER_PLATFORM_ANDROID
+#	include <android/log.h>
+#elif ALIMER_PLATFORM_WEB
+#	include <emscripten/emscripten.h>
+#	include <emscripten/html5.h>
+#	include <emscripten/threading.h>
 #endif
 
-namespace Alimer
-{
-#if ALIMER_PLATFORM_WINDOWS
-    using WindowHandle = HWND__*;
-#elif ALIMER_PLATFORM_UWP
-    using WindowHandle = IUnknown*;
-#else
-    struct WindowHandle
-    {
-        Display* display;
-        Window window;
-    };
 #endif
-} 

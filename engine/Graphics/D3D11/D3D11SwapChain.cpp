@@ -26,15 +26,14 @@
 #include "D3D11GraphicsDevice.h"
 #include "Platform/Window.h"
 
-using Microsoft::WRL::ComPtr;
-
 namespace Alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync)
-        : device{ device }
-        , colorFormat(srgb ? PixelFormat::BGRA8UnormSrgb : PixelFormat::BGRA8Unorm)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, const PresentationParameters& presentationParameters)
+        : SwapChain(presentationParameters)
+        , device{ device }
+        //, colorFormat(srgb ? PixelFormat::BGRA8UnormSrgb : PixelFormat::BGRA8Unorm)
     {
-        if (!verticalSync)
+        if (!presentationParameters.verticalSync)
         {
             syncInterval = 0u;
             // Recommended to always use tearing if supported when using a sync interval of 0.
@@ -87,8 +86,8 @@ namespace Alimer
         }*/
     }
 
-    HRESULT D3D11SwapChain::Present()
+    void D3D11SwapChain::Present()
     {
-        return handle->Present(syncInterval, presentFlags);
+        HRESULT hr = handle->Present(syncInterval, presentFlags);
     }
 }

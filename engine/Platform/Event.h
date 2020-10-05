@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2020 Amer Koleci and contributors.
+// Copyright (c) 2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,38 +22,22 @@
 
 #pragma once
 
-#include "Graphics/BackendTypes.h"
+#include "PlatformDef.h"
 
 namespace Alimer
 {
-    class GraphicsDevice;
-    struct CommandQueueApiData;
-
-    class ALIMER_API CommandQueue final
+    enum class EventType : uint8_t
     {
-    public:
-        /// Constructor.
-        CommandQueue(GraphicsDevice* device, CommandQueueType type);
-
-        /// Destructor.
-        ~CommandQueue();
-
-        void WaitIdle();
-
-        /// Get the API handle.
-        CommandQueueHandle GetHandle() const;
-
-    private:
-#if defined(ALIMER_D3D12)
-        uint64 Signal();
-        bool IsFenceComplete(uint64 fenceValue);
-        void WaitForFence(uint64 fenceValue);
-#endif
-
-    private:
-        GraphicsDevice* device;
-        CommandQueueType type;
-
-        CommandQueueApiData* apiData = nullptr;
+        Unkwnown = 0,
+        Quit,
     };
+
+    struct Event
+    {
+        EventType type;
+    };
+
+    ALIMER_API void PushEvent(const Event& e);
+    ALIMER_API void PushEvent(Event&& e);
+    ALIMER_API bool PollEvent(Event& e) noexcept;
 }

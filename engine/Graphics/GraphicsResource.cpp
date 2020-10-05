@@ -26,21 +26,15 @@
 
 namespace Alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice* device, Type type)
-        : device{ device }
-        , type{ type }
+    GraphicsResource::GraphicsResource(Type type)
+        : type{ type }
     {
-        device->AddGraphicsResource(this);
+        GraphicsDevice::Instance->AddGraphicsResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        device->RemoveGraphicsResource(this);
-    }
-
-    GraphicsDevice* GraphicsResource::GetDevice() const
-    {
-        return device;
+        GraphicsDevice::Instance->RemoveGraphicsResource(this);
     }
 
     void GraphicsResource::SetName(const std::string& newName)

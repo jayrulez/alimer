@@ -20,45 +20,51 @@
 // THE SOFTWARE.
 //
 
-#include "Platform/Library.h"
-#include "WindowsPlatform.h"
-
-#if defined(_DEBUG)
-#   include "Core/Log.h"
+#include "Platform/Event.h"
+#if defined(GLFW_BACKEND)
+#   include "Platform/glfw/GLFW_Window.h"
 #endif
+#include <deque>
 
 namespace Alimer
 {
-    LibHandle LibraryOpen(const char* libName)
+    namespace
     {
-        HMODULE handle = LoadLibraryA(libName);
-
-#if defined(_DEBUG)
-        if (handle == nullptr)
+        std::deque<Event>& GetEventQueue() noexcept
         {
-            LOGW("LibraryOpen - Windows Error: %d", GetLastError());
+            static std::deque<Event> event_queue;
+            return event_queue;
         }
-#endif
 
-        return (LibHandle)handle;
+        bool PopEvent(Event& e) noexcept
+        {
+            auto& event_queue = GetEventQueue();
+            // Pop the first event of the queue, if it is not empty
+            if (!event_queue.empty())
+            {
+                e = event_queue.front();
+                event_queue.pop_front();
+                return true;
+            }
+
+            return false;
+        }
     }
 
-    void LibraryClose(LibHandle handle)
+    void PushEvent(const Event& e)
     {
-        FreeLibrary(static_cast<HMODULE>(handle));
+        GetEventQueue().emplace_back(e);
     }
 
-    void* LibrarySymbol(LibHandle handle, const char* symbolName)
+    void PushEvent(Event&& e)
     {
-        void* proc = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(handle), symbolName));
+        GetEventQueue().emplace_back(std::move(e));
+    }
 
-#if defined(_DEBUG)
-        if (proc == nullptr)
-        {
-            LOGW("LibrarySymbol - Windows Error: {}", GetLastError());
-        }
-#endif
+    bool PollEvent(Event& e) noexcept
+    {
+        PumpEvents();
 
-        return proc;
+        return PopEvent(e);
     }
 }

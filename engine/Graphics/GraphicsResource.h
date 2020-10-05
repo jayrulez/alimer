@@ -46,9 +46,6 @@ namespace Alimer
         /// Release the GPU resource.
         virtual void Destroy() = 0;
 
-        /// Gets the device object that created the resource.
-        GraphicsDevice* GetDevice() const;
-
         /// Set the resource name.
         void SetName(const std::string& newName);
 
@@ -58,12 +55,11 @@ namespace Alimer
         const StringId32& GetNameId() const { return nameId; }
 
     protected:
-        GraphicsResource(GraphicsDevice* device, Type type);
+        GraphicsResource(Type type);
 
         virtual void BackendSetName() {}
 
     protected:
-        GraphicsDevice* device;
         Type type;
 
         std::string name;

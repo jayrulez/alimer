@@ -25,61 +25,36 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
+#if defined(ALIMER_D3D11)
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+#if defined(ALIMER_D3D12)
+#endif
+#if defined(ALIMER_VULKAN)
+#endif
+
 namespace Alimer
 {
-    GraphicsDevice::GraphicsDevice(FeatureLevel minFeatureLevel, DebugFlags debugFlags)
-        : impl(nullptr)
+    GraphicsDevice* GraphicsDevice::Instance;
+
+    bool GraphicsDevice::Initialize(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
     {
-        graphicsQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Graphics);
-        computeQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Compute);
-        copyQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Copy);
+        if (Instance != nullptr)
+            return true;
+
+        Instance = new D3D11GraphicsDevice(flags);
+        return true;
     }
 
-    GraphicsDevice::~GraphicsDevice()
+    void GraphicsDevice::Shutdown()
     {
-        WaitForGPU();
-        graphicsQueue.reset();
-        computeQueue.reset();
-        copyQueue.reset();
-    }
-
-    void GraphicsDevice::WaitForGPU()
-    {
-        graphicsQueue->WaitIdle();
-        computeQueue->WaitIdle();
-        copyQueue->WaitIdle();
-    }
-
-    void GraphicsDevice::BeginFrame()
-    {
-    }
-
-    void GraphicsDevice::EndFrame()
-    {
-    }
-
-    void GraphicsDevice::SetDeviceLost()
-    {
-    }
-
-    CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType type) const
-    {
-        switch (type)
+        if (Instance != nullptr)
         {
-        case CommandQueueType::Graphics:
-            return graphicsQueue.get();
-
-        case CommandQueueType::Compute:
-            return computeQueue.get();
-
-        case CommandQueueType::Copy:
-            return copyQueue.get();
-
-        default:
-            ALIMER_ASSERT_FAIL("Invalid command queue type.");
-            ALIMER_UNREACHABLE();
+            delete Instance;
+            Instance = nullptr;
         }
     }
+
 
     void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
     {
@@ -99,11 +74,6 @@ namespace Alimer
         {
             gpuObjects.erase(it);
         }
-    }
-
-    DeviceHandle GraphicsDevice::GetHandle() const
-    {
-        return {};
     }
 }
 

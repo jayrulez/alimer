@@ -42,13 +42,9 @@ namespace Alimer
             if (any(usage & BufferUsage::Index))
                 flags |= D3D11_BIND_INDEX_BUFFER;
 
-            if (any(usage & BufferUsage::StorageReadOnly)
-                || any(usage & BufferUsage::StorageReadWrite))
+            if (any(usage & BufferUsage::Storage))
             {
                 flags |= D3D11_BIND_SHADER_RESOURCE;
-            }
-            if (any(usage & BufferUsage::StorageReadWrite))
-            {
                 flags |= D3D11_BIND_UNORDERED_ACCESS;
             }
 
@@ -57,7 +53,7 @@ namespace Alimer
     }
 
     D3D11GPUBuffer::D3D11GPUBuffer(D3D11GraphicsDevice* device, const BufferDescription& desc, const void* initialData)
-        : GPUBuffer(desc)
+        : GraphicsBuffer(desc)
         , device{ device }
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
@@ -93,8 +89,7 @@ namespace Alimer
             d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE | D3D11_CPU_ACCESS_READ;
         }
 
-        if (any(usage & BufferUsage::StorageReadOnly)
-            || any(usage & BufferUsage::StorageReadWrite))
+        if (any(usage & BufferUsage::Storage))
         {
             if (desc.stride != 0)
             {

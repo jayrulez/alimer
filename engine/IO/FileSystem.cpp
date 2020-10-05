@@ -22,11 +22,7 @@
 
 #include "IO/FileSystem.h"
 #include "IO/FileStream.h"
-
-#ifdef _WIN32
-#   include "Platform/Win32/WindowsPlatform.h"
-#else
-#endif
+#include "PlatformIncl.h"
 
 namespace Alimer::File
 {

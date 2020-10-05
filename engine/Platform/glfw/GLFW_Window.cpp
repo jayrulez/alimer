@@ -22,6 +22,8 @@
 
 #include "Core/Log.h"
 #include "GLFW_Window.h"
+#include "Platform/Event.h"
+
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
@@ -39,10 +41,34 @@ namespace Alimer
             LOGE("GLFW Error {} - {}", description, code);
         }
 
+        std::vector<WindowImpl*>& GetWindows() noexcept
+        {
+            static std::vector<WindowImpl*> windows;
+            return windows;
+        }
+
+
+        inline uint32_t RegisterWindow(WindowImpl* impl)
+        {
+            static uint32_t id{ 0 };
+            auto& windows = GetWindows();
+            windows.emplace_back(impl);
+            return ++id;
+        }
+
+        inline void UnregisterWindow(uint32_t id)
+        {
+            auto& windows = GetWindows();
+            windows.erase(std::remove_if(std::begin(windows), std::end(windows),
+                [id](const auto& win) { return win->GetId() == id; }),
+                std::end(windows)
+            );
+        }
     }
 
-    GLFW_Window::GLFW_Window(const char* title, uint32 width, uint32 height, WindowFlags flags)
-        : Window(width, height)
+    WindowImpl::WindowImpl(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
+        : title{ title }
+        , id{}
     {
         // Init glfw at first call
         if (s_windowCount == 0)
@@ -57,23 +83,7 @@ namespace Alimer
             }
         }
 
-        if (any(flags & WindowFlags::OpenGL))
-        {
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#ifdef __APPLE__
-            glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-            //glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, config->debug);
-            //glfwWindowHint(GLFW_CONTEXT_NO_ERROR, !config->debug);
-            //glfwWindowHint(GLFW_SAMPLES, config->sample_count);
-            //glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
-        }
-        else
-        {
-            glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        }
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
         auto visible = any(flags & WindowFlags::Hidden) ? GLFW_FALSE : GLFW_TRUE;
         glfwWindowHint(GLFW_VISIBLE, visible);
@@ -106,39 +116,24 @@ namespace Alimer
             glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
         }
 
-        window = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title, monitor, nullptr);
-
+        window = glfwCreateWindow(static_cast<int>(width), static_cast<int>(height), title.c_str(), monitor, nullptr);
         if (!window)
         {
             LOGE("Couldn't create glfw window.");
+            return;
         }
-
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        handle = glfwGetWin32Window(window);
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        handle.display = glfwGetX11Display();
-        handle.window = glfwGetX11Window(window);
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        handle = glfwGetCocoaWindow(window);
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        //return glfwGetWaylandWindow(window);
-#endif
-
-        glfwSetWindowUserPointer(window, this);
-
         glfwDefaultWindowHints();
 
-        if (any(flags & WindowFlags::OpenGL))
-        {
-            glfwMakeContextCurrent(window);
-            //glfwSwapInterval(config->vsync ? 1 : 0);
-        }
+        id = RegisterWindow(this);
+        glfwSetWindowUserPointer(window, this);
 
         s_windowCount++;
     }
 
-    GLFW_Window::~GLFW_Window()
+    WindowImpl::~WindowImpl()
     {
+        UnregisterWindow(id);
+
         s_windowCount--;
 
         if (s_windowCount == 0) {
@@ -146,13 +141,58 @@ namespace Alimer
         }
     }
 
-    void GLFW_Window::PollEvents()
-    {
-        glfwPollEvents();
-    }
-
-    bool GLFW_Window::IsOpen() const
+    bool WindowImpl::IsOpen() const noexcept
     {
         return !glfwWindowShouldClose(window);
+    }
+
+    NativeHandle WindowImpl::GetNativeHandle() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return glfwGetWin32Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Window(window);
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return glfwGetCocoaWindow(window);
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandWindow(window);
+#else
+        return nullptr;
+#endif
+    }
+
+    NativeDisplay WindowImpl::GetNativeDisplay() const
+    {
+#if defined(GLFW_EXPOSE_NATIVE_WIN32)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_X11)
+        return (void*)(uintptr_t)glfwGetX11Display();
+#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
+        return nullptr;
+#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
+        return glfwGetWaylandDisplay();
+#else
+        return nullptr;
+#endif
+    }
+
+    void PumpEvents() noexcept
+    {
+        glfwPollEvents();
+
+        static bool reported = false;
+        if (!reported)
+        {
+            auto& windows = GetWindows();
+            auto allClosed = std::all_of(std::begin(windows), std::end(windows), [](const auto& e) { return glfwWindowShouldClose(e->GetGLFWwindow()); });
+            if (allClosed)
+            {
+                reported = true;
+
+                Event evt {};
+                evt.type = EventType::Quit;
+                PushEvent(std::move(evt));
+            }
+        }
     }
 }

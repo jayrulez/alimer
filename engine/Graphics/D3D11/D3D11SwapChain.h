@@ -23,24 +23,26 @@
 #pragma once
 
 #include "D3D11Backend.h"
+#include "Graphics/SwapChain.h"
 
 namespace Alimer
 {
     class Window;
     class D3D11Texture;
 
-    class ALIMER_API D3D11SwapChain final
+    class ALIMER_API D3D11SwapChain final : public SwapChain
     {
     public:
         /// Constructor.
-        D3D11SwapChain(D3D11GraphicsDevice* device, Window* window, bool srgb, bool verticalSync);
+        D3D11SwapChain(D3D11GraphicsDevice* device, const PresentationParameters& presentationParameters);
         /// Destructor
         ~D3D11SwapChain();
 
-        HRESULT Present();
-        D3D11Texture* GetColorTexture() const { return colorTexture.Get(); }
-
+        void Present() override;
     private:
+
+        static constexpr uint32 kBufferCount = 2u;
+
         void AfterReset();
 
         D3D11GraphicsDevice* device;

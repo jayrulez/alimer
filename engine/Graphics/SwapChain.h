@@ -29,26 +29,18 @@ namespace Alimer
 {
     class GraphicsDevice;
 
-    class ALIMER_API SwapChain final : public GraphicsResource
+    class ALIMER_API SwapChain : public GraphicsResource
     {
     public:
         /// Constructor.
-        SwapChain(GraphicsDevice* device, const PresentationParameters& presentationParameters);
-        ~SwapChain() override;
-
-        void Destroy() override;
-        void Present();
+        SwapChain(const PresentationParameters& presentationParameters);
+        virtual void Present() = 0;
 
         Texture* GetCurrentTexture() const;
 
     private:
-        void AfterReset();
-
-        static constexpr uint32 kBufferCount = 2u;
-
-        SwapChainHandle handle;
-        uint32 backBufferWidth;
-        uint32 backBufferHeight;
+        uint32_t backBufferWidth;
+        uint32_t backBufferHeight;
         PixelFormat backBufferFormat;
         PixelFormat depthStencilFormat;
         bool isFullscreen;

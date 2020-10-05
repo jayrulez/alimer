@@ -47,6 +47,22 @@ define_engine_source_files(
     Scene
 )
 
+if(ALIMER_D3D11 OR ALIMER_D3D12)
+    define_engine_source_files(Graphics/D3D)
+endif()
+
+if(ALIMER_D3D11)
+    define_engine_source_files(Graphics/D3D11)
+endif()
+
+if(ALIMER_D3D12)
+    #define_engine_source_files(Graphics/D3D12)
+endif()
+
+if (ALIMER_ENABLE_VULKAN)
+    #define_engine_source_files(Graphics/Vulkan)
+endif()
+
 if (ALIMER_IMGUI)
     define_engine_source_files(UI)
 endif ()
@@ -61,6 +77,10 @@ define_engine_source_files(Platform/${ALIMER_NATIVE_PLATFORM})
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     define_engine_source_files(Platform/glfw)
 endif()
+
+# Add root-level files
+file (GLOB TOP_HEADER_FILES *.h)
+list (APPEND HEADER_FILES ${TOP_HEADER_FILES})
 
 group_sources()
 
@@ -78,7 +98,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    agpu
     fmt
     stb
 )
@@ -151,6 +170,7 @@ endif ()
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
 endif ()
 
 if (ALIMER_IMGUI)

@@ -23,32 +23,58 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Platform/WindowHandle.h"
 
 namespace Alimer
 {
+    enum class WindowFlags : uint32_t
+    {
+        None = 0,
+        Fullscreen = 1 << 0,
+        FullscreenDesktop = 1 << 1,
+        Hidden = 1 << 2,
+        Borderless = 1 << 3,
+        Resizable = 1 << 4,
+        Minimized = 1 << 5,
+        Maximized = 1 << 6,
+        HighDpi = 1 << 7,
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
+
+    class WindowImpl;
+    using NativeHandle = void*;
+    using NativeDisplay = void*;
+
     class ALIMER_API Window : public Object
     {
         ALIMER_OBJECT(Window, Object);
 
     public:
+        constexpr static const int Centered = std::numeric_limits<int32_t>::max();
+
         /// Constructor.
-        Window(uint32 width, uint32 height);
+        Window(const std::string& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
 
         /// Destructor.
-        virtual ~Window() = default;
+        ~Window();
 
-        virtual bool IsOpen() const = 0;
+        bool IsOpen() const noexcept;
+        uint32_t GetId() const noexcept;
 
         uint32 GetWidth() const { return width; }
         uint32 GetHeight() const { return height; }
 
         /// Get the native window handle.
-        const WindowHandle& GetHandle() const { return handle; }
+        NativeHandle GetNativeHandle() const;
+
+        /// Get the native display handle.
+        NativeDisplay GetNativeDisplay() const;
 
     protected:
         uint32 width;
         uint32 height;
-        WindowHandle handle;
+
+    private:
+        WindowImpl* impl;
     };
-} 
+
+}
