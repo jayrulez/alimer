@@ -26,17 +26,37 @@
 
 namespace Alimer
 {
-    using FilePath = std::string;
-
-    namespace File
+    enum class FileMode
     {
-        ALIMER_API bool Exists(const FilePath& path);
-        ALIMER_API std::string ReadAllText(const std::string& path);
-        ALIMER_API std::vector<uint8_t> ReadAllBytes(const std::string& path);
-    }
+        Read,
+        Write,
+        ReadWrite
+    };
 
-    namespace Directory
+    /// Stream for reading and writing to file.
+    class ALIMER_API FileStream : public Stream
     {
-        ALIMER_API bool Exists(const FilePath& path);
-    }
+    public:
+        FileStream();
+        FileStream(const std::string& path, FileMode mode = FileMode::Read);
+        FileStream(FileStream&& src) noexcept;
+        FileStream& operator=(FileStream&& src) noexcept;
+        virtual ~FileStream();
+
+        virtual void Close() override;
+        virtual int64_t Length() const override;
+        virtual int64_t Position() const override;
+        virtual bool CanSeek() const override;
+        virtual bool CanRead() const override;
+        virtual bool CanWrite() const  override;
+        virtual int64_t Seek(int64_t position)  override;
+        virtual int64_t Read(void* buffer, int64_t length)  override;
+        virtual uint64_t Write(const void* buffer, uint64_t length) override;
+
+    private:
+        FileMode mode;
+        void* handle;
+        int64_t length;
+    };
+
 }

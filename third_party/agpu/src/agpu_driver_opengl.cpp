@@ -751,6 +751,51 @@ static GLuint _agpu_gl_compile_shader(GLenum type, const char** sources, int* le
     return shader;
 }
 
+static GLuint _agpu_gl_compile_spirv(GLenum type, const agpu_shader_source* shader_source)
+{
+    spirv_cross::CompilerGLSL::Options options;
+    // The range of Z-coordinate in the clipping volume of OpenGL is [-w, w], while it is
+    // [0, w] in D3D12, Metal and Vulkan, so we should normalize it in shaders in all
+    // backends. See the documentation of
+    // spirv_cross::CompilerGLSL::Options::vertex::fixup_clipspace for more details.
+    //options.vertex.flip_vert_y = true;
+    options.vertex.fixup_clipspace = true;
+    options.version = 450;
+
+    spirv_cross::CompilerGLSL compiler(static_cast<const uint32_t*>(shader_source->code), shader_source->size / 4);
+    compiler.set_common_options(options);
+    //compiler.set_entry_point("main", spv::ExecutionModelVertex);
+    compiler.build_combined_image_samplers();
+
+    std::string glsl_code = compiler.compile();
+    const char* glsl_code_str = glsl_code.c_str();
+
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &glsl_code_str, nullptr);
+    glCompileShader(shader);
+
+    int isShaderCompiled;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &isShaderCompiled);
+    if (!isShaderCompiled) {
+        int logLength;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+        char* log = (char*)malloc(logLength);
+        AGPU_ASSERT(log);
+        glGetShaderInfoLog(shader, logLength, &logLength, log);
+        const char* name;
+        switch (type) {
+        case GL_VERTEX_SHADER: name = "vertex shader"; break;
+        case GL_FRAGMENT_SHADER: name = "fragment shader"; break;
+        case GL_COMPUTE_SHADER: name = "compute shader"; break;
+        default: name = "shader"; break;
+        }
+        agpu_log(AGPU_LOG_LEVEL_ERROR, "Could not compile %s:\n%s", name, log);
+        free(log);
+    }
+
+    return shader;
+}
+
 static bool _agpu_gl_link_program(GLuint program) {
     glLinkProgram(program);
 
@@ -773,24 +818,9 @@ static bool _agpu_gl_link_program(GLuint program) {
 
 static agpu_shader gl_shader_create(const agpu_shader_info* info)
 {
-#if defined(__EMSCRIPTEN__) || defined(__ANDROID__)
-    const char* version = "#version 300 es\n";
-#else
-    const char* version = "#version 450\n";
-#endif
-
-    const char* vertex_source = (const char*)info->vertex.code;
-    const char* vertex_sources[] = { version, vertex_source };
-    int vertexSourceLengths[] = { -1, (int)info->vertex.size };
-    GLsizei vertex_source_count = sizeof(vertex_sources) / sizeof(vertex_sources[0]);
-    GLuint vertex_shader = _agpu_gl_compile_shader(GL_VERTEX_SHADER, vertex_sources, vertexSourceLengths, vertex_source_count);
+    GLuint vertex_shader = _agpu_gl_compile_spirv(GL_VERTEX_SHADER, &info->vertex);
     _AGPU_GL_CHECK_ERROR();
-
-    const char* fragment_source = (const char*)info->fragment.code;
-    const char* fragment_sources[] = { version, fragment_source };
-    int fragment_source_lengths[] = { -1, (int)info->vertex.size };
-    GLsizei fragmentSourceCount = sizeof(fragment_sources) / sizeof(fragment_sources[0]);
-    GLuint fragment_shader = _agpu_gl_compile_shader(GL_FRAGMENT_SHADER, fragment_sources, fragment_source_lengths, fragmentSourceCount);
+    GLuint fragment_shader = _agpu_gl_compile_spirv(GL_FRAGMENT_SHADER, &info->fragment);
     _AGPU_GL_CHECK_ERROR();
 
     // Link

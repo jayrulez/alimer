@@ -38,6 +38,9 @@ namespace Alimer
         /// Destructor.
         virtual ~Stream() = default;
 
+        // Closes the stream.
+        virtual void Close() = 0;
+
         /// returns the length of the stream
         virtual int64_t Length() const = 0;
 
@@ -84,6 +87,9 @@ namespace Alimer
             Read(&value, sizeof(T));
             return value;
         }
+
+        /// Read a byte buffer.
+        std::vector<uint8_t> ReadBytes(uint32_t count = 0);
 
         /// Read a byte buffer, with size prepended as a VLE value.
         std::vector<uint8_t> ReadBuffer();

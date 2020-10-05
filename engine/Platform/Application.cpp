@@ -24,6 +24,7 @@
 #include "Platform/Application.h"
 #include "Platform/Platform.h"
 #include "Graphics/GraphicsDevice.h"
+#include "IO/FileSystem.h"
 #include "UI/ImGuiLayer.h"
 #include <agpu.h>
 
@@ -104,9 +105,9 @@ namespace Alimer
 
         // Define the geometry for a triangle.
         float vertices[] = {
-            -0.5f, -0.5f, 0.0f,
+            0.0f, 0.5f, 0.0f,
             0.5f, -0.5f, 0.0f,
-            0.0f,  0.5f, 0.0f
+            -0.5f,  -0.5f, 0.0f
         };
 
         agpu_buffer_info buffer_info = {};
@@ -116,22 +117,14 @@ namespace Alimer
 
         vertex_buffer = agpu_create_buffer(&buffer_info);
 
-        const char* vertexShaderSource = "layout (location = 0) in vec3 aPos;\n"
-            "void main()\n"
-            "{\n"
-            "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-            "}\0";
-        const char* fragmentShaderSource = "out vec4 FragColor;\n"
-            "void main()\n"
-            "{\n"
-            "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-            "}\n\0";
+        auto vs_bytecode = File::ReadAllBytes("assets/shaders/triangle.vert.spv");
+        auto fs_bytecode = File::ReadAllBytes("assets/shaders/triangle.frag.spv");
 
         agpu_shader_info shader_info = {};
-        shader_info.vertex.code = vertexShaderSource;
-        shader_info.vertex.size = strlen(vertexShaderSource);
-        shader_info.fragment.code = fragmentShaderSource;
-        shader_info.fragment.size = strlen(fragmentShaderSource);
+        shader_info.vertex.code = vs_bytecode.data();
+        shader_info.vertex.size = vs_bytecode.size();
+        shader_info.fragment.code = fs_bytecode.data();
+        shader_info.fragment.size = fs_bytecode.size();
         agpu_shader shader = agpu_create_shader(&shader_info);
 
         // Create pipeline

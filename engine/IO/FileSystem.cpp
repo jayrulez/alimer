@@ -20,13 +20,68 @@
 // THE SOFTWARE.
 //
 
-//#include "IO/FileStream.h"
 #include "IO/FileSystem.h"
+#include "IO/FileStream.h"
 
-namespace Alimer::FileSystem
+#ifdef _WIN32
+#   include "Platform/Win32/WindowsPlatform.h"
+#else
+#endif
+
+namespace Alimer::File
 {
-    /*std::unique_ptr<Stream> Open(const std::string& path, FileMode mode)
+    bool Exists(const FilePath& path)
     {
-        return {};
-    }*/
+#ifdef _WIN32
+        DWORD attributes = GetFileAttributesW(ToUtf16(path).c_str());
+        if (attributes == INVALID_FILE_ATTRIBUTES)
+            return false;
+#else
+        struct stat st;
+        if (stat(path.c_str(), &st) || st.st_mode & S_IFDIR)
+            return false;
+#endif
+
+        return true;
+    }
+
+    std::string ReadAllText(const std::string& path)
+    {
+        if (!Exists(path))
+            return EMPTY_STRING;
+
+        FileStream stream(path, FileMode::Read);
+        std::string result = stream.ReadString();
+        return result;
+    }
+
+
+    std::vector<uint8_t> ReadAllBytes(const std::string& path)
+    {
+        if (!Exists(path))
+            return {};
+
+        FileStream stream(path, FileMode::Read);
+        std::vector<uint8_t> result = stream.ReadBytes();
+        return result;
+    }
+}
+
+
+namespace Alimer::Directory
+{
+    bool Exists(const FilePath& path)
+    {
+#ifdef _WIN32
+        DWORD attributes = GetFileAttributesW(ToUtf16(path).c_str());
+        return (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY));
+#else
+        struct stat st;
+        if (stat(path.c_str(), &st) || !(st.st_mode & S_IFDIR))
+            return false;
+
+        return true;
+#endif
+
+    }
 }

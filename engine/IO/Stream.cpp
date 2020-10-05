@@ -22,8 +22,15 @@
 
 #include "IO/Stream.h"
 
+using namespace std;
+
 namespace Alimer
 {
+    Stream::Stream()
+    {
+
+    }
+
     std::string Stream::ReadString(int length)
     {
         if (length >= 0)
@@ -146,9 +153,16 @@ namespace Alimer
         return ReadString(4);
     }
 
-    std::vector<uint8_t> Stream::ReadBuffer()
+    vector<uint8_t> Stream::ReadBytes(uint32_t count)
     {
-        std::vector<uint8_t> ret(ReadVLE());
+        vector<uint8_t> result(count > 0 ? count : Length());
+        Read(result.data(), static_cast<int64_t>(result.size()));
+        return result;
+    }
+
+    vector<uint8_t> Stream::ReadBuffer()
+    {
+        vector<uint8_t> ret(ReadVLE());
         if (ret.size())
         {
             Read(ret.data(), static_cast<int64_t>(ret.size()));
