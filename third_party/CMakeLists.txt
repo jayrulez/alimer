@@ -4,6 +4,20 @@ target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
 add_subdirectory(fmt)
 
+# spirv-cross
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
+set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
+add_subdirectory(spirv-cross EXCLUDE_FROM_ALL)
+set_property(TARGET spirv-cross PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-core PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-glsl PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-cpp PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-msl PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-reflect PROPERTY FOLDER "ThirdParty")
+set_property(TARGET spirv-cross-util PROPERTY FOLDER "ThirdParty")
+
 # agpu
 add_subdirectory(agpu)
 set_property(TARGET agpu PROPERTY FOLDER "ThirdParty")

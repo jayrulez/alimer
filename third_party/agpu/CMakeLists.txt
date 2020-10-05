@@ -51,9 +51,12 @@ set_target_properties(agpu PROPERTIES OUTPUT_NAME "agpu"
 	SOVERSION ${AGPU_VERSION_MAJOR}
 )
 
+target_link_libraries(agpu PRIVATE spirv-cross-core)
+
 if(WIN32 OR WINDOWS_STORE)
     target_link_libraries(agpu PRIVATE D3D12MemoryAllocator)
 
+    target_compile_definitions(agpu PRIVATE NOMINMAX)
     target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D11)
     #target_compile_definitions(agpu PRIVATE AGPU_DRIVER_D3D12)
 endif ()
@@ -65,6 +68,7 @@ endif ()
 
 if (WIN32 OR ANDROID OR EMSCRIPTEN)
     target_compile_definitions(agpu PRIVATE AGPU_DRIVER_OPENGL)
+    target_link_libraries(agpu PRIVATE spirv-cross-glsl)
 endif ()
 
 if (MSVC)

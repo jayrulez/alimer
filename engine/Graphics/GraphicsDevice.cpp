@@ -25,16 +25,10 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_D3D12)
-#   include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#elif defined(ALIMER_VULKAN)
-#   include "Graphics/Vulkan/VulkanGraphicsDevice.h"
-#endif
-
 namespace Alimer
 {
     GraphicsDevice::GraphicsDevice(FeatureLevel minFeatureLevel, DebugFlags debugFlags)
-        : impl(new GraphicsDeviceImpl(minFeatureLevel, debugFlags))
+        : impl(nullptr)
     {
         graphicsQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Graphics);
         computeQueue = std::make_unique<CommandQueue>(this, CommandQueueType::Compute);
@@ -47,7 +41,6 @@ namespace Alimer
         graphicsQueue.reset();
         computeQueue.reset();
         copyQueue.reset();
-        SafeDelete(impl);
     }
 
     void GraphicsDevice::WaitForGPU()
@@ -59,17 +52,14 @@ namespace Alimer
 
     void GraphicsDevice::BeginFrame()
     {
-        impl->BeginFrame();
     }
 
     void GraphicsDevice::EndFrame()
     {
-        impl->EndFrame();
     }
 
     void GraphicsDevice::SetDeviceLost()
     {
-        impl->SetDeviceLost();
     }
 
     CommandQueue* GraphicsDevice::GetCommandQueue(CommandQueueType type) const
@@ -113,7 +103,7 @@ namespace Alimer
 
     DeviceHandle GraphicsDevice::GetHandle() const
     {
-        return impl->GetHandle();
+        return {};
     }
 }
 

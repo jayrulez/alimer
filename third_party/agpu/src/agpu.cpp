@@ -68,9 +68,9 @@ static const agpu_driver* drivers[] = {
 
 static agpu_config _agpu_config_defaults(const agpu_config* config) {
     agpu_config def = *config;
-    def.swapchain_info.color_format = _agpu_def(def.swapchain_info.color_format, AGPU_TEXTURE_FORMAT_BGRA8_UNORM);
-    def.swapchain_info.depth_stencil_format = _agpu_def(def.swapchain_info.depth_stencil_format, AGPU_TEXTURE_FORMAT_INVALID);
-    def.swapchain_info.sample_count = _agpu_def(def.swapchain_info.sample_count, 1u);
+    def.swapchain_info.color_format = AGPU_DEF(def.swapchain_info.color_format, AGPU_TEXTURE_FORMAT_BGRA8_UNORM);
+    def.swapchain_info.depth_stencil_format = AGPU_DEF(def.swapchain_info.depth_stencil_format, AGPU_TEXTURE_FORMAT_INVALID);
+    def.swapchain_info.sample_count = AGPU_DEF(def.swapchain_info.sample_count, 1u);
     return def;
 };
 
@@ -194,10 +194,10 @@ void agpu_destroy_shader(agpu_shader shader)
 /* Texture */
 static agpu_texture_info _agpu_texture_info_defaults(const agpu_texture_info* info) {
     agpu_texture_info def = *info;
-    def.type = _agpu_def(def.type, AGPU_TEXTURE_TYPE_2D);
-    def.format = _agpu_def(def.format, AGPU_TEXTURE_FORMAT_RGBA8_UNORM);
-    def.depth = _agpu_def(def.depth, 1);
-    def.mipmaps = _agpu_def(def.mipmaps, 1);
+    def.type = AGPU_DEF(def.type, AGPU_TEXTURE_TYPE_2D);
+    def.format = AGPU_DEF(def.format, AGPU_TEXTURE_FORMAT_RGBA8_UNORM);
+    def.depth = AGPU_DEF(def.depth, 1);
+    def.mipmaps = AGPU_DEF(def.mipmaps, 1);
     return def;
 };
 

@@ -22,7 +22,10 @@
 
 #if defined(AGPU_DRIVER_D3D11)
 
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+
 #define WIN32_LEAN_AND_MEAN
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
@@ -115,9 +118,6 @@ static struct {
 #   define agpuCreateDXGIFactory2 CreateDXGIFactory2
 #   define agpuD3D11CreateDevice D3D11CreateDevice
 #endif
-
-#define GPU_THROW(s) if (d3d11.config.callback) { d3d11.config.callback(d3d11.config.context, AGPU_LOG_LEVEL_ERROR, s); }
-#define GPU_CHECK(c, s) if (!(c)) { GPU_THROW(s); }
 
 /* Device/Renderer */
 static void _agpu_d3d11_init_swapchain(d3d11_swapchain* swapchain, const agpu_swapchain_info* info);
@@ -359,7 +359,7 @@ static bool d3d11_init(const char* app_name, const agpu_config* config)
 #if defined(NDEBUG)
         else
         {
-            GPU_THROW("No Direct3D hardware device found");
+            agpu_log(AGPU_LOG_LEVEL_ERROR, "No Direct3D hardware device found");
             AGPU_UNREACHABLE();
         }
 #else

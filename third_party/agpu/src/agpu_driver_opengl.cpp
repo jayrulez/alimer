@@ -346,6 +346,8 @@ typedef char			GLchar;
 
 #endif /* !defined(__EMSCRIPTEN__) */
 
+#include <spirv_glsl.hpp>
+
 typedef enum agpu_gl_profile_type
 {
     agpu_gl_profile_type_core = 0,

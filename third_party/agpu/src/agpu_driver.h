@@ -27,16 +27,11 @@
 #include <new>
 #include <stdlib.h>
 #include <string.h> 
-#include <float.h> 
-
-#ifndef AGPU_ASSERT
-#   include <assert.h>
-#   define AGPU_ASSERT(c) assert(c)
-#endif
+#include <float.h>
 
 #define AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
 
-#define _agpu_def(val, def) (((val) == 0) ? (def) : (val))
+#define AGPU_DEF(val, def) (((val) == 0) ? (def) : (val))
 #define AGPU_DEF_FLOAT(val, def) (((val) == 0.0f) ? (def) : (val))
 #define AGPU_MIN(a,b) ((a<b)?a:b)
 #define AGPU_MAX(a,b) ((a>b)?a:b)
@@ -60,89 +55,17 @@ extern void __cdecl __debugbreak(void);
 #   define AGPU_THREADLOCAL
 #endif
 
-namespace agpu
-{
-    template<typename T>
-    struct Array
-    {
-        uint32_t Size;
-        uint32_t capacity;
-        T* data;
-
-        constexpr Array() { Size = capacity = 0; data = nullptr; }
-
-        constexpr Array(const Array<T>& src) { Size = capacity = 0; data = nullptr; operator=(src); }
-        inline Array<T>& operator=(const Array<T>& src)
-        {
-            Clear();
-            Resize(src.Size);
-            memcpy(data, src.data, (size_t)Size * sizeof(T));
-            return *this;
-        }
-
-        inline ~Array()
-        {
-            if (data)
-                free(data);
-        }
-
-        inline bool     IsEmpty() const { return Size == 0; }
-        inline uint32_t MemorySize() const { return Size * (uint32_t)sizeof(T); }
-        inline uint32_t Capacity() const { return capacity; }
-        inline T& operator[](uint32_t i) { AGPU_ASSERT(i < Size); return data[i]; }
-        inline const T& operator[](uint32_t i) const { AGPU_ASSERT(i < Size); return data[i]; }
-
-        inline void Clear()
-        {
-            if (data) {
-                Size = capacity = 0; free(data);
-                data = nullptr;
-            }
-        }
-
-        constexpr uint32_t getGrowCapacity(uint32_t size) const
-        {
-            uint32_t newCapacity = capacity ? (capacity + capacity / 2) : 8;
-            return newCapacity > size ? newCapacity : size;
-        }
-
-        inline void Resize(uint32_t newSize)
-        {
-            if (newSize > capacity)
-            {
-                Reserve(getGrowCapacity(newSize));
-            }
-
-            Size = newSize;
-        }
-
-        inline void Reserve(uint32_t newCapacity)
-        {
-            if (newCapacity <= capacity)
-                return;
-
-            T* new_data = (T*)malloc((size_t)newCapacity * sizeof(T));
-            if (data) {
-                memcpy(new_data, data, (size_t)Size * sizeof(T));
-                free(data);
-            }
-
-            data = new_data;
-            capacity = newCapacity;
-        }
-
-        inline void Add(const T& v)
-        {
-            if (Size == capacity)
-            {
-                Reserve(getGrowCapacity(Size + 1));
-            }
-
-            memcpy(&data[Size], &v, sizeof(v));
-            Size++;
-        }
-    };
-}
+#ifndef AGPU_ASSERT
+#   define AGPU_ASSERT(cond) \
+        do \
+		{ \
+			if (!(cond)) \
+			{ \
+			    agpu_log(AGPU_LOG_LEVEL_ERROR, #cond); \
+				AGPU_UNREACHABLE(); \
+			} \
+		} while(0)
+#endif
 
 struct agpu_renderer {
     bool (*init)(const char* app_name, const agpu_config* config);

@@ -23,6 +23,7 @@ Uses the following open-source and third-party libraries:
 - [Nothings](https://github.com/nothings/stb) single file libs.
   - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
 - [glfw](https://www.glfw.org)
+- [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)
 - [volk](https://github.com/zeux/volk)
 - [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
 - [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
