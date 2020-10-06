@@ -54,7 +54,9 @@ namespace Alimer
 
     Application::~Application()
     {
+        GraphicsDevice::Instance->WaitForGPU();
         //ImGuiLayer::Shutdown();
+        windowSwapChain.reset();
         GraphicsDevice::Shutdown();
         s_appCurrent = nullptr;
     }
@@ -66,7 +68,21 @@ namespace Alimer
 
     void Application::InitBeforeRun()
     {
+        // Create main window.
+        WindowFlags windowFlags = WindowFlags::None;
+        if (config.resizable)
+            windowFlags |= WindowFlags::Resizable;
+
+        if (config.fullscreen)
+            windowFlags |= WindowFlags::Fullscreen;
+
+        window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
+
         // Create SwapChain
+        windowSwapChain.reset(GraphicsDevice::Instance->CreateSwapChain());
+        windowSwapChain->SetWindow(window.get());
+        windowSwapChain->CreateOrResize();
+
         ImGuiLayer::Initialize();
 
         assets.Load<Texture>("texture.png");
@@ -94,15 +110,7 @@ namespace Alimer
 
     void Application::Run()
     {
-        // Create main window.
-        WindowFlags windowFlags = WindowFlags::None;
-        if (config.resizable)
-            windowFlags |= WindowFlags::Resizable;
-
-        if (config.fullscreen)
-            windowFlags |= WindowFlags::Fullscreen;
-
-        window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
+        InitBeforeRun();
 
         running = true;
         while (running)
@@ -116,17 +124,27 @@ namespace Alimer
                     break;
                 }
             }
+
+            Tick();
         }
     }
 
     void Application::Tick()
     {
-        if (!GraphicsDevice::Instance->BeginFrame())
+        FrameOpResult result = GraphicsDevice::Instance->BeginFrame(windowSwapChain.get());
+        if (result == FrameOpResult::SwapChainOutOfDate)
+        {
+            // TODO: resize;
+        }
+
+        if (result != FrameOpResult::Success)
+        {
+            LOGD("BeginFrame failed with result {}", ToString(result));
             return;
+        }
 
         /*agpu_push_debug_group("Frame");
-
-        /*RenderPassDesc renderPass{};
+        RenderPassDesc renderPass{};
         renderPass.colorAttachments[0].texture = swapChain->GetCurrentTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         context->BeginRenderPass(renderPass);
@@ -134,7 +152,8 @@ namespace Alimer
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);
         agpu_pop_debug_group();*/
-        GraphicsDevice::Instance->EndFrame();
+
+        GraphicsDevice::Instance->EndFrame(windowSwapChain.get());
     }
 
     const Config* Application::GetConfig()

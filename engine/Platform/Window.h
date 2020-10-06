@@ -42,6 +42,7 @@ namespace Alimer
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
     class WindowImpl;
+
     using NativeHandle = void*;
     using NativeDisplay = void*;
 
@@ -74,12 +75,7 @@ namespace Alimer
         void SetSize(const SizeI& size) noexcept;
         SizeI GetSize() const noexcept;
 
-    protected:
-        uint32 width;
-        uint32 height;
-
     private:
         WindowImpl* impl;
     };
-
 }

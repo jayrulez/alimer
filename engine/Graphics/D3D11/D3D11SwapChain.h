@@ -30,35 +30,32 @@ namespace Alimer
     class Window;
     class D3D11Texture;
 
-    class ALIMER_API D3D11SwapChain final : public SwapChain
+    struct D3D11SwapChain final : public SwapChain
     {
-    public:
-        /// Constructor.
-        D3D11SwapChain(D3D11GraphicsDevice* device, const PresentationParameters& presentationParameters);
-        /// Destructor
+        D3D11SwapChain(D3D11GraphicsDevice* device);
         ~D3D11SwapChain();
+        void Destroy() override;
 
-        void Present() override;
-    private:
-
-        static constexpr uint32 kBufferCount = 2u;
+        bool CreateOrResize() override;
+        Texture* GetCurrentTexture() const override;
 
         void AfterReset();
 
-        D3D11GraphicsDevice* device;
+        static constexpr uint32 kBufferCount = 2u;
 
-        uint32_t backBufferCount = 2u;
-        uint32_t syncInterval;
-        uint32_t presentFlags;
+        D3D11GraphicsDevice* device;
+        uint32_t syncInterval = 1;
+        uint32_t presentFlags = 0;
 
 #if ALIMER_PLATFORM_WINDOWS
-        Microsoft::WRL::ComPtr<IDXGISwapChain1> handle;
+        HWND windowHandle = nullptr;
 #else
-        Microsoft::WRL::ComPtr<IDXGISwapChain3> handle;
+        IUnknown* windowHandle = nullptr;
 #endif
 
+        IDXGISwapChain1* handle = nullptr;
+
         DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-        PixelFormat colorFormat;
         RefPtr<D3D11Texture> colorTexture;
     };
 }

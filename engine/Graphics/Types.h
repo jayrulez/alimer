@@ -110,19 +110,6 @@ namespace Alimer
         Present
     };
 
-    enum class BufferUsage : uint32_t
-    {
-        None = 0,
-        Vertex = 1 << 0,
-        Index = 1 << 1,
-        Uniform = 1 << 2,
-        Storage = 1 << 3,
-        Indirect = 1 << 4,
-        Dynamic = 1 << 5,
-        Staging = 1 << 6,
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
-
     enum class LoadAction : uint32_t
     {
         DontCare,
@@ -136,14 +123,25 @@ namespace Alimer
         Store,
     };
 
-    /* Structs */
-    struct BufferDescription
-    {
-        BufferUsage usage;
-        uint32 size;
-        uint32 stride;
+    enum class FrameOpResult : uint32_t {
+        Success = 0,
+        Error,
+        SwapChainOutOfDate,
+        DeviceLost
     };
 
+    enum class BeginFrameFlags : uint32_t {
+        None = 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
+
+    enum class EndFrameFlags : uint32_t {
+        None = 0,
+        SkipPresent = 1 << 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
+
+    /* Structs */
     struct TextureDescription
     {
         TextureType type = TextureType::Type2D;
@@ -249,9 +247,9 @@ namespace Alimer
         uint32_t maxTextureArrayLayers;
         uint32_t maxColorAttachments;
         uint32_t maxUniformBufferSize;
-        uint32_t minUniformBufferOffsetAlignment;
+        uint64_t minUniformBufferOffsetAlignment;
         uint32_t maxStorageBufferSize;
-        uint32_t minStorageBufferOffsetAlignment;
+        uint64_t minStorageBufferOffsetAlignment;
         uint32_t maxSamplerAnisotropy;
         uint32_t maxViewports;
         uint32_t maxViewportWidth;
@@ -291,6 +289,7 @@ namespace Alimer
         GraphicsDeviceLimits limits;
     };
 
+    ALIMER_API const char* ToString(FrameOpResult value);
     ALIMER_API const char* ToString(GraphicsBackendType value);
 
     // Returns true if adapter's vendor is AMD.

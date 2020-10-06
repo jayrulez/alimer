@@ -23,30 +23,53 @@
 #pragma once
 
 #include "Graphics/Texture.h"
+#include "Math/Size.h"
 #include <vector>
 
 namespace Alimer
 {
-    class GraphicsDevice;
+    class Window;
 
     class ALIMER_API SwapChain : public GraphicsResource
     {
     public:
+
+        Window* GetWindow() const { return window; }
+        void SetWindow(Window* newWindow) { window = newWindow; }
+
+        bool GetAutoResizeDrawable() const noexcept { return autoResizeDrawable; }
+        void SetAutoResizeDrawable(bool value) noexcept { autoResizeDrawable = value; }
+
+        SizeI GetDrawableSize() const noexcept { return drawableSize; }
+        void SetDrawableSize(const SizeI& value) noexcept { drawableSize = value; }
+
+        PixelFormat GetColorFormat() const noexcept { return colorFormat; }
+        void SetColorFormat(PixelFormat value) noexcept { colorFormat = value; }
+
+        PixelFormat GetDepthStencilFormat() const noexcept { return depthStencilFormat; }
+        void SetDepthStencilFormat(PixelFormat value) noexcept { depthStencilFormat = value; }
+
+        uint32_t GetSampleCount() const noexcept { return sampleCount; }
+        void SetSampleCount(uint32_t value) noexcept { sampleCount = value; }
+
+        virtual bool CreateOrResize() = 0;
+
+        virtual Texture* GetCurrentTexture() const = 0;
+
+    protected:
         /// Constructor.
-        SwapChain(const PresentationParameters& presentationParameters);
-        virtual void Present() = 0;
+        SwapChain()
+            : GraphicsResource(Type::SwapChain)
+        {
 
-        Texture* GetCurrentTexture() const;
+        }
 
-    private:
-        uint32_t backBufferWidth;
-        uint32_t backBufferHeight;
-        PixelFormat backBufferFormat;
-        PixelFormat depthStencilFormat;
-        bool isFullscreen;
-        bool verticalSync;
-
-        uint32_t backBufferIndex = 0;
-        std::vector<RefPtr<Texture>> colorTextures;
+        Window* window = nullptr;
+        bool autoResizeDrawable = true;
+        SizeI drawableSize;
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        uint32_t sampleCount = 1u;
+        bool verticalSync = true;
     };
 }

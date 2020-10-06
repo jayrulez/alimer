@@ -23,7 +23,6 @@
 //#include "D3D11CommandBuffer.h"
 #include "D3D11GraphicsDevice.h"
 #include "D3D11SwapChain.h"
-#include "D3D11GPUBuffer.h"
 #include "D3D11Texture.h"
 #include "Core/String.h"
 
@@ -31,6 +30,134 @@ using Microsoft::WRL::ComPtr;
 
 namespace Alimer
 {
+    /* --- D3D11RHIBuffer --- */
+    namespace
+    {
+        D3D11_USAGE D3D11GetUsage(HeapType heapType)
+        {
+            switch (heapType)
+            {
+            case HeapType::Default:
+                return D3D11_USAGE_DEFAULT;
+            case HeapType::Upload:
+                return D3D11_USAGE_DYNAMIC;
+            case HeapType::Readback:
+                return D3D11_USAGE_STAGING;
+            default:
+                return D3D11_USAGE_DEFAULT;
+            }
+        }
+
+        D3D11_CPU_ACCESS_FLAG D3D11GetCPUAccessFlags(HeapType heapType)
+        {
+            switch (heapType)
+            {
+            case HeapType::Default:
+                return (D3D11_CPU_ACCESS_FLAG)0;
+            case HeapType::Upload: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_WRITE);
+            case HeapType::Readback: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE);
+
+            default:
+                return (D3D11_CPU_ACCESS_FLAG)0;
+            }
+        }
+
+        UINT D3D11GetBindFlags(RHIBuffer::Usage usage)
+        {
+            if (any(usage & RHIBuffer::Usage::Uniform))
+            {
+                // This cannot be combined with nothing else.
+                return D3D11_BIND_CONSTANT_BUFFER;
+            }
+
+            UINT flags = {};
+            if (any(usage & RHIBuffer::Usage::Vertex))
+                flags |= D3D11_BIND_VERTEX_BUFFER;
+            if (any(usage & RHIBuffer::Usage::Index))
+                flags |= D3D11_BIND_INDEX_BUFFER;
+
+            if (any(usage & RHIBuffer::Usage::Storage))
+            {
+                flags |= D3D11_BIND_SHADER_RESOURCE;
+                flags |= D3D11_BIND_UNORDERED_ACCESS;
+            }
+
+            return flags;
+        }
+    }
+
+    D3D11RHIBuffer::D3D11RHIBuffer(D3D11GraphicsDevice* device_, RHIBuffer::Usage usage, uint64_t size, HeapType heapType, const void* initialData)
+        : RHIBuffer(usage, size, heapType)
+        , device(device_)
+    {
+        static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
+        static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
+
+        if (size > c_maxBytes)
+        {
+            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", size);
+            return;
+        }
+
+        uint64_t bufferSize = size;
+        if (any(usage & RHIBuffer::Usage::Uniform))
+        {
+            bufferSize = AlignTo(size, device->GetCaps().limits.minUniformBufferOffsetAlignment);
+        }
+        else
+        {
+            bufferSize = AlignTo(size, static_cast<uint64_t>(4u));
+        }
+
+        D3D11_BUFFER_DESC d3dDesc;
+        d3dDesc.ByteWidth = bufferSize;
+        d3dDesc.Usage = D3D11GetUsage(heapType);
+        d3dDesc.BindFlags = D3D11GetBindFlags(usage);
+        d3dDesc.CPUAccessFlags = D3D11GetCPUAccessFlags(heapType);
+        d3dDesc.MiscFlags = 0;
+        d3dDesc.StructureByteStride = 0;
+
+        if (any(usage & RHIBuffer::Usage::Storage))
+        {
+            d3dDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+        }
+
+        if (any(usage & RHIBuffer::Usage::Indirect))
+        {
+            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
+        }
+
+        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
+        D3D11_SUBRESOURCE_DATA initialResourceData = {};
+        if (initialData != nullptr)
+        {
+            initialResourceData.pSysMem = initialData;
+            initialDataPtr = &initialResourceData;
+        }
+
+        HRESULT hr = device->GetD3DDevice()->CreateBuffer(&d3dDesc, initialDataPtr, &handle);
+        if (FAILED(hr))
+        {
+            LOGE("Direct3D11: Failed to create buffer");
+        }
+    }
+
+    D3D11RHIBuffer::~D3D11RHIBuffer()
+    {
+        Destroy();
+    }
+
+    void D3D11RHIBuffer::Destroy()
+    {
+        SafeRelease(handle);
+    }
+
+    void D3D11RHIBuffer::SetName(const std::string& newName)
+    {
+        RHIBuffer::SetName(newName);
+        D3D11SetObjectName(handle, name);
+    }
+
     bool D3D11GraphicsDevice::IsAvailable()
     {
         static bool available = false;
@@ -162,8 +289,8 @@ namespace Alimer
             };
 
             // Create the Direct3D 11 API device object and a corresponding context.
-            ComPtr<ID3D11Device> device;
-            ComPtr<ID3D11DeviceContext> context;
+            ID3D11Device* tempDevice;
+            ID3D11DeviceContext* tempContext;
 
             hr = E_FAIL;
             if (dxgiAdapter)
@@ -176,9 +303,9 @@ namespace Alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    device.GetAddressOf(),
-                    &d3dFeatureLevel,
-                    context.GetAddressOf()
+                    &tempDevice,
+                    &featureLevel,
+                    &tempContext
                 );
             }
 #if defined(NDEBUG)
@@ -200,9 +327,9 @@ namespace Alimer
                     s_featureLevels,
                     _countof(s_featureLevels),
                     D3D11_SDK_VERSION,
-                    device.GetAddressOf(),
-                    &d3dFeatureLevel,
-                    context.GetAddressOf()
+                    &tempDevice,
+                    &featureLevel,
+                    &tempContext
                 );
 
                 if (SUCCEEDED(hr))
@@ -215,11 +342,11 @@ namespace Alimer
             ThrowIfFailed(hr);
 
 #ifndef NDEBUG
-            ComPtr<ID3D11Debug> d3dDebug;
-            if (SUCCEEDED(device.As(&d3dDebug)))
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(tempDevice->QueryInterface(&d3dDebug)))
             {
-                ComPtr<ID3D11InfoQueue> d3dInfoQueue;
-                if (SUCCEEDED(d3dDebug.As(&d3dInfoQueue)))
+                ID3D11InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug->QueryInterface(&d3dInfoQueue)))
                 {
 #ifdef _DEBUG
                     d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -233,15 +360,17 @@ namespace Alimer
                     filter.DenyList.NumIDs = _countof(hide);
                     filter.DenyList.pIDList = hide;
                     d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
                 }
+
+                d3dDebug->Release();
             }
 #endif
 
-            ThrowIfFailed(device->QueryInterface(IID_PPV_ARGS(&d3dDevice)));
+            ThrowIfFailed(tempDevice->QueryInterface(IID_PPV_ARGS(&device)));
 
             // Create main context.
-            ThrowIfFailed(context.As(&immediateContext));
-            ThrowIfFailed(context.As(&d3dAnnotation));
+            ThrowIfFailed(tempContext->QueryInterface(&context));
 
             // Init caps
             InitCapabilities(dxgiAdapter.Get());
@@ -258,27 +387,26 @@ namespace Alimer
 
     void D3D11GraphicsDevice::Shutdown()
     {
-        SafeDelete(swapChain);
-        d3dAnnotation.Reset();
-        immediateContext.Reset();
-        //cmdBuffersPool.clear();
+        context->Release();
+        context = nullptr;
 
-        ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
+        ULONG refCount = device->Release();
         if (refCount > 0)
         {
             LOGD("Direct3D11: There are {} unreleased references left on the device", refCount);
 
             ID3D11Debug* d3d11Debug;
-            if (SUCCEEDED(d3dDevice->QueryInterface(&d3d11Debug)))
+            if (SUCCEEDED(device->QueryInterface(&d3d11Debug)))
             {
                 d3d11Debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_SUMMARY | D3D11_RLDO_IGNORE_INTERNAL);
                 d3d11Debug->Release();
             }
         }
 #else
-        (void)refCount; // avoid warning
+        device->Release();
 #endif
+        device = nullptr;
 
         dxgiFactory.Reset();
 
@@ -391,7 +519,7 @@ namespace Alimer
 #else
         dxgiFactoryCaps |= DXGIFactoryCaps::FlipPresent;
 #endif
-        }
+    }
 
 #if defined(_DEBUG)
     bool D3D11GraphicsDevice::IsSdkLayersAvailable() noexcept
@@ -437,7 +565,7 @@ namespace Alimer
         }
 
         D3D11_FEATURE_DATA_THREADING threadingSupport = { 0 };
-        ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingSupport, sizeof(threadingSupport)));
+        ThrowIfFailed(device->CheckFeatureSupport(D3D11_FEATURE_THREADING, &threadingSupport, sizeof(threadingSupport)));
 
         // Features
         caps.features.baseVertex = true;
@@ -505,7 +633,7 @@ namespace Alimer
                 continue;
 
             UINT formatSupport = 0;
-            if (FAILED(d3dDevice->CheckFormatSupport(dxgiFormat, &formatSupport))) {
+            if (FAILED(device->CheckFormatSupport(dxgiFormat, &formatSupport))) {
                 continue;
             }
 
@@ -513,102 +641,88 @@ namespace Alimer
         }
     }
 
+    bool D3D11GraphicsDevice::IsDeviceLost() const
+    {
+        return deviceLost;
+    }
+
     void D3D11GraphicsDevice::WaitForGPU()
     {
-        immediateContext->Flush();
+        context->Flush();
     }
 
-    bool D3D11GraphicsDevice::BeginFrame()
+    FrameOpResult D3D11GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
     {
-        return !isLost;
+        return FrameOpResult::Success;
     }
 
-    void D3D11GraphicsDevice::EndFrame()
+    FrameOpResult D3D11GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
     {
-        //SubmitCommandBuffers();
+        D3D11SwapChain* d3dSwapChain = static_cast<D3D11SwapChain*>(swapChain);
 
-        HRESULT  hr = S_OK; // swapChain->Present();
-
-        // If the device was removed either by a disconnection or a driver upgrade, we
-        // must recreate all device resources.
-        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        if (!any(flags & EndFrameFlags::SkipPresent))
         {
-#ifdef _DEBUG
-            char buff[64] = {};
-            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
-                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? d3dDevice->GetDeviceRemovedReason() : hr));
-            OutputDebugStringA(buff);
-#endif
-            HandleDeviceLost();
+            HRESULT hr = d3dSwapChain->handle->Present(d3dSwapChain->syncInterval, d3dSwapChain->presentFlags);
+
+            // Handle device lost logic.
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                LOGW("Device loss detected on SwapChain Present");
+                HandleDeviceLost();
+                return FrameOpResult::DeviceLost;
+            }
+            else if (FAILED(hr))
+            {
+                LOGW("Failed to present: %s", GetDXErrorStringAnsi(hr).c_str());
+                return FrameOpResult::Error;
+            }
         }
         else
         {
-            ThrowIfFailed(hr);
-
-            if (!dxgiFactory->IsCurrent())
-            {
-                // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-                CreateFactory();
-            }
+            context->Flush();
         }
+
+        // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
+        if (!dxgiFactory->IsCurrent())
+        {
+            CreateFactory();
+        }
+
+        return FrameOpResult::Success;
+    }
+
+    SwapChain* D3D11GraphicsDevice::CreateSwapChain()
+    {
+        return new D3D11SwapChain(this);
+    }
+
+    RHIBuffer* D3D11GraphicsDevice::CreateBuffer(RHIBuffer::Usage usage, uint64_t size, HeapType heapType)
+    {
+        return new D3D11RHIBuffer(this, usage, size, heapType, nullptr);
+    }
+
+    RHIBuffer* D3D11GraphicsDevice::CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size)
+    {
+        ALIMER_UNUSED(batch);
+
+        return new D3D11RHIBuffer(this, usage, size, HeapType::Default, initialData);
     }
 
     void D3D11GraphicsDevice::HandleDeviceLost()
     {
-        isLost = true;
-    }
+        deviceLost = true;
+        HRESULT result = device->GetDeviceRemovedReason();
 
-    //Texture* D3D11GraphicsDevice::GetBackbufferTexture() const
-    //{
-    //    return swapChain->GetColorTexture();
-    //}
-
-    //CommandBuffer* D3D11GraphicsDevice::RequestCommandBufferCore(const char* name, bool profile)
-    //{
-    //    std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
-
-    //    D3D11CommandBuffer* commandBuffer = nullptr;
-    //    if (availableCommandBuffers.empty())
-    //    {
-    //        //commandBuffer = new D3D11CommandBuffer(this, MEGABYTES(8));
-    //        commandBuffer = new D3D11ContextCommandBuffer(this);
-    //        cmdBuffersPool.emplace_back(commandBuffer);
-    //    }
-    //    else
-    //    {
-    //        commandBuffer = availableCommandBuffers.front();
-    //        availableCommandBuffers.pop();
-    //        commandBuffer->Reset();
-    //    }
-    //    ALIMER_ASSERT(commandBuffer != nullptr);
-
-    //    return commandBuffer;
-    //}
-
-    void D3D11GraphicsDevice::CommitCommandBuffer(D3D11CommandBuffer* commandBuffer)
-    {
-        commitCommandBuffers.push(commandBuffer);
-    }
-
-    void D3D11GraphicsDevice::SubmitCommandBuffer(D3D11CommandBuffer* commandBuffer)
-    {
-        ALIMER_ASSERT(commandBuffer != nullptr);
-        std::lock_guard<std::mutex> LockGuard(cmdBuffersAllocationMutex);
-        //commandBuffer->Execute(immediateContext.Get(), d3dAnnotation.Get());
-        availableCommandBuffers.push(commandBuffer);
-    }
-
-    void D3D11GraphicsDevice::SubmitCommandBuffers()
-    {
-        D3D11CommandBuffer* commandBuffer = nullptr;
-
-        while (!commitCommandBuffers.empty())
+        const char* reason = "?";
+        switch (result)
         {
-            commandBuffer = commitCommandBuffers.front();
-            SubmitCommandBuffer(commandBuffer);
-            commitCommandBuffers.pop();
+        case DXGI_ERROR_DEVICE_HUNG:			reason = "HUNG"; break;
+        case DXGI_ERROR_DEVICE_REMOVED:			reason = "REMOVED"; break;
+        case DXGI_ERROR_DEVICE_RESET:			reason = "RESET"; break;
+        case DXGI_ERROR_DRIVER_INTERNAL_ERROR:	reason = "INTERNAL_ERROR"; break;
+        case DXGI_ERROR_INVALID_CALL:			reason = "INVALID_CALL"; break;
         }
 
-        immediateContext->ClearState();
+        LOGE("The Direct3D 12 device has been removed (Error: {} '{}').  Please restart the application.", result, reason);
     }
-    }
+}

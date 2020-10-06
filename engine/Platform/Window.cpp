@@ -21,6 +21,7 @@
 //
 
 #include "Platform/Window.h"
+
 #if defined(GLFW_BACKEND)
 #   include "Platform/glfw/GLFW_Window.h"
 #endif
@@ -29,8 +30,6 @@ namespace Alimer
 {
     Window::Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
         : impl(new WindowImpl(title, x, y, width, height, flags))
-        , width{ width }
-        , height{ height }
     {
     }
 

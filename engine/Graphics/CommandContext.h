@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
 #include "Graphics/SwapChain.h"
 #include "Math/Size.h"
 #include "Math/Color.h"

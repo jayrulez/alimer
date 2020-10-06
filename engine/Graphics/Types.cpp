@@ -25,6 +25,15 @@
 
 namespace Alimer
 {
+    const char* ToString(FrameOpResult value)
+    {
+        static const char* names[] = {
+            "Success", "Error", "SwapChainOutOfDate", "DeviceLost"
+        };
+
+        return names[static_cast<uint32>(value)];
+    }
+
     const char* ToString(GraphicsBackendType value)
     {
         static const char* names[] = {

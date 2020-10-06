@@ -45,6 +45,8 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
+    class SwapChain;
+
     class ALIMER_API Application : public Object
     {
         ALIMER_OBJECT(Application, Object);
@@ -82,6 +84,8 @@ namespace Alimer
         void InitBeforeRun();
 
         std::unique_ptr<Window> window{ nullptr };
+        std::unique_ptr<SwapChain> windowSwapChain = nullptr;
+
         Config config;
         State state;
         AssetManager assets;

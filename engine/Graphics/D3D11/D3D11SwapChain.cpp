@@ -28,12 +28,96 @@
 
 namespace Alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device, const PresentationParameters& presentationParameters)
-        : SwapChain(presentationParameters)
-        , device{ device }
-        //, colorFormat(srgb ? PixelFormat::BGRA8UnormSrgb : PixelFormat::BGRA8Unorm)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device)
+        : device{ device }
     {
-        if (!presentationParameters.verticalSync)
+
+    }
+
+    D3D11SwapChain::~D3D11SwapChain()
+    {
+        Destroy();
+    }
+
+    void D3D11SwapChain::Destroy()
+    {
+        if (!handle)
+            return;
+
+        SafeRelease(handle);
+    }
+
+    bool D3D11SwapChain::CreateOrResize()
+    {
+        drawableSize = window->GetSize();
+
+        UINT swapChainFlags = 0;
+
+        if (device->IsTearingSupported())
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+        bool needRecreate = handle == nullptr || window->GetNativeHandle() != windowHandle;
+        if (needRecreate)
+        {
+            Destroy();
+
+            // Create a descriptor for the swap chain.
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+            swapChainDesc.Width = UINT(drawableSize.width);
+            swapChainDesc.Height = UINT(drawableSize.height);
+            swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
+            swapChainDesc.Stereo = FALSE;
+            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = kBufferCount;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#else
+            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            swapChainDesc.Flags = swapChainFlags;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            windowHandle = (HWND)window->GetNativeHandle();
+            ALIMER_ASSERT(IsWindow(windowHandle));
+
+            //DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            //fsSwapChainDesc.Windowed = TRUE; // !window->IsFullscreen();
+
+            // Create a swap chain for the window.
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+                device->GetD3DDevice(),
+                windowHandle,
+                &swapChainDesc,
+                nullptr, // &fsSwapChainDesc,
+                nullptr,
+                &handle
+            ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER));
+#else
+            windowHandle = (IUnknown*)window->GetNativeHandle();
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+                device->GetD3DDevice(),
+                window,
+                &swapChainDesc,
+                nullptr,
+                &handle
+            ));
+#endif
+        }
+        else
+        {
+
+        }
+
+        // Update present data
+        if (!verticalSync)
         {
             syncInterval = 0u;
             // Recommended to always use tearing if supported when using a sync interval of 0.
@@ -45,21 +129,14 @@ namespace Alimer
             presentFlags = 0u;
         }
 
-        /*auto bounds = window->GetBounds();
+        AfterReset();
 
-        handle = DXGICreateSwapChain(
-            device->GetDXGIFactory(), device->GetDXGIFactoryCaps(),
-            device->GetD3DDevice(),
-            window->GetNativeHandle(),
-            static_cast<uint32_t>(bounds.width), static_cast<uint32_t>(bounds.height),
-            DXGI_FORMAT_B8G8R8A8_UNORM,
-            backBufferCount,
-            window->IsFullscreen());
-        AfterReset();*/
+        return true;
     }
 
-    D3D11SwapChain::~D3D11SwapChain()
+    Texture* D3D11SwapChain::GetCurrentTexture() const
     {
+        return colorTexture.Get();
     }
 
     void D3D11SwapChain::AfterReset()
@@ -70,24 +147,10 @@ namespace Alimer
         ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
         colorTexture = MakeRefPtr<D3D11Texture>(device, backbufferTexture.Get(), colorFormat);
 
-        /*colorTextures.clear();
-        depthStencilTexture.Reset();
-
-        // Create a render target view of the swap chain back buffer.
-        ID3D11Texture2D* backbufferTexture;
-        ThrowIfFailed(swapChain->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
-        colorTextures.push_back(MakeRefPtr<D3D11Texture>(device, backbufferTexture, colorFormat));
-        backbufferTexture->Release();
-
         if (depthStencilFormat != PixelFormat::Invalid)
         {
             //GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
             //depthStencilTexture.Reset(new D3D11Texture(device, depthTextureDesc, nullptr));
-        }*/
-    }
-
-    void D3D11SwapChain::Present()
-    {
-        HRESULT hr = handle->Present(syncInterval, presentFlags);
+        }
     }
 }

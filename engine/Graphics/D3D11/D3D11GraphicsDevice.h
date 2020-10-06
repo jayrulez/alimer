@@ -30,7 +30,19 @@
 namespace Alimer
 {
     class D3D11CommandBuffer;
-    class D3D11SwapChain;
+
+    struct D3D11RHIBuffer final : public RHIBuffer
+    {
+    public:
+        D3D11RHIBuffer(D3D11GraphicsDevice* device, RHIBuffer::Usage usage, uint64_t size, HeapType heapType, const void* initialData);
+        ~D3D11RHIBuffer() override;
+        void Destroy() override;
+
+        void SetName(const std::string& newName) override;
+
+        D3D11GraphicsDevice* device;
+        ID3D11Buffer* handle = nullptr;
+    };
 
     class D3D11GraphicsDevice final : public GraphicsDevice
     {
@@ -42,16 +54,10 @@ namespace Alimer
         void Shutdown();
         void HandleDeviceLost();
 
-        void CommitCommandBuffer(D3D11CommandBuffer* commandBuffer);
-        void SubmitCommandBuffer(D3D11CommandBuffer* commandBuffer);
-        void SubmitCommandBuffers();
-
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
         DXGIFactoryCaps GetDXGIFactoryCaps() const { return dxgiFactoryCaps; }
-        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
-        bool IsLost() const { return isLost; }
-        //Texture* GetBackbufferTexture() const override;
+        ID3D11Device1* GetD3DDevice() const { return device; }
 
     private:
         void CreateFactory();
@@ -61,28 +67,23 @@ namespace Alimer
 #endif
 
         void InitCapabilities(IDXGIAdapter1* adapter);
+
+        bool IsDeviceLost() const override;
         void WaitForGPU() override;
-        bool BeginFrame() override;
-        void EndFrame() override;
+        FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags) override;
+        FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
+        SwapChain* CreateSwapChain() override;
+        RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, HeapType heapType) override;
+        RHIBuffer* CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size) override;
 
         bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
-        ID3D11Device1*  d3dDevice = nullptr;
-        Microsoft::WRL::ComPtr<ID3D11DeviceContext1> immediateContext;
-        Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> d3dAnnotation;
+        ID3D11Device1*          device = nullptr;
+        ID3D11DeviceContext1*   context = nullptr;
 
-        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_9_1;
-        bool isLost = false;
-        /// Number of frame count
-        uint64 frameCount{ 0 };
-
-        D3D11SwapChain* swapChain = nullptr;
-
-        //std::vector<std::unique_ptr<D3D11CommandBuffer>> cmdBuffersPool;
-        std::queue<D3D11CommandBuffer*> availableCommandBuffers;
-        std::mutex cmdBuffersAllocationMutex;
-        std::queue<D3D11CommandBuffer*> commitCommandBuffers;
+        D3D_FEATURE_LEVEL       featureLevel = D3D_FEATURE_LEVEL_9_1;
+        bool deviceLost = false;
     };
 }
