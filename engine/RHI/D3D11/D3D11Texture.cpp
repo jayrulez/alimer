@@ -33,21 +33,19 @@ namespace Alimer
             D3D11_TEXTURE2D_DESC d3dDesc;
             texture->GetDesc(&d3dDesc);
 
-            return TextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
+            return TextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1/*, D3D11GetTextureUsage(d3dDesc.BindFlags)*/);
         }
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : Texture(Convert2DDesc(externalTexture, format))
-        , device{ device }
+    D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, ID3D11Texture2D* externalTexture, PixelFormat format)
+        : device(device_)
         , handle(externalTexture)
     {
         handle->AddRef();
     }
 
-    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
-        : Texture(desc)
-        , device{ device }
+    D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, const TextureDescription& desc, const void* initialData)
+        : device(device_)
     {
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialResourceData = {};
@@ -57,7 +55,7 @@ namespace Alimer
             initialDataPtr = &initialResourceData;
         }
 
-        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
+        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, RHITexture::Usage::Sampled/* desc.usage*/);
         D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
         UINT bindFlags = 0;
         UINT CPUAccessFlags = 0;
@@ -68,7 +66,7 @@ namespace Alimer
             miscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
         }
 
-        if (any(desc.usage & TextureUsage::Sampled)) {
+        /*if (any(desc.usage & TextureUsage::Sampled)) {
             bindFlags |= D3D11_BIND_SHADER_RESOURCE;
         }
 
@@ -89,7 +87,7 @@ namespace Alimer
         {
             bindFlags |= D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
             miscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-        }
+        }*/
 
         switch (desc.type)
         {
@@ -109,7 +107,7 @@ namespace Alimer
             d3dDesc.CPUAccessFlags = CPUAccessFlags;
             d3dDesc.MiscFlags = miscFlags;
 
-            HRESULT hr = device->GetD3DDevice()->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
+            HRESULT hr = device->d3dDevice->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
             if (FAILED(hr)) {
                 LOGE("Direct3D11: Failed to create 2D texture");
                 return;
@@ -130,7 +128,7 @@ namespace Alimer
             d3dDesc.CPUAccessFlags = CPUAccessFlags;
             d3dDesc.MiscFlags = miscFlags;
 
-            HRESULT hr = device->GetD3DDevice()->CreateTexture3D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture3D**>(&handle));
+            HRESULT hr = device->d3dDevice->CreateTexture3D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture3D**>(&handle));
             if (FAILED(hr)) {
                 LOGE("Direct3D11: Failed to create 2D texture");
                 return;
@@ -286,7 +284,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11ShaderResourceView> srv;
-        ThrowIfFailed(device->GetD3DDevice()->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
+        ThrowIfFailed(device->d3dDevice->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
         srvs.push_back(srv);
         return srv.Get();
     }
@@ -400,22 +398,26 @@ namespace Alimer
         }
 
         RefPtr<ID3D11UnorderedAccessView> uav;
-        ThrowIfFailed(device->GetD3DDevice()->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
+        ThrowIfFailed(device->d3dDevice->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
         uavs.push_back(uav);
         return uav.Get();
     }
 
-    ID3D11RenderTargetView* D3D11Texture::GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
+    ID3D11RenderTargetView* D3D11Texture::GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice) const
     {
         // For non-array textures force slice to 0.
         if (GetArrayLayers() <= 1)
             slice = 0;
 
-        const uint32_t subresource = GetSubresourceIndex(level, slice);
+        D3D11RHIViewInfo info{ level, slice };
+
+        std::size_t hash = std::hash<D3D11RHIViewInfo>{}(info);
+        auto it = rtvs.find(hash);
 
         // Already created?
-        if (rtvs.size() > subresource) {
-            return rtvs[subresource].Get();
+        if (it != rtvs.end())
+        {
+            return it->second.Get();
         }
 
         D3D11_RESOURCE_DIMENSION type;
@@ -533,9 +535,9 @@ namespace Alimer
         }
 
         RefPtr<ID3D11RenderTargetView> rtv;
-        ThrowIfFailed(device->GetD3DDevice()->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
-        rtvs.push_back(rtv);
-        return rtv.Get();
+        ThrowIfFailed(device->d3dDevice->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
+        rtvs[hash] = rtv;
+        return rtvs[hash].Get();
     }
 
     ID3D11DepthStencilView* D3D11Texture::GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice)
@@ -651,7 +653,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11DepthStencilView> view;
-        ThrowIfFailed(device->GetD3DDevice()->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
+        ThrowIfFailed(device->d3dDevice->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
         dsvs.push_back(view);
         return view.Get();
     }

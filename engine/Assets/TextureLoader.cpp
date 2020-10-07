@@ -22,12 +22,12 @@
 
 #include "TextureLoader.h"
 #include "AssetManager.h"
-#include "RHI/Texture.h"
+#include "RHI/RHI.h"
 
 namespace Alimer
 {
     TextureLoader::TextureLoader(AssetManager& assets)
-        : AssetLoader(assets, Texture::GetTypeStatic())
+        : AssetLoader(assets, RHITexture::GetTypeStatic())
     {
     }
 }

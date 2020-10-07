@@ -43,7 +43,8 @@ namespace Alimer
 #ifdef _DEBUG
         flags |= GraphicsDeviceFlags::DebugRuntime;
 #endif
-        if (!GraphicsDevice::Initialize("Alimer", config.preferredBackendType, flags))
+        rhiDevice.reset(RHIDevice::Create("Alimer", config.preferredBackendType, flags));
+        if (!rhiDevice)
         {
             headless = true;
         }
@@ -53,10 +54,10 @@ namespace Alimer
 
     Application::~Application()
     {
-        GraphicsDevice::Instance->WaitForGPU();
+        rhiDevice->WaitForGPU();
         //ImGuiLayer::Shutdown();
         windowSwapChain.reset();
-        GraphicsDevice::Shutdown();
+        rhiDevice.reset();
         s_appCurrent = nullptr;
     }
 
@@ -78,48 +79,28 @@ namespace Alimer
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Create SwapChain
-        windowSwapChain.reset(GraphicsDevice::Instance->CreateSwapChain());
+        windowSwapChain.reset(rhiDevice->CreateSwapChain());
         windowSwapChain->SetWindow(window.get());
         windowSwapChain->CreateOrResize();
 
         ImGuiLayer::Initialize();
 
-        assets.Load<Texture>("texture.png");
-
-        /*struct Vertex
-        {
-            Float3 position;
-            Color color;
-        };
-
-        Vertex triangleVertices[] =
-        {
-            { { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
-        };
-
-        BufferDescription bufferDesc{};
-        bufferDesc.usage = BufferUsage::Vertex;
-        bufferDesc.size = sizeof(triangleVertices);
-        bufferDesc.stride = sizeof(Vertex);
-
-        auto buffer = GetGraphics()->CreateBuffer(bufferDesc, triangleVertices);*/
+        Initialize();
     }
 
     void Application::Run()
     {
         InitBeforeRun();
 
-        running = true;
-        while (running)
+        state = State::Running;
+        while (state == State::Running)
         {
             Event evt {};
             while (PollEvent(evt))
             {
                 if (evt.type == EventType::Quit)
                 {
-                    running = false;
+                    state = State::Uninitialized;
                     break;
                 }
             }
@@ -130,29 +111,29 @@ namespace Alimer
 
     void Application::Tick()
     {
-        FrameOpResult result = GraphicsDevice::Instance->BeginFrame(windowSwapChain.get());
-        if (result == FrameOpResult::SwapChainOutOfDate)
+        RHIDevice::FrameOpResult result = rhiDevice->BeginFrame(windowSwapChain.get());
+        if (result == RHIDevice::FrameOpResult::SwapChainOutOfDate)
         {
             // TODO: resize;
         }
 
-        if (result != FrameOpResult::Success)
+        if (result != RHIDevice::FrameOpResult::Success)
         {
             LOGD("BeginFrame failed with result {}", ToString(result));
             return;
         }
 
+        OnDraw();
+
         /*agpu_push_debug_group("Frame");
-        RenderPassDesc renderPass{};
-        renderPass.colorAttachments[0].texture = swapChain->GetCurrentTexture();
-        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);
         agpu_pop_debug_group();*/
 
-        GraphicsDevice::Instance->EndFrame(windowSwapChain.get());
+        rhiDevice->EndFrame(windowSwapChain.get());
     }
 
     const Config* Application::GetConfig()

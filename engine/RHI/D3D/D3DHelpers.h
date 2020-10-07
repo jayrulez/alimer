@@ -25,7 +25,7 @@
 #include "AlimerConfig.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "RHI/Types.h"
+#include "RHI/RHI.h"
 
 #if ALIMER_PLATFORM_WINDOWS
 #   include "PlatformIncl.h"
@@ -147,11 +147,11 @@ namespace Alimer
         }
     }
 
-    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, TextureUsage usage)
+    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, RHITexture::Usage usage)
     {
         // If depth and either ua or sr, set to typeless
         if (IsDepthStencilFormat(format)
-            && ((usage & (TextureUsage::Sampled | TextureUsage::Storage)) != TextureUsage::None))
+            && ((usage & (RHITexture::Usage::Sampled | RHITexture::Usage::Storage)) != RHITexture::Usage::None))
         {
             return GetTypelessFormatFromDepthFormat(format);
         }

@@ -56,6 +56,10 @@ namespace Alimer
         enum class State
         {
             Uninitialized,
+            Splash,
+            Loading,
+            Running,
+            Paused
         };
 
         /// Constructor.
@@ -81,17 +85,22 @@ namespace Alimer
         AssetManager& GetAssets() { return assets; }
         const AssetManager& GetAssets() const { return assets; }
 
+    protected:
+        virtual void Initialize() {}
+        virtual void OnDraw() {}
+
     private:
         void InitBeforeRun();
 
-        std::unique_ptr<Window> window{ nullptr };
-        std::unique_ptr<RHISwapChain> windowSwapChain = nullptr;
-
         Config config;
+
+    protected:
         State state;
         AssetManager assets;
         bool headless = false;
-        bool running = false;
+        std::unique_ptr<Window> window{ nullptr };
+        std::unique_ptr<RHISwapChain> windowSwapChain{ nullptr };
+        std::unique_ptr<RHIDevice> rhiDevice{ nullptr };
     };
 
     extern Application* CreateApplication(void);

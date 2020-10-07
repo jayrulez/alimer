@@ -32,7 +32,41 @@ namespace Alimer
         {
 
         }
+
+        void Initialize() override;
+        void OnDraw() override;
     };
+
+    void HelloWorldApp::Initialize()
+    {
+        struct Vertex
+        {
+            Float3 position;
+            Color color;
+        };
+
+        Vertex triangleVertices[] =
+        {
+            { { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { -0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+        };
+
+        RHIResourceUploadBatch* batch = nullptr;
+        auto buffer = rhiDevice->CreateStaticBuffer(batch, triangleVertices, RHIBuffer::Usage::Vertex, sizeof(Vertex));
+    }
+
+    void HelloWorldApp::OnDraw()
+    {
+        RHICommandBuffer* cb = windowSwapChain->CurrentFrameCommandBuffer();
+        cb->PushDebugGroup("Frame");
+        RenderPassDesc renderPass{};
+        renderPass.colorAttachments[0].texture = windowSwapChain->GetCurrentTexture();
+        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
+        cb->BeginRenderPass(renderPass);
+        cb->EndRenderPass();
+        cb->PopDebugGroup();
+    }
 
     Application* CreateApplication()
     {

@@ -24,7 +24,7 @@
 
 namespace Alimer
 {
-    const char* ToString(FrameOpResult value)
+    const char* ToString(RHIDevice::FrameOpResult value)
     {
         static const char* names[] = {
             "Success", "Error", "SwapChainOutOfDate", "DeviceLost"

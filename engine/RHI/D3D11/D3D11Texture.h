@@ -22,18 +22,27 @@
 
 #pragma once
 
-#include "RHI/Texture.h"
+#include "RHI/RHI.h"
 #include "D3D11Backend.h"
+#include "Core/Hash.h"
 
 namespace Alimer
 {
-    class ALIMER_API D3D11Texture final : public Texture
+    struct D3D11RHIDevice;
+
+    struct D3D11RHIViewInfo
+    {
+        uint32_t level;
+        uint32_t slice;
+    };
+
+    class ALIMER_API D3D11Texture final : public RHITexture
     {
     public:
         /// Constructor.
-        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        D3D11Texture(D3D11RHIDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
         /// Constructor.
-        D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
+        D3D11Texture(D3D11RHIDevice* device, const TextureDescription& desc, const void* initialData);
         /// Destructor
         ~D3D11Texture() override;
 
@@ -41,17 +50,33 @@ namespace Alimer
 
         ID3D11ShaderResourceView* GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
         ID3D11UnorderedAccessView* GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
-        ID3D11RenderTargetView* GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11RenderTargetView* GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice) const;
         ID3D11DepthStencilView* GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
     private:
         void BackendSetName();
 
-        D3D11GraphicsDevice* device;
+        D3D11RHIDevice* device;
         ID3D11Resource* handle;
+
         std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
         std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;
-        std::vector<RefPtr<ID3D11RenderTargetView>> rtvs;
+        mutable std::unordered_map<size_t, RefPtr<ID3D11RenderTargetView>> rtvs;
         std::vector<RefPtr<ID3D11DepthStencilView>> dsvs;
+    };
+}
+
+namespace std
+{
+    template<>
+    struct hash<Alimer::D3D11RHIViewInfo>
+    {
+        std::size_t operator()(const Alimer::D3D11RHIViewInfo& info) const noexcept
+        {
+            std::size_t seed = 0;
+            Alimer::hash_combine(seed, info.level);
+            Alimer::hash_combine(seed, info.slice);
+            return seed;
+        }
     };
 }

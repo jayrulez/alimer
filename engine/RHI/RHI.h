@@ -22,9 +22,8 @@
 
 #pragma once
 
+#include "Core/Object.h"
 #include "RHI/Types.h"
-#include "RHI/GraphicsResource.h"
-#include "RHI/Texture.h"
 #include "Math/Size.h"
 #include <memory>
 #include <mutex>
@@ -34,7 +33,9 @@ namespace Alimer
     class Window;
     class RHIResource;
     class RHIBuffer;
+    class RHITexture;
     class RHISwapChain;
+    class RHICommandBuffer;
 
     enum class MemoryUsage
     {
@@ -42,13 +43,6 @@ namespace Alimer
         CpuOnly,
         CpuToGpu,
         GpuToCpu
-    };
-
-    enum class FrameOpResult : uint32_t {
-        Success = 0,
-        Error,
-        SwapChainOutOfDate,
-        DeviceLost
     };
 
     enum class BeginFrameFlags : uint32_t {
@@ -61,6 +55,49 @@ namespace Alimer
         SkipPresent = 1 << 0
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
+
+    /// A 3D rectangular region for the viewport clipping.
+    class ALIMER_API RHIViewport
+    {
+    public:
+        /// The x coordinate of the upper-left corner of the viewport.
+        float x;
+        /// The y coordinate of the upper-left corner of the viewport.
+        float y;
+        /// The width of the viewport, in pixels.
+        float width;
+        /// The width of the viewport, in pixels.
+        float height;
+        /// The z coordinate of the near clipping plane of the viewport.
+        float minDepth;
+        /// The z coordinate of the far clipping plane of the viewport.
+        float maxDepth;
+
+        /// Constructor.
+        RHIViewport() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f), minDepth(0.0f), maxDepth(1.0f) {}
+        constexpr RHIViewport(float x_, float y_, float width_, float ih, float iminz = 0.f, float imaxz = 1.f) noexcept
+            : x(x_), y(y_), width(width_), height(ih), minDepth(iminz), maxDepth(imaxz) {}
+
+        RHIViewport(const RHIViewport&) = default;
+        RHIViewport& operator=(const RHIViewport&) = default;
+
+        RHIViewport(RHIViewport&&) = default;
+        RHIViewport& operator=(RHIViewport&&) = default;
+
+        // Comparison operators
+        bool operator == (const RHIViewport& rhs) const noexcept
+        {
+            return (x == rhs.x && y == rhs.y && width == rhs.width && height == rhs.height && minDepth == rhs.minDepth && maxDepth == rhs.maxDepth);
+        }
+
+        bool operator != (const RHIViewport& rhs) const noexcept
+        {
+            return (x != rhs.x || y != rhs.y || width != rhs.width || height != rhs.height || minDepth != rhs.minDepth || maxDepth != rhs.maxDepth);
+        }
+
+        // Viewport operations
+        float AspectRatio() const;
+    };
 
     /// Defines a base RHI resource class.
     class ALIMER_API RHIResource
@@ -138,6 +175,80 @@ namespace Alimer
         uint64_t size;
     };
 
+    class ALIMER_API RHITexture : public Object, public RHIResource
+    {
+        ALIMER_OBJECT(RHITexture, Object);
+
+    public:
+        /// Defines the usage of texture resource.
+        enum class Usage : uint32_t
+        {
+            None = 0,
+            Sampled = (1 << 0),
+            Storage = (1 << 1),
+            RenderTarget = (1 << 2),
+            GenerateMipmaps = (1 << 3)
+        };
+
+        /// Get the texture pixel format.
+        PixelFormat GetFormat() const { return format; }
+
+        /// Get a mip-level width.
+        uint32 GetWidth(uint32 mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, width >> mipLevel) : 0; }
+
+        /// Get a mip-level height.
+        uint32 GetHeight(uint32 mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> mipLevel) : 0; }
+
+        /// Get a mip-level depth.
+        uint32 GetDepth(uint32 mipLevel = 0) const { return (mipLevel == 0) || (mipLevel < mipLevels) ? Max(1u, height >> depthOrArraySize) : 0; }
+
+        /// Gets number of mipmap levels of the texture.
+        uint32 GetMipLevels() const { return mipLevels; }
+
+        /// Get the array layers of the texture.
+        uint32 GetArrayLayers() const { return depthOrArraySize; }
+
+        /// Get the texture usage.
+        Usage GetUsage() const { return usage; }
+
+        /// Get the current texture layout.
+        TextureLayout GetLayout() const { return layout; }
+
+        /// Get the array index of a subresource.
+        uint32 GetSubresourceArraySlice(uint32_t subresource) const { return subresource / mipLevels; }
+
+        /// Get the mip-level of a subresource.
+        uint32 GetSubresourceMipLevel(uint32_t subresource) const { return subresource % mipLevels; }
+
+        /// Get the subresource index.
+        uint32 GetSubresourceIndex(uint32 mipLevel, uint32 arraySlice) const { return mipLevel + arraySlice * mipLevels; }
+
+        /// Calculates the resulting size at a single level for an original size.
+        static uint32 CalculateMipSize(uint32 mipLevel, uint32 baseSize)
+        {
+            baseSize = baseSize >> mipLevel;
+            return baseSize > 0u ? baseSize : 1u;
+        }
+
+    protected:
+        /// Constructor
+        RHITexture()
+            : RHIResource(Type::Texture)
+        {
+
+        }
+
+        TextureType type = TextureType::Type2D;
+        PixelFormat format = PixelFormat::RGBA8Unorm;
+        Usage usage = Usage::Sampled;
+        uint32 width = 1u;
+        uint32 height = 1u;
+        uint32 depthOrArraySize = 1u;
+        uint32 mipLevels = 1u;
+        uint32 sampleCount = 1u;
+        TextureLayout layout = TextureLayout::Undefined;
+    };
+
     class ALIMER_API RHISwapChain : public RHIResource
     {
     public:
@@ -161,7 +272,8 @@ namespace Alimer
 
         virtual bool CreateOrResize() = 0;
 
-        virtual Texture* GetCurrentTexture() const = 0;
+        virtual RHITexture* GetCurrentTexture() const = 0;
+        virtual RHICommandBuffer* CurrentFrameCommandBuffer() = 0;
 
     protected:
         /// Constructor.
@@ -193,17 +305,48 @@ namespace Alimer
         }
     };
 
-    /// Defines the graphics subsystem.
-    class ALIMER_API GraphicsDevice
+    /// 
+    class ALIMER_API RHICommandBuffer
     {
-        friend class GraphicsResource;
-
     public:
-        /// The single instance of the graphics device.
-        static GraphicsDevice* Instance;
+        virtual ~RHICommandBuffer() = default;
 
-        static bool Initialize(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
-        static void Shutdown();
+        virtual void PushDebugGroup(const std::string& name) = 0;
+        virtual void PopDebugGroup() = 0;
+        virtual void InsertDebugMarker(const std::string& name) = 0;
+
+        virtual void SetViewport(const RHIViewport& viewport) = 0;
+        virtual void SetScissorRect(const RectI& scissorRect) = 0;
+        virtual void SetBlendColor(const Color& color) = 0;
+
+        virtual void BeginRenderPass(const RenderPassDesc& renderPass) = 0;
+        virtual void EndRenderPass() = 0;
+
+        //virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
+        //virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
+
+    protected:
+        RHICommandBuffer()
+        {
+
+        }
+    };
+
+    /// Defines the RHI device.
+    class ALIMER_API RHIDevice
+    {
+    public:
+        enum class FrameOpResult : uint32_t {
+            Success = 0,
+            Error,
+            SwapChainOutOfDate,
+            DeviceLost
+        };
+
+        /// Destructor
+        virtual ~RHIDevice() = default;
+
+        static RHIDevice* Create(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -226,26 +369,40 @@ namespace Alimer
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     protected:
-        GraphicsDevice() = default;
-        virtual ~GraphicsDevice() = default;
-
-        /// Add a GPU object to keep track of. Called by GraphicsResource.
-        void AddGraphicsResource(GraphicsResource* resource);
-        /// Remove a GPU object. Called by GraphicsResource.
-        void RemoveGraphicsResource(GraphicsResource* resource);
+        RHIDevice() = default;
 
         GraphicsDeviceCaps caps{};
 
+        /// Add a GPU object to keep track of. Called by GraphicsResource.
+        //void AddGraphicsResource(GraphicsResource* resource);
+        /// Remove a GPU object. Called by GraphicsResource.
+        //void RemoveGraphicsResource(GraphicsResource* resource);
         /// Mutex for accessing the GPU objects vector from several threads.
-        std::mutex gpuObjectMutex;
+        //std::mutex gpuObjectMutex;
         /// GPU objects.
-        std::vector<GraphicsResource*> gpuObjects;
+        //std::vector<GraphicsResource*> gpuObjects;
     };
 
     /* Enum flags operators */
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHIBuffer::Usage, uint32_t);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHITexture::Usage, uint32_t);
 
     /* Helper methods */
-    ALIMER_API const char* ToString(FrameOpResult value);
+    inline uint32_t RHICalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u)
+    {
+        uint32_t mipLevels = 0;
+        uint32_t size = Max(Max(width, height), depth);
+        while (1u << mipLevels <= size) {
+            ++mipLevels;
+        }
+
+        if (1u << mipLevels < size) {
+            ++mipLevels;
+        }
+
+        return mipLevels;
+    }
+
+    ALIMER_API const char* ToString(RHIDevice::FrameOpResult value);
 }
 

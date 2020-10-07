@@ -35,28 +35,21 @@
 
 namespace Alimer
 {
-    GraphicsDevice* GraphicsDevice::Instance;
-
-    bool GraphicsDevice::Initialize(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    float RHIViewport::AspectRatio() const
     {
-        if (Instance != nullptr)
-            return true;
+        if (width == 0.f || height == 0.f)
+            return 0.f;
 
-        Instance = new D3D11GraphicsDevice(flags);
-        return true;
+        return (width / height);
     }
 
-    void GraphicsDevice::Shutdown()
+    RHIDevice* RHIDevice::Create(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
     {
-        if (Instance != nullptr)
-        {
-            delete Instance;
-            Instance = nullptr;
-        }
+        RHIDevice* device = new D3D11RHIDevice(flags);
+        return device;
     }
 
-
-    void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
+    /*void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
     {
         ALIMER_ASSERT(resource);
 
@@ -74,6 +67,6 @@ namespace Alimer
         {
             gpuObjects.erase(it);
         }
-    }
+    }*/
 }
 

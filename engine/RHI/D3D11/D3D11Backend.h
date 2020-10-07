@@ -35,24 +35,22 @@ namespace Alimer
     extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
 #endif
 
-    class D3D11GraphicsDevice;
-
     void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
 
-    static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
+    static inline RHITexture::Usage D3D11GetTextureUsage(UINT bindFlags)
     {
-        TextureUsage usage = TextureUsage::None;
+        RHITexture::Usage usage = RHITexture::Usage::None;
         if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
-            usage |= TextureUsage::Sampled;
+            usage |= RHITexture::Usage::Sampled;
         }
         if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
-            usage |= TextureUsage::Storage;
+            usage |= RHITexture::Usage::Storage;
         }
         if (bindFlags & D3D11_BIND_RENDER_TARGET) {
-            usage |= TextureUsage::RenderTarget;
+            usage |= RHITexture::Usage::RenderTarget;
         }
         if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
-            usage |= TextureUsage::RenderTarget;
+            usage |= RHITexture::Usage::RenderTarget;
         }
 
         return usage;

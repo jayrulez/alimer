@@ -89,17 +89,6 @@ namespace Alimer
         TypeCube
     };
 
-    /// Defines the usage of texture resource.
-    enum class TextureUsage : uint32_t
-    {
-        None = 0,
-        Sampled = (1 << 0),
-        Storage = (1 << 1),
-        RenderTarget = (1 << 2),
-        GenerateMipmaps = (1 << 3)
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
-
     enum class TextureLayout : uint32
     {
         Undefined,
@@ -129,7 +118,6 @@ namespace Alimer
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
-        TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
         uint32 height = 1u;
         uint32 depthOrArraySize = 1u;
@@ -137,12 +125,11 @@ namespace Alimer
         uint32 sampleCount = 1u;
         TextureLayout initialLayout = TextureLayout::Undefined;
 
-        static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
+        static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false)
         {
             TextureDescription desc = {};
             desc.type = TextureType::Type2D;
             desc.format = format;
-            desc.usage = usage;
             desc.width = width;
             desc.height = height;
             desc.depthOrArraySize = 1u;
@@ -152,10 +139,10 @@ namespace Alimer
         }
     };
 
-    class Texture;
+    class RHITexture;
     struct RenderPassColorAttachment
     {
-        Texture* texture = nullptr;
+        RHITexture* texture = nullptr;
         uint32_t mipLevel = 0;
         uint32_t slice;
         LoadAction loadAction = LoadAction::Clear;
@@ -165,7 +152,7 @@ namespace Alimer
 
     struct RenderPassDepthStencilAttachment
     {
-        Texture* texture = nullptr;
+        RHITexture* texture = nullptr;
         uint32_t mipLevel = 0;
         uint32_t slice;
         LoadAction depthLoadAction = LoadAction::Clear;
