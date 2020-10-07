@@ -22,47 +22,36 @@
 
 #pragma once
 
-#include "Core/StringId.h"
-#include "Graphics/Types.h"
+#include "RHI/Texture.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-    class GraphicsDevice;
-
-    /// Defines a GPU Resource created by device.
-    class ALIMER_API GraphicsResource 
+    class ALIMER_API D3D11Texture final : public Texture
     {
     public:
-        enum class Type
-        {
-            Buffer,
-            Texture,
-            Sampler,
-            SwapChain
-        };
+        /// Constructor.
+        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        /// Constructor.
+        D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
+        /// Destructor
+        ~D3D11Texture() override;
 
-        virtual ~GraphicsResource();
+        void Destroy();
 
-        /// Release the GPU resource.
-        virtual void Destroy() = 0;
+        ID3D11ShaderResourceView* GetSRV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11UnorderedAccessView* GetUAV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11RenderTargetView* GetRTV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
+        ID3D11DepthStencilView* GetDSV(DXGI_FORMAT format, uint32_t level, uint32_t slice);
 
-        /// Set the resource name.
-        void SetName(const std::string& newName);
+    private:
+        void BackendSetName();
 
-        /// Get the resource name
-        const std::string& GetName() const { return name; }
-        /// Return name id of the resource.
-        const StringId32& GetNameId() const { return nameId; }
-
-    protected:
-        GraphicsResource(Type type);
-
-        virtual void BackendSetName() {}
-
-    protected:
-        Type type;
-
-        std::string name;
-        StringId32 nameId;
+        D3D11GraphicsDevice* device;
+        ID3D11Resource* handle;
+        std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;
+        std::vector<RefPtr<ID3D11UnorderedAccessView>> uavs;
+        std::vector<RefPtr<ID3D11RenderTargetView>> rtvs;
+        std::vector<RefPtr<ID3D11DepthStencilView>> dsvs;
     };
 }

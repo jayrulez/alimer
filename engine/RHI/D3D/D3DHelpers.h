@@ -25,7 +25,7 @@
 #include "AlimerConfig.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/Types.h"
+#include "RHI/Types.h"
 
 #if ALIMER_PLATFORM_WINDOWS
 #   include "PlatformIncl.h"

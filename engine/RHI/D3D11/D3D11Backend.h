@@ -20,13 +20,41 @@
 // THE SOFTWARE.
 //
 
+#pragma once
+
+#include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/CommandContext.h"
+#include "RHI/Types.h"
+#include "RHI/D3D/D3DHelpers.h"
+#define D3D11_NO_HELPERS
+#include <d3d11_3.h>
 
 namespace Alimer
 {
-    CommandContext::CommandContext()
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
+#endif
+
+    class D3D11GraphicsDevice;
+
+    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+
+    static inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
     {
+        TextureUsage usage = TextureUsage::None;
+        if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
+            usage |= TextureUsage::Sampled;
+        }
+        if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
+            usage |= TextureUsage::Storage;
+        }
+        if (bindFlags & D3D11_BIND_RENDER_TARGET) {
+            usage |= TextureUsage::RenderTarget;
+        }
+        if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
+            usage |= TextureUsage::RenderTarget;
+        }
+
+        return usage;
     }
 }
-

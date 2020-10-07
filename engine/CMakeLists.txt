@@ -43,24 +43,24 @@ define_engine_source_files(
     Math
     IO
     Assets
-    Graphics
+    RHI
     Scene
 )
 
 if(ALIMER_D3D11 OR ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(RHI/D3D)
 endif()
 
 if(ALIMER_D3D11)
-    define_engine_source_files(Graphics/D3D11)
+    define_engine_source_files(RHI/D3D11)
 endif()
 
 if(ALIMER_D3D12)
-    #define_engine_source_files(Graphics/D3D12)
+    #define_engine_source_files(RHI/D3D12)
 endif()
 
-if (ALIMER_ENABLE_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
+if (ALIMER_VULKAN)
+    #define_engine_source_files(RHI/Vulkan)
 endif()
 
 if (ALIMER_IMGUI)
@@ -176,6 +176,10 @@ endif ()
 if (ALIMER_IMGUI)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 endif ()
+
+if (ALIMER_VULKAN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
+endif()
 
 # SDK installation
 install(TARGETS ${PROJECT_NAME}

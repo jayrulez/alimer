@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "D3D11Texture.h"
-#include "D3D11GraphicsDevice.h"
+#include "D3D11RHI.h"
 
 namespace Alimer
 {

@@ -21,26 +21,24 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/GraphicsResource.h"
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/GraphicsResource.h"
 
 namespace Alimer
 {
     GraphicsResource::GraphicsResource(Type type)
         : type{ type }
     {
-        GraphicsDevice::Instance->AddGraphicsResource(this);
+        //GraphicsDevice::Instance->AddGraphicsResource(this);
     }
 
     GraphicsResource::~GraphicsResource()
     {
-        GraphicsDevice::Instance->RemoveGraphicsResource(this);
+        //GraphicsDevice::Instance->RemoveGraphicsResource(this);
     }
 
     void GraphicsResource::SetName(const std::string& newName)
     {
         name = newName;
-        nameId = StringId32(newName);
         BackendSetName();
     }
 }

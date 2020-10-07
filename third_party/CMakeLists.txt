@@ -47,7 +47,7 @@ if(ALIMER_D3D12)
     set_property(TARGET D3D12MemoryAllocator PROPERTY FOLDER "ThirdParty")
 endif ()
 
-if (ALIMER_ENABLE_VULKAN)
+if (ALIMER_VULKAN)
     # vulkan
     add_library(vulkan INTERFACE)
     set(VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)

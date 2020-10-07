@@ -20,26 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Types.h"
-#include "Graphics/Texture.h"
+#include "Core/Log.h"
+#include "RHI/CommandContext.h"
 
 namespace Alimer
 {
-    const char* ToString(FrameOpResult value)
+    CommandContext::CommandContext()
     {
-        static const char* names[] = {
-            "Success", "Error", "SwapChainOutOfDate", "DeviceLost"
-        };
-
-        return names[static_cast<uint32>(value)];
-    }
-
-    const char* ToString(GraphicsBackendType value)
-    {
-        static const char* names[] = {
-            "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "Count"
-        };
-
-        return names[static_cast<uint32>(value)];
     }
 }
+

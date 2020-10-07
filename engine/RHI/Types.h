@@ -24,7 +24,7 @@
 
 #include "Math/Color.h"
 #include "Math/Rect.h"
-#include "Graphics/PixelFormat.h"
+#include "RHI/PixelFormat.h"
 
 namespace Alimer
 {
@@ -123,23 +123,6 @@ namespace Alimer
         Store,
     };
 
-    enum class FrameOpResult : uint32_t {
-        Success = 0,
-        Error,
-        SwapChainOutOfDate,
-        DeviceLost
-    };
-
-    enum class BeginFrameFlags : uint32_t {
-        None = 0
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
-
-    enum class EndFrameFlags : uint32_t {
-        None = 0,
-        SkipPresent = 1 << 0
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
 
     /* Structs */
     struct TextureDescription
@@ -289,7 +272,6 @@ namespace Alimer
         GraphicsDeviceLimits limits;
     };
 
-    ALIMER_API const char* ToString(FrameOpResult value);
     ALIMER_API const char* ToString(GraphicsBackendType value);
 
     // Returns true if adapter's vendor is AMD.

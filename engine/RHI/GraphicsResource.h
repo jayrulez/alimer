@@ -22,40 +22,43 @@
 
 #pragma once
 
-#include "D3D11Backend.h"
-#include "Graphics/SwapChain.h"
+#include "RHI/Types.h"
 
 namespace Alimer
 {
-    class Window;
-    class D3D11Texture;
+    class GraphicsDevice;
 
-    struct D3D11SwapChain final : public SwapChain
+    /// Defines a GPU Resource created by device.
+    class ALIMER_API GraphicsResource 
     {
-        D3D11SwapChain(D3D11GraphicsDevice* device);
-        ~D3D11SwapChain();
-        void Destroy() override;
+    public:
+        enum class Type
+        {
+            Buffer,
+            Texture,
+            Sampler,
+            SwapChain
+        };
 
-        bool CreateOrResize() override;
-        Texture* GetCurrentTexture() const override;
+        virtual ~GraphicsResource();
 
-        void AfterReset();
+        /// Release the GPU resource.
+        virtual void Destroy() = 0;
 
-        static constexpr uint32 kBufferCount = 2u;
+        /// Set the resource name.
+        void SetName(const std::string& newName);
 
-        D3D11GraphicsDevice* device;
-        uint32_t syncInterval = 1;
-        uint32_t presentFlags = 0;
+        /// Get the resource name
+        const std::string& GetName() const { return name; }
 
-#if ALIMER_PLATFORM_WINDOWS
-        HWND windowHandle = nullptr;
-#else
-        IUnknown* windowHandle = nullptr;
-#endif
+    protected:
+        GraphicsResource(Type type);
 
-        IDXGISwapChain1* handle = nullptr;
+        virtual void BackendSetName() {}
 
-        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-        RefPtr<D3D11Texture> colorTexture;
+    protected:
+        Type type;
+
+        std::string name;
     };
 }

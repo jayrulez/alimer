@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Graphics/GraphicsResource.h"
+#include "RHI/GraphicsResource.h"
 
 namespace Alimer
 {

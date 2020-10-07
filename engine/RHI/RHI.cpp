@@ -23,10 +23,10 @@
 #include "AlimerConfig.h"
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/RHI.h"
 
 #if defined(ALIMER_D3D11)
-#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#include "RHI/D3D11/D3D11RHI.h"
 #endif
 #if defined(ALIMER_D3D12)
 #endif

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/RHI.h"
 #include "D3D11Backend.h"
 #include <queue>
 #include <mutex>
@@ -30,11 +30,12 @@
 namespace Alimer
 {
     class D3D11CommandBuffer;
+    class D3D11Texture;
 
     struct D3D11RHIBuffer final : public RHIBuffer
     {
     public:
-        D3D11RHIBuffer(D3D11GraphicsDevice* device, RHIBuffer::Usage usage, uint64_t size, HeapType heapType, const void* initialData);
+        D3D11RHIBuffer(D3D11GraphicsDevice* device, RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage, const void* initialData);
         ~D3D11RHIBuffer() override;
         void Destroy() override;
 
@@ -42,6 +43,35 @@ namespace Alimer
 
         D3D11GraphicsDevice* device;
         ID3D11Buffer* handle = nullptr;
+    };
+
+    struct D3D11RHISwapChain final : public RHISwapChain
+    {
+        D3D11RHISwapChain(D3D11GraphicsDevice* device);
+        ~D3D11RHISwapChain();
+        void Destroy() override;
+
+        bool CreateOrResize() override;
+        Texture* GetCurrentTexture() const override;
+
+        void AfterReset();
+
+        static constexpr uint32 kBufferCount = 2u;
+
+        D3D11GraphicsDevice* device;
+        uint32_t syncInterval = 1;
+        uint32_t presentFlags = 0;
+
+#if ALIMER_PLATFORM_WINDOWS
+        HWND windowHandle = nullptr;
+#else
+        IUnknown* windowHandle = nullptr;
+#endif
+
+        IDXGISwapChain1* handle = nullptr;
+
+        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
+        RefPtr<D3D11Texture> colorTexture;
     };
 
     class D3D11GraphicsDevice final : public GraphicsDevice
@@ -70,10 +100,10 @@ namespace Alimer
 
         bool IsDeviceLost() const override;
         void WaitForGPU() override;
-        FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags) override;
-        FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
-        SwapChain* CreateSwapChain() override;
-        RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, HeapType heapType) override;
+        FrameOpResult BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags) override;
+        FrameOpResult EndFrame(RHISwapChain* swapChain, EndFrameFlags flags) override;
+        RHISwapChain* CreateSwapChain() override;
+        RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage) override;
         RHIBuffer* CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size) override;
 
         bool debugRuntime;

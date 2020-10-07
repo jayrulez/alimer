@@ -24,7 +24,7 @@
 
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
-#include "Graphics/Types.h"
+#include "RHI/RHI.h"
 #include <memory>
 
 namespace Alimer
@@ -45,7 +45,8 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
-    class SwapChain;
+    class RHISwapChain;
+    class RHIDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -84,7 +85,7 @@ namespace Alimer
         void InitBeforeRun();
 
         std::unique_ptr<Window> window{ nullptr };
-        std::unique_ptr<SwapChain> windowSwapChain = nullptr;
+        std::unique_ptr<RHISwapChain> windowSwapChain = nullptr;
 
         Config config;
         State state;

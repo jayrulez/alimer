@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/SwapChain.h"
+#include "RHI/Types.h"
 #include "Math/Size.h"
 #include "Math/Color.h"
 #include "Math/Viewport.h"

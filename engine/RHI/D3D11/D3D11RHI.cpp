@@ -21,43 +21,39 @@
 //
 
 //#include "D3D11CommandBuffer.h"
-#include "D3D11GraphicsDevice.h"
-#include "D3D11SwapChain.h"
+#include "D3D11RHI.h"
 #include "D3D11Texture.h"
-#include "Core/String.h"
-
-using Microsoft::WRL::ComPtr;
+#include "Platform/Window.h"
 
 namespace Alimer
 {
-    /* --- D3D11RHIBuffer --- */
     namespace
     {
-        D3D11_USAGE D3D11GetUsage(HeapType heapType)
+        D3D11_USAGE D3D11GetUsage(MemoryUsage usage)
         {
-            switch (heapType)
+            switch (usage)
             {
-            case HeapType::Default:
-                return D3D11_USAGE_DEFAULT;
-            case HeapType::Upload:
-                return D3D11_USAGE_DYNAMIC;
-            case HeapType::Readback:
-                return D3D11_USAGE_STAGING;
+            case MemoryUsage::GpuOnly:  return D3D11_USAGE_DEFAULT;
+            case MemoryUsage::CpuOnly:  return D3D11_USAGE_STAGING;
+            case MemoryUsage::CpuToGpu: return D3D11_USAGE_DYNAMIC;
+            case MemoryUsage::GpuToCpu: return D3D11_USAGE_STAGING;
             default:
+                ALIMER_ASSERT_FAIL("Invalid Memory Usage");
                 return D3D11_USAGE_DEFAULT;
             }
         }
 
-        D3D11_CPU_ACCESS_FLAG D3D11GetCPUAccessFlags(HeapType heapType)
+        D3D11_CPU_ACCESS_FLAG D3D11GetCPUAccessFlags(MemoryUsage usage)
         {
-            switch (heapType)
+            switch (usage)
             {
-            case HeapType::Default:
-                return (D3D11_CPU_ACCESS_FLAG)0;
-            case HeapType::Upload: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_WRITE);
-            case HeapType::Readback: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE);
+            case MemoryUsage::GpuOnly:  return (D3D11_CPU_ACCESS_FLAG)0;
+            case MemoryUsage::CpuOnly:  return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE);
+            case MemoryUsage::CpuToGpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_WRITE);
+            case MemoryUsage::GpuToCpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ);
 
             default:
+                ALIMER_ASSERT_FAIL("Invalid Memory Usage");
                 return (D3D11_CPU_ACCESS_FLAG)0;
             }
         }
@@ -86,8 +82,9 @@ namespace Alimer
         }
     }
 
-    D3D11RHIBuffer::D3D11RHIBuffer(D3D11GraphicsDevice* device_, RHIBuffer::Usage usage, uint64_t size, HeapType heapType, const void* initialData)
-        : RHIBuffer(usage, size, heapType)
+    /* --- D3D11RHIBuffer --- */
+    D3D11RHIBuffer::D3D11RHIBuffer(D3D11GraphicsDevice* device_, RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage, const void* initialData)
+        : RHIBuffer(usage, size, memoryUsage)
         , device(device_)
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
@@ -111,9 +108,9 @@ namespace Alimer
 
         D3D11_BUFFER_DESC d3dDesc;
         d3dDesc.ByteWidth = bufferSize;
-        d3dDesc.Usage = D3D11GetUsage(heapType);
+        d3dDesc.Usage = D3D11GetUsage(memoryUsage);
         d3dDesc.BindFlags = D3D11GetBindFlags(usage);
-        d3dDesc.CPUAccessFlags = D3D11GetCPUAccessFlags(heapType);
+        d3dDesc.CPUAccessFlags = D3D11GetCPUAccessFlags(memoryUsage);
         d3dDesc.MiscFlags = 0;
         d3dDesc.StructureByteStride = 0;
 
@@ -158,6 +155,134 @@ namespace Alimer
         D3D11SetObjectName(handle, name);
     }
 
+    /* --- D3D11RHIBuffer --- */
+    D3D11RHISwapChain::D3D11RHISwapChain(D3D11GraphicsDevice* device_)
+        : device(device_)
+    {
+
+    }
+
+    D3D11RHISwapChain::~D3D11RHISwapChain()
+    {
+        Destroy();
+    }
+
+    void D3D11RHISwapChain::Destroy()
+    {
+        if (!handle)
+            return;
+
+        SafeRelease(handle);
+    }
+
+    bool D3D11RHISwapChain::CreateOrResize()
+    {
+        drawableSize = window->GetSize();
+
+        UINT swapChainFlags = 0;
+
+        if (device->IsTearingSupported())
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+        bool needRecreate = handle == nullptr || window->GetNativeHandle() != windowHandle;
+        if (needRecreate)
+        {
+            Destroy();
+
+            // Create a descriptor for the swap chain.
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+            swapChainDesc.Width = UINT(drawableSize.width);
+            swapChainDesc.Height = UINT(drawableSize.height);
+            swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
+            swapChainDesc.Stereo = FALSE;
+            swapChainDesc.SampleDesc.Count = 1;
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = kBufferCount;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#else
+            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            swapChainDesc.Flags = swapChainFlags;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            windowHandle = (HWND)window->GetNativeHandle();
+            ALIMER_ASSERT(IsWindow(windowHandle));
+
+            //DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            //fsSwapChainDesc.Windowed = TRUE; // !window->IsFullscreen();
+
+            // Create a swap chain for the window.
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
+                device->GetD3DDevice(),
+                windowHandle,
+                &swapChainDesc,
+                nullptr, // &fsSwapChainDesc,
+                nullptr,
+                &handle
+            ));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER));
+#else
+            windowHandle = (IUnknown*)window->GetNativeHandle();
+            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+                device->GetD3DDevice(),
+                window,
+                &swapChainDesc,
+                nullptr,
+                &handle
+            ));
+#endif
+        }
+        else
+        {
+
+        }
+
+        // Update present data
+        if (!verticalSync)
+        {
+            syncInterval = 0u;
+            // Recommended to always use tearing if supported when using a sync interval of 0.
+            presentFlags = device->IsTearingSupported() ? DXGI_PRESENT_ALLOW_TEARING : 0u;
+        }
+        else
+        {
+            syncInterval = 1u;
+            presentFlags = 0u;
+        }
+
+        AfterReset();
+
+        return true;
+    }
+
+    void D3D11RHISwapChain::AfterReset()
+    {
+        colorTexture.Reset();
+
+        ComPtr<ID3D11Texture2D> backbufferTexture;
+        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
+        colorTexture = MakeRefPtr<D3D11Texture>(device, backbufferTexture.Get(), colorFormat);
+
+        if (depthStencilFormat != PixelFormat::Invalid)
+        {
+            //GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
+            //depthStencilTexture.Reset(new D3D11Texture(device, depthTextureDesc, nullptr));
+        }
+    }
+
+    Texture* D3D11RHISwapChain::GetCurrentTexture() const
+    {
+        return colorTexture.Get();
+    }
+
+    /* --- D3D11GraphicsDevice --- */
     bool D3D11GraphicsDevice::IsAvailable()
     {
         static bool available = false;
@@ -651,14 +776,14 @@ namespace Alimer
         context->Flush();
     }
 
-    FrameOpResult D3D11GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
+    FrameOpResult D3D11GraphicsDevice::BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags)
     {
         return FrameOpResult::Success;
     }
 
-    FrameOpResult D3D11GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
+    FrameOpResult D3D11GraphicsDevice::EndFrame(RHISwapChain* swapChain, EndFrameFlags flags)
     {
-        D3D11SwapChain* d3dSwapChain = static_cast<D3D11SwapChain*>(swapChain);
+        D3D11RHISwapChain* d3dSwapChain = static_cast<D3D11RHISwapChain*>(swapChain);
 
         if (!any(flags & EndFrameFlags::SkipPresent))
         {
@@ -691,21 +816,21 @@ namespace Alimer
         return FrameOpResult::Success;
     }
 
-    SwapChain* D3D11GraphicsDevice::CreateSwapChain()
+    RHISwapChain* D3D11GraphicsDevice::CreateSwapChain()
     {
-        return new D3D11SwapChain(this);
+        return new D3D11RHISwapChain(this);
     }
 
-    RHIBuffer* D3D11GraphicsDevice::CreateBuffer(RHIBuffer::Usage usage, uint64_t size, HeapType heapType)
+    RHIBuffer* D3D11GraphicsDevice::CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage)
     {
-        return new D3D11RHIBuffer(this, usage, size, heapType, nullptr);
+        return new D3D11RHIBuffer(this, usage, size, memoryUsage, nullptr);
     }
 
     RHIBuffer* D3D11GraphicsDevice::CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size)
     {
         ALIMER_UNUSED(batch);
 
-        return new D3D11RHIBuffer(this, usage, size, HeapType::Default, initialData);
+        return new D3D11RHIBuffer(this, usage, size, MemoryUsage::GpuOnly, initialData);
     }
 
     void D3D11GraphicsDevice::HandleDeviceLost()

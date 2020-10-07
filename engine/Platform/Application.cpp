@@ -24,7 +24,6 @@
 #include "Platform/Platform.h"
 #include "Platform/Event.h"
 #include "Platform/Application.h"
-#include "Graphics/GraphicsDevice.h"
 #include "IO/FileSystem.h"
 #include "UI/ImGuiLayer.h"
 

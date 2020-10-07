@@ -21,7 +21,7 @@
 //
 
 #include "Core/Log.h"
-#include "Graphics/Texture.h"
+#include "RHI/Texture.h"
 
 namespace Alimer
 {

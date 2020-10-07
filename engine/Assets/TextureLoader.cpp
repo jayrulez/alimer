@@ -22,7 +22,7 @@
 
 #include "TextureLoader.h"
 #include "AssetManager.h"
-#include "Graphics/Texture.h"
+#include "RHI/Texture.h"
 
 namespace Alimer
 {

@@ -22,19 +22,45 @@
 
 #pragma once
 
-#include "Graphics/CommandContext.h"
-#include "Graphics/SwapChain.h"
+#include "RHI/Types.h"
+#include "RHI/GraphicsResource.h"
+#include "RHI/Texture.h"
+#include "Math/Size.h"
 #include <memory>
 #include <mutex>
 
 namespace Alimer
 {
-    enum class HeapType
+    class Window;
+    class RHIResource;
+    class RHIBuffer;
+    class RHISwapChain;
+
+    enum class MemoryUsage
     {
-        Default,
-        Upload,
-        Readback
+        GpuOnly,
+        CpuOnly,
+        CpuToGpu,
+        GpuToCpu
     };
+
+    enum class FrameOpResult : uint32_t {
+        Success = 0,
+        Error,
+        SwapChainOutOfDate,
+        DeviceLost
+    };
+
+    enum class BeginFrameFlags : uint32_t {
+        None = 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
+
+    enum class EndFrameFlags : uint32_t {
+        None = 0,
+        SkipPresent = 1 << 0
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
 
     /// Defines a base RHI resource class.
     class ALIMER_API RHIResource
@@ -56,8 +82,8 @@ namespace Alimer
         /// Get the resource type.
         ALIMER_FORCE_INLINE Type GetType() const { return type; }
 
-        /// Get the resource heap type.
-        ALIMER_FORCE_INLINE HeapType GetHeapType() const { return heapType; }
+        /// Get the resource memory usage.
+        ALIMER_FORCE_INLINE MemoryUsage GetMemoryUsage() const { return memoryUsage; }
 
         /// Set the resource name.
         virtual void SetName(const std::string& newName) { name = newName; }
@@ -66,16 +92,16 @@ namespace Alimer
         const std::string& GetName() const { return name; }
 
     protected:
-        RHIResource(Type type_, HeapType heapType_)
+        RHIResource(Type type_, MemoryUsage memoryUsage_ = MemoryUsage::GpuOnly)
             : type(type_)
-            , heapType(heapType_)
+            , memoryUsage(memoryUsage_)
         {
 
         }
 
     protected:
         Type type;
-        HeapType heapType;
+        MemoryUsage memoryUsage;
         std::string name;
     };
 
@@ -100,8 +126,8 @@ namespace Alimer
 
     protected:
         /// Constructor
-        RHIBuffer(Usage usage_, uint64_t size_, HeapType heapType_)
-            : RHIResource(Type::Buffer, heapType_)
+        RHIBuffer(Usage usage_, uint64_t size_, MemoryUsage memoryUsage_)
+            : RHIResource(Type::Buffer, memoryUsage_)
             , usage(usage_)
             , size(size_)
         {
@@ -112,7 +138,47 @@ namespace Alimer
         uint64_t size;
     };
 
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHIBuffer::Usage, uint32_t);
+    class ALIMER_API RHISwapChain : public RHIResource
+    {
+    public:
+        Window* GetWindow() const { return window; }
+        void SetWindow(Window* newWindow) { window = newWindow; }
+
+        bool GetAutoResizeDrawable() const noexcept { return autoResizeDrawable; }
+        void SetAutoResizeDrawable(bool value) noexcept { autoResizeDrawable = value; }
+
+        SizeI GetDrawableSize() const noexcept { return drawableSize; }
+        void SetDrawableSize(const SizeI& value) noexcept { drawableSize = value; }
+
+        PixelFormat GetColorFormat() const noexcept { return colorFormat; }
+        void SetColorFormat(PixelFormat value) noexcept { colorFormat = value; }
+
+        PixelFormat GetDepthStencilFormat() const noexcept { return depthStencilFormat; }
+        void SetDepthStencilFormat(PixelFormat value) noexcept { depthStencilFormat = value; }
+
+        uint32_t GetSampleCount() const noexcept { return sampleCount; }
+        void SetSampleCount(uint32_t value) noexcept { sampleCount = value; }
+
+        virtual bool CreateOrResize() = 0;
+
+        virtual Texture* GetCurrentTexture() const = 0;
+
+    protected:
+        /// Constructor.
+        RHISwapChain()
+            : RHIResource(Type::SwapChain)
+        {
+
+        }
+
+        Window* window = nullptr;
+        bool autoResizeDrawable = true;
+        SizeI drawableSize;
+        PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        uint32_t sampleCount = 1u;
+        bool verticalSync = true;
+    };
 
     /// Batch used for inizializing resource data.
     class ALIMER_API RHIResourceUploadBatch
@@ -145,12 +211,12 @@ namespace Alimer
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
-        virtual FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags = BeginFrameFlags::None) = 0;
-        virtual FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags = EndFrameFlags::None) = 0;
+        virtual FrameOpResult BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags = BeginFrameFlags::None) = 0;
+        virtual FrameOpResult EndFrame(RHISwapChain* swapChain, EndFrameFlags flags = EndFrameFlags::None) = 0;
 
-        virtual SwapChain* CreateSwapChain() = 0;
+        virtual RHISwapChain* CreateSwapChain() = 0;
 
-        virtual RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, HeapType heapType = HeapType::Default) = 0;
+        virtual RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage = MemoryUsage::GpuOnly) = 0;
         virtual RHIBuffer* CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size) = 0;
 
         /// Gets the device backend type.
@@ -176,5 +242,10 @@ namespace Alimer
         std::vector<GraphicsResource*> gpuObjects;
     };
 
+    /* Enum flags operators */
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHIBuffer::Usage, uint32_t);
+
+    /* Helper methods */
+    ALIMER_API const char* ToString(FrameOpResult value);
 }
 
