@@ -22,28 +22,23 @@
 
 #pragma once
 
-#include "Graphics/RHI.h"
+#include "Graphics/Texture.h"
 #include "D3D11Backend.h"
 #include "Core/Hash.h"
 
 namespace Alimer
 {
-    struct D3D11RHIDevice;
-
     struct D3D11RHIViewInfo
     {
         uint32_t level;
         uint32_t slice;
     };
 
-    class ALIMER_API D3D11Texture final : public RHITexture
+    class D3D11Texture final : public Texture
     {
     public:
-        /// Constructor.
         D3D11Texture(D3D11RHIDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
-        /// Constructor.
         D3D11Texture(D3D11RHIDevice* device, const TextureDescription& desc, const void* initialData);
-        /// Destructor
         ~D3D11Texture() override;
 
         void Destroy();

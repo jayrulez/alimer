@@ -147,17 +147,17 @@ namespace Alimer
         }
     }
 
-    /*static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, RHITexture::Usage usage)
+    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, TextureUsage usage)
     {
         // If depth and either ua or sr, set to typeless
         if (IsDepthStencilFormat(format)
-            && ((usage & (RHITexture::Usage::Sampled | RHITexture::Usage::Storage)) != RHITexture::Usage::None))
+            && (any(usage & (TextureUsage::Sampled | TextureUsage::Storage))))
         {
             return GetTypelessFormatFromDepthFormat(format);
         }
 
         return ToDXGIFormat(format);
-    }*/
+    }
 
     enum class DXGIFactoryCaps : uint8
     {

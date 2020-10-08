@@ -29,64 +29,11 @@
 
 namespace Alimer
 {
-    struct D3D11RHICommandBuffer;
-    class D3D11Texture;
-    struct D3D11RHIDevice;
+    class D3D11CommandContext;
 
-    struct D3D11RHISwapChain final : public RHISwapChain
+    class D3D11RHIDevice final : public RHIDevice
     {
-        D3D11RHISwapChain(D3D11RHIDevice* device);
-        ~D3D11RHISwapChain();
-        void Destroy() override;
-
-        bool CreateOrResize() override;
-        RHITexture* GetCurrentTexture() const override;
-        RHICommandBuffer* CurrentFrameCommandBuffer() override;
-
-        void AfterReset();
-
-        static constexpr uint32 kBufferCount = 2u;
-
-        D3D11RHIDevice* device;
-        uint32_t syncInterval = 1;
-        uint32_t presentFlags = 0;
-
-#if ALIMER_PLATFORM_WINDOWS
-        HWND windowHandle = nullptr;
-#else
-        IUnknown* windowHandle = nullptr;
-#endif
-
-        IDXGISwapChain1* handle = nullptr;
-
-        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-        RefPtr<D3D11Texture> colorTexture;
-        D3D11RHICommandBuffer* commandBuffer;
-    };
-
-    struct D3D11RHICommandBuffer final : public RHICommandBuffer
-    {
-        D3D11RHICommandBuffer(D3D11RHIDevice* device);
-        ~D3D11RHICommandBuffer();
-
-        void PushDebugGroup(const std::string& name) override;
-        void PopDebugGroup() override;
-        void InsertDebugMarker(const std::string& name) override;
-        void SetViewport(const RHIViewport& viewport) override;
-        void SetScissorRect(const RectI& scissorRect) override;
-        void SetBlendColor(const Color& color) override;
-        void BeginRenderPass(const RenderPassDesc& renderPass) override;
-        void EndRenderPass() override;
-
-        ID3D11DeviceContext1* context;
-        ID3DUserDefinedAnnotation* annotation;
-
-    private:
-        ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
-    };
-
-    struct D3D11RHIDevice final : public RHIDevice
-    {
+    public:
         static bool IsAvailable();
         D3D11RHIDevice(GraphicsDeviceFlags flags);
         ~D3D11RHIDevice() override;
@@ -95,6 +42,7 @@ namespace Alimer
         void HandleDeviceLost();
 
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
+        ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
 
         void CreateFactory();
@@ -102,17 +50,20 @@ namespace Alimer
 
         bool IsDeviceLost() const override;
         void WaitForGPU() override;
-        FrameOpResult BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags) override;
-        FrameOpResult EndFrame(RHISwapChain* swapChain, EndFrameFlags flags) override;
-        RHISwapChain* CreateSwapChain() override;
+        FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags) override;
+        FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
+        CommandContext* GetImmediateContext() const override;
+
+        SwapChain* CreateSwapChain() override;
         GraphicsBuffer* CreateBuffer(const BufferDescription& description, const void* initialData, const char* label) override;
 
+    private:
         bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
         ID3D11Device1*          d3dDevice = nullptr;
-        ID3D11DeviceContext1*   context = nullptr;
+        D3D11CommandContext*    immediateContext = nullptr;
 
         D3D_FEATURE_LEVEL       featureLevel = D3D_FEATURE_LEVEL_9_1;
         bool deviceLost = false;

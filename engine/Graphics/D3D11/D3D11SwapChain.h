@@ -22,19 +22,45 @@
 
 #pragma once
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/SwapChain.h"
+#include "D3D11Backend.h"
+#include "Core/Ptr.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
+    class D3D11Texture;
+
+    class D3D11SwapChain final : public SwapChain
+    {
+        friend class D3D11RHIDevice;
+
+    public:
+        D3D11SwapChain(D3D11RHIDevice* device);
+        ~D3D11SwapChain() override;
+        void Destroy();
+
+
+        bool CreateOrResize() override;
+        Texture* GetCurrentTexture() const override;
+
+        void AfterReset();
+
+    private:
+        static constexpr uint32 kBufferCount = 2u;
+
+        D3D11RHIDevice* device;
+        uint32_t syncInterval = 1;
+        uint32_t presentFlags = 0;
+
+#if ALIMER_PLATFORM_WINDOWS
+        HWND windowHandle = nullptr;
+#else
+        IUnknown* windowHandle = nullptr;
 #endif
 
-    class D3D11RHIDevice;
+        IDXGISwapChain1* handle = nullptr;
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
+        RefPtr<D3D11Texture> colorTexture;
+    };
 }

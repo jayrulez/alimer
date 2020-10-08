@@ -22,19 +22,31 @@
 
 #pragma once
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/CommandContext.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+    class D3D11CommandContext final : public CommandContext
+    {
+    public:
+        D3D11CommandContext(D3D11RHIDevice* device_, ID3D11DeviceContext1* context_);
+        ~D3D11CommandContext();
 
-    class D3D11RHIDevice;
+        void PushDebugGroup(const std::string& name) override;
+        void PopDebugGroup() override;
+        void InsertDebugMarker(const std::string& name) override;
+        void SetViewport(const RHIViewport& viewport) override;
+        void SetScissorRect(const RectI& scissorRect) override;
+        void SetBlendColor(const Color& color) override;
+        void BeginRenderPass(const RenderPassDesc& renderPass) override;
+        void EndRenderPass() override;
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+        D3D11RHIDevice* device;
+        ID3D11DeviceContext1* context;
+        ID3DUserDefinedAnnotation* annotation = nullptr;
+
+    private:
+        ID3D11RenderTargetView* zeroRTVS[kMaxColorAttachments] = {};
+    };
 }

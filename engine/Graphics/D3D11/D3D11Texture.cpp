@@ -28,24 +28,45 @@ namespace Alimer
 {
     namespace
     {
-        TextureDescription Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
+        inline TextureUsage D3D11GetTextureUsage(UINT bindFlags)
+        {
+            TextureUsage usage = TextureUsage::None;
+            if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
+                usage |= TextureUsage::Sampled;
+            }
+            if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
+                usage |= TextureUsage::Storage;
+            }
+            if (bindFlags & D3D11_BIND_RENDER_TARGET) {
+                usage |= TextureUsage::RenderTarget;
+            }
+            if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
+                usage |= TextureUsage::RenderTarget;
+            }
+
+            return usage;
+        }
+
+        inline TextureDescription Convert2DDesc(ID3D11Texture2D* texture, PixelFormat format)
         {
             D3D11_TEXTURE2D_DESC d3dDesc;
             texture->GetDesc(&d3dDesc);
 
-            return TextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1/*, D3D11GetTextureUsage(d3dDesc.BindFlags)*/);
+            return TextureDescription::New2D(format, d3dDesc.Width, d3dDesc.Height, d3dDesc.MipLevels > 1, D3D11GetTextureUsage(d3dDesc.BindFlags));
         }
     }
 
     D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, ID3D11Texture2D* externalTexture, PixelFormat format)
-        : device(device_)
+        : Texture(Convert2DDesc(externalTexture, format))
+        , device(device_)
         , handle(externalTexture)
     {
         handle->AddRef();
     }
 
     D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, const TextureDescription& desc, const void* initialData)
-        : device(device_)
+        : Texture(desc)
+        , device(device_)
     {
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialResourceData = {};
@@ -55,7 +76,7 @@ namespace Alimer
             initialDataPtr = &initialResourceData;
         }
 
-        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, RHITexture::Usage::Sampled/* desc.usage*/);
+        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
         D3D11_USAGE usage = D3D11_USAGE_DEFAULT;
         UINT bindFlags = 0;
         UINT CPUAccessFlags = 0;
@@ -107,7 +128,7 @@ namespace Alimer
             d3dDesc.CPUAccessFlags = CPUAccessFlags;
             d3dDesc.MiscFlags = miscFlags;
 
-            HRESULT hr = device->d3dDevice->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
+            HRESULT hr = device->GetD3DDevice()->CreateTexture2D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture2D**>(&handle));
             if (FAILED(hr)) {
                 LOGE("Direct3D11: Failed to create 2D texture");
                 return;
@@ -128,7 +149,7 @@ namespace Alimer
             d3dDesc.CPUAccessFlags = CPUAccessFlags;
             d3dDesc.MiscFlags = miscFlags;
 
-            HRESULT hr = device->d3dDevice->CreateTexture3D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture3D**>(&handle));
+            HRESULT hr = device->GetD3DDevice()->CreateTexture3D(&d3dDesc, initialDataPtr, reinterpret_cast<ID3D11Texture3D**>(&handle));
             if (FAILED(hr)) {
                 LOGE("Direct3D11: Failed to create 2D texture");
                 return;
@@ -284,7 +305,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11ShaderResourceView> srv;
-        ThrowIfFailed(device->d3dDevice->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateShaderResourceView(handle, &viewDesc, srv.GetAddressOf()));
         srvs.push_back(srv);
         return srv.Get();
     }
@@ -398,7 +419,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11UnorderedAccessView> uav;
-        ThrowIfFailed(device->d3dDevice->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateUnorderedAccessView(handle, &viewDesc, uav.GetAddressOf()));
         uavs.push_back(uav);
         return uav.Get();
     }
@@ -535,7 +556,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11RenderTargetView> rtv;
-        ThrowIfFailed(device->d3dDevice->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateRenderTargetView(handle, &viewDesc, rtv.GetAddressOf()));
         rtvs[hash] = rtv;
         return rtvs[hash].Get();
     }
@@ -653,7 +674,7 @@ namespace Alimer
         }
 
         RefPtr<ID3D11DepthStencilView> view;
-        ThrowIfFailed(device->d3dDevice->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
+        ThrowIfFailed(device->GetD3DDevice()->CreateDepthStencilView(handle, &viewDesc, view.GetAddressOf()));
         dsvs.push_back(view);
         return view.Get();
     }

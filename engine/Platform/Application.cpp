@@ -26,6 +26,7 @@
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
 #include "Graphics/RHI.h"
+#include "Graphics/SwapChain.h"
 #include "UI/ImGuiLayer.h"
 
 namespace Alimer
@@ -124,7 +125,7 @@ namespace Alimer
             return;
         }
 
-        OnDraw();
+        OnDraw(rhiDevice->GetImmediateContext());
 
         /*agpu_push_debug_group("Frame");
         

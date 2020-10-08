@@ -24,7 +24,7 @@
 
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
-#include "Graphics/Types.h"
+#include "Graphics/CommandContext.h"
 #include <memory>
 
 namespace Alimer
@@ -45,7 +45,7 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
-    class RHISwapChain;
+    class SwapChain;
     class RHIDevice;
 
     class ALIMER_API Application : public Object
@@ -87,7 +87,7 @@ namespace Alimer
 
     protected:
         virtual void Initialize() {}
-        virtual void OnDraw() {}
+        virtual void OnDraw(CommandContext* context) {}
 
     private:
         void InitBeforeRun();
@@ -99,7 +99,7 @@ namespace Alimer
         AssetManager assets;
         bool headless = false;
         std::unique_ptr<Window> window{ nullptr };
-        std::unique_ptr<RHISwapChain> windowSwapChain{ nullptr };
+        std::unique_ptr<SwapChain> windowSwapChain{ nullptr };
         std::unique_ptr<RHIDevice> rhiDevice{ nullptr };
     };
 

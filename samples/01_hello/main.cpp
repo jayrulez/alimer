@@ -22,6 +22,7 @@
 
 #include "Platform/Application.h"
 #include "Graphics/RHI.h"
+#include "Graphics/SwapChain.h"
 
 namespace Alimer
 {
@@ -33,10 +34,19 @@ namespace Alimer
         {
 
         }
+        ~HelloWorldApp() override;
 
         void Initialize() override;
-        void OnDraw() override;
+        void OnDraw(CommandContext* context) override;
+
+    private:
+        std::unique_ptr<GraphicsBuffer> vertexBuffer;
     };
+
+    HelloWorldApp::~HelloWorldApp()
+    {
+
+    }
 
     void HelloWorldApp::Initialize()
     {
@@ -57,19 +67,19 @@ namespace Alimer
         bufferDesc.usage = BufferUsage::Vertex;
         bufferDesc.size = sizeof(triangleVertices);
         bufferDesc.size = sizeof(Vertex);
-        auto buffer = rhiDevice->CreateBuffer(bufferDesc, triangleVertices);
+        vertexBuffer.reset( rhiDevice->CreateBuffer(bufferDesc, triangleVertices));
     }
 
-    void HelloWorldApp::OnDraw()
+    void HelloWorldApp::OnDraw(CommandContext* context)
     {
-        RHICommandBuffer* cb = windowSwapChain->CurrentFrameCommandBuffer();
-        cb->PushDebugGroup("Frame");
+        context->PushDebugGroup("Frame");
         RenderPassDesc renderPass{};
         renderPass.colorAttachments[0].texture = windowSwapChain->GetCurrentTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
-        cb->BeginRenderPass(renderPass);
-        cb->EndRenderPass();
-        cb->PopDebugGroup();
+        context->BeginRenderPass(renderPass);
+        context->EndRenderPass();
+        context->PopDebugGroup();
+        //windowSwapChain->p
     }
 
     Application* CreateApplication()

@@ -22,19 +22,30 @@
 
 #pragma once
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+    class ALIMER_API CommandContext
+    {
+    public:
+        virtual ~CommandContext() = default;
 
-    class D3D11RHIDevice;
+        virtual void PushDebugGroup(const std::string& name) = 0;
+        virtual void PopDebugGroup() = 0;
+        virtual void InsertDebugMarker(const std::string& name) = 0;
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+        virtual void SetViewport(const RHIViewport& viewport) = 0;
+        virtual void SetScissorRect(const RectI& scissorRect) = 0;
+        virtual void SetBlendColor(const Color& color) = 0;
+
+        virtual void BeginRenderPass(const RenderPassDesc& renderPass) = 0;
+        virtual void EndRenderPass() = 0;
+
+        //virtual void BindBuffer(uint32_t slot, GPUBuffer* buffer) = 0;
+        //virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
+
+    protected:
+        CommandContext();
+    };
 }

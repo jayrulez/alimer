@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-//#include "D3D11CommandBuffer.h"
 #include "D3D11RHI.h"
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
-#include "Platform/Window.h"
+#include "D3D11SwapChain.h"
+#include "D3D11CommandContext.h"
 
 namespace Alimer
 {
@@ -53,242 +53,7 @@ namespace Alimer
         
     }
     
-    /* --- D3D11RHIBuffer --- */
-    D3D11RHISwapChain::D3D11RHISwapChain(D3D11RHIDevice* device_)
-        : device(device_)
-        , commandBuffer(new D3D11RHICommandBuffer(device_))
-    {
-
-    }
-
-    D3D11RHISwapChain::~D3D11RHISwapChain()
-    {
-        Destroy();
-    }
-
-    void D3D11RHISwapChain::Destroy()
-    {
-        if (!handle)
-            return;
-
-        SafeDelete(commandBuffer);
-        SafeRelease(handle);
-    }
-
-    bool D3D11RHISwapChain::CreateOrResize()
-    {
-        drawableSize = window->GetSize();
-
-        UINT swapChainFlags = 0;
-
-        if (device->IsTearingSupported())
-            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-
-        bool needRecreate = handle == nullptr || window->GetNativeHandle() != windowHandle;
-        if (needRecreate)
-        {
-            Destroy();
-
-            // Create a descriptor for the swap chain.
-            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-            swapChainDesc.Width = UINT(drawableSize.width);
-            swapChainDesc.Height = UINT(drawableSize.height);
-            swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(colorFormat));
-            swapChainDesc.Stereo = FALSE;
-            swapChainDesc.SampleDesc.Count = 1;
-            swapChainDesc.SampleDesc.Quality = 0;
-            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-            swapChainDesc.BufferCount = kBufferCount;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-#else
-            swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-#endif
-            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-            swapChainDesc.Flags = swapChainFlags;
-
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            windowHandle = (HWND)window->GetNativeHandle();
-            ALIMER_ASSERT(IsWindow(windowHandle));
-
-            //DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-            //fsSwapChainDesc.Windowed = TRUE; // !window->IsFullscreen();
-
-            // Create a swap chain for the window.
-            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForHwnd(
-                device->d3dDevice,
-                windowHandle,
-                &swapChainDesc,
-                nullptr, // &fsSwapChainDesc,
-                nullptr,
-                &handle
-            ));
-
-            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-            ThrowIfFailed(device->GetDXGIFactory()->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER));
-#else
-            windowHandle = (IUnknown*)window->GetNativeHandle();
-            ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
-                device->d3dDevice,
-                windowHandle,
-                &swapChainDesc,
-                nullptr,
-                &handle
-            ));
-#endif
-        }
-        else
-        {
-
-        }
-
-        // Update present data
-        if (!verticalSync)
-        {
-            syncInterval = 0u;
-            // Recommended to always use tearing if supported when using a sync interval of 0.
-            presentFlags = device->IsTearingSupported() ? DXGI_PRESENT_ALLOW_TEARING : 0u;
-        }
-        else
-        {
-            syncInterval = 1u;
-            presentFlags = 0u;
-        }
-
-        AfterReset();
-
-        return true;
-    }
-
-    void D3D11RHISwapChain::AfterReset()
-    {
-        colorTexture.Reset();
-
-        ComPtr<ID3D11Texture2D> backbufferTexture;
-        ThrowIfFailed(handle->GetBuffer(0, IID_PPV_ARGS(&backbufferTexture)));
-        colorTexture = MakeRefPtr<D3D11Texture>(device, backbufferTexture.Get(), colorFormat);
-
-        if (depthStencilFormat != PixelFormat::Invalid)
-        {
-            //GPUTextureDescription depthTextureDesc = GPUTextureDescription::New2D(depthStencilFormat, extent.width, extent.height, false, TextureUsage::RenderTarget);
-            //depthStencilTexture.Reset(new D3D11Texture(device, depthTextureDesc, nullptr));
-        }
-    }
-
-    RHITexture* D3D11RHISwapChain::GetCurrentTexture() const
-    {
-        return colorTexture.Get();
-    }
-
-    RHICommandBuffer* D3D11RHISwapChain::CurrentFrameCommandBuffer()
-    {
-        return commandBuffer;
-    }
-
-    /* --- D3D11RHICommandBuffer --- */
-    D3D11RHICommandBuffer::D3D11RHICommandBuffer(D3D11RHIDevice* device)
-        : annotation(nullptr)
-    {
-        // TODO: Add deferred contexts?
-        //ThrowIfFailed(device->d3dDevice->CreateDeferredContext1(0, &context));
-        context = device->context;
-        ThrowIfFailed(context->QueryInterface(&annotation));
-    }
-
-    D3D11RHICommandBuffer::~D3D11RHICommandBuffer()
-    {
-        annotation->Release(); annotation = nullptr;
-        //context->Release(); context = nullptr;
-    }
-
-    void D3D11RHICommandBuffer::PushDebugGroup(const std::string& name)
-    {
-        std::wstring wideLabel = ToUtf16(name);
-        annotation->BeginEvent(wideLabel.c_str());
-    }
-
-    void D3D11RHICommandBuffer::PopDebugGroup()
-    {
-        annotation->EndEvent();
-    }
-
-    void D3D11RHICommandBuffer::InsertDebugMarker(const std::string& name)
-    {
-        std::wstring wideLabel = ToUtf16(name);
-        annotation->SetMarker(wideLabel.c_str());
-    }
-
-    void D3D11RHICommandBuffer::SetViewport(const RHIViewport& viewport)
-    {
-        D3D11_VIEWPORT d3dViewport;
-        d3dViewport.TopLeftX = viewport.x;
-        d3dViewport.TopLeftY = viewport.y;
-        d3dViewport.Width = viewport.width;
-        d3dViewport.Height = viewport.height;
-        d3dViewport.MinDepth = viewport.minDepth;
-        d3dViewport.MaxDepth = viewport.maxDepth;
-        context->RSSetViewports(1, &d3dViewport);
-    }
-
-    void D3D11RHICommandBuffer::SetScissorRect(const RectI& scissorRect)
-    {
-        D3D11_RECT d3dScissorRect;
-        d3dScissorRect.left = static_cast<LONG>(scissorRect.x);
-        d3dScissorRect.top = static_cast<LONG>(scissorRect.y);
-        d3dScissorRect.right = static_cast<LONG>(scissorRect.x + scissorRect.width);
-        d3dScissorRect.bottom = static_cast<LONG>(scissorRect.y + scissorRect.height);
-        context->RSSetScissorRects(1, &d3dScissorRect);
-    }
-
-    void D3D11RHICommandBuffer::SetBlendColor(const Color& color)
-    {
-
-    }
-
-    void D3D11RHICommandBuffer::BeginRenderPass(const RenderPassDesc& renderPass)
-    {
-        ID3D11RenderTargetView* renderTargetViews[kMaxColorAttachments];
-
-        uint32_t numColorAttachments = 0;
-
-        for (uint32_t i = 0; i < kMaxColorAttachments; i++)
-        {
-            auto& attachment = renderPass.colorAttachments[i];
-            if (attachment.texture == nullptr)
-                continue;
-
-            D3D11Texture* texture = static_cast<D3D11Texture*>(attachment.texture);
-
-            ID3D11RenderTargetView* rtv = texture->GetRTV(DXGI_FORMAT_UNKNOWN, attachment.mipLevel, attachment.slice);
-
-            switch (attachment.loadAction)
-            {
-            case LoadAction::DontCare:
-                context->DiscardView(rtv);
-                break;
-
-            case LoadAction::Clear:
-                context->ClearRenderTargetView(rtv, &attachment.clearColor.r);
-                break;
-
-            default:
-                break;
-            }
-
-            renderTargetViews[numColorAttachments++] = rtv;
-        }
-
-        context->OMSetRenderTargets(numColorAttachments, renderTargetViews, nullptr);
-    }
-
-    void D3D11RHICommandBuffer::EndRenderPass()
-    {
-        // TODO: Resolve 
-        context->OMSetRenderTargets(kMaxColorAttachments, zeroRTVS, nullptr);
-    }
-
+    
 
     /* --- D3D11GraphicsDevice --- */
     bool D3D11RHIDevice::IsAvailable()
@@ -529,7 +294,12 @@ namespace Alimer
             ThrowIfFailed(tempDevice->QueryInterface(IID_PPV_ARGS(&d3dDevice)));
 
             // Create main context.
-            ThrowIfFailed(tempContext->QueryInterface(&context));
+            ID3D11DeviceContext1* d3dContext;
+            ThrowIfFailed(tempContext->QueryInterface(&d3dContext));
+            immediateContext = new D3D11CommandContext(this, d3dContext);
+
+            SafeRelease(tempContext);
+            SafeRelease(tempDevice);
 
             // Init caps
             InitCapabilities(dxgiAdapter.Get());
@@ -543,8 +313,7 @@ namespace Alimer
 
     void D3D11RHIDevice::Shutdown()
     {
-        context->Release();
-        context = nullptr;
+        SafeDelete(immediateContext);
 
 #if !defined(NDEBUG)
         ULONG refCount = d3dDevice->Release();
@@ -783,17 +552,17 @@ namespace Alimer
 
     void D3D11RHIDevice::WaitForGPU()
     {
-        context->Flush();
+        immediateContext->context->Flush();
     }
 
-    RHIDevice::FrameOpResult D3D11RHIDevice::BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags)
+    RHIDevice::FrameOpResult D3D11RHIDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
     {
         return FrameOpResult::Success;
     }
 
-    RHIDevice::FrameOpResult D3D11RHIDevice::EndFrame(RHISwapChain* swapChain, EndFrameFlags flags)
+    RHIDevice::FrameOpResult D3D11RHIDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
     {
-        D3D11RHISwapChain* d3dSwapChain = static_cast<D3D11RHISwapChain*>(swapChain);
+        D3D11SwapChain* d3dSwapChain = static_cast<D3D11SwapChain*>(swapChain);
 
         if (!any(flags & EndFrameFlags::SkipPresent))
         {
@@ -814,7 +583,7 @@ namespace Alimer
         }
         else
         {
-            context->Flush();
+            immediateContext->context->Flush();
         }
 
         // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
@@ -826,9 +595,14 @@ namespace Alimer
         return FrameOpResult::Success;
     }
 
-    RHISwapChain* D3D11RHIDevice::CreateSwapChain()
+    CommandContext* D3D11RHIDevice::GetImmediateContext() const
     {
-        return new D3D11RHISwapChain(this);
+        return immediateContext;
+    }
+
+    SwapChain* D3D11RHIDevice::CreateSwapChain()
+    {
+        return new D3D11SwapChain(this);
     }
 
     GraphicsBuffer* D3D11RHIDevice::CreateBuffer(const BufferDescription& description, const void* initialData, const char* label)

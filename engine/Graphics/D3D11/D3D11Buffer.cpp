@@ -109,7 +109,7 @@ namespace Alimer
             initialDataPtr = &initialResourceData;
         }
 
-        HRESULT hr = device->d3dDevice->CreateBuffer(&d3dDesc, initialDataPtr, &handle);
+        HRESULT hr = device->GetD3DDevice()->CreateBuffer(&d3dDesc, initialDataPtr, &handle);
         if (FAILED(hr))
         {
             LOGE("Direct3D11: Failed to create buffer");

@@ -102,6 +102,17 @@ namespace Alimer
         TypeCube
     };
 
+    /// Defines the usage of texture resource.
+    enum class TextureUsage : uint32_t
+    {
+        None = 0,
+        Sampled = (1 << 0),
+        Storage = (1 << 1),
+        RenderTarget = (1 << 2),
+        GenerateMipmaps = (1 << 3)
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
+
     enum class TextureLayout : uint32
     {
         Undefined,
@@ -125,8 +136,50 @@ namespace Alimer
         Store,
     };
 
-
     /* Structs */
+    /// A 3D rectangular region for the viewport clipping.
+    class ALIMER_API RHIViewport
+    {
+    public:
+        /// The x coordinate of the upper-left corner of the viewport.
+        float x;
+        /// The y coordinate of the upper-left corner of the viewport.
+        float y;
+        /// The width of the viewport, in pixels.
+        float width;
+        /// The width of the viewport, in pixels.
+        float height;
+        /// The z coordinate of the near clipping plane of the viewport.
+        float minDepth;
+        /// The z coordinate of the far clipping plane of the viewport.
+        float maxDepth;
+
+        /// Constructor.
+        RHIViewport() noexcept : x(0.0f), y(0.0f), width(0.0f), height(0.0f), minDepth(0.0f), maxDepth(1.0f) {}
+        constexpr RHIViewport(float x_, float y_, float width_, float ih, float iminz = 0.f, float imaxz = 1.f) noexcept
+            : x(x_), y(y_), width(width_), height(ih), minDepth(iminz), maxDepth(imaxz) {}
+
+        RHIViewport(const RHIViewport&) = default;
+        RHIViewport& operator=(const RHIViewport&) = default;
+
+        RHIViewport(RHIViewport&&) = default;
+        RHIViewport& operator=(RHIViewport&&) = default;
+
+        // Comparison operators
+        bool operator == (const RHIViewport& rhs) const noexcept
+        {
+            return (x == rhs.x && y == rhs.y && width == rhs.width && height == rhs.height && minDepth == rhs.minDepth && maxDepth == rhs.maxDepth);
+        }
+
+        bool operator != (const RHIViewport& rhs) const noexcept
+        {
+            return (x != rhs.x || y != rhs.y || width != rhs.width || height != rhs.height || minDepth != rhs.minDepth || maxDepth != rhs.maxDepth);
+        }
+
+        // Viewport operations
+        float AspectRatio() const;
+    };
+
     struct BufferDescription
     {
         BufferUsage usage;
@@ -138,6 +191,7 @@ namespace Alimer
     {
         TextureType type = TextureType::Type2D;
         PixelFormat format = PixelFormat::RGBA8Unorm;
+        TextureUsage usage = TextureUsage::Sampled;
         uint32 width = 1u;
         uint32 height = 1u;
         uint32 depthOrArraySize = 1u;
@@ -145,11 +199,12 @@ namespace Alimer
         uint32 sampleCount = 1u;
         TextureLayout initialLayout = TextureLayout::Undefined;
 
-        static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false)
+        static TextureDescription New2D(PixelFormat format, uint32 width, uint32 height, bool mipmapped = false, TextureUsage usage = TextureUsage::Sampled)
         {
             TextureDescription desc = {};
             desc.type = TextureType::Type2D;
             desc.format = format;
+            desc.usage = usage;
             desc.width = width;
             desc.height = height;
             desc.depthOrArraySize = 1u;
@@ -159,10 +214,10 @@ namespace Alimer
         }
     };
 
-    class RHITexture;
+    class Texture;
     struct RenderPassColorAttachment
     {
-        RHITexture* texture = nullptr;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         uint32_t slice;
         LoadAction loadAction = LoadAction::Clear;
@@ -172,7 +227,7 @@ namespace Alimer
 
     struct RenderPassDepthStencilAttachment
     {
-        RHITexture* texture = nullptr;
+        Texture* texture = nullptr;
         uint32_t mipLevel = 0;
         uint32_t slice;
         LoadAction depthLoadAction = LoadAction::Clear;
