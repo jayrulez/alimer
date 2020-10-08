@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "RHI/Types.h"
+#include "Graphics/GraphicsBuffer.h"
 #include "Math/Size.h"
 #include <memory>
 #include <mutex>
@@ -32,18 +32,9 @@ namespace Alimer
 {
     class Window;
     class RHIResource;
-    class RHIBuffer;
     class RHITexture;
     class RHISwapChain;
     class RHICommandBuffer;
-
-    enum class MemoryUsage
-    {
-        GpuOnly,
-        CpuOnly,
-        CpuToGpu,
-        GpuToCpu
-    };
 
     enum class BeginFrameFlags : uint32_t {
         None = 0
@@ -119,9 +110,6 @@ namespace Alimer
         /// Get the resource type.
         ALIMER_FORCE_INLINE Type GetType() const { return type; }
 
-        /// Get the resource memory usage.
-        ALIMER_FORCE_INLINE MemoryUsage GetMemoryUsage() const { return memoryUsage; }
-
         /// Set the resource name.
         virtual void SetName(const std::string& newName) { name = newName; }
 
@@ -129,52 +117,18 @@ namespace Alimer
         const std::string& GetName() const { return name; }
 
     protected:
-        RHIResource(Type type_, MemoryUsage memoryUsage_ = MemoryUsage::GpuOnly)
+        RHIResource(Type type_)
             : type(type_)
-            , memoryUsage(memoryUsage_)
         {
 
         }
 
     protected:
         Type type;
-        MemoryUsage memoryUsage;
         std::string name;
     };
 
-    class RHIBuffer : public RHIResource
-    {
-    public:
-        enum class Usage : uint32_t
-        {
-            None = 0,
-            Vertex = 1 << 0,
-            Index = 1 << 1,
-            Uniform = 1 << 2,
-            Storage = 1 << 3,
-            Indirect = 1 << 4
-        };
-
-        /// Gets buffer usage.
-        ALIMER_FORCE_INLINE Usage GetUsage() const{ return usage; }
-
-        /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint64_t GetSize() const { return size; }
-
-    protected:
-        /// Constructor
-        RHIBuffer(Usage usage_, uint64_t size_, MemoryUsage memoryUsage_)
-            : RHIResource(Type::Buffer, memoryUsage_)
-            , usage(usage_)
-            , size(size_)
-        {
-
-        }
-
-        Usage usage;
-        uint64_t size;
-    };
-
+    
     class ALIMER_API RHITexture : public Object, public RHIResource
     {
         ALIMER_OBJECT(RHITexture, Object);
@@ -292,6 +246,31 @@ namespace Alimer
         bool verticalSync = true;
     };
 
+    class RHIShader : public RHIResource
+    {
+    public:
+        enum class Stage : uint32_t
+        {
+            Vertex,
+            Fragment,
+            Compute
+        };
+
+        /// Gets shader usage.
+        ALIMER_FORCE_INLINE Stage GetStage() const { return stage; }
+
+    protected:
+        /// Constructor
+        RHIShader(Stage stage_)
+            : RHIResource(Type::Buffer)
+            , stage(stage_)
+        {
+
+        }
+
+        Stage stage;
+    };
+
     /// Batch used for inizializing resource data.
     class ALIMER_API RHIResourceUploadBatch
     {
@@ -359,8 +338,9 @@ namespace Alimer
 
         virtual RHISwapChain* CreateSwapChain() = 0;
 
-        virtual RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage = MemoryUsage::GpuOnly) = 0;
-        virtual RHIBuffer* CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size) = 0;
+        virtual GraphicsBuffer* CreateBuffer(const BufferDescription& description, const void* initialData, const char* label = nullptr) = 0;
+
+        //virtual RHIShader* CreateShader();
 
         /// Gets the device backend type.
         GraphicsBackendType GetBackendType() const { return caps.backendType; }
@@ -384,7 +364,6 @@ namespace Alimer
     };
 
     /* Enum flags operators */
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHIBuffer::Usage, uint32_t);
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(RHITexture::Usage, uint32_t);
 
     /* Helper methods */

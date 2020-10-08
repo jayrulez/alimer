@@ -25,6 +25,7 @@
 #include "Platform/Event.h"
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
+#include "Graphics/RHI.h"
 #include "UI/ImGuiLayer.h"
 
 namespace Alimer

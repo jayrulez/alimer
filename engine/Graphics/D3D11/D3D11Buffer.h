@@ -20,25 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "RHI/RHI.h"
+#pragma once
+
+#include "Graphics/GraphicsBuffer.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-    const char* ToString(RHIDevice::FrameOpResult value)
+    struct D3D11Buffer final : public GraphicsBuffer
     {
-        static const char* names[] = {
-            "Success", "Error", "SwapChainOutOfDate", "DeviceLost"
-        };
+        D3D11Buffer(D3D11RHIDevice* device, const BufferDescription& desc, const void* initialData, const char* label);
+        ~D3D11Buffer();
+        void Destroy() override;
+        void SetName(const std::string& newName) override;
 
-        return names[static_cast<uint32>(value)];
-    }
-
-    const char* ToString(GraphicsBackendType value)
-    {
-        static const char* names[] = {
-            "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "Count"
-        };
-
-        return names[static_cast<uint32>(value)];
-    }
+        D3D11RHIDevice* device;
+        ID3D11Buffer* handle;
+    };
 }

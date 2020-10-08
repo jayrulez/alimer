@@ -60,11 +60,34 @@ namespace Alimer
             return result;
         }
 
+        void SetMaximumSize(const SizeI& size) noexcept
+        {
+            maxSize = size;
+            glfwSetWindowSizeLimits(window, GLFW_DONT_CARE, GLFW_DONT_CARE, static_cast<int>(size.width), static_cast<int>(size.height));
+        }
+
+        SizeI GetMaximumSize() const noexcept
+        {
+            return maxSize;
+        }
+
+        void SetMinimumSize(const SizeI& size) noexcept
+        {
+            minSize = size;
+            glfwSetWindowSizeLimits(window, static_cast<int>(size.width), static_cast<int>(size.height), GLFW_DONT_CARE, GLFW_DONT_CARE);
+        }
+
+        SizeI GetMinimumSize() const noexcept
+        {
+            return minSize;
+        }
 
     private:
         GLFWwindow* window{ nullptr };
         std::string title{};
         uint32_t id;
+        SizeI minSize{};
+        SizeI maxSize{};
     };
 
     void PumpEvents() noexcept;

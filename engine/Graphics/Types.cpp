@@ -20,39 +20,25 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "RHI/Types.h"
-#include "RHI/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/RHI.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
-
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
-
-    static inline RHITexture::Usage D3D11GetTextureUsage(UINT bindFlags)
+    const char* ToString(RHIDevice::FrameOpResult value)
     {
-        RHITexture::Usage usage = RHITexture::Usage::None;
-        if (bindFlags & D3D11_BIND_SHADER_RESOURCE) {
-            usage |= RHITexture::Usage::Sampled;
-        }
-        if (bindFlags & D3D11_BIND_UNORDERED_ACCESS) {
-            usage |= RHITexture::Usage::Storage;
-        }
-        if (bindFlags & D3D11_BIND_RENDER_TARGET) {
-            usage |= RHITexture::Usage::RenderTarget;
-        }
-        if (bindFlags & D3D11_BIND_DEPTH_STENCIL) {
-            usage |= RHITexture::Usage::RenderTarget;
-        }
+        static const char* names[] = {
+            "Success", "Error", "SwapChainOutOfDate", "DeviceLost"
+        };
 
-        return usage;
+        return names[static_cast<uint32>(value)];
+    }
+
+    const char* ToString(GraphicsBackendType value)
+    {
+        static const char* names[] = {
+            "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "Count"
+        };
+
+        return names[static_cast<uint32>(value)];
     }
 }

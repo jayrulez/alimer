@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "RHI/RHI.h"
+#include "Graphics/RHI.h"
 #include "D3D11Backend.h"
 #include <queue>
 #include <mutex>
@@ -32,19 +32,6 @@ namespace Alimer
     struct D3D11RHICommandBuffer;
     class D3D11Texture;
     struct D3D11RHIDevice;
-
-    struct D3D11RHIBuffer final : public RHIBuffer
-    {
-    public:
-        D3D11RHIBuffer(D3D11RHIDevice* device, RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage, const void* initialData);
-        ~D3D11RHIBuffer() override;
-        void Destroy() override;
-
-        void SetName(const std::string& newName) override;
-
-        D3D11RHIDevice* device;
-        ID3D11Buffer* handle = nullptr;
-    };
 
     struct D3D11RHISwapChain final : public RHISwapChain
     {
@@ -118,8 +105,7 @@ namespace Alimer
         FrameOpResult BeginFrame(RHISwapChain* swapChain, BeginFrameFlags flags) override;
         FrameOpResult EndFrame(RHISwapChain* swapChain, EndFrameFlags flags) override;
         RHISwapChain* CreateSwapChain() override;
-        RHIBuffer* CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage) override;
-        RHIBuffer* CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size) override;
+        GraphicsBuffer* CreateBuffer(const BufferDescription& description, const void* initialData, const char* label) override;
 
         bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;

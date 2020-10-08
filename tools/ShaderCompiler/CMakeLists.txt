@@ -1,7 +1,9 @@
 
 # Library
 add_library(ShaderCompilerLib
-	include/ShaderCompiler.h
+	include/MemoryStream.h
+    include/ShaderCompiler.h
+    src/MemoryStream.cpp
 	src/ShaderCompiler.cpp
 )
 

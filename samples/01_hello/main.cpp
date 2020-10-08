@@ -21,6 +21,7 @@
 //
 
 #include "Platform/Application.h"
+#include "Graphics/RHI.h"
 
 namespace Alimer
 {
@@ -52,8 +53,11 @@ namespace Alimer
             { { -0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
         };
 
-        RHIResourceUploadBatch* batch = nullptr;
-        auto buffer = rhiDevice->CreateStaticBuffer(batch, triangleVertices, RHIBuffer::Usage::Vertex, sizeof(Vertex));
+        BufferDescription bufferDesc{};
+        bufferDesc.usage = BufferUsage::Vertex;
+        bufferDesc.size = sizeof(triangleVertices);
+        bufferDesc.size = sizeof(Vertex);
+        auto buffer = rhiDevice->CreateBuffer(bufferDesc, triangleVertices);
     }
 
     void HelloWorldApp::OnDraw()

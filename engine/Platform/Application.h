@@ -24,7 +24,7 @@
 
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
-#include "RHI/RHI.h"
+#include "Graphics/Types.h"
 #include <memory>
 
 namespace Alimer

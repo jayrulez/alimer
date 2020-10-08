@@ -71,9 +71,17 @@ namespace Alimer
         void SetBrightness(float value);
         float GetBrightness() const noexcept;
 
-        void SetSize(uint32_t width, uint32_t height) noexcept;
+        void SetSize(int32_t width, int32_t height) noexcept;
         void SetSize(const SizeI& size) noexcept;
         SizeI GetSize() const noexcept;
+
+        void SetMaximumSize(int32_t width, int32_t height) noexcept;
+        void SetMaximumSize(const SizeI& size) noexcept;
+        SizeI GetMaximumSize() const noexcept;
+
+        void SetMinimumSize(int32_t width, int32_t height) noexcept;
+        void SetMinimumSize(const SizeI& size) noexcept;
+        SizeI GetMinimumSize() const noexcept;
 
     private:
         WindowImpl* impl;

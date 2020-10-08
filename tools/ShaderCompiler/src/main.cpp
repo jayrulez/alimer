@@ -21,6 +21,7 @@
 //
 
 #include "ShaderCompiler.h"
+#include "MemoryStream.h"
 
 #include <fstream>
 #include <iostream>
@@ -37,14 +38,13 @@ int main(int argc, const char* argv[])
     options.add_options()
         ("E,entry", "Entry point of the shader", cxxopts::value<std::string>()->default_value("main"))
         ("I,input", "Input file name", cxxopts::value<std::string>())("O,output", "Output file name", cxxopts::value<std::string>())
-        ("S,stage", "Shader stage: vs|vertex, ps|pixel|fragment, cs|compute", cxxopts::value<std::string>())
         ("T,target", "Target shading language: dxil, spirv, hlsl, glsl, essl, msl_macos, msl_ios", cxxopts::value<std::string>()->default_value("dxil"))
         ("V,version", "The version of target shading language", cxxopts::value<std::string>()->default_value(""))
         ("D,define", "Macro define as name=value", cxxopts::value<std::vector<std::string>>());
 
     auto opts = options.parse(argc, argv);
 
-    if ((opts.count("input") == 0) || (opts.count("stage") == 0))
+    if ((opts.count("input") == 0))
     {
         std::cerr << "COULDN'T find <input> or <stage> in command line parameters." << std::endl;
         std::cerr << options.help() << std::endl;
@@ -60,25 +60,6 @@ int main(int argc, const char* argv[])
     const auto targetVersion = opts["version"].as<std::string>();
 
     sourceDesc.fileName = fileName.c_str();
-
-    const auto stageName = opts["stage"].as<std::string>();
-    if (stageName == "vs" || stageName == "vertex")
-    {
-        sourceDesc.stage = ShaderStage::Vertex;
-    }
-    else if (stageName == "ps" || stageName == "pixel" || stageName == "fragment")
-    {
-        sourceDesc.stage = ShaderStage::Pixel;
-    }
-    else if (stageName == "cs" || stageName == "compute")
-    {
-        sourceDesc.stage = ShaderStage::Compute;
-    }
-    else
-    {
-        std::cerr << "Invalid shader stage: " << stageName << std::endl;
-        return 1;
-    }
 
     std::string outputName;
     if (opts.count("output") == 0)
@@ -111,8 +92,38 @@ int main(int argc, const char* argv[])
     }
     sourceDesc.source = source.c_str();
 
-    bool result = Compile(sourceDesc, targetDesc);
+    CompileOptions compileOptions{};
+    compileOptions.shaderModel = { 5, 0 };
 
-    return 1;
+    ResultDesc result = Compile(sourceDesc, compileOptions, targetDesc);
+
+    if (result.hasError && result.errors.Size() > 0)
+    {
+        const char* msg = reinterpret_cast<const char*>(result.errors.Data());
+        std::cerr << "Error or warning from shader compiler: " << std::endl
+            << std::string(msg, msg + result.errors.Size()) << std::endl;
+    }
+
+    {
+        FileStream stream(outputName);
+        stream.WriteFileID("ASHD");
+        stream.Write(static_cast<uint32_t>(result.shaders.size()));
+    }
+
+    if (result.output.Size() > 0)
+    {
+        std::ofstream outputFile(outputName, std::ios_base::binary);
+        if (!outputFile)
+        {
+            std::cerr << "COULDN'T open the output file: " << outputName << std::endl;
+            return 1;
+        }
+
+        outputFile.write(reinterpret_cast<const char*>(result.output.Data()), result.output.Size());
+
+        std::cout << "The compiled file is saved to " << outputName << std::endl;
+    }
+
+    return result.hasError ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 

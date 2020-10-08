@@ -25,7 +25,7 @@
 #include "AlimerConfig.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "RHI/RHI.h"
+#include "Graphics/Types.h"
 
 #if ALIMER_PLATFORM_WINDOWS
 #   include "PlatformIncl.h"
@@ -147,7 +147,7 @@ namespace Alimer
         }
     }
 
-    static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, RHITexture::Usage usage)
+    /*static inline DXGI_FORMAT ToDXGIFormatWitUsage(PixelFormat format, RHITexture::Usage usage)
     {
         // If depth and either ua or sr, set to typeless
         if (IsDepthStencilFormat(format)
@@ -157,7 +157,7 @@ namespace Alimer
         }
 
         return ToDXGIFormat(format);
-    }
+    }*/
 
     enum class DXGIFactoryCaps : uint8
     {

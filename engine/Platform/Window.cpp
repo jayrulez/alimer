@@ -68,7 +68,7 @@ namespace Alimer
         return impl->GetBrightness();
     }
 
-    void Window::SetSize(uint32_t width, uint32_t height) noexcept
+    void Window::SetSize(int32_t width, int32_t height) noexcept
     {
         impl->SetSize(SizeI(width, height));
     }
@@ -81,5 +81,35 @@ namespace Alimer
     SizeI Window::GetSize() const noexcept
     {
         return impl->GetSize();
+    }
+
+    void Window::SetMaximumSize(int32_t width, int32_t height) noexcept
+    {
+        impl->SetMaximumSize(SizeI(width, height));
+    }
+
+    void Window::SetMaximumSize(const SizeI& size) noexcept
+    {
+        impl->SetMaximumSize(size);
+    }
+
+    SizeI Window::GetMaximumSize() const noexcept
+    {
+        return impl->GetMaximumSize();
+    }
+
+    void Window::SetMinimumSize(int32_t width, int32_t height) noexcept
+    {
+        impl->SetMinimumSize(SizeI(width, height));
+    }
+
+    void Window::SetMinimumSize(const SizeI& size) noexcept
+    {
+        impl->SetMinimumSize(size);
+    }
+
+    SizeI Window::GetMinimumSize() const noexcept
+    {
+        return impl->GetMinimumSize();
     }
 }

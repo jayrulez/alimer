@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "RHI/RHI.h"
+#include "Graphics/RHI.h"
 #include "D3D11Backend.h"
 #include "Core/Hash.h"
 

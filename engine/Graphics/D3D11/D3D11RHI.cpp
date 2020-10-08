@@ -22,6 +22,7 @@
 
 //#include "D3D11CommandBuffer.h"
 #include "D3D11RHI.h"
+#include "D3D11Buffer.h"
 #include "D3D11Texture.h"
 #include "Platform/Window.h"
 
@@ -49,132 +50,9 @@ namespace Alimer
             return SUCCEEDED(hr);
         }
 #endif
-        D3D11_USAGE D3D11GetUsage(MemoryUsage usage)
-        {
-            switch (usage)
-            {
-            case MemoryUsage::GpuOnly:  return D3D11_USAGE_DEFAULT;
-            case MemoryUsage::CpuOnly:  return D3D11_USAGE_STAGING;
-            case MemoryUsage::CpuToGpu: return D3D11_USAGE_DYNAMIC;
-            case MemoryUsage::GpuToCpu: return D3D11_USAGE_STAGING;
-            default:
-                ALIMER_ASSERT_FAIL("Invalid Memory Usage");
-                return D3D11_USAGE_DEFAULT;
-            }
-        }
-
-        D3D11_CPU_ACCESS_FLAG D3D11GetCPUAccessFlags(MemoryUsage usage)
-        {
-            switch (usage)
-            {
-            case MemoryUsage::GpuOnly:  return (D3D11_CPU_ACCESS_FLAG)0;
-            case MemoryUsage::CpuOnly:  return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE);
-            case MemoryUsage::CpuToGpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_WRITE);
-            case MemoryUsage::GpuToCpu: return (D3D11_CPU_ACCESS_FLAG)(D3D11_CPU_ACCESS_READ);
-
-            default:
-                ALIMER_ASSERT_FAIL("Invalid Memory Usage");
-                return (D3D11_CPU_ACCESS_FLAG)0;
-            }
-        }
-
-        UINT D3D11GetBindFlags(RHIBuffer::Usage usage)
-        {
-            if (any(usage & RHIBuffer::Usage::Uniform))
-            {
-                // This cannot be combined with nothing else.
-                return D3D11_BIND_CONSTANT_BUFFER;
-            }
-
-            UINT flags = {};
-            if (any(usage & RHIBuffer::Usage::Vertex))
-                flags |= D3D11_BIND_VERTEX_BUFFER;
-            if (any(usage & RHIBuffer::Usage::Index))
-                flags |= D3D11_BIND_INDEX_BUFFER;
-
-            if (any(usage & RHIBuffer::Usage::Storage))
-            {
-                flags |= D3D11_BIND_SHADER_RESOURCE;
-                flags |= D3D11_BIND_UNORDERED_ACCESS;
-            }
-
-            return flags;
-        }
+        
     }
-
-    /* --- D3D11RHIBuffer --- */
-    D3D11RHIBuffer::D3D11RHIBuffer(D3D11RHIDevice* device_, RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage, const void* initialData)
-        : RHIBuffer(usage, size, memoryUsage)
-        , device(device_)
-    {
-        static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
-        static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
-
-        if (size > c_maxBytes)
-        {
-            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", size);
-            return;
-        }
-
-        uint64_t bufferSize = size;
-        if (any(usage & Usage::Uniform))
-        {
-            bufferSize = AlignTo(size, device->GetCaps().limits.minUniformBufferOffsetAlignment);
-        }
-        else
-        {
-            bufferSize = AlignTo(size, static_cast<uint64_t>(4u));
-        }
-
-        D3D11_BUFFER_DESC d3dDesc;
-        d3dDesc.ByteWidth = bufferSize;
-        d3dDesc.Usage = D3D11GetUsage(memoryUsage);
-        d3dDesc.BindFlags = D3D11GetBindFlags(usage);
-        d3dDesc.CPUAccessFlags = D3D11GetCPUAccessFlags(memoryUsage);
-        d3dDesc.MiscFlags = 0;
-        d3dDesc.StructureByteStride = 0;
-
-        if (any(usage & Usage::Storage))
-        {
-            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-        }
-
-        if (any(usage & Usage::Indirect))
-        {
-            d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
-        }
-
-        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
-        D3D11_SUBRESOURCE_DATA initialResourceData = {};
-        if (initialData != nullptr)
-        {
-            initialResourceData.pSysMem = initialData;
-            initialDataPtr = &initialResourceData;
-        }
-
-        HRESULT hr = device->d3dDevice->CreateBuffer(&d3dDesc, initialDataPtr, &handle);
-        if (FAILED(hr))
-        {
-            LOGE("Direct3D11: Failed to create buffer");
-        }
-    }
-
-    D3D11RHIBuffer::~D3D11RHIBuffer()
-    {
-        Destroy();
-    }
-
-    void D3D11RHIBuffer::Destroy()
-    {
-        SafeRelease(handle);
-    }
-
-    void D3D11RHIBuffer::SetName(const std::string& newName)
-    {
-        RHIBuffer::SetName(newName);
-        D3D11SetObjectName(handle, name);
-    }
-
+    
     /* --- D3D11RHIBuffer --- */
     D3D11RHISwapChain::D3D11RHISwapChain(D3D11RHIDevice* device_)
         : device(device_)
@@ -953,16 +831,9 @@ namespace Alimer
         return new D3D11RHISwapChain(this);
     }
 
-    RHIBuffer* D3D11RHIDevice::CreateBuffer(RHIBuffer::Usage usage, uint64_t size, MemoryUsage memoryUsage)
+    GraphicsBuffer* D3D11RHIDevice::CreateBuffer(const BufferDescription& description, const void* initialData, const char* label)
     {
-        return new D3D11RHIBuffer(this, usage, size, memoryUsage, nullptr);
-    }
-
-    RHIBuffer* D3D11RHIDevice::CreateStaticBuffer(RHIResourceUploadBatch* batch, const void* initialData, RHIBuffer::Usage usage, uint64_t size)
-    {
-        ALIMER_UNUSED(batch);
-
-        return new D3D11RHIBuffer(this, usage, size, MemoryUsage::GpuOnly, initialData);
+        return new D3D11Buffer(this, description, initialData, label);
     }
 
     void D3D11RHIDevice::HandleDeviceLost()

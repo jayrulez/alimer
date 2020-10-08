@@ -24,7 +24,7 @@
 
 #include "Math/Color.h"
 #include "Math/Rect.h"
-#include "RHI/PixelFormat.h"
+#include "Graphics/PixelFormat.h"
 
 namespace Alimer
 {
@@ -78,6 +78,19 @@ namespace Alimer
         Count
     };
 
+    enum class BufferUsage : uint32_t
+    {
+        None = 0,
+        Vertex = 1 << 0,
+        Index = 1 << 1,
+        Uniform = 1 << 2,
+        Storage = 1 << 3,
+        Indirect = 1 << 4,
+        Dynamic = 1 << 5,
+        Staging = 1 << 6,
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BufferUsage, uint32_t);
+
     /// Describes the texture type.
     enum class TextureType
     {
@@ -114,6 +127,13 @@ namespace Alimer
 
 
     /* Structs */
+    struct BufferDescription
+    {
+        BufferUsage usage;
+        uint32_t size;
+        uint32_t stride;
+    };
+
     struct TextureDescription
     {
         TextureType type = TextureType::Type2D;
@@ -217,9 +237,9 @@ namespace Alimer
         uint32_t maxTextureArrayLayers;
         uint32_t maxColorAttachments;
         uint32_t maxUniformBufferSize;
-        uint64_t minUniformBufferOffsetAlignment;
+        uint32_t minUniformBufferOffsetAlignment;
         uint32_t maxStorageBufferSize;
-        uint64_t minStorageBufferOffsetAlignment;
+        uint32_t minStorageBufferOffsetAlignment;
         uint32_t maxSamplerAnisotropy;
         uint32_t maxViewports;
         uint32_t maxViewportWidth;

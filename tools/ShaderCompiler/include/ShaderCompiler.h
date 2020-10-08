@@ -35,12 +35,6 @@ namespace ShaderCompiler
         Count
     };
 
-    enum class SourceShaderLanguage : uint32_t
-    {
-        HLSL,
-        LegacyHLSL
-    };
-
     enum class ShadingLanguage : uint32_t
     {
         DXIL = 0,
@@ -50,19 +44,90 @@ namespace ShaderCompiler
         Count
     };
 
+    class Blob
+    {
+    public:
+        Blob() noexcept = default;
+        Blob(const void* data, uint32_t size);
+        Blob(const Blob& other);
+        Blob(Blob&& other) noexcept;
+        ~Blob() noexcept;
+
+        Blob& operator=(const Blob& other);
+        Blob& operator=(Blob&& other) noexcept;
+
+        void Reset();
+        void Reset(const void* newData, uint32_t size);
+
+        const void* Data() const noexcept;
+        uint32_t Size() const noexcept;
+
+    private:
+        std::vector<uint8_t> data;
+    };
+
+    struct ShaderModel
+    {
+        uint8_t major_ver : 6;
+        uint8_t minor_ver : 2;
+
+        uint32_t FullVersion() const noexcept
+        {
+            return (major_ver << 2) | minor_ver;
+        }
+
+        bool operator<(const ShaderModel& other) const noexcept
+        {
+            return this->FullVersion() < other.FullVersion();
+        }
+        bool operator==(const ShaderModel& other) const noexcept
+        {
+            return this->FullVersion() == other.FullVersion();
+        }
+        bool operator>(const ShaderModel& other) const noexcept
+        {
+            return other < *this;
+        }
+        bool operator<=(const ShaderModel& other) const noexcept
+        {
+            return (*this < other) || (*this == other);
+        }
+        bool operator>=(const ShaderModel& other) const noexcept
+        {
+            return (*this > other) || (*this == other);
+        }
+    };
+
+    struct CompileOptions
+    {
+        ShaderModel shaderModel = { 6, 0 };
+    };
+
     struct SourceDesc
     {
         const char* source;
         const char* fileName;
-        const char* entryPoint;
-        ShaderStage stage;
-        SourceShaderLanguage language;
     };
 
     struct TargetDesc
     {
-        ShadingLanguage language = ShadingLanguage::DXIL;
+        ShadingLanguage language = ShadingLanguage::HLSL;
     };
 
-    bool Compile(const SourceDesc& source, const TargetDesc& target);
+    struct Shader
+    {
+        ShaderStage stage;
+        Blob bytecode;
+    };
+
+    struct ResultDesc
+    {
+        bool hasError;
+        Blob errors;
+
+        Blob output;
+        std::vector<Shader> shaders;
+    };
+
+    ResultDesc Compile(const SourceDesc& source, const CompileOptions& options, const TargetDesc& target);
 }
