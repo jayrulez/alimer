@@ -46,7 +46,7 @@ namespace Alimer
     };
 
     class SwapChain;
-    class RHIDevice;
+    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -100,7 +100,7 @@ namespace Alimer
         bool headless = false;
         std::unique_ptr<Window> window{ nullptr };
         std::unique_ptr<SwapChain> windowSwapChain{ nullptr };
-        std::unique_ptr<RHIDevice> rhiDevice{ nullptr };
+        RefPtr<GraphicsDevice> graphicsDevice;
     };
 
     extern Application* CreateApplication(void);

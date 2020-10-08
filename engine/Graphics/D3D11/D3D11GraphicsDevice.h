@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/RHI.h"
+#include "Graphics/GraphicsDevice.h"
 #include "D3D11Backend.h"
 #include <queue>
 #include <mutex>
@@ -31,12 +31,12 @@ namespace Alimer
 {
     class D3D11CommandContext;
 
-    class D3D11RHIDevice final : public RHIDevice
+    class D3D11GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D11RHIDevice(GraphicsDeviceFlags flags);
-        ~D3D11RHIDevice() override;
+        D3D11GraphicsDevice(GraphicsDeviceFlags flags);
+        ~D3D11GraphicsDevice() override;
 
         void Shutdown();
         void HandleDeviceLost();
@@ -54,8 +54,10 @@ namespace Alimer
         FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
         CommandContext* GetImmediateContext() const override;
 
+        RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() override;
         SwapChain* CreateSwapChain() override;
-        GraphicsBuffer* CreateBuffer(const BufferDescription& description, const void* initialData, const char* label) override;
+        GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label) override;
+        GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label) override;
 
     private:
         bool debugRuntime;

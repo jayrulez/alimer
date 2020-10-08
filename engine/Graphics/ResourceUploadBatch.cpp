@@ -20,21 +20,33 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/ResourceUploadBatch.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+    ResourceUploadBatch::ResourceUploadBatch()
+        : inBeginEndBlock(false)
+    {
 
-    class D3D11GraphicsDevice;
+    }
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+    void ResourceUploadBatch::Begin()
+    {
+        if (inBeginEndBlock)
+        {
+            throw std::exception("Can't Begin: already in a Begin-End block.");
+        }
+
+        PlatformBegin();
+        inBeginEndBlock = true;
+    }
+
+    void ResourceUploadBatch::End(bool waitForCompletion)
+    {
+        if (!inBeginEndBlock)
+            throw std::exception("ResourceUploadBatch already closed.");
+
+        PlatformEnd(waitForCompletion);
+        inBeginEndBlock = false;
+    }
 }

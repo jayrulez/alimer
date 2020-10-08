@@ -27,14 +27,16 @@
 
 namespace Alimer
 {
-    struct D3D11Buffer final : public GraphicsBuffer
+    class D3D11Buffer final : public GraphicsBuffer
     {
-        D3D11Buffer(D3D11RHIDevice* device, const BufferDescription& desc, const void* initialData, const char* label);
+    public:
+        D3D11Buffer(D3D11GraphicsDevice* device, BufferUsage usage, uint32_t count, uint32_t stride, const void* initialData, const char* label);
         ~D3D11Buffer();
         void Destroy() override;
         void SetName(const std::string& newName) override;
 
-        D3D11RHIDevice* device;
+    private:
+        D3D11GraphicsDevice* device;
         ID3D11Buffer* handle;
     };
 }

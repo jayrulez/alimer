@@ -24,9 +24,12 @@
 
 namespace Alimer
 {
-    GraphicsBuffer::GraphicsBuffer(const BufferDescription& desc)
+    GraphicsBuffer::GraphicsBuffer(BufferUsage usage, uint32_t count, uint32_t stride)
         : GraphicsResource(Type::Buffer)
-        , desc{ desc }
+        , usage{ usage }
+        , count{ count }
+        , stride{ stride }
+        , size(count * stride)
     {
 
     }

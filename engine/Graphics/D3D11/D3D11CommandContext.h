@@ -30,7 +30,7 @@ namespace Alimer
     class D3D11CommandContext final : public CommandContext
     {
     public:
-        D3D11CommandContext(D3D11RHIDevice* device_, ID3D11DeviceContext1* context_);
+        D3D11CommandContext(D3D11GraphicsDevice* device_, ID3D11DeviceContext1* context_);
         ~D3D11CommandContext();
 
         void PushDebugGroup(const std::string& name) override;
@@ -42,7 +42,7 @@ namespace Alimer
         void BeginRenderPass(const RenderPassDesc& renderPass) override;
         void EndRenderPass() override;
 
-        D3D11RHIDevice* device;
+        D3D11GraphicsDevice* device;
         ID3D11DeviceContext1* context;
         ID3DUserDefinedAnnotation* annotation = nullptr;
 

@@ -22,17 +22,13 @@
 
 #pragma once
 
-#include "Graphics/GraphicsBuffer.h"
-#include "Graphics/Texture.h"
-#include "Math/Size.h"
+#include "Core/Ptr.h"
+#include "Graphics/Types.h"
 #include <memory>
 #include <mutex>
 
 namespace Alimer
 {
-    class Window;
-    class SwapChain;
-
     enum class BeginFrameFlags : uint32_t {
         None = 0
     };
@@ -44,9 +40,7 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
 
-    class CommandContext;
-
-    class ALIMER_API RHIDevice
+    class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
         enum class FrameOpResult : uint32_t {
@@ -57,9 +51,9 @@ namespace Alimer
         };
 
         /// Destructor
-        virtual ~RHIDevice() = default;
+        virtual ~GraphicsDevice() = default;
 
-        static RHIDevice* Create(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static RefPtr<GraphicsDevice> Create(GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -72,9 +66,12 @@ namespace Alimer
 
         virtual CommandContext* GetImmediateContext() const = 0;
 
+        virtual RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() = 0;
+
         virtual SwapChain* CreateSwapChain() = 0;
 
-        virtual GraphicsBuffer* CreateBuffer(const BufferDescription& description, const void* initialData, const char* label = nullptr) = 0;
+        virtual GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
+        virtual GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
 
         /// Gets the device backend type.
         GraphicsBackendType GetBackendType() const { return caps.backendType; }
@@ -83,7 +80,7 @@ namespace Alimer
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     protected:
-        RHIDevice() = default;
+        GraphicsDevice() = default;
 
         GraphicsDeviceCaps caps{};
 
@@ -113,7 +110,5 @@ namespace Alimer
 
         return mipLevels;
     }
-
-    ALIMER_API const char* ToString(RHIDevice::FrameOpResult value);
 }
 

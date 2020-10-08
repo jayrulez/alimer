@@ -22,12 +22,12 @@
 
 #include "D3D11SwapChain.h"
 #include "D3D11Texture.h"
-#include "D3D11RHI.h"
+#include "D3D11GraphicsDevice.h"
 #include "Platform/Window.h"
 
 namespace Alimer
 {
-    D3D11SwapChain::D3D11SwapChain(D3D11RHIDevice* device_)
+    D3D11SwapChain::D3D11SwapChain(D3D11GraphicsDevice* device_)
         : device(device_)
     {
 

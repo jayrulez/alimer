@@ -20,21 +20,46 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Assert.h"
+#include "AlimerConfig.h"
 #include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Math/MathHelper.h"
+#include "Graphics/GraphicsDevice.h"
+
+#if defined(ALIMER_D3D11)
+#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+#if defined(ALIMER_D3D12)
+#endif
+#if defined(ALIMER_VULKAN)
+#endif
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
 
-    class D3D11GraphicsDevice;
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    {
+        RefPtr<GraphicsDevice> device(new D3D11GraphicsDevice(flags));
+        return device;
+    }
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+    /*void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
+    {
+        ALIMER_ASSERT(resource);
+
+        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
+        gpuObjects.push_back(resource);
+    }
+
+    void GraphicsDevice::RemoveGraphicsResource(GraphicsResource* resource)
+    {
+        ALIMER_ASSERT(resource);
+        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
+
+        auto it = std::find(gpuObjects.begin(), gpuObjects.end(), resource);
+        if (it != gpuObjects.end())
+        {
+            gpuObjects.erase(it);
+        }
+    }*/
 }
+

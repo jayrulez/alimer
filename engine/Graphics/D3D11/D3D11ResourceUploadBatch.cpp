@@ -20,53 +20,30 @@
 // THE SOFTWARE.
 //
 
-#include "AlimerConfig.h"
+#include "D3D11ResourceUploadBatch.h"
+#include "D3D11GraphicsDevice.h"
 #include "Core/Log.h"
-#include "Math/MathHelper.h"
-#include "RHI/RHI.h"
-
-#if defined(ALIMER_D3D11)
-#include "RHI/D3D11/D3D11RHI.h"
-#endif
-#if defined(ALIMER_D3D12)
-#endif
-#if defined(ALIMER_VULKAN)
-#endif
 
 namespace Alimer
 {
-    float RHIViewport::AspectRatio() const
+    D3D11ResourceUploadBatch::D3D11ResourceUploadBatch(D3D11GraphicsDevice* device)
+        : device{ device }
     {
-        if (width == 0.f || height == 0.f)
-            return 0.f;
-
-        return (width / height);
+       
     }
 
-    RHIDevice* RHIDevice::Create(const std::string& applicationName, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    D3D11ResourceUploadBatch::~D3D11ResourceUploadBatch()
     {
-        RHIDevice* device = new D3D11RHIDevice(flags);
-        return device;
     }
 
-    /*void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)
+    void D3D11ResourceUploadBatch::PlatformBegin()
     {
-        ALIMER_ASSERT(resource);
 
-        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
-        gpuObjects.push_back(resource);
     }
 
-    void GraphicsDevice::RemoveGraphicsResource(GraphicsResource* resource)
+    void D3D11ResourceUploadBatch::PlatformEnd(bool waitForCompletion)
     {
-        ALIMER_ASSERT(resource);
-        std::lock_guard<std::mutex> LockGuard(gpuObjectMutex);
-
-        auto it = std::find(gpuObjects.begin(), gpuObjects.end(), resource);
-        if (it != gpuObjects.end())
-        {
-            gpuObjects.erase(it);
-        }
-    }*/
+        ALIMER_UNUSED(waitForCompletion);
+    }
 }
 

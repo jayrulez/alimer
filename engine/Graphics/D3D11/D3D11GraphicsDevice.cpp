@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "D3D11RHI.h"
+#include "D3D11GraphicsDevice.h"
+#include "D3D11ResourceUploadBatch.h"
 #include "D3D11Buffer.h"
 #include "D3D11Texture.h"
 #include "D3D11SwapChain.h"
@@ -52,11 +53,8 @@ namespace Alimer
 #endif
         
     }
-    
-    
 
-    /* --- D3D11GraphicsDevice --- */
-    bool D3D11RHIDevice::IsAvailable()
+    bool D3D11GraphicsDevice::IsAvailable()
     {
         static bool available = false;
         static bool available_initialized = false;
@@ -123,7 +121,7 @@ namespace Alimer
         return true;
     }
 
-    D3D11RHIDevice::D3D11RHIDevice(GraphicsDeviceFlags flags)
+    D3D11GraphicsDevice::D3D11GraphicsDevice(GraphicsDeviceFlags flags)
         : debugRuntime(any(flags& GraphicsDeviceFlags::DebugRuntime) || any(flags & GraphicsDeviceFlags::GPUBasedValidation))
     {
         ALIMER_VERIFY(IsAvailable());
@@ -306,12 +304,12 @@ namespace Alimer
         }
     }
 
-    D3D11RHIDevice::~D3D11RHIDevice()
+    D3D11GraphicsDevice::~D3D11GraphicsDevice()
     {
         Shutdown();
     }
 
-    void D3D11RHIDevice::Shutdown()
+    void D3D11GraphicsDevice::Shutdown()
     {
         SafeDelete(immediateContext);
 
@@ -350,7 +348,7 @@ namespace Alimer
 #endif
     }
 
-    void D3D11RHIDevice::CreateFactory()
+    void D3D11GraphicsDevice::CreateFactory()
     {
 #if defined(_DEBUG) && (_WIN32_WINNT >= 0x0603 /*_WIN32_WINNT_WINBLUE*/)
         bool debugDXGI = false;
@@ -446,7 +444,7 @@ namespace Alimer
 #endif
     }
 
-    void D3D11RHIDevice::InitCapabilities(IDXGIAdapter1* adapter)
+    void D3D11GraphicsDevice::InitCapabilities(IDXGIAdapter1* adapter)
     {
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(adapter->GetDesc1(&desc));
@@ -545,22 +543,22 @@ namespace Alimer
         }
     }
 
-    bool D3D11RHIDevice::IsDeviceLost() const
+    bool D3D11GraphicsDevice::IsDeviceLost() const
     {
         return deviceLost;
     }
 
-    void D3D11RHIDevice::WaitForGPU()
+    void D3D11GraphicsDevice::WaitForGPU()
     {
         immediateContext->context->Flush();
     }
 
-    RHIDevice::FrameOpResult D3D11RHIDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
+    D3D11GraphicsDevice::FrameOpResult D3D11GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
     {
         return FrameOpResult::Success;
     }
 
-    RHIDevice::FrameOpResult D3D11RHIDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
+    D3D11GraphicsDevice::FrameOpResult D3D11GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
     {
         D3D11SwapChain* d3dSwapChain = static_cast<D3D11SwapChain*>(swapChain);
 
@@ -595,22 +593,34 @@ namespace Alimer
         return FrameOpResult::Success;
     }
 
-    CommandContext* D3D11RHIDevice::GetImmediateContext() const
+    CommandContext* D3D11GraphicsDevice::GetImmediateContext() const
     {
         return immediateContext;
     }
 
-    SwapChain* D3D11RHIDevice::CreateSwapChain()
+    RefPtr<ResourceUploadBatch> D3D11GraphicsDevice::CreateResourceUploadBatch()
+    {
+        return RefPtr<ResourceUploadBatch>(new D3D11ResourceUploadBatch(this));
+    }
+
+    SwapChain* D3D11GraphicsDevice::CreateSwapChain()
     {
         return new D3D11SwapChain(this);
     }
 
-    GraphicsBuffer* D3D11RHIDevice::CreateBuffer(const BufferDescription& description, const void* initialData, const char* label)
+    GraphicsBuffer* D3D11GraphicsDevice::CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label)
     {
-        return new D3D11Buffer(this, description, initialData, label);
+        return new D3D11Buffer(this, usage, count, stride, nullptr, label);
     }
 
-    void D3D11RHIDevice::HandleDeviceLost()
+    GraphicsBuffer* D3D11GraphicsDevice::CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label)
+    {
+        ALIMER_UNUSED(batch);
+
+        return new D3D11Buffer(this, usage, count, stride, data, label);
+    }
+
+    void D3D11GraphicsDevice::HandleDeviceLost()
     {
         deviceLost = true;
         HRESULT result = d3dDevice->GetDeviceRemovedReason();

@@ -20,9 +20,9 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
 #include "D3D11Buffer.h"
-#include "D3D11RHI.h"
+#include "D3D11GraphicsDevice.h"
+#include "Core/Log.h"
 
 namespace Alimer
 {
@@ -52,51 +52,51 @@ namespace Alimer
         }
     }
 
-    D3D11Buffer::D3D11Buffer(D3D11RHIDevice* device_, const BufferDescription& desc, const void* initialData, const char* label)
-        : GraphicsBuffer(desc)
+    D3D11Buffer::D3D11Buffer(D3D11GraphicsDevice* device_, BufferUsage usage, uint32_t count, uint32_t stride, const void* initialData, const char* label)
+        : GraphicsBuffer(usage, count, stride)
         , device(device_)
     {
         static constexpr uint64_t c_maxBytes = D3D11_REQ_RESOURCE_SIZE_IN_MEGABYTES_EXPRESSION_A_TERM * 1024u * 1024u;
         static_assert(c_maxBytes <= UINT32_MAX, "Exceeded integer limits");
 
-        if (desc.size > c_maxBytes)
+        if (size > c_maxBytes)
         {
-            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", desc.size);
+            LOGE("Direct3D11: Resource size too large for DirectX 11 (size {})", size);
             return;
         }
 
         D3D11_BUFFER_DESC d3dDesc = {};
 
-        d3dDesc.ByteWidth = desc.size;
-        if (any(desc.usage & BufferUsage::Uniform))
+        d3dDesc.ByteWidth = size;
+        if (any(usage & BufferUsage::Uniform))
         {
-            d3dDesc.ByteWidth = AlignTo(desc.size, 256u);
+            d3dDesc.ByteWidth = AlignTo(size, 256u);
             d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
             d3dDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
             d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         }
         else
         {
-            d3dDesc.BindFlags = D3D11GetBindFlags(desc.usage);
+            d3dDesc.BindFlags = D3D11GetBindFlags(usage);
 
-            if (any(desc.usage & BufferUsage::Dynamic))
+            if (any(usage & BufferUsage::Dynamic))
             {
                 d3dDesc.Usage = D3D11_USAGE_DYNAMIC;
                 d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
             }
-            else if (any(desc.usage & BufferUsage::Staging))
+            else if (any(usage & BufferUsage::Staging))
             {
                 d3dDesc.Usage = D3D11_USAGE_STAGING;
                 d3dDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
             }
         }
 
-        if (any(desc.usage & BufferUsage::Storage))
+        if (any(usage & BufferUsage::Storage))
         {
             d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
         }
 
-        if (any(desc.usage & BufferUsage::Indirect))
+        if (any(usage & BufferUsage::Indirect))
         {
             d3dDesc.MiscFlags |= D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS;
         }

@@ -37,8 +37,8 @@ namespace Alimer
     class D3D11Texture final : public Texture
     {
     public:
-        D3D11Texture(D3D11RHIDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
-        D3D11Texture(D3D11RHIDevice* device, const TextureDescription& desc, const void* initialData);
+        D3D11Texture(D3D11GraphicsDevice* device, ID3D11Texture2D* externalTexture, PixelFormat format);
+        D3D11Texture(D3D11GraphicsDevice* device, const TextureDescription& desc, const void* initialData);
         ~D3D11Texture() override;
 
         void Destroy();
@@ -51,7 +51,7 @@ namespace Alimer
     private:
         void BackendSetName();
 
-        D3D11RHIDevice* device;
+        D3D11GraphicsDevice* device;
         ID3D11Resource* handle;
 
         std::vector<RefPtr<ID3D11ShaderResourceView>> srvs;

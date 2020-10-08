@@ -21,8 +21,9 @@
 //
 
 #include "Platform/Application.h"
-#include "Graphics/RHI.h"
+#include "Graphics/GraphicsBuffer.h"
 #include "Graphics/SwapChain.h"
+#include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -50,7 +51,7 @@ namespace Alimer
 
     void HelloWorldApp::Initialize()
     {
-        struct Vertex
+        /*struct Vertex
         {
             Float3 position;
             Color color;
@@ -67,7 +68,7 @@ namespace Alimer
         bufferDesc.usage = BufferUsage::Vertex;
         bufferDesc.size = sizeof(triangleVertices);
         bufferDesc.size = sizeof(Vertex);
-        vertexBuffer.reset( rhiDevice->CreateBuffer(bufferDesc, triangleVertices));
+        vertexBuffer.reset(graphicsDevice->CreateBuffer(bufferDesc, triangleVertices));*/
     }
 
     void HelloWorldApp::OnDraw(CommandContext* context)

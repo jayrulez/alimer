@@ -22,7 +22,7 @@
 
 #include "Core/Log.h"
 #include "D3D11Texture.h"
-#include "D3D11RHI.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
@@ -56,7 +56,7 @@ namespace Alimer
         }
     }
 
-    D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, ID3D11Texture2D* externalTexture, PixelFormat format)
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, ID3D11Texture2D* externalTexture, PixelFormat format)
         : Texture(Convert2DDesc(externalTexture, format))
         , device(device_)
         , handle(externalTexture)
@@ -64,7 +64,7 @@ namespace Alimer
         handle->AddRef();
     }
 
-    D3D11Texture::D3D11Texture(D3D11RHIDevice* device_, const TextureDescription& desc, const void* initialData)
+    D3D11Texture::D3D11Texture(D3D11GraphicsDevice* device_, const TextureDescription& desc, const void* initialData)
         : Texture(desc)
         , device(device_)
     {

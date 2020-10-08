@@ -22,19 +22,21 @@
 
 #pragma once
 
-#include "Core/Assert.h"
-#include "Core/Log.h"
-#include "Graphics/D3D/D3DHelpers.h"
-#define D3D11_NO_HELPERS
-#include <d3d11_3.h>
+#include "Graphics/ResourceUploadBatch.h"
+#include "D3D11Backend.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+    class D3D11ResourceUploadBatch final : public ResourceUploadBatch
+    {
+    public:
+        D3D11ResourceUploadBatch(D3D11GraphicsDevice* device);
+        ~D3D11ResourceUploadBatch();
 
-    class D3D11GraphicsDevice;
+    private:
+        void PlatformBegin() override;
+        void PlatformEnd(bool waitForCompletion) override;
 
-    void D3D11SetObjectName(ID3D11DeviceChild* obj, const std::string& name);
+        D3D11GraphicsDevice* device;
+    };
 }

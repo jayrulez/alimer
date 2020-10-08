@@ -32,10 +32,10 @@ namespace Alimer
 
     class D3D11SwapChain final : public SwapChain
     {
-        friend class D3D11RHIDevice;
+        friend class D3D11GraphicsDevice;
 
     public:
-        D3D11SwapChain(D3D11RHIDevice* device);
+        D3D11SwapChain(D3D11GraphicsDevice* device);
         ~D3D11SwapChain() override;
         void Destroy();
 
@@ -48,7 +48,7 @@ namespace Alimer
     private:
         static constexpr uint32 kBufferCount = 2u;
 
-        D3D11RHIDevice* device;
+        D3D11GraphicsDevice* device;
         uint32_t syncInterval = 1;
         uint32_t presentFlags = 0;
 

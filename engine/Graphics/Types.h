@@ -43,6 +43,13 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
+    /* Forward declarations */
+    class GraphicsBuffer;
+    class Texture;
+    class SwapChain;
+    class ResourceUploadBatch;
+    class CommandContext;
+
     enum class GraphicsDeviceFlags : uint32
     {
         None = 0,
@@ -178,13 +185,6 @@ namespace Alimer
 
         // Viewport operations
         float AspectRatio() const;
-    };
-
-    struct BufferDescription
-    {
-        BufferUsage usage;
-        uint32_t size;
-        uint32_t stride;
     };
 
     struct TextureDescription

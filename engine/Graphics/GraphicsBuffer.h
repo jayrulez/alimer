@@ -29,23 +29,23 @@ namespace Alimer
     class GraphicsBuffer : public GraphicsResource
     {
     public:
-        /// Gets the buffer description.
-        const BufferDescription& GetDescription() const { return desc; }
-
         /// Gets buffer usage.
-        ALIMER_FORCE_INLINE BufferUsage GetUsage() const { return desc.usage; }
+        ALIMER_FORCE_INLINE BufferUsage GetUsage() const { return usage; }
 
         /// Gets buffer size in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetSize() const { return desc.size; }
+        ALIMER_FORCE_INLINE uint32_t GetSize() const { return size; }
 
         /// Gets buffer stride in bytes.
-        ALIMER_FORCE_INLINE uint32_t GetStride() const { return desc.stride; }
+        ALIMER_FORCE_INLINE uint32_t GetStride() const { return stride; }
 
     protected:
         /// Constructor
-        GraphicsBuffer(const BufferDescription& desc);
+        GraphicsBuffer(BufferUsage usage, uint32_t count, uint32_t stride);
 
-        BufferDescription desc;
+        BufferUsage usage;
+        uint32_t count;
+        uint32_t stride;
+        uint32_t size;
     };
 
 }

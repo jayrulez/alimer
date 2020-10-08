@@ -20,17 +20,16 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/RHI.h"
+#include "Graphics/Types.h"
 
 namespace Alimer
 {
-    const char* ToString(RHIDevice::FrameOpResult value)
+    float RHIViewport::AspectRatio() const
     {
-        static const char* names[] = {
-            "Success", "Error", "SwapChainOutOfDate", "DeviceLost"
-        };
+        if (width == 0.f || height == 0.f)
+            return 0.f;
 
-        return names[static_cast<uint32>(value)];
+        return (width / height);
     }
 
     const char* ToString(GraphicsBackendType value)

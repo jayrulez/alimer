@@ -22,11 +22,11 @@
 
 #include "D3D11CommandContext.h"
 #include "D3D11Texture.h"
-#include "D3D11RHI.h"
+#include "D3D11GraphicsDevice.h"
 
 namespace Alimer
 {
-    D3D11CommandContext::D3D11CommandContext(D3D11RHIDevice* device_, ID3D11DeviceContext1* context_)
+    D3D11CommandContext::D3D11CommandContext(D3D11GraphicsDevice* device_, ID3D11DeviceContext1* context_)
         : device(device_)
         , context(context_)
     {
