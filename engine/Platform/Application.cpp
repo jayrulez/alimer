@@ -40,17 +40,6 @@ namespace Alimer
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
-        // Init graphics device
-        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
-#ifdef _DEBUG
-        flags |= GraphicsDeviceFlags::DebugRuntime;
-#endif
-        graphicsDevice = GraphicsDevice::Create(config.preferredBackendType, flags);
-        if (!graphicsDevice)
-        {
-            headless = true;
-        }
-
         s_appCurrent = this;
     }
 
@@ -58,7 +47,6 @@ namespace Alimer
     {
         graphicsDevice->WaitForGPU();
         //ImGuiLayer::Shutdown();
-        windowSwapChain.reset();
         graphicsDevice.Reset();
         s_appCurrent = nullptr;
     }
@@ -80,10 +68,20 @@ namespace Alimer
 
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
-        // Create SwapChain
-        windowSwapChain.reset(graphicsDevice->CreateSwapChain());
-        windowSwapChain->SetWindow(window.get());
-        windowSwapChain->CreateOrResize();
+        // Init graphics device
+        PresentationParameters presentationParameters = {};
+        presentationParameters.windowHandle = window->GetNativeHandle();
+
+        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
+#ifdef _DEBUG
+        flags |= GraphicsDeviceFlags::DebugRuntime;
+#endif
+
+        graphicsDevice = GraphicsDevice::Create(presentationParameters, config.preferredBackendType, flags);
+        if (!graphicsDevice)
+        {
+            headless = true;
+        }
 
         ImGuiLayer::Initialize();
 
@@ -113,17 +111,8 @@ namespace Alimer
 
     void Application::Tick()
     {
-        auto result = graphicsDevice->BeginFrame(windowSwapChain.get());
-        /*if (result == RHIDevice::FrameOpResult::SwapChainOutOfDate)
-        {
-            // TODO: resize;
-        }
-
-        if (result != RHIDevice::FrameOpResult::Success)
-        {
-            LOGD("BeginFrame failed with result {}", ToString(result));
+        if (!graphicsDevice->BeginFrame())
             return;
-        }*/
 
         OnDraw(graphicsDevice->GetImmediateContext());
 
@@ -135,7 +124,7 @@ namespace Alimer
         agpu_draw(3, 1, 0);
         agpu_pop_debug_group();*/
 
-        graphicsDevice->EndFrame(windowSwapChain.get());
+        graphicsDevice->EndFrame();
     }
 
     const Config* Application::GetConfig()

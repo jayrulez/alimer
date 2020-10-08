@@ -51,7 +51,7 @@ namespace Alimer
             return SUCCEEDED(hr);
         }
 #endif
-        
+
     }
 
     bool D3D11GraphicsDevice::IsAvailable()
@@ -121,8 +121,9 @@ namespace Alimer
         return true;
     }
 
-    D3D11GraphicsDevice::D3D11GraphicsDevice(GraphicsDeviceFlags flags)
-        : debugRuntime(any(flags& GraphicsDeviceFlags::DebugRuntime) || any(flags & GraphicsDeviceFlags::GPUBasedValidation))
+    D3D11GraphicsDevice::D3D11GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags)
+        : GraphicsDevice(presentationParameters)
+        , debugRuntime(any(flags& GraphicsDeviceFlags::DebugRuntime) || any(flags & GraphicsDeviceFlags::GPUBasedValidation))
     {
         ALIMER_VERIFY(IsAvailable());
 
@@ -302,6 +303,62 @@ namespace Alimer
             // Init caps
             InitCapabilities(dxgiAdapter.Get());
         }
+
+        // Create swapchain
+        UINT swapChainFlags = 0;
+
+        if (IsTearingSupported())
+            swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+        // Create a descriptor for the swap chain.
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+        swapChainDesc.Width = backbufferWidth;
+        swapChainDesc.Height = backbufferHeight;
+        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(presentationParameters.backBufferFormat));
+        swapChainDesc.Stereo = FALSE;
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        swapChainDesc.BufferCount = kBufferCount;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+#else
+        swapChainDesc.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+#endif
+        swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+        swapChainDesc.Flags = swapChainFlags;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+        HWND windowHandle = (HWND)presentationParameters.windowHandle;
+        ALIMER_ASSERT(IsWindow(windowHandle));
+
+        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+        fsSwapChainDesc.Windowed = !presentationParameters.isFullscreen;
+
+        // Create a swap chain for the window.
+        ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(
+            d3dDevice,
+            windowHandle,
+            &swapChainDesc,
+            &fsSwapChainDesc,
+            nullptr,
+            &swapChain
+        ));
+
+        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+        ThrowIfFailed(dxgiFactory->MakeWindowAssociation(windowHandle, DXGI_MWA_NO_ALT_ENTER));
+#else
+        windowHandle = (IUnknown*)window->GetNativeHandle();
+        ThrowIfFailed(device->GetDXGIFactory()->CreateSwapChainForCoreWindow(
+            device->d3dDevice,
+            windowHandle,
+            &swapChainDesc,
+            nullptr,
+            &handle
+        ));
+#endif
     }
 
     D3D11GraphicsDevice::~D3D11GraphicsDevice()
@@ -312,6 +369,7 @@ namespace Alimer
     void D3D11GraphicsDevice::Shutdown()
     {
         SafeDelete(immediateContext);
+        SafeRelease(swapChain);
 
 #if !defined(NDEBUG)
         ULONG refCount = d3dDevice->Release();
@@ -553,44 +611,30 @@ namespace Alimer
         immediateContext->context->Flush();
     }
 
-    D3D11GraphicsDevice::FrameOpResult D3D11GraphicsDevice::BeginFrame(SwapChain* swapChain, BeginFrameFlags flags)
+    bool D3D11GraphicsDevice::BeginFrame()
     {
-        return FrameOpResult::Success;
+        return !deviceLost;
     }
 
-    D3D11GraphicsDevice::FrameOpResult D3D11GraphicsDevice::EndFrame(SwapChain* swapChain, EndFrameFlags flags)
+    void D3D11GraphicsDevice::EndFrame()
     {
-        D3D11SwapChain* d3dSwapChain = static_cast<D3D11SwapChain*>(swapChain);
+        HRESULT hr = swapChain->Present(1, 0);
 
-        if (!any(flags & EndFrameFlags::SkipPresent))
+        // Handle device lost logic.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
         {
-            HRESULT hr = d3dSwapChain->handle->Present(d3dSwapChain->syncInterval, d3dSwapChain->presentFlags);
+            LOGW("Device loss detected on SwapChain Present");
+            HandleDeviceLost();
+            return;
+        }
 
-            // Handle device lost logic.
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
-            {
-                LOGW("Device loss detected on SwapChain Present");
-                HandleDeviceLost();
-                return FrameOpResult::DeviceLost;
-            }
-            else if (FAILED(hr))
-            {
-                LOGW("Failed to present: %s", GetDXErrorStringAnsi(hr).c_str());
-                return FrameOpResult::Error;
-            }
-        }
-        else
-        {
-            immediateContext->context->Flush();
-        }
+        ThrowIfFailed(hr);
 
         // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
         if (!dxgiFactory->IsCurrent())
         {
             CreateFactory();
         }
-
-        return FrameOpResult::Success;
     }
 
     CommandContext* D3D11GraphicsDevice::GetImmediateContext() const

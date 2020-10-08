@@ -36,13 +36,14 @@ namespace Alimer
     class D3D12Texture;
     class D3D12DescriptorHeap;
 
-    class GraphicsDeviceImpl final
+    class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
-        GraphicsDeviceImpl(FeatureLevel minFeatureLevel, GraphicsDevice::DebugFlags debugFlags);
-        ~GraphicsDeviceImpl();
+        static bool IsAvailable();
+        D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags);
+        ~D3D12GraphicsDevice();
 
-        void BeginFrame();
+        bool BeginFrame() override;
         void EndFrame();
         void SetDeviceLost();
 
@@ -53,7 +54,7 @@ namespace Alimer
 
         IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
-        DeviceHandle GetHandle() const noexcept { return d3dDevice; }
+        //DeviceHandle GetHandle() const noexcept { return d3dDevice; }
 
         void ReleaseResource(IUnknown* resource);
         template<typename T> void ReleaseResource(T*& resource)
@@ -72,6 +73,7 @@ namespace Alimer
 
         static constexpr uint32_t kRenderLatency = 2u;
 
+        D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
         D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         DWORD dxgiFactoryFlags = 0;
@@ -82,7 +84,6 @@ namespace Alimer
         bool isLost = false;
         bool shuttingDown = false;
 
-        FeatureLevel featureLevel = FeatureLevel::Level_11_0;
         D3D12DescriptorHeap* rtvHeap;
         D3D12DescriptorHeap* dsvHeap;
         D3D12DescriptorHeap* cbvSrvUavCpuHeap;
@@ -95,5 +96,6 @@ namespace Alimer
         std::queue<ResourceRelease> deferredReleases;
         D3D12Fence* frameFence;
         uint64 frameCount = 0;
+        bool deviceLost = false;
     };
 }

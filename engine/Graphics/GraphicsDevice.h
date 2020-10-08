@@ -29,31 +29,13 @@
 
 namespace Alimer
 {
-    enum class BeginFrameFlags : uint32_t {
-        None = 0
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(BeginFrameFlags, uint32_t);
-
-    enum class EndFrameFlags : uint32_t {
-        None = 0,
-        SkipPresent = 1 << 0
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(EndFrameFlags, uint32_t);
-
     class ALIMER_API GraphicsDevice : public RefCounted
     {
     public:
-        enum class FrameOpResult : uint32_t {
-            Success = 0,
-            Error,
-            SwapChainOutOfDate,
-            DeviceLost
-        };
-
         /// Destructor
         virtual ~GraphicsDevice() = default;
 
-        static RefPtr<GraphicsDevice> Create(GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static RefPtr<GraphicsDevice> Create(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -61,8 +43,8 @@ namespace Alimer
         /// Wait for GPU to finish pending operation and become idle.
         virtual void WaitForGPU() = 0;
 
-        virtual FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags = BeginFrameFlags::None) = 0;
-        virtual FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags = EndFrameFlags::None) = 0;
+        virtual bool BeginFrame() = 0;
+        virtual void EndFrame() = 0;
 
         virtual CommandContext* GetImmediateContext() const = 0;
 
@@ -80,9 +62,11 @@ namespace Alimer
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     protected:
-        GraphicsDevice() = default;
+        GraphicsDevice(const PresentationParameters& presentationParameters);
 
         GraphicsDeviceCaps caps{};
+        uint32_t backbufferWidth;
+        uint32_t backbufferHeight;
 
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         //void AddGraphicsResource(GraphicsResource* resource);

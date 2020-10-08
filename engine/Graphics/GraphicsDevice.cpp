@@ -29,16 +29,23 @@
 #include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
 #if defined(ALIMER_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 #if defined(ALIMER_VULKAN)
 #endif
 
 namespace Alimer
 {
-
-    RefPtr<GraphicsDevice> GraphicsDevice::Create(GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    GraphicsDevice::GraphicsDevice(const PresentationParameters& presentationParameters)
+        : backbufferWidth(presentationParameters.backBufferWidth)
+        , backbufferHeight(presentationParameters.backBufferHeight)
     {
-        RefPtr<GraphicsDevice> device(new D3D11GraphicsDevice(flags));
+
+    }
+
+    RefPtr<GraphicsDevice> GraphicsDevice::Create(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    {
+        RefPtr<GraphicsDevice> device(new D3D11GraphicsDevice(presentationParameters, flags));
         return device;
     }
 

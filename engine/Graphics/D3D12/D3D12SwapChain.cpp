@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Graphics/SwapChain.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -153,3 +154,5 @@ namespace Alimer
         backBufferIndex = handle->GetCurrentBackBufferIndex();
     }
 }
+
+#endif // TOO

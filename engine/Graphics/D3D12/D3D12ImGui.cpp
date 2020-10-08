@@ -59,16 +59,16 @@ namespace Alimer
             HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
             IM_ASSERT(hwnd != nullptr);
 
-            PresentationParameters presentationParameters = {};
+            /*PresentationParameters presentationParameters = {};
             presentationParameters.handle = hwnd;
             presentationParameters.backBufferWidth = (uint32)viewport->Size.x;
             presentationParameters.backBufferHeight = (uint32)viewport->Size.y;
             presentationParameters.verticalSync = false;
-            data->swapChain = new SwapChain(device, presentationParameters);
+            data->swapChain = new SwapChain(device, presentationParameters);*/
         }
     }
 
-    D3D12ImGui::D3D12ImGui(GraphicsDevice* device)
+    D3D12ImGui::D3D12ImGui(D3D12GraphicsDevice* device)
         : device{ device }
     {
         ImGuiIO& io = ImGui::GetIO();

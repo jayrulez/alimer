@@ -31,10 +31,10 @@ namespace Alimer
     class D3D12ImGui final 
     {
     public:
-        D3D12ImGui(GraphicsDevice* device);
+        D3D12ImGui(D3D12GraphicsDevice* device);
         ~D3D12ImGui();
 
     private:
-        GraphicsDevice* device;
+        D3D12GraphicsDevice* device;
     };
 }

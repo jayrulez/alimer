@@ -35,7 +35,7 @@ namespace Alimer
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsDevice(GraphicsDeviceFlags flags);
+        D3D11GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags);
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
@@ -50,8 +50,8 @@ namespace Alimer
 
         bool IsDeviceLost() const override;
         void WaitForGPU() override;
-        FrameOpResult BeginFrame(SwapChain* swapChain, BeginFrameFlags flags) override;
-        FrameOpResult EndFrame(SwapChain* swapChain, EndFrameFlags flags) override;
+        bool BeginFrame() override;
+        void EndFrame() override;
         CommandContext* GetImmediateContext() const override;
 
         RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() override;
@@ -60,12 +60,15 @@ namespace Alimer
         GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label) override;
 
     private:
+        static constexpr uint32 kBufferCount = 2u;
+
         bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;
         DXGIFactoryCaps dxgiFactoryCaps = DXGIFactoryCaps::None;
 
         ID3D11Device1*          d3dDevice = nullptr;
         D3D11CommandContext*    immediateContext = nullptr;
+        IDXGISwapChain1*        swapChain;
 
         D3D_FEATURE_LEVEL       featureLevel = D3D_FEATURE_LEVEL_9_1;
         bool deviceLost = false;

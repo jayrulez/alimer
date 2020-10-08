@@ -45,7 +45,6 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
-    class SwapChain;
     class GraphicsDevice;
 
     class ALIMER_API Application : public Object
@@ -99,7 +98,6 @@ namespace Alimer
         AssetManager assets;
         bool headless = false;
         std::unique_ptr<Window> window{ nullptr };
-        std::unique_ptr<SwapChain> windowSwapChain{ nullptr };
         RefPtr<GraphicsDevice> graphicsDevice;
     };
 

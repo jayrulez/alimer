@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#if TODO
 #include "Graphics/CommandQueue.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -143,7 +144,6 @@ namespace Alimer
         apiData->lastCompletedFenceValue = fenceValue;
     }
 
-#if TODO
     void D3D12CommandQueue::StallForFence(uint64 fenceValue)
     {
         auto producer = device->GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
@@ -183,6 +183,5 @@ namespace Alimer
     {
         allocatorPool.DiscardAllocator(fenceValue, commandAllocator);
     }
-#endif // TODO
-
 }
+#endif // TODO

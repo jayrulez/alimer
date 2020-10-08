@@ -29,48 +29,14 @@
 
 namespace Alimer
 {
-    namespace
-    {
-        constexpr D3D_FEATURE_LEVEL GetD3DFeatureLevel(FeatureLevel featureLevel)
-        {
-            switch (featureLevel)
-            {
-            case FeatureLevel::Level_11_1:
-                return D3D_FEATURE_LEVEL_11_1;
-            case FeatureLevel::Level_12_0:
-                return D3D_FEATURE_LEVEL_12_0;
-            case FeatureLevel::Level_12_1:
-                return D3D_FEATURE_LEVEL_12_1;
-            default:
-                return D3D_FEATURE_LEVEL_11_0;
-            }
-        }
-
-        constexpr FeatureLevel FromD3DFeatureLevel(D3D_FEATURE_LEVEL featureLevel)
-        {
-            switch (featureLevel)
-            {
-            case D3D_FEATURE_LEVEL_11_1:
-                return FeatureLevel::Level_11_1;
-            case D3D_FEATURE_LEVEL_12_0:
-                return FeatureLevel::Level_12_0;
-            case D3D_FEATURE_LEVEL_12_1:
-                return FeatureLevel::Level_12_1;
-            default:
-                return FeatureLevel::Level_11_0;
-            }
-        }
-    }
-
-    GraphicsDeviceImpl::GraphicsDeviceImpl(FeatureLevel minFeatureLevel, GraphicsDevice::DebugFlags debugFlags)
-        : featureLevel(minFeatureLevel)
-        , d3dMinFeatureLevel(GetD3DFeatureLevel(minFeatureLevel))
+    D3D12GraphicsDevice::D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags)
+        : GraphicsDevice(presentationParameters)
     {
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
 
-        const bool enableDebugLayer = any(debugFlags & GraphicsDevice::DebugFlags::DebugRuntime);
-        const bool GPUBasedValidation = any(debugFlags & GraphicsDevice::DebugFlags::GPUBasedValidation);
+        const bool enableDebugLayer = any(flags & GraphicsDeviceFlags::DebugRuntime);
+        const bool GPUBasedValidation = any(flags & GraphicsDeviceFlags::GPUBasedValidation);
 
         if (enableDebugLayer)
         {
@@ -189,7 +155,7 @@ namespace Alimer
         LOGI("Successfully create {} Graphics Device", ToString(caps.backendType));
     }
 
-    GraphicsDeviceImpl::~GraphicsDeviceImpl()
+    D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         shuttingDown = true;
         SafeDelete(rtvHeap);
@@ -231,11 +197,12 @@ namespace Alimer
 #endif
     }
 
-    void GraphicsDeviceImpl::BeginFrame()
+    bool D3D12GraphicsDevice::BeginFrame()
     {
+        return !deviceLost;
     }
 
-    void GraphicsDeviceImpl::EndFrame()
+    void D3D12GraphicsDevice::EndFrame()
     {
         frameCount++;
 
@@ -248,7 +215,7 @@ namespace Alimer
         }
     }
 
-    void GraphicsDeviceImpl::SetDeviceLost()
+    void D3D12GraphicsDevice::SetDeviceLost()
     {
         HRESULT result = d3dDevice->GetDeviceRemovedReason();
 
@@ -265,7 +232,7 @@ namespace Alimer
         LOGE("The Direct3D 12 device has been removed (Error: {} '{}').  Please restart the application.", result, reason);
     }
 
-    void GraphicsDeviceImpl::ReleaseResource(IUnknown* resource)
+    void D3D12GraphicsDevice::ReleaseResource(IUnknown* resource)
     {
         if (resource == nullptr)
             return;
@@ -278,7 +245,7 @@ namespace Alimer
         deferredReleases.push({ frameCount, resource });
     }
 
-    void GraphicsDeviceImpl::ExecuteDeferredReleases()
+    void D3D12GraphicsDevice::ExecuteDeferredReleases()
     {
         /*uint64_t gpuValue = graphicsQueue->GetFenceCompletedValue();
         while (deferredReleases.size())
@@ -291,13 +258,13 @@ namespace Alimer
         }*/
     }
 
-    void GraphicsDeviceImpl::WaitForFence(uint64_t fenceValue)
+    void D3D12GraphicsDevice::WaitForFence(uint64_t fenceValue)
     {
        // auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
         //producer->WaitForFence(fenceValue);
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GraphicsDeviceImpl::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
     {
         if (type == D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
         {
@@ -316,8 +283,7 @@ namespace Alimer
         return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
     }
 
-
-    void GraphicsDeviceImpl::GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter)
+    void D3D12GraphicsDevice::GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter)
     {
         *ppAdapter = nullptr;
 
@@ -396,12 +362,12 @@ namespace Alimer
         *ppAdapter = adapter.Detach();
     }
 
-    void GraphicsDeviceImpl::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
+    void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* dxgiAdapter)
     {
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
 
-        caps.backendType = GPUBackendType::Direct3D12;
+        caps.backendType =  GraphicsBackendType::Direct3D12;
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 
@@ -432,16 +398,16 @@ namespace Alimer
 
         D3D12_FEATURE_DATA_FEATURE_LEVELS featLevels =
         {
-            _countof(s_featureLevels), s_featureLevels, D3D_FEATURE_LEVEL_11_0
+            _countof(s_featureLevels), s_featureLevels, d3dMinFeatureLevel
         };
 
         if (SUCCEEDED(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &featLevels, sizeof(featLevels))))
         {
-            featureLevel = FromD3DFeatureLevel(featLevels.MaxSupportedFeatureLevel);
+            d3dFeatureLevel = featLevels.MaxSupportedFeatureLevel;
         }
         else
         {
-            featureLevel = FeatureLevel::Level_11_0;
+            d3dFeatureLevel = d3dMinFeatureLevel;
         }
 
         // Features

@@ -73,14 +73,13 @@ namespace Alimer
 
     void HelloWorldApp::OnDraw(CommandContext* context)
     {
-        context->PushDebugGroup("Frame");
+        /*context->PushDebugGroup("Frame");
         RenderPassDesc renderPass{};
         renderPass.colorAttachments[0].texture = windowSwapChain->GetCurrentTexture();
         renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
-        context->PopDebugGroup();
-        //windowSwapChain->p
+        context->PopDebugGroup();*/
     }
 
     Application* CreateApplication()
