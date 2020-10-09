@@ -110,29 +110,6 @@ namespace Alimer
         D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
     };
 
-    class D3D12Fence
-    {
-    public:
-        D3D12Fence(D3D12GraphicsDevice* device);
-        ~D3D12Fence();
-
-        void Shutdown();
-
-        uint64_t GpuSignal(ID3D12CommandQueue* queue);
-        void SyncGpu(ID3D12CommandQueue* queue);
-        void SyncCpu();
-        void SyncCpu(uint64_t value);
-
-        uint64_t GetCpuValue() const { return cpuValue; }
-        uint64_t GetGpuValue() const;
-
-    private:
-        D3D12GraphicsDevice* device;
-        ID3D12Fence* handle;
-        HANDLE fenceEvent;
-        uint64_t cpuValue;
-    };
-
     class D3D12CommandAllocatorPool
     {
     public:

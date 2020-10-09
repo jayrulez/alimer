@@ -121,8 +121,8 @@ namespace Alimer
         return true;
     }
 
-    D3D11GraphicsDevice::D3D11GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags)
-        : GraphicsDevice(presentationParameters)
+    D3D11GraphicsDevice::D3D11GraphicsDevice(WindowHandle windowHandle, GraphicsDeviceFlags flags)
+        : GraphicsDevice()
         , debugRuntime(any(flags& GraphicsDeviceFlags::DebugRuntime) || any(flags & GraphicsDeviceFlags::GPUBasedValidation))
     {
         ALIMER_VERIFY(IsAvailable());
@@ -314,12 +314,12 @@ namespace Alimer
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
         swapChainDesc.Width = backbufferWidth;
         swapChainDesc.Height = backbufferHeight;
-        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(presentationParameters.backBufferFormat));
+        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(PixelFormat::BGRA8Unorm));
         swapChainDesc.Stereo = FALSE;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = kBufferCount;
+        swapChainDesc.BufferCount = kRenderLatency;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -331,11 +331,10 @@ namespace Alimer
         swapChainDesc.Flags = swapChainFlags;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-        HWND windowHandle = (HWND)presentationParameters.windowHandle;
         ALIMER_ASSERT(IsWindow(windowHandle));
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
-        fsSwapChainDesc.Windowed = !presentationParameters.isFullscreen;
+        fsSwapChainDesc.Windowed = TRUE;
 
         // Create a swap chain for the window.
         ThrowIfFailed(dxgiFactory->CreateSwapChainForHwnd(

@@ -50,65 +50,6 @@ namespace Alimer
 #endif
     }
 
-    D3D12Fence::D3D12Fence(D3D12GraphicsDevice* device)
-        : device{ device }
-        , cpuValue(0)
-    {
-        //ThrowIfFailed(device->GetHandle()->CreateFence(cpuValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&handle)));
-        cpuValue++;
-
-        fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
-        ALIMER_ASSERT(fenceEvent != 0);
-    }
-
-    D3D12Fence::~D3D12Fence()
-    {
-        Shutdown();
-    }
-
-    void D3D12Fence::Shutdown()
-    {
-        if (!handle)
-            return;
-
-        CloseHandle(fenceEvent);
-        device->ReleaseResource(handle);
-    }
-
-    uint64_t D3D12Fence::GpuSignal(ID3D12CommandQueue* queue)
-    {
-        ThrowIfFailed(queue->Signal(handle, cpuValue));
-        cpuValue++;
-        return cpuValue - 1;
-    }
-
-    void D3D12Fence::SyncGpu(ID3D12CommandQueue* queue)
-    {
-        ThrowIfFailed(queue->Wait(handle, cpuValue - 1));
-    }
-
-    void D3D12Fence::SyncCpu()
-    {
-        SyncCpu(cpuValue - 1);
-    }
-
-    void D3D12Fence::SyncCpu(uint64_t value)
-    {
-        ALIMER_ASSERT(value <= cpuValue - 1);
-
-        uint64_t gpuVal = GetGpuValue();
-        if (gpuVal < value)
-        {
-            ThrowIfFailed(handle->SetEventOnCompletion(value, fenceEvent));
-            WaitForSingleObject(fenceEvent, INFINITE);
-        }
-    }
-
-    uint64_t D3D12Fence::GetGpuValue() const
-    {
-        return handle->GetCompletedValue();
-    }
-
     /* D3D12CommandAllocatorPool */
     D3D12CommandAllocatorPool::D3D12CommandAllocatorPool(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE type)
         : device{ device }

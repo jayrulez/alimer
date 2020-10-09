@@ -177,10 +177,6 @@ if (ALIMER_IMGUI)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 endif ()
 
-if(ALIMER_D3D12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE D3D12MemoryAllocator)
-endif()
-
 if (ALIMER_VULKAN)
     target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
 endif()

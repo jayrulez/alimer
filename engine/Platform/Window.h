@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Platform/WindowHandle.h"
 #include "Core/Object.h"
 #include "Math/Size.h"
 
@@ -43,9 +44,6 @@ namespace Alimer
 
     class WindowImpl;
 
-    using NativeHandle = void*;
-    using NativeDisplay = void*;
-
     class ALIMER_API Window : public Object
     {
         ALIMER_OBJECT(Window, Object);
@@ -63,10 +61,7 @@ namespace Alimer
         uint32_t GetId() const noexcept;
 
         /// Get the native window handle.
-        NativeHandle GetNativeHandle() const;
-
-        /// Get the native display handle.
-        NativeDisplay GetNativeDisplay() const;
+        WindowHandle GetHandle() const;
 
         void SetBrightness(float value);
         float GetBrightness() const noexcept;

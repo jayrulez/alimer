@@ -40,7 +40,7 @@ namespace Alimer
     {
     public:
         static bool IsAvailable();
-        D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags);
+        D3D12GraphicsDevice(WindowHandle windowHandle, GraphicsDeviceFlags flags);
         ~D3D12GraphicsDevice();
 
         bool IsDeviceLost() const override;
@@ -54,7 +54,7 @@ namespace Alimer
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 
-        IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
+        IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory; }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
         //DeviceHandle GetHandle() const noexcept { return d3dDevice; }
 
@@ -73,19 +73,20 @@ namespace Alimer
         void GetAdapter(bool lowPower, IDXGIAdapter1** ppAdapter);
         void ExecuteDeferredReleases();
 
-        static constexpr uint32_t kRenderLatency = 2u;
-
         D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
         D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         DWORD dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory;
+        IDXGIFactory4* dxgiFactory = nullptr;
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
         bool supportsRenderPass = false;
-        bool isLost = false;
         bool shuttingDown = false;
+        bool deviceLost = false;
+
+        ID3D12CommandQueue* graphicsQueue;
+        ID3D12CommandQueue* computeQueue;
 
         D3D12DescriptorHeap* rtvHeap;
         D3D12DescriptorHeap* dsvHeap;
@@ -96,9 +97,10 @@ namespace Alimer
             uint64 frameID;
             IUnknown* resource;
         };
+
         std::queue<ResourceRelease> deferredReleases;
-        D3D12Fence* frameFence;
-        uint64 frameCount = 0;
-        bool deviceLost = false;
+        ID3D12Fence* frameFence;
+        HANDLE frameFenceEvent;
+        uint32_t frameIndex = 0;
     };
 }

@@ -74,8 +74,8 @@ namespace Alimer
         return false;
     }
 
-    D3D12GraphicsDevice::D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags)
-        : GraphicsDevice(presentationParameters)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(WindowHandle windowHandle, GraphicsDeviceFlags flags)
+        : GraphicsDevice()
     {
         // Enable the debug layer (requires the Graphics Tools "optional feature").
         // NOTE: Enabling the debug layer after device creation will invalidate the active device.
@@ -125,14 +125,14 @@ namespace Alimer
 #endif
         }
 
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
 
         // Determines whether tearing support is available for fullscreen borderless windows.
         {
             BOOL allowTearing = FALSE;
 
-            ComPtr<IDXGIFactory5> dxgiFactory5;
-            HRESULT hr = dxgiFactory.As(&dxgiFactory5);
+            IDXGIFactory5* dxgiFactory5 = nullptr;
+            HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory5);
             if (SUCCEEDED(hr))
             {
                 hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
@@ -148,6 +148,8 @@ namespace Alimer
             {
                 isTearingSupported = true;
             }
+
+            SafeRelease(dxgiFactory5);
         }
 
         // Get adapter and create device
@@ -194,11 +196,31 @@ namespace Alimer
             dxgiAdapter->Release();
         }
 
+        // Command queues (we use compute queue for upload/generate mips logic)
+        {
+            D3D12_COMMAND_QUEUE_DESC graphicsQueueDesc = { D3D12_COMMAND_LIST_TYPE_DIRECT, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
+            D3D12_COMMAND_QUEUE_DESC computeQueueDesc = { D3D12_COMMAND_LIST_TYPE_COMPUTE, 0, D3D12_COMMAND_QUEUE_FLAG_NONE, 0x0 };
+
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&graphicsQueueDesc, IID_PPV_ARGS(&graphicsQueue)));
+            ThrowIfFailed(d3dDevice->CreateCommandQueue(&computeQueueDesc, IID_PPV_ARGS(&computeQueue)));
+
+            graphicsQueue->SetName(L"Graphics Command Queue");
+            computeQueue->SetName(L"Compute Command Queue");
+        }
+
         // Heaps
         {
             rtvHeap = new D3D12DescriptorHeap(d3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
             dsvHeap = new D3D12DescriptorHeap(d3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
             cbvSrvUavCpuHeap = new D3D12DescriptorHeap(d3dDevice, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
+        }
+
+        // Frame fence
+        {
+            ThrowIfFailed(d3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence)));
+            frameFenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
+            ALIMER_ASSERT(frameFenceEvent != INVALID_HANDLE_VALUE);
+            frameFence->SetName(L"Frame Fence");
         }
 
         LOGI("Successfully create {} Graphics Device", ToString(caps.backendType));
@@ -207,9 +229,25 @@ namespace Alimer
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         shuttingDown = true;
-        SafeDelete(rtvHeap);
-        SafeDelete(dsvHeap);
-        SafeDelete(cbvSrvUavCpuHeap);
+
+        // Command queues
+        {
+            SafeRelease(graphicsQueue);
+            SafeRelease(computeQueue);
+        }
+
+        // Heaps
+        {
+            SafeDelete(rtvHeap);
+            SafeDelete(dsvHeap);
+            SafeDelete(cbvSrvUavCpuHeap);
+        }
+
+        // Frame fence
+        {
+            CloseHandle(frameFenceEvent);
+            SafeRelease(frameFence);
+        }
 
         // Allocator.
         if (allocator != nullptr)
@@ -224,8 +262,8 @@ namespace Alimer
             SafeRelease(allocator);
         }
 
-        ULONG refCount = d3dDevice->Release();
 #if !defined(NDEBUG)
+        ULONG refCount = d3dDevice->Release();
         if (refCount > 0)
         {
             LOGD("Direct3D12: There are {} unreleased references left on the device", refCount);
@@ -242,7 +280,20 @@ namespace Alimer
             LOGD("Direct3D12: No leaks detected");
         }
 #else
-        (void)refCount; // avoid warning
+        d3dDevice->Release();
+#endif
+        d3dDevice = nullptr;
+
+
+        SafeRelease(dxgiFactory);
+
+#ifdef _DEBUG
+        IDXGIDebug1* dxgiDebug1;
+        if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+        {
+            dxgiDebug1->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            dxgiDebug1->Release();
+        }
 #endif
     }
 
@@ -253,7 +304,12 @@ namespace Alimer
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
+        // Wait for the GPU to fully catch up with the CPU
+        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
+        ThrowIfFailed(frameFence->SetEventOnCompletion(frameCount, frameFenceEvent));
+        WaitForSingleObject(frameFenceEvent, INFINITE);
 
+        ExecuteDeferredReleases();
     }
 
     bool D3D12GraphicsDevice::BeginFrame()
@@ -263,14 +319,26 @@ namespace Alimer
 
     void D3D12GraphicsDevice::EndFrame()
     {
-        frameCount++;
+        ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
+
+        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
+
+        // Make sure that the previous frame is finished
+        if ((frameCount - GPUFrameCount) >= kRenderLatency)
+        {
+            ThrowIfFailed(frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent));
+            WaitForSingleObject(frameFenceEvent, INFINITE);
+        }
+
+        frameIndex = frameCount % kRenderLatency;
 
         ExecuteDeferredReleases();
 
+        // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
         if (!dxgiFactory->IsCurrent())
         {
-            // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+            SafeRelease(dxgiFactory);
+            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
         }
     }
 
@@ -306,7 +374,7 @@ namespace Alimer
 
     void D3D12GraphicsDevice::ExecuteDeferredReleases()
     {
-        /*uint64_t gpuValue = graphicsQueue->GetFenceCompletedValue();
+        const uint64_t gpuValue = frameFence->GetCompletedValue();
         while (deferredReleases.size())
         {
             if (shuttingDown || deferredReleases.front().frameID <= gpuValue)
@@ -314,13 +382,13 @@ namespace Alimer
                 deferredReleases.front().resource->Release();
                 deferredReleases.pop();
             }
-        }*/
+        }
     }
 
     void D3D12GraphicsDevice::WaitForFence(uint64_t fenceValue)
     {
-       // auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
-        //producer->WaitForFence(fenceValue);
+        // auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
+         //producer->WaitForFence(fenceValue);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
@@ -349,8 +417,8 @@ namespace Alimer
         ComPtr<IDXGIAdapter1> adapter = nullptr;
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
-        ComPtr<IDXGIFactory6> dxgiFactory6;
-        HRESULT hr = dxgiFactory.As(&dxgiFactory6);
+        IDXGIFactory6* dxgiFactory6 = nullptr;
+        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
             const DXGI_GPU_PREFERENCE gpuPreference = lowPower ? DXGI_GPU_PREFERENCE_MINIMUM_POWER : DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE;
@@ -383,6 +451,8 @@ namespace Alimer
                 }
             }
         }
+
+        SafeRelease(dxgiFactory6);
 #endif
 
         if (!adapter)
@@ -426,7 +496,7 @@ namespace Alimer
         DXGI_ADAPTER_DESC1 desc;
         ThrowIfFailed(dxgiAdapter->GetDesc1(&desc));
 
-        caps.backendType =  GraphicsBackendType::Direct3D12;
+        caps.backendType = GraphicsBackendType::Direct3D12;
         caps.deviceId = desc.DeviceId;
         caps.vendorId = desc.VendorId;
 

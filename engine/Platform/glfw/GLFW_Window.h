@@ -37,8 +37,7 @@ namespace Alimer
         bool IsOpen() const noexcept;
         uint32_t GetId() const noexcept { return id; }
 
-        NativeHandle GetNativeHandle() const;
-        NativeDisplay GetNativeDisplay() const;
+        WindowHandle GetHandle() const;
         GLFWwindow* GetGLFWwindow() const noexcept { return window; }
 
         float GetBrightness() const noexcept { return 1.0f; }

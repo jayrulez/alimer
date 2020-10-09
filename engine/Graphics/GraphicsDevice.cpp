@@ -39,13 +39,6 @@ namespace Alimer
 {
     GraphicsDevice* GraphicsDevice::Instance = nullptr;
 
-    GraphicsDevice::GraphicsDevice(const PresentationParameters& presentationParameters)
-        : backbufferWidth(presentationParameters.backBufferWidth)
-        , backbufferHeight(presentationParameters.backBufferHeight)
-    {
-
-    }
-
     std::set<GraphicsBackendType> GraphicsDevice::GetAvailableBackends()
     {
         static std::set<GraphicsBackendType> backends;
@@ -73,7 +66,7 @@ namespace Alimer
         return backends;
     }
 
-    bool GraphicsDevice::Initialize(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    bool GraphicsDevice::Initialize(WindowHandle windowHandle, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
     {
         if (Instance != nullptr)
         {
@@ -101,14 +94,14 @@ namespace Alimer
 #if defined(ALIMER_D3D12)
         case GraphicsBackendType::Direct3D12:
             LOGI("Using Direct3D 12 render driver");
-            Instance = new D3D12GraphicsDevice(presentationParameters, flags);
+            Instance = new D3D12GraphicsDevice(windowHandle, flags);
             break;
 #endif
 
 #if defined(ALIMER_D3D11)
         case GraphicsBackendType::Direct3D11:
             LOGI("Using Direct3D 11 render driver");
-            Instance = new D3D11GraphicsDevice(presentationParameters, flags);
+            Instance = new D3D11GraphicsDevice(windowHandle, flags);
             break;
 #endif
 

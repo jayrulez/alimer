@@ -35,7 +35,7 @@ namespace Alimer
     {
     public:
         static bool IsAvailable();
-        D3D11GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags);
+        D3D11GraphicsDevice(WindowHandle windowHandle, GraphicsDeviceFlags flags);
         ~D3D11GraphicsDevice() override;
 
         void Shutdown();
@@ -60,7 +60,7 @@ namespace Alimer
         GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label);
 
     private:
-        static constexpr uint32 kBufferCount = 2u;
+        
 
         bool debugRuntime;
         Microsoft::WRL::ComPtr<IDXGIFactory2> dxgiFactory;

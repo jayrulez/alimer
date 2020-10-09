@@ -144,31 +144,22 @@ namespace Alimer
         return !glfwWindowShouldClose(window);
     }
 
-    NativeHandle WindowImpl::GetNativeHandle() const
+    WindowHandle WindowImpl::GetHandle() const
     {
 #if defined(GLFW_EXPOSE_NATIVE_WIN32)
         return glfwGetWin32Window(window);
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Window(window);
+        WindowHandle handle{};
+        handle.display = glfwGetX11Display(window);
+        handle.window = glfwGetX11Window(window);
+        return handle;
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
         return glfwGetCocoaWindow(window);
 #elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandWindow(window);
-#else
-        return nullptr;
-#endif
-    }
-
-    NativeDisplay WindowImpl::GetNativeDisplay() const
-    {
-#if defined(GLFW_EXPOSE_NATIVE_WIN32)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_X11)
-        return (void*)(uintptr_t)glfwGetX11Display();
-#elif defined(GLFW_EXPOSE_NATIVE_COCOA)
-        return nullptr;
-#elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
-        return glfwGetWaylandDisplay();
+        WindowHandle handle{};
+        handle.display = glfwGetWaylandDisplay();
+        handle.window = glfwGetWaylandWindow(window);
+        return handle;
 #else
         return nullptr;
 #endif

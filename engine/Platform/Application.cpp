@@ -69,15 +69,12 @@ namespace Alimer
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init graphics device
-        PresentationParameters presentationParameters = {};
-        presentationParameters.windowHandle = window->GetNativeHandle();
-
         GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
 #ifdef _DEBUG
         flags |= GraphicsDeviceFlags::DebugRuntime;
 #endif
 
-        if (!GraphicsDevice::Initialize(presentationParameters, config.preferredBackendType, flags))
+        if (!GraphicsDevice::Initialize(window->GetHandle(), config.preferredBackendType, flags))
         {
             headless = true;
         }

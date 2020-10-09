@@ -55,7 +55,7 @@ namespace Alimer
         if (device->IsTearingSupported())
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
-        bool needRecreate = handle == nullptr || window->GetNativeHandle() != windowHandle;
+        bool needRecreate = handle == nullptr || window->GetHandle() != windowHandle;
         if (needRecreate)
         {
             Destroy();
@@ -81,7 +81,7 @@ namespace Alimer
             swapChainDesc.Flags = swapChainFlags;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-            windowHandle = (HWND)window->GetNativeHandle();
+            windowHandle = (HWND)window->GetHandle();
             ALIMER_ASSERT(IsWindow(windowHandle));
 
             //DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};

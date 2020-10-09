@@ -48,14 +48,9 @@ namespace Alimer
         return impl->GetId();
     }
 
-    NativeHandle Window::GetNativeHandle() const
+    WindowHandle Window::GetHandle() const
     {
-        return impl->GetNativeHandle();
-    }
-
-    NativeDisplay Window::GetNativeDisplay() const
-    {
-        return impl->GetNativeDisplay();
+        return impl->GetHandle();
     }
 
     void Window::SetBrightness(float value)

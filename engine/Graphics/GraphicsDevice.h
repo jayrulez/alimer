@@ -24,6 +24,7 @@
 
 #include "Core/Ptr.h"
 #include "Graphics/Types.h"
+#include "Platform/WindowHandle.h"
 #include <memory>
 #include <set>
 #include <mutex>
@@ -41,7 +42,7 @@ namespace Alimer
 
         static std::set<GraphicsBackendType> GetAvailableBackends();
 
-        static bool Initialize(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType = GraphicsBackendType::Count, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static bool Initialize(WindowHandle windowHandle, GraphicsBackendType preferredBackendType = GraphicsBackendType::Count, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -65,11 +66,15 @@ namespace Alimer
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
     protected:
-        GraphicsDevice(const PresentationParameters& presentationParameters);
+        GraphicsDevice() = default;
+
+        static constexpr uint32_t kRenderLatency = 2u;
 
         GraphicsDeviceCaps caps{};
-        uint32_t backbufferWidth;
-        uint32_t backbufferHeight;
+        uint32_t backbufferWidth = 0;
+        uint32_t backbufferHeight = 0;
+
+        uint64 frameCount = 0;
 
         /// Add a GPU object to keep track of. Called by GraphicsResource.
         //void AddGraphicsResource(GraphicsResource* resource);
