@@ -25,22 +25,20 @@
 #include <stdarg.h>
 
 /* Logging */
-static agpu_log_callback s_log_function = nullptr;
-static void* s_log_user_data = nullptr;
+static vgpu_log_callback s_log_function = NULL;
+static void* s_log_user_data = NULL;
 
-void agpu_set_log_callback(agpu_log_callback callback, void* user_data)
-{
+void vgpu_set_log_callback(vgpu_log_callback callback, void* user_data) {
     s_log_function = callback;
     s_log_user_data = user_data;
 }
 
-void agpu_log(agpu_log_level level, const char* format, ...)
-{
+void vgpu_log(vgpu_log_level level, const char* format, ...) {
     if (s_log_function) {
         va_list args;
         va_start(args, format);
-        char message[AGPU_MAX_LOG_MESSAGE_LENGTH];
-        vsnprintf(message, AGPU_MAX_LOG_MESSAGE_LENGTH, format, args);
+        char message[VGPU_MAX_LOG_MESSAGE_LENGTH];
+        vsnprintf(message, VGPU_MAX_LOG_MESSAGE_LENGTH, format, args);
         s_log_function(s_log_user_data, level, message);
         va_end(args);
     }
@@ -62,8 +60,7 @@ static const agpu_driver* drivers[] = {
 #if AGPU_DRIVER_OPENGL
     & GL_Driver,
 #endif
-
-    nullptr
+    NULL
 };
 
 static agpu_config _agpu_config_defaults(const agpu_config* config) {
@@ -75,18 +72,18 @@ static agpu_config _agpu_config_defaults(const agpu_config* config) {
 };
 
 static agpu_backend_type s_backend = VGPU_BACKEND_TYPE_COUNT;
-static agpu_renderer* renderer = nullptr;
+static agpu_renderer* renderer = NULL;
 
 bool agpu_set_preferred_backend(agpu_backend_type backend)
 {
-    if (renderer != nullptr)
+    if (renderer != NULL)
         return false;
 
     s_backend = backend;
     return true;
 }
 
-bool agpu_init(const char* app_name, const agpu_config* config)
+bool vgpu_init(const char* app_name, const agpu_config* config)
 {
     AGPU_ASSERT(config);
 
@@ -96,7 +93,7 @@ bool agpu_init(const char* app_name, const agpu_config* config)
 
     if (s_backend == VGPU_BACKEND_TYPE_COUNT)
     {
-        for (uint32_t i = 0; i < AGPU_COUNT_OF(drivers); i++)
+        for (uint32_t i = 0; i < VGPU_COUNT_OF(drivers); i++)
         {
             if (!drivers[i])
                 break;
@@ -109,7 +106,7 @@ bool agpu_init(const char* app_name, const agpu_config* config)
     }
     else
     {
-        for (uint32_t i = 0; i < AGPU_COUNT_OF(drivers); i++)
+        for (uint32_t i = 0; i < VGPU_COUNT_OF(drivers); i++)
         {
             if (!drivers[i])
                 break;
@@ -130,70 +127,66 @@ bool agpu_init(const char* app_name, const agpu_config* config)
     return true;
 }
 
-void agpu_shutdown(void) {
-    if (renderer == nullptr)
+void vgpu_shutdown(void) {
+    if (renderer == NULL)
         return;
 
     renderer->shutdown();
-    renderer = nullptr;
+    renderer = NULL;
 }
 
-void agpuQueryCaps(agpu_caps* caps)
+void vgpu_query_caps(agpu_caps* caps)
 {
     AGPU_ASSERT(caps);
     AGPU_ASSERT(renderer);
 
-    return renderer->query_caps(caps);
+    renderer->query_caps(caps);
 }
 
-bool agpu_begin_frame(void)
+bool vgpu_begin_frame(void)
 {
     return renderer->frame_begin();
 }
 
-void agpu_end_frame(void)
+void vgpu_end_frame(void)
 {
-    return renderer->frame_finish();
+    renderer->frame_finish();
 }
 
 /* Buffer */
-agpu_buffer agpu_create_buffer(const agpu_buffer_info* info)
-{
+vgpu_buffer vgpu_create_buffer(const agpu_buffer_info* info) {
     AGPU_ASSERT(info);
     AGPU_ASSERT(info->size > 0);
 
     if (info->usage == AGPU_BUFFER_USAGE_IMMUTABLE && !info->data)
     {
-        agpu_log(AGPU_LOG_LEVEL_ERROR, "Cannot create immutable buffer without data");
-        return nullptr;
+        vgpu_log(VGPU_LOG_LEVEL_ERROR, "Cannot create immutable buffer without data");
+        return NULL;
     }
 
     return renderer->buffer_create(info);
 }
 
-void agpu_destroy_buffer(agpu_buffer buffer)
-{
+void vgpu_destroy_buffer(vgpu_buffer buffer) {
     AGPU_ASSERT(buffer);
 
     renderer->buffer_destroy(buffer);
 }
 
 /* Shader */
-agpu_shader agpu_create_shader(const agpu_shader_info* info)
-{
+vgpu_shader vgpu_create_shader(const vgpu_shader_info* info) {
     AGPU_ASSERT(info);
     return renderer->shader_create(info);
 }
 
-void agpu_destroy_shader(agpu_shader shader)
-{
+void vgpu_destroy_shader(vgpu_shader shader) {
     AGPU_ASSERT(shader);
     renderer->shader_destroy(shader);
 }
 
 /* Texture */
-static agpu_texture_info _agpu_texture_info_defaults(const agpu_texture_info* info) {
-    agpu_texture_info def = *info;
+static vgpu_texture_info _vgpu_texture_info_defaults(const vgpu_texture_info* info) {
+    vgpu_texture_info def = *info;
     def.type = AGPU_DEF(def.type, AGPU_TEXTURE_TYPE_2D);
     def.format = AGPU_DEF(def.format, AGPU_TEXTURE_FORMAT_RGBA8_UNORM);
     def.depth = AGPU_DEF(def.depth, 1);
@@ -201,72 +194,66 @@ static agpu_texture_info _agpu_texture_info_defaults(const agpu_texture_info* in
     return def;
 };
 
-agpu_texture agpu_create_texture(const agpu_texture_info* info)
+vgpu_texture vgpu_create_texture(const vgpu_texture_info* info)
 {
     AGPU_ASSERT(info);
-    agpu_texture_info def = _agpu_texture_info_defaults(info);
+    vgpu_texture_info def = _vgpu_texture_info_defaults(info);
     return renderer->texture_create(&def);
 }
 
-void agpu_destroy_texture(agpu_texture handle)
-{
+void vgpu_destroy_texture(vgpu_texture handle) {
     renderer->texture_destroy(handle);
 }
 
+uint64_t vgpu_texture_get_native_handle(vgpu_texture handle) {
+    return renderer->texture_get_native_handle(handle);
+}
+
 /* Pipeline */
-agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info)
-{
+vgpu_pipeline vgpu_create_pipeline(const vgpu_pipeline_info* info) {
     AGPU_ASSERT(info);
     return renderer->pipeline_create(info);
 }
 
-void agpu_destroy_pipeline(agpu_pipeline pipeline)
-{
+void vgpu_destroy_pipeline(vgpu_pipeline pipeline) {
     renderer->pipeline_destroy(pipeline);
 }
 
 /* Commands */
-void agpu_push_debug_group(const char* name)
-{
+void vgpu_push_debug_group(const char* name) {
     renderer->push_debug_group(name);
 }
 
-void agpu_pop_debug_group(void)
-{
+void vgpu_pop_debug_group(void) {
     renderer->pop_debug_group();
 }
 
-void agpu_insert_debug_marker(const char* name)
-{
+void vgpu_insert_debug_marker(const char* name) {
     renderer->insert_debug_marker(name);
 }
 
-void agpu_begin_render_pass(const agpu_render_pass_info* info)
-{
+void vgpu_begin_render_pass(const agpu_render_pass_info* info) {
     AGPU_ASSERT(info);
     AGPU_ASSERT(info->num_color_attachments || info->depth_stencil.texture);
 
     renderer->begin_render_pass(info);
 }
 
-void agpu_end_render_pass(void)
-{
+void vgpu_end_render_pass(void) {
     renderer->end_render_pass();
 }
 
-void agpu_bind_pipeline(agpu_pipeline pipeline)
-{
+void vgpu_bind_pipeline(vgpu_pipeline pipeline) {
     AGPU_ASSERT(pipeline);
     renderer->bind_pipeline(pipeline);
 }
 
-void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex)
-{
+void vgpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex) {
     renderer->draw(vertex_count, instance_count, first_vertex);
 }
 
 /* Utility methods */
-uint32_t agpuCalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth)
+uint32_t vgpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth)
 {
     uint32_t mipLevels = 0u;
     uint32_t size = AGPU_MAX(AGPU_MAX(width, height), depth);

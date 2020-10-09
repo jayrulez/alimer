@@ -21,25 +21,22 @@ elseif(WIN32)
 	set(CMAKE_SHARED_LIBRARY_PREFIX "")
 endif()
 
-# Third party deps
-set(AGPU_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
-
 # Library
 add_library(vgpu
 	include/vgpu.h
 	src/vgpu_driver.h
-	src/vgpu.cpp
-    src/vgpu_driver_vk.cpp
+	src/vgpu.c
+    src/vgpu_driver_vk.c
     #src/agpu_driver_d3d_common.h
     #src/agpu_driver_d3d11.cpp
     #src/agpu_driver_d3d12.cpp
     #src/agpu_driver_opengl.cpp
-    src/vgpu_test.c
 )
 
 target_include_directories(vgpu PUBLIC
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external>
 )
 
 # Soname
@@ -49,8 +46,14 @@ set_target_properties(vgpu PROPERTIES OUTPUT_NAME "vgpu"
 )
 
 if (WIN32 OR ANDROID OR LINUX)
+    target_sources(vgpu PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/vma/vk_mem_alloc.cpp
+    )
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_VULKAN)
-    #target_link_libraries(agpu PRIVATE alimer_vulkan_headers)
+
+    target_include_directories(vgpu PRIVATE
+        $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/vulkan/include>
+    )
 endif ()
 
 if (MSVC)

@@ -98,6 +98,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
+    vgpu
     fmt
     stb
 )
@@ -176,10 +177,6 @@ endif ()
 if (ALIMER_IMGUI)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
 endif ()
-
-if (ALIMER_VULKAN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma)
-endif()
 
 # SDK installation
 install(TARGETS ${PROJECT_NAME}

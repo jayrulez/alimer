@@ -28,9 +28,28 @@
 #include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
+#include <vgpu.h>
 
 namespace Alimer
 {
+    static void vgpu_log_callback(void* userData, vgpu_log_level level, const char* message)
+    {
+        switch (level)
+        {
+        case VGPU_LOG_LEVEL_INFO:
+            LOGI(message);
+            break;
+        case VGPU_LOG_LEVEL_WARN:
+            LOGW(message);
+            break;
+        case VGPU_LOG_LEVEL_ERROR:
+            LOGE(message);
+            break;
+        default:
+            break;
+        }
+    }
+
     static Application* s_appCurrent = nullptr;
 
     Application::Application(const Config& config)
@@ -40,14 +59,15 @@ namespace Alimer
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
+        vgpu_set_log_callback(vgpu_log_callback, this);
+
         s_appCurrent = this;
     }
 
     Application::~Application()
     {
-        GraphicsDevice::Instance->WaitForGPU();
         //ImGuiLayer::Shutdown();
-        SafeDelete(GraphicsDevice::Instance);
+        vgpu_shutdown();
         s_appCurrent = nullptr;
     }
 
@@ -68,13 +88,12 @@ namespace Alimer
 
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
-        // Init graphics device
-        GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
+        // Init vgpu
+        agpu_config gpu_config = {};
 #ifdef _DEBUG
-        flags |= GraphicsDeviceFlags::DebugRuntime;
+        gpu_config.debug = true;
 #endif
-
-        if (!GraphicsDevice::Initialize(window->GetHandle(), config.preferredBackendType, flags))
+        if (vgpu_init("Alimer",&gpu_config))
         {
             headless = true;
         }
@@ -91,7 +110,7 @@ namespace Alimer
         state = State::Running;
         while (state == State::Running)
         {
-            Event evt {};
+            Event evt{};
             while (PollEvent(evt))
             {
                 if (evt.type == EventType::Quit)
@@ -107,20 +126,20 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!GraphicsDevice::Instance->BeginFrame())
+        if (!vgpu_begin_frame())
             return;
 
         OnDraw();
 
         /*agpu_push_debug_group("Frame");
-        
+
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);
         agpu_pop_debug_group();*/
 
-        GraphicsDevice::Instance->EndFrame();
+        vgpu_end_frame();
     }
 
     const Config* Application::GetConfig()

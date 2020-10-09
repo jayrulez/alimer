@@ -25,24 +25,24 @@
 
 // On Windows, use the stdcall convention, pn other platforms, use the default calling convention
 #if defined(_WIN32)
-#   define AGPU_API_CALL __stdcall
+#   define VGPU_API_CALL __stdcall
 #else
-#   define AGPU_API_CALL
+#   define VGPU_API_CALL
 #endif
 
-#if defined(AGPU_SHARED_LIBRARY)
+#if defined(VGPU_SHARED_LIBRARY)
 #   if defined(_WIN32)
-#       if defined(AGPU_IMPLEMENTATION)
-#           define AGPU_API __declspec(dllexport)
+#       if defined(VGPU_IMPLEMENTATION)
+#           define VGPU_API __declspec(dllexport)
 #       else
-#           define AGPU_API __declspec(dllimport)
+#           define VGPU_API __declspec(dllimport)
 #       endif
 #   else  // defined(_WIN32)
-#       define AGPU_API __attribute__((visibility("default")))
+#       define VGPU_API __attribute__((visibility("default")))
 #   endif  // defined(_WIN32)
-#else       // defined(AGPU_SHARED_LIBRARY)
-#   define AGPU_API
-#endif  // defined(AGPU_SHARED_LIBRARY)
+#else       // defined(VGPU_SHARED_LIBRARY)
+#   define VGPU_API
+#endif  // defined(VGPU_SHARED_LIBRARY)
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -51,31 +51,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    typedef struct agpu_buffer_t* agpu_buffer;
-    typedef struct agpu_shader_t* agpu_shader;
-    typedef struct agpu_texture_t* agpu_texture;
-    typedef struct agpu_pipeline_t* agpu_pipeline;
-    
+    typedef struct vgpu_buffer_t* vgpu_buffer;
+    typedef struct vgpu_shader_t* vgpu_shader;
+    typedef struct vgpu_texture_t* vgpu_texture;
+    typedef struct vgpu_pipeline_t* vgpu_pipeline;
+
     /* Constants */
     enum {
-        AGPU_INVALID_ID = 0,
-        AGPU_NUM_INFLIGHT_FRAMES = 2u,
-        AGPU_MAX_INFLIGHT_FRAMES = 3u,
-        AGPU_MAX_LOG_MESSAGE_LENGTH = 4096u,
-        AGPU_MAX_COLOR_ATTACHMENTS = 8u,
-        AGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
-        AGPU_MAX_VERTEX_ATTRIBUTES = 16u,
-        AGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
-        AGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u
+        VGPU_NUM_INFLIGHT_FRAMES = 2u,
+        VGPU_MAX_INFLIGHT_FRAMES = 3u,
+        VGPU_MAX_LOG_MESSAGE_LENGTH = 4096u,
+        VGPU_MAX_COLOR_ATTACHMENTS = 8u,
+        VGPU_MAX_VERTEX_BUFFER_BINDINGS = 8u,
+        VGPU_MAX_VERTEX_ATTRIBUTES = 16u,
+        VGPU_MAX_VERTEX_ATTRIBUTE_OFFSET = 2047u,
+        VGPU_MAX_VERTEX_BUFFER_STRIDE = 2048u
     };
 
     /* Enums */
-    typedef enum agpu_log_level {
-        AGPU_LOG_LEVEL_INFO,
-        AGPU_LOG_LEVEL_WARN,
-        AGPU_LOG_LEVEL_ERROR,
-        _AGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
-    } agpu_log_level;
+    typedef enum vgpu_log_level {
+        VGPU_LOG_LEVEL_INFO,
+        VGPU_LOG_LEVEL_WARN,
+        VGPU_LOG_LEVEL_ERROR,
+        _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_log_level;
 
     typedef enum agpu_backend_type {
         /// Null renderer.
@@ -194,14 +193,14 @@ extern "C" {
     } agpu_load_op;
 
     /* Structs */
-    typedef struct agpu_color {
+    typedef struct vgpu_color {
         float r;
         float g;
         float b;
         float a;
-    } agpu_color;
+    } vgpu_color;
 
-    typedef struct agpu_texture_info {
+    typedef struct vgpu_texture_info {
         agpu_texture_type type;
         agpu_texture_usage usage;
         agpu_texture_format format;
@@ -211,45 +210,52 @@ extern "C" {
         uint32_t mipmaps;
         const void* external_handle;
         const char* label;
-    } agpu_texture_info;
+    } vgpu_texture_info;
 
-    typedef struct agpu_color_attachment
-    {
-        agpu_texture texture;
-        uint32_t mip_level;
-        union {
-            uint32_t face;
-            uint32_t layer;
-            uint32_t slice;
-        };
+    typedef struct vgpu_shader_source {
+        const void* code;
+        size_t size;
+        const char* entry;
+    } vgpu_shader_source;
+
+    typedef struct vgpu_shader_info {
+        vgpu_shader_source vertex;
+        vgpu_shader_source fragment;
+        vgpu_shader_source compute;
+        const char* label;
+    } vgpu_shader_info;
+
+    typedef struct vgpu_pipeline_info {
+        vgpu_shader shader;
+        const char* label;
+    } vgpu_pipeline_info;
+
+    typedef struct vgpu_color_attachment {
+        vgpu_texture texture;
+        uint32_t level;
+        uint32_t slice;
         agpu_load_op load_op;
-        agpu_color clear_color;
-    } agpu_color_attachment;
+        vgpu_color clear_color;
+    } vgpu_color_attachment;
 
-    typedef struct agpu_depth_stencil_attachment
-    {
-        agpu_texture texture;
+    typedef struct agpu_depth_stencil_attachment {
+        vgpu_texture texture;
         uint32_t mip_level;
-        union {
-            uint32_t face;
-            uint32_t layer;
-            uint32_t slice;
-        };
-
+        uint32_t level;
+        uint32_t slice;
         agpu_load_op depth_load_op;
         agpu_load_op stencil_load_op;
         float clear_depth;
         uint8_t clear_stencil;
     } agpu_depth_stencil_attachment;
 
-    typedef struct agpu_render_pass_info
-    {
+    typedef struct agpu_render_pass_info {
         uint32_t num_color_attachments;
-        agpu_color_attachment color_attachments[AGPU_MAX_COLOR_ATTACHMENTS];
+        vgpu_color_attachment color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
         agpu_depth_stencil_attachment depth_stencil;
     } agpu_render_pass_info;
 
-    typedef struct agpu_features {
+    typedef struct vgpu_features {
         bool independentBlend;
         bool computeShader;
         bool indexUInt32;
@@ -260,9 +266,9 @@ extern "C" {
         bool textureCompressionBC;
         bool textureCubeArray;
         bool raytracing;
-    } agpu_features;
+    } vgpu_features;
 
-    typedef struct agpu_limits {
+    typedef struct vgpu_limits {
         uint32_t        maxVertexAttributes;
         uint32_t        maxVertexBindings;
         uint32_t        maxVertexAttributeOffset;
@@ -293,17 +299,17 @@ extern "C" {
         uint32_t        max_compute_work_group_size_x;
         uint32_t        max_compute_work_group_size_y;
         uint32_t        max_compute_work_group_size_z;
-    } agpu_limits;
+    } vgpu_limits;
 
     typedef struct agpu_caps {
         agpu_backend_type backend;
         uint32_t vendorID;
         uint32_t deviceID;
-        agpu_features features;
-        agpu_limits limits;
+        vgpu_features features;
+        vgpu_limits limits;
     } agpu_caps;
 
-    typedef struct agpu_swapchain_info {
+    typedef struct vgpu_swapchain_info {
         void* window_handle;
         uint32_t width;
         uint32_t height;
@@ -312,33 +318,33 @@ extern "C" {
         bool vsync;
         bool is_fullscreen;
         uint32_t sample_count;
-    } agpu_swapchain_info;
+    } vgpu_swapchain_info;
 
     typedef struct agpu_config {
         bool debug;
-        agpu_swapchain_info swapchain_info;
+        vgpu_swapchain_info swapchain_info;
     } agpu_config;
 
     /* Log functions */
-    typedef void(AGPU_API_CALL* agpu_log_callback)(void* userData, agpu_log_level level, const char* message);
-    AGPU_API void agpu_set_log_callback(agpu_log_callback callback, void* user_data);
-    AGPU_API void agpu_log(agpu_log_level level, const char* format, ...);
+    typedef void(VGPU_API_CALL* vgpu_log_callback)(void* userData, vgpu_log_level level, const char* message);
+    VGPU_API void vgpu_set_log_callback(vgpu_log_callback callback, void* user_data);
+    VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
 
     /* Frame logic */
-    AGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
-    AGPU_API bool agpu_init(const char* app_name, const agpu_config* config);
-    AGPU_API void agpu_shutdown(void);
-    AGPU_API void agpuQueryCaps(agpu_caps* caps);
-    AGPU_API bool agpu_begin_frame(void);
-    AGPU_API void agpu_end_frame(void);
+    VGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
+    VGPU_API bool vgpu_init(const char* app_name, const agpu_config* config);
+    VGPU_API void vgpu_shutdown(void);
+    VGPU_API void vgpu_query_caps(agpu_caps* caps);
+    VGPU_API bool vgpu_begin_frame(void);
+    VGPU_API void vgpu_end_frame(void);
 
     /* Buffer */
-    typedef enum agpu_buffer_type {
-        AGPU_BUFFER_TYPE_VERTEX,
-        AGPU_BUFFER_TYPE_INDEX,
-        AGPU_BUFFER_TYPE_UNIFORM,
-        _AGPU_BUFFER_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } agpu_buffer_type;
+    typedef enum vgpu_buffer_type {
+        VGPU_BUFFER_TYPE_VERTEX,
+        VGPU_BUFFER_TYPE_INDEX,
+        VGPU_BUFFER_TYPE_UNIFORM,
+        _VGPU_BUFFER_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_buffer_type;
 
     typedef enum agpu_buffer_usage {
         AGPU_BUFFER_USAGE_IMMUTABLE,
@@ -349,56 +355,39 @@ extern "C" {
 
     typedef struct agpu_buffer_info {
         uint64_t size;
-        agpu_buffer_type type;
+        vgpu_buffer_type type;
         agpu_buffer_usage usage;
         const void* data;
         const char* label;
     } agpu_buffer_info;
 
-    AGPU_API agpu_buffer agpu_create_buffer(const agpu_buffer_info* info);
-    AGPU_API void agpu_destroy_buffer(agpu_buffer buffer);
+    VGPU_API vgpu_buffer vgpu_create_buffer(const agpu_buffer_info* info);
+    VGPU_API void vgpu_destroy_buffer(vgpu_buffer buffer);
 
     /* Shader */
-    typedef struct {
-        const void* code;
-        size_t size;
-        const char* entry;
-    } agpu_shader_source;
-
-    typedef struct {
-        agpu_shader_source vertex;
-        agpu_shader_source fragment;
-        agpu_shader_source compute;
-        const char* label;
-    } agpu_shader_info;
-
-    AGPU_API agpu_shader agpu_create_shader(const agpu_shader_info* info);
-    AGPU_API void agpu_destroy_shader(agpu_shader shader);
+    VGPU_API vgpu_shader vgpu_create_shader(const vgpu_shader_info* info);
+    VGPU_API void vgpu_destroy_shader(vgpu_shader shader);
 
     /* Texture */
-    AGPU_API agpu_texture agpu_create_texture(const agpu_texture_info* info);
-    AGPU_API void agpu_destroy_texture(agpu_texture handle);
+    VGPU_API vgpu_texture vgpu_create_texture(const vgpu_texture_info* info);
+    VGPU_API void vgpu_destroy_texture(vgpu_texture handle);
+    VGPU_API uint64_t vgpu_texture_get_native_handle(vgpu_texture handle);
 
     /* Pipeline */
-    typedef struct {
-        agpu_shader shader;
-        const char* label;
-    } agpu_pipeline_info;
-
-    AGPU_API agpu_pipeline agpu_create_pipeline(const agpu_pipeline_info* info);
-    AGPU_API void agpu_destroy_pipeline(agpu_pipeline pipeline);
+    VGPU_API vgpu_pipeline vgpu_create_pipeline(const vgpu_pipeline_info* info);
+    VGPU_API void vgpu_destroy_pipeline(vgpu_pipeline pipeline);
 
     /* Commands */
-    AGPU_API void agpu_push_debug_group(const char* name);
-    AGPU_API void agpu_pop_debug_group(void);
-    AGPU_API void agpu_insert_debug_marker(const char* name);
-    AGPU_API void agpu_begin_render_pass(const agpu_render_pass_info* info);
-    AGPU_API void agpu_end_render_pass(void);
-    AGPU_API void agpu_bind_pipeline(agpu_pipeline pipeline);
-    AGPU_API void agpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
+    VGPU_API void vgpu_push_debug_group(const char* name);
+    VGPU_API void vgpu_pop_debug_group(void);
+    VGPU_API void vgpu_insert_debug_marker(const char* name);
+    VGPU_API void vgpu_begin_render_pass(const agpu_render_pass_info* info);
+    VGPU_API void vgpu_end_render_pass(void);
+    VGPU_API void vgpu_bind_pipeline(vgpu_pipeline pipeline);
+    VGPU_API void vgpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 
     /* Utility methods */
-    AGPU_API uint32_t agpuCalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth);
+    VGPU_API uint32_t vgpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 
 #ifdef __cplusplus
 }
