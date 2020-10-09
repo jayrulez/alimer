@@ -33,8 +33,8 @@
 
 namespace Alimer
 {
-    class D3D12Texture;
     class D3D12DescriptorHeap;
+    class D3D12SwapChain;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
@@ -49,14 +49,14 @@ namespace Alimer
         void EndFrame();
         void SetDeviceLost();
 
-        // The CPU will wait for a fence to reach a specified value
-        void WaitForFence(uint64_t fenceValue);
-
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 
         IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory; }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
-        //DeviceHandle GetHandle() const noexcept { return d3dDevice; }
+        ID3D12Device* GetD3DDevice() const { return d3dDevice; }
+        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
+        ID3D12CommandQueue* GetComputeQueue() const { return computeQueue; }
+        void* GetNativeHandle() const override { return d3dDevice; }
 
         void ReleaseResource(IUnknown* resource);
         template<typename T> void ReleaseResource(T*& resource)
@@ -102,5 +102,7 @@ namespace Alimer
         ID3D12Fence* frameFence;
         HANDLE frameFenceEvent;
         uint32_t frameIndex = 0;
+
+        D3D12SwapChain* swapChain = nullptr;
     };
 }

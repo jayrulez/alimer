@@ -22,8 +22,7 @@
 
 //#include "D3D12Texture.h"
 //#include "D3D12Buffer.h"
-//#include "D3D12CommandContext.h"
-//#include "D3D12SwapChain.h"
+#include "D3D12SwapChain.h"
 #include "D3D12DescriptorHeap.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -223,12 +222,14 @@ namespace Alimer
             frameFence->SetName(L"Frame Fence");
         }
 
-        LOGI("Successfully create {} Graphics Device", ToString(caps.backendType));
+        swapChain = new D3D12SwapChain(this, windowHandle, kRenderLatency);
     }
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         shuttingDown = true;
+
+        SafeDelete(swapChain);
 
         // Command queues
         {
@@ -319,6 +320,9 @@ namespace Alimer
 
     void D3D12GraphicsDevice::EndFrame()
     {
+        // Present main SwapChain using vertical sync.
+        swapChain->Present(true);
+
         ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
 
         uint64_t GPUFrameCount = frameFence->GetCompletedValue();
@@ -383,12 +387,6 @@ namespace Alimer
                 deferredReleases.pop();
             }
         }
-    }
-
-    void D3D12GraphicsDevice::WaitForFence(uint64_t fenceValue)
-    {
-        // auto producer = GetQueue((D3D12_COMMAND_LIST_TYPE)(fenceValue >> 56));
-         //producer->WaitForFence(fenceValue);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)

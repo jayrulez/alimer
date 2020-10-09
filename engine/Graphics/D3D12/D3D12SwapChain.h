@@ -22,44 +22,28 @@
 
 #pragma once
 
-#include "Graphics/SwapChain.h"
-#include "D3D11Backend.h"
-#include "Core/Ptr.h"
+#include "Platform/WindowHandle.h"
+#include "Graphics/Texture.h"
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    class D3D11Texture;
-
-    class D3D11SwapChain final : public SwapChain
+    class D3D12SwapChain final
     {
-        friend class D3D11GraphicsDevice;
-
     public:
-        D3D11SwapChain(D3D11GraphicsDevice* device);
-        ~D3D11SwapChain() override;
+        D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, uint32_t bufferCount);
+        ~D3D12SwapChain();
         void Destroy();
-
-        bool CreateOrResize() override;
-        Texture* GetCurrentTexture() const override;
-
-        void AfterReset();
+        void Present(bool verticalSync);
 
     private:
-        static constexpr uint32 kBufferCount = 2u;
+        void AfterReset();
 
-        D3D11GraphicsDevice* device;
-        uint32_t syncInterval = 1;
-        uint32_t presentFlags = 0;
-
-#if ALIMER_PLATFORM_WINDOWS
-        HWND windowHandle = nullptr;
-#else
-        IUnknown* windowHandle = nullptr;
-#endif
-
-        IDXGISwapChain1* handle = nullptr;
-
-        DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_IDENTITY;
-        RefPtr<D3D11Texture> colorTexture;
+        D3D12GraphicsDevice* device;
+        IDXGISwapChain3* handle;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        bool isFullscreen = false;
+        uint32_t backBufferIndex = 0;
     };
 }

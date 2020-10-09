@@ -44,6 +44,7 @@ namespace Alimer
         IDXGIFactory2* GetDXGIFactory() const { return dxgiFactory.Get(); }
         ID3D11Device1* GetD3DDevice() const { return d3dDevice; }
         bool IsTearingSupported() const { return any(dxgiFactoryCaps & DXGIFactoryCaps::Tearing); }
+        void* GetNativeHandle() const override { return d3dDevice; }
 
         void CreateFactory();
         void InitCapabilities(IDXGIAdapter1* adapter);

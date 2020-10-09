@@ -53,6 +53,11 @@ namespace Alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
+        /**
+        * Get the native handle (ID3D12Device, ID3D11Device1, VkDevice)
+        */
+        virtual void* GetNativeHandle() const = 0;
+
         //virtual CommandContext* GetImmediateContext() const = 0;
         //virtual RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() = 0;
         //virtual SwapChain* CreateSwapChain() = 0;
