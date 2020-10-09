@@ -73,14 +73,14 @@ namespace Alimer
     {
         /// Null renderer.
         Null,
-        /// Direct3D 11 backend.
-        Direct3D11,
         /// Direct3D 12 backend.
         Direct3D12,
-        /// Metal backend.
-        Metal,
+        /// Direct3D 11 backend.
+        Direct3D11,
         /// Vulkan backend.
         Vulkan,
+        /// Metal backend.
+        Metal,
         /// Default best platform supported backend.
         Count
     };

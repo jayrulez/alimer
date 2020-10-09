@@ -52,12 +52,12 @@ namespace Alimer
         void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame() override;
-        CommandContext* GetImmediateContext() const override;
+        CommandContext* GetImmediateContext() const;
 
-        RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() override;
-        SwapChain* CreateSwapChain() override;
-        GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label) override;
-        GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label) override;
+        RefPtr<ResourceUploadBatch> CreateResourceUploadBatch();
+        SwapChain* CreateSwapChain();
+        GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label);
+        GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label);
 
     private:
         static constexpr uint32 kBufferCount = 2u;

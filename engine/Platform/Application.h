@@ -45,8 +45,6 @@ namespace Alimer
         std::string rootDirectory = "Assets";
     };
 
-    class GraphicsDevice;
-
     class ALIMER_API Application : public Object
     {
         ALIMER_OBJECT(Application, Object);
@@ -86,7 +84,7 @@ namespace Alimer
 
     protected:
         virtual void Initialize() {}
-        virtual void OnDraw(CommandContext* context) {}
+        virtual void OnDraw() {}
 
     private:
         void InitBeforeRun();
@@ -98,7 +96,6 @@ namespace Alimer
         AssetManager assets;
         bool headless = false;
         std::unique_ptr<Window> window{ nullptr };
-        RefPtr<GraphicsDevice> graphicsDevice;
     };
 
     extern Application* CreateApplication(void);

@@ -35,7 +35,7 @@ namespace Alimer
     const char* ToString(GraphicsBackendType value)
     {
         static const char* names[] = {
-            "Null", "Direct3D11", "Direct3D12", "Metal", "Vulkan", "Count"
+            "Null", "Direct3D12", "Direct3D11", "Vulkan", "Metal", "Count"
         };
 
         return names[static_cast<uint32>(value)];

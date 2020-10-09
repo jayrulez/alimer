@@ -26,6 +26,8 @@
 namespace Alimer
 {
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface = nullptr;
+    PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
     PFN_DXC_CREATE_INSTANCE DxcCreateInstance = nullptr;
 #endif
 

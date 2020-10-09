@@ -24,7 +24,6 @@
 
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Graphics/CommandBuffer.h"
 #include "Graphics/Types.h"
 
 #ifdef _WIN32
@@ -160,7 +159,6 @@ namespace Alimer
 
         VkFence RequestFence();
         VkSemaphore RequestSemaphore();
-        CommandBuffer* RequestCommandBuffer();
 
     private:
         VulkanGraphicsDevice& device;

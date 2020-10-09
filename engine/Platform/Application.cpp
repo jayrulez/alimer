@@ -45,9 +45,9 @@ namespace Alimer
 
     Application::~Application()
     {
-        graphicsDevice->WaitForGPU();
+        GraphicsDevice::Instance->WaitForGPU();
         //ImGuiLayer::Shutdown();
-        graphicsDevice.Reset();
+        SafeDelete(GraphicsDevice::Instance);
         s_appCurrent = nullptr;
     }
 
@@ -77,8 +77,7 @@ namespace Alimer
         flags |= GraphicsDeviceFlags::DebugRuntime;
 #endif
 
-        graphicsDevice = GraphicsDevice::Create(presentationParameters, config.preferredBackendType, flags);
-        if (!graphicsDevice)
+        if (!GraphicsDevice::Initialize(presentationParameters, config.preferredBackendType, flags))
         {
             headless = true;
         }
@@ -111,10 +110,10 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!graphicsDevice->BeginFrame())
+        if (!GraphicsDevice::Instance->BeginFrame())
             return;
 
-        OnDraw(graphicsDevice->GetImmediateContext());
+        OnDraw();
 
         /*agpu_push_debug_group("Frame");
         
@@ -124,7 +123,7 @@ namespace Alimer
         agpu_draw(3, 1, 0);
         agpu_pop_debug_group();*/
 
-        graphicsDevice->EndFrame();
+        GraphicsDevice::Instance->EndFrame();
     }
 
     const Config* Application::GetConfig()

@@ -25,17 +25,23 @@
 #include "Core/Ptr.h"
 #include "Graphics/Types.h"
 #include <memory>
+#include <set>
 #include <mutex>
 
 namespace Alimer
 {
-    class ALIMER_API GraphicsDevice : public RefCounted
+    class ALIMER_API GraphicsDevice 
     {
     public:
+        /// The single instance of the graphics device.
+        static GraphicsDevice* Instance;
+
         /// Destructor
         virtual ~GraphicsDevice() = default;
 
-        static RefPtr<GraphicsDevice> Create(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static std::set<GraphicsBackendType> GetAvailableBackends();
+
+        static bool Initialize(const PresentationParameters& presentationParameters, GraphicsBackendType preferredBackendType = GraphicsBackendType::Count, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -46,14 +52,11 @@ namespace Alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        virtual CommandContext* GetImmediateContext() const = 0;
-
-        virtual RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() = 0;
-
-        virtual SwapChain* CreateSwapChain() = 0;
-
-        virtual GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
-        virtual GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
+        //virtual CommandContext* GetImmediateContext() const = 0;
+        //virtual RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() = 0;
+        //virtual SwapChain* CreateSwapChain() = 0;
+        //virtual GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
+        //virtual GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
 
         /// Gets the device backend type.
         GraphicsBackendType GetBackendType() const { return caps.backendType; }

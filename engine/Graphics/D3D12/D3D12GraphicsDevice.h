@@ -43,6 +43,8 @@ namespace Alimer
         D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags);
         ~D3D12GraphicsDevice();
 
+        bool IsDeviceLost() const override;
+        void WaitForGPU() override;
         bool BeginFrame() override;
         void EndFrame();
         void SetDeviceLost();
@@ -81,6 +83,7 @@ namespace Alimer
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
+        bool supportsRenderPass = false;
         bool isLost = false;
         bool shuttingDown = false;
 

@@ -38,7 +38,7 @@ namespace Alimer
         ~HelloWorldApp() override;
 
         void Initialize() override;
-        void OnDraw(CommandContext* context) override;
+        void OnDraw() override;
 
     private:
         std::unique_ptr<GraphicsBuffer> vertexBuffer;
@@ -71,7 +71,7 @@ namespace Alimer
         vertexBuffer.reset(graphicsDevice->CreateBuffer(bufferDesc, triangleVertices));*/
     }
 
-    void HelloWorldApp::OnDraw(CommandContext* context)
+    void HelloWorldApp::OnDraw()
     {
         /*context->PushDebugGroup("Frame");
         RenderPassDesc renderPass{};

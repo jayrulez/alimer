@@ -29,6 +29,51 @@
 
 namespace Alimer
 {
+    bool D3D12GraphicsDevice::IsAvailable()
+    {
+        static bool available = false;
+        static bool available_initialized = false;
+
+        if (available_initialized) {
+            return available;
+        }
+
+        available_initialized = true;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
+        static HMODULE dxgiDLL = LoadLibraryA("dxgi.dll");
+        if (!dxgiDLL) {
+            return false;
+        }
+        CreateDXGIFactory2 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY2>(GetProcAddress(dxgiDLL, "CreateDXGIFactory2"));
+        if (!CreateDXGIFactory2)
+        {
+            return false;
+        }
+
+        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
+
+        static HMODULE d3d12DLL = LoadLibraryA("d3d12.dll");
+        if (!d3d12DLL) {
+            return false;
+        }
+
+        D3D12GetDebugInterface = (PFN_D3D12_GET_DEBUG_INTERFACE)GetProcAddress(d3d12DLL, "D3D12GetDebugInterface");
+        D3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(d3d12DLL, "D3D12CreateDevice");
+        if (!D3D12CreateDevice) {
+            return false;
+        }
+#endif
+
+        if (SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+        {
+            available = true;
+            return true;
+        }
+
+        return false;
+    }
+
     D3D12GraphicsDevice::D3D12GraphicsDevice(const PresentationParameters& presentationParameters, GraphicsDeviceFlags flags)
         : GraphicsDevice(presentationParameters)
     {
@@ -40,16 +85,18 @@ namespace Alimer
 
         if (enableDebugLayer)
         {
-            ComPtr<ID3D12Debug> debugController;
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf()))))
+            ID3D12Debug* debugController;
+            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
             {
                 debugController->EnableDebugLayer();
 
-                ComPtr<ID3D12Debug1> debugController1;
-                if (SUCCEEDED(debugController.As(&debugController1)))
+                ID3D12Debug1* debugController1;
+                if (SUCCEEDED(debugController->QueryInterface(&debugController1)))
                 {
                     debugController1->SetEnableGPUBasedValidation(GPUBasedValidation);
+                    debugController1->Release();
                 }
+                debugController->Release();
             }
             else
             {
@@ -57,8 +104,8 @@ namespace Alimer
             }
 
 #if defined(_DEBUG)
-            ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
-            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+            IDXGIInfoQueue* dxgiInfoQueue;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
             {
                 dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 
@@ -73,6 +120,7 @@ namespace Alimer
                 filter.DenyList.NumIDs = _countof(hide);
                 filter.DenyList.pIDList = hide;
                 dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->Release();
             }
 #endif
         }
@@ -104,11 +152,11 @@ namespace Alimer
 
         // Get adapter and create device
         {
-            ComPtr<IDXGIAdapter1> dxgiAdapter;
-            GetAdapter(false, dxgiAdapter.GetAddressOf());
+            IDXGIAdapter1* dxgiAdapter;
+            GetAdapter(false, &dxgiAdapter);
 
             // Create the DX12 API device object.
-            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter.Get(), d3dMinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
+            ThrowIfFailed(D3D12CreateDevice(dxgiAdapter, d3dMinFeatureLevel, IID_PPV_ARGS(&d3dDevice)));
 
 #ifndef NDEBUG
             // Configure debug device (if active).
@@ -139,10 +187,11 @@ namespace Alimer
             D3D12MA::ALLOCATOR_DESC desc = {};
             desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
             desc.pDevice = d3dDevice;
-            desc.pAdapter = dxgiAdapter.Get();
+            desc.pAdapter = dxgiAdapter;
             ThrowIfFailed(D3D12MA::CreateAllocator(&desc, &allocator));
 
-            InitCapabilities(dxgiAdapter.Get());
+            InitCapabilities(dxgiAdapter);
+            dxgiAdapter->Release();
         }
 
         // Heaps
@@ -195,6 +244,16 @@ namespace Alimer
 #else
         (void)refCount; // avoid warning
 #endif
+    }
+
+    bool D3D12GraphicsDevice::IsDeviceLost() const
+    {
+        return deviceLost;
+    }
+
+    void D3D12GraphicsDevice::WaitForGPU()
+    {
+
     }
 
     bool D3D12GraphicsDevice::BeginFrame()
@@ -411,12 +470,37 @@ namespace Alimer
         }
 
         // Features
-        /*supportsRenderPass = false;
-        if (d3d12options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
+        caps.features.baseVertex = true;
+        caps.features.independentBlend = true;
+        caps.features.computeShader = true;
+        caps.features.geometryShader = true;
+        caps.features.tessellationShader = true;
+        caps.features.logicOp = true;
+        caps.features.multiViewport = true;
+        caps.features.fullDrawIndexUint32 = true;
+        caps.features.multiDrawIndirect = true;
+        caps.features.fillModeNonSolid = true;
+        caps.features.samplerAnisotropy = true;
+        caps.features.textureCompressionETC2 = false;
+        caps.features.textureCompressionASTC_LDR = false;
+        caps.features.textureCompressionBC = true;
+        caps.features.textureCubeArray = true;
+        caps.features.raytracing = false;
+
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = { };
+        ThrowIfFailed(d3dDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
+
+        if (options5.RaytracingTier > D3D12_RAYTRACING_TIER_NOT_SUPPORTED)
+        {
+            caps.features.raytracing = true;
+        }
+
+        supportsRenderPass = false;
+        if (options5.RenderPassesTier > D3D12_RENDER_PASS_TIER_0 &&
             caps.vendorId != KnownVendorId_Intel)
         {
             supportsRenderPass = true;
-        }*/
+        }
 
         // Limits
         caps.limits.maxVertexAttributes = kMaxVertexAttributes;
