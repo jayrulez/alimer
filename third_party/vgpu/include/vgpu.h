@@ -20,7 +20,8 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#ifndef __VGPU_H__
+#define __VGPU_H__
 
 // On Windows, use the stdcall convention, pn other platforms, use the default calling convention
 #if defined(_WIN32)
@@ -86,12 +87,12 @@ extern "C" {
         /// Metal backend.
         AGPU_BACKEND_TYPE_METAL,
         /// Vulkan backend.
-        AGPU_BACKEND_TYPE_VULKAN,
+        VGPU_BACKEND_TYPE_VULKAN,
         /// OpenGL 3.3+ or GLES 3.0+ backend.
         AGPU_BACKEND_TYPE_OPENGL,
         /// Default best platform supported backend.
-        AGPU_BACKEND_TYPE_COUNT,
-        _AGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
+        VGPU_BACKEND_TYPE_COUNT,
+        _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } agpu_backend_type;
 
     /// Defines pixel format.
@@ -402,3 +403,6 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* __VGPU_H__ */
+

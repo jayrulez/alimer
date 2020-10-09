@@ -20,10 +20,10 @@
 // THE SOFTWARE.
 //
 
-#ifndef AGPU_DRIVER_H
-#define AGPU_DRIVER_H
+#ifndef __VGPU_DRIVER_H__
+#define __VGPU_DRIVER_H__
 
-#include "agpu.h"
+#include "vgpu.h"
 #include <new>
 #include <stdlib.h>
 #include <string.h> 
@@ -133,4 +133,4 @@ extern agpu_driver vulkan_driver;
 extern agpu_driver metal_driver;
 extern agpu_driver GL_Driver;
 
-#endif /* AGPU_DRIVER_H */
+#endif /* __VGPU_DRIVER_H__ */

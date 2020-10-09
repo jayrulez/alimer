@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#include "agpu_driver.h"
+#include "vgpu_driver.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -56,7 +56,7 @@ static const agpu_driver* drivers[] = {
 #if AGPU_DRIVER_METAL
     & metal_driver,
 #endif
-#if AGPU_DRIVER_VULKAN && defined(TODO_VK)
+#if VGPU_DRIVER_VULKAN 
     &vulkan_driver,
 #endif
 #if AGPU_DRIVER_OPENGL
@@ -74,7 +74,7 @@ static agpu_config _agpu_config_defaults(const agpu_config* config) {
     return def;
 };
 
-static agpu_backend_type s_backend = AGPU_BACKEND_TYPE_COUNT;
+static agpu_backend_type s_backend = VGPU_BACKEND_TYPE_COUNT;
 static agpu_renderer* renderer = nullptr;
 
 bool agpu_set_preferred_backend(agpu_backend_type backend)
@@ -94,7 +94,7 @@ bool agpu_init(const char* app_name, const agpu_config* config)
         return true;
     }
 
-    if (s_backend == AGPU_BACKEND_TYPE_COUNT)
+    if (s_backend == VGPU_BACKEND_TYPE_COUNT)
     {
         for (uint32_t i = 0; i < AGPU_COUNT_OF(drivers); i++)
         {
