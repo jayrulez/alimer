@@ -27,7 +27,7 @@
 #include <string.h> 
 #include <float.h>
 
-#define AGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
+#define VGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
 
 #define AGPU_DEF(val, def) (((val) == 0) ? (def) : (val))
 #define AGPU_DEF_FLOAT(val, def) (((val) == 0.0f) ? (def) : (val))
@@ -69,12 +69,11 @@ extern void __cdecl __debugbreak(void);
 	} while(0)
 #endif
 
-typedef struct agpu_renderer {
+typedef struct vgpu_renderer {
     bool (*init)(const char* app_name, const agpu_config* config);
     void (*shutdown)(void);
     bool(*frame_begin)(void);
     void(*frame_finish)(void);
-
     void (*query_caps)(agpu_caps* caps);
 
     vgpu_buffer(*buffer_create)(const agpu_buffer_info* info);
@@ -98,7 +97,7 @@ typedef struct agpu_renderer {
     void(*end_render_pass)(void);
     void(*bind_pipeline)(vgpu_pipeline handle);
     void(*draw)(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
-} agpu_renderer;
+} vgpu_renderer;
 
 #define ASSIGN_DRIVER_FUNC(func, name) renderer.func = name##_##func;
 #define ASSIGN_DRIVER(name) \
@@ -124,17 +123,23 @@ typedef struct agpu_renderer {
     ASSIGN_DRIVER_FUNC(bind_pipeline, name) \
     ASSIGN_DRIVER_FUNC(draw, name) \
 
-typedef struct agpu_driver
+typedef struct vgpu_driver
 {
-    agpu_backend_type backend;
+    vgpu_backend_type backend;
     bool (*is_supported)(void);
-    agpu_renderer* (*create_renderer)(void);
-} agpu_driver;
+    vgpu_renderer* (*create_renderer)(void);
+} vgpu_driver;
 
-//extern agpu_driver d3d12_driver;
-//extern agpu_driver D3D11_Driver;
-extern agpu_driver vulkan_driver;
-//extern agpu_driver metal_driver;
-//extern agpu_driver GL_Driver;
+#ifdef __cplusplus
+#define DRIVER_EXTERN extern "C"
+#else
+#define DRIVER_EXTERN extern
+#endif
+
+DRIVER_EXTERN vgpu_driver d3d12_driver;
+//DRIVER_EXTERN vgpu_driver D3D11_Driver;
+DRIVER_EXTERN vgpu_driver vulkan_driver;
+//DRIVER_EXTERN vgpu_driver metal_driver;
+//DRIVER_EXTERN vgpu_driver GL_Driver;
 
 #endif /* __VGPU_DRIVER_H__ */

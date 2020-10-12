@@ -47,22 +47,6 @@ define_engine_source_files(
     Scene
 )
 
-if(ALIMER_D3D11 OR ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D)
-endif()
-
-if(ALIMER_D3D11)
-    define_engine_source_files(Graphics/D3D11)
-endif()
-
-if(ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D12)
-endif()
-
-if (ALIMER_VULKAN)
-    #define_engine_source_files(Graphics/Vulkan)
-endif()
-
 if (ALIMER_IMGUI)
     define_engine_source_files(UI)
 endif ()

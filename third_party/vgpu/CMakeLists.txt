@@ -27,9 +27,9 @@ add_library(vgpu
 	src/vgpu_driver.h
 	src/vgpu.c
     src/vgpu_driver_vk.c
-    #src/agpu_driver_d3d_common.h
+    src/vgpu_driver_d3d_common.h
     #src/agpu_driver_d3d11.cpp
-    #src/agpu_driver_d3d12.cpp
+    src/vgpu_driver_d3d12.cpp
     #src/agpu_driver_opengl.cpp
 )
 
@@ -45,15 +45,32 @@ set_target_properties(vgpu PROPERTIES OUTPUT_NAME "vgpu"
 	SOVERSION ${VGPU_VERSION_MAJOR}
 )
 
+# Vulkan
 if (WIN32 OR ANDROID OR LINUX)
     target_sources(vgpu PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/external/vma/vk_mem_alloc.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/vma/src/vk_mem_alloc.cpp
     )
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_VULKAN)
 
     target_include_directories(vgpu PRIVATE
         $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/vulkan/include>
+        $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/vma/src>
     )
+endif ()
+
+# D3D12 and D3D11
+if(WIN32 OR WINDOWS_STORE)
+    target_sources(vgpu PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/external/d3d12ma/src/D3D12MemAlloc.cpp
+    )
+
+    target_include_directories(vgpu PRIVATE
+        $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/d3d12ma/src>
+    )
+
+    #target_compile_definitions(vgpu PRIVATE NOMINMAX)
+    #target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D11)
+    target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D12)
 endif ()
 
 if (MSVC)

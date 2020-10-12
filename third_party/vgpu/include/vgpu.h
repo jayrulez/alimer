@@ -76,23 +76,23 @@ extern "C" {
         _VGPU_LOG_LEVEL_FORCE_U32 = 0x7FFFFFFF
     } vgpu_log_level;
 
-    typedef enum agpu_backend_type {
+    typedef enum vgpu_backend_type {
         /// Null renderer.
-        AGPU_BACKEND_TYPE_NULL,
+        VGPU_BACKEND_TYPE_NULL,
         /// Direct3D 11 backend.
-        AGPU_BACKEND_TYPE_D3D11,
+        VGPU_BACKEND_TYPE_D3D11,
         /// Direct3D 12 backend.
-        AGPU_BACKEND_TYPE_D3D12,
+        VGPU_BACKEND_TYPE_D3D12,
         /// Metal backend.
-        AGPU_BACKEND_TYPE_METAL,
+        VGPU_BACKEND_TYPE_METAL,
         /// Vulkan backend.
         VGPU_BACKEND_TYPE_VULKAN,
         /// OpenGL 3.3+ or GLES 3.0+ backend.
-        AGPU_BACKEND_TYPE_OPENGL,
+        VGPU_BACKEND_TYPE_OPENGL,
         /// Default best platform supported backend.
         VGPU_BACKEND_TYPE_COUNT,
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } agpu_backend_type;
+    } vgpu_backend_type;
 
     /// Defines pixel format.
     typedef enum agpu_texture_format {
@@ -302,7 +302,7 @@ extern "C" {
     } vgpu_limits;
 
     typedef struct agpu_caps {
-        agpu_backend_type backend;
+        vgpu_backend_type backend;
         uint32_t vendorID;
         uint32_t deviceID;
         vgpu_features features;
@@ -331,7 +331,7 @@ extern "C" {
     VGPU_API void vgpu_log(vgpu_log_level level, const char* format, ...);
 
     /* Frame logic */
-    VGPU_API bool agpu_set_preferred_backend(agpu_backend_type backend);
+    VGPU_API bool agpu_set_preferred_backend(vgpu_backend_type backend);
     VGPU_API bool vgpu_init(const char* app_name, const agpu_config* config);
     VGPU_API void vgpu_shutdown(void);
     VGPU_API void vgpu_query_caps(agpu_caps* caps);

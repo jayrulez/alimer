@@ -44,20 +44,20 @@ void vgpu_log(vgpu_log_level level, const char* format, ...) {
     }
 }
 
-static const agpu_driver* drivers[] = {
-#if AGPU_DRIVER_D3D12 && defined(TODO_D3D12)
+static const vgpu_driver* drivers[] = {
+#if VGPU_DRIVER_D3D12
     &d3d12_driver,
 #endif
-#if AGPU_DRIVER_D3D11
+#if VGPU_DRIVER_D3D11
     & D3D11_Driver,
 #endif
-#if AGPU_DRIVER_METAL
+#if VGPU_DRIVER_METAL
     & metal_driver,
 #endif
 #if VGPU_DRIVER_VULKAN 
     &vulkan_driver,
 #endif
-#if AGPU_DRIVER_OPENGL
+#if VGPU_DRIVER_OPENGL
     & GL_Driver,
 #endif
     NULL
@@ -71,10 +71,10 @@ static agpu_config _agpu_config_defaults(const agpu_config* config) {
     return def;
 };
 
-static agpu_backend_type s_backend = VGPU_BACKEND_TYPE_COUNT;
-static agpu_renderer* renderer = NULL;
+static vgpu_backend_type s_backend = VGPU_BACKEND_TYPE_COUNT;
+static vgpu_renderer* renderer = NULL;
 
-bool agpu_set_preferred_backend(agpu_backend_type backend)
+bool agpu_set_preferred_backend(vgpu_backend_type backend)
 {
     if (renderer != NULL)
         return false;

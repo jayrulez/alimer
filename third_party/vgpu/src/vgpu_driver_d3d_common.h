@@ -22,8 +22,8 @@
 
 #pragma once
 
-#if defined(AGPU_DRIVER_D3D11) || defined(AGPU_DRIVER_D3D12)
-#include "agpu_driver.h"
+#if defined(VGPU_DRIVER_D3D11) || defined(VGPU_DRIVER_D3D12)
+#include "vgpu_driver.h"
 
 #if defined(NTDDI_WIN10_RS2)
 #   include <dxgi1_6.h>
@@ -191,7 +191,7 @@ static inline IDXGISwapChain1* agpu_d3d_create_swapchain(
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     HWND window = (HWND)window_handle;
     if (!IsWindow(window)) {
-        agpu_log(AGPU_LOG_LEVEL_ERROR, "D3D: Invalid HWND handle");
+        vgpu_log(VGPU_LOG_LEVEL_ERROR, "D3D: Invalid HWND handle");
         return nullptr;
     }
 #else

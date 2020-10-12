@@ -40,7 +40,7 @@
 PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 
-#include "vma/vk_mem_alloc.h"
+#include "vk_mem_alloc.h"
 
 // Functions that don't require an instance
 #define VGPU_FOREACH_ANONYMOUS(X)\
@@ -502,14 +502,14 @@ static bool vk_is_supported(void)
     return true;
 };
 
-static agpu_renderer* vk_create_renderer(void)
+static vgpu_renderer* vk_create_renderer(void)
 {
-    static agpu_renderer renderer = { 0 };
+    static vgpu_renderer renderer = { 0 };
     ASSIGN_DRIVER(vk);
     return &renderer;
 }
 
-agpu_driver vulkan_driver = {
+vgpu_driver vulkan_driver = {
     VGPU_BACKEND_TYPE_VULKAN,
     vk_is_supported,
     vk_create_renderer
