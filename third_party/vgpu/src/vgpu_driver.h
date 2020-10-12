@@ -29,8 +29,8 @@
 
 #define VGPU_UNUSED(x) do { (void)sizeof(x); } while(0)
 
-#define AGPU_DEF(val, def) (((val) == 0) ? (def) : (val))
-#define AGPU_DEF_FLOAT(val, def) (((val) == 0.0f) ? (def) : (val))
+#define VGPU_DEF(val, def) (((val) == 0) ? (def) : (val))
+#define VGPU_DEF_FLOAT(val, def) (((val) == 0.0f) ? (def) : (val))
 #define VGPU_MIN(a,b) ((a<b)?a:b)
 #define VGPU_MAX(a,b) ((a>b)?a:b)
 #define VGPU_CLAMP(v,v0,v1) ((v<v0)?(v0):((v>v1)?(v1):(v)))

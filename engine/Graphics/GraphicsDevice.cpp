@@ -28,9 +28,6 @@
 #if defined(ALIMER_D3D11)
 #include "Graphics/D3D11/D3D11GraphicsDevice.h"
 #endif
-#if defined(ALIMER_D3D12)
-#include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
 #if defined(ALIMER_VULKAN)
 //#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
@@ -50,11 +47,6 @@ namespace Alimer
 #if defined(ALIMER_D3D11)
             if(D3D11GraphicsDevice::IsAvailable())
                 backends.insert(GraphicsBackendType::Direct3D11);
-#endif
-
-#if defined(ALIMER_D3D12)
-            if (D3D12GraphicsDevice::IsAvailable())
-                backends.insert(GraphicsBackendType::Direct3D12);
 #endif
 
 #if defined(ALIMER_VULKAN)
@@ -91,12 +83,6 @@ namespace Alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_D3D12)
-        case GraphicsBackendType::Direct3D12:
-            LOGI("Using Direct3D 12 render driver");
-            Instance = new D3D12GraphicsDevice(windowHandle, flags);
-            break;
-#endif
 
 #if defined(ALIMER_D3D11)
         case GraphicsBackendType::Direct3D11:

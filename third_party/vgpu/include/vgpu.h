@@ -58,6 +58,7 @@ extern "C" {
 
     /* Constants */
     enum {
+        VGPU_MAX_PHYSICAL_DEVICE_NAME_SIZE = 256u,
         VGPU_NUM_INFLIGHT_FRAMES = 2u,
         VGPU_MAX_INFLIGHT_FRAMES = 3u,
         VGPU_MAX_LOG_MESSAGE_LENGTH = 4096u,
@@ -94,20 +95,14 @@ extern "C" {
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_backend_type;
 
-    typedef enum vgpu_device_preference {
-        /**
-        * High performance (discrete GPU)
-        */
-        VGPU_DEVICE_PREFERENCE_HIGH_PERFORMANCE,
-        /**
-        * Low power (integrated GPU)
-        */
-        VGPU_DEVICE_PREFERENCE_LOW_POWER,
-        /**
-        * No GPU preference.
-        */
-        VGPU_DEVICE_PREFERENCE_DONT_CARE
-    } vgpu_device_preference;
+    typedef enum vgpu_adapter_type {
+        VGPU_ADAPTER_TYPE_OTHER,
+        VGPU_ADAPTER_TYPE_INTEGRATED_GPU,
+        VGPU_ADAPTER_TYPE_DISCRETE_GPU,
+        VGPU_ADAPTER_TYPE_VIRTUAL_GPU,
+        VGPU_ADAPTER_TYPE_CPU,
+        _VGPU_ADAPTER_TYPE_FORCE_U32 = 0x7FFFFFFF
+    } vgpu_adapter_type;
 
     /// Defines pixel format.
     typedef enum vgpu_texture_format {
@@ -173,6 +168,26 @@ extern "C" {
         VGPU_TEXTURE_FORMAT_BC6H,
         VGPU_TEXTURE_FORMAT_BC6HS,
         VGPU_TEXTURE_FORMAT_BC7,
+
+        VGPU_TEXTURE_FORMAT_ETC2_RGB8,
+        VGPU_TEXTURE_FORMAT_ETC2_RGB8A1,
+        VGPU_TEXTURE_FORMAT_ETC2_RGBA8,
+
+        VGPU_TEXTURE_FORMAT_ASTC_4x4,
+        VGPU_TEXTURE_FORMAT_ASTC_5x4,
+        VGPU_TEXTURE_FORMAT_ASTC_5x5,
+        VGPU_TEXTURE_FORMAT_ASTC_6x5,
+        VGPU_TEXTURE_FORMAT_ASTC_6x6,
+        VGPU_TEXTURE_FORMAT_ASTC_8x5,
+        VGPU_TEXTURE_FORMAT_ASTC_8x6,
+        VGPU_TEXTURE_FORMAT_ASTC_8x8,
+        VGPU_TEXTURE_FORMAT_ASTC_10x5,
+        VGPU_TEXTURE_FORMAT_ASTC_10x6,
+        VGPU_TEXTURE_FORMAT_ASTC_10x8,
+        VGPU_TEXTURE_FORMAT_ASTC_10x10,
+        VGPU_TEXTURE_FORMAT_ASTC_12x10,
+        VGPU_TEXTURE_FORMAT_ASTC_12x12,
+
         _VGPU_TEXTURE_FORMAT_COUNT,
         _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
     } vgpu_texture_format;
@@ -217,6 +232,17 @@ extern "C" {
     } vgpu_load_op;
 
     /* Structs */
+    typedef struct vgpu_extent2D {
+        uint32_t width;
+        uint32_t height;
+    } vgpu_extent2D;
+
+    typedef struct vgpu_extent3D {
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+    } vgpu_extent3D;
+
     typedef struct vgpu_color {
         float r;
         float g;
@@ -225,58 +251,56 @@ extern "C" {
     } vgpu_color;
 
     typedef struct vgpu_texture_info {
-        vgpu_texture_type type;
-        vgpu_texture_usage usage;
-        vgpu_texture_format format;
-        uint32_t width;
-        uint32_t height;
-        uint32_t depth;
-        uint32_t mipmaps;
-        const void* external_handle;
-        const char* label;
+        vgpu_texture_type       type;
+        vgpu_texture_usage      usage;
+        vgpu_texture_format     format;
+        vgpu_extent3D           size;
+        uint32_t                mip_level_count;
+        uint32_t                sample_count;
+        const uint64_t          external_handle;
+        const char*             label;
     } vgpu_texture_info;
 
     typedef struct vgpu_shader_source {
-        const void* code;
-        size_t size;
-        const char* entry;
+        const void*     code;
+        size_t          size;
+        const char*     entry;
     } vgpu_shader_source;
 
     typedef struct vgpu_shader_info {
-        vgpu_shader_source vertex;
-        vgpu_shader_source fragment;
-        vgpu_shader_source compute;
-        const char* label;
+        vgpu_shader_source  vertex;
+        vgpu_shader_source  fragment;
+        vgpu_shader_source  compute;
+        const char*         label;
     } vgpu_shader_info;
 
     typedef struct vgpu_pipeline_info {
-        vgpu_shader shader;
-        const char* label;
+        vgpu_shader     shader;
+        const char*     label;
     } vgpu_pipeline_info;
 
     typedef struct vgpu_color_attachment {
-        vgpu_texture texture;
-        uint32_t level;
-        uint32_t slice;
-        vgpu_load_op load_op;
-        vgpu_color clear_color;
+        vgpu_texture    texture;
+        uint32_t        level;
+        uint32_t        slice;
+        vgpu_load_op    load_op;
+        vgpu_color      clear_color;
     } vgpu_color_attachment;
 
     typedef struct vgpu_depth_stencil_attachment {
-        vgpu_texture texture;
-        uint32_t mip_level;
-        uint32_t level;
-        uint32_t slice;
-        vgpu_load_op depth_load_op;
-        vgpu_load_op stencil_load_op;
-        float clear_depth;
-        uint8_t clear_stencil;
+        vgpu_texture    texture;
+        uint32_t        level;
+        uint32_t        slice;
+        vgpu_load_op    depth_load_op;
+        vgpu_load_op    stencil_load_op;
+        float           clear_depth;
+        uint8_t         clear_stencil;
     } vgpu_depth_stencil_attachment;
 
     typedef struct vgpu_render_pass_info {
-        uint32_t num_color_attachments;
-        vgpu_color_attachment color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
-        vgpu_depth_stencil_attachment depth_stencil;
+        uint32_t                        num_color_attachments;
+        vgpu_color_attachment           color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
+        vgpu_depth_stencil_attachment   depth_stencil;
     } vgpu_render_pass_info;
 
     typedef struct vgpu_features {
@@ -302,11 +326,11 @@ extern "C" {
         uint32_t        maxTextureDimensionCube;
         uint32_t        maxTextureArrayLayers;
         uint32_t        maxColorAttachments;
-        uint32_t        max_uniform_buffer_size;
+        uint32_t        max_uniform_buffer_range;
         uint64_t        min_uniform_buffer_offset_alignment;
-        uint32_t        max_storage_buffer_size;
+        uint32_t        max_storage_buffer_range;
         uint64_t        min_storage_buffer_offset_alignment;
-        uint32_t        max_sampler_anisotropy;
+        float           max_sampler_anisotropy;
         uint32_t        max_viewports;
         uint32_t        max_viewport_width;
         uint32_t        max_viewport_height;
@@ -316,38 +340,33 @@ extern "C" {
         float           line_width_range_min;
         float           line_width_range_max;
         uint32_t        max_compute_shared_memory_size;
-        uint32_t        max_compute_work_group_count_x;
-        uint32_t        max_compute_work_group_count_y;
-        uint32_t        max_compute_work_group_count_z;
+        uint32_t        max_compute_work_group_count[3];
         uint32_t        max_compute_work_group_invocations;
-        uint32_t        max_compute_work_group_size_x;
-        uint32_t        max_compute_work_group_size_y;
-        uint32_t        max_compute_work_group_size_z;
+        uint32_t        max_compute_work_group_size[3];
     } vgpu_limits;
 
     typedef struct vgpu_caps {
-        vgpu_backend_type backend;
-        uint32_t vendorID;
-        uint32_t deviceID;
-        vgpu_features features;
-        vgpu_limits limits;
+        vgpu_backend_type   backend;
+        uint32_t            vendor_id;
+        uint32_t            adapter_id;
+        vgpu_adapter_type   adapter_type;
+        char                adapter_name[VGPU_MAX_PHYSICAL_DEVICE_NAME_SIZE];
+        vgpu_features       features;
+        vgpu_limits         limits;
     } vgpu_caps;
 
     typedef struct vgpu_swapchain_info {
-        void* window_handle;
-        uint32_t width;
-        uint32_t height;
-        vgpu_texture_format color_format;
-        vgpu_texture_format depth_stencil_format;
-        bool vsync;
-        bool is_fullscreen;
-        uint32_t sample_count;
+        void*                   window_handle;
+        vgpu_texture_format     color_format;
+        vgpu_texture_format     depth_stencil_format;
+        bool                    vsync;
+        uint32_t                sample_count;
     } vgpu_swapchain_info;
 
     typedef struct vgpu_config {
-        bool debug;
-        vgpu_device_preference device_preference;
-        vgpu_swapchain_info swapchain_info;
+        bool                    debug;
+        vgpu_adapter_type       device_preference;
+        vgpu_swapchain_info     swapchain_info;
     } vgpu_config;
 
     /* Log functions */

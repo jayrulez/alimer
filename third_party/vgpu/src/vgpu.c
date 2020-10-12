@@ -54,7 +54,7 @@ static const vgpu_driver* drivers[] = {
 #if VGPU_DRIVER_METAL
     & metal_driver,
 #endif
-#if VGPU_DRIVER_VULKAN 
+#if VGPU_DRIVER_VULKAN
     & vulkan_driver,
 #endif
 #if VGPU_DRIVER_OPENGL
@@ -65,9 +65,10 @@ static const vgpu_driver* drivers[] = {
 
 static vgpu_config _vgpu_config_defaults(const vgpu_config* config) {
     vgpu_config def = *config;
-    def.swapchain_info.color_format = AGPU_DEF(def.swapchain_info.color_format, VGPU_TEXTURE_FORMAT_BGRA8);
-    def.swapchain_info.depth_stencil_format = AGPU_DEF(def.swapchain_info.depth_stencil_format, VGPU_TEXTURE_FORMAT_UNDEFINED);
-    def.swapchain_info.sample_count = AGPU_DEF(def.swapchain_info.sample_count, 1u);
+    def.device_preference = VGPU_DEF(def.device_preference, VGPU_ADAPTER_TYPE_DISCRETE_GPU);
+    def.swapchain_info.color_format = VGPU_DEF(def.swapchain_info.color_format, VGPU_TEXTURE_FORMAT_BGRA8);
+    def.swapchain_info.depth_stencil_format = VGPU_DEF(def.swapchain_info.depth_stencil_format, VGPU_TEXTURE_FORMAT_UNDEFINED);
+    def.swapchain_info.sample_count = VGPU_DEF(def.swapchain_info.sample_count, 1u);
     return def;
 };
 
@@ -187,10 +188,11 @@ void vgpu_destroy_shader(vgpu_shader shader) {
 /* Texture */
 static vgpu_texture_info _vgpu_texture_info_defaults(const vgpu_texture_info* info) {
     vgpu_texture_info def = *info;
-    def.type = AGPU_DEF(def.type, VGPU_TEXTURE_TYPE_2D);
-    def.format = AGPU_DEF(def.format, VGPU_TEXTURE_FORMAT_RGBA8);
-    def.depth = AGPU_DEF(def.depth, 1);
-    def.mipmaps = AGPU_DEF(def.mipmaps, 1);
+    def.type = VGPU_DEF(def.type, VGPU_TEXTURE_TYPE_2D);
+    def.format = VGPU_DEF(def.format, VGPU_TEXTURE_FORMAT_RGBA8);
+    def.size.depth = VGPU_DEF(def.size.depth, 1);
+    def.mip_level_count = VGPU_DEF(def.mip_level_count, 1);
+    def.sample_count = VGPU_DEF(def.sample_count, 1);
     return def;
 };
 
@@ -280,7 +282,7 @@ typedef struct vgpu_texture_format_desc
     } bits;
 } vgpu_texture_format_desc;
 
-const vgpu_texture_format_desc FormatDesc[] =
+const vgpu_texture_format_desc k_format_desc[] =
 {
     // format                               type                                    bpp         compression             bits
     { VGPU_TEXTURE_FORMAT_UNDEFINED,        VGPU_TEXTURE_FORMAT_TYPE_UNKNOWN,       0,          {0, 0, 0, 0, 0},        {0, 0, 0, 0, 0, 0}},
@@ -376,6 +378,25 @@ const vgpu_texture_format_desc FormatDesc[] =
     { VGPU_PIXEL_FORMAT_ASTC10x10,              "ASTC10x10",            VGPU_PIXEL_FORMAT_TYPE_UNORM,       3,          {10, 10, 16, 1, 1},     {0, 0, 0, 0, 0, 0} },
     { VGPU_PIXEL_FORMAT_ASTC12x12,              "ASTC12x12",            VGPU_PIXEL_FORMAT_TYPE_UNORM,       3,          {12, 12, 16, 1, 1},     {0, 0, 0, 0, 0, 0} },*/
 };
+
+bool vgpu_is_depth_format(vgpu_texture_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return k_format_desc[format].bits.depth > 0;
+}
+
+bool vgpu_is_stencil_format(vgpu_texture_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return k_format_desc[format].bits.stencil > 0;
+}
+
+bool vgpu_is_depth_stencil_format(vgpu_texture_format format) {
+    return vgpu_is_depth_format(format) || vgpu_is_stencil_format(format);
+}
+
+bool vgpu_is_compressed_format(vgpu_texture_format format) {
+    VGPU_ASSERT(k_format_desc[format].format == format);
+    return format >= VGPU_TEXTURE_FORMAT_BC1 && format <= VGPU_TEXTURE_FORMAT_ASTC_12x12;
+}
 
 uint32_t vgpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth)
 {
