@@ -60,6 +60,7 @@ namespace Alimer
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
         vgpu_set_log_callback(vgpu_log_callback, this);
+        vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
 
         s_appCurrent = this;
     }
@@ -89,11 +90,13 @@ namespace Alimer
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init vgpu
-        agpu_config gpu_config = {};
+        vgpu_config gpu_config = {};
 #ifdef _DEBUG
         gpu_config.debug = true;
 #endif
-        if (vgpu_init("Alimer",&gpu_config))
+        gpu_config.swapchain_info.window_handle = window->GetHandle();
+
+        if (vgpu_init("Alimer", &gpu_config))
         {
             headless = true;
         }

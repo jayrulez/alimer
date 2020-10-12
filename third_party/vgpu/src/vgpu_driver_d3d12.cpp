@@ -22,7 +22,6 @@
 
 #if defined(VGPU_DRIVER_D3D12)
 
-#define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #include <d3d12.h>
 #include <D3D12MemAlloc.h>
@@ -48,7 +47,7 @@ static struct {
     PFN_D3D12_CREATE_DEVICE D3D12CreateDevice = nullptr;
 #endif
 
-    agpu_caps caps;
+    vgpu_caps caps;
 
 } d3d12;
 
@@ -64,7 +63,7 @@ static struct {
 #   define vgpuD3D12CreateDevice D3D12CreateDevice
 #endif
 
-static bool d3d12_init(const char* app_name, const agpu_config* config)
+static bool d3d12_init(const char* app_name, const vgpu_config* config)
 {
     VGPU_UNUSED(app_name);
 
@@ -81,12 +80,12 @@ static bool d3d12_frame_begin(void) {
 static void d3d12_frame_finish(void) {
 }
 
-static void d3d12_query_caps(agpu_caps* caps) {
+static void d3d12_query_caps(vgpu_caps* caps) {
     *caps = d3d12.caps;
 }
 
 /* Buffer */
-static vgpu_buffer d3d12_buffer_create(const agpu_buffer_info* info) {
+static vgpu_buffer d3d12_buffer_create(const vgpu_buffer_info* info) {
     return nullptr;
     //vk_buffer* buffer = VGPU_ALLOC(vk_buffer);
     //return (vgpu_buffer)buffer;
@@ -141,7 +140,7 @@ static void d3d12_pop_debug_group(void) {
 static void d3d12_insert_debug_marker(const char* name) {
 }
 
-static void d3d12_begin_render_pass(const agpu_render_pass_info* info) {
+static void d3d12_begin_render_pass(const vgpu_render_pass_info* info) {
 
 }
 

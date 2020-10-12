@@ -45,7 +45,7 @@ typedef HRESULT(WINAPI* PFN_CREATE_DXGI_FACTORY2)(UINT flags, REFIID _riid, void
 typedef HRESULT(WINAPI* PFN_GET_DXGI_DEBUG_INTERFACE1)(UINT flags, REFIID _riid, void** _debug);
 #endif
 
-#define VHR(hr) if (FAILED(hr)) { AGPU_ASSERT(0); }
+#define VHR(hr) if (FAILED(hr)) { VGPU_ASSERT(0); }
 #define SAFE_RELEASE(obj) if ((obj)) { (obj)->Release(); (obj) = nullptr; }
 
 enum class DXGIFactoryCaps : uint8_t
@@ -57,122 +57,105 @@ enum class DXGIFactoryCaps : uint8_t
 };
 DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps);
 
-static inline DXGI_FORMAT _agpu_d3d11_dxgi_format(agpu_texture_format format) {
+static inline DXGI_FORMAT _vgpu_d3d11_dxgi_format(vgpu_texture_format format, bool srgb) {
     switch (format)
     {
         // 8-bit pixel formats
-    case agpu_texture_format::R8Unorm:      return DXGI_FORMAT_R8_UNORM;
-    case agpu_texture_format::R8Snorm:      return DXGI_FORMAT_R8_SNORM;
-    case agpu_texture_format::R8Uint:       return DXGI_FORMAT_R8_UINT;
-    case agpu_texture_format::R8Sint:       return DXGI_FORMAT_R8_SINT;
+    case VGPU_TEXTURE_FORMAT_R8:        return DXGI_FORMAT_R8_UNORM;
+    case VGPU_TEXTURE_FORMAT_R8S:       return DXGI_FORMAT_R8_SNORM;
+    case VGPU_TEXTURE_FORMAT_R8U:       return DXGI_FORMAT_R8_UINT;
+    case VGPU_TEXTURE_FORMAT_R8I:       return DXGI_FORMAT_R8_SINT;
         // 16-bit pixel formats
-    case agpu_texture_format::R16Unorm:     return DXGI_FORMAT_R16_UNORM;
-    case agpu_texture_format::R16Snorm:     return DXGI_FORMAT_R16_SNORM;
-    case agpu_texture_format::R16Uint:      return DXGI_FORMAT_R16_UINT;
-    case agpu_texture_format::R16Sint:      return DXGI_FORMAT_R16_SINT;
-    case agpu_texture_format::R16Float:     return DXGI_FORMAT_R16_FLOAT;
-    case agpu_texture_format::RG8Unorm:     return DXGI_FORMAT_R8G8_UNORM;
-    case agpu_texture_format::RG8Snorm:     return DXGI_FORMAT_R8G8_SNORM;
-    case agpu_texture_format::RG8Uint:      return DXGI_FORMAT_R8G8_UINT;
-    case agpu_texture_format::RG8Sint:      return DXGI_FORMAT_R8G8_SINT;
+    case VGPU_TEXTURE_FORMAT_R16:       return DXGI_FORMAT_R16_UNORM;
+    case VGPU_TEXTURE_FORMAT_R16S:      return DXGI_FORMAT_R16_SNORM;
+    case VGPU_TEXTURE_FORMAT_R16U:      return DXGI_FORMAT_R16_UINT;
+    case VGPU_TEXTURE_FORMAT_R16I:      return DXGI_FORMAT_R16_SINT;
+    case VGPU_TEXTURE_FORMAT_R16F:      return DXGI_FORMAT_R16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG8:       return DXGI_FORMAT_R8G8_UNORM;
+    case VGPU_TEXTURE_FORMAT_RG8S:      return DXGI_FORMAT_R8G8_SNORM;
+    case VGPU_TEXTURE_FORMAT_RG8U:      return DXGI_FORMAT_R8G8_UINT;
+    case VGPU_TEXTURE_FORMAT_RG8I:      return DXGI_FORMAT_R8G8_SINT;
         // 32-bit pixel formats
-    case agpu_texture_format::R32Uint:          return DXGI_FORMAT_R32_UINT;
-    case agpu_texture_format::R32Sint:          return DXGI_FORMAT_R32_SINT;
-    case agpu_texture_format::R32Float:         return DXGI_FORMAT_R32_FLOAT;
-    case agpu_texture_format::RG16Unorm:        return DXGI_FORMAT_R16G16_UNORM;
-    case agpu_texture_format::RG16Snorm:        return DXGI_FORMAT_R16G16_SNORM;
-    case agpu_texture_format::RG16Uint:         return DXGI_FORMAT_R16G16_UINT;
-    case agpu_texture_format::RG16Sint:         return DXGI_FORMAT_R16G16_SINT;
-    case agpu_texture_format::RG16Float:        return DXGI_FORMAT_R16G16_FLOAT;
-    case AGPU_TEXTURE_FORMAT_RGBA8_UNORM:       return DXGI_FORMAT_R8G8B8A8_UNORM;
-    case AGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:   return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-    case AGPU_TEXTURE_FORMAT_RGBA8_SNORM:       return DXGI_FORMAT_R8G8B8A8_SNORM;
-    case AGPU_TEXTURE_FORMAT_RGBA8_UINT:        return DXGI_FORMAT_R8G8B8A8_UINT;
-    case AGPU_TEXTURE_FORMAT_RGBA8_SINT:        return DXGI_FORMAT_R8G8B8A8_SINT;
-    case AGPU_TEXTURE_FORMAT_BGRA8_UNORM:       return DXGI_FORMAT_B8G8R8A8_UNORM;
-    case AGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:  return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_R32:       return DXGI_FORMAT_R32_UINT;
+    case VGPU_TEXTURE_FORMAT_R32S:      return DXGI_FORMAT_R32_SINT;
+    case VGPU_TEXTURE_FORMAT_R32F:      return DXGI_FORMAT_R32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG16:      return DXGI_FORMAT_R16G16_UNORM;
+    case VGPU_TEXTURE_FORMAT_RG16S:     return DXGI_FORMAT_R16G16_SNORM;
+    case VGPU_TEXTURE_FORMAT_RG16U:     return DXGI_FORMAT_R16G16_UINT;
+    case VGPU_TEXTURE_FORMAT_RG16I:     return DXGI_FORMAT_R16G16_SINT;
+    case VGPU_TEXTURE_FORMAT_RG16F:     return DXGI_FORMAT_R16G16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA8:     return srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA8S:    return DXGI_FORMAT_R8G8B8A8_SNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA8U:    return DXGI_FORMAT_R8G8B8A8_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA8I:    return DXGI_FORMAT_R8G8B8A8_SINT;
+    case VGPU_TEXTURE_FORMAT_BGRA8:     return srgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
         // Packed 32-Bit Pixel formats
-    case AGPU_TEXTURE_FORMAT_RGB10A2_UNORM:     return DXGI_FORMAT_R10G10B10A2_UNORM;
-    case agpu_texture_format::RG11B10Float:     return DXGI_FORMAT_R11G11B10_FLOAT;
-    case agpu_texture_format::RGB9E5Float:      return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+    case VGPU_TEXTURE_FORMAT_RGB10A2:   return DXGI_FORMAT_R10G10B10A2_UNORM;
+    case VGPU_TEXTURE_FORMAT_RG11B10F:  return DXGI_FORMAT_R11G11B10_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGB9E5F:   return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
         // 64-Bit Pixel Formats
-    case agpu_texture_format::RG32Uint:         return DXGI_FORMAT_R32G32_UINT;
-    case agpu_texture_format::RG32Sint:         return DXGI_FORMAT_R32G32_SINT;
-    case agpu_texture_format::RG32Float:        return DXGI_FORMAT_R32G32_FLOAT;
-    case AGPU_TEXTURE_FORMAT_RGBA16_UNORM:      return DXGI_FORMAT_R16G16B16A16_UNORM;
-    case agpu_texture_format::RGBA16Snorm:      return DXGI_FORMAT_R16G16B16A16_SNORM;
-    case agpu_texture_format::RGBA16Uint:       return DXGI_FORMAT_R16G16B16A16_UINT;
-    case agpu_texture_format::RGBA16Sint:       return DXGI_FORMAT_R16G16B16A16_SINT;
-    case agpu_texture_format::RGBA16Float:      return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RG32U:     return DXGI_FORMAT_R32G32_UINT;
+    case VGPU_TEXTURE_FORMAT_RG32I:     return DXGI_FORMAT_R32G32_SINT;
+    case VGPU_TEXTURE_FORMAT_RG32F:     return DXGI_FORMAT_R32G32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA16:    return DXGI_FORMAT_R16G16B16A16_UNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA16S:   return DXGI_FORMAT_R16G16B16A16_SNORM;
+    case VGPU_TEXTURE_FORMAT_RGBA16U:   return DXGI_FORMAT_R16G16B16A16_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA16I:   return DXGI_FORMAT_R16G16B16A16_SINT;
+    case VGPU_TEXTURE_FORMAT_RGBA16F:   return DXGI_FORMAT_R16G16B16A16_FLOAT;
         // 128-Bit Pixel Formats
-    case agpu_texture_format::RGBA32Uint:       return DXGI_FORMAT_R32G32B32A32_UINT;
-    case agpu_texture_format::RGBA32Sint:       return DXGI_FORMAT_R32G32B32A32_SINT;
-    case AGPU_TEXTURE_FORMAT_RGBA32_FLOAT:      return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_RGBA32U:   return DXGI_FORMAT_R32G32B32A32_UINT;
+    case VGPU_TEXTURE_FORMAT_RGBA32I:   return DXGI_FORMAT_R32G32B32A32_SINT;
+    case VGPU_TEXTURE_FORMAT_RGBA32F:   return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
         // Depth-stencil
-    case agpu_texture_format::Stencil8:             return DXGI_FORMAT_D24_UNORM_S8_UINT;
-    case agpu_texture_format::Depth16Unorm:         return DXGI_FORMAT_D16_UNORM;
-    case agpu_texture_format::Depth24Plus:          return DXGI_FORMAT_D24_UNORM_S8_UINT;
-    case agpu_texture_format::Depth24PlusStencil8:  return DXGI_FORMAT_D24_UNORM_S8_UINT;
-    case agpu_texture_format::Depth32Float:         return DXGI_FORMAT_D32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_D16:           return DXGI_FORMAT_D16_UNORM;
+    case VGPU_TEXTURE_FORMAT_D32F:          return DXGI_FORMAT_D32_FLOAT;
+    case VGPU_TEXTURE_FORMAT_D24S8:         return DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         // Compressed BC formats
-    case agpu_texture_format::BC1RGBAUnorm:         return DXGI_FORMAT_BC1_UNORM;
-    case agpu_texture_format::BC1RGBAUnormSrgb:     return DXGI_FORMAT_BC1_UNORM_SRGB;
-    case agpu_texture_format::BC2RGBAUnorm:         return DXGI_FORMAT_BC2_UNORM;
-    case agpu_texture_format::BC2RGBAUnormSrgb:     return DXGI_FORMAT_BC2_UNORM_SRGB;
-    case agpu_texture_format::BC3RGBAUnorm:         return DXGI_FORMAT_BC3_UNORM;
-    case agpu_texture_format::BC3RGBAUnormSrgb:     return DXGI_FORMAT_BC3_UNORM_SRGB;
-    case agpu_texture_format::BC4RUnorm:            return DXGI_FORMAT_BC4_UNORM;
-    case agpu_texture_format::BC4RSnorm:            return DXGI_FORMAT_BC4_SNORM;
-    case agpu_texture_format::BC5RGUnorm:           return DXGI_FORMAT_BC5_UNORM;
-    case agpu_texture_format::BC5RGSnorm:           return DXGI_FORMAT_BC5_SNORM;
-    case agpu_texture_format::BC6HRGBUfloat:        return DXGI_FORMAT_BC6H_UF16;
-    case agpu_texture_format::BC6HRGBFloat:         return DXGI_FORMAT_BC6H_SF16;
-    case agpu_texture_format::BC7RGBAUnorm:         return DXGI_FORMAT_BC7_UNORM;
-    case agpu_texture_format::BC7RGBAUnormSrgb:     return DXGI_FORMAT_BC7_UNORM_SRGB;
+    case VGPU_TEXTURE_FORMAT_BC1:           return srgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC2:           return srgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC3:           return srgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC4:           return DXGI_FORMAT_BC4_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC4S:          return DXGI_FORMAT_BC4_SNORM;
+    case VGPU_TEXTURE_FORMAT_BC5:           return DXGI_FORMAT_BC5_UNORM;
+    case VGPU_TEXTURE_FORMAT_BC5S:          return DXGI_FORMAT_BC5_SNORM;
+    case VGPU_TEXTURE_FORMAT_BC6H:          return DXGI_FORMAT_BC6H_UF16;
+    case VGPU_TEXTURE_FORMAT_BC6HS:         return DXGI_FORMAT_BC6H_SF16;
+    case VGPU_TEXTURE_FORMAT_BC7:           return srgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
     default:
-        AGPU_UNREACHABLE();
+        VGPU_UNREACHABLE();
     }
 }
 
-static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(agpu_texture_format format)
+static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(vgpu_texture_format format)
 {
     switch (format)
     {
-    case agpu_texture_format::Stencil8:
-        return DXGI_FORMAT_R24G8_TYPELESS;
-    case agpu_texture_format::Depth16Unorm:
-        return DXGI_FORMAT_R16_TYPELESS;
-    case agpu_texture_format::Depth24Plus:
-    case agpu_texture_format::Depth24PlusStencil8:
-        return DXGI_FORMAT_R24G8_TYPELESS;
-
-    case agpu_texture_format::Depth32Float:
-        return DXGI_FORMAT_R32_TYPELESS;
+    case VGPU_TEXTURE_FORMAT_D16:       return DXGI_FORMAT_R16_TYPELESS;
+    case VGPU_TEXTURE_FORMAT_D32F:      return DXGI_FORMAT_R32_TYPELESS;
+    case VGPU_TEXTURE_FORMAT_D24S8:     return DXGI_FORMAT_R24G8_TYPELESS;
 
     default:
-        //AGPU_ASSERT(IsDepthFormat(format) == false);
-        return _agpu_d3d11_dxgi_format(format);
+        VGPU_ASSERT(vgpu_is_depth_format(format) == false);
+        return _vgpu_d3d11_dxgi_format(format, false);
     }
 }
 
-static inline DXGI_FORMAT _agpu_d3d_swapchain_format(agpu_texture_format format)
+static inline DXGI_FORMAT _vgpu_d3d_swapchain_format(vgpu_texture_format format)
 {
     switch (format)
     {
-    case AGPU_TEXTURE_FORMAT_RGBA32_FLOAT:
+    case VGPU_TEXTURE_FORMAT_RGBA32F:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-    case AGPU_TEXTURE_FORMAT_BGRA8_UNORM:
-    case AGPU_TEXTURE_FORMAT_BGRA8_UNORM_SRGB:
+    case VGPU_TEXTURE_FORMAT_BGRA8:
         return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    case AGPU_TEXTURE_FORMAT_RGBA8_UNORM:
-    case AGPU_TEXTURE_FORMAT_RGBA8_UNORM_SRGB:
+    case VGPU_TEXTURE_FORMAT_RGBA8:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    case AGPU_TEXTURE_FORMAT_RGB10A2_UNORM:
+    case VGPU_TEXTURE_FORMAT_RGB10A2:
         return DXGI_FORMAT_R10G10B10A2_UNORM;
     }
 

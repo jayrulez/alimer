@@ -50,7 +50,27 @@ if (WIN32 OR ANDROID OR LINUX)
     target_sources(vgpu PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/external/vma/src/vk_mem_alloc.cpp
     )
-    target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_VULKAN)
+    target_compile_definitions(vgpu PRIVATE
+        VK_NO_PROTOTYPES
+        VGPU_DRIVER_VULKAN
+        VK_ENABLE_BETA_EXTENSIONS
+    )
+
+    if(ANDROID)
+        target_compile_definitions(vgpu PRIVATE VK_USE_PLATFORM_ANDROID_KHR)
+    elseif(WIN32)
+        target_compile_definitions(vgpu PRIVATE VK_USE_PLATFORM_WIN32_KHR)
+    elseif(APPLE)
+        target_compile_definitions(vgpu PRIVATE VK_USE_PLATFORM_MACOS_MVK)
+    elseif(UNIX)
+        # See whether X11 is available. If not, fall back to direct-to-display mode.
+        find_package(X11 QUIET)
+        if (X11_FOUND)
+            target_compile_definitions(vgpu PRIVATE INTERFACE VK_USE_PLATFORM_XCB_KHR)
+        else()
+            target_compile_definitions(vgpu PRIVATE VK_USE_PLATFORM_DISPLAY_KHR)
+        endif()
+    endif()
 
     target_include_directories(vgpu PRIVATE
         $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/vulkan/include>
@@ -68,7 +88,7 @@ if(WIN32 OR WINDOWS_STORE)
         $<BUILD_INTERFACE: ${CMAKE_CURRENT_SOURCE_DIR}/external/d3d12ma/src>
     )
 
-    #target_compile_definitions(vgpu PRIVATE NOMINMAX)
+    target_compile_definitions(vgpu PRIVATE NOMINMAX)
     #target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D11)
     target_compile_definitions(vgpu PRIVATE VGPU_DRIVER_D3D12)
 endif ()
