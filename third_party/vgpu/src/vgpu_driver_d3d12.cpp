@@ -31,6 +31,11 @@
 // then add the NuGet package WinPixEventRuntime to the project.
 #include <pix.h>
 
+typedef struct D3D12Texture {
+    ID3D12Resource*         handle;
+    D3D12MA::Allocation*    allocation;
+} D3D12Texture;
+
 
 /* Global data */
 static struct {
@@ -430,17 +435,21 @@ static void d3d12_shader_destroy(vgpu_shader handle) {
 }
 
 /* Texture */
-static vgpu_texture d3d12_texture_create(const vgpu_texture_info* info) {
-    return NULL;
+static VGPUTexture d3d12_texture_create(const vgpu_texture_info* info) {
+    D3D12Texture* texture = VGPU_ALLOC(D3D12Texture);
+    return (VGPUTexture)texture;
 }
 
-static void d3d12_texture_destroy(vgpu_texture handle) {
+static void d3d12_texture_destroy(VGPUTexture handle) {
 }
 
-static uint64_t d3d12_texture_get_native_handle(vgpu_texture handle) {
-    return 0;
-    //vk_texture* texture = (vk_texture*)handle;
-    //return VOIDP_TO_U64(texture->handle);
+static bool d3d12_textureInitView(VGPUTexture handle, const VGPUTextureViewDescriptor* descriptor) {
+    return true;
+}
+
+static uint64_t d3d12_texture_get_native_handle(VGPUTexture handle) {
+    D3D12Texture* texture = (D3D12Texture*)handle;
+    return (uint64_t)texture->handle;
 }
 
 /* Pipeline */

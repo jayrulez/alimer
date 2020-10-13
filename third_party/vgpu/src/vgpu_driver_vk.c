@@ -147,9 +147,9 @@ VGPU_FOREACH_INSTANCE(VGPU_DECLARE);
 VGPU_FOREACH_INSTANCE_SURFACE(VGPU_DECLARE);
 VGPU_FOREACH_DEVICE(VGPU_DECLARE);
 
-#define VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 #define VGPU_VK_LOG_ERROR(result, message) vgpu_log(VGPU_LOG_LEVEL_ERROR, "%s - Vulkan error: %s", _vgpu_vk_get_error_string(result));
 #define VGPU_VK_CHECK(f) do { VkResult r = (f); VGPU_CHECK(r >= 0, _vgpu_vk_get_error_string(r)); } while (0)
+#define VGPU_VOIDP_TO_U64(x) (((union { uint64_t u; void* p; }) { .p = x }).u)
 
 /* Constants */
 enum {
@@ -187,12 +187,16 @@ typedef struct {
     VkBuffer handle;
 } vgpu_vk_buffer;
 
-typedef struct {
-    VkImage handle;
-    VmaAllocation allocation;
-    VkImageLayout layout;
-    VkImageAspectFlagBits aspect;
-} vgpu_vk_texture;
+typedef struct VulkanTexture {
+    VkImage                 handle;
+    VmaAllocation           allocation;
+    VkImageView             view;
+    VkFormat                format;
+    VkImageLayout           layout;
+    VkImageAspectFlagBits   aspect;
+    VGPUTexture             source;
+    VGPUTextureType         type;
+} VulkanTexture;
 
 typedef struct {
     VkBuffer handle;
@@ -203,10 +207,12 @@ typedef struct {
 } vgpu_vk_pipeline;
 
 typedef struct {
-    VkSurfaceKHR surface;
-    VkSwapchainKHR handle;
-    VkFormat format;
-    vgpu_extent3D size;
+    VkSurfaceKHR    surface;
+    VkSwapchainKHR  handle;
+    VkFormat        format;
+    VGPUExtent3D    size;
+    uint32_t        imageCount;
+    VGPUTexture     backbufferTextures[3];
 } vgpu_vk_swapchain;
 
 typedef struct {
@@ -921,6 +927,9 @@ static void vk_shutdown(void) {
     for (uint32_t i = 0; i < VGPU_COUNT_OF(vk.frames); i++) {
         vgpu_vk_frame* frame = &vk.frames[i];
 
+        _vgpu_vk_destroy_free_list(frame);
+        free(frame->freelist.data);
+
         if (frame->fence) {
             vkDestroyFence(vk.device, frame->fence, NULL);
         }
@@ -1023,21 +1032,46 @@ static void vk_shader_destroy(vgpu_shader handle)
 }
 
 /* Texture */
-static vgpu_texture vk_texture_create(const vgpu_texture_info* info) {
-    vgpu_vk_texture* texture = VGPU_ALLOC(vgpu_vk_texture);
+static VkFormat _vgpu_vk_format(VGPUTextureFormat format) {
+    switch (format) {
+        // 32-bit pixel formats
+    case VGPUTextureFormat_R32Uint:             return VK_FORMAT_R32_UINT;
+    case VGPUTextureFormat_R32Sint:             return VK_FORMAT_R32_SINT;
+    case VGPUTextureFormat_R32Float:            return VK_FORMAT_R32_SFLOAT;
+    case VGPUTextureFormat_RG16Unorm:           return VK_FORMAT_R16G16_UNORM;
+    case VGPUTextureFormat_RG16Snorm:           return VK_FORMAT_R16G16_SNORM;
+    case VGPUTextureFormat_RG16Uint:            return VK_FORMAT_R16G16_UINT;
+    case VGPUTextureFormat_RG16Sint:            return VK_FORMAT_R16G16_SINT;
+    case VGPUTextureFormat_RG16Float:           return VK_FORMAT_R16G16_SFLOAT;
+    case VGPUTextureFormat_RGBA8Unorm:          return VK_FORMAT_R8G8B8A8_UNORM;
+    case VGPUTextureFormat_RGBA8UnormSrgb:      return VK_FORMAT_R8G8B8A8_SRGB;
+    case VGPUTextureFormat_RGBA8Snorm:          return VK_FORMAT_R8G8B8A8_SNORM;
+    case VGPUTextureFormat_RGBA8Uint:           return VK_FORMAT_R8G8B8A8_UINT;
+    case VGPUTextureFormat_RGBA8Sint:           return VK_FORMAT_R8G8B8A8_SINT;
+    case VGPUTextureFormat_BGRA8Unorm:          return VK_FORMAT_B8G8R8A8_UNORM;
+    case VGPUTextureFormat_BGRA8UnormSrgb:      return VK_FORMAT_B8G8R8A8_SRGB;
+    default:
+        VGPU_UNREACHABLE();
+    }
+}
+
+static VGPUTexture vk_texture_create(const vgpu_texture_info* info) {
+    VulkanTexture* texture = VGPU_ALLOC(VulkanTexture);
     if (info->external_handle) {
-        texture->handle = (VkImage) info->external_handle;
+        texture->handle = (VkImage)info->external_handle;
         texture->allocation = VK_NULL_HANDLE;
     }
     else {
 
     }
 
+    texture->type = info->type;
+    texture->format = _vgpu_vk_format(info->format);
     texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (vgpu_is_depth_stencil_format(info->format)) {
+    if (vgpuIsDepthStencilFormat(info->format)) {
         texture->aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        if (vgpu_is_stencil_format(info->format)) {
+        if (vgpuIsStencilFormat(info->format)) {
             texture->aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
         }
     }
@@ -1045,23 +1079,72 @@ static vgpu_texture vk_texture_create(const vgpu_texture_info* info) {
         texture->aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
+    if (!vgpuTextureInitView((VGPUTexture)texture, &(VGPUTextureViewDescriptor) {.source = (VGPUTexture)texture })) {
+        return NULL;
+    }
+
     _vgpu_vk_set_name(texture->handle, VK_OBJECT_TYPE_IMAGE, info->label);
 
-    return (vgpu_texture)texture;
+    return (VGPUTexture)texture;
 }
 
-static void vk_texture_destroy(vgpu_texture handle) {
-    vgpu_vk_texture* texture = (vgpu_vk_texture*)handle;
-    if (texture->allocation) {
-        _vgpu_vk_defer_destroy(VK_OBJECT_TYPE_IMAGE, texture->handle, texture->allocation);
-    }
+static void vk_texture_destroy(VGPUTexture handle) {
+    VulkanTexture* texture = (VulkanTexture*)handle;
+    if (texture->allocation) _vgpu_vk_defer_destroy(VK_OBJECT_TYPE_IMAGE, texture->handle, texture->allocation);
+    if (texture->view) _vgpu_vk_defer_destroy(VK_OBJECT_TYPE_IMAGE_VIEW, texture->view, NULL);
 
     VGPU_FREE(texture);
 }
 
-static uint64_t vk_texture_get_native_handle(vgpu_texture handle) {
-    vgpu_vk_texture* texture = (vgpu_vk_texture*)handle;
-    return VOIDP_TO_U64(texture->handle);
+static bool vk_textureInitView(VGPUTexture handle, const VGPUTextureViewDescriptor* descriptor) {
+    VulkanTexture* texture = (VulkanTexture*)handle;
+    VulkanTexture* sourceTexture = (VulkanTexture*)descriptor->source;
+
+    if (texture != sourceTexture) {
+        texture->handle = VK_NULL_HANDLE;
+        texture->allocation = VK_NULL_HANDLE;
+        texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        texture->source = descriptor->source;
+        texture->type = descriptor ? descriptor->type : sourceTexture->type;
+        texture->format = _vgpu_vk_format(descriptor->format);
+        texture->aspect = sourceTexture->aspect;
+    }
+
+    VkImageViewType viewType;
+    switch (texture->type) {
+    case VGPUTextureType_2D: viewType = VK_IMAGE_VIEW_TYPE_2D; break;
+    case VGPUTextureType_3D: viewType = VK_IMAGE_VIEW_TYPE_3D; break;
+    case VGPUTextureType_Cube: viewType = VK_IMAGE_VIEW_TYPE_CUBE; break;
+    default: return false;
+    }
+
+    const VkImageViewCreateInfo view_info = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = sourceTexture->handle,
+        .viewType = viewType,
+        .format = texture->format,
+        .components = {
+            .r = VK_COMPONENT_SWIZZLE_R,
+            .g = VK_COMPONENT_SWIZZLE_G,
+            .b = VK_COMPONENT_SWIZZLE_B,
+            .a = VK_COMPONENT_SWIZZLE_A
+        },
+        .subresourceRange = {
+            .aspectMask = texture->aspect,
+            .baseMipLevel = descriptor ? descriptor->baseMipmap : 0u,
+            .levelCount = (descriptor && descriptor->mipmapCount) ? descriptor->mipmapCount : VK_REMAINING_MIP_LEVELS,
+            .baseArrayLayer = descriptor ? descriptor->baseLayer : 0u,
+            .layerCount = (descriptor && descriptor->layerCount) ? descriptor->layerCount : VK_REMAINING_ARRAY_LAYERS
+        }
+    };
+
+    VGPU_VK_CHECK(vkCreateImageView(vk.device, &view_info, NULL, &texture->view));
+    return true;
+}
+
+static uint64_t vk_texture_get_native_handle(VGPUTexture handle) {
+    VulkanTexture* texture = (VulkanTexture*)handle;
+    return VGPU_VOIDP_TO_U64(texture->handle);
 }
 
 /* Pipeline */
@@ -1443,52 +1526,32 @@ static bool _vgpu_vk_init_swapchain(vgpu_vk_swapchain* swapchain) {
 
     swapchain->format = format.format;
 
-    uint32_t image_count;
     VkImage images[8];
-    VGPU_VK_CHECK(vkGetSwapchainImagesKHR(vk.device, swapchain->handle, &image_count, NULL));
-    VGPU_VK_CHECK(vkGetSwapchainImagesKHR(vk.device, swapchain->handle, &image_count, images));
+    VGPU_VK_CHECK(vkGetSwapchainImagesKHR(vk.device, swapchain->handle, &swapchain->imageCount, NULL));
+    VGPU_VK_CHECK(vkGetSwapchainImagesKHR(vk.device, swapchain->handle, &swapchain->imageCount, images));
 
-    for (uint32_t i = 0; i < image_count; i++)
+    for (uint32_t i = 0; i < swapchain->imageCount; i++)
     {
         const vgpu_texture_info color_texture_info = {
-            .type = VGPU_TEXTURE_TYPE_2D,
-            .usage = VGPU_TEXTURE_USAGE_RENDER_TARGET,
-            .format = VGPU_TEXTURE_FORMAT_BGRA8,
+            .type = VGPUTextureType_2D,
+            .usage = VGPUTextureUsage_OutputAttachment,
+            .format = VGPUTextureFormat_BGRA8Unorm,
             .size = swapchain->size,
-            .external_handle = VOIDP_TO_U64(images[i]),
+            .external_handle = VGPU_VOIDP_TO_U64(images[i]),
             .label = "Backbuffer"
         };
 
-        vgpu_create_texture(&color_texture_info);
-
-        /*const VkImageViewCreateInfo view_info = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = images[i],
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = swapchain->format,
-            .components = {
-                .r = VK_COMPONENT_SWIZZLE_R,
-                .g = VK_COMPONENT_SWIZZLE_G,
-                .b = VK_COMPONENT_SWIZZLE_B,
-                .a = VK_COMPONENT_SWIZZLE_A
-            },
-            .subresourceRange = {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .baseMipLevel = 0u,
-                .levelCount = 1u,
-                .baseArrayLayer = 0u,
-                .layerCount = 1u
-            }
-        };
-
-        VkImageView image_view;
-        VGPU_VK_CHECK(vkCreateImageView(vk.device, &view_info, NULL, &image_view));*/
+        swapchain->backbufferTextures[i] = vgpuTextureCreate(&color_texture_info);
     }
 
     return true;
 }
 
 static void _vgpu_vk_shutdown_swapchain(vgpu_vk_swapchain* swapchain) {
+    for (uint32_t i = 0; i < swapchain->imageCount; i++) {
+        vgpuTextureDestroy(swapchain->backbufferTextures[i]);
+    }
+
     if (swapchain->handle != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(vk.device, swapchain->handle, NULL);
         swapchain->handle = VK_NULL_HANDLE;
@@ -1505,7 +1568,7 @@ void _vgpu_vk_set_name(void* handle, VkObjectType type, const char* name) {
         VkDebugUtilsObjectNameInfoEXT info = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .objectType = type,
-            .objectHandle = VOIDP_TO_U64(handle),
+            .objectHandle = VGPU_VOIDP_TO_U64(handle),
             .pObjectName = name
         };
 

@@ -57,93 +57,110 @@ enum class DXGIFactoryCaps : uint8_t
 };
 DEFINE_ENUM_FLAG_OPERATORS(DXGIFactoryCaps);
 
-static inline DXGI_FORMAT _vgpu_d3d11_dxgi_format(vgpu_texture_format format, bool srgb) {
+static inline DXGI_FORMAT _vgpu_d3d11_dxgi_format(VGPUTextureFormat format) {
     switch (format)
     {
         // 8-bit pixel formats
-    case VGPU_TEXTURE_FORMAT_R8:        return DXGI_FORMAT_R8_UNORM;
-    case VGPU_TEXTURE_FORMAT_R8S:       return DXGI_FORMAT_R8_SNORM;
-    case VGPU_TEXTURE_FORMAT_R8U:       return DXGI_FORMAT_R8_UINT;
-    case VGPU_TEXTURE_FORMAT_R8I:       return DXGI_FORMAT_R8_SINT;
+    case VGPUTextureFormat_R8Unorm:     return DXGI_FORMAT_R8_UNORM;
+    case VGPUTextureFormat_R8Snorm:     return DXGI_FORMAT_R8_SNORM;
+    case VGPUTextureFormat_R8Uint:      return DXGI_FORMAT_R8_UINT;
+    case VGPUTextureFormat_R8Sint:      return DXGI_FORMAT_R8_SINT;
         // 16-bit pixel formats
-    case VGPU_TEXTURE_FORMAT_R16:       return DXGI_FORMAT_R16_UNORM;
-    case VGPU_TEXTURE_FORMAT_R16S:      return DXGI_FORMAT_R16_SNORM;
-    case VGPU_TEXTURE_FORMAT_R16U:      return DXGI_FORMAT_R16_UINT;
-    case VGPU_TEXTURE_FORMAT_R16I:      return DXGI_FORMAT_R16_SINT;
-    case VGPU_TEXTURE_FORMAT_R16F:      return DXGI_FORMAT_R16_FLOAT;
-    case VGPU_TEXTURE_FORMAT_RG8:       return DXGI_FORMAT_R8G8_UNORM;
-    case VGPU_TEXTURE_FORMAT_RG8S:      return DXGI_FORMAT_R8G8_SNORM;
-    case VGPU_TEXTURE_FORMAT_RG8U:      return DXGI_FORMAT_R8G8_UINT;
-    case VGPU_TEXTURE_FORMAT_RG8I:      return DXGI_FORMAT_R8G8_SINT;
+    case VGPUTextureFormat_R16Unorm:    return DXGI_FORMAT_R16_UNORM;
+    case VGPUTextureFormat_R16Snorm:    return DXGI_FORMAT_R16_SNORM;
+    case VGPUTextureFormat_R16Uint:     return DXGI_FORMAT_R16_UINT;
+    case VGPUTextureFormat_R16Sint:     return DXGI_FORMAT_R16_SINT;
+    case VGPUTextureFormat_R16Float:    return DXGI_FORMAT_R16_FLOAT;
+    case VGPUTextureFormat_RG8Unorm:    return DXGI_FORMAT_R8G8_UNORM;
+    case VGPUTextureFormat_RG8Snorm:    return DXGI_FORMAT_R8G8_SNORM;
+    case VGPUTextureFormat_RG8Uint:     return DXGI_FORMAT_R8G8_UINT;
+    case VGPUTextureFormat_RG8Sint:     return DXGI_FORMAT_R8G8_SINT;
         // 32-bit pixel formats
-    case VGPU_TEXTURE_FORMAT_R32:       return DXGI_FORMAT_R32_UINT;
-    case VGPU_TEXTURE_FORMAT_R32S:      return DXGI_FORMAT_R32_SINT;
-    case VGPU_TEXTURE_FORMAT_R32F:      return DXGI_FORMAT_R32_FLOAT;
-    case VGPU_TEXTURE_FORMAT_RG16:      return DXGI_FORMAT_R16G16_UNORM;
-    case VGPU_TEXTURE_FORMAT_RG16S:     return DXGI_FORMAT_R16G16_SNORM;
-    case VGPU_TEXTURE_FORMAT_RG16U:     return DXGI_FORMAT_R16G16_UINT;
-    case VGPU_TEXTURE_FORMAT_RG16I:     return DXGI_FORMAT_R16G16_SINT;
-    case VGPU_TEXTURE_FORMAT_RG16F:     return DXGI_FORMAT_R16G16_FLOAT;
-    case VGPU_TEXTURE_FORMAT_RGBA8:     return srgb ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
-    case VGPU_TEXTURE_FORMAT_RGBA8S:    return DXGI_FORMAT_R8G8B8A8_SNORM;
-    case VGPU_TEXTURE_FORMAT_RGBA8U:    return DXGI_FORMAT_R8G8B8A8_UINT;
-    case VGPU_TEXTURE_FORMAT_RGBA8I:    return DXGI_FORMAT_R8G8B8A8_SINT;
-    case VGPU_TEXTURE_FORMAT_BGRA8:     return srgb ? DXGI_FORMAT_B8G8R8A8_UNORM_SRGB : DXGI_FORMAT_B8G8R8A8_UNORM;
+    case VGPUTextureFormat_R32Uint:             return DXGI_FORMAT_R32_UINT;
+    case VGPUTextureFormat_R32Sint:             return DXGI_FORMAT_R32_SINT;
+    case VGPUTextureFormat_R32Float:            return DXGI_FORMAT_R32_FLOAT;
+    case VGPUTextureFormat_RG16Unorm:           return DXGI_FORMAT_R16G16_UNORM;
+    case VGPUTextureFormat_RG16Snorm:           return DXGI_FORMAT_R16G16_SNORM;
+    case VGPUTextureFormat_RG16Uint:            return DXGI_FORMAT_R16G16_UINT;
+    case VGPUTextureFormat_RG16Sint:            return DXGI_FORMAT_R16G16_SINT;
+    case VGPUTextureFormat_RG16Float:           return DXGI_FORMAT_R16G16_FLOAT;
+    case VGPUTextureFormat_RGBA8Unorm:          return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case VGPUTextureFormat_RGBA8UnormSrgb:      return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    case VGPUTextureFormat_RGBA8Snorm:          return DXGI_FORMAT_R8G8B8A8_SNORM;
+    case VGPUTextureFormat_RGBA8Uint:           return DXGI_FORMAT_R8G8B8A8_UINT;
+    case VGPUTextureFormat_RGBA8Sint:           return DXGI_FORMAT_R8G8B8A8_SINT;
+    case VGPUTextureFormat_BGRA8Unorm:          return DXGI_FORMAT_B8G8R8A8_UNORM;
+    case VGPUTextureFormat_BGRA8UnormSrgb:      return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+
         // Packed 32-Bit Pixel formats
-    case VGPU_TEXTURE_FORMAT_RGB10A2:   return DXGI_FORMAT_R10G10B10A2_UNORM;
-    case VGPU_TEXTURE_FORMAT_RG11B10F:  return DXGI_FORMAT_R11G11B10_FLOAT;
-    case VGPU_TEXTURE_FORMAT_RGB9E5F:   return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
+    case VGPUTextureFormat_RGB10A2Unorm:        return DXGI_FORMAT_R10G10B10A2_UNORM;
+    case VGPUTextureFormat_RG11B10Ufloat:       return DXGI_FORMAT_R11G11B10_FLOAT;
+    case VGPUTextureFormat_RGB9E5Ufloat:        return DXGI_FORMAT_R9G9B9E5_SHAREDEXP;
         // 64-Bit Pixel Formats
-    case VGPU_TEXTURE_FORMAT_RG32U:     return DXGI_FORMAT_R32G32_UINT;
-    case VGPU_TEXTURE_FORMAT_RG32I:     return DXGI_FORMAT_R32G32_SINT;
-    case VGPU_TEXTURE_FORMAT_RG32F:     return DXGI_FORMAT_R32G32_FLOAT;
-    case VGPU_TEXTURE_FORMAT_RGBA16:    return DXGI_FORMAT_R16G16B16A16_UNORM;
-    case VGPU_TEXTURE_FORMAT_RGBA16S:   return DXGI_FORMAT_R16G16B16A16_SNORM;
-    case VGPU_TEXTURE_FORMAT_RGBA16U:   return DXGI_FORMAT_R16G16B16A16_UINT;
-    case VGPU_TEXTURE_FORMAT_RGBA16I:   return DXGI_FORMAT_R16G16B16A16_SINT;
-    case VGPU_TEXTURE_FORMAT_RGBA16F:   return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    case VGPUTextureFormat_RG32Uint:            return DXGI_FORMAT_R32G32_UINT;
+    case VGPUTextureFormat_RG32Sint:            return DXGI_FORMAT_R32G32_SINT;
+    case VGPUTextureFormat_RG32Float:           return DXGI_FORMAT_R32G32_FLOAT;
+    case VGPUTextureFormat_RGBA16Unorm:         return DXGI_FORMAT_R16G16B16A16_UNORM;
+    case VGPUTextureFormat_RGBA16Snorm:         return DXGI_FORMAT_R16G16B16A16_SNORM;
+    case VGPUTextureFormat_RGBA16Uint:          return DXGI_FORMAT_R16G16B16A16_UINT;
+    case VGPUTextureFormat_RGBA16Sint:          return DXGI_FORMAT_R16G16B16A16_SINT;
+    case VGPUTextureFormat_RGBA16Float:         return DXGI_FORMAT_R16G16B16A16_FLOAT;
         // 128-Bit Pixel Formats
-    case VGPU_TEXTURE_FORMAT_RGBA32U:   return DXGI_FORMAT_R32G32B32A32_UINT;
-    case VGPU_TEXTURE_FORMAT_RGBA32I:   return DXGI_FORMAT_R32G32B32A32_SINT;
-    case VGPU_TEXTURE_FORMAT_RGBA32F:   return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case VGPUTextureFormat_RGBA32Uint:          return DXGI_FORMAT_R32G32B32A32_UINT;
+    case VGPUTextureFormat_RGBA32Sint:          return DXGI_FORMAT_R32G32B32A32_SINT;
+    case VGPUTextureFormat_RGBA32Float:         return DXGI_FORMAT_R32G32B32A32_FLOAT;
 
         // Depth-stencil
-    case VGPU_TEXTURE_FORMAT_D16:           return DXGI_FORMAT_D16_UNORM;
-    case VGPU_TEXTURE_FORMAT_D32F:          return DXGI_FORMAT_D32_FLOAT;
-    case VGPU_TEXTURE_FORMAT_D24S8:         return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case VGPUTextureFormat_Depth16Unorm:            return DXGI_FORMAT_D16_UNORM;
+    case VGPUTextureFormat_Depth32Float:            return DXGI_FORMAT_D32_FLOAT;
+    case VGPUTextureFormat_Stencil8:                return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case VGPUTextureFormat_Depth24UnormStencil8:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case VGPUTextureFormat_Depth32FloatStencil8:    return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
         // Compressed BC formats
-    case VGPU_TEXTURE_FORMAT_BC1:           return srgb ? DXGI_FORMAT_BC1_UNORM_SRGB : DXGI_FORMAT_BC1_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC2:           return srgb ? DXGI_FORMAT_BC2_UNORM_SRGB : DXGI_FORMAT_BC2_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC3:           return srgb ? DXGI_FORMAT_BC3_UNORM_SRGB : DXGI_FORMAT_BC3_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC4:           return DXGI_FORMAT_BC4_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC4S:          return DXGI_FORMAT_BC4_SNORM;
-    case VGPU_TEXTURE_FORMAT_BC5:           return DXGI_FORMAT_BC5_UNORM;
-    case VGPU_TEXTURE_FORMAT_BC5S:          return DXGI_FORMAT_BC5_SNORM;
-    case VGPU_TEXTURE_FORMAT_BC6H:          return DXGI_FORMAT_BC6H_UF16;
-    case VGPU_TEXTURE_FORMAT_BC6HS:         return DXGI_FORMAT_BC6H_SF16;
-    case VGPU_TEXTURE_FORMAT_BC7:           return srgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
+    case VGPUTextureFormat_BC1RGBAUnorm:        return DXGI_FORMAT_BC1_UNORM;
+    case VGPUTextureFormat_BC1RGBAUnormSrgb:    return DXGI_FORMAT_BC1_UNORM_SRGB;
+    case VGPUTextureFormat_BC2RGBAUnorm:        return DXGI_FORMAT_BC2_UNORM;
+    case VGPUTextureFormat_BC2RGBAUnormSrgb:    return DXGI_FORMAT_BC2_UNORM_SRGB;
+    case VGPUTextureFormat_BC3RGBAUnorm:        return DXGI_FORMAT_BC3_UNORM;
+    case VGPUTextureFormat_BC3RGBAUnormSrgb:    return DXGI_FORMAT_BC3_UNORM_SRGB;
+    case VGPUTextureFormat_BC4RUnorm:           return DXGI_FORMAT_BC4_UNORM;
+    case VGPUTextureFormat_BC4RSnorm:           return DXGI_FORMAT_BC4_SNORM;
+    case VGPUTextureFormat_BC5RGUnorm:          return DXGI_FORMAT_BC5_UNORM;
+    case VGPUTextureFormat_BC5RGSnorm:          return DXGI_FORMAT_BC5_SNORM;
+    case VGPUTextureFormat_BC6HRGBUfloat:       return DXGI_FORMAT_BC6H_UF16;
+    case VGPUTextureFormat_BC6HRGBFloat:        return DXGI_FORMAT_BC6H_SF16;
+    case VGPUTextureFormat_BC7RGBAUnorm:        return DXGI_FORMAT_BC7_UNORM;
+    case VGPUTextureFormat_BC7RGBAUnormSrgb:    return DXGI_FORMAT_BC7_UNORM_SRGB;
 
-    case VGPU_TEXTURE_FORMAT_ETC2_RGB8:
-    case VGPU_TEXTURE_FORMAT_ETC2_RGB8A1:
-    case VGPU_TEXTURE_FORMAT_ETC2_RGBA8:
+    case VGPUTextureFormat_PVRTC_RGB2:
+    case VGPUTextureFormat_PVRTC_RGBA2:
+    case VGPUTextureFormat_PVRTC_RGB4:
+    case VGPUTextureFormat_PVRTC_RGBA4:
+        vgpu_log(VGPU_LOG_LEVEL_ERROR, "D3D11 or D3D12 does not support PVRTC textures");
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    case VGPUTextureFormat_ETC2_RGB8:
+    case VGPUTextureFormat_ETC2_RGB8Srgb:
+    case VGPUTextureFormat_ETC2_RGB8A1:
+    case VGPUTextureFormat_ETC2_RGB8A1Srgb:
         vgpu_log(VGPU_LOG_LEVEL_ERROR, "D3D11 or D3D12 does not support ETC2 textures");
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    case VGPU_TEXTURE_FORMAT_ASTC_4x4:
-    case VGPU_TEXTURE_FORMAT_ASTC_5x4:
-    case VGPU_TEXTURE_FORMAT_ASTC_5x5:
-    case VGPU_TEXTURE_FORMAT_ASTC_6x5:
-    case VGPU_TEXTURE_FORMAT_ASTC_6x6:
-    case VGPU_TEXTURE_FORMAT_ASTC_8x5:
-    case VGPU_TEXTURE_FORMAT_ASTC_8x6:
-    case VGPU_TEXTURE_FORMAT_ASTC_8x8:
-    case VGPU_TEXTURE_FORMAT_ASTC_10x5:
-    case VGPU_TEXTURE_FORMAT_ASTC_10x6:
-    case VGPU_TEXTURE_FORMAT_ASTC_10x8:
-    case VGPU_TEXTURE_FORMAT_ASTC_10x10:
-    case VGPU_TEXTURE_FORMAT_ASTC_12x10:
-    case VGPU_TEXTURE_FORMAT_ASTC_12x12:
+    case VGPUTextureFormat_ASTC_4x4:
+    case VGPUTextureFormat_ASTC_5x4:
+    case VGPUTextureFormat_ASTC_5x5:
+    case VGPUTextureFormat_ASTC_6x5:
+    case VGPUTextureFormat_ASTC_6x6:
+    case VGPUTextureFormat_ASTC_8x5:
+    case VGPUTextureFormat_ASTC_8x6:
+    case VGPUTextureFormat_ASTC_8x8:
+    case VGPUTextureFormat_ASTC_10x5:
+    case VGPUTextureFormat_ASTC_10x6:
+    case VGPUTextureFormat_ASTC_10x8:
+    case VGPUTextureFormat_ASTC_10x10:
+    case VGPUTextureFormat_ASTC_12x10:
+    case VGPUTextureFormat_ASTC_12x12:
         vgpu_log(VGPU_LOG_LEVEL_ERROR, "D3D11 or D3D12 does not support ASTC textures");
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -152,34 +169,38 @@ static inline DXGI_FORMAT _vgpu_d3d11_dxgi_format(vgpu_texture_format format, bo
     }
 }
 
-static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(vgpu_texture_format format)
+static inline DXGI_FORMAT _vgpuGetTypelessFormatFromDepthFormat(VGPUTextureFormat format)
 {
     switch (format)
     {
-    case VGPU_TEXTURE_FORMAT_D16:       return DXGI_FORMAT_R16_TYPELESS;
-    case VGPU_TEXTURE_FORMAT_D32F:      return DXGI_FORMAT_R32_TYPELESS;
-    case VGPU_TEXTURE_FORMAT_D24S8:     return DXGI_FORMAT_R24G8_TYPELESS;
+    case VGPUTextureFormat_Depth16Unorm:            return DXGI_FORMAT_R16_TYPELESS;
+    case VGPUTextureFormat_Depth32Float:            return DXGI_FORMAT_R32_TYPELESS;
+    case VGPUTextureFormat_Stencil8:                return DXGI_FORMAT_R24G8_TYPELESS;
+    case VGPUTextureFormat_Depth24UnormStencil8:    return DXGI_FORMAT_R24G8_TYPELESS;
+    case VGPUTextureFormat_Depth32FloatStencil8:    return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 
     default:
-        VGPU_ASSERT(vgpu_is_depth_format(format) == false);
-        return _vgpu_d3d11_dxgi_format(format, false);
+        VGPU_ASSERT(vgpuIsDepthFormat(format) == false);
+        return _vgpu_d3d11_dxgi_format(format);
     }
 }
 
-static inline DXGI_FORMAT _vgpu_d3d_swapchain_format(vgpu_texture_format format)
+static inline DXGI_FORMAT _vgpu_d3d_swapchain_format(VGPUTextureFormat format)
 {
     switch (format)
     {
-    case VGPU_TEXTURE_FORMAT_RGBA32F:
+    case VGPUTextureFormat_RGBA32Float:
         return DXGI_FORMAT_R16G16B16A16_FLOAT;
 
-    case VGPU_TEXTURE_FORMAT_BGRA8:
+    case VGPUTextureFormat_BGRA8Unorm:
+    case VGPUTextureFormat_BGRA8UnormSrgb:
         return DXGI_FORMAT_B8G8R8A8_UNORM;
 
-    case VGPU_TEXTURE_FORMAT_RGBA8:
+    case VGPUTextureFormat_RGBA8Unorm:
+    case VGPUTextureFormat_RGBA8UnormSrgb:
         return DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    case VGPU_TEXTURE_FORMAT_RGB10A2:
+    case VGPUTextureFormat_RGB10A2Unorm:
         return DXGI_FORMAT_R10G10B10A2_UNORM;
     }
 

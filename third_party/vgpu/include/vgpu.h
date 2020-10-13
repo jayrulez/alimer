@@ -53,7 +53,7 @@ extern "C" {
 #endif
     typedef struct vgpu_buffer_t* vgpu_buffer;
     typedef struct vgpu_shader_t* vgpu_shader;
-    typedef struct vgpu_texture_t* vgpu_texture;
+    typedef struct VGPUTexture_T* VGPUTexture;
     typedef struct vgpu_pipeline_t* vgpu_pipeline;
 
     /* Constants */
@@ -105,125 +105,142 @@ extern "C" {
     } vgpu_adapter_type;
 
     /// Defines pixel format.
-    typedef enum vgpu_texture_format {
-        VGPU_TEXTURE_FORMAT_UNDEFINED = 0,
+    typedef enum VGPUTextureFormat {
+        VGPUTextureFormat_Undefined = 0,
         // 8-bit pixel formats
-        VGPU_TEXTURE_FORMAT_R8,
-        VGPU_TEXTURE_FORMAT_R8S,
-        VGPU_TEXTURE_FORMAT_R8U,
-        VGPU_TEXTURE_FORMAT_R8I,
+        VGPUTextureFormat_R8Unorm = 0x00000001,
+        VGPUTextureFormat_R8Snorm = 0x00000002,
+        VGPUTextureFormat_R8Uint = 0x00000003,
+        VGPUTextureFormat_R8Sint = 0x00000004,
         // 16-bit pixel formats
-        VGPU_TEXTURE_FORMAT_R16,
-        VGPU_TEXTURE_FORMAT_R16S,
-        VGPU_TEXTURE_FORMAT_R16U,
-        VGPU_TEXTURE_FORMAT_R16I,
-        VGPU_TEXTURE_FORMAT_R16F,
-        VGPU_TEXTURE_FORMAT_RG8,
-        VGPU_TEXTURE_FORMAT_RG8S,
-        VGPU_TEXTURE_FORMAT_RG8U,
-        VGPU_TEXTURE_FORMAT_RG8I,
+        VGPUTextureFormat_R16Unorm,
+        VGPUTextureFormat_R16Snorm,
+        VGPUTextureFormat_R16Uint,
+        VGPUTextureFormat_R16Sint,
+        VGPUTextureFormat_R16Float,
+        VGPUTextureFormat_RG8Unorm,
+        VGPUTextureFormat_RG8Snorm,
+        VGPUTextureFormat_RG8Uint,
+        VGPUTextureFormat_RG8Sint,
         // 32-bit pixel formats
-        VGPU_TEXTURE_FORMAT_R32,
-        VGPU_TEXTURE_FORMAT_R32S,
-        VGPU_TEXTURE_FORMAT_R32F,
-        VGPU_TEXTURE_FORMAT_RG16,
-        VGPU_TEXTURE_FORMAT_RG16S,
-        VGPU_TEXTURE_FORMAT_RG16U,
-        VGPU_TEXTURE_FORMAT_RG16I,
-        VGPU_TEXTURE_FORMAT_RG16F,
-        VGPU_TEXTURE_FORMAT_RGBA8,
-        VGPU_TEXTURE_FORMAT_RGBA8S,
-        VGPU_TEXTURE_FORMAT_RGBA8U,
-        VGPU_TEXTURE_FORMAT_RGBA8I,
-        VGPU_TEXTURE_FORMAT_BGRA8,
+        VGPUTextureFormat_R32Uint,
+        VGPUTextureFormat_R32Sint,
+        VGPUTextureFormat_R32Float,
+        VGPUTextureFormat_RG16Unorm,
+        VGPUTextureFormat_RG16Snorm,
+        VGPUTextureFormat_RG16Uint,
+        VGPUTextureFormat_RG16Sint,
+        VGPUTextureFormat_RG16Float,
+        VGPUTextureFormat_RGBA8Unorm,
+        VGPUTextureFormat_RGBA8UnormSrgb,
+        VGPUTextureFormat_RGBA8Snorm,
+        VGPUTextureFormat_RGBA8Uint,
+        VGPUTextureFormat_RGBA8Sint,
+        VGPUTextureFormat_BGRA8Unorm,
+        VGPUTextureFormat_BGRA8UnormSrgb,
         // Packed 32-Bit Pixel formats
-        VGPU_TEXTURE_FORMAT_RGB10A2,
-        VGPU_TEXTURE_FORMAT_RG11B10F,
-        VGPU_TEXTURE_FORMAT_RGB9E5F,
+        VGPUTextureFormat_RGB10A2Unorm,
+        VGPUTextureFormat_RG11B10Ufloat,
+        VGPUTextureFormat_RGB9E5Ufloat,
         // 64-Bit Pixel Formats
-        VGPU_TEXTURE_FORMAT_RG32U,
-        VGPU_TEXTURE_FORMAT_RG32I,
-        VGPU_TEXTURE_FORMAT_RG32F,
-        VGPU_TEXTURE_FORMAT_RGBA16,
-        VGPU_TEXTURE_FORMAT_RGBA16S,
-        VGPU_TEXTURE_FORMAT_RGBA16U,
-        VGPU_TEXTURE_FORMAT_RGBA16I,
-        VGPU_TEXTURE_FORMAT_RGBA16F,
+        VGPUTextureFormat_RG32Uint,
+        VGPUTextureFormat_RG32Sint,
+        VGPUTextureFormat_RG32Float,
+        VGPUTextureFormat_RGBA16Unorm,
+        VGPUTextureFormat_RGBA16Snorm,
+        VGPUTextureFormat_RGBA16Uint,
+        VGPUTextureFormat_RGBA16Sint,
+        VGPUTextureFormat_RGBA16Float,
         // 128-Bit Pixel Formats
-        VGPU_TEXTURE_FORMAT_RGBA32U,
-        VGPU_TEXTURE_FORMAT_RGBA32I,
-        VGPU_TEXTURE_FORMAT_RGBA32F,
+        VGPUTextureFormat_RGBA32Uint,
+        VGPUTextureFormat_RGBA32Sint,
+        VGPUTextureFormat_RGBA32Float,
         // Depth-stencil formats
-        VGPU_TEXTURE_FORMAT_D16,
-        VGPU_TEXTURE_FORMAT_D32F,
-        VGPU_TEXTURE_FORMAT_D24S8,
+        VGPUTextureFormat_Depth16Unorm,
+        VGPUTextureFormat_Depth32Float,
+        VGPUTextureFormat_Stencil8,
+        VGPUTextureFormat_Depth24UnormStencil8,
+        VGPUTextureFormat_Depth32FloatStencil8,
         // Compressed BC formats
-        VGPU_TEXTURE_FORMAT_BC1,
-        VGPU_TEXTURE_FORMAT_BC2,
-        VGPU_TEXTURE_FORMAT_BC3,
-        VGPU_TEXTURE_FORMAT_BC4,
-        VGPU_TEXTURE_FORMAT_BC4S,
-        VGPU_TEXTURE_FORMAT_BC5,
-        VGPU_TEXTURE_FORMAT_BC5S,
-        VGPU_TEXTURE_FORMAT_BC6H,
-        VGPU_TEXTURE_FORMAT_BC6HS,
-        VGPU_TEXTURE_FORMAT_BC7,
+        VGPUTextureFormat_BC1RGBAUnorm,
+        VGPUTextureFormat_BC1RGBAUnormSrgb,
+        VGPUTextureFormat_BC2RGBAUnorm,
+        VGPUTextureFormat_BC2RGBAUnormSrgb,
+        VGPUTextureFormat_BC3RGBAUnorm,
+        VGPUTextureFormat_BC3RGBAUnormSrgb,
+        VGPUTextureFormat_BC4RUnorm,
+        VGPUTextureFormat_BC4RSnorm,
+        VGPUTextureFormat_BC5RGUnorm,
+        VGPUTextureFormat_BC5RGSnorm,
+        VGPUTextureFormat_BC6HRGBUfloat,
+        VGPUTextureFormat_BC6HRGBFloat,
+        VGPUTextureFormat_BC7RGBAUnorm,
+        VGPUTextureFormat_BC7RGBAUnormSrgb,
+        // Compressed PVRTC Pixel Formats
+        VGPUTextureFormat_PVRTC_RGB2,
+        VGPUTextureFormat_PVRTC_RGBA2,
+        VGPUTextureFormat_PVRTC_RGB4,
+        VGPUTextureFormat_PVRTC_RGBA4,
+        // Compressed ETC Pixel Formats
+        VGPUTextureFormat_ETC2_RGB8,
+        VGPUTextureFormat_ETC2_RGB8Srgb,
+        VGPUTextureFormat_ETC2_RGB8A1,
+        VGPUTextureFormat_ETC2_RGB8A1Srgb,
+        // Compressed ASTC Pixel Formats
+        VGPUTextureFormat_ASTC_4x4,
+        VGPUTextureFormat_ASTC_5x4,
+        VGPUTextureFormat_ASTC_5x5,
+        VGPUTextureFormat_ASTC_6x5,
+        VGPUTextureFormat_ASTC_6x6,
+        VGPUTextureFormat_ASTC_8x5,
+        VGPUTextureFormat_ASTC_8x6,
+        VGPUTextureFormat_ASTC_8x8,
+        VGPUTextureFormat_ASTC_10x5,
+        VGPUTextureFormat_ASTC_10x6,
+        VGPUTextureFormat_ASTC_10x8,
+        VGPUTextureFormat_ASTC_10x10,
+        VGPUTextureFormat_ASTC_12x10,
+        VGPUTextureFormat_ASTC_12x12,
 
-        VGPU_TEXTURE_FORMAT_ETC2_RGB8,
-        VGPU_TEXTURE_FORMAT_ETC2_RGB8A1,
-        VGPU_TEXTURE_FORMAT_ETC2_RGBA8,
-
-        VGPU_TEXTURE_FORMAT_ASTC_4x4,
-        VGPU_TEXTURE_FORMAT_ASTC_5x4,
-        VGPU_TEXTURE_FORMAT_ASTC_5x5,
-        VGPU_TEXTURE_FORMAT_ASTC_6x5,
-        VGPU_TEXTURE_FORMAT_ASTC_6x6,
-        VGPU_TEXTURE_FORMAT_ASTC_8x5,
-        VGPU_TEXTURE_FORMAT_ASTC_8x6,
-        VGPU_TEXTURE_FORMAT_ASTC_8x8,
-        VGPU_TEXTURE_FORMAT_ASTC_10x5,
-        VGPU_TEXTURE_FORMAT_ASTC_10x6,
-        VGPU_TEXTURE_FORMAT_ASTC_10x8,
-        VGPU_TEXTURE_FORMAT_ASTC_10x10,
-        VGPU_TEXTURE_FORMAT_ASTC_12x10,
-        VGPU_TEXTURE_FORMAT_ASTC_12x12,
-
-        _VGPU_TEXTURE_FORMAT_COUNT,
-        _VGPU_TEXTURE_FORMAT_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_format;
+        VGPUTextureFormat_Count,
+        VGPUTextureFormat_Force32 = 0x7FFFFFFF
+    } VGPUTextureFormat;
 
     /// Defines pixel format type.
-    typedef enum vgpu_texture_format_type {
+    typedef enum VGPUTextureFormatType {
         /// Unknown format Type
-        VGPU_TEXTURE_FORMAT_TYPE_UNKNOWN = 0,
+        VGPUTextureFormatType_Unknown = 0,
         /// floating-point formats.
-        VGPU_TEXTURE_FORMAT_TYPE_FLOAT,
+        VGPUTextureFormatType_Float,
         /// Unsigned normalized formats.
-        VGPU_TEXTURE_FORMAT_TYPE_UNORM,
+        VGPUTextureFormatType_Unorm,
+        /// Unsigned normalized SRGB formats.
+        VGPUTextureFormatType_UnormSrgb,
         /// Signed normalized formats.
-        VGPU_TEXTURE_FORMAT_TYPE_SNORM,
+        VGPUTextureFormatType_Snorm,
         /// Unsigned integer formats.
-        VGPU_TEXTURE_FORMAT_TYPE_UINT,
+        VGPUTextureFormatType_Uint,
         /// Signed integer formats.
-        VGPU_TEXTURE_FORMAT_TYPE_SINT,
-        _VGPU_TEXTURE_FORMAT_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_format_type;
+        VGPUTextureFormatType_Sint,
+        VGPUTextureFormatType_Force32 = 0x7FFFFFFF
+    } VGPUTextureFormatType;
 
-    typedef enum vgpu_texture_type {
-        VGPU_TEXTURE_TYPE_2D,
-        VGPU_TEXTURE_TYPE_3D,
-        VGPU_TEXTURE_TYPE_CUBE,
-        VGPU_TEXTURE_TYPE_ARRAY,
-        _VGPU_TEXTURE_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_type;
+    typedef enum VGPUTextureType {
+        VGPUTextureType_2D,
+        VGPUTextureType_3D,
+        VGPUTextureType_Cube,
+        VGPUTextureType_Force32 = 0x7FFFFFFF
+    } VGPUTextureType;
 
-    typedef enum vgpu_texture_usage {
-        VGPU_TEXTURE_USAGE_NONE = 0,
-        VGPU_TEXTURE_USAGE_SAMPLED = (1 << 0),
-        VGPU_TEXTURE_USAGE_STORAGE = (1 << 1),
-        VGPU_TEXTURE_USAGE_RENDER_TARGET = (1 << 2),
-        _VGPU_TEXTURE_USAGE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_texture_usage;
+    typedef enum VGPUTextureUsage {
+        VGPUTextureUsage_None = 0x00000000,
+        VGPUTextureUsage_CopySrc = 0x00000001,
+        VGPUTextureUsage_CopyDst = 0x00000002,
+        VGPUTextureUsage_Sampled = 0x00000004,
+        VGPUTextureUsage_Storage = 0x00000008,
+        VGPUTextureUsage_OutputAttachment = 0x00000010,
+        VGPUTextureUsage_Force32 = 0x7FFFFFFF
+    } VGPUTextureUsage;
 
     typedef enum vgpu_load_op {
         VGPU_LOAD_OP_CLEAR = 0,
@@ -232,34 +249,44 @@ extern "C" {
     } vgpu_load_op;
 
     /* Structs */
-    typedef struct vgpu_extent2D {
+    typedef struct VGPUExtent2D {
         uint32_t width;
         uint32_t height;
-    } vgpu_extent2D;
+    } VGPUExtent2D;
 
-    typedef struct vgpu_extent3D {
+    typedef struct VGPUExtent3D {
         uint32_t width;
         uint32_t height;
         uint32_t depth;
-    } vgpu_extent3D;
+    } VGPUExtent3D;
 
-    typedef struct vgpu_color {
+    typedef struct VGPUColor {
         float r;
         float g;
         float b;
         float a;
-    } vgpu_color;
+    } VGPUColor;
 
     typedef struct vgpu_texture_info {
-        vgpu_texture_type       type;
-        vgpu_texture_usage      usage;
-        vgpu_texture_format     format;
-        vgpu_extent3D           size;
+        VGPUTextureType         type;
+        VGPUTextureUsage        usage;
+        VGPUTextureFormat       format;
+        VGPUExtent3D            size;
         uint32_t                mip_level_count;
         uint32_t                sample_count;
         const uint64_t          external_handle;
         const char*             label;
     } vgpu_texture_info;
+
+    typedef struct VGPUTextureViewDescriptor {
+        VGPUTexture         source;
+        VGPUTextureType     type;
+        VGPUTextureFormat   format;
+        uint32_t            baseMipmap;
+        uint32_t            mipmapCount;
+        uint32_t            baseLayer;
+        uint32_t            layerCount;
+    } VGPUTextureViewDescriptor;
 
     typedef struct vgpu_shader_source {
         const void*     code;
@@ -280,15 +307,15 @@ extern "C" {
     } vgpu_pipeline_info;
 
     typedef struct vgpu_color_attachment {
-        vgpu_texture    texture;
+        VGPUTexture     texture;
         uint32_t        level;
         uint32_t        slice;
         vgpu_load_op    load_op;
-        vgpu_color      clear_color;
+        VGPUColor       clearColor;
     } vgpu_color_attachment;
 
     typedef struct vgpu_depth_stencil_attachment {
-        vgpu_texture    texture;
+        VGPUTexture     texture;
         uint32_t        level;
         uint32_t        slice;
         vgpu_load_op    depth_load_op;
@@ -357,8 +384,8 @@ extern "C" {
 
     typedef struct vgpu_swapchain_info {
         void*                   window_handle;
-        vgpu_texture_format     color_format;
-        vgpu_texture_format     depth_stencil_format;
+        VGPUTextureFormat       color_format;
+        VGPUTextureFormat       depth_stencil_format;
         bool                    vsync;
         uint32_t                sample_count;
     } vgpu_swapchain_info;
@@ -413,9 +440,10 @@ extern "C" {
     VGPU_API void vgpu_destroy_shader(vgpu_shader shader);
 
     /* Texture */
-    VGPU_API vgpu_texture vgpu_create_texture(const vgpu_texture_info* info);
-    VGPU_API void vgpu_destroy_texture(vgpu_texture handle);
-    VGPU_API uint64_t vgpu_texture_get_native_handle(vgpu_texture handle);
+    VGPU_API VGPUTexture vgpuTextureCreate(const vgpu_texture_info* info);
+    VGPU_API void vgpuTextureDestroy(VGPUTexture handle);
+    VGPU_API bool vgpuTextureInitView(VGPUTexture texture, const VGPUTextureViewDescriptor* descriptor);
+    VGPU_API uint64_t vgpuTextureGetNativeHandle(VGPUTexture handle);
 
     /* Pipeline */
     VGPU_API vgpu_pipeline vgpu_create_pipeline(const vgpu_pipeline_info* info);
@@ -432,13 +460,15 @@ extern "C" {
 
     /* Utility methods */
     /// Check if the format has a depth component.
-    VGPU_API bool vgpu_is_depth_format(vgpu_texture_format format);
+    VGPU_API bool vgpuIsDepthFormat(VGPUTextureFormat format);
     /// Check if the format has a stencil component.
-    VGPU_API bool vgpu_is_stencil_format(vgpu_texture_format format);
+    VGPU_API bool vgpuIsStencilFormat(VGPUTextureFormat format);
     /// Check if the format has depth or stencil components.
-    VGPU_API bool vgpu_is_depth_stencil_format(vgpu_texture_format format);
+    VGPU_API bool vgpuIsDepthStencilFormat(VGPUTextureFormat format);
     /// Check if the format is a compressed format.
-    VGPU_API bool vgpu_is_compressed_format(vgpu_texture_format format);
+    VGPU_API bool vgpuIsCompressedFormat(VGPUTextureFormat format);
+    /// Check if the format is BC compressed format.
+    VGPU_API bool vgpuIsBcCompressedFormat(VGPUTextureFormat format);
 
     VGPU_API uint32_t vgpu_calculate_mip_levels(uint32_t width, uint32_t height, uint32_t depth);
 

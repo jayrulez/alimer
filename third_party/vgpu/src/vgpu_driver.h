@@ -85,9 +85,10 @@ typedef struct vgpu_renderer {
     vgpu_shader(*shader_create)(const vgpu_shader_info* info);
     void(*shader_destroy)(vgpu_shader handle);
 
-    vgpu_texture(*texture_create)(const vgpu_texture_info* info);
-    void(*texture_destroy)(vgpu_texture handle);
-    uint64_t(*texture_get_native_handle)(vgpu_texture handle);
+    VGPUTexture(*texture_create)(const vgpu_texture_info* info);
+    void(*texture_destroy)(VGPUTexture handle);
+    bool(*textureInitView)(VGPUTexture handle, const VGPUTextureViewDescriptor* descriptor);
+    uint64_t(*texture_get_native_handle)(VGPUTexture handle);
 
     vgpu_pipeline(*pipeline_create)(const vgpu_pipeline_info* info);
     void(*pipeline_destroy)(vgpu_pipeline handle);
@@ -115,6 +116,7 @@ typedef struct vgpu_renderer {
     ASSIGN_DRIVER_FUNC(shader_destroy, name)\
     ASSIGN_DRIVER_FUNC(texture_create, name)\
     ASSIGN_DRIVER_FUNC(texture_destroy, name)\
+    ASSIGN_DRIVER_FUNC(textureInitView, name)\
     ASSIGN_DRIVER_FUNC(texture_get_native_handle, name)\
     ASSIGN_DRIVER_FUNC(pipeline_create, name)\
     ASSIGN_DRIVER_FUNC(pipeline_destroy, name)\
