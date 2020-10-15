@@ -30,6 +30,11 @@ namespace Alimer
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
     extern const std::string EMPTY_STRING;
 
+    template<typename T> constexpr typename std::underlying_type<T>::type ecast(T x)
+    {
+        return static_cast<typename std::underlying_type<T>::type>(x);
+    }
+
 #ifdef _WIN32
     ALIMER_API std::string ToUtf8(const wchar_t* wstr, size_t len);
     ALIMER_API std::string ToUtf8(const std::wstring& wstr);

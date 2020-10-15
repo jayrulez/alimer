@@ -33,11 +33,6 @@ namespace Alimer
     {
     }
 
-    Window::~Window()
-    {
-        SafeDelete(impl);
-    }
-
     bool Window::IsOpen() const noexcept
     {
         return impl != nullptr && impl->IsOpen();

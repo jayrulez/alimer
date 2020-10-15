@@ -61,6 +61,16 @@ namespace Alimer
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
 
+    template <typename T>
+    void SafeRelease(T& resource)
+    {
+        if (resource)
+        {
+            resource->Release();
+            resource = nullptr;
+        }
+    }
+
 #ifdef _DEBUG
     // Declare Guids to avoid linking with "dxguid.lib"
     static constexpr GUID DXGI_DEBUG_ALL = { 0xe48ae283, 0xda80, 0x490b, {0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x8 } };

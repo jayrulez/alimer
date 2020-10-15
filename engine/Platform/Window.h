@@ -55,7 +55,7 @@ namespace Alimer
         Window(const std::string& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
 
         /// Destructor.
-        ~Window();
+        virtual ~Window() = default;
 
         bool IsOpen() const noexcept;
         uint32_t GetId() const noexcept;
@@ -79,6 +79,6 @@ namespace Alimer
         SizeI GetMinimumSize() const noexcept;
 
     private:
-        WindowImpl* impl;
+        std::unique_ptr<WindowImpl> impl;
     };
 }

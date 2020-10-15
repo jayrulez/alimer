@@ -37,12 +37,6 @@
 #include <dxcapi.h>
 #include <d3d12shader.h>
 
-#ifdef _WIN64
-#ifndef PLATFORM_UWP
-#pragma comment(lib,"dxcompiler.lib")
-#endif // PLATFORM_UWP
-#endif // _X64
-
 #include <sstream>
 #include <algorithm>
 
@@ -55,7 +49,7 @@ namespace Alimer
     PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
     PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
     PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-    //PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
+    PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
 
     namespace DX12_Internal
@@ -2169,6 +2163,13 @@ namespace Alimer
         D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(d3d12DLL, "D3D12CreateRootSignatureDeserializer");
         D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeVersionedRootSignature");
         D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
+
+        static HMODULE dxcompilerDLL = LoadLibraryA("dxcompiler.dll");
+        if (!dxcompilerDLL) {
+            return false;
+        }
+
+        DxcCreateInstance = (PFN_DXC_CREATE_INSTANCE)GetProcAddress(dxcompilerDLL, "DxcCreateInstance");
 #endif
 
         if (SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
@@ -2176,6 +2177,7 @@ namespace Alimer
             available = true;
             return true;
         }
+
 
         return false;
     }

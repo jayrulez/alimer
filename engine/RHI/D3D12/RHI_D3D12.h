@@ -55,7 +55,7 @@ namespace Alimer
     extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
     extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
     extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-    //extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
+    extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
 #endif
 
     class GraphicsDevice_DX12 final : public GraphicsDevice

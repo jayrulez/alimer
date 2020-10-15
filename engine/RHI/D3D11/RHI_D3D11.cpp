@@ -2594,8 +2594,13 @@ namespace Alimer
 
     void GraphicsDevice_DX11::SetName(GPUResource* pResource, const char* name)
     {
+#ifdef _DEBUG
         auto internal_state = to_internal(pResource);
         internal_state->resource->SetPrivateData(g_D3DDebugObjectName, (UINT)strlen(name), name);
+#else
+        ALIMER_UNUSED(pResource);
+        ALIMER_UNUSED(name);
+#endif
     }
 
     void GraphicsDevice_DX11::PresentBegin(CommandList cmd)

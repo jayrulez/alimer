@@ -424,53 +424,10 @@ template <> struct Limits<type> { \
     //---------------------------------------------
     // Basic comparisons
     //---------------------------------------------
-    template<typename T> inline T Abs(T v) { return (v >= 0) ? v : -v; }
-    template<typename T> inline T Min(T a, T b) { return (a < b) ? a : b; }
-    template<typename T> inline T Max(T a, T b) { return (a < b) ? b : a; }
-    template<typename T> inline T Clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
-
-    template <typename T, unsigned int N>
-    void SafeRelease(T(&resourceBlock)[N])
-    {
-        for (unsigned int i = 0; i < N; i++)
-        {
-            SafeRelease(resourceBlock[i]);
-        }
-    }
-
-    template <typename T>
-    void SafeRelease(T& resource)
-    {
-        if (resource)
-        {
-            resource->Release();
-            resource = nullptr;
-        }
-    }
-
-    template <typename T>
-    void SafeDelete(T*& resource)
-    {
-        delete resource;
-        resource = nullptr;
-    }
-
-    template <typename T>
-    void SafeDeleteContainer(T& resource)
-    {
-        for (auto& element : resource)
-        {
-            SafeDelete(element);
-        }
-        resource.clear();
-    }
-
-    template <typename T>
-    void SafeDeleteArray(T*& resource)
-    {
-        delete[] resource;
-        resource = nullptr;
-    }
+    template<typename T> constexpr T Abs(T v) { return (v >= 0) ? v : -v; }
+    template<typename T> constexpr T Min(T a, T b) { return (a < b) ? a : b; }
+    template<typename T> constexpr T Max(T a, T b) { return (a < b) ? b : a; }
+    template<typename T> constexpr T Clamp(T arg, T lo, T hi) { return (arg < lo) ? lo : (arg < hi) ? arg : hi; }
 }
 
 #if !defined(ALIMER_DISABLE_COPY)
