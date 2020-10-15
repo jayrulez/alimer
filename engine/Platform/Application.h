@@ -24,7 +24,6 @@
 
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
-#include "Graphics/CommandContext.h"
 #include <memory>
 
 namespace Alimer
@@ -40,10 +39,12 @@ namespace Alimer
         int vsync;
         uint32_t sampleCount;
 
-        GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
+        //GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
 
         std::string rootDirectory = "Assets";
     };
+
+    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -73,6 +74,9 @@ namespace Alimer
 
         void Tick();
 
+        const std::string& GetName() const;
+        void SetName(const std::string& name);
+
         // Gets the config data used to run the application
         const Config* GetConfig();
 
@@ -89,6 +93,7 @@ namespace Alimer
     private:
         void InitBeforeRun();
 
+        std::string name{};
         Config config;
 
     protected:
@@ -96,6 +101,7 @@ namespace Alimer
         AssetManager assets;
         bool headless = false;
         std::unique_ptr<Window> window{ nullptr };
+        std::shared_ptr<GraphicsDevice> graphicsDevice{ nullptr };
     };
 
     extern Application* CreateApplication(void);

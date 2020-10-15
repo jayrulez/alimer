@@ -79,6 +79,9 @@ PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 
 // Functions that require a device
 #define VGPU_FOREACH_DEVICE(X)\
+    X(vkCmdBeginDebugUtilsLabelEXT)\
+    X(vkCmdEndDebugUtilsLabelEXT)\
+    X(vkCmdInsertDebugUtilsLabelEXT)\
     X(vkSetDebugUtilsObjectNameEXT)\
     X(vkQueueSubmit)\
     X(vkDeviceWaitIdle)\
@@ -544,25 +547,22 @@ static bool vk_init(const char* app_name, const vgpu_config* config) {
             switch (gpu_props.deviceType) {
             case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
                 score += 100U;
-                if (config->device_preference == VGPU_ADAPTER_TYPE_DISCRETE_GPU) {
+                if (config->adapterPreference == VGPUAdapterType_DiscreteGPU) {
                     score += 1000u;
                 }
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
                 score += 90U;
-                if (config->device_preference == VGPU_ADAPTER_TYPE_INTEGRATED_GPU) {
+                if (config->adapterPreference == VGPUAdapterType_IntegratedGPU) {
                     score += 1000u;
                 }
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
                 score += 80u;
-                if (config->device_preference == VGPU_ADAPTER_TYPE_VIRTUAL_GPU) {
-                    score += 1000u;
-                }
                 break;
             case VK_PHYSICAL_DEVICE_TYPE_CPU:
                 score += 70u;
-                if (config->device_preference == VGPU_ADAPTER_TYPE_CPU) {
+                if (config->adapterPreference == VGPUAdapterType_CPU) {
                     score += 1000u;
                 }
                 break;
@@ -809,19 +809,19 @@ static bool vk_init(const char* app_name, const vgpu_config* config) {
         switch (vk.physical_device_properties.deviceType)
         {
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            vk.caps.adapter_type = VGPU_ADAPTER_TYPE_INTEGRATED_GPU;
+            vk.caps.adapterType = VGPUAdapterType_IntegratedGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            vk.caps.adapter_type = VGPU_ADAPTER_TYPE_DISCRETE_GPU;
+            vk.caps.adapterType = VGPUAdapterType_DiscreteGPU;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-            vk.caps.adapter_type = VGPU_ADAPTER_TYPE_VIRTUAL_GPU;
+            vk.caps.adapterType = VGPUAdapterType_Unknown;
             break;
         case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            vk.caps.adapter_type = VGPU_ADAPTER_TYPE_CPU;
+            vk.caps.adapterType = VGPUAdapterType_CPU;
             break;
         default:
-            vk.caps.adapter_type = VGPU_ADAPTER_TYPE_OTHER;
+            vk.caps.adapterType = VGPUAdapterType_Unknown;
             break;
         }
 
@@ -1055,23 +1055,15 @@ static VkFormat _vgpu_vk_format(VGPUTextureFormat format) {
     }
 }
 
-static VGPUTexture vk_texture_create(const vgpu_texture_info* info) {
+static VGPUTexture vk_texture_create(const VGPUTextureDescriptor* desc) {
     VulkanTexture* texture = VGPU_ALLOC(VulkanTexture);
-    if (info->external_handle) {
-        texture->handle = (VkImage)info->external_handle;
-        texture->allocation = VK_NULL_HANDLE;
-    }
-    else {
-
-    }
-
-    texture->type = info->type;
-    texture->format = _vgpu_vk_format(info->format);
+    texture->type = desc->type;
+    texture->format = _vgpu_vk_format(desc->format);
     texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (vgpuIsDepthStencilFormat(info->format)) {
+    if (vgpuIsDepthStencilFormat(desc->format)) {
         texture->aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
 
-        if (vgpuIsStencilFormat(info->format)) {
+        if (vgpuIsStencilFormat(desc->format)) {
             texture->aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
         }
     }
@@ -1079,11 +1071,62 @@ static VGPUTexture vk_texture_create(const vgpu_texture_info* info) {
         texture->aspect = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
+    if (desc->externalHandle) {
+        texture->handle = (VkImage)desc->externalHandle;
+        texture->allocation = VK_NULL_HANDLE;
+    }
+    else {
+        VkImageType type = VK_IMAGE_TYPE_2D;
+        VkImageCreateFlags flags = 0;
+        VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        if (desc->usage & VGPUTextureUsage_ShaderRead) {
+            usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
+        if (desc->usage & VGPUTextureUsage_ShaderWrite) {
+            usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+        }
+        if (desc->usage & VGPUTextureUsage_RenderTarget) {
+            if (texture->aspect == VK_IMAGE_ASPECT_COLOR_BIT) {
+                usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            }
+            else {
+                usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            }
+        }
+
+        const VkImageCreateInfo createInfo = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .flags = flags,
+            .imageType = type,
+            .format = texture->format,
+            .extent.width = desc->size.width,
+            .extent.height = desc->size.height,
+            .extent.depth = desc->size.depth,
+            .mipLevels = desc->mipLevelCount,
+            .arrayLayers = 1u,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = usage
+        };
+
+        const VmaAllocationCreateInfo allocationCreateInfo = {
+            .usage = VMA_MEMORY_USAGE_GPU_ONLY
+        };
+
+        VmaAllocationInfo allocationInfo;
+        VkResult result = vmaCreateImage(vk.memory_allocator, &createInfo, &allocationCreateInfo, &texture->handle, &texture->allocation, &allocationInfo);
+        if (result != VK_SUCCESS)
+        {
+            VGPU_FREE(texture);
+            return NULL;
+        }
+    }
+
     if (!vgpuTextureInitView((VGPUTexture)texture, &(VGPUTextureViewDescriptor) {.source = (VGPUTexture)texture })) {
         return NULL;
     }
 
-    _vgpu_vk_set_name(texture->handle, VK_OBJECT_TYPE_IMAGE, info->label);
+    _vgpu_vk_set_name(texture->handle, VK_OBJECT_TYPE_IMAGE, desc->label);
 
     return (VGPUTexture)texture;
 }
@@ -1158,25 +1201,73 @@ static void vk_pipeline_destroy(vgpu_pipeline handle)
 }
 
 /* Commands */
-static void vk_push_debug_group(const char* name)
-{
+static void vk_push_debug_group(const char* name, const VGPUColor* color) {
+    if (vk.config.debug && vk.debug_utils) {
+        const VkDebugUtilsLabelEXT label = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pNext = NULL,
+            .pLabelName = name,
+            .color = {color->r, color->g, color->b, color->a}
+        };
+
+        vkCmdBeginDebugUtilsLabelEXT(vk.frames[vk.frame_index].command_buffer, &label);
+    }
 }
 
-static void vk_pop_debug_group(void)
-{
+static void vk_pop_debug_group(void) {
+    if (vk.config.debug && vk.debug_utils) {
+        vkCmdEndDebugUtilsLabelEXT(vk.frames[vk.frame_index].command_buffer);
+    }
 }
 
-static void vk_insert_debug_marker(const char* name)
-{
+static void vk_insert_debug_marker(const char* name, const VGPUColor* color) {
+    if (vk.config.debug && vk.debug_utils) {
+        const VkDebugUtilsLabelEXT label = {
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+            .pNext = NULL,
+            .pLabelName = name,
+            .color = {color->r, color->g, color->b, color->a}
+        };
+
+        vkCmdInsertDebugUtilsLabelEXT(vk.frames[vk.frame_index].command_buffer, &label);
+    }
 }
 
-static void vk_begin_render_pass(const vgpu_render_pass_info* info)
-{
+static void vk_begin_render_pass(const VGPURenderPassDescriptor* desc) {
+    uint32_t clearValueCount = 0;
+    VkClearValue clearValues[VGPU_MAX_COLOR_ATTACHMENTS + 1];
 
+    for (uint32_t i = 0; i < desc->colorAttachmentCount; i++) {
+        /*vgpuVkTextureBarrier(driverData,
+            renderer->frame->commandBuffer,
+            framebuffer.attachments[i],
+            VGPUTextureLayout_RenderTarget
+        );*/
+
+        clearValues[clearValueCount].color.float32[0] = desc->colorAttachments[i].clearColor.r;
+        clearValues[clearValueCount].color.float32[1] = desc->colorAttachments[i].clearColor.g;
+        clearValues[clearValueCount].color.float32[2] = desc->colorAttachments[i].clearColor.b;
+        clearValues[clearValueCount].color.float32[3] = desc->colorAttachments[i].clearColor.a;
+        clearValueCount++;
+    }
+
+    const VkRenderPassBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = VK_NULL_HANDLE,
+        .framebuffer = VK_NULL_HANDLE,
+        .renderArea.offset.x = 0,
+        .renderArea.offset.y = 0,
+        .renderArea.extent.width = 0,
+        .renderArea.extent.height = 0,
+        .clearValueCount = clearValueCount,
+        .pClearValues = clearValues
+    };
+
+    //vkCmdBeginRenderPass(vk.frames[vk.frame_index].command_buffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-static void vk_end_render_pass(void)
-{
+static void vk_end_render_pass(void) {
+    //vkCmdEndRenderPass(vk.frames[vk.frame_index].command_buffer);
 }
 
 static void vk_bind_pipeline(vgpu_pipeline handle)
@@ -1532,16 +1623,16 @@ static bool _vgpu_vk_init_swapchain(vgpu_vk_swapchain* swapchain) {
 
     for (uint32_t i = 0; i < swapchain->imageCount; i++)
     {
-        const vgpu_texture_info color_texture_info = {
+        const VGPUTextureDescriptor colorTextureDesc = {
             .type = VGPUTextureType_2D,
-            .usage = VGPUTextureUsage_OutputAttachment,
+            .usage = VGPUTextureUsage_RenderTarget,
             .format = VGPUTextureFormat_BGRA8Unorm,
             .size = swapchain->size,
-            .external_handle = VGPU_VOIDP_TO_U64(images[i]),
+            .externalHandle = VGPU_VOIDP_TO_U64(images[i]),
             .label = "Backbuffer"
         };
 
-        swapchain->backbufferTextures[i] = vgpuTextureCreate(&color_texture_info);
+        swapchain->backbufferTextures[i] = vgpuTextureCreate(&colorTextureDesc);
     }
 
     return true;

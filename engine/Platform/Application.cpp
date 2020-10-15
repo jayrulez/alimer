@@ -25,42 +25,20 @@
 #include "Platform/Event.h"
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/RHI.h"
 #include "UI/ImGuiLayer.h"
-#include <vgpu.h>
 
 namespace Alimer
 {
-    static void vgpu_log_callback(void* userData, vgpu_log_level level, const char* message)
-    {
-        switch (level)
-        {
-        case VGPU_LOG_LEVEL_INFO:
-            LOGI(message);
-            break;
-        case VGPU_LOG_LEVEL_WARN:
-            LOGW(message);
-            break;
-        case VGPU_LOG_LEVEL_ERROR:
-            LOGE(message);
-            break;
-        default:
-            break;
-        }
-    }
-
     static Application* s_appCurrent = nullptr;
 
     Application::Application(const Config& config)
-        : config{ config }
+        : name("Alimer")
+        , config{ config }
         , state(State::Uninitialized)
         , assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
-
-        vgpu_set_log_callback(vgpu_log_callback, this);
-        vgpu_set_preferred_backend(VGPU_BACKEND_TYPE_VULKAN);
 
         s_appCurrent = this;
     }
@@ -68,13 +46,23 @@ namespace Alimer
     Application::~Application()
     {
         //ImGuiLayer::Shutdown();
-        vgpu_shutdown();
+        graphicsDevice.reset();
         s_appCurrent = nullptr;
     }
 
     Application* Application::Current()
     {
         return s_appCurrent;
+    }
+
+    const std::string& Application::GetName() const
+    {
+        return name;
+    }
+
+    void Application::SetName(const std::string& name_)
+    {
+        name = name_;
     }
 
     void Application::InitBeforeRun()
@@ -89,14 +77,14 @@ namespace Alimer
 
         window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
-        // Init vgpu
-        vgpu_config gpu_config = {};
+        // Init graphics
+        bool enableDebugLayer = false;
 #ifdef _DEBUG
-        gpu_config.debug = true;
+        enableDebugLayer = true;
 #endif
-        gpu_config.swapchain_info.window_handle = window->GetHandle();
 
-        if (vgpu_init("Alimer", &gpu_config))
+        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), false, enableDebugLayer);
+        if (!graphicsDevice)
         {
             headless = true;
         }
@@ -129,20 +117,25 @@ namespace Alimer
 
     void Application::Tick()
     {
-        if (!vgpu_begin_frame())
-            return;
+        CommandList commandList = graphicsDevice->BeginCommandList();
+        graphicsDevice->PresentBegin(commandList);
 
         OnDraw();
 
-        /*agpu_push_debug_group("Frame");
+        /*VGPUColor color = { 1.0f, 0.78f, 0.05f, 1.0f };
+        vgpuPushDebugGroup("Frame", &color);
 
+        VGPURenderPassDescriptor renderPass = {};
+        renderPass.colorAttachmentCount = 1u;
+        vgpuBeginRenderPass(&renderPass);
+        vgpuEndRenderPass();
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);
-        agpu_pop_debug_group();*/
+        vgpuPopDebugGroup();*/
 
-        vgpu_end_frame();
+        graphicsDevice->PresentEnd(commandList);
     }
 
     const Config* Application::GetConfig()

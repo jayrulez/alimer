@@ -23,6 +23,8 @@
 #include "vgpu_driver.h"
 #include <stdio.h>
 #include <stdarg.h>
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 
 /* Logging */
 static vgpu_log_callback s_log_function = NULL;
@@ -65,7 +67,7 @@ static const vgpu_driver* drivers[] = {
 
 static vgpu_config _vgpu_config_defaults(const vgpu_config* config) {
     vgpu_config def = *config;
-    def.device_preference = VGPU_DEF(def.device_preference, VGPU_ADAPTER_TYPE_DISCRETE_GPU);
+    def.adapterPreference = VGPU_DEF(def.adapterPreference, VGPUAdapterType_DiscreteGPU);
     def.swapchain_info.color_format = VGPU_DEF(def.swapchain_info.color_format, VGPUTextureFormat_BGRA8Unorm);
     def.swapchain_info.depth_stencil_format = VGPU_DEF(def.swapchain_info.depth_stencil_format, VGPUTextureFormat_Undefined);
     def.swapchain_info.sample_count = VGPU_DEF(def.swapchain_info.sample_count, 1u);
@@ -186,19 +188,19 @@ void vgpu_destroy_shader(vgpu_shader shader) {
 }
 
 /* Texture */
-static vgpu_texture_info _vgpu_texture_info_defaults(const vgpu_texture_info* info) {
-    vgpu_texture_info def = *info;
+static VGPUTextureDescriptor _vgpu_texture_info_defaults(const VGPUTextureDescriptor* info) {
+    VGPUTextureDescriptor def = *info;
     def.type = VGPU_DEF(def.type, VGPUTextureType_2D);
     def.format = VGPU_DEF(def.format, VGPUTextureFormat_RGBA8Unorm);
-    def.size.depth = VGPU_DEF(def.size.depth, 1);
-    def.mip_level_count = VGPU_DEF(def.mip_level_count, 1);
-    def.sample_count = VGPU_DEF(def.sample_count, 1);
+    def.size.depth = VGPU_DEF(def.size.depth, 1u);
+    def.mipLevelCount = VGPU_DEF(def.mipLevelCount, 1u);
+    def.sampleCount = VGPU_DEF(def.sampleCount, 1u);
     return def;
 };
 
-VGPUTexture vgpuTextureCreate(const vgpu_texture_info* info) {
-    VGPU_ASSERT(info);
-    vgpu_texture_info def = _vgpu_texture_info_defaults(info);
+VGPUTexture vgpuTextureCreate(const VGPUTextureDescriptor* descriptor) {
+    VGPU_ASSERT(descriptor);
+    VGPUTextureDescriptor def = _vgpu_texture_info_defaults(descriptor);
     return renderer->texture_create(&def);
 }
 
@@ -225,26 +227,28 @@ void vgpu_destroy_pipeline(vgpu_pipeline pipeline) {
 }
 
 /* Commands */
-void vgpu_push_debug_group(const char* name) {
-    renderer->push_debug_group(name);
+void vgpuPushDebugGroup(const char* name, const VGPUColor* color) {
+    VGPU_ASSERT(color);
+    renderer->push_debug_group(name, color);
 }
 
-void vgpu_pop_debug_group(void) {
+void vgpuPopDebugGroup(void) {
     renderer->pop_debug_group();
 }
 
-void vgpu_insert_debug_marker(const char* name) {
-    renderer->insert_debug_marker(name);
+void vgpuInsertDebugMarker(const char* name, const VGPUColor* color) {
+    VGPU_ASSERT(color);
+    renderer->insert_debug_marker(name, color);
 }
 
-void vgpu_begin_render_pass(const vgpu_render_pass_info* info) {
-    VGPU_ASSERT(info);
-    VGPU_ASSERT(info->num_color_attachments || info->depth_stencil.texture);
+void vgpuBeginRenderPass(const VGPURenderPassDescriptor* descriptor) {
+    VGPU_ASSERT(descriptor);
+    VGPU_ASSERT(descriptor->colorAttachmentCount || descriptor->depthStencilAttachment.texture);
 
-    renderer->begin_render_pass(info);
+    renderer->begin_render_pass(descriptor);
 }
 
-void vgpu_end_render_pass(void) {
+void vgpuEndRenderPass(void) {
     renderer->end_render_pass();
 }
 

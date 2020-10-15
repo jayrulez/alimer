@@ -43,9 +43,24 @@ define_engine_source_files(
     Math
     IO
     Assets
-    Graphics
+    RHI
     Scene
 )
+
+# Graphics backend
+if (ALIMER_D3D11)
+    define_engine_source_files(RHI/D3DCommon)
+    define_engine_source_files(RHI/D3D11)
+endif()
+
+if (ALIMER_D3D12)
+    define_engine_source_files(RHI/D3DCommon)
+    define_engine_source_files(RHI/D3D12)
+endif()
+
+if (ALIMER_VULKAN)
+    define_engine_source_files(RHI/Vulkan)
+endif()
 
 if (ALIMER_IMGUI)
     define_engine_source_files(UI)
@@ -82,7 +97,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    vgpu
     fmt
     stb
 )
@@ -157,6 +171,11 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
 endif ()
+
+if (ALIMER_VULKAN)
+    #target_compile_definitions(volk PUBLIC VK_ENABLE_BETA_EXTENSIONS)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+endif()
 
 if (ALIMER_IMGUI)
     target_link_libraries(${PROJECT_NAME} PUBLIC imgui)

@@ -85,7 +85,7 @@ typedef struct vgpu_renderer {
     vgpu_shader(*shader_create)(const vgpu_shader_info* info);
     void(*shader_destroy)(vgpu_shader handle);
 
-    VGPUTexture(*texture_create)(const vgpu_texture_info* info);
+    VGPUTexture(*texture_create)(const VGPUTextureDescriptor* desc);
     void(*texture_destroy)(VGPUTexture handle);
     bool(*textureInitView)(VGPUTexture handle, const VGPUTextureViewDescriptor* descriptor);
     uint64_t(*texture_get_native_handle)(VGPUTexture handle);
@@ -94,10 +94,10 @@ typedef struct vgpu_renderer {
     void(*pipeline_destroy)(vgpu_pipeline handle);
 
     /* Commands */
-    void(*push_debug_group)(const char* name);
+    void(*push_debug_group)(const char* name, const VGPUColor* color);
     void(*pop_debug_group)(void);
-    void(*insert_debug_marker)(const char* name);
-    void(*begin_render_pass)(const vgpu_render_pass_info* info);
+    void(*insert_debug_marker)(const char* name, const VGPUColor* color);
+    void(*begin_render_pass)(const VGPURenderPassDescriptor* desc);
     void(*end_render_pass)(void);
     void(*bind_pipeline)(vgpu_pipeline handle);
     void(*draw)(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);

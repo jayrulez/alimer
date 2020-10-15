@@ -31,6 +31,7 @@ add_library(vgpu
     #src/agpu_driver_d3d11.cpp
     src/vgpu_driver_d3d12.cpp
     #src/agpu_driver_opengl.cpp
+    src/stb_ds.h
 )
 
 target_include_directories(vgpu PUBLIC

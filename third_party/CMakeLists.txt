@@ -1,6 +1,6 @@
 # vgpu
-add_subdirectory(vgpu)
-set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
+#add_subdirectory(vgpu)
+#set_property(TARGET vgpu PROPERTY FOLDER "ThirdParty")
 
 # stb
 add_library(stb INTERFACE)
@@ -20,6 +20,33 @@ set_property(TARGET spirv-cross-glsl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-msl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-util PROPERTY FOLDER "ThirdParty")
+
+if (ALIMER_VULKAN)
+    # vulkan
+    add_library(vulkan INTERFACE)
+    set(VULKAN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/include)
+    target_sources(vulkan INTERFACE ${VULKAN_INCLUDE_DIR}/vulkan/vulkan.h)
+    target_include_directories(vulkan INTERFACE ${VULKAN_INCLUDE_DIR})
+    target_compile_definitions(vulkan INTERFACE VK_NO_PROTOTYPES)
+
+    if(ANDROID)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_ANDROID_KHR)
+    elseif(WIN32)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_WIN32_KHR)
+    elseif(APPLE)
+        target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_MACOS_MVK)
+    elseif(UNIX)
+        # See whether X11 is available. If not, fall back to direct-to-display mode.
+        find_package(X11 QUIET)
+        if (X11_FOUND)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_XCB_KHR)
+        else()
+            set(DIRECT_TO_DISPLAY TRUE)
+            set(DIRECT_TO_DISPLAY TRUE PARENT_SCOPE)
+            target_compile_definitions(vulkan INTERFACE VK_USE_PLATFORM_DISPLAY_KHR)
+        endif()
+    endif()
+endif()
 
 if (ALIMER_IMGUI)
     add_subdirectory(imgui)

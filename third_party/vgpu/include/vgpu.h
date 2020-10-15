@@ -95,14 +95,13 @@ extern "C" {
         _VGPU_BACKEND_TYPE_FORCE_U32 = 0x7FFFFFFF
     } vgpu_backend_type;
 
-    typedef enum vgpu_adapter_type {
-        VGPU_ADAPTER_TYPE_OTHER,
-        VGPU_ADAPTER_TYPE_INTEGRATED_GPU,
-        VGPU_ADAPTER_TYPE_DISCRETE_GPU,
-        VGPU_ADAPTER_TYPE_VIRTUAL_GPU,
-        VGPU_ADAPTER_TYPE_CPU,
-        _VGPU_ADAPTER_TYPE_FORCE_U32 = 0x7FFFFFFF
-    } vgpu_adapter_type;
+    typedef enum VGPUAdapterType {
+        VGPUAdapterType_DiscreteGPU,
+        VGPUAdapterType_IntegratedGPU,
+        VGPUAdapterType_CPU,
+        VGPUAdapterType_Unknown,
+        VGPUAdapterType_Force32 = 0x7FFFFFFF
+    } VGPUAdapterType;
 
     /// Defines pixel format.
     typedef enum VGPUTextureFormat {
@@ -233,12 +232,10 @@ extern "C" {
     } VGPUTextureType;
 
     typedef enum VGPUTextureUsage {
-        VGPUTextureUsage_None = 0x00000000,
-        VGPUTextureUsage_CopySrc = 0x00000001,
-        VGPUTextureUsage_CopyDst = 0x00000002,
-        VGPUTextureUsage_Sampled = 0x00000004,
-        VGPUTextureUsage_Storage = 0x00000008,
-        VGPUTextureUsage_OutputAttachment = 0x00000010,
+        VGPUTextureUsage_None = 0,
+        VGPUTextureUsage_ShaderRead = 0x1,
+        VGPUTextureUsage_ShaderWrite = 0x2,
+        VGPUTextureUsage_RenderTarget = 0x4,
         VGPUTextureUsage_Force32 = 0x7FFFFFFF
     } VGPUTextureUsage;
 
@@ -267,16 +264,16 @@ extern "C" {
         float a;
     } VGPUColor;
 
-    typedef struct vgpu_texture_info {
+    typedef struct VGPUTextureDescriptor {
         VGPUTextureType         type;
         VGPUTextureUsage        usage;
         VGPUTextureFormat       format;
         VGPUExtent3D            size;
-        uint32_t                mip_level_count;
-        uint32_t                sample_count;
-        const uint64_t          external_handle;
+        uint32_t                mipLevelCount;
+        uint32_t                sampleCount;
+        const uint64_t          externalHandle;
         const char*             label;
-    } vgpu_texture_info;
+    } VGPUTextureDescriptor;
 
     typedef struct VGPUTextureViewDescriptor {
         VGPUTexture         source;
@@ -324,11 +321,11 @@ extern "C" {
         uint8_t         clear_stencil;
     } vgpu_depth_stencil_attachment;
 
-    typedef struct vgpu_render_pass_info {
-        uint32_t                        num_color_attachments;
-        vgpu_color_attachment           color_attachments[VGPU_MAX_COLOR_ATTACHMENTS];
-        vgpu_depth_stencil_attachment   depth_stencil;
-    } vgpu_render_pass_info;
+    typedef struct VGPURenderPassDescriptor {
+        uint32_t                        colorAttachmentCount;
+        vgpu_color_attachment           colorAttachments[VGPU_MAX_COLOR_ATTACHMENTS];
+        vgpu_depth_stencil_attachment   depthStencilAttachment;
+    } VGPURenderPassDescriptor;
 
     typedef struct vgpu_features {
         bool independentBlend;
@@ -376,7 +373,7 @@ extern "C" {
         vgpu_backend_type   backend;
         uint32_t            vendor_id;
         uint32_t            adapter_id;
-        vgpu_adapter_type   adapter_type;
+        VGPUAdapterType     adapterType;
         char                adapter_name[VGPU_MAX_PHYSICAL_DEVICE_NAME_SIZE];
         vgpu_features       features;
         vgpu_limits         limits;
@@ -392,7 +389,7 @@ extern "C" {
 
     typedef struct vgpu_config {
         bool                    debug;
-        vgpu_adapter_type       device_preference;
+        VGPUAdapterType         adapterPreference;
         vgpu_swapchain_info     swapchain_info;
     } vgpu_config;
 
@@ -440,7 +437,7 @@ extern "C" {
     VGPU_API void vgpu_destroy_shader(vgpu_shader shader);
 
     /* Texture */
-    VGPU_API VGPUTexture vgpuTextureCreate(const vgpu_texture_info* info);
+    VGPU_API VGPUTexture vgpuTextureCreate(const VGPUTextureDescriptor* descriptor);
     VGPU_API void vgpuTextureDestroy(VGPUTexture handle);
     VGPU_API bool vgpuTextureInitView(VGPUTexture texture, const VGPUTextureViewDescriptor* descriptor);
     VGPU_API uint64_t vgpuTextureGetNativeHandle(VGPUTexture handle);
@@ -450,11 +447,11 @@ extern "C" {
     VGPU_API void vgpu_destroy_pipeline(vgpu_pipeline pipeline);
 
     /* Commands */
-    VGPU_API void vgpu_push_debug_group(const char* name);
-    VGPU_API void vgpu_pop_debug_group(void);
-    VGPU_API void vgpu_insert_debug_marker(const char* name);
-    VGPU_API void vgpu_begin_render_pass(const vgpu_render_pass_info* info);
-    VGPU_API void vgpu_end_render_pass(void);
+    VGPU_API void vgpuPushDebugGroup(const char* name, const VGPUColor* color);
+    VGPU_API void vgpuPopDebugGroup(void);
+    VGPU_API void vgpuInsertDebugMarker(const char* name, const VGPUColor* color);
+    VGPU_API void vgpuBeginRenderPass(const VGPURenderPassDescriptor* descriptor);
+    VGPU_API void vgpuEndRenderPass(void);
     VGPU_API void vgpu_bind_pipeline(vgpu_pipeline pipeline);
     VGPU_API void vgpu_draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex);
 

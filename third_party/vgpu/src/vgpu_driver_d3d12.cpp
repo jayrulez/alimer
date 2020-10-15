@@ -264,7 +264,7 @@ static bool d3d12_init(const char* app_name, const vgpu_config* config)
         return false;
     }
 
-    const bool lowPower = config->device_preference == VGPU_ADAPTER_TYPE_INTEGRATED_GPU;
+    const bool lowPower = config->adapterPreference == VGPUAdapterType_IntegratedGPU;
     IDXGIAdapter1* adapter = _vgpu_d3d12_get_adapter(lowPower);
 
     // Create the DX12 API device object.
@@ -435,7 +435,7 @@ static void d3d12_shader_destroy(vgpu_shader handle) {
 }
 
 /* Texture */
-static VGPUTexture d3d12_texture_create(const vgpu_texture_info* info) {
+static VGPUTexture d3d12_texture_create(const VGPUTextureDescriptor* desc) {
     D3D12Texture* texture = VGPU_ALLOC(D3D12Texture);
     return (VGPUTexture)texture;
 }
@@ -464,16 +464,16 @@ static void d3d12_pipeline_destroy(vgpu_pipeline handle) {
 }
 
 /* Commands */
-static void d3d12_push_debug_group(const char* name) {
+static void d3d12_push_debug_group(const char* name, const VGPUColor* color) {
 }
 
 static void d3d12_pop_debug_group(void) {
 }
 
-static void d3d12_insert_debug_marker(const char* name) {
+static void d3d12_insert_debug_marker(const char* name, const VGPUColor* color) {
 }
 
-static void d3d12_begin_render_pass(const vgpu_render_pass_info* info) {
+static void d3d12_begin_render_pass(const VGPURenderPassDescriptor* info) {
 
 }
 

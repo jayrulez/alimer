@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,38 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#pragma once
-
-#include "PlatformDef.h"
-#include <functional>
+#include "RHI_D3D.h"
 
 namespace Alimer
 {
-    // Source: https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
-    template <class T>
-    constexpr void hash_combine(std::size_t& seed, const T& v)
-    {
-        std::hash<T> hasher;
-        seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-    }
-
-    constexpr size_t string_hash(const char* input)
-    {
-        // https://stackoverflow.com/questions/2111667/compile-time-string-hashing
-        size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
-        const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
-
-        while (*input)
-        {
-            hash ^= static_cast<size_t>(*input);
-            hash *= prime;
-            ++input;
-        }
-
-        return hash;
-    }
-
-    ALIMER_API uint32 Murmur32(const void* key, uint32 len, uint32 seed);
-    ALIMER_API uint64 Murmur64(const void* key, uint64 len, uint64 seed);
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
 }

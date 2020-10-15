@@ -76,7 +76,28 @@ namespace Alimer
 
     template <typename T> inline bool IsPowerOfTwo(T value)
     {
-        return 0 == (value & (value - 1));
+        return !(value & (value - 1)) && value;
+    }
+
+    /// Round up to next power of two.
+    inline uint32_t NextPowerOfTwo(uint32_t value)
+    {
+        // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+        --value;
+        value |= value >> 1u;
+        value |= value >> 2u;
+        value |= value >> 4u;
+        value |= value >> 8u;
+        value |= value >> 16u;
+        return ++value;
+    }
+
+    /// Round up or down to the closest power of two.
+    inline uint32_t ClosestPowerOfTwo(uint32_t value)
+    {
+        const uint32_t next = NextPowerOfTwo(value);
+        const uint32_t prev = next >> 1u;
+        return (value - prev) > (next - value) ? next : prev;
     }
 
     inline uint32_t AlignTo(uint32_t value, uint32_t alignment)
