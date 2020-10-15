@@ -24,6 +24,7 @@
 
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
+#include "RHI/RHITypes.h"
 #include <memory>
 
 namespace Alimer
@@ -88,7 +89,7 @@ namespace Alimer
 
     protected:
         virtual void Initialize() {}
-        virtual void OnDraw() {}
+        virtual void OnDraw(CommandList commandList) {}
 
     private:
         void InitBeforeRun();

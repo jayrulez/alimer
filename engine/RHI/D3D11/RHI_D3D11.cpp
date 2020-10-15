@@ -25,8 +25,12 @@
 
 #if defined(ALIMER_D3D11)
 #include "RHI_D3D11.h"
-
+#include "Core/String.h"
 #include "PlatformIncl.h"
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+#   include <d3dcompiler.h>
+#endif
 
 #ifdef _WIN32
 // Indicates to hybrid graphics systems to prefer the discrete part by default
@@ -1207,6 +1211,33 @@ namespace Alimer
         {
             return static_cast<Query_DX11*>(param->internal_state.get());
         }
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+        static HINSTANCE d3dcompiler_dll = nullptr;
+        static bool d3dcompiler_dll_load_failed = false;
+        static pD3DCompile D3DCompile_func;
+
+        inline bool LoadD3DCompilerDLL(void)
+        {
+            /* load DLL on demand */
+            if (d3dcompiler_dll == nullptr && !d3dcompiler_dll_load_failed)
+            {
+                d3dcompiler_dll = LoadLibraryW(L"d3dcompiler_47.dll");
+                if (d3dcompiler_dll == nullptr)
+                {
+                    /* don't attempt to load missing DLL in the future */
+                    d3dcompiler_dll_load_failed = true;
+                    return false;
+                }
+
+                /* look up function pointers */
+                D3DCompile_func = (pD3DCompile)GetProcAddress(d3dcompiler_dll, "D3DCompile");
+                assert(D3DCompile_func != nullptr);
+            }
+
+            return d3dcompiler_dll != nullptr;
+        }
+#endif
     }
     using namespace DX11_Internal;
 
@@ -1588,7 +1619,7 @@ namespace Alimer
         return result;
     }
 
-    bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
+    bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer)
     {
         auto internal_state = std::make_shared<Resource_DX11>();
         pBuffer->internal_state = internal_state;
@@ -1602,14 +1633,16 @@ namespace Alimer
         desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
         desc.StructureByteStride = pDesc->StructureByteStride;
 
-        D3D11_SUBRESOURCE_DATA data;
-        if (pInitialData != nullptr)
+        D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
+        D3D11_SUBRESOURCE_DATA initialResourceData = {};
+        if (initialData != nullptr)
         {
-            data = _ConvertSubresourceData(*pInitialData);
+            initialResourceData.pSysMem = initialData;
+            initialDataPtr = &initialResourceData;
         }
 
         pBuffer->desc = *pDesc;
-        HRESULT hr = device->CreateBuffer(&desc, pInitialData == nullptr ? nullptr : &data, (ID3D11Buffer**)internal_state->resource.ReleaseAndGetAddressOf());
+        HRESULT hr = device->CreateBuffer(&desc, initialDataPtr, (ID3D11Buffer**)internal_state->resource.ReleaseAndGetAddressOf());
         assert(SUCCEEDED(hr) && "GPUBuffer creation failed!");
 
         if (SUCCEEDED(hr))
@@ -1728,7 +1761,8 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-    bool GraphicsDevice_DX11::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
+
+    bool GraphicsDevice_DX11::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
     {
         pShader->code.resize(BytecodeLength);
         std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
@@ -1738,42 +1772,42 @@ namespace Alimer
 
         switch (stage)
         {
-        case Alimer::VS:
+        case ShaderStage::Vertex:
         {
             auto internal_state = std::make_shared<VertexShader_DX11>();
             pShader->internal_state = internal_state;
             hr = device->CreateVertexShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
         }
         break;
-        case Alimer::HS:
+        case ShaderStage::Hull:
         {
             auto internal_state = std::make_shared<HullShader_DX11>();
             pShader->internal_state = internal_state;
             hr = device->CreateHullShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
         }
         break;
-        case Alimer::DS:
+        case ShaderStage::Domain:
         {
             auto internal_state = std::make_shared<DomainShader_DX11>();
             pShader->internal_state = internal_state;
             hr = device->CreateDomainShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
         }
         break;
-        case Alimer::GS:
+        case ShaderStage::Geometry:
         {
             auto internal_state = std::make_shared<GeometryShader_DX11>();
             pShader->internal_state = internal_state;
             hr = device->CreateGeometryShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
         }
         break;
-        case Alimer::PS:
+        case ShaderStage::Fragment:
         {
             auto internal_state = std::make_shared<PixelShader_DX11>();
             pShader->internal_state = internal_state;
             hr = device->CreatePixelShader(pShaderBytecode, BytecodeLength, nullptr, &internal_state->resource);
         }
         break;
-        case Alimer::CS:
+        case ShaderStage::Compute:
         {
             auto internal_state = std::make_shared<ComputeShader_DX11>();
             pShader->internal_state = internal_state;
@@ -1786,6 +1820,63 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
+
+    bool GraphicsDevice_DX11::CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader)
+    {
+#if defined(ALIMER_DISABLE_SHADER_COMPILER)
+        return false;
+#else
+        if (!LoadD3DCompilerDLL())
+        {
+            return false;
+        }
+
+        ComPtr<ID3DBlob> output = nullptr;
+        ID3DBlob* errors_or_warnings = nullptr;
+
+        const char* target = "vs_5_0";
+        switch (stage)
+        {
+        case ShaderStage::Hull:
+            target = "hs_5_0";
+            break;
+        case ShaderStage::Domain:
+            target = "ds_5_0";
+            break;
+        case ShaderStage::Geometry:
+            target = "gs_5_0";
+            break;
+        case ShaderStage::Fragment:
+            target = "ps_5_0";
+            break;
+        case ShaderStage::Compute:
+            target = "cs_5_0";
+            break;
+        }
+
+        HRESULT hr = D3DCompile_func(
+            source,
+            strlen(source),
+            nullptr,
+            NULL,
+            D3D_COMPILE_STANDARD_FILE_INCLUDE,
+            entryPoint,
+            target,
+            D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_OPTIMIZATION_LEVEL3,
+            0,
+            &output,
+            &errors_or_warnings);
+
+        if (FAILED(hr)) {
+            const char* errorMsg = (LPCSTR)errors_or_warnings->GetBufferPointer();
+            //errors->Reset(errors_or_warnings->GetBufferPointer(), static_cast<uint32_t>(errors_or_warnings->GetBufferSize()));
+            return false;
+        }
+
+        return CreateShader(stage, output->GetBufferPointer(), output->GetBufferSize(), pShader);
+#endif
+    }
+
     bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
     {
         auto internal_state = std::make_shared<BlendState_DX11>();
@@ -1986,6 +2077,7 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
+
     bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
     {
         pso->internal_state = emptyresource;
@@ -1994,6 +2086,7 @@ namespace Alimer
 
         return true;
     }
+
     bool GraphicsDevice_DX11::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
     {
         renderpass->internal_state = emptyresource;
@@ -2624,7 +2717,7 @@ namespace Alimer
         if (deviceContexts[cmd] == nullptr)
         {
             // need to create one more command list:
-            assert(cmd < COMMANDLIST_COUNT);
+            ALIMER_ASSERT(cmd < kCommanstListCount);
 
             HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[cmd]);
             assert(SUCCEEDED(hr));
@@ -2876,7 +2969,8 @@ namespace Alimer
         }
         deviceContexts[cmd]->RSSetViewports(NumViewports, d3dViewPorts);
     }
-    void GraphicsDevice_DX11::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+
+    void GraphicsDevice_DX11::BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
     {
         if (resource != nullptr && resource->IsValid())
         {
@@ -2895,22 +2989,22 @@ namespace Alimer
 
             switch (stage)
             {
-            case Alimer::VS:
+            case ShaderStage::Vertex:
                 deviceContexts[cmd]->VSSetShaderResources(slot, 1, &SRV);
                 break;
-            case Alimer::HS:
+            case ShaderStage::Hull:
                 deviceContexts[cmd]->HSSetShaderResources(slot, 1, &SRV);
                 break;
-            case Alimer::DS:
+            case ShaderStage::Domain:
                 deviceContexts[cmd]->DSSetShaderResources(slot, 1, &SRV);
                 break;
-            case Alimer::GS:
+            case ShaderStage::Geometry:
                 deviceContexts[cmd]->GSSetShaderResources(slot, 1, &SRV);
                 break;
-            case Alimer::PS:
+            case ShaderStage::Fragment:
                 deviceContexts[cmd]->PSSetShaderResources(slot, 1, &SRV);
                 break;
-            case Alimer::CS:
+            case ShaderStage::Compute:
                 deviceContexts[cmd]->CSSetShaderResources(slot, 1, &SRV);
                 break;
             default:
@@ -2919,7 +3013,8 @@ namespace Alimer
             }
         }
     }
-    void GraphicsDevice_DX11::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+
+    void GraphicsDevice_DX11::BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
     {
         assert(count <= 16);
         ID3D11ShaderResourceView* srvs[16];
@@ -2930,22 +3025,22 @@ namespace Alimer
 
         switch (stage)
         {
-        case Alimer::VS:
+        case ShaderStage::Vertex:
             deviceContexts[cmd]->VSSetShaderResources(slot, count, srvs);
             break;
-        case Alimer::HS:
+        case ShaderStage::Hull:
             deviceContexts[cmd]->HSSetShaderResources(slot, count, srvs);
             break;
-        case Alimer::DS:
+        case ShaderStage::Domain:
             deviceContexts[cmd]->DSSetShaderResources(slot, count, srvs);
             break;
-        case Alimer::GS:
+        case ShaderStage::Geometry:
             deviceContexts[cmd]->GSSetShaderResources(slot, count, srvs);
             break;
-        case Alimer::PS:
+        case ShaderStage::Fragment:
             deviceContexts[cmd]->PSSetShaderResources(slot, count, srvs);
             break;
-        case Alimer::CS:
+        case ShaderStage::Compute:
             deviceContexts[cmd]->CSSetShaderResources(slot, count, srvs);
             break;
         default:
@@ -2953,7 +3048,8 @@ namespace Alimer
             break;
         }
     }
-    void GraphicsDevice_DX11::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+
+    void GraphicsDevice_DX11::BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
     {
         if (resource != nullptr && resource->IsValid())
         {
@@ -2970,7 +3066,7 @@ namespace Alimer
                 UAV = internal_state->subresources_uav[subresource].Get();
             }
 
-            if (stage == CS)
+            if (stage == ShaderStage::Compute)
             {
                 deviceContexts[cmd]->CSSetUnorderedAccessViews(slot, 1, &UAV, nullptr);
             }
@@ -2982,7 +3078,8 @@ namespace Alimer
             }
         }
     }
-    void GraphicsDevice_DX11::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+
+    void GraphicsDevice_DX11::BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
     {
         assert(slot + count <= 8);
         ID3D11UnorderedAccessView* uavs[8];
@@ -2990,13 +3087,13 @@ namespace Alimer
         {
             uavs[i] = resources[i] != nullptr && resources[i]->IsValid() ? to_internal(resources[i])->uav.Get() : nullptr;
 
-            if (stage != CS)
+            if (stage != ShaderStage::Compute)
             {
                 raster_uavs[cmd][slot + i] = uavs[i];
             }
         }
 
-        if (stage == CS)
+        if (stage == ShaderStage::Compute)
         {
             deviceContexts[cmd]->CSSetUnorderedAccessViews(static_cast<uint32_t>(slot), static_cast<uint32_t>(count), uavs, nullptr);
         }
@@ -3006,6 +3103,7 @@ namespace Alimer
             raster_uavs_count[cmd] = Alimer::Max(raster_uavs_count[cmd], uint8_t(count));
         }
     }
+
     void GraphicsDevice_DX11::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
     {
         ALIMER_ASSERT_MSG(num <= _countof(__nullBlob), "Extend nullBlob to support more resource unbinding!");
@@ -3016,6 +3114,7 @@ namespace Alimer
         deviceContexts[cmd]->DSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
         deviceContexts[cmd]->CSSetShaderResources(slot, num, (ID3D11ShaderResourceView**)__nullBlob);
     }
+
     void GraphicsDevice_DX11::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
     {
         ALIMER_ASSERT_MSG(num <= _countof(__nullBlob), "Extend nullBlob to support more resource unbinding!");
@@ -3024,7 +3123,8 @@ namespace Alimer
         raster_uavs_count[cmd] = 0;
         raster_uavs_slot[cmd] = 8;
     }
-    void GraphicsDevice_DX11::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
+
+    void GraphicsDevice_DX11::BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
     {
         if (sampler != nullptr && sampler->IsValid())
         {
@@ -3033,26 +3133,26 @@ namespace Alimer
 
             switch (stage)
             {
-            case Alimer::VS:
+            case ShaderStage::Vertex:
                 deviceContexts[cmd]->VSSetSamplers(slot, 1, &SAM);
                 break;
-            case Alimer::HS:
+            case ShaderStage::Hull:
                 deviceContexts[cmd]->HSSetSamplers(slot, 1, &SAM);
                 break;
-            case Alimer::DS:
+            case ShaderStage::Domain:
                 deviceContexts[cmd]->DSSetSamplers(slot, 1, &SAM);
                 break;
-            case Alimer::GS:
+            case ShaderStage::Geometry:
                 deviceContexts[cmd]->GSSetSamplers(slot, 1, &SAM);
                 break;
-            case Alimer::PS:
+            case ShaderStage::Fragment:
                 deviceContexts[cmd]->PSSetSamplers(slot, 1, &SAM);
                 break;
-            case Alimer::CS:
+            case ShaderStage::Compute:
                 deviceContexts[cmd]->CSSetSamplers(slot, 1, &SAM);
                 break;
-            case MS:
-            case AS:
+            case ShaderStage::Mesh:
+            case ShaderStage::Amplification:
                 break;
             default:
                 assert(0);
@@ -3060,31 +3160,31 @@ namespace Alimer
             }
         }
     }
-    void GraphicsDevice_DX11::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+    void GraphicsDevice_DX11::BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
     {
         ID3D11Buffer* res = buffer != nullptr && buffer->IsValid() ? (ID3D11Buffer*)to_internal(buffer)->resource.Get() : nullptr;
         switch (stage)
         {
-        case Alimer::VS:
+        case ShaderStage::Vertex:
             deviceContexts[cmd]->VSSetConstantBuffers(slot, 1, &res);
             break;
-        case Alimer::HS:
+        case ShaderStage::Hull:
             deviceContexts[cmd]->HSSetConstantBuffers(slot, 1, &res);
             break;
-        case Alimer::DS:
+        case ShaderStage::Domain:
             deviceContexts[cmd]->DSSetConstantBuffers(slot, 1, &res);
             break;
-        case Alimer::GS:
+        case ShaderStage::Geometry:
             deviceContexts[cmd]->GSSetConstantBuffers(slot, 1, &res);
             break;
-        case Alimer::PS:
+        case ShaderStage::Fragment:
             deviceContexts[cmd]->PSSetConstantBuffers(slot, 1, &res);
             break;
-        case Alimer::CS:
+        case ShaderStage::Compute:
             deviceContexts[cmd]->CSSetConstantBuffers(slot, 1, &res);
             break;
-        case MS:
-        case AS:
+        case ShaderStage::Mesh:
+        case ShaderStage::Amplification:
             break;
         default:
             assert(0);
@@ -3103,10 +3203,10 @@ namespace Alimer
         deviceContexts[cmd]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const uint32_t*>(__nullBlob)));
     }
 
-    void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
+    void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
     {
         ID3D11Buffer* res = indexBuffer != nullptr && indexBuffer->IsValid() ? (ID3D11Buffer*)to_internal(indexBuffer)->resource.Get() : nullptr;
-        deviceContexts[cmd]->IASetIndexBuffer(res, (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
+        deviceContexts[cmd]->IASetIndexBuffer(res, (format == IndexFormat::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
     }
 
     void GraphicsDevice_DX11::BindStencilRef(uint32_t value, CommandList cmd)
@@ -3295,27 +3395,21 @@ namespace Alimer
         return result;
     }
 
-    void GraphicsDevice_DX11::EventBegin(const char* name, CommandList cmd)
+    void GraphicsDevice_DX11::PushDebugGroup(CommandList cmd, const char* name)
     {
-        /*wchar_t text[128];
-        if (wiHelper::StringConvert(name, text) > 0)
-        {
-            userDefinedAnnotations[cmd]->BeginEvent(text);
-        }*/
+        auto wName = ToUtf16(name, strlen(name));
+        userDefinedAnnotations[cmd]->BeginEvent(wName.c_str());
     }
 
-    void GraphicsDevice_DX11::EventEnd(CommandList cmd)
+    void GraphicsDevice_DX11::PopDebugGroup(CommandList cmd)
     {
-        //userDefinedAnnotations[cmd]->EndEvent();
+        userDefinedAnnotations[cmd]->EndEvent();
     }
 
-    void GraphicsDevice_DX11::SetMarker(const char* name, CommandList cmd)
+    void GraphicsDevice_DX11::InsertDebugMarker(CommandList cmd, const char* name)
     {
-        /*wchar_t text[128];
-        if (wiHelper::StringConvert(name, text) > 0)
-        {
-            userDefinedAnnotations[cmd]->SetMarker(text);
-        }*/
+        auto wName = ToUtf16(name, strlen(name));
+        userDefinedAnnotations[cmd]->SetMarker(wName.c_str());
     }
 }
 

@@ -699,46 +699,47 @@ namespace Alimer
 
             return D3D12_RESOURCE_STATE_COMMON;
         }
-        constexpr D3D12_SHADER_VISIBILITY _ConvertShaderVisibility(SHADERSTAGE value)
+        constexpr D3D12_SHADER_VISIBILITY _ConvertShaderVisibility(ShaderStage value)
         {
             switch (value)
             {
-            case MS:
+            case ShaderStage::Mesh:
                 return D3D12_SHADER_VISIBILITY_MESH;
-            case AS:
+            case ShaderStage::Amplification:
                 return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-            case VS:
+            case ShaderStage::Vertex:
                 return D3D12_SHADER_VISIBILITY_VERTEX;
-            case HS:
+            case ShaderStage::Hull:
                 return D3D12_SHADER_VISIBILITY_HULL;
-            case DS:
+            case ShaderStage::Domain:
                 return D3D12_SHADER_VISIBILITY_DOMAIN;
-            case GS:
+            case ShaderStage::Geometry:
                 return D3D12_SHADER_VISIBILITY_GEOMETRY;
-            case PS:
+            case ShaderStage::Fragment:
                 return D3D12_SHADER_VISIBILITY_PIXEL;
             default:
                 return D3D12_SHADER_VISIBILITY_ALL;
             }
             return D3D12_SHADER_VISIBILITY_ALL;
         }
-        constexpr D3D12_SHADING_RATE _ConvertShadingRate(SHADING_RATE value)
+
+        constexpr D3D12_SHADING_RATE _ConvertShadingRate(ShadingRate value)
         {
             switch (value)
             {
-            case SHADING_RATE_1X1:
+            case ShadingRate::Rate_1X1:
                 return D3D12_SHADING_RATE_1X1;
-            case SHADING_RATE_1X2:
+            case ShadingRate::Rate_1X2:
                 return D3D12_SHADING_RATE_1X2;
-            case SHADING_RATE_2X1:
+            case ShadingRate::Rate_2X1:
                 return D3D12_SHADING_RATE_2X1;
-            case SHADING_RATE_2X2:
+            case ShadingRate::Rate_2X2:
                 return D3D12_SHADING_RATE_2X2;
-            case SHADING_RATE_2X4:
+            case ShadingRate::Rate_2X4:
                 return D3D12_SHADING_RATE_2X4;
-            case SHADING_RATE_4X2:
+            case ShadingRate::Rate_4X2:
                 return D3D12_SHADING_RATE_4X2;
-            case SHADING_RATE_4X4:
+            case ShadingRate::Rate_4X4:
                 return D3D12_SHADING_RATE_4X4;
             default:
                 return D3D12_SHADING_RATE_1X1;
@@ -1009,7 +1010,7 @@ namespace Alimer
 
             D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
 
-            GraphicsDevice::GPUAllocation dynamic[COMMANDLIST_COUNT];
+            GraphicsDevice::GPUAllocation dynamic[kCommanstListCount];
 
             virtual ~Resource_DX12()
             {
@@ -2352,7 +2353,7 @@ namespace Alimer
             heapDesc.NodeMask = 0;
             heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
             heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-            heapDesc.NumDescriptors = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * COMMANDLIST_COUNT;
+            heapDesc.NumDescriptors = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT * kCommanstListCount;
             HRESULT hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorheap_RTV));
             assert(SUCCEEDED(hr));
             rtv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -2363,7 +2364,7 @@ namespace Alimer
             heapDesc.NodeMask = 0;
             heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
             heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-            heapDesc.NumDescriptors = COMMANDLIST_COUNT;
+            heapDesc.NumDescriptors = kCommanstListCount;
             HRESULT hr = device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorheap_DSV));
             assert(SUCCEEDED(hr));
             dsv_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
@@ -2665,7 +2666,7 @@ namespace Alimer
         return result;
     }
 
-    bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer)
+    bool GraphicsDevice_DX12::CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer)
     {
         auto internal_state = std::make_shared<Resource_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -2738,7 +2739,7 @@ namespace Alimer
 
 
         // Issue data copy on request:
-        if (pInitialData != nullptr)
+        if (initialData != nullptr)
         {
             GPUBufferDesc uploaddesc;
             uploaddesc.ByteWidth = pDesc->ByteWidth;
@@ -2752,7 +2753,7 @@ namespace Alimer
             CD3DX12_RANGE readRange(0, 0);
             hr = upload_resource->Map(0, &readRange, &pData);
             assert(SUCCEEDED(hr));
-            memcpy(pData, pInitialData->pSysMem, pDesc->ByteWidth);
+            memcpy(pData, initialData, pDesc->ByteWidth);
 
             copyQueueLock.lock();
             {
@@ -2795,6 +2796,7 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
+
     bool GraphicsDevice_DX12::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
     {
         auto internal_state = std::make_shared<Texture_DX12>();
@@ -3017,7 +3019,8 @@ namespace Alimer
 
         return true;
     }
-    bool GraphicsDevice_DX12::CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
+
+    bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
     {
         auto internal_state = std::make_shared<PipelineState_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3107,7 +3110,7 @@ namespace Alimer
                 }
             };
 
-            if (stage == SHADERSTAGE_COUNT) // Library reflection
+            if (stage == ShaderStage::Count) // Library reflection
             {
                 ComPtr<ID3D12LibraryReflection> reflection;
                 hr = container_reflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&reflection));
@@ -3156,7 +3159,7 @@ namespace Alimer
 #endif // _X64
 
 
-            if (stage == CS || stage == SHADERSTAGE_COUNT)
+            if (stage == ShaderStage::Compute || stage == ShaderStage::Count)
             {
                 std::vector<D3D12_ROOT_PARAMETER> params;
 
@@ -3197,7 +3200,7 @@ namespace Alimer
                 hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
                 assert(SUCCEEDED(hr));
 
-                if (stage == CS)
+                if (stage == ShaderStage::Compute)
                 {
                     struct PSO_STREAM
                     {
@@ -3220,6 +3223,13 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
+
+    bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader)
+    {
+        pShader->internal_state = nullptr;
+        return false;
+    }
+
     bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
     {
         pBlendState->internal_state = allocationhandler;
@@ -3227,6 +3237,7 @@ namespace Alimer
         pBlendState->desc = *pBlendStateDesc;
         return true;
     }
+
     bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
     {
         pDepthStencilState->internal_state = allocationhandler;
@@ -3234,6 +3245,7 @@ namespace Alimer
         pDepthStencilState->desc = *pDepthStencilStateDesc;
         return true;
     }
+
     bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
     {
         pRasterizerState->internal_state = allocationhandler;
@@ -3241,6 +3253,7 @@ namespace Alimer
         pRasterizerState->desc = *pRasterizerStateDesc;
         return true;
     }
+
     bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_DX12>();
@@ -3579,9 +3592,9 @@ namespace Alimer
                     geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertexStride;
                     geometry.Triangles.VertexCount = x.triangles.vertexCount;
                     geometry.Triangles.VertexFormat = _ConvertFormat(x.triangles.vertexFormat);
-                    geometry.Triangles.IndexFormat = (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+                    geometry.Triangles.IndexFormat = (x.triangles.indexFormat == IndexFormat::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
                     geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
-                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == IndexFormat::UInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
                     geometry.Triangles.IndexCount = x.triangles.indexCount;
 
                     if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
@@ -4558,7 +4571,7 @@ namespace Alimer
         return -1;
     }
 
-    void GraphicsDevice_DX12::WriteShadingRateValue(SHADING_RATE rate, void* dest)
+    void GraphicsDevice_DX12::WriteShadingRateValue(ShadingRate rate, void* dest)
     {
         D3D12_SHADING_RATE _rate = _ConvertShadingRate(rate);
         if (!features_6.AdditionalShadingRatesSupported)
@@ -4568,6 +4581,7 @@ namespace Alimer
 
         *(uint8_t*)dest = _rate;
     }
+
     void GraphicsDevice_DX12::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
     {
         D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
@@ -4905,7 +4919,7 @@ namespace Alimer
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
-        const float clearcolor[] = { 0,0,0,1 };
+        const float clearcolor[] = { 0, 0, 0, 1 };
         device->CreateRenderTargetView(backBuffers[backbuffer_index].Get(), nullptr, rtv_descriptor_heap_start);
 
         D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
@@ -4952,7 +4966,7 @@ namespace Alimer
         if (GetDirectCommandList(cmd) == nullptr)
         {
             // need to create one more command list:
-            assert(cmd < COMMANDLIST_COUNT);
+            ALIMER_ASSERT(cmd < kCommanstListCount);
 
             HRESULT hr;
             for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
@@ -5046,8 +5060,8 @@ namespace Alimer
 
         // Execute deferred command lists:
         {
-            ID3D12CommandList* cmdLists[COMMANDLIST_COUNT];
-            CommandList cmds[COMMANDLIST_COUNT];
+            ID3D12CommandList* cmdLists[kCommanstListCount];
+            CommandList cmds[kCommanstListCount];
             uint32_t counter = 0;
 
             CommandList cmd_last = cmd_count.load();
@@ -5363,7 +5377,8 @@ namespace Alimer
         }
         GetDirectCommandList(cmd)->RSSetViewports(NumViewports, d3dViewPorts);
     }
-    void GraphicsDevice_DX12::BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+
+    void GraphicsDevice_DX12::BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
     {
         assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
         auto& descriptors = GetFrameResources().descriptors[cmd];
@@ -5374,7 +5389,8 @@ namespace Alimer
             descriptors.dirty = true;
         }
     }
-    void GraphicsDevice_DX12::BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
     {
         if (resources != nullptr)
         {
@@ -5384,7 +5400,8 @@ namespace Alimer
             }
         }
     }
-    void GraphicsDevice_DX12::BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
+
+    void GraphicsDevice_DX12::BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource)
     {
         assert(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
         auto& descriptors = GetFrameResources().descriptors[cmd];
@@ -5395,7 +5412,8 @@ namespace Alimer
             descriptors.dirty = true;
         }
     }
-    void GraphicsDevice_DX12::BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd)
     {
         if (resources != nullptr)
         {
@@ -5405,13 +5423,16 @@ namespace Alimer
             }
         }
     }
+
     void GraphicsDevice_DX12::UnbindResources(uint32_t slot, uint32_t num, CommandList cmd)
     {
     }
+
     void GraphicsDevice_DX12::UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd)
     {
     }
-    void GraphicsDevice_DX12::BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
     {
         assert(slot < GPU_SAMPLER_HEAP_COUNT);
         auto& descriptors = GetFrameResources().descriptors[cmd];
@@ -5421,7 +5442,8 @@ namespace Alimer
             descriptors.dirty = true;
         }
     }
-    void GraphicsDevice_DX12::BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
     {
         assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
         auto& descriptors = GetFrameResources().descriptors[cmd];
@@ -5431,6 +5453,7 @@ namespace Alimer
             descriptors.dirty = true;
         }
     }
+
     void GraphicsDevice_DX12::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
     {
         assert(count <= 8);
@@ -5451,29 +5474,34 @@ namespace Alimer
         }
         GetDirectCommandList(cmd)->IASetVertexBuffers(static_cast<uint32_t>(slot), static_cast<uint32_t>(count), res);
     }
-    void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
     {
-        D3D12_INDEX_BUFFER_VIEW res = {};
+        D3D12_INDEX_BUFFER_VIEW view = {};
         if (indexBuffer != nullptr)
         {
             auto internal_state = to_internal(indexBuffer);
 
-            res.BufferLocation = internal_state->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
-            res.Format = (format == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
-            res.SizeInBytes = indexBuffer->desc.ByteWidth;
+            view.BufferLocation = internal_state->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)offset;
+            view.Format = (format == IndexFormat::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
+            view.SizeInBytes = indexBuffer->desc.ByteWidth;
         }
-        GetDirectCommandList(cmd)->IASetIndexBuffer(&res);
+
+        GetDirectCommandList(cmd)->IASetIndexBuffer(&view);
     }
+
     void GraphicsDevice_DX12::BindStencilRef(uint32_t value, CommandList cmd)
     {
         GetDirectCommandList(cmd)->OMSetStencilRef(value);
     }
+
     void GraphicsDevice_DX12::BindBlendFactor(float r, float g, float b, float a, CommandList cmd)
     {
         const float blendFactor[4] = { r, g, b, a };
         GetDirectCommandList(cmd)->OMSetBlendFactor(blendFactor);
     }
-    void GraphicsDevice_DX12::BindShadingRate(SHADING_RATE rate, CommandList cmd)
+
+    void GraphicsDevice_DX12::BindShadingRate(ShadingRate rate, CommandList cmd)
     {
         D3D12_SHADING_RATE _rate = D3D12_SHADING_RATE_1X1;
         WriteShadingRateValue(rate, &_rate);
@@ -5485,6 +5513,7 @@ namespace Alimer
             GetDirectCommandList(cmd)->RSSetShadingRate(_rate, nullptr);
         }
     }
+
     void GraphicsDevice_DX12::BindShadingRateImage(const Texture* texture, CommandList cmd)
     {
         if (VARIABLE_RATE_SHADING_TIER2)
@@ -5529,9 +5558,11 @@ namespace Alimer
         active_pso[cmd] = pso;
         dirty_pso[cmd] = true;
     }
+
     void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
     {
-        assert(cs->stage == CS);
+        ALIMER_ASSERT(cs->stage == ShaderStage::Compute);
+
         if (active_cs[cmd] != cs)
         {
             prev_pipeline_hash[cmd] = 0;
@@ -5553,43 +5584,51 @@ namespace Alimer
             }
         }
     }
+
     void GraphicsDevice_DX12::Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd)
     {
         predraw(cmd);
         GetDirectCommandList(cmd)->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
     }
+
     void GraphicsDevice_DX12::DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd)
     {
         predraw(cmd);
         GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
     }
+
     void GraphicsDevice_DX12::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
     {
         predraw(cmd);
         GetDirectCommandList(cmd)->DrawInstanced(vertexCount, instanceCount, startVertexLocation, startInstanceLocation);
     }
+
     void GraphicsDevice_DX12::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd)
     {
         predraw(cmd);
         GetDirectCommandList(cmd)->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
     }
+
     void GraphicsDevice_DX12::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
         GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
+
     void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
         GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
+
     void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
     {
         predispatch(cmd);
         GetDirectCommandList(cmd)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
+
     void GraphicsDevice_DX12::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predispatch(cmd);
@@ -5815,7 +5854,7 @@ namespace Alimer
                     geometry.Triangles.VertexBuffer.StartAddress = to_internal(&x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() +
                         (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
                     geometry.Triangles.IndexBuffer = to_internal(&x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
-                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == INDEXBUFFER_FORMAT::INDEXFORMAT_16BIT ? sizeof(uint16_t) : sizeof(uint32_t));
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == IndexFormat::UInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
 
                     if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
                     {
@@ -6109,27 +6148,19 @@ namespace Alimer
         return result;
     }
 
-    void GraphicsDevice_DX12::EventBegin(const char* name, CommandList cmd)
+    void GraphicsDevice_DX12::PushDebugGroup(CommandList cmd, const char* name)
     {
-        /*wchar_t text[128];
-        if (wiHelper::StringConvert(name, text) > 0)
-        {
-            PIXBeginEvent(GetDirectCommandList(cmd), 0xFF000000, text);
-        }*/
+        PIXBeginEvent(GetDirectCommandList(cmd), 0xFF000000, name);
     }
 
-    void GraphicsDevice_DX12::EventEnd(CommandList cmd)
+    void GraphicsDevice_DX12::PopDebugGroup(CommandList cmd)
     {
-        //PIXEndEvent(GetDirectCommandList(cmd));
+        PIXEndEvent(GetDirectCommandList(cmd));
     }
 
-    void GraphicsDevice_DX12::SetMarker(const char* name, CommandList cmd)
+    void GraphicsDevice_DX12::InsertDebugMarker(CommandList cmd, const char* name)
     {
-        /*wchar_t text[128];
-        if (wiHelper::StringConvert(name, text) > 0)
-        {
-            PIXSetMarker(GetDirectCommandList(cmd), 0xFFFF0000, text);
-        }*/
+        PIXSetMarker(GetDirectCommandList(cmd), 0xFFFF0000, name);
     }
 }
 

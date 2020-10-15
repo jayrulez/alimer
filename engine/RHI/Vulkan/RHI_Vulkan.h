@@ -61,7 +61,7 @@ namespace Alimer
     {
         friend struct DescriptorTableFrameAllocator;
     private:
-
+        bool debugUtils = false;
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -132,8 +132,8 @@ namespace Alimer
         struct FrameResources
         {
             VkFence frameFence = VK_NULL_HANDLE;
-            VkCommandPool commandPools[COMMANDLIST_COUNT] = {};
-            VkCommandBuffer commandBuffers[COMMANDLIST_COUNT] = {};
+            VkCommandPool commandPools[kCommanstListCount] = {};
+            VkCommandBuffer commandBuffers[kCommanstListCount] = {};
 
             VkQueue copyQueue = VK_NULL_HANDLE;
             VkCommandPool copyCommandPool = VK_NULL_HANDLE;
@@ -170,8 +170,7 @@ namespace Alimer
                 void validate(bool graphics, CommandList cmd, bool raytracing = false);
                 VkDescriptorSet commit(const DescriptorTable* table);
             };
-            DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
-
+            DescriptorTableFrameAllocator descriptors[kCommanstListCount];
 
             struct ResourceFrameAllocator
             {
@@ -187,7 +186,7 @@ namespace Alimer
                 void clear();
                 uint64_t calculateOffset(uint8_t* address);
             };
-            ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
+            ResourceFrameAllocator resourceBuffer[kCommanstListCount];
 
         };
         FrameResources frames[BACKBUFFER_COUNT];
@@ -195,14 +194,14 @@ namespace Alimer
         inline VkCommandBuffer GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandBuffers[cmd]; }
 
         std::unordered_map<size_t, VkPipeline> pipelines_global;
-        std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[COMMANDLIST_COUNT];
-        size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
-        const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-        const Shader* active_cs[COMMANDLIST_COUNT] = {};
-        const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-        const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+        std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[kCommanstListCount];
+        size_t prev_pipeline_hash[kCommanstListCount] = {};
+        const PipelineState* active_pso[kCommanstListCount] = {};
+        const Shader* active_cs[kCommanstListCount] = {};
+        const RaytracingPipelineState* active_rt[kCommanstListCount] = {};
+        const RenderPass* active_renderpass[kCommanstListCount] = {};
 
-        bool dirty_pso[COMMANDLIST_COUNT] = {};
+        bool dirty_pso[kCommanstListCount] = {};
         void pso_validate(CommandList cmd);
 
         void predraw(CommandList cmd);
@@ -228,10 +227,11 @@ namespace Alimer
         GraphicsDevice_Vulkan(void* window, bool fullscreen, bool enableDebugLayer_);
         virtual ~GraphicsDevice_Vulkan();
 
-        bool CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) override;
+        bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
-        bool CreateShader(SHADERSTAGE stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         bool CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState) override;
         bool CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState) override;
@@ -279,16 +279,16 @@ namespace Alimer
         void RenderPassEnd(CommandList cmd) override;
         void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
         void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
-        void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-        void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
         void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
         void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
-        void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
+        void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
+        void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
         void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
+        void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
         void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
@@ -318,10 +318,9 @@ namespace Alimer
 
         GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
-        void EventBegin(const char* name, CommandList cmd) override;
-        void EventEnd(CommandList cmd) override;
-        void SetMarker(const char* name, CommandList cmd) override;
-
+        void PushDebugGroup(CommandList cmd, const char* name) override;
+        void PopDebugGroup(CommandList cmd) override;
+        void InsertDebugMarker(CommandList cmd, const char* name) override;
 
         struct AllocationHandler
         {
@@ -574,7 +573,7 @@ namespace Alimer
                 destroylocker.unlock();
             }
         };
-        std::shared_ptr<AllocationHandler> allocationhandler;
 
+        std::shared_ptr<AllocationHandler> allocationhandler;
     };
 }

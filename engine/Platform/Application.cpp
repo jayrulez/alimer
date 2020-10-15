@@ -119,8 +119,9 @@ namespace Alimer
     {
         CommandList commandList = graphicsDevice->BeginCommandList();
         graphicsDevice->PresentBegin(commandList);
+        graphicsDevice->PushDebugGroup(commandList, "Frame");
 
-        OnDraw();
+        OnDraw(commandList);
 
         /*VGPUColor color = { 1.0f, 0.78f, 0.05f, 1.0f };
         vgpuPushDebugGroup("Frame", &color);
@@ -132,9 +133,8 @@ namespace Alimer
         context->BeginRenderPass(renderPass);
         context->EndRenderPass();
         agpu_bind_pipeline(render_pipeline);
-        agpu_draw(3, 1, 0);
-        vgpuPopDebugGroup();*/
-
+        agpu_draw(3, 1, 0);*/
+        graphicsDevice->PopDebugGroup(commandList);
         graphicsDevice->PresentEnd(commandList);
     }
 

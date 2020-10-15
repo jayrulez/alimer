@@ -107,12 +107,12 @@ namespace Alimer
 
         struct FrameResources
         {
-            Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocators[COMMANDLIST_COUNT];
-            Microsoft::WRL::ComPtr<ID3D12CommandList> commandLists[COMMANDLIST_COUNT];
+            ComPtr<ID3D12CommandAllocator> commandAllocators[kCommanstListCount];
+            ComPtr<ID3D12CommandList> commandLists[kCommanstListCount];
 
-            Microsoft::WRL::ComPtr<ID3D12CommandQueue> copyQueue;
-            Microsoft::WRL::ComPtr<ID3D12CommandAllocator> copyAllocator;
-            Microsoft::WRL::ComPtr<ID3D12CommandList> copyCommandList;
+            ComPtr<ID3D12CommandQueue> copyQueue;
+            ComPtr<ID3D12CommandAllocator> copyAllocator;
+            ComPtr<ID3D12CommandList> copyCommandList;
 
             struct DescriptorTableFrameAllocator
             {
@@ -152,7 +152,7 @@ namespace Alimer
                 void validate(bool graphics, CommandList cmd);
                 DescriptorHandles commit(const DescriptorTable* table, CommandList cmd);
             };
-            DescriptorTableFrameAllocator descriptors[COMMANDLIST_COUNT];
+            DescriptorTableFrameAllocator descriptors[kCommanstListCount];
 
             struct ResourceFrameAllocator
             {
@@ -168,7 +168,7 @@ namespace Alimer
                 void clear();
                 uint64_t calculateOffset(uint8_t* address);
             };
-            ResourceFrameAllocator resourceBuffer[COMMANDLIST_COUNT];
+            ResourceFrameAllocator resourceBuffer[kCommanstListCount];
         };
         FrameResources frames[BACKBUFFER_COUNT];
         FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
@@ -176,21 +176,21 @@ namespace Alimer
 
         Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
-        PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+        PRIMITIVETOPOLOGY prev_pt[kCommanstListCount] = {};
 
         std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
-        std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[COMMANDLIST_COUNT];
-        size_t prev_pipeline_hash[COMMANDLIST_COUNT] = {};
-        const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-        const Shader* active_cs[COMMANDLIST_COUNT] = {};
-        const RaytracingPipelineState* active_rt[COMMANDLIST_COUNT] = {};
-        const RootSignature* active_rootsig_graphics[COMMANDLIST_COUNT] = {};
-        const RootSignature* active_rootsig_compute[COMMANDLIST_COUNT] = {};
-        const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
-        D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[COMMANDLIST_COUNT][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
-        D3D12_SHADING_RATE prev_shadingrate[COMMANDLIST_COUNT] = {};
+        std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[kCommanstListCount];
+        size_t prev_pipeline_hash[kCommanstListCount] = {};
+        const PipelineState* active_pso[kCommanstListCount] = {};
+        const Shader* active_cs[kCommanstListCount] = {};
+        const RaytracingPipelineState* active_rt[kCommanstListCount] = {};
+        const RootSignature* active_rootsig_graphics[kCommanstListCount] = {};
+        const RootSignature* active_rootsig_compute[kCommanstListCount] = {};
+        const RenderPass* active_renderpass[kCommanstListCount] = {};
+        D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[kCommanstListCount][D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        D3D12_SHADING_RATE prev_shadingrate[kCommanstListCount] = {};
 
-        bool dirty_pso[COMMANDLIST_COUNT] = {};
+        bool dirty_pso[kCommanstListCount] = {};
         void pso_validate(CommandList cmd);
 
         void predraw(CommandList cmd);
@@ -202,7 +202,7 @@ namespace Alimer
             GPU_QUERY_TYPE type;
             UINT index;
         };
-        std::vector<Query_Resolve> query_resolves[COMMANDLIST_COUNT] = {};
+        std::vector<Query_Resolve> query_resolves[kCommanstListCount] = {};
 
         std::atomic<CommandList> cmd_count{ 0 };
 
@@ -212,10 +212,11 @@ namespace Alimer
         ~GraphicsDevice_DX12() override;
 
         void GetAdapter(IDXGIAdapter1** ppAdapter);
-        bool CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) override;
+        bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
-        bool CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         bool CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState) override;
         bool CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState) override;
@@ -231,7 +232,7 @@ namespace Alimer
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
         int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
-        void WriteShadingRateValue(SHADING_RATE rate, void* dest) override;
+        void WriteShadingRateValue(ShadingRate rate, void* dest) override;
         void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
         void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
         void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
@@ -262,19 +263,19 @@ namespace Alimer
         void RenderPassEnd(CommandList cmd) override;
         void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
         void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
-        void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-        void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
         void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
         void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
-        void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
+        void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
+        void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
         void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
+        void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
-        void BindShadingRate(SHADING_RATE rate, CommandList cmd) override;
+        void BindShadingRate(ShadingRate rate, CommandList cmd) override;
         void BindShadingRateImage(const Texture* texture, CommandList cmd) override;
         void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
         void BindComputeShader(const Shader* cs, CommandList cmd) override;
@@ -303,9 +304,9 @@ namespace Alimer
 
         GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
-        void EventBegin(const char* name, CommandList cmd) override;
-        void EventEnd(CommandList cmd) override;
-        void SetMarker(const char* name, CommandList cmd) override;
+        void PushDebugGroup(CommandList cmd, const char* name) override;
+        void PopDebugGroup(CommandList cmd) override;
+        void InsertDebugMarker(CommandList cmd, const char* name)  override;
 
 
         struct AllocationHandler

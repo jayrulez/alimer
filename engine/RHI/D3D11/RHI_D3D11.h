@@ -46,37 +46,37 @@ namespace Alimer
         ComPtr<ID3D11RenderTargetView> renderTargetView;
         ComPtr<ID3D11Texture2D> backBuffer;
         ComPtr<ID3D11DeviceContext> immediateContext;
-        ComPtr<ID3D11DeviceContext> deviceContexts[COMMANDLIST_COUNT];
-        ComPtr<ID3D11CommandList> commandLists[COMMANDLIST_COUNT];
-        ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[COMMANDLIST_COUNT];
+        ComPtr<ID3D11DeviceContext> deviceContexts[kCommanstListCount];
+        ComPtr<ID3D11CommandList> commandLists[kCommanstListCount];
+        ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[kCommanstListCount];
 
-        uint32_t	stencilRef[COMMANDLIST_COUNT];
-        XMFLOAT4	blendFactor[COMMANDLIST_COUNT];
+        uint32_t	stencilRef[kCommanstListCount];
+        XMFLOAT4	blendFactor[kCommanstListCount];
 
-        ID3D11VertexShader* prev_vs[COMMANDLIST_COUNT] = {};
-        ID3D11PixelShader* prev_ps[COMMANDLIST_COUNT] = {};
-        ID3D11HullShader* prev_hs[COMMANDLIST_COUNT] = {};
-        ID3D11DomainShader* prev_ds[COMMANDLIST_COUNT] = {};
-        ID3D11GeometryShader* prev_gs[COMMANDLIST_COUNT] = {};
-        ID3D11ComputeShader* prev_cs[COMMANDLIST_COUNT] = {};
-        XMFLOAT4 prev_blendfactor[COMMANDLIST_COUNT] = {};
-        uint32_t prev_samplemask[COMMANDLIST_COUNT] = {};
-        ID3D11BlendState* prev_bs[COMMANDLIST_COUNT] = {};
-        ID3D11RasterizerState* prev_rs[COMMANDLIST_COUNT] = {};
-        uint32_t prev_stencilRef[COMMANDLIST_COUNT] = {};
-        ID3D11DepthStencilState* prev_dss[COMMANDLIST_COUNT] = {};
-        ID3D11InputLayout* prev_il[COMMANDLIST_COUNT] = {};
-        PRIMITIVETOPOLOGY prev_pt[COMMANDLIST_COUNT] = {};
+        ID3D11VertexShader* prev_vs[kCommanstListCount] = {};
+        ID3D11PixelShader* prev_ps[kCommanstListCount] = {};
+        ID3D11HullShader* prev_hs[kCommanstListCount] = {};
+        ID3D11DomainShader* prev_ds[kCommanstListCount] = {};
+        ID3D11GeometryShader* prev_gs[kCommanstListCount] = {};
+        ID3D11ComputeShader* prev_cs[kCommanstListCount] = {};
+        XMFLOAT4 prev_blendfactor[kCommanstListCount] = {};
+        uint32_t prev_samplemask[kCommanstListCount] = {};
+        ID3D11BlendState* prev_bs[kCommanstListCount] = {};
+        ID3D11RasterizerState* prev_rs[kCommanstListCount] = {};
+        uint32_t prev_stencilRef[kCommanstListCount] = {};
+        ID3D11DepthStencilState* prev_dss[kCommanstListCount] = {};
+        ID3D11InputLayout* prev_il[kCommanstListCount] = {};
+        PRIMITIVETOPOLOGY prev_pt[kCommanstListCount] = {};
 
-        const PipelineState* active_pso[COMMANDLIST_COUNT] = {};
-        bool dirty_pso[COMMANDLIST_COUNT] = {};
+        const PipelineState* active_pso[kCommanstListCount] = {};
+        bool dirty_pso[kCommanstListCount] = {};
         void pso_validate(CommandList cmd);
 
-        const RenderPass* active_renderpass[COMMANDLIST_COUNT] = {};
+        const RenderPass* active_renderpass[kCommanstListCount] = {};
 
-        ID3D11UnorderedAccessView* raster_uavs[COMMANDLIST_COUNT][8] = {};
-        uint8_t raster_uavs_slot[COMMANDLIST_COUNT] = {};
-        uint8_t raster_uavs_count[COMMANDLIST_COUNT] = {};
+        ID3D11UnorderedAccessView* raster_uavs[kCommanstListCount][8] = {};
+        uint8_t raster_uavs_slot[kCommanstListCount] = {};
+        uint8_t raster_uavs_count[kCommanstListCount] = {};
 
         struct GPUAllocator
         {
@@ -84,7 +84,7 @@ namespace Alimer
             size_t byteOffset = 0;
             uint64_t residentFrame = 0;
             bool dirty = false;
-        } frame_allocators[COMMANDLIST_COUNT];
+        } frame_allocators[kCommanstListCount];
         void commit_allocations(CommandList cmd);
 
         void CreateBackBufferResources();
@@ -98,10 +98,11 @@ namespace Alimer
         static bool IsAvailable();
         GraphicsDevice_DX11(void* window, bool fullscreen, bool enableDebugLayer_);
 
-        bool CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) override;
+        bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
-        bool CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         bool CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState) override;
         bool CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState) override;
@@ -137,16 +138,16 @@ namespace Alimer
         void RenderPassEnd(CommandList cmd) override;
         void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
         void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
-        void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-        void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
+        void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
+        void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
         void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
         void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
-        void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
+        void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
+        void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
         void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) override;
+        void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
         void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
@@ -167,8 +168,8 @@ namespace Alimer
 
         GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
 
-        void EventBegin(const char* name, CommandList cmd) override;
-        void EventEnd(CommandList cmd) override;
-        void SetMarker(const char* name, CommandList cmd) override;
+        void PushDebugGroup(CommandList cmd, const char* name) override;
+        void PopDebugGroup(CommandList cmd) override;
+        void InsertDebugMarker(CommandList cmd, const char* name) override;
     };
 }

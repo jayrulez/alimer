@@ -59,10 +59,11 @@ namespace Alimer
 
         static std::shared_ptr<GraphicsDevice> Create(void* window, bool fullscreen = false, bool enableDebugLayer = false);
 
-        virtual bool CreateBuffer(const GPUBufferDesc* pDesc, const SubresourceData* pInitialData, GPUBuffer* pBuffer) = 0;
+        virtual bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) = 0;
         virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) = 0;
         virtual bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) = 0;
-        virtual bool CreateShader(SHADERSTAGE stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
+        virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
+        virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) = 0;
         virtual bool CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState) = 0;
         virtual bool CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState) = 0;
@@ -78,7 +79,7 @@ namespace Alimer
         virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
         virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
 
-        virtual void WriteShadingRateValue(SHADING_RATE rate, void* dest) {};
+        virtual void WriteShadingRateValue(ShadingRate rate, void* dest) {};
         virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
         virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
         virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
@@ -144,19 +145,19 @@ namespace Alimer
         virtual void RenderPassEnd(CommandList cmd) = 0;
         virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
         virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
-        virtual void BindResource(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-        virtual void BindResources(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
-        virtual void BindUAV(SHADERSTAGE stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-        virtual void BindUAVs(SHADERSTAGE stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+        virtual void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
+        virtual void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
+        virtual void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
+        virtual void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
         virtual void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) = 0;
         virtual void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) = 0;
-        virtual void BindSampler(SHADERSTAGE stage, const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
-        virtual void BindConstantBuffer(SHADERSTAGE stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
+        virtual void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
+        virtual void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
         virtual void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
-        virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, const INDEXBUFFER_FORMAT format, uint32_t offset, CommandList cmd) = 0;
+        virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) = 0;
         virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
         virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
-        virtual void BindShadingRate(SHADING_RATE rate, CommandList cmd) {}
+        virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
         virtual void BindShadingRateImage(const Texture* texture, CommandList cmd) {}
         virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
         virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
@@ -198,9 +199,9 @@ namespace Alimer
         //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
         virtual GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) = 0;
 
-        virtual void EventBegin(const char* name, CommandList cmd) = 0;
-        virtual void EventEnd(CommandList cmd) = 0;
-        virtual void SetMarker(const char* name, CommandList cmd) = 0;
+        virtual void PushDebugGroup(CommandList cmd, const char* name) = 0;
+        virtual void PopDebugGroup(CommandList cmd) = 0;
+        virtual void InsertDebugMarker(CommandList cmd, const char* name) = 0;
     };
 
 }

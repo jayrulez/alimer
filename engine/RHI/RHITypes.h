@@ -41,22 +41,37 @@ namespace Alimer
 	struct GPUBuffer;
 	struct Texture;
 	struct RootSignature;
-
     using CommandList = uint8_t;
-    static constexpr CommandList COMMANDLIST_COUNT = 16;
 
-	enum SHADERSTAGE
+    static constexpr uint32_t kMaxColorAttachments = 8u;
+    static constexpr uint32_t kMaxVertexBufferBindings = 8u;
+    static constexpr uint32_t kMaxVertexAttributes = 16u;
+    static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
+    static constexpr uint32_t kMaxVertexBufferStride = 2048u;
+    static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
+    static constexpr CommandList kCommanstListCount = 16;
+
+    static constexpr uint32_t KnownVendorId_AMD = 0x1002;
+    static constexpr uint32_t KnownVendorId_Intel = 0x8086;
+    static constexpr uint32_t KnownVendorId_Nvidia = 0x10DE;
+    static constexpr uint32_t KnownVendorId_Microsoft = 0x1414;
+    static constexpr uint32_t KnownVendorId_ARM = 0x13B5;
+    static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
+    static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
+
+	enum class ShaderStage : uint32_t
 	{
-		MS,
-		AS,
-		VS,
-		HS,
-		DS,
-		GS,
-		PS,
-		CS,
-		SHADERSTAGE_COUNT,
+		Vertex,
+		Hull,
+		Domain,
+		Geometry,
+		Fragment,
+		Compute,
+        Amplification,
+        Mesh,
+		Count,
 	};
+
 	enum PRIMITIVETOPOLOGY
 	{
 		UNDEFINED,
@@ -288,11 +303,13 @@ namespace Alimer
 		GPU_QUERY_TYPE_TIMESTAMP,			// retrieve time point of gpu execution
 		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
 	};
-	enum INDEXBUFFER_FORMAT
-	{
-		INDEXFORMAT_16BIT,
-		INDEXFORMAT_32BIT,
+
+	enum class IndexFormat : uint32_t
+    {
+        UInt16 = 0x00000000,
+        UInt32 = 0x00000001,
 	};
+
 	enum SUBRESOURCE_TYPE
 	{
 		SRV,
@@ -326,16 +343,18 @@ namespace Alimer
 		BUFFER_STATE_COPY_DST,					// copy to
 		BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 	};
-	enum SHADING_RATE
+
+	enum class ShadingRate : uint32_t
 	{
-		SHADING_RATE_1X1,
-		SHADING_RATE_1X2,
-		SHADING_RATE_2X1,
-		SHADING_RATE_2X2,
-		SHADING_RATE_2X4,
-		SHADING_RATE_4X2,
-		SHADING_RATE_4X4
+		Rate_1X1,
+		Rate_1X2,
+		Rate_2X1,
+		Rate_2X2,
+		Rate_2X4,
+		Rate_4X2,
+		Rate_4X4
 	};
+
 	enum GRAPHICSDEVICE_CAPABILITY
 	{
 		GRAPHICSDEVICE_CAPABILITY_TESSELLATION,
@@ -392,6 +411,7 @@ namespace Alimer
 		float MinDepth = 0.0f;
 		float MaxDepth = 1.0f;
 	};
+
 	struct InputLayoutDesc
 	{
 		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
@@ -404,6 +424,7 @@ namespace Alimer
 		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
 		uint32_t InstanceDataStepRate = 0;
 	};
+
 	union ClearValue
 	{
 		float color[4];
@@ -413,6 +434,7 @@ namespace Alimer
 			uint32_t stencil;
 		} depthstencil;
 	};
+
 	struct TextureDesc
 	{
 		enum TEXTURE_TYPE
@@ -435,6 +457,7 @@ namespace Alimer
 		ClearValue clear = {};
 		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
 	};
+
 	struct SamplerDesc
 	{
 		FILTER Filter = FILTER_MIN_MAG_MIP_POINT;
@@ -448,6 +471,7 @@ namespace Alimer
 		float MinLOD = 0.0f;
 		float MaxLOD = FLT_MAX;
 	};
+
 	struct RasterizerStateDesc
 	{
 		FILL_MODE FillMode = FILL_SOLID;
@@ -462,6 +486,7 @@ namespace Alimer
 		bool ConservativeRasterizationEnable = false;
 		uint32_t ForcedSampleCount = 0;
 	};
+
 	struct DepthStencilOpDesc
 	{
 		STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
@@ -469,6 +494,7 @@ namespace Alimer
 		STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
 		COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
 	};
+
 	struct DepthStencilStateDesc
 	{
 		bool DepthEnable = false;
@@ -480,6 +506,7 @@ namespace Alimer
 		DepthStencilOpDesc FrontFace;
 		DepthStencilOpDesc BackFace;
 	};
+
 	struct RenderTargetBlendStateDesc
 	{
 		bool BlendEnable = false;
@@ -491,12 +518,14 @@ namespace Alimer
 		BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
 		uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	};
+
 	struct BlendStateDesc
 	{
 		bool AlphaToCoverageEnable = false;
 		bool IndependentBlendEnable = false;
-		RenderTargetBlendStateDesc RenderTarget[8];
+		RenderTargetBlendStateDesc RenderTarget[kMaxColorAttachments];
 	};
+
 	struct GPUBufferDesc
 	{
 		uint32_t ByteWidth = 0;
@@ -507,16 +536,19 @@ namespace Alimer
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
 		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
 	};
+
 	struct GPUQueryDesc
 	{
 		GPU_QUERY_TYPE Type = GPU_QUERY_TYPE_INVALID;
 	};
+
 	struct GPUQueryResult
 	{
 		uint64_t	result_passed_sample_count = 0;
 		uint64_t	result_timestamp = 0;
 		uint64_t	result_timestamp_frequency = 0;
 	};
+
 	struct PipelineStateDesc
 	{
 		const RootSignature* rootSignature = nullptr;
@@ -741,7 +773,7 @@ namespace Alimer
 
 	struct Shader : public GraphicsDeviceChild
 	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+        ShaderStage stage = ShaderStage::Count;
 		std::vector<uint8_t> code;
 		const RootSignature* rootSignature = nullptr;
 	};
@@ -878,7 +910,7 @@ namespace Alimer
 					uint32_t vertexCount = 0;
 					uint32_t vertexByteOffset = 0;
 					uint32_t vertexStride = 0;
-					INDEXBUFFER_FORMAT indexFormat = INDEXFORMAT_32BIT;
+					IndexFormat indexFormat = IndexFormat::UInt32;
 					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
 					GPUBuffer transform3x4Buffer;
 					uint32_t transform3x4BufferOffset = 0;
@@ -1035,14 +1067,14 @@ namespace Alimer
 	};
 	struct DescriptorTable : public GraphicsDeviceChild
 	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+        ShaderStage stage = ShaderStage::Count;
 		std::vector<ResourceRange> resources;
 		std::vector<SamplerRange> samplers;
 		std::vector<StaticSampler> staticsamplers;
 	};
 	struct RootConstantRange
 	{
-		SHADERSTAGE stage = SHADERSTAGE_COUNT;
+        ShaderStage stage = ShaderStage::Count;
 		uint32_t slot = 0;
 		uint32_t size = 0;
 		uint32_t offset = 0;

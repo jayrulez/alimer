@@ -37,8 +37,8 @@ namespace Alimer
 {
     std::shared_ptr<GraphicsDevice> GraphicsDevice::Create(void* window, bool fullscreen, bool enableDebugLayer)
     {
-        //return std::make_shared<GraphicsDevice_DX11>(window, fullscreen, debugLayer);
-        return std::make_shared<GraphicsDevice_DX12>(window, fullscreen, enableDebugLayer);
+        return std::make_shared<GraphicsDevice_DX11>(window, fullscreen, enableDebugLayer);
+        //return std::make_shared<GraphicsDevice_DX12>(window, fullscreen, enableDebugLayer);
         //return std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, enableDebugLayer);
     }
 
