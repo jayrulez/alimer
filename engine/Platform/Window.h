@@ -78,6 +78,9 @@ namespace Alimer
         void SetMinimumSize(const SizeI& size) noexcept;
         SizeI GetMinimumSize() const noexcept;
 
+        std::string GetTitle() const noexcept;
+        void SetTitle(const std::string& str) noexcept;
+
     private:
         std::unique_ptr<WindowImpl> impl;
     };

@@ -102,4 +102,14 @@ namespace Alimer
     {
         return impl->GetMinimumSize();
     }
+
+    std::string Window::GetTitle() const noexcept
+    {
+        return impl->GetTitle();
+    }
+
+    void Window::SetTitle(const std::string& str) noexcept
+    {
+        impl->SetTitle(str);
+    }
 }

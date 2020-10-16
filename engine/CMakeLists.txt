@@ -174,7 +174,7 @@ endif ()
 
 if (ALIMER_VULKAN)
     #target_compile_definitions(volk PUBLIC VK_ENABLE_BETA_EXTENSIONS)
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan spirv-cross-core)
 endif()
 
 if (ALIMER_IMGUI)

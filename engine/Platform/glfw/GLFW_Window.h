@@ -81,6 +81,13 @@ namespace Alimer
             return minSize;
         }
 
+        std::string GetTitle() const noexcept { return title; }
+        void SetTitle(const std::string& str) noexcept
+        {
+            title = str;
+            glfwSetWindowTitle(window, str.c_str());
+        }
+
     private:
         GLFWwindow* window{ nullptr };
         std::string title{};

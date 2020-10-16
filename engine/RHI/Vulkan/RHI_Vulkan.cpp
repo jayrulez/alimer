@@ -29,7 +29,7 @@
 #define NOMINMAX
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
-//#include "Utility/spirv_reflect.hpp"
+#include "spirv_reflect.hpp"
 
 #include <sstream>
 #include <vector>
@@ -41,6 +41,11 @@
 #ifdef SDL2
 #include <SDL2/SDL_vulkan.h>
 #include "sdl2.h"
+#endif
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER) && VK_USE_PLATFORM_WIN32_KHR
+#include <wrl/client.h> 
+#include <dxcapi.h>
 #endif
 
 const char* VkResultToString(VkResult result)
@@ -749,40 +754,24 @@ namespace Alimer
 
             return true;
         }
-        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
-            VkDebugReportFlagsEXT flags,
-            VkDebugReportObjectTypeEXT objType,
-            uint64_t obj,
-            size_t location,
-            int32_t code,
-            const char* layerPrefix,
-            const char* msg,
-            void* userData) {
 
-            std::stringstream ss("");
-            ss << "[VULKAN validation layer]: " << msg << std::endl;
-
-            std::clog << ss.str();
-#ifdef _WIN32
-            OutputDebugStringA(ss.str().c_str());
-#endif
+        VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(
+            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+            void* pUserData)
+        {
+            // Log debug messge
+            if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+            {
+                LOGW("{} - {}: {}", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            }
+            else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+            {
+                LOGE("{} - {}: {}", pCallbackData->messageIdNumber, pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            }
 
             return VK_FALSE;
-        }
-        VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
-            auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-            if (func != nullptr) {
-                return func(instance, pCreateInfo, pAllocator, pCallback);
-            }
-            else {
-                return VK_ERROR_EXTENSION_NOT_PRESENT;
-            }
-        }
-        void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
-            auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-            if (func != nullptr) {
-                func(instance, callback, pAllocator);
-            }
         }
 
         // Queue families:
@@ -1053,7 +1042,7 @@ namespace Alimer
             std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
             std::vector<VkImageViewType> imageViewTypes;
 
-            //std::vector<spirv_cross::EntryPoint> entrypoints;
+            std::vector<spirv_cross::EntryPoint> entrypoints;
 
             ~Shader_Vulkan()
             {
@@ -1250,7 +1239,53 @@ namespace Alimer
         {
             return static_cast<RootSignature_Vulkan*>(param->internal_state.get());
         }
+
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER) && VK_USE_PLATFORM_WIN32_KHR
+        using PFN_DXC_CREATE_INSTANCE = HRESULT(WINAPI*)(REFCLSID rclsid, REFIID riid, _COM_Outptr_ void** ppCompiler);
+
+        PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
+        Microsoft::WRL::ComPtr<IDxcLibrary> dxcLibrary;
+        Microsoft::WRL::ComPtr<IDxcCompiler> dxcCompiler;
+
+        inline IDxcLibrary* GetOrCreateDxcLibrary() {
+            if (DxcCreateInstance == nullptr) {
+                static HMODULE dxcompilerDLL = LoadLibraryA("dxcompiler.dll");
+                if (!dxcompilerDLL) {
+                    return nullptr;
+                }
+
+                DxcCreateInstance = (PFN_DXC_CREATE_INSTANCE)GetProcAddress(dxcompilerDLL, "DxcCreateInstance");
+            }
+
+            if (dxcLibrary == nullptr) {
+                DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary));
+                ALIMER_ASSERT(dxcLibrary != nullptr);
+            }
+
+            return dxcLibrary.Get();
+        }
+
+        inline IDxcCompiler* GetOrCreateDxcCompiler() {
+            if (DxcCreateInstance == nullptr) {
+                static HMODULE dxcompilerDLL = LoadLibraryA("dxcompiler.dll");
+                if (!dxcompilerDLL) {
+                    return nullptr;
+                }
+
+                DxcCreateInstance = (PFN_DXC_CREATE_INSTANCE)GetProcAddress(dxcompilerDLL, "DxcCreateInstance");
+            }
+
+            if (dxcCompiler == nullptr) {
+                DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
+                ALIMER_ASSERT(dxcCompiler != nullptr);
+            }
+
+            return dxcCompiler.Get();
+        }
+#endif
     }
+
     using namespace Vulkan_Internal;
 
     // Allocators:
@@ -2077,8 +2112,9 @@ namespace Alimer
 
                 pipelineInfo.pMultisampleState = &multisampling;
 
-
                 // Blending:
+                BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
+
                 uint32_t numBlendAttachments = 0;
                 VkPipelineColorBlendAttachmentState colorBlendAttachments[8];
                 const size_t blend_loopCount = active_renderpass[cmd] == nullptr ? 1 : active_renderpass[cmd]->desc.attachments.size();
@@ -2089,7 +2125,7 @@ namespace Alimer
                         continue;
                     }
 
-                    RenderTargetBlendStateDesc desc = pso->desc.bs->desc.RenderTarget[numBlendAttachments];
+                    RenderTargetBlendStateDesc desc = pBlendStateDesc.RenderTarget[numBlendAttachments];
                     VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
                     numBlendAttachments++;
 
@@ -2337,34 +2373,41 @@ namespace Alimer
 
             // Create instance:
             {
-                VkInstanceCreateInfo createInfo = {};
-                createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-                createInfo.pApplicationInfo = &appInfo;
-                createInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
-                createInfo.ppEnabledExtensionNames = enabledExtensions.data();
-                createInfo.enabledLayerCount = 0;
+                VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+                instanceCreateInfo.pApplicationInfo = &appInfo;
+                instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
+                instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
+                instanceCreateInfo.enabledLayerCount = 0;
                 if (enableValidationLayers)
                 {
-                    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-                    createInfo.ppEnabledLayerNames = validationLayers.data();
+                    instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+                    instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
                 }
-                res = vkCreateInstance(&createInfo, nullptr, &instance);
-                assert(res == VK_SUCCESS);
-            }
 
-            volkLoadInstance(instance);
+                VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+                if (debugUtils)
+                {
+                    debugUtilsCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+                    debugUtilsCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                    debugUtilsCreateInfo.pfnUserCallback = debugUtilsMessengerCallback;
 
-            // Register validation layer callback:
-            if (enableValidationLayers)
-            {
-                VkDebugReportCallbackCreateInfoEXT createInfo = {};
-                createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
-                createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
-                createInfo.pfnCallback = debugCallback;
-                res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
-                assert(res == VK_SUCCESS);
+                    instanceCreateInfo.pNext = &debugUtilsCreateInfo;
+                }
+
+                VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &instance));
+
+                volkLoadInstance(instance);
+
+                if (enableDebugLayer && debugUtils)
+                {
+                    result = vkCreateDebugUtilsMessengerEXT(instance, &debugUtilsCreateInfo, nullptr, &debugUtilsMessenger);
+                    if (result != VK_SUCCESS)
+                    {
+                        VK_LOG_ERROR(result, "Could not create debug utils messenger");
+                    }
+                }
             }
-    }
+        }
 
 
         // Surface creation:
@@ -2864,14 +2907,11 @@ namespace Alimer
         }
 
         //wiBackLog::post("Created GraphicsDevice_Vulkan");
-}
+    }
 
     GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
     {
-        VkResult res = vkQueueWaitIdle(graphicsQueue);
-        assert(res == VK_SUCCESS);
-        res = vkQueueWaitIdle(presentQueue);
-        assert(res == VK_SUCCESS);
+        VK_CHECK(vkDeviceWaitIdle(device));
 
         for (auto& frame : frames)
         {
@@ -2930,8 +2970,16 @@ namespace Alimer
         }
         vkDestroySwapchainKHR(device, swapChain, nullptr);
 
-        DestroyDebugReportCallbackEXT(instance, callback, nullptr);
+        vkDestroyDevice(device, nullptr);
+
         vkDestroySurfaceKHR(instance, surface, nullptr);
+
+        if (debugUtilsMessenger != VK_NULL_HANDLE)
+        {
+            vkDestroyDebugUtilsMessengerEXT(instance, debugUtilsMessenger, nullptr);
+        }
+
+        vkDestroyInstance(instance, nullptr);
     }
 
     void GraphicsDevice_Vulkan::CreateBackBufferResources()
@@ -3751,7 +3799,6 @@ namespace Alimer
 
         if (pShader->rootSignature == nullptr)
         {
-#if TODO
             // Perform shader reflection for shaders that don't specify a root signature:
             spirv_cross::Compiler comp((uint32_t*)pShader->code.data(), pShader->code.size() / sizeof(uint32_t));
             auto entrypoints = comp.get_entry_points_and_stages();
@@ -3921,7 +3968,7 @@ namespace Alimer
                 imageViewTypes.push_back(VK_IMAGE_VIEW_TYPE_MAX_ENUM);
             }
 
-            if (stage == CS || stage == SHADERSTAGE_COUNT)
+            if (stage == ShaderStage::Compute || stage == ShaderStage::Count)
             {
                 VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
                 descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -3939,8 +3986,6 @@ namespace Alimer
                 res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout_cs);
                 assert(res == VK_SUCCESS);
             }
-#endif // TODO
-
         }
 
         if (stage == ShaderStage::Compute)
@@ -3972,9 +4017,106 @@ namespace Alimer
 
     bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader)
     {
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER) && VK_USE_PLATFORM_WIN32_KHR
+        IDxcLibrary* dxcLibrary = GetOrCreateDxcLibrary();
+        IDxcCompiler* dxcCompiler = GetOrCreateDxcCompiler();
+
+        Microsoft::WRL::ComPtr<IDxcIncludeHandler> includeHandler;
+        dxcLibrary->CreateIncludeHandler(&includeHandler);
+
+        Microsoft::WRL::ComPtr<IDxcBlobEncoding> sourceBlob;
+        dxcLibrary->CreateBlobWithEncodingOnHeapCopy(source, (UINT32)strlen(source), CP_UTF8, &sourceBlob);
+
+        std::wstring entryPointW = ToUtf16(entryPoint);
+        std::vector<const wchar_t*> arguments;
+        arguments.push_back(L"/Zpc"); // Column major
+#ifdef _DEBUG
+        //arguments.push_back(L"/Zi");
+#else
+        arguments.push_back(L"/O3");
+#endif
+        arguments.push_back(L"-spirv");
+        arguments.push_back(L"-fspv-target-env=vulkan1.2");
+        arguments.push_back(L"-fvk-use-dx-layout");
+        arguments.push_back(L"-flegacy-macro-expansion");
+
+        if (stage == ShaderStage::Vertex || stage == ShaderStage::Domain || stage == ShaderStage::Geometry)
+        {
+            arguments.push_back(L"-fvk-invert-y");
+        }
+
+        arguments.push_back(L"-fvk-t-shift");
+        arguments.push_back(L"1000");
+        arguments.push_back(L"all");
+
+        arguments.push_back(L"-fvk-u-shift");
+        arguments.push_back(L"2000");
+        arguments.push_back(L"all");
+
+        arguments.push_back(L"-fvk-s-shift");
+        arguments.push_back(L"3000");
+        arguments.push_back(L"all");
+
+        const wchar_t* target = L"vs_6_1";
+        switch (stage)
+        {
+        case ShaderStage::Hull:
+            target = L"hs_6_1";
+            break;
+        case ShaderStage::Domain:
+            target = L"ds_6_1";
+            break;
+        case ShaderStage::Geometry:
+            target = L"gs_6_1";
+            break;
+        case ShaderStage::Fragment:
+            target = L"ps_6_1";
+            break;
+        case ShaderStage::Compute:
+            target = L"cs_6_1";
+            break;
+        }
+
+        Microsoft::WRL::ComPtr<IDxcOperationResult> compileResult;
+        dxcCompiler->Compile(
+            sourceBlob.Get(),
+            nullptr,
+            entryPointW.c_str(),
+            target,
+            arguments.data(),
+            (UINT32)arguments.size(),
+            nullptr,
+            0,
+            includeHandler.Get(),
+            &compileResult);
+
+        HRESULT hr;
+        compileResult->GetStatus(&hr);
+
+        if (FAILED(hr))
+        {
+            Microsoft::WRL::ComPtr<IDxcBlobEncoding> errors;
+            compileResult->GetErrorBuffer(&errors);
+            std::string message = std::string("DXC compile failed with ") + static_cast<char*>(errors->GetBufferPointer());
+            LOGE("{}", message);
+            return false;
+    }
+
+        Microsoft::WRL::ComPtr<IDxcBlob> compiledShader;
+        compileResult->GetResult(&compiledShader);
+
+        bool result = CreateShader(stage, compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), pShader);
+        if (result)
+        {
+            to_internal(pShader)->stageInfo.pName = entryPoint;
+        }
+
+        return result;
+#else
         pShader->internal_state = nullptr;
         return false;
-    }
+#endif
+}
 
     bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
     {
@@ -7005,4 +7147,4 @@ namespace Alimer
         label.color[3] = 1;
         vkCmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
     }
-        }
+}

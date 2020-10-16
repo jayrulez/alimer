@@ -3790,8 +3790,7 @@ namespace Alimer
 
             internal_state->exports.emplace_back();
             D3D12_EXPORT_DESC& export_desc = internal_state->exports.back();
-            internal_state->export_strings.emplace_back();
-            //wiHelper::StringConvert(x.function_name, internal_state->export_strings.back());
+            internal_state->export_strings.push_back(ToUtf16(x.function_name));
             export_desc.Name = internal_state->export_strings.back().c_str();
             library_desc.pExports = &export_desc;
 
@@ -3801,8 +3800,7 @@ namespace Alimer
         internal_state->hitgroup_descs.reserve(pDesc->hitgroups.size());
         for (auto& x : pDesc->hitgroups)
         {
-            internal_state->group_strings.emplace_back();
-            //wiHelper::StringConvert(x.name, internal_state->group_strings.back());
+            internal_state->group_strings.push_back(ToUtf16(x.name));
 
             if (x.type == ShaderHitGroup::GENERAL)
                 continue;
@@ -4942,15 +4940,12 @@ namespace Alimer
 
     void GraphicsDevice_DX12::SetName(GPUResource* pResource, const char* name)
     {
-        /*wchar_t text[256];
-        if (wiHelper::StringConvert(name, text) > 0)
+        auto internal_state = to_internal(pResource);
+        if (internal_state->resource != nullptr)
         {
-            auto internal_state = to_internal(pResource);
-            if (internal_state->resource != nullptr)
-            {
-                internal_state->resource->SetName(text);
-            }
-        }*/
+            auto wName = ToUtf16(name);
+            internal_state->resource->SetName(wName.c_str());
+        }
     }
 
     void GraphicsDevice_DX12::PresentBegin(CommandList cmd)

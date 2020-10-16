@@ -204,7 +204,7 @@ namespace Alimer
     {
         Config config{};
         //config.rendererType = GPUBackendType::Vulkan;
-        config.title = "TestApp";
+        config.title = "Cube - Direct3D11";
         //config.fullscreen = true;
         //config.width = 1280;
         //config.height = 720;

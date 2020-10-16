@@ -63,7 +63,7 @@ namespace Alimer
     private:
         bool debugUtils = false;
         VkInstance instance = VK_NULL_HANDLE;
-        VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT  debugUtilsMessenger{ VK_NULL_HANDLE };
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkDevice device = VK_NULL_HANDLE;
