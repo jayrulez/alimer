@@ -268,32 +268,32 @@ namespace Alimer
             }
             return D3D11_TEXTURE_ADDRESS_WRAP;
         }
-        constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
+        constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
             {
-            case COMPARISON_NEVER:
+            case CompareFunction::Never:
                 return D3D11_COMPARISON_NEVER;
                 break;
-            case COMPARISON_LESS:
+            case CompareFunction::Less:
                 return D3D11_COMPARISON_LESS;
                 break;
-            case COMPARISON_EQUAL:
+            case CompareFunction::Equal:
                 return D3D11_COMPARISON_EQUAL;
                 break;
-            case COMPARISON_LESS_EQUAL:
+            case CompareFunction::LessEqual:
                 return D3D11_COMPARISON_LESS_EQUAL;
                 break;
-            case COMPARISON_GREATER:
+            case CompareFunction::Greater:
                 return D3D11_COMPARISON_GREATER;
                 break;
-            case COMPARISON_NOT_EQUAL:
+            case CompareFunction::NotEqual:
                 return D3D11_COMPARISON_NOT_EQUAL;
                 break;
-            case COMPARISON_GREATER_EQUAL:
+            case CompareFunction::GreaterEqual:
                 return D3D11_COMPARISON_GREATER_EQUAL;
                 break;
-            case COMPARISON_ALWAYS:
+            case CompareFunction::Always:
                 return D3D11_COMPARISON_ALWAYS;
                 break;
             default:
@@ -334,50 +334,28 @@ namespace Alimer
             }
             return D3D11_CULL_NONE;
         }
-        constexpr D3D11_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
+        constexpr D3D11_STENCIL_OP _ConvertStencilOp(StencilOperation value)
         {
             switch (value)
             {
-            case DEPTH_WRITE_MASK_ZERO:
-                return D3D11_DEPTH_WRITE_MASK_ZERO;
-                break;
-            case DEPTH_WRITE_MASK_ALL:
-                return D3D11_DEPTH_WRITE_MASK_ALL;
-                break;
-            default:
-                break;
-            }
-            return D3D11_DEPTH_WRITE_MASK_ZERO;
-        }
-        constexpr D3D11_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
-        {
-            switch (value)
-            {
-            case STENCIL_OP_KEEP:
+            case StencilOperation::Keep:
                 return D3D11_STENCIL_OP_KEEP;
-                break;
-            case STENCIL_OP_ZERO:
+            case StencilOperation::Zero:
                 return D3D11_STENCIL_OP_ZERO;
-                break;
-            case STENCIL_OP_REPLACE:
+            case StencilOperation::Replace:
                 return D3D11_STENCIL_OP_REPLACE;
-                break;
-            case STENCIL_OP_INCR_SAT:
+            case StencilOperation::IncrementClamp:
                 return D3D11_STENCIL_OP_INCR_SAT;
-                break;
-            case STENCIL_OP_DECR_SAT:
+            case StencilOperation::DecrementClamp:
                 return D3D11_STENCIL_OP_DECR_SAT;
-                break;
-            case STENCIL_OP_INVERT:
+            case StencilOperation::Invert:
                 return D3D11_STENCIL_OP_INVERT;
-                break;
-            case STENCIL_OP_INCR:
+            case StencilOperation::IncrementWrap:
                 return D3D11_STENCIL_OP_INCR;
-                break;
-            case STENCIL_OP_DECR:
+            case StencilOperation::DecrementWrap:
                 return D3D11_STENCIL_OP_DECR;
-                break;
             default:
+                ALIMER_UNREACHABLE();
                 break;
             }
             return D3D11_STENCIL_OP_KEEP;
@@ -1106,6 +1084,14 @@ namespace Alimer
             return desc;
         }
 
+        inline D3D11_DEPTH_STENCILOP_DESC _ConvertStencilOpDesc(const StencilStateFaceDescriptor descriptor) {
+            D3D11_DEPTH_STENCILOP_DESC desc;
+            desc.StencilFailOp = _ConvertStencilOp(descriptor.failOp);
+            desc.StencilDepthFailOp = _ConvertStencilOp(descriptor.depthFailOp);
+            desc.StencilPassOp = _ConvertStencilOp(descriptor.passOp);
+            desc.StencilFunc = _ConvertComparisonFunc(descriptor.compare);
+            return desc;
+        }
 
         // Local Helpers:
         const void* const __nullBlob[128] = {}; // this is initialized to nullptrs and used to unbind resources!
@@ -1158,10 +1144,6 @@ namespace Alimer
         {
             ComPtr<ID3D11BlendState> resource;
         };
-        struct DepthStencilState_DX11
-        {
-            ComPtr<ID3D11DepthStencilState> resource;
-        };
         struct RasterizerState_DX11
         {
             ComPtr<ID3D11RasterizerState> resource;
@@ -1173,6 +1155,11 @@ namespace Alimer
         struct Query_DX11
         {
             ComPtr<ID3D11Query> resource;
+        };
+
+        struct PipelineState_DX11
+        {
+            ID3D11DepthStencilState* depthStencilState;
         };
 
         Resource_DX11* to_internal(const GPUResource* param)
@@ -1195,10 +1182,6 @@ namespace Alimer
         {
             return static_cast<BlendState_DX11*>(param->internal_state.get());
         }
-        DepthStencilState_DX11* to_internal(const DepthStencilState* param)
-        {
-            return static_cast<DepthStencilState_DX11*>(param->internal_state.get());
-        }
         RasterizerState_DX11* to_internal(const RasterizerState* param)
         {
             return static_cast<RasterizerState_DX11*>(param->internal_state.get());
@@ -1211,7 +1194,10 @@ namespace Alimer
         {
             return static_cast<Query_DX11*>(param->internal_state.get());
         }
-
+        PipelineState_DX11* to_internal(const PipelineState* param)
+        {
+            return static_cast<PipelineState_DX11*>(param->internal_state.get());
+        }
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
         static HINSTANCE d3dcompiler_dll = nullptr;
         static bool d3dcompiler_dll_load_failed = false;
@@ -1248,6 +1234,7 @@ namespace Alimer
 
         const PipelineState* pso = active_pso[cmd];
         const PipelineStateDesc& desc = pso != nullptr ? pso->GetDesc() : PipelineStateDesc();
+        auto internal_state = to_internal(pso);
 
         ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_cast<VertexShader_DX11*>(desc.vs->internal_state.get())->resource.Get();
         if (vs != prev_vs[cmd])
@@ -1302,7 +1289,7 @@ namespace Alimer
             prev_rs[cmd] = rs;
         }
 
-        ID3D11DepthStencilState* dss = desc.dss == nullptr ? nullptr : to_internal(desc.dss)->resource.Get();
+        ID3D11DepthStencilState* dss = internal_state->depthStencilState;
         if (dss != prev_dss[cmd] || stencilRef[cmd] != prev_stencilRef[cmd])
         {
             deviceContexts[cmd]->OMSetDepthStencilState(dss, stencilRef[cmd]);
@@ -1567,6 +1554,11 @@ namespace Alimer
         emptyresource = std::make_shared<EmptyResourceHandle>();
 
         //wiBackLog::post("Created GraphicsDevice_DX11");
+    }
+
+    GraphicsDevice_DX11::~GraphicsDevice_DX11()
+    {
+        depthStencilStatesCache.clear();
     }
 
     void GraphicsDevice_DX11::CreateBackBufferResources()
@@ -1854,6 +1846,14 @@ namespace Alimer
             break;
         }
 
+        UINT compileFlags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR;
+#ifdef _DEBUG
+        compileFlags |= D3DCOMPILE_DEBUG;
+        compileFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+        compileFlags |= D3DCOMPILE_OPTIMIZATION_LEVEL3;
+#endif
+
         HRESULT hr = D3DCompile_func(
             source,
             strlen(source),
@@ -1862,7 +1862,7 @@ namespace Alimer
             D3D_COMPILE_STANDARD_FILE_INCLUDE,
             entryPoint,
             target,
-            D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR | D3DCOMPILE_OPTIMIZATION_LEVEL3,
+            compileFlags,
             0,
             &output,
             &errors_or_warnings);
@@ -1903,34 +1903,33 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-    bool GraphicsDevice_DX11::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
+
+    ID3D11DepthStencilState* GraphicsDevice_DX11::GetDepthStencilState(const DepthStencilStateDescriptor* descriptor)
     {
-        auto internal_state = std::make_shared<DepthStencilState_DX11>();
-        pDepthStencilState->internal_state = internal_state;
+        std::size_t hash = std::hash<DepthStencilStateDescriptor>{}(*descriptor);
 
-        D3D11_DEPTH_STENCIL_DESC desc;
-        desc.DepthEnable = pDepthStencilStateDesc->DepthEnable;
-        desc.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc->DepthWriteMask);
-        desc.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->DepthFunc);
-        desc.StencilEnable = pDepthStencilStateDesc->StencilEnable;
-        desc.StencilReadMask = pDepthStencilStateDesc->StencilReadMask;
-        desc.StencilWriteMask = pDepthStencilStateDesc->StencilWriteMask;
-        desc.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilDepthFailOp);
-        desc.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilFailOp);
-        desc.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->FrontFace.StencilFunc);
-        desc.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->FrontFace.StencilPassOp);
-        desc.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilDepthFailOp);
-        desc.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilFailOp);
-        desc.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc->BackFace.StencilFunc);
-        desc.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc->BackFace.StencilPassOp);
+        auto it = depthStencilStatesCache.find(hash);
+        if (it == depthStencilStatesCache.end())
+        {
+            D3D11_DEPTH_STENCIL_DESC d3dDesc;
+            d3dDesc.DepthEnable = descriptor->depthCompare != CompareFunction::Always || descriptor->depthWriteEnabled;
+            d3dDesc.DepthWriteMask = descriptor->depthWriteEnabled ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+            d3dDesc.DepthFunc = _ConvertComparisonFunc(descriptor->depthCompare);
+            d3dDesc.StencilEnable = StencilTestEnabled(descriptor) ? TRUE : FALSE;
+            d3dDesc.StencilReadMask = descriptor->stencilReadMask;
+            d3dDesc.StencilWriteMask = descriptor->stencilWriteMask;
+            d3dDesc.FrontFace = _ConvertStencilOpDesc(descriptor->stencilFront);
+            d3dDesc.BackFace = _ConvertStencilOpDesc(descriptor->stencilBack);
 
-        pDepthStencilState->desc = *pDepthStencilStateDesc;
-        HRESULT hr = device->CreateDepthStencilState(&desc, &internal_state->resource);
-        assert(SUCCEEDED(hr));
+            ComPtr<ID3D11DepthStencilState> depthStencilState;
+            ThrowIfFailed(device->CreateDepthStencilState(&d3dDesc, depthStencilState.GetAddressOf()));
+            it = depthStencilStatesCache.insert({ hash, std::move(depthStencilState) }).first;
+        }
 
-        return SUCCEEDED(hr);
+        return it->second.Get();
     }
-    bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
+
+    bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizationStateDescriptor* pRasterizerStateDesc, RasterizerState* pRasterizerState)
     {
         auto internal_state = std::make_shared<RasterizerState_DX11>();
         pRasterizerState->internal_state = internal_state;
@@ -2027,7 +2026,7 @@ namespace Alimer
         desc.AddressW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
         desc.MipLODBias = pSamplerDesc->MipLODBias;
         desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
-        desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
+        desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->compareFunction);
         desc.BorderColor[0] = pSamplerDesc->BorderColor[0];
         desc.BorderColor[1] = pSamplerDesc->BorderColor[1];
         desc.BorderColor[2] = pSamplerDesc->BorderColor[2];
@@ -2078,11 +2077,13 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+    bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso)
     {
-        pso->internal_state = emptyresource;
+        auto internal_state = std::make_shared<PipelineState_DX11>();
+        internal_state->depthStencilState = GetDepthStencilState(&desc->depthStencilState);
+        pso->internal_state = internal_state;
 
-        pso->desc = *pDesc;
+        pso->desc = *desc;
 
         return true;
     }

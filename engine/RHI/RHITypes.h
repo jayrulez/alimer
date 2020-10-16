@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Assert.h"
+#include "Core/Hash.h"
 #include <DirectXMath.h>
 #include <memory>
 #include <vector>
@@ -35,7 +36,6 @@ namespace Alimer
 	struct Shader;
 	struct BlendState;
 	struct RasterizerState;
-	struct DepthStencilState;
 	struct InputLayout;
 	struct GPUResource;
 	struct GPUBuffer;
@@ -82,33 +82,31 @@ namespace Alimer
 		LINESTRIP,
 		PATCHLIST,
 	};
-	enum COMPARISON_FUNC
+
+	enum class CompareFunction : uint32_t
 	{
-		COMPARISON_NEVER,
-		COMPARISON_LESS,
-		COMPARISON_EQUAL,
-		COMPARISON_LESS_EQUAL,
-		COMPARISON_GREATER,
-		COMPARISON_NOT_EQUAL,
-		COMPARISON_GREATER_EQUAL,
-		COMPARISON_ALWAYS,
+        Never = 0,
+        Less,
+        Equal,
+        LessEqual,
+        Greater,
+        NotEqual,
+        GreaterEqual,
+        Always,
 	};
-	enum DEPTH_WRITE_MASK
-	{
-		DEPTH_WRITE_MASK_ZERO,
-		DEPTH_WRITE_MASK_ALL,
+
+    enum class StencilOperation : uint32_t
+    {
+        Keep,
+        Zero,
+        Replace,
+        IncrementClamp,
+        DecrementClamp,
+		Invert,
+        IncrementWrap,
+        DecrementWrap,
 	};
-	enum STENCIL_OP
-	{
-		STENCIL_OP_KEEP,
-		STENCIL_OP_ZERO,
-		STENCIL_OP_REPLACE,
-		STENCIL_OP_INCR_SAT,
-		STENCIL_OP_DECR_SAT,
-		STENCIL_OP_INVERT,
-		STENCIL_OP_INCR,
-		STENCIL_OP_DECR,
-	};
+
 	enum BLEND
 	{
 		BLEND_ZERO,
@@ -466,13 +464,13 @@ namespace Alimer
 		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
 		float MipLODBias = 0.0f;
 		uint32_t MaxAnisotropy = 0;
-		COMPARISON_FUNC ComparisonFunc = COMPARISON_NEVER;
 		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
 		float MinLOD = 0.0f;
 		float MaxLOD = FLT_MAX;
+        CompareFunction compareFunction = CompareFunction::Never;
 	};
 
-	struct RasterizerStateDesc
+	struct RasterizationStateDescriptor
 	{
 		FILL_MODE FillMode = FILL_SOLID;
 		CULL_MODE CullMode = CULL_NONE;
@@ -487,24 +485,22 @@ namespace Alimer
 		uint32_t ForcedSampleCount = 0;
 	};
 
-	struct DepthStencilOpDesc
+	struct StencilStateFaceDescriptor
 	{
-		STENCIL_OP StencilFailOp = STENCIL_OP_KEEP;
-		STENCIL_OP StencilDepthFailOp = STENCIL_OP_KEEP;
-		STENCIL_OP StencilPassOp = STENCIL_OP_KEEP;
-		COMPARISON_FUNC StencilFunc = COMPARISON_NEVER;
+        CompareFunction compare = CompareFunction::Always;
+        StencilOperation failOp = StencilOperation::Keep;
+        StencilOperation depthFailOp = StencilOperation::Keep;
+        StencilOperation passOp = StencilOperation::Keep;
 	};
 
-	struct DepthStencilStateDesc
+	struct DepthStencilStateDescriptor
 	{
-		bool DepthEnable = false;
-		DEPTH_WRITE_MASK DepthWriteMask = DEPTH_WRITE_MASK_ZERO;
-		COMPARISON_FUNC DepthFunc = COMPARISON_NEVER;
-		bool StencilEnable = false;
-		uint8_t StencilReadMask = 0xff;
-		uint8_t StencilWriteMask = 0xff;
-		DepthStencilOpDesc FrontFace;
-		DepthStencilOpDesc BackFace;
+        bool                        depthWriteEnabled = false;
+        CompareFunction             depthCompare = CompareFunction::Always;
+        StencilStateFaceDescriptor  stencilFront;
+        StencilStateFaceDescriptor  stencilBack;
+		uint8_t                     stencilReadMask = 0xff;
+		uint8_t                     stencilWriteMask = 0xff;
 	};
 
 	struct RenderTargetBlendStateDesc
@@ -561,7 +557,7 @@ namespace Alimer
 		const Shader*				as = nullptr;
 		const BlendState*			bs = nullptr;
 		const RasterizerState*		rs = nullptr;
-		const DepthStencilState*	dss = nullptr;
+		DepthStencilStateDescriptor	depthStencilState;
 		const InputLayout*			il = nullptr;
 		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
 		uint32_t					sampleMask = 0xFFFFFFFF;
@@ -818,18 +814,11 @@ namespace Alimer
 		const BlendStateDesc& GetDesc() const { return desc; }
 	};
 
-	struct DepthStencilState : public GraphicsDeviceChild
-	{
-		DepthStencilStateDesc desc;
-
-		const DepthStencilStateDesc& GetDesc() const { return desc; }
-	};
-
 	struct RasterizerState : public GraphicsDeviceChild
 	{
-		RasterizerStateDesc desc;
+        RasterizationStateDescriptor desc;
 
-		const RasterizerStateDesc& GetDesc() const { return desc; }
+		const RasterizationStateDescriptor& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource
@@ -1091,4 +1080,37 @@ namespace Alimer
 		std::vector<RootConstantRange> rootconstants;
 	};
 
+}
+
+namespace std
+{
+    template<>
+    struct hash<Alimer::StencilStateFaceDescriptor>
+    {
+        std::size_t operator()(const Alimer::StencilStateFaceDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.compare);
+            Alimer::hash_combine(hash, (uint32_t)desc.failOp);
+            Alimer::hash_combine(hash, (uint32_t)desc.depthFailOp);
+            Alimer::hash_combine(hash, (uint32_t)desc.passOp);
+            return hash;
+        }
+    };
+
+    template<>
+    struct hash<Alimer::DepthStencilStateDescriptor>
+    {
+        std::size_t operator()(const Alimer::DepthStencilStateDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, desc.depthWriteEnabled);
+            Alimer::hash_combine(hash, (uint32_t)desc.depthCompare);
+            Alimer::hash_combine(hash, desc.stencilFront);
+            Alimer::hash_combine(hash, desc.stencilBack);
+            Alimer::hash_combine(hash, desc.stencilReadMask);
+            Alimer::hash_combine(hash, desc.stencilWriteMask);
+            return hash;
+        }
+    };
 }

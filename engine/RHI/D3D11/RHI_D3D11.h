@@ -91,12 +91,15 @@ namespace Alimer
 
         std::atomic<CommandList> cmd_count{ 0 };
 
+        std::unordered_map<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStatesCache;
+
         struct EmptyResourceHandle {}; // only care about control-block
         std::shared_ptr<EmptyResourceHandle> emptyresource;
 
     public:
         static bool IsAvailable();
         GraphicsDevice_DX11(void* window, bool fullscreen, bool enableDebugLayer_);
+        ~GraphicsDevice_DX11() override;
 
         bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
@@ -104,8 +107,8 @@ namespace Alimer
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
-        bool CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState) override;
-        bool CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState) override;
+        ID3D11DepthStencilState* GetDepthStencilState(const DepthStencilStateDescriptor* descriptor);
+        bool CreateRasterizerState(const RasterizationStateDescriptor* descriptor, RasterizerState* pRasterizerState) override;
         bool CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
         bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;

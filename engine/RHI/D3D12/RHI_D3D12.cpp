@@ -217,32 +217,32 @@ namespace Alimer
             }
             return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
         }
-        constexpr D3D12_COMPARISON_FUNC _ConvertComparisonFunc(COMPARISON_FUNC value)
+        constexpr D3D12_COMPARISON_FUNC _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
             {
-            case COMPARISON_NEVER:
+            case CompareFunction::Never:
                 return D3D12_COMPARISON_FUNC_NEVER;
                 break;
-            case COMPARISON_LESS:
+            case CompareFunction::Less:
                 return D3D12_COMPARISON_FUNC_LESS;
                 break;
-            case COMPARISON_EQUAL:
+            case CompareFunction::Equal:
                 return D3D12_COMPARISON_FUNC_EQUAL;
                 break;
-            case COMPARISON_LESS_EQUAL:
+            case CompareFunction::LessEqual:
                 return D3D12_COMPARISON_FUNC_LESS_EQUAL;
                 break;
-            case COMPARISON_GREATER:
+            case CompareFunction::Greater:
                 return D3D12_COMPARISON_FUNC_GREATER;
                 break;
-            case COMPARISON_NOT_EQUAL:
+            case CompareFunction::NotEqual:
                 return D3D12_COMPARISON_FUNC_NOT_EQUAL;
                 break;
-            case COMPARISON_GREATER_EQUAL:
+            case CompareFunction::GreaterEqual:
                 return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
                 break;
-            case COMPARISON_ALWAYS:
+            case CompareFunction::Always:
                 return D3D12_COMPARISON_FUNC_ALWAYS;
                 break;
             default:
@@ -283,50 +283,28 @@ namespace Alimer
             }
             return D3D12_CULL_MODE_NONE;
         }
-        constexpr D3D12_DEPTH_WRITE_MASK _ConvertDepthWriteMask(DEPTH_WRITE_MASK value)
+        constexpr D3D12_STENCIL_OP _ConvertStencilOp(StencilOperation value)
         {
             switch (value)
             {
-            case DEPTH_WRITE_MASK_ZERO:
-                return D3D12_DEPTH_WRITE_MASK_ZERO;
-                break;
-            case DEPTH_WRITE_MASK_ALL:
-                return D3D12_DEPTH_WRITE_MASK_ALL;
-                break;
-            default:
-                break;
-            }
-            return D3D12_DEPTH_WRITE_MASK_ZERO;
-        }
-        constexpr D3D12_STENCIL_OP _ConvertStencilOp(STENCIL_OP value)
-        {
-            switch (value)
-            {
-            case STENCIL_OP_KEEP:
+            case StencilOperation::Keep:
                 return D3D12_STENCIL_OP_KEEP;
-                break;
-            case STENCIL_OP_ZERO:
+            case StencilOperation::Zero:
                 return D3D12_STENCIL_OP_ZERO;
-                break;
-            case STENCIL_OP_REPLACE:
+            case StencilOperation::Replace:
                 return D3D12_STENCIL_OP_REPLACE;
-                break;
-            case STENCIL_OP_INCR_SAT:
+            case StencilOperation::IncrementClamp:
                 return D3D12_STENCIL_OP_INCR_SAT;
-                break;
-            case STENCIL_OP_DECR_SAT:
+            case StencilOperation::DecrementClamp:
                 return D3D12_STENCIL_OP_DECR_SAT;
-                break;
-            case STENCIL_OP_INVERT:
+            case StencilOperation::Invert:
                 return D3D12_STENCIL_OP_INVERT;
-                break;
-            case STENCIL_OP_INCR:
+            case StencilOperation::IncrementWrap:
                 return D3D12_STENCIL_OP_INCR;
-                break;
-            case STENCIL_OP_DECR:
+            case StencilOperation::DecrementWrap:
                 return D3D12_STENCIL_OP_DECR;
-                break;
             default:
+                ALIMER_UNREACHABLE();
                 break;
             }
             return D3D12_STENCIL_OP_KEEP;
@@ -983,6 +961,14 @@ namespace Alimer
             return retVal;
         }
 
+        inline D3D12_DEPTH_STENCILOP_DESC _ConvertStencilOpDesc(const StencilStateFaceDescriptor descriptor) {
+            D3D12_DEPTH_STENCILOP_DESC desc;
+            desc.StencilFailOp = _ConvertStencilOp(descriptor.failOp);
+            desc.StencilDepthFailOp = _ConvertStencilOp(descriptor.depthFailOp);
+            desc.StencilPassOp = _ConvertStencilOp(descriptor.passOp);
+            desc.StencilFunc = _ConvertComparisonFunc(descriptor.compare);
+            return desc;
+        }
 
         // Local Helpers:
 
@@ -1870,7 +1856,7 @@ namespace Alimer
                     stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
                 }
 
-                RasterizerStateDesc pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizerStateDesc();
+                RasterizationStateDescriptor pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizationStateDescriptor();
                 CD3DX12_RASTERIZER_DESC rs = {};
                 rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
                 rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
@@ -1885,22 +1871,16 @@ namespace Alimer
                 rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
                 stream.RS = rs;
 
-                DepthStencilStateDesc pDepthStencilStateDesc = pso->desc.dss != nullptr ? pso->desc.dss->GetDesc() : DepthStencilStateDesc();
+                DepthStencilStateDescriptor pDepthStencilStateDesc = pso->desc.depthStencilState;
                 CD3DX12_DEPTH_STENCIL_DESC dss = {};
-                dss.DepthEnable = pDepthStencilStateDesc.DepthEnable;
-                dss.DepthWriteMask = _ConvertDepthWriteMask(pDepthStencilStateDesc.DepthWriteMask);
-                dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.DepthFunc);
-                dss.StencilEnable = pDepthStencilStateDesc.StencilEnable;
-                dss.StencilReadMask = pDepthStencilStateDesc.StencilReadMask;
-                dss.StencilWriteMask = pDepthStencilStateDesc.StencilWriteMask;
-                dss.FrontFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilDepthFailOp);
-                dss.FrontFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilFailOp);
-                dss.FrontFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.FrontFace.StencilFunc);
-                dss.FrontFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.FrontFace.StencilPassOp);
-                dss.BackFace.StencilDepthFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilDepthFailOp);
-                dss.BackFace.StencilFailOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilFailOp);
-                dss.BackFace.StencilFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.BackFace.StencilFunc);
-                dss.BackFace.StencilPassOp = _ConvertStencilOp(pDepthStencilStateDesc.BackFace.StencilPassOp);
+                dss.DepthEnable = pDepthStencilStateDesc.depthCompare != CompareFunction::Always || pDepthStencilStateDesc.depthWriteEnabled;
+                dss.DepthWriteMask = pDepthStencilStateDesc.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+                dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.depthCompare);
+                dss.StencilEnable = StencilTestEnabled(&pDepthStencilStateDesc) ? TRUE : FALSE;
+                dss.StencilReadMask = pDepthStencilStateDesc.stencilReadMask;
+                dss.StencilWriteMask = pDepthStencilStateDesc.stencilWriteMask;
+                dss.FrontFace = _ConvertStencilOpDesc(pDepthStencilStateDesc.stencilFront);
+                dss.BackFace = _ConvertStencilOpDesc(pDepthStencilStateDesc.stencilBack);
                 stream.DSS = dss;
 
                 BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
@@ -3238,19 +3218,10 @@ namespace Alimer
         return true;
     }
 
-    bool GraphicsDevice_DX12::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
-    {
-        pDepthStencilState->internal_state = allocationhandler;
-
-        pDepthStencilState->desc = *pDepthStencilStateDesc;
-        return true;
-    }
-
-    bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
+    bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizationStateDescriptor* desc, RasterizerState* pRasterizerState)
     {
         pRasterizerState->internal_state = allocationhandler;
-
-        pRasterizerState->desc = *pRasterizerStateDesc;
+        pRasterizerState->desc = *desc;
         return true;
     }
 
@@ -3267,7 +3238,7 @@ namespace Alimer
         desc.AddressW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
         desc.MipLODBias = pSamplerDesc->MipLODBias;
         desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
-        desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
+        desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->compareFunction);
         desc.BorderColor[0] = pSamplerDesc->BorderColor[0];
         desc.BorderColor[1] = pSamplerDesc->BorderColor[1];
         desc.BorderColor[2] = pSamplerDesc->BorderColor[2];
@@ -3345,7 +3316,7 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->il);
         Alimer::hash_combine(pso->hash, pDesc->rs);
         Alimer::hash_combine(pso->hash, pDesc->bs);
-        Alimer::hash_combine(pso->hash, pDesc->dss);
+        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
         Alimer::hash_combine(pso->hash, pDesc->pt);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
 
@@ -3903,7 +3874,7 @@ namespace Alimer
             desc.AddressW = _ConvertTextureAddressMode(x.sampler.desc.AddressW);
             desc.MipLODBias = x.sampler.desc.MipLODBias;
             desc.MaxAnisotropy = x.sampler.desc.MaxAnisotropy;
-            desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.ComparisonFunc);
+            desc.ComparisonFunc = _ConvertComparisonFunc(x.sampler.desc.compareFunction);
             desc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
             desc.MinLOD = x.sampler.desc.MinLOD;
             desc.MaxLOD = x.sampler.desc.MaxLOD;

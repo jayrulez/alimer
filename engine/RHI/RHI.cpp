@@ -237,4 +237,16 @@ namespace Alimer
     {
         return (float)GetResolutionHeight() / 1.0f; //wiPlatform::GetDPIScaling();
     }
+
+    bool StencilTestEnabled(const DepthStencilStateDescriptor* descriptor)
+    {
+        return descriptor->stencilBack.compare != CompareFunction::Always
+            || descriptor->stencilBack.failOp != StencilOperation::Keep
+            || descriptor->stencilBack.depthFailOp != StencilOperation::Keep
+            || descriptor->stencilBack.passOp != StencilOperation::Keep
+            || descriptor->stencilFront.compare != CompareFunction::Always
+            || descriptor->stencilFront.failOp != StencilOperation::Keep
+            || descriptor->stencilFront.depthFailOp != StencilOperation::Keep
+            || descriptor->stencilFront.passOp != StencilOperation::Keep;
+    }
 }

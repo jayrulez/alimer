@@ -14,14 +14,14 @@ struct PS_INPUT
 
 cbuffer ProjectionMatrixBuffer : register(b0) 
 {
-    float4x4 ProjectionMatrix; 
+    float4x4 mvp; 
 };
 
 PS_INPUT VSMain(VS_INPUT input)
 {
     PS_INPUT output;
     //output.Position = float4(input.Position.xyz, 1.0f);
-    output.Position = mul(ProjectionMatrix, float4(input.Position.xyz, 1.0f));
+    output.Position = mul(mvp, float4(input.Position.xyz, 1.0f));
     output.Color = input.Color;
     return output;
 }

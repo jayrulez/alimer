@@ -56,7 +56,7 @@ namespace Alimer
 
     struct Vertex
     {
-        Float4 position;
+        Float3 position;
         Color color;
     };
 
@@ -64,6 +64,7 @@ namespace Alimer
     Shader vertexShader;
     Shader pixelShader;
     InputLayout inputLayout;
+    RasterizerState rasterizerState;
 
     void HelloWorldApp::Initialize()
     {
@@ -73,87 +74,91 @@ namespace Alimer
 
         InputLayoutDesc layout[] =
         {
-            { "ATTRIBUTE", 0, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+            { "ATTRIBUTE", 0, FORMAT_R32G32B32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
             { "ATTRIBUTE", 1, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
         };
 
         graphicsDevice->CreateInputLayout(layout, ALIMER_STATIC_ARRAY_SIZE(layout), &vertexShader, &inputLayout);
+
+        RasterizationStateDescriptor rs;
+        rs.FillMode = FILL_SOLID;
+        rs.CullMode = CULL_BACK;
+        rs.FrontCounterClockwise = true;
+        rs.DepthBias = 0;
+        rs.DepthBiasClamp = 0;
+        rs.SlopeScaledDepthBias = 0;
+        rs.DepthClipEnable = false;
+        rs.MultisampleEnable = false;
+        rs.AntialiasedLineEnable = false;
+        graphicsDevice->CreateRasterizerState(&rs, &rasterizerState);
 
         PipelineStateDesc psoDesc = {};
         psoDesc.vs = &vertexShader;
         psoDesc.ps = &pixelShader;
         psoDesc.pt = TRIANGLELIST;
         psoDesc.il = &inputLayout;
+        psoDesc.rs = &rasterizerState;
+        psoDesc.depthStencilState.depthWriteEnabled = true;
+        psoDesc.depthStencilState.depthCompare = CompareFunction::LessEqual;
         graphicsDevice->CreatePipelineState(&psoDesc, &pipeline);
 
-        Vertex quadVertices[] =
+        /*Vertex quadVertices[] =
         {
-            { { -0.5f, 0.5f, 0.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.5f, 0.5f, 0.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { 0.5f, -0.5, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-            { { -0.5f, -0.5, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-        };
+            { { -0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { 0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+            { { -0.5f, -0.5, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
+        };*/
 
-        Vertex cubeData[] =
+        float cubeData[] =
         {
-            { {-1.0f, -1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} }, // Front
-            { {1.0f,  1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} },
-            { {-1.0f,  1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} },
-            { {-1.0f, -1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} },
-            { {1.0f, -1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} },
-            { {1.0f,  1.0f, -1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f, 1.0f} },
+            /* positions        colors */
+            -1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+             1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+             1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+            -1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
 
-                  { {-1.0f, -1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} }, // BACK
-                  { {-1.0f,  1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f,  1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} },
-                  { {-1.0f, -1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f,  1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f, -1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} },
+            -1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+             1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+             1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+            -1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
 
-                  { {-1.0f, 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} }, // Top
-                  { {1.0f, 1.0f,  1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f, 1.0f,  1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f, 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} },
-                  { {1.0f, 1.0f, -1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} },
-                  { {1.0f, 1.0f,  1.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} },
+            -1.0, -1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
+            -1.0,  1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
+            -1.0,  1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
+            -1.0, -1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
 
-                  { {-1.0f,-1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} }, // Bottom
-                  { {-1.0f,-1.0f,  1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f,-1.0f,  1.0f,  1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} },
-                  { {-1.0f,-1.0f, -1.0f, 1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f,-1.0f,  1.0f,  1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} },
-                  { {1.0f,-1.0f, -1.0f,  1.0f}, {1.0f, 1.0f, 0.0f, 1.0f} },
+            1.0, -1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
+            1.0,  1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
+            1.0,  1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
+            1.0, -1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
 
-                  { {-1.0f, -1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} }, // Left
-                  { {-1.0f,  1.0f,  1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f, -1.0f,  1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f, -1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f,  1.0f, -1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
-                  { {-1.0f,  1.0f,  1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 1.0f} },
+            -1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
+            -1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
+             1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
+             1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
 
-                  { {1.0f, -1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} }, // Right
-                  { {1.0f, -1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
-                  { {1.0f,  1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
-                  { {1.0f, -1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
-                  { {1.0f,  1.0f,  1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} },
-                  { {1.0f,  1.0f, -1.0f, 1.0f}, {0.0f, 1.0f, 1.0f, 1.0f} }
+            -1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0,
+            -1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
+             1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
+             1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0
         };
 
         GPUBufferDesc bufferDesc{};
         bufferDesc.Usage = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_VERTEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(cubeData);
-        bufferDesc.StructureByteStride = sizeof(Vertex);
-        graphicsDevice->CreateBuffer(&bufferDesc, quadVertices, &vertexBuffer);
+        //bufferDesc.StructureByteStride = sizeof(Vertex);
+        graphicsDevice->CreateBuffer(&bufferDesc, cubeData, &vertexBuffer);
 
         // Index buffer
         const uint16_t indices[] = {
             0, 1, 2,  0, 2, 3,
-        6, 5, 4,  7, 6, 4,
-        8, 9, 10,  8, 10, 11,
-        14, 13, 12,  15, 14, 12,
-        16, 17, 18,  16, 18, 19,
-        22, 21, 20, 23, 22, 20
+            6, 5, 4,  7, 6, 4,
+            8, 9, 10,  8, 10, 11,
+            14, 13, 12,  15, 14, 12,
+            16, 17, 18,  16, 18, 19,
+            22, 21, 20, 23, 22, 20
         };
 
         bufferDesc.Usage = USAGE_IMMUTABLE;
@@ -176,8 +181,8 @@ namespace Alimer
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
 
         float aspect = (float)(GetMainWindow()->GetSize().width / GetMainWindow()->GetSize().height);
-        XMMATRIX view = XMMatrixLookAtRH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
-        XMMATRIX proj = XMMatrixPerspectiveFovRH(Pi / 4.0f, aspect, 0.1f, 100);
+        XMMATRIX view = XMMatrixLookAtLH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
+        XMMATRIX proj = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
         XMMATRIX viewProj = XMMatrixMultiply(world, XMMatrixMultiply(view, proj));
         
         //Matrix4x4 projectionMatrix;

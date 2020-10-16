@@ -331,35 +331,28 @@ namespace Alimer
             }
             return VK_FORMAT_UNDEFINED;
         }
-        constexpr VkCompareOp _ConvertComparisonFunc(COMPARISON_FUNC value)
+        constexpr VkCompareOp _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
             {
-            case COMPARISON_NEVER:
+            case CompareFunction::Never:
                 return VK_COMPARE_OP_NEVER;
-                break;
-            case COMPARISON_LESS:
+            case CompareFunction::Less:
                 return VK_COMPARE_OP_LESS;
-                break;
-            case COMPARISON_EQUAL:
+            case CompareFunction::Equal:
                 return VK_COMPARE_OP_EQUAL;
-                break;
-            case COMPARISON_LESS_EQUAL:
+            case CompareFunction::LessEqual:
                 return VK_COMPARE_OP_LESS_OR_EQUAL;
-                break;
-            case COMPARISON_GREATER:
+            case CompareFunction::Greater:
                 return VK_COMPARE_OP_GREATER;
-                break;
-            case COMPARISON_NOT_EQUAL:
+            case CompareFunction::NotEqual:
                 return VK_COMPARE_OP_NOT_EQUAL;
-                break;
-            case COMPARISON_GREATER_EQUAL:
+            case CompareFunction::GreaterEqual:
                 return VK_COMPARE_OP_GREATER_OR_EQUAL;
-                break;
-            case COMPARISON_ALWAYS:
+            case CompareFunction::Always:
                 return VK_COMPARE_OP_ALWAYS;
-                break;
             default:
+                ALIMER_UNREACHABLE();
                 break;
             }
             return VK_COMPARE_OP_NEVER;
@@ -469,35 +462,28 @@ namespace Alimer
             }
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         }
-        constexpr VkStencilOp _ConvertStencilOp(STENCIL_OP value)
+        constexpr VkStencilOp _ConvertStencilOp(StencilOperation value)
         {
             switch (value)
             {
-            case Alimer::STENCIL_OP_KEEP:
+            case StencilOperation::Keep:
                 return VK_STENCIL_OP_KEEP;
-                break;
-            case Alimer::STENCIL_OP_ZERO:
+            case StencilOperation::Zero:
                 return VK_STENCIL_OP_ZERO;
-                break;
-            case Alimer::STENCIL_OP_REPLACE:
+            case StencilOperation::Replace:
                 return VK_STENCIL_OP_REPLACE;
-                break;
-            case Alimer::STENCIL_OP_INCR_SAT:
+            case StencilOperation::IncrementClamp:
                 return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
-                break;
-            case Alimer::STENCIL_OP_DECR_SAT:
+            case StencilOperation::DecrementClamp:
                 return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
-                break;
-            case Alimer::STENCIL_OP_INVERT:
+            case StencilOperation::Invert:
                 return VK_STENCIL_OP_INVERT;
-                break;
-            case Alimer::STENCIL_OP_INCR:
+            case StencilOperation::IncrementWrap:
                 return VK_STENCIL_OP_INCREMENT_AND_WRAP;
-                break;
-            case Alimer::STENCIL_OP_DECR:
+            case StencilOperation::DecrementWrap:
                 return VK_STENCIL_OP_DECREMENT_AND_WRAP;
-                break;
             default:
+                ALIMER_UNREACHABLE();
                 break;
             }
             return VK_STENCIL_OP_KEEP;
@@ -1939,7 +1925,7 @@ namespace Alimer
 
                 if (pso->desc.rs != nullptr)
                 {
-                    const RasterizerStateDesc& desc = pso->desc.rs->desc;
+                    const RasterizationStateDescriptor& desc = pso->desc.rs->desc;
 
                     switch (desc.FillMode)
                     {
@@ -2005,33 +1991,29 @@ namespace Alimer
                 // Depth-Stencil:
                 VkPipelineDepthStencilStateCreateInfo depthstencil = {};
                 depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-                if (pso->desc.dss != nullptr)
-                {
-                    depthstencil.depthTestEnable = pso->desc.dss->desc.DepthEnable ? VK_TRUE : VK_FALSE;
-                    depthstencil.depthWriteEnable = pso->desc.dss->desc.DepthWriteMask == DEPTH_WRITE_MASK_ZERO ? VK_FALSE : VK_TRUE;
-                    depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.dss->desc.DepthFunc);
+                depthstencil.depthTestEnable = (pso->desc.depthStencilState.depthCompare != CompareFunction::Always || pso->desc.depthStencilState.depthWriteEnabled) ? VK_TRUE : VK_FALSE;
+                depthstencil.depthWriteEnable = pso->desc.depthStencilState.depthWriteEnabled ? VK_FALSE : VK_TRUE;
+                depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.depthCompare);
 
-                    depthstencil.stencilTestEnable = pso->desc.dss->desc.StencilEnable ? VK_TRUE : VK_FALSE;
+                depthstencil.stencilTestEnable = StencilTestEnabled(&pso->desc.depthStencilState) ? VK_TRUE : VK_FALSE;
 
-                    depthstencil.front.compareMask = pso->desc.dss->desc.StencilReadMask;
-                    depthstencil.front.writeMask = pso->desc.dss->desc.StencilWriteMask;
-                    depthstencil.front.reference = 0; // runtime supplied
-                    depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.FrontFace.StencilFunc);
-                    depthstencil.front.passOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilPassOp);
-                    depthstencil.front.failOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilFailOp);
-                    depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.FrontFace.StencilDepthFailOp);
+                depthstencil.front.compareMask = pso->desc.depthStencilState.stencilReadMask;
+                depthstencil.front.writeMask = pso->desc.depthStencilState.stencilWriteMask;
+                depthstencil.front.reference = 0; // runtime supplied
+                depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.stencilFront.compare);
+                depthstencil.front.passOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.passOp);
+                depthstencil.front.failOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.failOp);
+                depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.depthFailOp);
 
-                    depthstencil.back.compareMask = pso->desc.dss->desc.StencilReadMask;
-                    depthstencil.back.writeMask = pso->desc.dss->desc.StencilWriteMask;
-                    depthstencil.back.reference = 0; // runtime supplied
-                    depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.dss->desc.BackFace.StencilFunc);
-                    depthstencil.back.passOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilPassOp);
-                    depthstencil.back.failOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilFailOp);
-                    depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.dss->desc.BackFace.StencilDepthFailOp);
+                depthstencil.back.compareMask = pso->desc.depthStencilState.stencilReadMask;
+                depthstencil.back.writeMask = pso->desc.depthStencilState.stencilWriteMask;
+                depthstencil.back.reference = 0; // runtime supplied
+                depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.stencilBack.compare);
+                depthstencil.back.passOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.passOp);
+                depthstencil.back.failOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.failOp);
+                depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.depthFailOp);
 
-                    depthstencil.depthBoundsTestEnable = VK_FALSE;
-                }
-
+                depthstencil.depthBoundsTestEnable = VK_FALSE;
                 pipelineInfo.pDepthStencilState = &depthstencil;
 
 
@@ -2339,7 +2321,7 @@ namespace Alimer
                 res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
                 assert(res == VK_SUCCESS);
             }
-        }
+            }
 
 
         // Surface creation:
@@ -2839,7 +2821,7 @@ namespace Alimer
         }
 
         //wiBackLog::post("Created GraphicsDevice_Vulkan");
-    }
+        }
 
     GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
     {
@@ -3959,19 +3941,10 @@ namespace Alimer
         return true;
     }
 
-    bool GraphicsDevice_Vulkan::CreateDepthStencilState(const DepthStencilStateDesc* pDepthStencilStateDesc, DepthStencilState* pDepthStencilState)
-    {
-        pDepthStencilState->internal_state = allocationhandler;
-
-        pDepthStencilState->desc = *pDepthStencilStateDesc;
-        return true;
-    }
-
-    bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizerStateDesc* pRasterizerStateDesc, RasterizerState* pRasterizerState)
+    bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizationStateDescriptor* desc, RasterizerState* pRasterizerState)
     {
         pRasterizerState->internal_state = allocationhandler;
-
-        pRasterizerState->desc = *pRasterizerStateDesc;
+        pRasterizerState->desc = *desc;
         return true;
     }
 
@@ -4148,7 +4121,7 @@ namespace Alimer
         createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
         createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
         createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->MaxAnisotropy);
-        createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->ComparisonFunc);
+        createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->compareFunction);
         createInfo.minLod = pSamplerDesc->MinLOD;
         createInfo.maxLod = pSamplerDesc->MaxLOD;
         createInfo.mipLodBias = pSamplerDesc->MipLODBias;
@@ -4224,7 +4197,7 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->il);
         Alimer::hash_combine(pso->hash, pDesc->rs);
         Alimer::hash_combine(pso->hash, pDesc->bs);
-        Alimer::hash_combine(pso->hash, pDesc->dss);
+        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
         Alimer::hash_combine(pso->hash, pDesc->pt);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
 
@@ -5089,7 +5062,7 @@ namespace Alimer
             {
                 if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
                 {
-                    if (texture->desc.ArraySize > 6)
+                    if (texture->desc.ArraySize > 6 && sliceCount > 6)
                     {
                         view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
                     }
@@ -5158,6 +5131,11 @@ namespace Alimer
         break;
         case Alimer::UAV:
         {
+            if (view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE || view_desc.viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY)
+            {
+                view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            }
+
             VkImageView uav;
             VkResult res = vkCreateImageView(device, &view_desc, nullptr, &uav);
 
@@ -6991,4 +6969,4 @@ namespace Alimer
         label.color[3] = 1;
         vkCmdInsertDebugUtilsLabelEXT(GetDirectCommandList(cmd), &label);
     }
-}
+        }
