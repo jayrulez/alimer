@@ -95,7 +95,7 @@ namespace Alimer
         PipelineStateDesc psoDesc = {};
         psoDesc.vs = &vertexShader;
         psoDesc.ps = &pixelShader;
-        psoDesc.pt = TRIANGLELIST;
+        //psoDesc.pt = TRIANGLELIST;
         psoDesc.il = &inputLayout;
         psoDesc.rs = &rasterizerState;
         psoDesc.depthStencilState.depthWriteEnabled = true;

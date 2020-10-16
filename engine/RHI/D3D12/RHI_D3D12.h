@@ -176,7 +176,7 @@ namespace Alimer
 
         Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
-        PRIMITIVETOPOLOGY prev_pt[kCommanstListCount] = {};
+        PrimitiveTopology prev_pt[kCommanstListCount] = {};
 
         std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
         std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[kCommanstListCount];

@@ -72,15 +72,14 @@ namespace Alimer
 		Count,
 	};
 
-	enum PRIMITIVETOPOLOGY
+	enum class PrimitiveTopology : uint32_t
 	{
-		UNDEFINED,
-		TRIANGLELIST,
-		TRIANGLESTRIP,
-		POINTLIST,
-		LINELIST,
-		LINESTRIP,
-		PATCHLIST,
+        PointList,
+        LineList,
+        LineStrip,
+        TriangleList,
+        TriangleStrip,
+		PatchList,
 	};
 
 	enum class CompareFunction : uint32_t
@@ -556,11 +555,11 @@ namespace Alimer
 		const Shader*				ms = nullptr;
 		const Shader*				as = nullptr;
 		const BlendState*			bs = nullptr;
+		uint32_t					sampleMask = 0xFFFFFFFF;
 		const RasterizerState*		rs = nullptr;
 		DepthStencilStateDescriptor	depthStencilState;
 		const InputLayout*			il = nullptr;
-		PRIMITIVETOPOLOGY			pt = TRIANGLELIST;
-		uint32_t					sampleMask = 0xFFFFFFFF;
+        PrimitiveTopology			primitiveTopology = PrimitiveTopology::TriangleList;
 	};
 	struct GPUBarrier
 	{

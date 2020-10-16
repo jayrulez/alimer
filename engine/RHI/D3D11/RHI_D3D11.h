@@ -66,7 +66,7 @@ namespace Alimer
         uint32_t prev_stencilRef[kCommanstListCount] = {};
         ID3D11DepthStencilState* prev_dss[kCommanstListCount] = {};
         ID3D11InputLayout* prev_il[kCommanstListCount] = {};
-        PRIMITIVETOPOLOGY prev_pt[kCommanstListCount] = {};
+        PrimitiveTopology prev_pt[kCommanstListCount] = {};
 
         const PipelineState* active_pso[kCommanstListCount] = {};
         bool dirty_pso[kCommanstListCount] = {};
@@ -91,7 +91,9 @@ namespace Alimer
 
         std::atomic<CommandList> cmd_count{ 0 };
 
-        std::unordered_map<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStatesCache;
+        std::unordered_map<size_t, ComPtr<ID3D11BlendState>> blendStateCache;
+        std::unordered_map<size_t, ComPtr<ID3D11RasterizerState>> rasterizerStateCache;
+        std::unordered_map<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStateCache;
 
         struct EmptyResourceHandle {}; // only care about control-block
         std::shared_ptr<EmptyResourceHandle> emptyresource;

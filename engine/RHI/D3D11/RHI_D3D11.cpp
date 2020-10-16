@@ -1198,6 +1198,7 @@ namespace Alimer
         {
             return static_cast<PipelineState_DX11*>(param->internal_state.get());
         }
+
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
         static HINSTANCE d3dcompiler_dll = nullptr;
         static bool d3dcompiler_dll_load_failed = false;
@@ -1304,27 +1305,27 @@ namespace Alimer
             prev_il[cmd] = il;
         }
 
-        if (prev_pt[cmd] != desc.pt)
+        if (prev_pt[cmd] != desc.primitiveTopology)
         {
             D3D11_PRIMITIVE_TOPOLOGY d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-            switch (desc.pt)
+            switch (desc.primitiveTopology)
             {
-            case TRIANGLELIST:
-                d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-                break;
-            case TRIANGLESTRIP:
-                d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-                break;
-            case POINTLIST:
+            case PrimitiveTopology::PointList:
                 d3dType = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
                 break;
-            case LINELIST:
+            case PrimitiveTopology::LineList:
                 d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
                 break;
-            case LINESTRIP:
+            case PrimitiveTopology::LineStrip:
                 d3dType = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
                 break;
-            case PATCHLIST:
+            case PrimitiveTopology::TriangleList:
+                d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+                break;
+            case PrimitiveTopology::TriangleStrip:
+                d3dType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+                break;
+            case PrimitiveTopology::PatchList:
                 d3dType = D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
                 break;
             default:
@@ -1333,7 +1334,7 @@ namespace Alimer
             };
             deviceContexts[cmd]->IASetPrimitiveTopology(d3dType);
 
-            prev_pt[cmd] = desc.pt;
+            prev_pt[cmd] = desc.primitiveTopology;
         }
     }
 
@@ -1558,7 +1559,9 @@ namespace Alimer
 
     GraphicsDevice_DX11::~GraphicsDevice_DX11()
     {
-        depthStencilStatesCache.clear();
+        blendStateCache.clear();
+        rasterizerStateCache.clear();
+        depthStencilStateCache.clear();
     }
 
     void GraphicsDevice_DX11::CreateBackBufferResources()
@@ -1908,8 +1911,8 @@ namespace Alimer
     {
         std::size_t hash = std::hash<DepthStencilStateDescriptor>{}(*descriptor);
 
-        auto it = depthStencilStatesCache.find(hash);
-        if (it == depthStencilStatesCache.end())
+        auto it = depthStencilStateCache.find(hash);
+        if (it == depthStencilStateCache.end())
         {
             D3D11_DEPTH_STENCIL_DESC d3dDesc;
             d3dDesc.DepthEnable = descriptor->depthCompare != CompareFunction::Always || descriptor->depthWriteEnabled;
@@ -1923,7 +1926,7 @@ namespace Alimer
 
             ComPtr<ID3D11DepthStencilState> depthStencilState;
             ThrowIfFailed(device->CreateDepthStencilState(&d3dDesc, depthStencilState.GetAddressOf()));
-            it = depthStencilStatesCache.insert({ hash, std::move(depthStencilState) }).first;
+            it = depthStencilStateCache.insert({ hash, std::move(depthStencilState) }).first;
         }
 
         return it->second.Get();
@@ -2777,7 +2780,7 @@ namespace Alimer
         prev_stencilRef[cmd] = {};
         prev_dss[cmd] = {};
         prev_il[cmd] = {};
-        prev_pt[cmd] = {};
+        prev_pt[cmd] = static_cast<PrimitiveTopology>(-1);
 
         memset(raster_uavs[cmd], 0, sizeof(raster_uavs[cmd]));
         raster_uavs_slot[cmd] = {};

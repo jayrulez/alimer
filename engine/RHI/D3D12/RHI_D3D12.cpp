@@ -1208,7 +1208,31 @@ namespace Alimer
         {
             return static_cast<RootSignature_DX12*>(param->internal_state.get());
         }
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
+        ComPtr<IDxcLibrary> dxcLibrary;
+        ComPtr<IDxcCompiler> dxcCompiler;
+
+        inline IDxcLibrary* GetOrCreateDxcLibrary() {
+            if (dxcLibrary == nullptr) {
+                ThrowIfFailed(DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&dxcLibrary)));
+                ALIMER_ASSERT(dxcLibrary != nullptr);
+            }
+
+            return dxcLibrary.Get();
+        }
+
+        inline IDxcCompiler* GetOrCreateDxcCompiler() {
+            if (dxcCompiler == nullptr) {
+                ThrowIfFailed(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler)));
+                ALIMER_ASSERT(dxcCompiler != nullptr);
+            }
+
+            return dxcCompiler.Get();
+        }
+#endif
     }
+
     using namespace DX12_Internal;
 
     // Allocators:
@@ -1997,20 +2021,20 @@ namespace Alimer
                 stream.SampleDesc = sampleDesc;
                 stream.SampleMask = pso->desc.sampleMask;
 
-                switch (pso->desc.pt)
+                switch (pso->desc.primitiveTopology)
                 {
-                case POINTLIST:
+                case PrimitiveTopology::PointList:
                     stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
                     break;
-                case LINELIST:
-                case LINESTRIP:
+                case PrimitiveTopology::LineList:
+                case PrimitiveTopology::LineStrip:
                     stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
                     break;
-                case TRIANGLELIST:
-                case TRIANGLESTRIP:
+                case PrimitiveTopology::TriangleList:
+                case PrimitiveTopology::TriangleStrip:
                     stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
                     break;
-                case PATCHLIST:
+                case PrimitiveTopology::PatchList:
                     stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
                     break;
                 default:
@@ -2049,29 +2073,29 @@ namespace Alimer
 
         GetDirectCommandList(cmd)->SetPipelineState(pipeline);
 
-        if (prev_pt[cmd] != pso->desc.pt)
+        if (prev_pt[cmd] != pso->desc.primitiveTopology)
         {
-            prev_pt[cmd] = pso->desc.pt;
+            prev_pt[cmd] = pso->desc.primitiveTopology;
 
             D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-            switch (pso->desc.pt)
+            switch (pso->desc.primitiveTopology)
             {
-            case TRIANGLELIST:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-                break;
-            case TRIANGLESTRIP:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-                break;
-            case POINTLIST:
+            case PrimitiveTopology::PointList:
                 d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
                 break;
-            case LINELIST:
+            case PrimitiveTopology::LineList:
                 d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
                 break;
-            case LINESTRIP:
+            case PrimitiveTopology::LineStrip:
                 d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
                 break;
-            case PATCHLIST:
+            case PrimitiveTopology::TriangleList:
+                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+                break;
+            case PrimitiveTopology::TriangleStrip:
+                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+                break;
+            case PrimitiveTopology::PatchList:
                 d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
                 break;
             default:
@@ -3206,8 +3230,81 @@ namespace Alimer
 
     bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader)
     {
+#if defined(ALIMER_DISABLE_SHADER_COMPILER)
         pShader->internal_state = nullptr;
         return false;
+#else
+        IDxcLibrary* dxcLibrary = GetOrCreateDxcLibrary();
+        IDxcCompiler* dxcCompiler = GetOrCreateDxcCompiler();
+
+        ComPtr<IDxcIncludeHandler> includeHandler;
+        ThrowIfFailed(dxcLibrary->CreateIncludeHandler(&includeHandler));
+
+        ComPtr<IDxcBlobEncoding> sourceBlob;
+        ThrowIfFailed(dxcLibrary->CreateBlobWithEncodingOnHeapCopy(source, (UINT32)strlen(source), CP_UTF8, &sourceBlob));
+
+        std::wstring entryPointW = ToUtf16( entryPoint);
+        std::vector<const wchar_t*> arguments;
+        arguments.push_back(L"/Zpc"); // Column major
+#ifdef _DEBUG
+        //arguments.push_back(L"/Zi");
+#else
+        arguments.push_back(L"/O3");
+#endif
+        // Enable FXC backward compatibility by setting the language version to 2016
+        arguments.push_back(L"-HV");
+        arguments.push_back(L"2016");
+
+        const wchar_t* target = L"vs_6_1";
+        switch (stage)
+        {
+        case ShaderStage::Hull:
+            target = L"hs_6_1";
+            break;
+        case ShaderStage::Domain:
+            target = L"ds_6_1";
+            break;
+        case ShaderStage::Geometry:
+            target = L"gs_6_1";
+            break;
+        case ShaderStage::Fragment:
+            target = L"ps_6_1";
+            break;
+        case ShaderStage::Compute:
+            target = L"cs_6_1";
+            break;
+        }
+
+        ComPtr<IDxcOperationResult> result;
+        ThrowIfFailed(dxcCompiler->Compile(
+            sourceBlob.Get(),
+            nullptr,
+            entryPointW.c_str(),
+            target,
+            arguments.data(),
+            (UINT32)arguments.size(),
+            nullptr,
+            0,
+            includeHandler.Get(),
+            &result));
+
+        HRESULT hr;
+        ThrowIfFailed(result->GetStatus(&hr));
+
+        if (FAILED(hr))
+        {
+            ComPtr<IDxcBlobEncoding> errors;
+            ThrowIfFailed(result->GetErrorBuffer(&errors));
+            std::string message = std::string("DXC compile failed with ") + static_cast<char*>(errors->GetBufferPointer());
+            LOGE("{}", message);
+            return false;
+        }
+
+        ComPtr<IDxcBlob> compiledShader;
+        ThrowIfFailed(result->GetResult(&compiledShader));
+
+        return CreateShader(stage, compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), pShader);
+#endif
     }
 
     bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
@@ -3297,6 +3394,7 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
+
     bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX12>();
@@ -3314,11 +3412,11 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->ds);
         Alimer::hash_combine(pso->hash, pDesc->gs);
         Alimer::hash_combine(pso->hash, pDesc->il);
-        Alimer::hash_combine(pso->hash, pDesc->rs);
         Alimer::hash_combine(pso->hash, pDesc->bs);
-        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
-        Alimer::hash_combine(pso->hash, pDesc->pt);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
+        Alimer::hash_combine(pso->hash, pDesc->rs);
+        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
+        Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 
         if (pDesc->rootSignature == nullptr)
         {
@@ -4985,7 +5083,7 @@ namespace Alimer
         }
         GetDirectCommandList(cmd)->RSSetScissorRects(8, pRects);
 
-        prev_pt[cmd] = PRIMITIVETOPOLOGY::UNDEFINED;
+        prev_pt[cmd] = static_cast<PrimitiveTopology>(-1);
         prev_pipeline_hash[cmd] = 0;
         active_pso[cmd] = nullptr;
         active_cs[cmd] = nullptr;
@@ -5703,10 +5801,9 @@ namespace Alimer
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
             GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
-
         }
-
     }
+
     void GraphicsDevice_DX12::QueryBegin(const GPUQuery* query, CommandList cmd)
     {
         auto internal_state = to_internal(query);

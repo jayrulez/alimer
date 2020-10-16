@@ -1875,24 +1875,24 @@ namespace Alimer
                 // Primitive type:
                 VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
                 inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-                switch (pso->desc.pt)
+                switch (pso->desc.primitiveTopology)
                 {
-                case POINTLIST:
+                case PrimitiveTopology::PointList:
                     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
                     break;
-                case LINELIST:
+                case PrimitiveTopology::LineList:
                     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
                     break;
-                case LINESTRIP:
+                case PrimitiveTopology::LineStrip:
                     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
                     break;
-                case TRIANGLESTRIP:
-                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-                    break;
-                case TRIANGLELIST:
+                case PrimitiveTopology::TriangleList:
                     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
                     break;
-                case PATCHLIST:
+                case PrimitiveTopology::TriangleStrip:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+                    break;
+                case PrimitiveTopology::PatchList:
                     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
                     break;
                 default:
@@ -4195,11 +4195,11 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->ds);
         Alimer::hash_combine(pso->hash, pDesc->gs);
         Alimer::hash_combine(pso->hash, pDesc->il);
-        Alimer::hash_combine(pso->hash, pDesc->rs);
         Alimer::hash_combine(pso->hash, pDesc->bs);
-        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
-        Alimer::hash_combine(pso->hash, pDesc->pt);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
+        Alimer::hash_combine(pso->hash, pDesc->rs);
+        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
+        Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 
         if (pDesc->rootSignature == nullptr)
         {
