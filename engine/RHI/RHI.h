@@ -65,7 +65,6 @@ namespace Alimer
         virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) = 0;
-        virtual bool CreateRasterizerState(const RasterizationStateDescriptor* descriptor, RasterizerState* pRasterizerState) = 0;
         virtual bool CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) = 0;
         virtual bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) = 0;
         virtual bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;

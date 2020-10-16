@@ -250,35 +250,18 @@ namespace Alimer
             }
             return D3D12_COMPARISON_FUNC_NEVER;
         }
-        constexpr D3D12_FILL_MODE _ConvertFillMode(FILL_MODE value)
+        constexpr D3D12_CULL_MODE _ConvertCullMode(CullMode value)
         {
             switch (value)
             {
-            case FILL_WIREFRAME:
-                return D3D12_FILL_MODE_WIREFRAME;
-                break;
-            case FILL_SOLID:
-                return D3D12_FILL_MODE_SOLID;
-                break;
-            default:
-                break;
-            }
-            return D3D12_FILL_MODE_WIREFRAME;
-        }
-        constexpr D3D12_CULL_MODE _ConvertCullMode(CULL_MODE value)
-        {
-            switch (value)
-            {
-            case CULL_NONE:
+            case CullMode::None:
                 return D3D12_CULL_MODE_NONE;
-                break;
-            case CULL_FRONT:
+            case CullMode::Front:
                 return D3D12_CULL_MODE_FRONT;
-                break;
-            case CULL_BACK:
+            case CullMode::Back:
                 return D3D12_CULL_MODE_BACK;
-                break;
             default:
+                ALIMER_UNREACHABLE();
                 break;
             }
             return D3D12_CULL_MODE_NONE;
@@ -1880,31 +1863,16 @@ namespace Alimer
                     stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
                 }
 
-                RasterizationStateDescriptor pRasterizerStateDesc = pso->desc.rs != nullptr ? pso->desc.rs->GetDesc() : RasterizationStateDescriptor();
-                CD3DX12_RASTERIZER_DESC rs = {};
-                rs.FillMode = _ConvertFillMode(pRasterizerStateDesc.FillMode);
-                rs.CullMode = _ConvertCullMode(pRasterizerStateDesc.CullMode);
-                rs.FrontCounterClockwise = pRasterizerStateDesc.FrontCounterClockwise;
-                rs.DepthBias = pRasterizerStateDesc.DepthBias;
-                rs.DepthBiasClamp = pRasterizerStateDesc.DepthBiasClamp;
-                rs.SlopeScaledDepthBias = pRasterizerStateDesc.SlopeScaledDepthBias;
-                rs.DepthClipEnable = pRasterizerStateDesc.DepthClipEnable;
-                rs.MultisampleEnable = pRasterizerStateDesc.MultisampleEnable;
-                rs.AntialiasedLineEnable = pRasterizerStateDesc.AntialiasedLineEnable;
-                rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc.ConservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-                rs.ForcedSampleCount = pRasterizerStateDesc.ForcedSampleCount;
-                stream.RS = rs;
-
-                DepthStencilStateDescriptor pDepthStencilStateDesc = pso->desc.depthStencilState;
+                DepthStencilStateDescriptor depthStencilState = pso->desc.depthStencilState;
                 CD3DX12_DEPTH_STENCIL_DESC dss = {};
-                dss.DepthEnable = pDepthStencilStateDesc.depthCompare != CompareFunction::Always || pDepthStencilStateDesc.depthWriteEnabled;
-                dss.DepthWriteMask = pDepthStencilStateDesc.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-                dss.DepthFunc = _ConvertComparisonFunc(pDepthStencilStateDesc.depthCompare);
-                dss.StencilEnable = StencilTestEnabled(&pDepthStencilStateDesc) ? TRUE : FALSE;
-                dss.StencilReadMask = pDepthStencilStateDesc.stencilReadMask;
-                dss.StencilWriteMask = pDepthStencilStateDesc.stencilWriteMask;
-                dss.FrontFace = _ConvertStencilOpDesc(pDepthStencilStateDesc.stencilFront);
-                dss.BackFace = _ConvertStencilOpDesc(pDepthStencilStateDesc.stencilBack);
+                dss.DepthEnable = depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
+                dss.DepthWriteMask = depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+                dss.DepthFunc = _ConvertComparisonFunc(depthStencilState.depthCompare);
+                dss.StencilEnable = StencilTestEnabled(&depthStencilState) ? TRUE : FALSE;
+                dss.StencilReadMask = depthStencilState.stencilReadMask;
+                dss.StencilWriteMask = depthStencilState.stencilWriteMask;
+                dss.FrontFace = _ConvertStencilOpDesc(depthStencilState.stencilFront);
+                dss.BackFace = _ConvertStencilOpDesc(depthStencilState.stencilBack);
                 stream.DSS = dss;
 
                 BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
@@ -2020,6 +1988,21 @@ namespace Alimer
                 stream.Formats = formats;
                 stream.SampleDesc = sampleDesc;
                 stream.SampleMask = pso->desc.sampleMask;
+
+                RasterizationStateDescriptor rasterizationState = pso->desc.rasterizationState;
+                CD3DX12_RASTERIZER_DESC rs = {};
+                rs.FillMode = D3D12_FILL_MODE_SOLID;
+                rs.CullMode = _ConvertCullMode(rasterizationState.cullMode);
+                rs.FrontCounterClockwise = (rasterizationState.frontFace == FrontFace::CCW) ? TRUE : FALSE;
+                rs.DepthBias = rasterizationState.depthBias;
+                rs.DepthBiasClamp = rasterizationState.depthBiasClamp;
+                rs.SlopeScaledDepthBias = rasterizationState.depthBiasSlopeScale;
+                rs.DepthClipEnable = rasterizationState.depthClipEnable;
+                rs.MultisampleEnable = (sampleDesc.Count > 1) ? TRUE : FALSE;
+                rs.AntialiasedLineEnable = FALSE;
+                rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && rasterizationState.conservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+                rs.ForcedSampleCount = rasterizationState.forcedSampleCount;
+                stream.RS = rs;
 
                 switch (pso->desc.primitiveTopology)
                 {
@@ -3315,13 +3298,6 @@ namespace Alimer
         return true;
     }
 
-    bool GraphicsDevice_DX12::CreateRasterizerState(const RasterizationStateDescriptor* desc, RasterizerState* pRasterizerState)
-    {
-        pRasterizerState->internal_state = allocationhandler;
-        pRasterizerState->desc = *desc;
-        return true;
-    }
-
     bool GraphicsDevice_DX12::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_DX12>();
@@ -3414,7 +3390,7 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->il);
         Alimer::hash_combine(pso->hash, pDesc->bs);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
-        Alimer::hash_combine(pso->hash, pDesc->rs);
+        Alimer::hash_combine(pso->hash, pDesc->rasterizationState);
         Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
         Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 

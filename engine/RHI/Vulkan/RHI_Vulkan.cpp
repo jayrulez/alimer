@@ -1902,68 +1902,41 @@ namespace Alimer
 
                 pipelineInfo.pInputAssemblyState = &inputAssembly;
 
+                // Rasterization State:
+                const RasterizationStateDescriptor& rasterizationState = pso->desc.rasterizationState;
+                // depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+                VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT };
+                depthclip.depthClipEnable = VK_TRUE;
 
-                // Rasterizer:
-                VkPipelineRasterizationStateCreateInfo rasterizer = {};
-                rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+                VkPipelineRasterizationStateCreateInfo rasterizer = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+                rasterizer.pNext = &depthclip;
                 rasterizer.depthClampEnable = VK_TRUE;
                 rasterizer.rasterizerDiscardEnable = VK_FALSE;
                 rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-                rasterizer.lineWidth = 1.0f;
-                rasterizer.cullMode = VK_CULL_MODE_NONE;
-                rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
-                rasterizer.depthBiasEnable = VK_FALSE;
-                rasterizer.depthBiasConstantFactor = 0.0f;
-                rasterizer.depthBiasClamp = 0.0f;
-                rasterizer.depthBiasSlopeFactor = 0.0f;
-
-                // depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
-                VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = {};
-                depthclip.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT;
-                depthclip.depthClipEnable = VK_TRUE;
-                rasterizer.pNext = &depthclip;
-
-                if (pso->desc.rs != nullptr)
+                switch (rasterizationState.cullMode)
                 {
-                    const RasterizationStateDescriptor& desc = pso->desc.rs->desc;
-
-                    switch (desc.FillMode)
-                    {
-                    case FILL_WIREFRAME:
-                        rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
-                        break;
-                    case FILL_SOLID:
-                    default:
-                        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-                        break;
-                    }
-
-                    switch (desc.CullMode)
-                    {
-                    case CULL_BACK:
-                        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-                        break;
-                    case CULL_FRONT:
-                        rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
-                        break;
-                    case CULL_NONE:
-                    default:
-                        rasterizer.cullMode = VK_CULL_MODE_NONE;
-                        break;
-                    }
-
-                    rasterizer.frontFace = desc.FrontCounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
-                    rasterizer.depthBiasEnable = desc.DepthBias != 0 || desc.SlopeScaledDepthBias != 0;
-                    rasterizer.depthBiasConstantFactor = static_cast<float>(desc.DepthBias);
-                    rasterizer.depthBiasClamp = desc.DepthBiasClamp;
-                    rasterizer.depthBiasSlopeFactor = desc.SlopeScaledDepthBias;
-
-                    // depth clip is extension in Vulkan 1.1:
-                    depthclip.depthClipEnable = desc.DepthClipEnable ? VK_TRUE : VK_FALSE;
+                case CullMode::Back:
+                    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+                    break;
+                case CullMode::Front:
+                    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+                    break;
+                case CullMode::None:
+                default:
+                    rasterizer.cullMode = VK_CULL_MODE_NONE;
+                    break;
                 }
 
-                pipelineInfo.pRasterizationState = &rasterizer;
+                rasterizer.frontFace = (rasterizationState.frontFace == FrontFace::CCW) ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+                rasterizer.depthBiasEnable = rasterizationState.depthBias != 0 || rasterizationState.depthBiasSlopeScale != 0;
+                rasterizer.depthBiasConstantFactor = static_cast<float>(rasterizationState.depthBias);
+                rasterizer.depthBiasClamp = rasterizationState.depthBiasClamp;
+                rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeScale;
+                rasterizer.lineWidth = 1.0f;
 
+                // depth clip is extension in Vulkan 1.1:
+                depthclip.depthClipEnable = rasterizationState.depthClipEnable ? VK_TRUE : VK_FALSE;
+                pipelineInfo.pRasterizationState = &rasterizer;
 
                 // Viewport, Scissor:
                 VkViewport viewport = {};
@@ -2321,7 +2294,7 @@ namespace Alimer
                 res = CreateDebugReportCallbackEXT(instance, &createInfo, nullptr, &callback);
                 assert(res == VK_SUCCESS);
             }
-            }
+    }
 
 
         // Surface creation:
@@ -2821,7 +2794,7 @@ namespace Alimer
         }
 
         //wiBackLog::post("Created GraphicsDevice_Vulkan");
-        }
+}
 
     GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
     {
@@ -3941,13 +3914,6 @@ namespace Alimer
         return true;
     }
 
-    bool GraphicsDevice_Vulkan::CreateRasterizerState(const RasterizationStateDescriptor* desc, RasterizerState* pRasterizerState)
-    {
-        pRasterizerState->internal_state = allocationhandler;
-        pRasterizerState->desc = *desc;
-        return true;
-    }
-
     bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_Vulkan>();
@@ -4197,7 +4163,7 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->il);
         Alimer::hash_combine(pso->hash, pDesc->bs);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
-        Alimer::hash_combine(pso->hash, pDesc->rs);
+        Alimer::hash_combine(pso->hash, pDesc->rasterizationState);
         Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
         Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 

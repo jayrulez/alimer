@@ -301,34 +301,16 @@ namespace Alimer
             }
             return D3D11_COMPARISON_NEVER;
         }
-        constexpr D3D11_FILL_MODE _ConvertFillMode(FILL_MODE value)
+        constexpr D3D11_CULL_MODE _ConvertCullMode(CullMode value)
         {
             switch (value)
             {
-            case FILL_WIREFRAME:
-                return D3D11_FILL_WIREFRAME;
-                break;
-            case FILL_SOLID:
-                return D3D11_FILL_SOLID;
-                break;
-            default:
-                break;
-            }
-            return D3D11_FILL_WIREFRAME;
-        }
-        constexpr D3D11_CULL_MODE _ConvertCullMode(CULL_MODE value)
-        {
-            switch (value)
-            {
-            case CULL_NONE:
+            case CullMode::None:
                 return D3D11_CULL_NONE;
-                break;
-            case CULL_FRONT:
+            case CullMode::Front:
                 return D3D11_CULL_FRONT;
-                break;
-            case CULL_BACK:
+            case CullMode::Back:
                 return D3D11_CULL_BACK;
-                break;
             default:
                 break;
             }
@@ -1144,10 +1126,6 @@ namespace Alimer
         {
             ComPtr<ID3D11BlendState> resource;
         };
-        struct RasterizerState_DX11
-        {
-            ComPtr<ID3D11RasterizerState> resource;
-        };
         struct Sampler_DX11
         {
             ComPtr<ID3D11SamplerState> resource;
@@ -1159,6 +1137,7 @@ namespace Alimer
 
         struct PipelineState_DX11
         {
+            ID3D11RasterizerState* rasterizerState;
             ID3D11DepthStencilState* depthStencilState;
         };
 
@@ -1181,10 +1160,6 @@ namespace Alimer
         BlendState_DX11* to_internal(const BlendState* param)
         {
             return static_cast<BlendState_DX11*>(param->internal_state.get());
-        }
-        RasterizerState_DX11* to_internal(const RasterizerState* param)
-        {
-            return static_cast<RasterizerState_DX11*>(param->internal_state.get());
         }
         Sampler_DX11* to_internal(const Sampler* param)
         {
@@ -1283,7 +1258,7 @@ namespace Alimer
             prev_samplemask[cmd] = desc.sampleMask;
         }
 
-        ID3D11RasterizerState* rs = desc.rs == nullptr ? nullptr : to_internal(desc.rs)->resource.Get();
+        ID3D11RasterizerState* rs = internal_state->rasterizerState;
         if (rs != prev_rs[cmd])
         {
             deviceContexts[cmd]->RSSetState(rs);
@@ -1907,22 +1882,22 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    ID3D11DepthStencilState* GraphicsDevice_DX11::GetDepthStencilState(const DepthStencilStateDescriptor* descriptor)
+    ID3D11DepthStencilState* GraphicsDevice_DX11::GetDepthStencilState(const DepthStencilStateDescriptor& descriptor)
     {
-        std::size_t hash = std::hash<DepthStencilStateDescriptor>{}(*descriptor);
+        std::size_t hash = std::hash<DepthStencilStateDescriptor>{}(descriptor);
 
         auto it = depthStencilStateCache.find(hash);
         if (it == depthStencilStateCache.end())
         {
             D3D11_DEPTH_STENCIL_DESC d3dDesc;
-            d3dDesc.DepthEnable = descriptor->depthCompare != CompareFunction::Always || descriptor->depthWriteEnabled;
-            d3dDesc.DepthWriteMask = descriptor->depthWriteEnabled ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
-            d3dDesc.DepthFunc = _ConvertComparisonFunc(descriptor->depthCompare);
-            d3dDesc.StencilEnable = StencilTestEnabled(descriptor) ? TRUE : FALSE;
-            d3dDesc.StencilReadMask = descriptor->stencilReadMask;
-            d3dDesc.StencilWriteMask = descriptor->stencilWriteMask;
-            d3dDesc.FrontFace = _ConvertStencilOpDesc(descriptor->stencilFront);
-            d3dDesc.BackFace = _ConvertStencilOpDesc(descriptor->stencilBack);
+            d3dDesc.DepthEnable = descriptor.depthCompare != CompareFunction::Always || descriptor.depthWriteEnabled;
+            d3dDesc.DepthWriteMask = descriptor.depthWriteEnabled ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
+            d3dDesc.DepthFunc = _ConvertComparisonFunc(descriptor.depthCompare);
+            d3dDesc.StencilEnable = StencilTestEnabled(&descriptor) ? TRUE : FALSE;
+            d3dDesc.StencilReadMask = descriptor.stencilReadMask;
+            d3dDesc.StencilWriteMask = descriptor.stencilWriteMask;
+            d3dDesc.FrontFace = _ConvertStencilOpDesc(descriptor.stencilFront);
+            d3dDesc.BackFace = _ConvertStencilOpDesc(descriptor.stencilBack);
 
             ComPtr<ID3D11DepthStencilState> depthStencilState;
             ThrowIfFailed(device->CreateDepthStencilState(&d3dDesc, depthStencilState.GetAddressOf()));
@@ -1932,91 +1907,85 @@ namespace Alimer
         return it->second.Get();
     }
 
-    bool GraphicsDevice_DX11::CreateRasterizerState(const RasterizationStateDescriptor* pRasterizerStateDesc, RasterizerState* pRasterizerState)
+    ID3D11RasterizerState* GraphicsDevice_DX11::GetRasterizerState(const RasterizationStateDescriptor& descriptor, uint32_t sampleCount)
     {
-        auto internal_state = std::make_shared<RasterizerState_DX11>();
-        pRasterizerState->internal_state = internal_state;
+        std::size_t hash = std::hash<RasterizationStateDescriptor>{}(descriptor);
 
-        pRasterizerState->desc = *pRasterizerStateDesc;
-
-        D3D11_RASTERIZER_DESC desc;
-        desc.FillMode = _ConvertFillMode(pRasterizerStateDesc->FillMode);
-        desc.CullMode = _ConvertCullMode(pRasterizerStateDesc->CullMode);
-        desc.FrontCounterClockwise = pRasterizerStateDesc->FrontCounterClockwise;
-        desc.DepthBias = pRasterizerStateDesc->DepthBias;
-        desc.DepthBiasClamp = pRasterizerStateDesc->DepthBiasClamp;
-        desc.SlopeScaledDepthBias = pRasterizerStateDesc->SlopeScaledDepthBias;
-        desc.DepthClipEnable = pRasterizerStateDesc->DepthClipEnable;
-        desc.ScissorEnable = true;
-        desc.MultisampleEnable = pRasterizerStateDesc->MultisampleEnable;
-        desc.AntialiasedLineEnable = pRasterizerStateDesc->AntialiasedLineEnable;
-
-
-        if (CONSERVATIVE_RASTERIZATION && pRasterizerStateDesc->ConservativeRasterizationEnable == TRUE)
+        auto it = rasterizerStateCache.find(hash);
+        if (it == rasterizerStateCache.end())
         {
-            ComPtr<ID3D11Device3> device3;
-            if (SUCCEEDED(device.As(&device3)))
+            D3D11_RASTERIZER_DESC desc;
+            desc.FillMode = D3D11_FILL_SOLID;
+            desc.CullMode = _ConvertCullMode(descriptor.cullMode);
+            desc.FrontCounterClockwise = (descriptor.frontFace == FrontFace::CCW) ? TRUE : FALSE;
+            desc.DepthBias = descriptor.depthBias;
+            desc.DepthBiasClamp = descriptor.depthBiasClamp;
+            desc.SlopeScaledDepthBias = descriptor.depthBiasSlopeScale;
+            desc.DepthClipEnable = descriptor.depthClipEnable;
+            desc.ScissorEnable = TRUE;
+            desc.MultisampleEnable = sampleCount > 1 ? TRUE : FALSE;
+            desc.AntialiasedLineEnable = FALSE;
+
+            if (CONSERVATIVE_RASTERIZATION && descriptor.conservativeRasterizationEnable)
             {
-                D3D11_RASTERIZER_DESC2 desc2;
-                desc2.FillMode = desc.FillMode;
-                desc2.CullMode = desc.CullMode;
-                desc2.FrontCounterClockwise = desc.FrontCounterClockwise;
-                desc2.DepthBias = desc.DepthBias;
-                desc2.DepthBiasClamp = desc.DepthBiasClamp;
-                desc2.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
-                desc2.DepthClipEnable = desc.DepthClipEnable;
-                desc2.ScissorEnable = desc.ScissorEnable;
-                desc2.MultisampleEnable = desc.MultisampleEnable;
-                desc2.AntialiasedLineEnable = desc.AntialiasedLineEnable;
-                desc2.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
-                desc2.ForcedSampleCount = (RASTERIZER_ORDERED_VIEWS ? pRasterizerStateDesc->ForcedSampleCount : 0);
+                ComPtr<ID3D11Device3> device3;
+                if (SUCCEEDED(device.As(&device3)))
+                {
+                    D3D11_RASTERIZER_DESC2 desc2;
+                    desc2.FillMode = desc.FillMode;
+                    desc2.CullMode = desc.CullMode;
+                    desc2.FrontCounterClockwise = desc.FrontCounterClockwise;
+                    desc2.DepthBias = desc.DepthBias;
+                    desc2.DepthBiasClamp = desc.DepthBiasClamp;
+                    desc2.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+                    desc2.DepthClipEnable = desc.DepthClipEnable;
+                    desc2.ScissorEnable = desc.ScissorEnable;
+                    desc2.MultisampleEnable = desc.MultisampleEnable;
+                    desc2.AntialiasedLineEnable = desc.AntialiasedLineEnable;
+                    desc2.ConservativeRaster = D3D11_CONSERVATIVE_RASTERIZATION_MODE_ON;
+                    desc2.ForcedSampleCount = (RASTERIZER_ORDERED_VIEWS ? descriptor.forcedSampleCount : 0);
 
-                pRasterizerState->desc = *pRasterizerStateDesc;
+                    ComPtr<ID3D11RasterizerState2> rasterizerState2;
+                    ThrowIfFailed(device3->CreateRasterizerState2(&desc2, &rasterizerState2));
 
-                ComPtr<ID3D11RasterizerState2> rasterizer2;
-                HRESULT hr = device3->CreateRasterizerState2(&desc2, &rasterizer2);
-                assert(SUCCEEDED(hr));
-
-                internal_state->resource = rasterizer2;
-
-                return SUCCEEDED(hr);
+                    it = rasterizerStateCache.insert({ hash, std::move(rasterizerState2) }).first;
+                    return it->second.Get();
+                }
             }
-        }
-        else if (RASTERIZER_ORDERED_VIEWS && pRasterizerStateDesc->ForcedSampleCount > 0)
-        {
-            ComPtr<ID3D11Device1> device1;
-            if (SUCCEEDED(device.As(&device1)))
+            else if (RASTERIZER_ORDERED_VIEWS && descriptor.forcedSampleCount > 0)
             {
-                D3D11_RASTERIZER_DESC1 desc1;
-                desc1.FillMode = desc.FillMode;
-                desc1.CullMode = desc.CullMode;
-                desc1.FrontCounterClockwise = desc.FrontCounterClockwise;
-                desc1.DepthBias = desc.DepthBias;
-                desc1.DepthBiasClamp = desc.DepthBiasClamp;
-                desc1.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
-                desc1.DepthClipEnable = desc.DepthClipEnable;
-                desc1.ScissorEnable = desc.ScissorEnable;
-                desc1.MultisampleEnable = desc.MultisampleEnable;
-                desc1.AntialiasedLineEnable = desc.AntialiasedLineEnable;
-                desc1.ForcedSampleCount = pRasterizerStateDesc->ForcedSampleCount;
+                ComPtr<ID3D11Device1> device1;
+                if (SUCCEEDED(device.As(&device1)))
+                {
+                    D3D11_RASTERIZER_DESC1 desc1;
+                    desc1.FillMode = desc.FillMode;
+                    desc1.CullMode = desc.CullMode;
+                    desc1.FrontCounterClockwise = desc.FrontCounterClockwise;
+                    desc1.DepthBias = desc.DepthBias;
+                    desc1.DepthBiasClamp = desc.DepthBiasClamp;
+                    desc1.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+                    desc1.DepthClipEnable = desc.DepthClipEnable;
+                    desc1.ScissorEnable = desc.ScissorEnable;
+                    desc1.MultisampleEnable = desc.MultisampleEnable;
+                    desc1.AntialiasedLineEnable = desc.AntialiasedLineEnable;
+                    desc1.ForcedSampleCount = descriptor.forcedSampleCount;
 
-                pRasterizerState->desc = *pRasterizerStateDesc;
+                    ComPtr<ID3D11RasterizerState1> rasterizerState1;
+                    ThrowIfFailed(device1->CreateRasterizerState1(&desc1, &rasterizerState1));
 
-                ComPtr<ID3D11RasterizerState1> rasterizer1;
-                HRESULT hr = device1->CreateRasterizerState1(&desc1, &rasterizer1);
-                assert(SUCCEEDED(hr));
-
-                internal_state->resource = rasterizer1;
-
-                return SUCCEEDED(hr);
+                    it = rasterizerStateCache.insert({ hash, std::move(rasterizerState1) }).first;
+                    return it->second.Get();
+                }
             }
+
+            ComPtr<ID3D11RasterizerState> rasterizerState;
+            ThrowIfFailed(device->CreateRasterizerState(&desc, &rasterizerState));
+            it = rasterizerStateCache.insert({ hash, std::move(rasterizerState) }).first;
         }
 
-        HRESULT hr = device->CreateRasterizerState(&desc, &internal_state->resource);
-        assert(SUCCEEDED(hr));
-
-        return SUCCEEDED(hr);
+        return it->second.Get();
     }
+
     bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_DX11>();
@@ -2083,7 +2052,8 @@ namespace Alimer
     bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX11>();
-        internal_state->depthStencilState = GetDepthStencilState(&desc->depthStencilState);
+        internal_state->rasterizerState = GetRasterizerState(desc->rasterizationState, 1u);
+        internal_state->depthStencilState = GetDepthStencilState(desc->depthStencilState);
         pso->internal_state = internal_state;
 
         pso->desc = *desc;

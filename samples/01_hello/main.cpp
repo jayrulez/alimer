@@ -64,7 +64,6 @@ namespace Alimer
     Shader vertexShader;
     Shader pixelShader;
     InputLayout inputLayout;
-    RasterizerState rasterizerState;
 
     void HelloWorldApp::Initialize()
     {
@@ -80,24 +79,12 @@ namespace Alimer
 
         graphicsDevice->CreateInputLayout(layout, ALIMER_STATIC_ARRAY_SIZE(layout), &vertexShader, &inputLayout);
 
-        RasterizationStateDescriptor rs;
-        rs.FillMode = FILL_SOLID;
-        rs.CullMode = CULL_BACK;
-        rs.FrontCounterClockwise = true;
-        rs.DepthBias = 0;
-        rs.DepthBiasClamp = 0;
-        rs.SlopeScaledDepthBias = 0;
-        rs.DepthClipEnable = false;
-        rs.MultisampleEnable = false;
-        rs.AntialiasedLineEnable = false;
-        graphicsDevice->CreateRasterizerState(&rs, &rasterizerState);
-
         PipelineStateDesc psoDesc = {};
         psoDesc.vs = &vertexShader;
         psoDesc.ps = &pixelShader;
         //psoDesc.pt = TRIANGLELIST;
         psoDesc.il = &inputLayout;
-        psoDesc.rs = &rasterizerState;
+        psoDesc.rasterizationState.cullMode = CullMode::Back;
         psoDesc.depthStencilState.depthWriteEnabled = true;
         psoDesc.depthStencilState.depthCompare = CompareFunction::LessEqual;
         graphicsDevice->CreatePipelineState(&psoDesc, &pipeline);

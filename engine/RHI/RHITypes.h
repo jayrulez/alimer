@@ -35,7 +35,6 @@ namespace Alimer
 {
 	struct Shader;
 	struct BlendState;
-	struct RasterizerState;
 	struct InputLayout;
 	struct GPUResource;
 	struct GPUBuffer;
@@ -143,17 +142,20 @@ namespace Alimer
 		BLEND_OP_MIN,
 		BLEND_OP_MAX,
 	};
-	enum FILL_MODE
-	{
-		FILL_WIREFRAME,
-		FILL_SOLID,
-	};
-	enum CULL_MODE
-	{
-		CULL_NONE,
-		CULL_FRONT,
-		CULL_BACK,
-	};
+
+    enum class FrontFace : uint32_t
+    {
+        CCW,
+        CW,
+    };
+
+    enum class CullMode : uint32_t
+    {
+        None,
+        Front,
+        Back,
+    };
+
 	enum INPUT_CLASSIFICATION
 	{
 		INPUT_PER_VERTEX_DATA,
@@ -291,6 +293,7 @@ namespace Alimer
 		FORMAT_BC7_UNORM,
 		FORMAT_BC7_UNORM_SRGB
 	};
+
 	enum GPU_QUERY_TYPE
 	{
 		GPU_QUERY_TYPE_INVALID,				// do not use! Indicates if query was not created.
@@ -471,17 +474,14 @@ namespace Alimer
 
 	struct RasterizationStateDescriptor
 	{
-		FILL_MODE FillMode = FILL_SOLID;
-		CULL_MODE CullMode = CULL_NONE;
-		bool FrontCounterClockwise = false;
-		int32_t DepthBias = 0;
-		float DepthBiasClamp = 0.0f;
-		float SlopeScaledDepthBias = 0.0f;
-		bool DepthClipEnable = false;
-		bool MultisampleEnable = false;
-		bool AntialiasedLineEnable = false;
-		bool ConservativeRasterizationEnable = false;
-		uint32_t ForcedSampleCount = 0;
+        FrontFace frontFace = FrontFace::CCW;
+        CullMode cullMode = CullMode::None;
+		int32_t depthBias = 0;
+        float depthBiasSlopeScale = 0.0f;
+        float depthBiasClamp = 0.0f;
+        bool depthClipEnable = true;
+		bool conservativeRasterizationEnable = false;
+		uint32_t forcedSampleCount = 0;
 	};
 
 	struct StencilStateFaceDescriptor
@@ -546,20 +546,20 @@ namespace Alimer
 
 	struct PipelineStateDesc
 	{
-		const RootSignature* rootSignature = nullptr;
-		const Shader*				vs = nullptr;
-		const Shader*				ps = nullptr;
-		const Shader*				hs = nullptr;
-		const Shader*				ds = nullptr;
-		const Shader*				gs = nullptr;
-		const Shader*				ms = nullptr;
-		const Shader*				as = nullptr;
-		const BlendState*			bs = nullptr;
-		uint32_t					sampleMask = 0xFFFFFFFF;
-		const RasterizerState*		rs = nullptr;
-		DepthStencilStateDescriptor	depthStencilState;
-		const InputLayout*			il = nullptr;
-        PrimitiveTopology			primitiveTopology = PrimitiveTopology::TriangleList;
+		const RootSignature*            rootSignature = nullptr;
+		const Shader*				    vs = nullptr;
+		const Shader*				    ps = nullptr;
+		const Shader*				    hs = nullptr;
+		const Shader*				    ds = nullptr;
+		const Shader*				    gs = nullptr;
+		const Shader*				    ms = nullptr;
+		const Shader*				    as = nullptr;
+		const BlendState*			    bs = nullptr;
+		uint32_t					    sampleMask = 0xFFFFFFFF;
+        RasterizationStateDescriptor    rasterizationState;
+		DepthStencilStateDescriptor	    depthStencilState;
+		const InputLayout*			    il = nullptr;
+        PrimitiveTopology			    primitiveTopology = PrimitiveTopology::TriangleList;
 	};
 	struct GPUBarrier
 	{
@@ -811,13 +811,6 @@ namespace Alimer
 		BlendStateDesc desc;
 
 		const BlendStateDesc& GetDesc() const { return desc; }
-	};
-
-	struct RasterizerState : public GraphicsDeviceChild
-	{
-        RasterizationStateDescriptor desc;
-
-		const RasterizationStateDescriptor& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource
@@ -1083,6 +1076,24 @@ namespace Alimer
 
 namespace std
 {
+    template<>
+    struct hash<Alimer::RasterizationStateDescriptor>
+    {
+        std::size_t operator()(const Alimer::RasterizationStateDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.frontFace);
+            Alimer::hash_combine(hash, (uint32_t)desc.cullMode);
+            Alimer::hash_combine(hash, desc.depthBias);
+            Alimer::hash_combine(hash, desc.depthBiasSlopeScale);
+            Alimer::hash_combine(hash, desc.depthBiasClamp);
+            Alimer::hash_combine(hash, desc.depthClipEnable);
+            Alimer::hash_combine(hash, desc.conservativeRasterizationEnable);
+            Alimer::hash_combine(hash, desc.forcedSampleCount);
+            return hash;
+        }
+    };
+
     template<>
     struct hash<Alimer::StencilStateFaceDescriptor>
     {
