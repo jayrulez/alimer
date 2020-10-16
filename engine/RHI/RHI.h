@@ -202,6 +202,9 @@ namespace Alimer
         virtual void InsertDebugMarker(CommandList cmd, const char* name) = 0;
     };
 
+    uint32_t GetVertexFormatNumComponents(VertexFormat format);
+    uint32_t GetVertexFormatComponentSize(VertexFormat format);
+    uint32_t GetVertexFormatSize(VertexFormat format);
 
     bool StencilTestEnabled(const DepthStencilStateDescriptor* descriptor);
 }

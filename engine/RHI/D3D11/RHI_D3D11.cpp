@@ -673,7 +673,7 @@ namespace Alimer
             }
             return DXGI_FORMAT_UNKNOWN;
         }
-
+        
         inline D3D11_TEXTURE1D_DESC _ConvertTextureDesc1D(const TextureDesc* pDesc)
         {
             D3D11_TEXTURE1D_DESC desc;
@@ -1716,7 +1716,7 @@ namespace Alimer
         {
             desc[i].SemanticName = pInputElementDescs[i].SemanticName.c_str();
             desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
-            desc[i].Format = _ConvertFormat(pInputElementDescs[i].Format);
+            desc[i].Format = D3DConvertVertexFormat(pInputElementDescs[i].format);
             desc[i].InputSlot = pInputElementDescs[i].InputSlot;
             desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
             if (desc[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)

@@ -73,8 +73,8 @@ namespace Alimer
 
         InputLayoutDesc layout[] =
         {
-            { "ATTRIBUTE", 0, FORMAT_R32G32B32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-            { "ATTRIBUTE", 1, FORMAT_R32G32B32A32_FLOAT, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+            { "ATTRIBUTE", 0, VertexFormat::Float3, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
+            { "ATTRIBUTE", 1, VertexFormat::Float4, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
         };
 
         graphicsDevice->CreateInputLayout(layout, ALIMER_STATIC_ARRAY_SIZE(layout), &vertexShader, &inputLayout);

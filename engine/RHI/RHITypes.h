@@ -304,6 +304,40 @@ namespace Alimer
 		GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,	// timestamp frequency information
 	};
 
+    enum class VertexFormat : uint32_t
+    {
+        UChar2,
+        UChar4,
+        Char2,
+        Char4,
+        UChar2Norm,
+        UChar4Norm,
+        Char2Norm,
+        Char4Norm,
+        UShort2,
+        UShort4,
+        Short2,
+        Short4,
+        UShort2Norm,
+        UShort4Norm,
+        Short2Norm,
+        Short4Norm,
+        Half2,
+        Half4,
+        Float,
+        Float2,
+        Float3,
+        Float4,
+        UInt,
+        UInt2,
+        UInt3,
+        UInt4,
+        Int,
+        Int2,
+        Int3,
+        Int4,
+    };
+
 	enum class IndexFormat : uint32_t
     {
         UInt16 = 0x00000000,
@@ -418,7 +452,7 @@ namespace Alimer
 
 		std::string SemanticName;
 		uint32_t SemanticIndex = 0;
-		FORMAT Format = FORMAT_UNKNOWN;
+        VertexFormat format;
 		uint32_t InputSlot = 0;
 		uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
 		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;

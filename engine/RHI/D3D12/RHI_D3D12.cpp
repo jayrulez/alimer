@@ -1902,7 +1902,7 @@ namespace Alimer
                     {
                         elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
                         elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
-                        elements[i].Format = _ConvertFormat(pso->desc.il->desc[i].Format);
+                        elements[i].Format = D3DConvertVertexFormat(pso->desc.il->desc[i].format);
                         elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
                         elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
                         if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)

@@ -103,4 +103,73 @@ namespace Alimer
             throw com_exception(hr);
         }
     }
+
+    constexpr DXGI_FORMAT D3DConvertVertexFormat(VertexFormat format)
+    {
+        switch (format)
+        {
+        case VertexFormat::UChar2:
+            return DXGI_FORMAT_R8G8_UINT;
+        case VertexFormat::UChar4:
+            return DXGI_FORMAT_R8G8B8A8_UINT;
+        case VertexFormat::Char2:
+            return DXGI_FORMAT_R8G8_SINT;
+        case VertexFormat::Char4:
+            return DXGI_FORMAT_R8G8B8A8_SINT;
+        case VertexFormat::UChar2Norm:
+            return DXGI_FORMAT_R8G8_UNORM;
+        case VertexFormat::UChar4Norm:
+            return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case VertexFormat::Char2Norm:
+            return DXGI_FORMAT_R8G8_SNORM;
+        case VertexFormat::Char4Norm:
+            return DXGI_FORMAT_R8G8B8A8_SNORM;
+        case VertexFormat::UShort2:
+            return DXGI_FORMAT_R16G16_UINT;
+        case VertexFormat::UShort4:
+            return DXGI_FORMAT_R16G16B16A16_UINT;
+        case VertexFormat::Short2:
+            return DXGI_FORMAT_R16G16_SINT;
+        case VertexFormat::Short4:
+            return DXGI_FORMAT_R16G16B16A16_SINT;
+        case VertexFormat::UShort2Norm:
+            return DXGI_FORMAT_R16G16_UNORM;
+        case VertexFormat::UShort4Norm:
+            return DXGI_FORMAT_R16G16B16A16_UNORM;
+        case VertexFormat::Short2Norm:
+            return DXGI_FORMAT_R16G16_SNORM;
+        case VertexFormat::Short4Norm:
+            return DXGI_FORMAT_R16G16B16A16_SNORM;
+        case VertexFormat::Half2:
+            return DXGI_FORMAT_R16G16_FLOAT;
+        case VertexFormat::Half4:
+            return DXGI_FORMAT_R16G16B16A16_FLOAT;
+        case VertexFormat::Float:
+            return DXGI_FORMAT_R32_FLOAT;
+        case VertexFormat::Float2:
+            return DXGI_FORMAT_R32G32_FLOAT;
+        case VertexFormat::Float3:
+            return DXGI_FORMAT_R32G32B32_FLOAT;
+        case VertexFormat::Float4:
+            return DXGI_FORMAT_R32G32B32A32_FLOAT;
+        case VertexFormat::UInt:
+            return DXGI_FORMAT_R32_UINT;
+        case VertexFormat::UInt2:
+            return DXGI_FORMAT_R32G32_UINT;
+        case VertexFormat::UInt3:
+            return DXGI_FORMAT_R32G32B32_UINT;
+        case VertexFormat::UInt4:
+            return DXGI_FORMAT_R32G32B32A32_UINT;
+        case VertexFormat::Int:
+            return DXGI_FORMAT_R32_SINT;
+        case VertexFormat::Int2:
+            return DXGI_FORMAT_R32G32_SINT;
+        case VertexFormat::Int3:
+            return DXGI_FORMAT_R32G32B32_SINT;
+        case VertexFormat::Int4:
+            return DXGI_FORMAT_R32G32B32A32_SINT;
+        default:
+            ALIMER_UNREACHABLE();
+        }
+    }
 }

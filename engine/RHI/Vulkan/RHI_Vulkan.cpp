@@ -331,6 +331,76 @@ namespace Alimer
             }
             return VK_FORMAT_UNDEFINED;
         }
+
+        constexpr VkFormat _ConvertVertexFormat(VertexFormat format)
+        {
+            switch (format)
+            {
+            case VertexFormat::UChar2:
+                return VK_FORMAT_R8G8_UINT;
+            case VertexFormat::UChar4:
+                return VK_FORMAT_R8G8B8A8_UINT;
+            case VertexFormat::Char2:
+                return VK_FORMAT_R8G8_SINT;
+            case VertexFormat::Char4:
+                return VK_FORMAT_R8G8B8A8_SINT;
+            case VertexFormat::UChar2Norm:
+                return VK_FORMAT_R8G8_UNORM;
+            case VertexFormat::UChar4Norm:
+                return VK_FORMAT_R8G8B8A8_UNORM;
+            case VertexFormat::Char2Norm:
+                return VK_FORMAT_R8G8_SNORM;
+            case VertexFormat::Char4Norm:
+                return VK_FORMAT_R8G8B8A8_SNORM;
+            case VertexFormat::UShort2:
+                return VK_FORMAT_R16G16_UINT;
+            case VertexFormat::UShort4:
+                return VK_FORMAT_R16G16B16A16_UINT;
+            case VertexFormat::Short2:
+                return VK_FORMAT_R16G16_SINT;
+            case VertexFormat::Short4:
+                return VK_FORMAT_R16G16B16A16_SINT;
+            case VertexFormat::UShort2Norm:
+                return VK_FORMAT_R16G16_UNORM;
+            case VertexFormat::UShort4Norm:
+                return VK_FORMAT_R16G16B16A16_UNORM;
+            case VertexFormat::Short2Norm:
+                return VK_FORMAT_R16G16_SNORM;
+            case VertexFormat::Short4Norm:
+                return VK_FORMAT_R16G16B16A16_SNORM;
+            case VertexFormat::Half2:
+                return VK_FORMAT_R16G16_SFLOAT;
+            case VertexFormat::Half4:
+                return VK_FORMAT_R16G16B16A16_SFLOAT;
+            case VertexFormat::Float:
+                return VK_FORMAT_R32_SFLOAT;
+            case VertexFormat::Float2:
+                return VK_FORMAT_R32G32_SFLOAT;
+            case VertexFormat::Float3:
+                return VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexFormat::Float4:
+                return VK_FORMAT_R32G32B32A32_SFLOAT;
+            case VertexFormat::UInt:
+                return VK_FORMAT_R32_UINT;
+            case VertexFormat::UInt2:
+                return VK_FORMAT_R32G32_UINT;
+            case VertexFormat::UInt3:
+                return VK_FORMAT_R32G32B32_UINT;
+            case VertexFormat::UInt4:
+                return VK_FORMAT_R32G32B32A32_UINT;
+            case VertexFormat::Int:
+                return VK_FORMAT_R32_SINT;
+            case VertexFormat::Int2:
+                return VK_FORMAT_R32G32_SINT;
+            case VertexFormat::Int3:
+                return VK_FORMAT_R32G32B32_SINT;
+            case VertexFormat::Int4:
+                return VK_FORMAT_R32G32B32A32_SINT;
+            default:
+                ALIMER_UNREACHABLE();
+            }
+        }
+
         constexpr VkCompareOp _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
@@ -1824,7 +1894,7 @@ namespace Alimer
                         if (bind.stride == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
                         {
                             // need to manually resolve this from the format spec.
-                            bind.stride = GetFormatStride(x.Format);
+                            bind.stride = GetVertexFormatSize(x.format);
                         }
 
                         if (lastBinding != bind.binding)
@@ -1850,14 +1920,14 @@ namespace Alimer
                             lastBinding = attr.binding;
                             offset = 0;
                         }
-                        attr.format = _ConvertFormat(x.Format);
+                        attr.format = _ConvertVertexFormat(x.format);
                         attr.location = i;
                         attr.offset = x.AlignedByteOffset;
                         if (attr.offset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
                         {
                             // need to manually resolve this from the format spec.
                             attr.offset = offset;
-                            offset += GetFormatStride(x.Format);
+                            offset += GetVertexFormatSize(x.format);
                         }
 
                         attributes.push_back(attr);
