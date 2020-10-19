@@ -218,7 +218,7 @@ namespace Alimer
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
-        bool CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) override;
+        bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
         bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;

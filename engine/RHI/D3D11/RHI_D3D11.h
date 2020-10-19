@@ -111,7 +111,7 @@ namespace Alimer
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         ID3D11DepthStencilState* GetDepthStencilState(const DepthStencilStateDescriptor& descriptor);
         ID3D11RasterizerState* GetRasterizerState(const RasterizationStateDescriptor& descriptor, uint32_t sampleCount);
-        bool CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) override;
+        bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
         bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;

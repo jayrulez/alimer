@@ -96,7 +96,8 @@ namespace Alimer
 
 	enum class CompareFunction : uint32_t
 	{
-        Never = 0,
+        Undefined = 0,
+        Never,
         Less,
         Equal,
         LessEqual,
@@ -181,52 +182,28 @@ namespace Alimer
 		USAGE_DYNAMIC,
 		USAGE_STAGING,
 	};
-	enum TEXTURE_ADDRESS_MODE
+
+    enum class SamplerAddressMode : uint32_t
+    {
+        ClampToEdge,
+        Repeat,
+        MirrorRepeat,
+        ClampToBorder
+    };
+
+	enum class FilterMode : uint32_t
 	{
-		TEXTURE_ADDRESS_WRAP,
-		TEXTURE_ADDRESS_MIRROR,
-		TEXTURE_ADDRESS_CLAMP,
-		TEXTURE_ADDRESS_BORDER,
+        Nearest,
+        Linear
 	};
-	enum FILTER
-	{
-		FILTER_MIN_MAG_MIP_POINT,
-		FILTER_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MIN_MAG_MIP_LINEAR,
-		FILTER_ANISOTROPIC,
-		FILTER_COMPARISON_MIN_MAG_MIP_POINT,
-		FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_COMPARISON_MIN_MAG_MIP_LINEAR,
-		FILTER_COMPARISON_ANISOTROPIC,
-		FILTER_MINIMUM_MIN_MAG_MIP_POINT,
-		FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MINIMUM_MIN_MAG_MIP_LINEAR,
-		FILTER_MINIMUM_ANISOTROPIC,
-		FILTER_MAXIMUM_MIN_MAG_MIP_POINT,
-		FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
-		FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT,
-		FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR,
-		FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT,
-		FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR,
-		FILTER_MAXIMUM_ANISOTROPIC,
-	};
+
+    enum class SamplerBorderColor : uint32_t
+    {
+        TransparentBlack,
+        OpaqueBlack,
+        OpaqueWhite,
+    };
+
 	enum FORMAT
 	{
 		FORMAT_UNKNOWN,
@@ -505,18 +482,21 @@ namespace Alimer
 		IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
 	};
 
-	struct SamplerDesc
+	struct SamplerDescriptor
 	{
-		FILTER Filter = FILTER_MIN_MAG_MIP_POINT;
-		TEXTURE_ADDRESS_MODE AddressU = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressV = TEXTURE_ADDRESS_CLAMP;
-		TEXTURE_ADDRESS_MODE AddressW = TEXTURE_ADDRESS_CLAMP;
-		float MipLODBias = 0.0f;
-		uint32_t MaxAnisotropy = 0;
-		float BorderColor[4] = { 0.0f,0.0f,0.0f,0.0f };
-		float MinLOD = 0.0f;
-		float MaxLOD = FLT_MAX;
+        FilterMode magFilter = FilterMode::Nearest;
+        FilterMode minFilter = FilterMode::Nearest;
+        FilterMode mipmapFilter = FilterMode::Nearest;
+        SamplerAddressMode addressModeU = SamplerAddressMode::ClampToEdge;
+        SamplerAddressMode addressModeV = SamplerAddressMode::ClampToEdge;
+        SamplerAddressMode addressModeW = SamplerAddressMode::ClampToEdge;
+        float mipLodBias;
+		uint32_t maxAnisotropy = 1u;
         CompareFunction compareFunction = CompareFunction::Never;
+        float lodMinClamp = 0.0f;
+        float lodMaxClamp = 1000.0f;
+        SamplerBorderColor borderColor = SamplerBorderColor::TransparentBlack;
+        const char* label;
 	};
 
 	struct RasterizationStateDescriptor
@@ -822,9 +802,8 @@ namespace Alimer
 
 	struct Sampler : public GraphicsDeviceChild
 	{
-		SamplerDesc desc;
-
-		const SamplerDesc& GetDesc() const { return desc; }
+        //SamplerDescriptor desc;
+        //const SamplerDescriptor& GetDesc() const { return desc; }
 	};
 
 	struct GPUResource : public GraphicsDeviceChild

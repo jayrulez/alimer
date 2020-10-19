@@ -130,144 +130,60 @@ namespace Alimer
             return _flag;
         }
 
-        constexpr D3D11_FILTER _ConvertFilter(FILTER value)
+        constexpr D3D11_FILTER_TYPE _ConvertFilterType(FilterMode filter)
         {
-            switch (value)
+            switch (filter)
             {
-            case FILTER_MIN_MAG_MIP_POINT:
-                return D3D11_FILTER_MIN_MAG_MIP_POINT;
-                break;
-            case FILTER_MIN_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MIN_POINT_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR;
-                break;
-            case FILTER_MIN_LINEAR_MAG_MIP_POINT:
-                return D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-                break;
-            case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MIN_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MIN_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-                break;
-            case FILTER_ANISOTROPIC:
-                return D3D11_FILTER_ANISOTROPIC;
-                break;
-            case FILTER_COMPARISON_MIN_MAG_MIP_POINT:
-                return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-                break;
-            case FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
-                return D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR;
-                break;
-            case FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
-                return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT;
-                break;
-            case FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-                return D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-                break;
-            case FILTER_COMPARISON_ANISOTROPIC:
-                return D3D11_FILTER_COMPARISON_ANISOTROPIC;
-                break;
-            case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
-                return D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT;
-                break;
-            case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR;
-                break;
-            case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
-                return D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT;
-                break;
-            case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR;
-                break;
-            case FILTER_MINIMUM_ANISOTROPIC:
-                return D3D11_FILTER_MINIMUM_ANISOTROPIC;
-                break;
-            case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
-                return D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT;
-                break;
-            case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR;
-                break;
-            case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
-                return D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT;
-                break;
-            case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-                return D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
-                break;
-            case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
-                return D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT;
-                break;
-            case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-                return D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR;
-                break;
-            case FILTER_MAXIMUM_ANISOTROPIC:
-                return D3D11_FILTER_MAXIMUM_ANISOTROPIC;
-                break;
+            case FilterMode::Nearest:
+                return D3D11_FILTER_TYPE_POINT;
+            case FilterMode::Linear:
+                return D3D11_FILTER_TYPE_LINEAR;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return (D3D11_FILTER_TYPE)-1;
             }
-            return D3D11_FILTER_MIN_MAG_MIP_POINT;
         }
-        constexpr D3D11_TEXTURE_ADDRESS_MODE _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+
+        inline D3D11_FILTER _ConvertFilter(FilterMode minFilter, FilterMode magFilter, FilterMode mipFilter, bool isComparison, bool isAnisotropic)
+        {
+            D3D11_FILTER filter;
+            D3D11_FILTER_REDUCTION_TYPE reduction = isComparison ? D3D11_FILTER_REDUCTION_TYPE_COMPARISON : D3D11_FILTER_REDUCTION_TYPE_STANDARD;
+
+            if (isAnisotropic)
+            {
+                filter = D3D11_ENCODE_ANISOTROPIC_FILTER(reduction);
+            }
+            else
+            {
+                D3D11_FILTER_TYPE dxMin = _ConvertFilterType(minFilter);
+                D3D11_FILTER_TYPE dxMag = _ConvertFilterType(magFilter);
+                D3D11_FILTER_TYPE dxMip = _ConvertFilterType(mipFilter);
+                filter = D3D11_ENCODE_BASIC_FILTER(dxMin, dxMag, dxMip, reduction);
+            }
+
+            return filter;
+        }
+
+        constexpr D3D11_TEXTURE_ADDRESS_MODE _ConvertAddressMode(SamplerAddressMode value)
         {
             switch (value)
             {
-            case TEXTURE_ADDRESS_WRAP:
-                return D3D11_TEXTURE_ADDRESS_WRAP;
-                break;
-            case TEXTURE_ADDRESS_MIRROR:
-                return D3D11_TEXTURE_ADDRESS_MIRROR;
-                break;
-            case TEXTURE_ADDRESS_CLAMP:
+            case SamplerAddressMode::ClampToEdge:
                 return D3D11_TEXTURE_ADDRESS_CLAMP;
-                break;
-            case TEXTURE_ADDRESS_BORDER:
+            //case SamplerAddressMode::MirrorClampToEdge:
+            //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+            case SamplerAddressMode::Repeat:
+                return D3D11_TEXTURE_ADDRESS_WRAP;
+            case SamplerAddressMode::MirrorRepeat:
+                return D3D11_TEXTURE_ADDRESS_MIRROR;
+            case SamplerAddressMode::ClampToBorder:
                 return D3D11_TEXTURE_ADDRESS_BORDER;
-                break;
             default:
-                break;
+                return D3D11_TEXTURE_ADDRESS_CLAMP;
             }
-            return D3D11_TEXTURE_ADDRESS_WRAP;
+            return D3D11_TEXTURE_ADDRESS_CLAMP;
         }
+
         constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
@@ -1986,27 +1902,58 @@ namespace Alimer
         return it->second.Get();
     }
 
-    bool GraphicsDevice_DX11::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
+    bool GraphicsDevice_DX11::CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_DX11>();
         pSamplerState->internal_state = internal_state;
 
         D3D11_SAMPLER_DESC desc;
-        desc.Filter = _ConvertFilter(pSamplerDesc->Filter);
-        desc.AddressU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
-        desc.AddressV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
-        desc.AddressW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
-        desc.MipLODBias = pSamplerDesc->MipLODBias;
-        desc.MaxAnisotropy = pSamplerDesc->MaxAnisotropy;
-        desc.ComparisonFunc = _ConvertComparisonFunc(pSamplerDesc->compareFunction);
-        desc.BorderColor[0] = pSamplerDesc->BorderColor[0];
-        desc.BorderColor[1] = pSamplerDesc->BorderColor[1];
-        desc.BorderColor[2] = pSamplerDesc->BorderColor[2];
-        desc.BorderColor[3] = pSamplerDesc->BorderColor[3];
-        desc.MinLOD = pSamplerDesc->MinLOD;
-        desc.MaxLOD = pSamplerDesc->MaxLOD;
+        desc.Filter = _ConvertFilter(
+            descriptor->minFilter,
+            descriptor->magFilter,
+            descriptor->mipmapFilter,
+            descriptor->compareFunction != CompareFunction::Undefined,
+            descriptor->maxAnisotropy
+        );
 
-        pSamplerState->desc = *pSamplerDesc;
+        desc.AddressU = _ConvertAddressMode(descriptor->addressModeU);
+        desc.AddressV = _ConvertAddressMode(descriptor->addressModeV);
+        desc.AddressW = _ConvertAddressMode(descriptor->addressModeW);
+        desc.MipLODBias = descriptor->mipLodBias;
+        desc.MaxAnisotropy = descriptor->maxAnisotropy;
+        if (descriptor->compareFunction != CompareFunction::Undefined) {
+            desc.ComparisonFunc = _ConvertComparisonFunc(descriptor->compareFunction);
+        }
+        else {
+            desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        }
+        switch (descriptor->borderColor)
+        {
+        case SamplerBorderColor::OpaqueBlack:
+            desc.BorderColor[0] = 0.0f;
+            desc.BorderColor[1] = 0.0f;
+            desc.BorderColor[2] = 0.0f;
+            desc.BorderColor[3] = 1.0f;
+            break;
+
+        case SamplerBorderColor::OpaqueWhite:
+            desc.BorderColor[0] = 1.0f;
+            desc.BorderColor[1] = 1.0f;
+            desc.BorderColor[2] = 1.0f;
+            desc.BorderColor[3] = 1.0f;
+            break;
+
+        default:
+            desc.BorderColor[0] = 0.0f;
+            desc.BorderColor[1] = 0.0f;
+            desc.BorderColor[2] = 0.0f;
+            desc.BorderColor[3] = 0.0f;
+            break;
+        }
+
+        desc.MinLOD = descriptor->lodMinClamp;
+        desc.MaxLOD = descriptor->lodMaxClamp;
+
         HRESULT hr = device->CreateSamplerState(&desc, &internal_state->resource);
         assert(SUCCEEDED(hr));
 

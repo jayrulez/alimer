@@ -315,7 +315,7 @@ namespace Alimer
         bool CreateShader(ShaderStage stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
-        bool CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState) override;
+        bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
         bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
@@ -1064,26 +1064,64 @@ namespace Alimer
             }
             return VK_BLEND_OP_ADD;
         }
-        constexpr VkSamplerAddressMode _ConvertTextureAddressMode(TEXTURE_ADDRESS_MODE value)
+        constexpr VkFilter _ConvertFilter(FilterMode filter)
+        {
+            switch (filter)
+            {
+            case FilterMode::Nearest:
+                return VK_FILTER_NEAREST;
+            case FilterMode::Linear:
+                return VK_FILTER_LINEAR;
+            default:
+                ALIMER_UNREACHABLE();
+                return VK_FILTER_NEAREST;
+            }
+        }
+        VkSamplerMipmapMode _ConvertMipMapFilterMode(FilterMode filter)
+        {
+            switch (filter)
+            {
+            case FilterMode::Nearest:
+                return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            case FilterMode::Linear:
+                return VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            default:
+                ALIMER_UNREACHABLE();
+                return VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            }
+        }
+
+        constexpr VkSamplerAddressMode _ConvertAddressMode(SamplerAddressMode value)
         {
             switch (value)
             {
-            case TEXTURE_ADDRESS_WRAP:
-                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-                break;
-            case TEXTURE_ADDRESS_MIRROR:
-                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-                break;
-            case TEXTURE_ADDRESS_CLAMP:
+            case SamplerAddressMode::ClampToEdge:
                 return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-                break;
-            case TEXTURE_ADDRESS_BORDER:
+            case SamplerAddressMode::Repeat:
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            case SamplerAddressMode::MirrorRepeat:
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            case SamplerAddressMode::ClampToBorder:
                 return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             }
-            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        }
+        constexpr VkBorderColor _ConvertSamplerBorderColor(SamplerBorderColor value)
+        {
+            switch (value)
+            {
+            case SamplerBorderColor::TransparentBlack:
+                return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            case SamplerBorderColor::OpaqueBlack:
+                return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+            case SamplerBorderColor::OpaqueWhite:
+                return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            default:
+                ALIMER_UNREACHABLE();
+                return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            }
         }
         constexpr VkStencilOp _ConvertStencilOp(StencilOperation value)
         {
@@ -4720,184 +4758,36 @@ namespace Alimer
         return true;
     }
 
-    bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDesc* pSamplerDesc, Sampler* pSamplerState)
+    bool GraphicsDevice_Vulkan::CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState)
     {
         auto internal_state = std::make_shared<Sampler_Vulkan>();
         internal_state->allocationhandler = allocationhandler;
         pSamplerState->internal_state = internal_state;
 
-        pSamplerState->desc = *pSamplerDesc;
-
-        VkSamplerCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         createInfo.flags = 0;
         createInfo.pNext = nullptr;
-
-
-        switch (pSamplerDesc->Filter)
-        {
-        case FILTER_MIN_MAG_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_MAG_POINT_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_POINT_MAG_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_LINEAR_MAG_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_MAG_LINEAR_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_MIN_MAG_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_ANISOTROPIC:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = true;
-            createInfo.compareEnable = false;
-            break;
-        case FILTER_COMPARISON_MIN_MAG_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_MIN_MAG_MIP_LINEAR:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_COMPARISON_ANISOTROPIC:
-            createInfo.minFilter = VK_FILTER_LINEAR;
-            createInfo.magFilter = VK_FILTER_LINEAR;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            createInfo.anisotropyEnable = true;
-            createInfo.compareEnable = true;
-            break;
-        case FILTER_MINIMUM_MIN_MAG_MIP_POINT:
-        case FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR:
-        case FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-        case FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR:
-        case FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT:
-        case FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-        case FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT:
-        case FILTER_MINIMUM_MIN_MAG_MIP_LINEAR:
-        case FILTER_MINIMUM_ANISOTROPIC:
-        case FILTER_MAXIMUM_MIN_MAG_MIP_POINT:
-        case FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR:
-        case FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT:
-        case FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR:
-        case FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT:
-        case FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR:
-        case FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT:
-        case FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR:
-        case FILTER_MAXIMUM_ANISOTROPIC:
-        default:
-            createInfo.minFilter = VK_FILTER_NEAREST;
-            createInfo.magFilter = VK_FILTER_NEAREST;
-            createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-            createInfo.anisotropyEnable = false;
-            createInfo.compareEnable = false;
-            break;
+        createInfo.magFilter = _ConvertFilter(descriptor->magFilter);
+        createInfo.minFilter = _ConvertFilter(descriptor->minFilter);
+        createInfo.mipmapMode = _ConvertMipMapFilterMode(descriptor->mipmapFilter);
+        createInfo.addressModeU = _ConvertAddressMode(descriptor->addressModeU);
+        createInfo.addressModeV = _ConvertAddressMode(descriptor->addressModeV);
+        createInfo.addressModeW = _ConvertAddressMode(descriptor->addressModeW);
+        createInfo.mipLodBias = descriptor->mipLodBias;
+        createInfo.anisotropyEnable = (descriptor->maxAnisotropy > 1) ? VK_TRUE : VK_FALSE;
+        createInfo.maxAnisotropy = static_cast<float>(descriptor->maxAnisotropy);
+        if (descriptor->compareFunction != CompareFunction::Undefined) {
+            createInfo.compareEnable = VK_TRUE;
+            createInfo.compareOp = _ConvertComparisonFunc(descriptor->compareFunction);
+        }
+        else {
+            createInfo.compareEnable = VK_FALSE;
+            createInfo.compareOp = VK_COMPARE_OP_NEVER;
         }
 
-        createInfo.addressModeU = _ConvertTextureAddressMode(pSamplerDesc->AddressU);
-        createInfo.addressModeV = _ConvertTextureAddressMode(pSamplerDesc->AddressV);
-        createInfo.addressModeW = _ConvertTextureAddressMode(pSamplerDesc->AddressW);
-        createInfo.maxAnisotropy = static_cast<float>(pSamplerDesc->MaxAnisotropy);
-        createInfo.compareOp = _ConvertComparisonFunc(pSamplerDesc->compareFunction);
-        createInfo.minLod = pSamplerDesc->MinLOD;
-        createInfo.maxLod = pSamplerDesc->MaxLOD;
-        createInfo.mipLodBias = pSamplerDesc->MipLODBias;
-        createInfo.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+        createInfo.minLod = descriptor->lodMinClamp;
+        createInfo.maxLod = descriptor->lodMaxClamp;
+        createInfo.borderColor = _ConvertSamplerBorderColor(descriptor->borderColor);
         createInfo.unnormalizedCoordinates = VK_FALSE;
 
         VkResult res = vkCreateSampler(device, &createInfo, nullptr, &internal_state->resource);
