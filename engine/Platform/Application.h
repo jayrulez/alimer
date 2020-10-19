@@ -40,7 +40,7 @@ namespace Alimer
         int vsync;
         uint32_t sampleCount;
 
-        //GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
+        GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
 
         std::string rootDirectory = "Assets";
     };

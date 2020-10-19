@@ -83,7 +83,7 @@ namespace Alimer
         enableDebugLayer = true;
 #endif
 
-        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), false, enableDebugLayer);
+        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), config.preferredBackendType, false, enableDebugLayer);
         if (!graphicsDevice)
         {
             headless = true;

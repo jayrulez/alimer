@@ -173,8 +173,7 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
 endif ()
 
 if (ALIMER_VULKAN)
-    #target_compile_definitions(volk PUBLIC VK_ENABLE_BETA_EXTENSIONS)
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan spirv-cross-core)
+    target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
 endif()
 
 if (ALIMER_IMGUI)

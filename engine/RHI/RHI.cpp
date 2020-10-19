@@ -35,11 +35,50 @@
 
 namespace Alimer
 {
-    std::shared_ptr<GraphicsDevice> GraphicsDevice::Create(void* window, bool fullscreen, bool enableDebugLayer)
+    std::shared_ptr<GraphicsDevice> GraphicsDevice::Create(void* windowHandle, GraphicsBackendType backendType, bool fullscreen, bool enableDebugLayer)
     {
-        return std::make_shared<GraphicsDevice_DX11>(window, fullscreen, enableDebugLayer);
-        //return std::make_shared<GraphicsDevice_DX12>(window, fullscreen, enableDebugLayer);
-        //return std::make_shared<GraphicsDevice_Vulkan>(window, fullscreen, enableDebugLayer);
+        if (backendType == GraphicsBackendType::Count)
+        {
+#if defined(ALIMER_D3D12)
+            if (GraphicsDevice_DX12::IsAvailable())
+                backendType = GraphicsBackendType::Direct3D12;
+#endif
+        }
+
+        switch (backendType)
+        {
+#if defined(ALIMER_D3D12)
+        case GraphicsBackendType::Direct3D12:
+            if (GraphicsDevice_DX12::IsAvailable())
+            {
+                return std::make_shared<GraphicsDevice_DX12>(windowHandle, fullscreen, enableDebugLayer);
+            }
+            break;
+#endif
+
+#if defined(ALIMER_D3D11)
+        case GraphicsBackendType::Direct3D11:
+            if (GraphicsDevice_DX11::IsAvailable())
+            {
+                return std::make_shared<GraphicsDevice_DX11>(windowHandle, fullscreen, enableDebugLayer);
+            }
+            break;
+#endif
+
+#if defined(ALIMER_D3D11)
+        case GraphicsBackendType::Vulkan:
+            if (IsVulkanBackendAvailable())
+            {
+                return CreateVulkanGraphicsDevice(windowHandle, fullscreen, enableDebugLayer);
+            }
+            break;
+#endif
+
+        default:
+            break;
+        }
+
+        return nullptr;
     }
 
     bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const

@@ -51,7 +51,6 @@ namespace Alimer
 
     HelloWorldApp::~HelloWorldApp()
     {
-
     }
 
     struct Vertex
@@ -203,7 +202,7 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        //config.rendererType = GPUBackendType::Vulkan;
+        config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Cube - Direct3D11";
         //config.fullscreen = true;
         //config.width = 1280;

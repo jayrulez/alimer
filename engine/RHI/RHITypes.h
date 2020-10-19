@@ -58,6 +58,19 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_ImgTec = 0x1010;
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
+    /// Enum describing the rendering backend.
+    enum class GraphicsBackendType : uint32
+    {
+        /// Direct3D 12 backend.
+        Direct3D12,
+        /// Direct3D 11 backend.
+        Direct3D11,
+        /// Vulkan backend.
+        Vulkan,
+        /// Default best platform supported backend.
+        Count
+    };
+
 	enum class ShaderStage : uint32_t
 	{
 		Vertex,

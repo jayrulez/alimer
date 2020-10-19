@@ -57,7 +57,7 @@ namespace Alimer
     public:
         virtual ~GraphicsDevice() = default;
 
-        static std::shared_ptr<GraphicsDevice> Create(void* window, bool fullscreen = false, bool enableDebugLayer = false);
+        static std::shared_ptr<GraphicsDevice> Create(void* windowHandle, GraphicsBackendType backendType = GraphicsBackendType::Count, bool fullscreen = false, bool enableDebugLayer = false);
 
         virtual bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) = 0;
         virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) = 0;
