@@ -34,8 +34,11 @@
 #include "D3D12MemAlloc.h"
 
 #include <pix.h>
-#include <dxcapi.h>
+
+#if !defined(ALIMER_DISABLE_SHADER_COMPILER)
 #include <d3d12shader.h>
+#include "dxcapi.h"
+#endif
 
 #include <sstream>
 #include <algorithm>
@@ -3145,13 +3148,16 @@ namespace Alimer
         std::vector<const wchar_t*> arguments;
         arguments.push_back(L"/Zpc"); // Column major
 #ifdef _DEBUG
-        //arguments.push_back(L"/Zi");
+        arguments.push_back(L"/Zi");
 #else
         arguments.push_back(L"/O3");
 #endif
+        arguments.push_back(L"-all_resources_bound");
+        //arguments.push_back(L"-Vd");
+
         // Enable FXC backward compatibility by setting the language version to 2016
-        arguments.push_back(L"-HV");
-        arguments.push_back(L"2016");
+        //arguments.push_back(L"-HV");
+        //arguments.push_back(L"2016");
 
         const wchar_t* target = L"vs_6_1";
         switch (stage)

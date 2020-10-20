@@ -172,6 +172,10 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_BACKEND)
 endif ()
 
+if (ALIMER_D3D12)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dxc)
+endif ()
+
 if (ALIMER_VULKAN)
     target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
 endif()

@@ -21,6 +21,12 @@ set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-msl PROPERTY FOLDER "ThirdParty")
 set_property(TARGET spirv-cross-util PROPERTY FOLDER "ThirdParty")
 
+# dxc
+add_library(dxc INTERFACE)
+set(DXC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxc/include)
+target_sources(dxc INTERFACE ${DXC_INCLUDE_DIR}/dxcapi.h)
+target_include_directories(dxc INTERFACE ${DXC_INCLUDE_DIR})
+
 if (ALIMER_VULKAN)
     # vulkan
     add_library(vulkan INTERFACE)

@@ -21,6 +21,8 @@ function(add_sample sample_name)
         set_target_properties(${sample_name} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
     endif ()
 
+    alimer_copy_required_dlls(${sample_name})
+
     install(TARGETS ${sample_name}
         LIBRARY DESTINATION ${DEST_LIBRARY_DIR_CONFIG}
         RUNTIME DESTINATION ${DEST_BIN_DIR_CONFIG}

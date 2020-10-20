@@ -88,3 +88,25 @@ function(alimer_add_plugin name files)
 	target_link_libraries(${name} PRIVATE Alimer)
 	set_target_properties(${name} PROPERTIES FOLDER Plugins)
 endfunction()
+
+function(alimer_copy_required_dlls TARGET_NAME)
+	if(WIN32 OR WINDOWS_STORE)
+		# Copy DXIL
+    	set(VS_WINDOWS_SDK_BIN_DIR "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64")
+    	set(VS_DXIL_SIGNER_PATH  "\"${VS_WINDOWS_SDK_BIN_DIR}\\dxil.dll\"" CACHE INTERNAL "dxil.dll path")
+		set(DXC_COMPILER_PATH  "\"${ALIMER_THIRD_PARTY_DIR}\\dxc\\bin\\dxcompiler.dll\"" CACHE INTERNAL "dxcompiler.dll path")
+
+		add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${VS_DXIL_SIGNER_PATH}
+			"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
+		)
+
+		# Copy dxcompiler (third_party/dxc/bin)
+		add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			${DXC_COMPILER_PATH}
+			"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
+		)
+	endif ()
+endfunction()
