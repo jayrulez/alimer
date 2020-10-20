@@ -170,8 +170,8 @@ namespace Alimer
             {
             case SamplerAddressMode::ClampToEdge:
                 return D3D11_TEXTURE_ADDRESS_CLAMP;
-            //case SamplerAddressMode::MirrorClampToEdge:
-            //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+                //case SamplerAddressMode::MirrorClampToEdge:
+                //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
             case SamplerAddressMode::Repeat:
                 return D3D11_TEXTURE_ADDRESS_WRAP;
             case SamplerAddressMode::MirrorRepeat:
@@ -258,89 +258,69 @@ namespace Alimer
             }
             return D3D11_STENCIL_OP_KEEP;
         }
-        constexpr D3D11_BLEND _ConvertBlend(BLEND value)
+        constexpr D3D11_BLEND _ConvertBlend(BlendFactor value)
         {
             switch (value)
             {
-            case BLEND_ZERO:
+            case BlendFactor::Zero:
                 return D3D11_BLEND_ZERO;
-                break;
-            case BLEND_ONE:
+            case BlendFactor::One:
                 return D3D11_BLEND_ONE;
-                break;
-            case BLEND_SRC_COLOR:
+            case BlendFactor::SourceColor:
                 return D3D11_BLEND_SRC_COLOR;
-                break;
-            case BLEND_INV_SRC_COLOR:
+            case BlendFactor::OneMinusSourceColor:
                 return D3D11_BLEND_INV_SRC_COLOR;
-                break;
-            case BLEND_SRC_ALPHA:
+            case BlendFactor::SourceAlpha:
                 return D3D11_BLEND_SRC_ALPHA;
-                break;
-            case BLEND_INV_SRC_ALPHA:
+            case BlendFactor::OneMinusSourceAlpha:
                 return D3D11_BLEND_INV_SRC_ALPHA;
-                break;
-            case BLEND_DEST_ALPHA:
-                return D3D11_BLEND_DEST_ALPHA;
-                break;
-            case BLEND_INV_DEST_ALPHA:
-                return D3D11_BLEND_INV_DEST_ALPHA;
-                break;
-            case BLEND_DEST_COLOR:
+            case BlendFactor::DestinationColor:
                 return D3D11_BLEND_DEST_COLOR;
-                break;
-            case BLEND_INV_DEST_COLOR:
+            case BlendFactor::OneMinusDestinationColor:
                 return D3D11_BLEND_INV_DEST_COLOR;
-                break;
-            case BLEND_SRC_ALPHA_SAT:
+            case BlendFactor::DestinationAlpha:
+                return D3D11_BLEND_DEST_ALPHA;
+            case BlendFactor::OneMinusDestinationAlpha:
+                return D3D11_BLEND_INV_DEST_ALPHA;
+            case BlendFactor::SourceAlphaSaturated:
                 return D3D11_BLEND_SRC_ALPHA_SAT;
-                break;
-            case BLEND_BLEND_FACTOR:
+            case BlendFactor::BlendColor:
+            case BlendFactor::BlendAlpha:
                 return D3D11_BLEND_BLEND_FACTOR;
-                break;
-            case BLEND_INV_BLEND_FACTOR:
+            case BlendFactor::OneMinusBlendColor:
+            case BlendFactor::OneMinusBlendAlpha:
                 return D3D11_BLEND_INV_BLEND_FACTOR;
-                break;
-            case BLEND_SRC1_COLOR:
+            case BlendFactor::Source1Color:
                 return D3D11_BLEND_SRC1_COLOR;
-                break;
-            case BLEND_INV_SRC1_COLOR:
+            case BlendFactor::OneMinusSource1Color:
                 return D3D11_BLEND_INV_SRC1_COLOR;
-                break;
-            case BLEND_SRC1_ALPHA:
+            case BlendFactor::Source1Alpha:
                 return D3D11_BLEND_SRC1_ALPHA;
-                break;
-            case BLEND_INV_SRC1_ALPHA:
+            case BlendFactor::OneMinusSource1Alpha:
                 return D3D11_BLEND_INV_SRC1_ALPHA;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return D3D11_BLEND_ZERO;
             }
-            return D3D11_BLEND_ZERO;
         }
-        constexpr D3D11_BLEND_OP _ConvertBlendOp(BLEND_OP value)
+        constexpr D3D11_BLEND_OP _ConvertBlendOp(BlendOperation value)
         {
             switch (value)
             {
-            case BLEND_OP_ADD:
+            case BlendOperation::Add:
                 return D3D11_BLEND_OP_ADD;
-                break;
-            case BLEND_OP_SUBTRACT:
+            case BlendOperation::Subtract:
                 return D3D11_BLEND_OP_SUBTRACT;
-                break;
-            case BLEND_OP_REV_SUBTRACT:
+            case BlendOperation::ReverseSubtract:
                 return D3D11_BLEND_OP_REV_SUBTRACT;
-                break;
-            case BLEND_OP_MIN:
+            case BlendOperation::Min:
                 return D3D11_BLEND_OP_MIN;
-                break;
-            case BLEND_OP_MAX:
+            case BlendOperation::Max:
                 return D3D11_BLEND_OP_MAX;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return D3D11_BLEND_OP_ADD;
             }
-            return D3D11_BLEND_OP_ADD;
         }
         constexpr D3D11_USAGE _ConvertUsage(USAGE value)
         {
@@ -589,7 +569,7 @@ namespace Alimer
             }
             return DXGI_FORMAT_UNKNOWN;
         }
-        
+
         inline D3D11_TEXTURE1D_DESC _ConvertTextureDesc1D(const TextureDesc* pDesc)
         {
             D3D11_TEXTURE1D_DESC desc;
@@ -3332,6 +3312,6 @@ namespace Alimer
         auto wName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[cmd]->SetMarker(wName.c_str());
     }
-}
+    }
 
 #endif // defined(ALIMER_D3D11)

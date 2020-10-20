@@ -119,26 +119,38 @@ namespace Alimer
         DecrementWrap,
 	};
 
-	enum BLEND
+	enum class BlendFactor : uint32_t
 	{
-		BLEND_ZERO,
-		BLEND_ONE,
-		BLEND_SRC_COLOR,
-		BLEND_INV_SRC_COLOR,
-		BLEND_SRC_ALPHA,
-		BLEND_INV_SRC_ALPHA,
-		BLEND_DEST_ALPHA,
-		BLEND_INV_DEST_ALPHA,
-		BLEND_DEST_COLOR,
-		BLEND_INV_DEST_COLOR,
-		BLEND_SRC_ALPHA_SAT,
-		BLEND_BLEND_FACTOR,
-		BLEND_INV_BLEND_FACTOR,
-		BLEND_SRC1_COLOR,
-		BLEND_INV_SRC1_COLOR,
-		BLEND_SRC1_ALPHA,
-		BLEND_INV_SRC1_ALPHA,
-	}; 
+        Zero,
+        One,
+        SourceColor,
+        OneMinusSourceColor,
+		SourceAlpha,
+        OneMinusSourceAlpha,
+        DestinationColor,
+        OneMinusDestinationColor,
+        DestinationAlpha,
+        OneMinusDestinationAlpha,
+        SourceAlphaSaturated,
+		BlendColor,
+		OneMinusBlendColor,
+        BlendAlpha,
+        OneMinusBlendAlpha,
+		Source1Color,
+        OneMinusSource1Color,
+        Source1Alpha,
+        OneMinusSource1Alpha,
+	};
+
+    enum class BlendOperation : uint32_t
+    {
+        Add,
+        Subtract,
+        ReverseSubtract,
+        Min,
+        Max,
+    };
+
 	enum COLOR_WRITE_ENABLE
 	{
 		COLOR_WRITE_DISABLE = 0,
@@ -147,14 +159,6 @@ namespace Alimer
 		COLOR_WRITE_ENABLE_BLUE = 4,
 		COLOR_WRITE_ENABLE_ALPHA = 8,
 		COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
-	};
-	enum BLEND_OP
-	{
-		BLEND_OP_ADD,
-		BLEND_OP_SUBTRACT,
-		BLEND_OP_REV_SUBTRACT,
-		BLEND_OP_MIN,
-		BLEND_OP_MAX,
 	};
 
     enum class FrontFace : uint32_t
@@ -532,12 +536,12 @@ namespace Alimer
 	struct RenderTargetBlendStateDesc
 	{
 		bool BlendEnable = false;
-		BLEND SrcBlend = BLEND_SRC_ALPHA;
-		BLEND DestBlend = BLEND_INV_SRC_ALPHA;
-		BLEND_OP BlendOp = BLEND_OP_ADD;
-		BLEND SrcBlendAlpha = BLEND_ONE;
-		BLEND DestBlendAlpha = BLEND_ONE;
-		BLEND_OP BlendOpAlpha = BLEND_OP_ADD;
+        BlendFactor SrcBlend = BlendFactor::One;
+        BlendFactor DestBlend = BlendFactor::Zero;
+        BlendOperation BlendOp = BlendOperation::Add;
+        BlendFactor SrcBlendAlpha = BlendFactor::One;
+        BlendFactor DestBlendAlpha = BlendFactor::Zero;
+        BlendOperation BlendOpAlpha = BlendOperation::Add;
 		uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
 	};
 

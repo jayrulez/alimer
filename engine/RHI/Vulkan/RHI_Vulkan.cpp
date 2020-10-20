@@ -980,89 +980,73 @@ namespace Alimer
             }
             return VK_COMPARE_OP_NEVER;
         }
-        constexpr VkBlendFactor _ConvertBlend(BLEND value)
+        constexpr VkBlendFactor _ConvertBlend(BlendFactor value)
         {
             switch (value)
             {
-            case BLEND_ZERO:
+            case BlendFactor::Zero:
                 return VK_BLEND_FACTOR_ZERO;
-                break;
-            case BLEND_ONE:
+            case BlendFactor::One:
                 return VK_BLEND_FACTOR_ONE;
-                break;
-            case BLEND_SRC_COLOR:
+            case BlendFactor::SourceColor:
                 return VK_BLEND_FACTOR_SRC_COLOR;
-                break;
-            case BLEND_INV_SRC_COLOR:
+            case BlendFactor::OneMinusSourceColor:
                 return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
-                break;
-            case BLEND_SRC_ALPHA:
+            case BlendFactor::SourceAlpha:
                 return VK_BLEND_FACTOR_SRC_ALPHA;
-                break;
-            case BLEND_INV_SRC_ALPHA:
+            case BlendFactor::OneMinusSourceAlpha:
                 return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-                break;
-            case BLEND_DEST_ALPHA:
-                return VK_BLEND_FACTOR_DST_ALPHA;
-                break;
-            case BLEND_INV_DEST_ALPHA:
-                return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
-                break;
-            case BLEND_DEST_COLOR:
+            case BlendFactor::DestinationColor:
                 return VK_BLEND_FACTOR_DST_COLOR;
-                break;
-            case BLEND_INV_DEST_COLOR:
+            case BlendFactor::OneMinusDestinationColor:
                 return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
-                break;
-            case BLEND_SRC_ALPHA_SAT:
+            case BlendFactor::DestinationAlpha:
+                return VK_BLEND_FACTOR_DST_ALPHA;
+            case BlendFactor::OneMinusDestinationAlpha:
+                return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+            case BlendFactor::SourceAlphaSaturated:
                 return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
-                break;
-            case BLEND_BLEND_FACTOR:
+            case BlendFactor::BlendColor:
                 return VK_BLEND_FACTOR_CONSTANT_COLOR;
-                break;
-            case BLEND_INV_BLEND_FACTOR:
+            case BlendFactor::OneMinusBlendColor:
                 return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
-                break;
-            case BLEND_SRC1_COLOR:
+            case BlendFactor::BlendAlpha:
+                return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+            case BlendFactor::OneMinusBlendAlpha:
+                return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+            case BlendFactor::Source1Color:
                 return VK_BLEND_FACTOR_SRC1_COLOR;
-                break;
-            case BLEND_INV_SRC1_COLOR:
+            case BlendFactor::OneMinusSource1Color:
                 return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
-                break;
-            case BLEND_SRC1_ALPHA:
+            case BlendFactor::Source1Alpha:
                 return VK_BLEND_FACTOR_SRC1_ALPHA;
-                break;
-            case BLEND_INV_SRC1_ALPHA:
+            case BlendFactor::OneMinusSource1Alpha:
                 return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return VK_BLEND_FACTOR_ZERO;
             }
-            return VK_BLEND_FACTOR_ZERO;
+
         }
-        constexpr VkBlendOp _ConvertBlendOp(BLEND_OP value)
+        constexpr VkBlendOp _ConvertBlendOp(BlendOperation value)
         {
             switch (value)
             {
-            case BLEND_OP_ADD:
+            case BlendOperation::Add:
                 return VK_BLEND_OP_ADD;
-                break;
-            case BLEND_OP_SUBTRACT:
+            case BlendOperation::Subtract:
                 return VK_BLEND_OP_SUBTRACT;
-                break;
-            case BLEND_OP_REV_SUBTRACT:
+            case BlendOperation::ReverseSubtract:
                 return VK_BLEND_OP_REVERSE_SUBTRACT;
-                break;
-            case BLEND_OP_MIN:
+            case BlendOperation::Min:
                 return VK_BLEND_OP_MIN;
-                break;
-            case BLEND_OP_MAX:
+            case BlendOperation::Max:
                 return VK_BLEND_OP_MAX;
                 break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return VK_BLEND_OP_ADD;
             }
-            return VK_BLEND_OP_ADD;
         }
         constexpr VkFilter _ConvertFilter(FilterMode filter)
         {
@@ -2985,7 +2969,7 @@ namespace Alimer
                 SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensionNames_sdl.data());
                 enabledExtensions.reserve(enabledExtensions.size() + extensionNames_sdl.size());
                 enabledExtensions.insert(enabledExtensions.begin(), extensionNames_sdl.cbegin(), extensionNames_sdl.cend());
-        }
+            }
 #endif // _WIN32
 
             bool enableValidationLayers = enableDebugLayer_;
@@ -3038,7 +3022,7 @@ namespace Alimer
                     }
                 }
             }
-    }
+        }
 
 
         // Surface creation:
@@ -3059,7 +3043,7 @@ namespace Alimer
 #else
 #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
 #endif // _WIN32
-            }
+        }
 
 
         // Enumerating and creating devices:
@@ -3538,7 +3522,7 @@ namespace Alimer
         }
 
         //wiBackLog::post("Created GraphicsDevice_Vulkan");
-        }
+    }
 
     GraphicsDevice_Vulkan::~GraphicsDevice_Vulkan()
     {
@@ -4748,7 +4732,7 @@ namespace Alimer
         pShader->internal_state = nullptr;
         return false;
 #endif
-        }
+    }
 
     bool GraphicsDevice_Vulkan::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
     {
@@ -7641,4 +7625,4 @@ namespace Alimer
     {
         return std::make_shared<GraphicsDevice_Vulkan>(windowHandle, fullscreen, enableDebugLayer);
     }
-    }
+}
