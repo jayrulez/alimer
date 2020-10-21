@@ -36,6 +36,7 @@
 #include "dxcapi.h"
 #endif
 
+#include <array>
 #include <sstream>
 #include <algorithm>
 
@@ -233,7 +234,7 @@ namespace Alimer
             case BlendFactor::SourceAlphaSaturated:
                 return D3D12_BLEND_SRC_ALPHA_SAT;
             case BlendFactor::BlendColor:
-            //case BlendFactor::BlendAlpha:
+                //case BlendFactor::BlendAlpha:
                 return D3D12_BLEND_BLEND_FACTOR;
             case BlendFactor::OneMinusBlendColor:
                 //case BlendFactor::OneMinusBlendAlpha:
@@ -270,20 +271,18 @@ namespace Alimer
                 return D3D12_BLEND_OP_ADD;
             }
         }
-        constexpr D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
+        constexpr D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(InputStepMode value)
         {
             switch (value)
             {
-            case INPUT_PER_VERTEX_DATA:
+            case InputStepMode::Vertex:
                 return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-                break;
-            case INPUT_PER_INSTANCE_DATA:
+            case InputStepMode::Instance:
                 return D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
             }
-            return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
         }
         constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
         {
@@ -1847,27 +1846,38 @@ namespace Alimer
                 }
                 stream.BD = bd;
 
-                std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
-                D3D12_INPUT_LAYOUT_DESC il = {};
-                if (pso->desc.il != nullptr)
+                // InputLayout
+                D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
+                std::array<D3D12_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
+                for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
                 {
-                    il.NumElements = (uint32_t)pso->desc.il->desc.size();
-                    elements.resize(il.NumElements);
-                    for (uint32_t i = 0; i < il.NumElements; ++i)
+                    const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[i];
+                    if (attrDesc->format == VertexFormat::Invalid) {
+                        break;
+                    }
+
+                    const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[i];
+
+                    D3D12_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputLayoutDesc.NumElements++];
+                    inputElementDesc->SemanticName = "ATTRIBUTE";
+                    inputElementDesc->SemanticIndex = i;
+                    inputElementDesc->Format = D3DConvertVertexFormat(attrDesc->format);
+                    inputElementDesc->InputSlot = attrDesc->bufferIndex;
+                    inputElementDesc->AlignedByteOffset = attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
+                    if (layoutDesc->stepMode == InputStepMode::Vertex)
                     {
-                        elements[i].SemanticName = pso->desc.il->desc[i].SemanticName.c_str();
-                        elements[i].SemanticIndex = pso->desc.il->desc[i].SemanticIndex;
-                        elements[i].Format = D3DConvertVertexFormat(pso->desc.il->desc[i].format);
-                        elements[i].InputSlot = pso->desc.il->desc[i].InputSlot;
-                        elements[i].AlignedByteOffset = pso->desc.il->desc[i].AlignedByteOffset;
-                        if (elements[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
-                            elements[i].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
-                        elements[i].InputSlotClass = _ConvertInputClassification(pso->desc.il->desc[i].InputSlotClass);
-                        elements[i].InstanceDataStepRate = pso->desc.il->desc[i].InstanceDataStepRate;
+                        inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                        inputElementDesc->InstanceDataStepRate = 0;
+                    }
+                    else
+                    {
+                        inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+                        inputElementDesc->InstanceDataStepRate = 1;
                     }
                 }
-                il.pInputElementDescs = elements.data();
-                stream.IL = il;
+
+                inputLayoutDesc.pInputElementDescs = inputElements.data();
+                stream.IL = inputLayoutDesc;
 
                 DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
                 D3D12_RT_FORMAT_ARRAY formats = {};
@@ -2945,19 +2955,6 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-    bool GraphicsDevice_DX12::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
-    {
-        pInputLayout->internal_state = allocationhandler;
-
-        pInputLayout->desc.clear();
-        pInputLayout->desc.reserve((size_t)NumElements);
-        for (uint32_t i = 0; i < NumElements; ++i)
-        {
-            pInputLayout->desc.push_back(pInputElementDescs[i]);
-        }
-
-        return true;
-    }
 
     bool GraphicsDevice_DX12::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
     {
@@ -3356,7 +3353,7 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX12::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+    bool GraphicsDevice_DX12::CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3372,7 +3369,7 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->hs);
         Alimer::hash_combine(pso->hash, pDesc->ds);
         Alimer::hash_combine(pso->hash, pDesc->gs);
-        Alimer::hash_combine(pso->hash, pDesc->il);
+        Alimer::hash_combine(pso->hash, pDesc->vertexDescriptor);
         Alimer::hash_combine(pso->hash, pDesc->bs);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
         Alimer::hash_combine(pso->hash, pDesc->rasterizationState);

@@ -44,8 +44,9 @@
 #include "vk_mem_alloc.h"
 #include "spirv_reflect.hpp"
 
-#include <sstream>
+#include <array>
 #include <vector>
+#include <sstream>
 #include <cstring>
 #include <iostream>
 #include <set>
@@ -311,13 +312,12 @@ namespace Alimer
 
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
-        bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
         bool CreateShader(ShaderStage stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+        bool CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
         bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
         bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
@@ -2502,72 +2502,47 @@ namespace Alimer
                 pipelineInfo.stageCount = shaderStageCount;
                 pipelineInfo.pStages = shaderStages;
 
-
-                // Fixed function states:
-
+                // Fixed function states
                 // Input layout:
-                VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-                vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-                std::vector<VkVertexInputBindingDescription> bindings;
-                std::vector<VkVertexInputAttributeDescription> attributes;
-                if (pso->desc.il != nullptr)
+                VkPipelineVertexInputStateCreateInfo vertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
+                uint32_t vertexBindingDescriptionCount = 0;
+                uint32_t vertexAttributeDescriptionCount = 0;
+                std::array<VkVertexInputBindingDescription, kMaxVertexBufferBindings> vertexBindingDescriptions;
+                std::array<VkVertexInputAttributeDescription, kMaxVertexAttributes> vertexAttributeDescriptions;
+
+                // Layout first
+                for (uint32_t binding = 0; binding < kMaxVertexBufferBindings; ++binding)
                 {
-                    uint32_t lastBinding = 0xFFFFFFFF;
-                    for (auto& x : pso->desc.il->desc)
-                    {
-                        VkVertexInputBindingDescription bind = {};
-                        bind.binding = x.InputSlot;
-                        bind.inputRate = x.InputSlotClass == INPUT_PER_VERTEX_DATA ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
-                        bind.stride = x.AlignedByteOffset;
-                        if (bind.stride == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
-                        {
-                            // need to manually resolve this from the format spec.
-                            bind.stride = GetVertexFormatSize(x.format);
-                        }
-
-                        if (lastBinding != bind.binding)
-                        {
-                            bindings.push_back(bind);
-                            lastBinding = bind.binding;
-                        }
-                        else
-                        {
-                            bindings.back().stride += bind.stride;
-                        }
+                    const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[binding];
+                    if (layoutDesc->stride == 0) {
+                        break;
                     }
 
-                    uint32_t offset = 0;
-                    uint32_t i = 0;
-                    lastBinding = 0xFFFFFFFF;
-                    for (auto& x : pso->desc.il->desc)
-                    {
-                        VkVertexInputAttributeDescription attr = {};
-                        attr.binding = x.InputSlot;
-                        if (attr.binding != lastBinding)
-                        {
-                            lastBinding = attr.binding;
-                            offset = 0;
-                        }
-                        attr.format = _ConvertVertexFormat(x.format);
-                        attr.location = i;
-                        attr.offset = x.AlignedByteOffset;
-                        if (attr.offset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
-                        {
-                            // need to manually resolve this from the format spec.
-                            attr.offset = offset;
-                            offset += GetVertexFormatSize(x.format);
-                        }
-
-                        attributes.push_back(attr);
-
-                        i++;
-                    }
-
-                    vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindings.size());
-                    vertexInputInfo.pVertexBindingDescriptions = bindings.data();
-                    vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributes.size());
-                    vertexInputInfo.pVertexAttributeDescriptions = attributes.data();
+                    VkVertexInputBindingDescription* vkVertexBindingDescription = &vertexBindingDescriptions[vertexBindingDescriptionCount++];
+                    vkVertexBindingDescription->binding = binding;
+                    vkVertexBindingDescription->stride = layoutDesc->stride;
+                    vkVertexBindingDescription->inputRate = layoutDesc->stepMode == InputStepMode::Vertex ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
                 }
+
+                for (uint32_t location = 0; location < kMaxVertexAttributes; ++location)
+                {
+                    const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[location];
+                    if (attrDesc->format == VertexFormat::Invalid) {
+                        break;
+                    }
+
+                    VkVertexInputAttributeDescription* vkVertexAttributeDesc = &vertexAttributeDescriptions[vertexAttributeDescriptionCount++];
+                    vkVertexAttributeDesc->location = location;
+                    vkVertexAttributeDesc->binding = attrDesc->bufferIndex;
+                    vkVertexAttributeDesc->format = _ConvertVertexFormat(attrDesc->format);
+                    vkVertexAttributeDesc->offset = attrDesc->offset;
+                }
+
+                vertexInputInfo.vertexBindingDescriptionCount = vertexBindingDescriptionCount;
+                vertexInputInfo.pVertexBindingDescriptions = vertexBindingDescriptions.data();
+                vertexInputInfo.vertexAttributeDescriptionCount = vertexAttributeDescriptionCount;
+                vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
                 pipelineInfo.pVertexInputState = &vertexInputInfo;
 
                 // Primitive type:
@@ -4357,20 +4332,6 @@ namespace Alimer
         return res == VK_SUCCESS;
     }
 
-    bool GraphicsDevice_Vulkan::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
-    {
-        pInputLayout->internal_state = allocationhandler;
-
-        pInputLayout->desc.clear();
-        pInputLayout->desc.reserve((size_t)NumElements);
-        for (uint32_t i = 0; i < NumElements; ++i)
-        {
-            pInputLayout->desc.push_back(pInputElementDescs[i]);
-        }
-
-        return true;
-    }
-
     bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
     {
         auto internal_state = std::make_shared<Shader_Vulkan>();
@@ -4836,7 +4797,7 @@ namespace Alimer
 
         return hr;
     }
-    bool GraphicsDevice_Vulkan::CreatePipelineState(const PipelineStateDesc* pDesc, PipelineState* pso)
+    bool GraphicsDevice_Vulkan::CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_Vulkan>();
         internal_state->allocationhandler = allocationhandler;
@@ -4852,11 +4813,11 @@ namespace Alimer
         Alimer::hash_combine(pso->hash, pDesc->hs);
         Alimer::hash_combine(pso->hash, pDesc->ds);
         Alimer::hash_combine(pso->hash, pDesc->gs);
-        Alimer::hash_combine(pso->hash, pDesc->il);
         Alimer::hash_combine(pso->hash, pDesc->bs);
         Alimer::hash_combine(pso->hash, pDesc->sampleMask);
         Alimer::hash_combine(pso->hash, pDesc->rasterizationState);
         Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
+        Alimer::hash_combine(pso->hash, pDesc->vertexDescriptor);
         Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 
         if (pDesc->rootSignature == nullptr)

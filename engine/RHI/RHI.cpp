@@ -29,7 +29,7 @@
 #if defined(ALIMER_D3D12)
 #   include "RHI/D3D12/RHI_D3D12.h"
 #endif
-#if defined(ALIMER_VULKAN)
+#if defined(ALIMER_VULKAN) 
 #   include "RHI/Vulkan/RHI_Vulkan.h"
 #endif
 
@@ -88,6 +88,53 @@ namespace Alimer
         }
 
         return nullptr;
+    }
+
+    static PipelineStateDesc PipelineStateDesc_Defaults(const PipelineStateDesc* desc)
+    {
+        PipelineStateDesc def = *desc;
+
+        uint32_t autoOffset[kMaxVertexBufferBindings] = {};
+
+        bool useAutOffset = true;
+        for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
+        {
+            // to use computed offsets, *all* attr offsets must be 0.
+            if (desc->vertexDescriptor.attributes[i].format != VertexFormat::Invalid && desc->vertexDescriptor.attributes[i].offset != 0)
+            {
+                useAutOffset = false;
+            }
+        }
+
+        for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
+        {
+            VertexAttributeDescriptor* attrDesc = &def.vertexDescriptor.attributes[i];
+            if (attrDesc->format == VertexFormat::Invalid) {
+                break;
+            }
+
+            ALIMER_ASSERT((attrDesc->bufferIndex >= 0) && (attrDesc->bufferIndex < kMaxVertexBufferBindings));
+            if (useAutOffset) {
+                attrDesc->offset = autoOffset[attrDesc->bufferIndex];
+            }
+            autoOffset[attrDesc->bufferIndex] += GetVertexFormatSize(attrDesc->format);
+        }
+
+        // Compute vertex strides if needed.
+        for (uint32_t bufferIndex = 0; bufferIndex < kMaxVertexBufferBindings; bufferIndex++) {
+            VertexBufferLayoutDescriptor* layoutDesc = &def.vertexDescriptor.layouts[bufferIndex];
+            if (layoutDesc->stride == 0) {
+                layoutDesc->stride = autoOffset[bufferIndex];
+            }
+        }
+
+        return def;
+    }
+
+    bool GraphicsDevice::CreatePipelineState(const PipelineStateDesc* descriptor, PipelineState* pipelineState)
+    {
+        PipelineStateDesc descDef = PipelineStateDesc_Defaults(descriptor);
+        return CreatePipelineStateCore(&descDef, pipelineState);
     }
 
     bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const

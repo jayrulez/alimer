@@ -29,6 +29,9 @@
 #include "Core/Log.h"
 #include "PlatformIncl.h"
 
+#include <array>
+#include <vector>
+
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
 #   include <d3dcompiler.h>
 #endif
@@ -344,20 +347,18 @@ namespace Alimer
             }
             return D3D11_USAGE_DEFAULT;
         }
-        constexpr D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(INPUT_CLASSIFICATION value)
+        constexpr D3D11_INPUT_CLASSIFICATION _ConvertInputClassification(InputStepMode value)
         {
             switch (value)
             {
-            case INPUT_PER_VERTEX_DATA:
+            case InputStepMode::Vertex:
                 return D3D11_INPUT_PER_VERTEX_DATA;
-                break;
-            case INPUT_PER_INSTANCE_DATA:
+            case InputStepMode::Instance:
                 return D3D11_INPUT_PER_INSTANCE_DATA;
-                break;
             default:
-                break;
+                ALIMER_UNREACHABLE();
+                return D3D11_INPUT_PER_VERTEX_DATA;
             }
-            return D3D11_INPUT_PER_VERTEX_DATA;
         }
         constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
         {
@@ -1023,10 +1024,6 @@ namespace Alimer
             std::vector<ComPtr<ID3D11RenderTargetView>> subresources_rtv;
             std::vector<ComPtr<ID3D11DepthStencilView>> subresources_dsv;
         };
-        struct InputLayout_DX11
-        {
-            ComPtr<ID3D11InputLayout> resource;
-        };
         struct VertexShader_DX11
         {
             ComPtr<ID3D11VertexShader> resource;
@@ -1068,6 +1065,8 @@ namespace Alimer
         {
             ID3D11RasterizerState* rasterizerState;
             ID3D11DepthStencilState* depthStencilState;
+            ComPtr<ID3D11InputLayout> inputLayout;
+            uint32_t vertexBufferStrides[kMaxVertexBufferBindings];
         };
 
         Resource_DX11* to_internal(const GPUResource* param)
@@ -1083,10 +1082,6 @@ namespace Alimer
         Texture_DX11* to_internal(const Texture* param)
         {
             return static_cast<Texture_DX11*>(param->internal_state.get());
-        }
-        InputLayout_DX11* to_internal(const InputLayout* param)
-        {
-            return static_cast<InputLayout_DX11*>(param->internal_state.get());
         }
         BlendState_DX11* to_internal(const BlendState* param)
         {
@@ -1204,7 +1199,7 @@ namespace Alimer
             prev_stencilRef[cmd] = stencilRef[cmd];
         }
 
-        ID3D11InputLayout* il = desc.il == nullptr ? nullptr : to_internal(desc.il)->resource.Get();
+        ID3D11InputLayout* il = internal_state->inputLayout.Get();
         if (il != prev_il[cmd])
         {
             deviceContexts[cmd]->IASetInputLayout(il);
@@ -1637,33 +1632,6 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-    bool GraphicsDevice_DX11::CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout)
-    {
-        auto internal_state = std::make_shared<InputLayout_DX11>();
-        pInputLayout->internal_state = internal_state;
-
-        pInputLayout->desc.reserve((size_t)NumElements);
-
-        std::vector<D3D11_INPUT_ELEMENT_DESC> desc(NumElements);
-        for (uint32_t i = 0; i < NumElements; ++i)
-        {
-            desc[i].SemanticName = pInputElementDescs[i].SemanticName.c_str();
-            desc[i].SemanticIndex = pInputElementDescs[i].SemanticIndex;
-            desc[i].Format = D3DConvertVertexFormat(pInputElementDescs[i].format);
-            desc[i].InputSlot = pInputElementDescs[i].InputSlot;
-            desc[i].AlignedByteOffset = pInputElementDescs[i].AlignedByteOffset;
-            if (desc[i].AlignedByteOffset == InputLayoutDesc::APPEND_ALIGNED_ELEMENT)
-                desc[i].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-            desc[i].InputSlotClass = _ConvertInputClassification(pInputElementDescs[i].InputSlotClass);
-            desc[i].InstanceDataStepRate = pInputElementDescs[i].InstanceDataStepRate;
-
-            pInputLayout->desc.push_back(pInputElementDescs[i]);
-        }
-
-        HRESULT hr = device->CreateInputLayout(desc.data(), NumElements, shader->code.data(), shader->code.size(), &internal_state->resource);
-
-        return SUCCEEDED(hr);
-    }
 
     bool GraphicsDevice_DX11::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
     {
@@ -2013,11 +1981,49 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX11::CreatePipelineState(const PipelineStateDesc* desc, PipelineState* pso)
+    bool GraphicsDevice_DX11::CreatePipelineStateCore(const PipelineStateDesc* desc, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX11>();
         internal_state->rasterizerState = GetRasterizerState(desc->rasterizationState, 1u);
         internal_state->depthStencilState = GetDepthStencilState(desc->depthStencilState);
+
+        // TODO: Cache
+        uint32_t inputElementsCount = 0;
+        std::array<D3D11_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
+        for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
+        {
+            const VertexAttributeDescriptor* attrDesc = &desc->vertexDescriptor.attributes[i];
+            if (attrDesc->format == VertexFormat::Invalid) {
+                break;
+            }
+
+            const VertexBufferLayoutDescriptor* layoutDesc = &desc->vertexDescriptor.layouts[i];
+
+            D3D11_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputElementsCount++];
+            inputElementDesc->SemanticName = "ATTRIBUTE";
+            inputElementDesc->SemanticIndex = i;
+            inputElementDesc->Format = D3DConvertVertexFormat(attrDesc->format);
+            inputElementDesc->InputSlot = attrDesc->bufferIndex;
+            inputElementDesc->AlignedByteOffset = attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
+            if (layoutDesc->stepMode == InputStepMode::Vertex)
+            {
+                inputElementDesc->InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+                inputElementDesc->InstanceDataStepRate = 0;
+            }
+            else
+            {
+                inputElementDesc->InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+                inputElementDesc->InstanceDataStepRate = 1;
+            }
+        }
+
+        HRESULT hr = device->CreateInputLayout(
+            inputElements.data(),
+            inputElementsCount,
+            desc->vs->code.data(),
+            desc->vs->code.size(),
+            internal_state->inputLayout.ReleaseAndGetAddressOf());
+
         pso->internal_state = internal_state;
 
         pso->desc = *desc;
@@ -3099,7 +3105,7 @@ namespace Alimer
     }
     void GraphicsDevice_DX11::BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd)
     {
-        ID3D11Buffer* res = buffer != nullptr  ? to_internal(buffer)->handle : nullptr;
+        ID3D11Buffer* res = buffer != nullptr ? to_internal(buffer)->handle : nullptr;
         switch (stage)
         {
         case ShaderStage::Vertex:

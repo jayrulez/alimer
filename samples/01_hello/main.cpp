@@ -62,30 +62,21 @@ namespace Alimer
     /* TODO: Until we fix resource creation */
     Shader vertexShader;
     Shader pixelShader;
-    InputLayout inputLayout;
 
     void HelloWorldApp::Initialize()
     {
         auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
         graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", &vertexShader);
         graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", &pixelShader);
-
-        InputLayoutDesc layout[] =
-        {
-            { "ATTRIBUTE", 0, VertexFormat::Float3, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-            { "ATTRIBUTE", 1, VertexFormat::Float4, 0, InputLayoutDesc::APPEND_ALIGNED_ELEMENT, INPUT_PER_VERTEX_DATA, 0 },
-        };
-
-        graphicsDevice->CreateInputLayout(layout, ALIMER_STATIC_ARRAY_SIZE(layout), &vertexShader, &inputLayout);
-
         PipelineStateDesc psoDesc = {};
         psoDesc.vs = &vertexShader;
         psoDesc.ps = &pixelShader;
         //psoDesc.pt = TRIANGLELIST;
-        psoDesc.il = &inputLayout;
         psoDesc.rasterizationState.cullMode = CullMode::Back;
         psoDesc.depthStencilState.depthWriteEnabled = true;
         psoDesc.depthStencilState.depthCompare = CompareFunction::LessEqual;
+        psoDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
+        psoDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
         graphicsDevice->CreatePipelineState(&psoDesc, &pipeline);
 
         /*Vertex quadVertices[] =
@@ -202,6 +193,7 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
+        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
         //config.preferredBackendType = GraphicsBackendType::Direct3D12;
         config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";

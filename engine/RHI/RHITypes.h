@@ -35,7 +35,6 @@ namespace Alimer
 {
 	struct Shader;
 	struct BlendState;
-	struct InputLayout;
 	struct GPUResource;
 	class GraphicsBuffer;
 	struct Texture;
@@ -172,11 +171,12 @@ namespace Alimer
         Back,
     };
 
-	enum INPUT_CLASSIFICATION
+	enum class InputStepMode : uint32_t
 	{
-		INPUT_PER_VERTEX_DATA,
-		INPUT_PER_INSTANCE_DATA,
+		Vertex,
+		Instance,
 	};
+
 	enum USAGE
 	{
 		USAGE_DEFAULT,
@@ -298,6 +298,7 @@ namespace Alimer
 
     enum class VertexFormat : uint32_t
     {
+        Invalid,
         UChar2,
         UChar4,
         Char2,
@@ -438,19 +439,6 @@ namespace Alimer
 		float MaxDepth = 1.0f;
 	};
 
-	struct InputLayoutDesc
-	{
-		static const uint32_t APPEND_ALIGNED_ELEMENT = 0xffffffff; // automatically figure out AlignedByteOffset depending on Format
-
-		std::string SemanticName;
-		uint32_t SemanticIndex = 0;
-        VertexFormat format;
-		uint32_t InputSlot = 0;
-		uint32_t AlignedByteOffset = APPEND_ALIGNED_ELEMENT;
-		INPUT_CLASSIFICATION InputSlotClass = INPUT_CLASSIFICATION::INPUT_PER_VERTEX_DATA;
-		uint32_t InstanceDataStepRate = 0;
-	};
-
 	union ClearValue
 	{
 		float color[4];
@@ -573,6 +561,25 @@ namespace Alimer
 		uint64_t	result_timestamp_frequency = 0;
 	};
 
+    struct VertexAttributeDescriptor
+    {
+        VertexFormat format;
+        uint32_t offset;
+        uint32_t bufferIndex;
+    };
+
+    struct VertexBufferLayoutDescriptor
+    {
+        uint32_t        stride = 0;
+        InputStepMode   stepMode = InputStepMode::Vertex;
+    };
+
+    struct VertexDescriptor
+    {
+        VertexAttributeDescriptor       attributes[kMaxVertexAttributes];
+        VertexBufferLayoutDescriptor    layouts[kMaxVertexBufferBindings];
+    };
+
 	struct PipelineStateDesc
 	{
 		const RootSignature*            rootSignature = nullptr;
@@ -587,7 +594,7 @@ namespace Alimer
 		uint32_t					    sampleMask = 0xFFFFFFFF;
         RasterizationStateDescriptor    rasterizationState;
 		DepthStencilStateDescriptor	    depthStencilState;
-		const InputLayout*			    il = nullptr;
+        VertexDescriptor                vertexDescriptor;
         PrimitiveTopology			    primitiveTopology = PrimitiveTopology::TriangleList;
 	};
 	struct GPUBarrier
@@ -821,11 +828,6 @@ namespace Alimer
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
 		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
-	};
-
-	struct InputLayout : public GraphicsDeviceChild
-	{
-		std::vector<InputLayoutDesc> desc;
 	};
 
 	struct BlendState : public GraphicsDeviceChild
@@ -1142,6 +1144,50 @@ namespace std
             Alimer::hash_combine(hash, desc.stencilBack);
             Alimer::hash_combine(hash, desc.stencilReadMask);
             Alimer::hash_combine(hash, desc.stencilWriteMask);
+            return hash;
+        }
+    };
+
+    template<>
+    struct hash<Alimer::VertexBufferLayoutDescriptor>
+    {
+        std::size_t operator()(const Alimer::VertexBufferLayoutDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.stride);
+            Alimer::hash_combine(hash, (uint32_t)desc.stepMode);
+            return hash;
+        }
+    };
+
+    template<>
+    struct hash<Alimer::VertexAttributeDescriptor>
+    {
+        std::size_t operator()(const Alimer::VertexAttributeDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.format);
+            Alimer::hash_combine(hash, desc.offset);
+            Alimer::hash_combine(hash, desc.bufferIndex);
+            return hash;
+        }
+    };
+
+    template<>
+    struct hash<Alimer::VertexDescriptor>
+    {
+        std::size_t operator()(const Alimer::VertexDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+
+            for (uint32_t i = 0; i < Alimer::kMaxVertexAttributes; ++i)
+            {
+                if (desc.attributes[i].format != Alimer::VertexFormat::Invalid)
+                    break;
+
+                Alimer::hash_combine(hash, desc.attributes[i]);
+            }
+
             return hash;
         }
     };
