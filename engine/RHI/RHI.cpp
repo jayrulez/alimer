@@ -39,10 +39,19 @@ namespace Alimer
     {
         if (backendType == GraphicsBackendType::Count)
         {
-#if defined(ALIMER_D3D12)
+#if defined(ALIMER_D3D12) 
             if (GraphicsDevice_DX12::IsAvailable())
                 backendType = GraphicsBackendType::Direct3D12;
 #endif
+
+            if (backendType == GraphicsBackendType::Count)
+            {
+
+#if defined(ALIMER_D3D11)
+                if (GraphicsDevice_DX11::IsAvailable())
+                    backendType = GraphicsBackendType::Direct3D11;
+#endif
+            }
         }
 
         switch (backendType)
@@ -65,7 +74,7 @@ namespace Alimer
             break;
 #endif
 
-#if defined(ALIMER_D3D11)
+#if defined(ALIMER_VULKAN)
         case GraphicsBackendType::Vulkan:
             if (IsVulkanBackendAvailable())
             {

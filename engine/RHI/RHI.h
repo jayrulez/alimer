@@ -22,11 +22,66 @@
 
 #pragma once
 
+#include "Core/Ptr.h"
 #include "RHI/RHITypes.h"
 #include <memory>
 
 namespace Alimer
 {
+    class ALIMER_API GraphicsResource : public RefCounted
+    {
+    public:
+        enum class Type
+        {
+            Buffer,
+            Texture,
+            Sampler,
+            AccelerationStructure,
+        };
+
+        virtual ~GraphicsResource() = default;
+
+        virtual void Destroy() = 0;
+
+        inline Type GetType() const { return type; }
+        inline bool IsTexture() const { return type == Type::Texture; }
+        inline bool IsBuffer() const { return type == Type::Buffer; }
+        inline bool IsSampler() const { return type == Type::Sampler; }
+        inline bool IsAccelerationStructure() const { return type == Type::AccelerationStructure; }
+
+        /// Set the resource name.
+        virtual void SetName(const std::string& newName) { name = newName; }
+
+        /// Get the resource name
+        const std::string& GetName() const { return name; }
+
+    protected:
+        GraphicsResource(Type type_)
+            : type(type_)
+        {
+
+        }
+
+        Type type;
+        std::string name;
+    };
+
+    class ALIMER_API GraphicsBuffer : public GraphicsResource
+    {
+    public:
+        const GPUBufferDesc& GetDesc() const { return desc; }
+
+    protected:
+        GraphicsBuffer(const GPUBufferDesc& desc_)
+            : GraphicsResource(Type::Buffer)
+            , desc(desc_)
+        {
+
+        }
+
+        GPUBufferDesc desc;
+    };
+
     class GraphicsDevice
     {
     protected:
@@ -59,7 +114,7 @@ namespace Alimer
 
         static std::shared_ptr<GraphicsDevice> Create(void* windowHandle, GraphicsBackendType backendType = GraphicsBackendType::Count, bool fullscreen = false, bool enableDebugLayer = false);
 
-        virtual bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) = 0;
+        virtual RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData = nullptr) = 0;
         virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) = 0;
         virtual bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) = 0;
         virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
@@ -75,7 +130,7 @@ namespace Alimer
         virtual bool CreateRootSignature(RootSignature* rootsig) { return false; }
 
         virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
-        virtual int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
+        virtual int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
 
         virtual void WriteShadingRateValue(ShadingRate rate, void* dest) {};
         virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
@@ -150,9 +205,9 @@ namespace Alimer
         virtual void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) = 0;
         virtual void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) = 0;
         virtual void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
-        virtual void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
-        virtual void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
-        virtual void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) = 0;
+        virtual void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
+        virtual void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
+        virtual void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) = 0;
         virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
         virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
         virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
@@ -163,14 +218,14 @@ namespace Alimer
         virtual void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) = 0;
         virtual void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) = 0;
         virtual void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) = 0;
-        virtual void DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
-        virtual void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+        virtual void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+        virtual void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
         virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
-        virtual void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+        virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
         virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
-        virtual void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) {}
+        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) {}
         virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
-        virtual void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) = 0;
+        virtual void UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
         virtual void QueryBegin(const GPUQuery* query, CommandList cmd) = 0;
         virtual void QueryEnd(const GPUQuery* query, CommandList cmd) = 0;
         virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
@@ -179,14 +234,14 @@ namespace Alimer
         virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
 
         virtual void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-        virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) {}
+        virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) {}
         virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
 
         struct GPUAllocation
         {
-            void* data = nullptr;				// application can write to this. Reads might be not supported or slow. The offset is already applied
-            const GPUBuffer* buffer = nullptr;	// application can bind it to the GPU
-            uint32_t offset = 0;					// allocation's offset from the GPUbuffer's beginning
+            void*                   data = nullptr;		// application can write to this. Reads might be not supported or slow. The offset is already applied
+            const GraphicsBuffer*   buffer = nullptr;   // application can bind it to the GPU
+            uint32_t                offset = 0;			// allocation's offset from the GPUbuffer's beginning
 
             // Returns true if the allocation was successful
             inline bool IsValid() const { return data != nullptr && buffer != nullptr; }

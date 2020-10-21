@@ -26,6 +26,7 @@
 #if defined(ALIMER_D3D11)
 #include "RHI_D3D11.h"
 #include "Core/String.h"
+#include "Core/Log.h"
 #include "PlatformIncl.h"
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
@@ -285,10 +286,10 @@ namespace Alimer
             case BlendFactor::SourceAlphaSaturated:
                 return D3D11_BLEND_SRC_ALPHA_SAT;
             case BlendFactor::BlendColor:
-            case BlendFactor::BlendAlpha:
+                //case BlendFactor::BlendAlpha:
                 return D3D11_BLEND_BLEND_FACTOR;
             case BlendFactor::OneMinusBlendColor:
-            case BlendFactor::OneMinusBlendAlpha:
+                //case BlendFactor::OneMinusBlendAlpha:
                 return D3D11_BLEND_INV_BLEND_FACTOR;
             case BlendFactor::Source1Color:
                 return D3D11_BLEND_SRC1_COLOR;
@@ -974,6 +975,38 @@ namespace Alimer
         // Local Helpers:
         const void* const __nullBlob[128] = {}; // this is initialized to nullptrs and used to unbind resources!
 
+        struct Buffer_DX11 : public GraphicsBuffer
+        {
+            Buffer_DX11(const GPUBufferDesc& desc_)
+                : GraphicsBuffer(desc_)
+            {
+            }
+
+            ~Buffer_DX11() override
+            {
+                Destroy();
+            }
+
+            void Destroy() override
+            {
+                SafeRelease(handle);
+            }
+
+#ifdef _DEBUG
+            void SetName(const std::string& newName) override
+            {
+                GraphicsBuffer::SetName(newName);
+
+                handle->SetPrivateData(g_D3DDebugObjectName, (UINT)newName.length(), newName.c_str());
+            }
+#endif
+
+            ID3D11Buffer* handle = nullptr;
+            ComPtr<ID3D11ShaderResourceView> srv;
+            ComPtr<ID3D11UnorderedAccessView> uav;
+            std::vector<ComPtr<ID3D11ShaderResourceView>> subresources_srv;
+            std::vector<ComPtr<ID3D11UnorderedAccessView>> subresources_uav;
+        };
 
         struct Resource_DX11
         {
@@ -1041,10 +1074,12 @@ namespace Alimer
         {
             return static_cast<Resource_DX11*>(param->internal_state.get());
         }
-        Resource_DX11* to_internal(const GPUBuffer* param)
+
+        const Buffer_DX11* to_internal(const GraphicsBuffer* param)
         {
-            return static_cast<Resource_DX11*>(param->internal_state.get());
+            return static_cast<const Buffer_DX11*>(param);
         }
+
         Texture_DX11* to_internal(const Texture* param)
         {
             return static_cast<Texture_DX11*>(param->internal_state.get());
@@ -1485,19 +1520,15 @@ namespace Alimer
         return result;
     }
 
-    bool GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer)
+    RefPtr<GraphicsBuffer> GraphicsDevice_DX11::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
     {
-        auto internal_state = std::make_shared<Resource_DX11>();
-        pBuffer->internal_state = internal_state;
-        pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
-
-        D3D11_BUFFER_DESC desc;
-        desc.ByteWidth = pDesc->ByteWidth;
-        desc.Usage = _ConvertUsage(pDesc->Usage);
-        desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
-        desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
-        desc.MiscFlags = _ParseResourceMiscFlags(pDesc->MiscFlags);
-        desc.StructureByteStride = pDesc->StructureByteStride;
+        D3D11_BUFFER_DESC d3d11Desc = {};
+        d3d11Desc.ByteWidth = desc.ByteWidth;
+        d3d11Desc.Usage = _ConvertUsage(desc.Usage);
+        d3d11Desc.BindFlags = _ParseBindFlags(desc.BindFlags);
+        d3d11Desc.CPUAccessFlags = _ParseCPUAccessFlags(desc.CPUAccessFlags);
+        d3d11Desc.MiscFlags = _ParseResourceMiscFlags(desc.MiscFlags);
+        d3d11Desc.StructureByteStride = desc.StructureByteStride;
 
         D3D11_SUBRESOURCE_DATA* initialDataPtr = nullptr;
         D3D11_SUBRESOURCE_DATA initialResourceData = {};
@@ -1507,25 +1538,31 @@ namespace Alimer
             initialDataPtr = &initialResourceData;
         }
 
-        pBuffer->desc = *pDesc;
-        HRESULT hr = device->CreateBuffer(&desc, initialDataPtr, (ID3D11Buffer**)internal_state->resource.ReleaseAndGetAddressOf());
-        assert(SUCCEEDED(hr) && "GPUBuffer creation failed!");
+        RefPtr<Buffer_DX11> result(new Buffer_DX11(desc));
+        HRESULT hr = device->CreateBuffer(&d3d11Desc, initialDataPtr, &result->handle);
+        if (FAILED(hr))
+        {
+            LOGE("D3D11: Create buffer failed");
+            return nullptr;
+        }
+
 
         if (SUCCEEDED(hr))
         {
             // Create resource views if needed
-            if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+            if (desc.BindFlags & BIND_SHADER_RESOURCE)
             {
-                CreateSubresource(pBuffer, SRV, 0);
+                CreateSubresource(result, SRV, 0);
             }
-            if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+            if (desc.BindFlags & BIND_UNORDERED_ACCESS)
             {
-                CreateSubresource(pBuffer, UAV, 0);
+                CreateSubresource(result, UAV, 0);
             }
         }
 
-        return SUCCEEDED(hr);
+        return result;
     }
+
     bool GraphicsDevice_DX11::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
     {
         auto internal_state = std::make_shared<Texture_DX11>();
@@ -2392,9 +2429,10 @@ namespace Alimer
         }
         return -1;
     }
-    int GraphicsDevice_DX11::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+
+    int GraphicsDevice_DX11::CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
     {
-        auto internal_state = to_internal(buffer);
+        Buffer_DX11* buffer_d3d11 = static_cast<Buffer_DX11*>(buffer);
         const GPUBufferDesc& desc = buffer->GetDesc();
         HRESULT hr = E_FAIL;
 
@@ -2432,19 +2470,19 @@ namespace Alimer
             }
 
             ComPtr<ID3D11ShaderResourceView> srv;
-            hr = device->CreateShaderResourceView(internal_state->resource.Get(), &srv_desc, &srv);
+            hr = device->CreateShaderResourceView(buffer_d3d11->handle, &srv_desc, &srv);
 
             if (SUCCEEDED(hr))
             {
-                if (internal_state->srv == nullptr)
+                if (buffer_d3d11->srv == nullptr)
                 {
-                    internal_state->srv = srv;
+                    buffer_d3d11->srv = srv;
                     return -1;
                 }
                 else
                 {
-                    internal_state->subresources_srv.push_back(srv);
-                    return int(internal_state->subresources_srv.size() - 1);
+                    buffer_d3d11->subresources_srv.push_back(srv);
+                    return int(buffer_d3d11->subresources_srv.size() - 1);
                 }
             }
             else
@@ -2483,19 +2521,19 @@ namespace Alimer
             }
 
             ComPtr<ID3D11UnorderedAccessView> uav;
-            hr = device->CreateUnorderedAccessView(internal_state->resource.Get(), &uav_desc, &uav);
+            hr = device->CreateUnorderedAccessView(buffer_d3d11->handle, &uav_desc, &uav);
 
             if (SUCCEEDED(hr))
             {
-                if (internal_state->uav == nullptr)
+                if (buffer_d3d11->uav == nullptr)
                 {
-                    internal_state->uav = uav;
+                    buffer_d3d11->uav = uav;
                     return -1;
                 }
                 else
                 {
-                    internal_state->subresources_uav.push_back(uav);
-                    return int(internal_state->subresources_uav.size() - 1);
+                    buffer_d3d11->subresources_uav.push_back(uav);
+                    return int(buffer_d3d11->subresources_uav.size() - 1);
                 }
             }
             else
@@ -2633,9 +2671,9 @@ namespace Alimer
             frameAllocatorDesc.Usage = USAGE_DYNAMIC;
             frameAllocatorDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
             frameAllocatorDesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-            bool success = CreateBuffer(&frameAllocatorDesc, nullptr, &frame_allocators[cmd].buffer);
-            assert(success);
-            SetName(&frame_allocators[cmd].buffer, "frame_allocator");
+            frame_allocators[cmd].buffer = CreateBuffer(frameAllocatorDesc, nullptr);
+            ALIMER_ASSERT(frame_allocators[cmd].buffer.IsNotNull());
+            frame_allocators[cmd].buffer->SetName("frame_allocator");
 
         }
 
@@ -2723,19 +2761,17 @@ namespace Alimer
         assert(result == TRUE);
     }
 
-
     void GraphicsDevice_DX11::commit_allocations(CommandList cmd)
     {
         // DX11 needs to unmap allocations before it can execute safely
 
         if (frame_allocators[cmd].dirty)
         {
-            auto internal_state = to_internal(&frame_allocators[cmd].buffer);
-            deviceContexts[cmd]->Unmap(internal_state->resource.Get(), 0);
+            auto buffer_d3d11 = StaticCast<Buffer_DX11>(frame_allocators[cmd].buffer);
+            deviceContexts[cmd]->Unmap(buffer_d3d11->handle, 0);
             frame_allocators[cmd].dirty = false;
         }
     }
-
 
     void GraphicsDevice_DX11::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
     {
@@ -3061,9 +3097,9 @@ namespace Alimer
             }
         }
     }
-    void GraphicsDevice_DX11::BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+    void GraphicsDevice_DX11::BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd)
     {
-        ID3D11Buffer* res = buffer != nullptr && buffer->IsValid() ? (ID3D11Buffer*)to_internal(buffer)->resource.Get() : nullptr;
+        ID3D11Buffer* res = buffer != nullptr  ? to_internal(buffer)->handle : nullptr;
         switch (stage)
         {
         case ShaderStage::Vertex:
@@ -3093,20 +3129,20 @@ namespace Alimer
         }
     }
 
-    void GraphicsDevice_DX11::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
+    void GraphicsDevice_DX11::BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
     {
         assert(count <= 8);
         ID3D11Buffer* res[8] = { 0 };
         for (uint32_t i = 0; i < count; ++i)
         {
-            res[i] = vertexBuffers[i] != nullptr && vertexBuffers[i]->IsValid() ? (ID3D11Buffer*)to_internal(vertexBuffers[i])->resource.Get() : nullptr;
+            res[i] = vertexBuffers[i] != nullptr ? to_internal(vertexBuffers[i])->handle : nullptr;
         }
         deviceContexts[cmd]->IASetVertexBuffers(slot, count, res, strides, (offsets != nullptr ? offsets : reinterpret_cast<const uint32_t*>(__nullBlob)));
     }
 
-    void GraphicsDevice_DX11::BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
+    void GraphicsDevice_DX11::BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
     {
-        ID3D11Buffer* res = indexBuffer != nullptr && indexBuffer->IsValid() ? (ID3D11Buffer*)to_internal(indexBuffer)->resource.Get() : nullptr;
+        ID3D11Buffer* res = indexBuffer != nullptr ? to_internal(indexBuffer)->handle : nullptr;
         deviceContexts[cmd]->IASetIndexBuffer(res, (format == IndexFormat::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT), offset);
     }
 
@@ -3172,32 +3208,37 @@ namespace Alimer
 
         deviceContexts[cmd]->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
     }
-    void GraphicsDevice_DX11::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+
+    void GraphicsDevice_DX11::DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         pso_validate(cmd);
         commit_allocations(cmd);
 
-        deviceContexts[cmd]->DrawInstancedIndirect((ID3D11Buffer*)to_internal(args)->resource.Get(), args_offset);
+        deviceContexts[cmd]->DrawInstancedIndirect(to_internal(args)->handle, args_offset);
     }
-    void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+
+    void GraphicsDevice_DX11::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         pso_validate(cmd);
         commit_allocations(cmd);
 
-        deviceContexts[cmd]->DrawIndexedInstancedIndirect((ID3D11Buffer*)to_internal(args)->resource.Get(), args_offset);
+        deviceContexts[cmd]->DrawIndexedInstancedIndirect(to_internal(args)->handle, args_offset);
     }
+
     void GraphicsDevice_DX11::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
     {
         commit_allocations(cmd);
 
         deviceContexts[cmd]->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
-    void GraphicsDevice_DX11::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+
+    void GraphicsDevice_DX11::DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         commit_allocations(cmd);
 
-        deviceContexts[cmd]->DispatchIndirect((ID3D11Buffer*)to_internal(args)->resource.Get(), args_offset);
+        deviceContexts[cmd]->DispatchIndirect(to_internal(args)->handle, args_offset);
     }
+
     void GraphicsDevice_DX11::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
     {
         assert(pDst != nullptr && pSrc != nullptr);
@@ -3205,42 +3246,46 @@ namespace Alimer
         auto internal_state_dst = to_internal(pDst);
         deviceContexts[cmd]->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
     }
-    void GraphicsDevice_DX11::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
-    {
-        assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
-        assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
 
-        if (dataSize == 0)
+    void GraphicsDevice_DX11::UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size)
+    {
+        const GPUBufferDesc& bufferDesc = buffer->GetDesc();
+
+        assert(bufferDesc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+        assert((int)bufferDesc.ByteWidth >= size && "Data size is too big!");
+
+        auto internal_state = static_cast<const Buffer_DX11*>(buffer);
+        if (size == 0)
         {
-            return;
+            size = bufferDesc.ByteWidth;
+        }
+        else
+        {
+            size = Alimer::Min<uint64_t>(bufferDesc.ByteWidth, size);
         }
 
-        auto internal_state = to_internal(buffer);
-
-        dataSize = Alimer::Min((int)buffer->desc.ByteWidth, dataSize);
-
-        if (buffer->desc.Usage == USAGE_DYNAMIC)
+        if (bufferDesc.Usage == USAGE_DYNAMIC)
         {
             D3D11_MAPPED_SUBRESOURCE mappedResource;
-            HRESULT hr = deviceContexts[cmd]->Map(internal_state->resource.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+            HRESULT hr = deviceContexts[cmd]->Map(internal_state->handle, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
             assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
-            memcpy(mappedResource.pData, data, (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth));
-            deviceContexts[cmd]->Unmap(internal_state->resource.Get(), 0);
+            memcpy(mappedResource.pData, data, size);
+            deviceContexts[cmd]->Unmap(internal_state->handle, 0);
         }
-        else if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER || dataSize < 0)
+        else if (bufferDesc.BindFlags & BIND_CONSTANT_BUFFER)
         {
-            deviceContexts[cmd]->UpdateSubresource(internal_state->resource.Get(), 0, nullptr, data, 0, 0);
+            deviceContexts[cmd]->UpdateSubresource(internal_state->handle, 0, nullptr, data, 0, 0);
         }
         else
         {
             D3D11_BOX box = {};
             box.left = 0;
-            box.right = static_cast<uint32_t>(dataSize);
+            box.right = static_cast<uint32_t>(size);
             box.top = 0;
             box.bottom = 1;
             box.front = 0;
             box.back = 1;
-            deviceContexts[cmd]->UpdateSubresource(internal_state->resource.Get(), 0, &box, data, 0, 0);
+            deviceContexts[cmd]->UpdateSubresource(internal_state->handle, 0, &box, data, 0, 0);
         }
     }
     void GraphicsDevice_DX11::QueryBegin(const GPUQuery* query, CommandList cmd)
@@ -3263,34 +3308,35 @@ namespace Alimer
         }
 
         GPUAllocator& allocator = frame_allocators[cmd];
-        if (allocator.buffer.desc.ByteWidth <= dataSize)
+        GPUBufferDesc bufferDesc = allocator.buffer->GetDesc();
+        if (bufferDesc.ByteWidth <= dataSize)
         {
             // If allocation too large, grow the allocator:
-            allocator.buffer.desc.ByteWidth = uint32_t((dataSize + 1) * 2);
-            bool success = CreateBuffer(&allocator.buffer.desc, nullptr, &allocator.buffer);
-            assert(success);
-            SetName(&allocator.buffer, "frame_allocator");
+            bufferDesc.ByteWidth = uint32_t((dataSize + 1) * 2);
+            allocator.buffer = CreateBuffer(bufferDesc, nullptr);
+            assert(allocator.buffer.IsNotNull());
+            allocator.buffer->SetName("frame_allocator");
             allocator.byteOffset = 0;
         }
 
-        auto internal_state = to_internal(&allocator.buffer);
+        auto buffer_d3d11 = StaticCast<Buffer_DX11>(allocator.buffer);
 
         allocator.dirty = true;
 
         size_t position = allocator.byteOffset;
-        bool wrap = position == 0 || position + dataSize > allocator.buffer.desc.ByteWidth || allocator.residentFrame != FRAMECOUNT;
+        bool wrap = position == 0 || position + dataSize > allocator.buffer->GetDesc().ByteWidth || allocator.residentFrame != FRAMECOUNT;
         position = wrap ? 0 : position;
 
         // Issue buffer rename (realloc) on wrap, otherwise just append data:
         D3D11_MAP mapping = wrap ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE;
         D3D11_MAPPED_SUBRESOURCE mappedResource;
-        HRESULT hr = deviceContexts[cmd]->Map(internal_state->resource.Get(), 0, mapping, 0, &mappedResource);
+        HRESULT hr = deviceContexts[cmd]->Map(buffer_d3d11->handle, 0, mapping, 0, &mappedResource);
         assert(SUCCEEDED(hr) && "GPUBuffer mapping failed!");
 
         allocator.byteOffset = position + dataSize;
         allocator.residentFrame = FRAMECOUNT;
 
-        result.buffer = &allocator.buffer;
+        result.buffer = allocator.buffer.Get();
         result.offset = (uint32_t)position;
         result.data = (void*)((size_t)mappedResource.pData + position);
         return result;
@@ -3312,6 +3358,6 @@ namespace Alimer
         auto wName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[cmd]->SetMarker(wName.c_str());
     }
-    }
+}
 
 #endif // defined(ALIMER_D3D11)

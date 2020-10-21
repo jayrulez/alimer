@@ -37,7 +37,7 @@ namespace Alimer
 	struct BlendState;
 	struct InputLayout;
 	struct GPUResource;
-	struct GPUBuffer;
+	class GraphicsBuffer;
 	struct Texture;
 	struct RootSignature;
     using CommandList = uint8_t;
@@ -134,8 +134,6 @@ namespace Alimer
         SourceAlphaSaturated,
 		BlendColor,
 		OneMinusBlendColor,
-        BlendAlpha,
-        OneMinusBlendAlpha,
 		Source1Color,
         OneMinusSource1Color,
         Source1Alpha,
@@ -613,7 +611,7 @@ namespace Alimer
 		};
 		struct Buffer
 		{
-			const GPUBuffer* buffer;
+			const GraphicsBuffer* buffer;
 			BUFFER_STATE state_before;
 			BUFFER_STATE state_after;
 		};
@@ -631,7 +629,7 @@ namespace Alimer
 			barrier.memory.resource = resource;
 			return barrier;
 		}
-		static GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after)
+		static inline GPUBarrier Image(const Texture* texture, IMAGE_LAYOUT before, IMAGE_LAYOUT after)
 		{
 			GPUBarrier barrier;
 			barrier.type = IMAGE_BARRIER;
@@ -640,7 +638,8 @@ namespace Alimer
 			barrier.image.layout_after = after;
 			return barrier;
 		}
-		static GPUBarrier Buffer(const GPUBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
+
+		static inline GPUBarrier Buffer(const GraphicsBuffer* buffer, BUFFER_STATE before, BUFFER_STATE after)
 		{
 			GPUBarrier barrier;
 			barrier.type = BUFFER_BARRIER;
@@ -824,13 +823,6 @@ namespace Alimer
 		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
 	};
 
-	struct GPUBuffer : public GPUResource
-	{
-		GPUBufferDesc desc;
-
-		const GPUBufferDesc& GetDesc() const { return desc; }
-	};
-
 	struct InputLayout : public GraphicsDeviceChild
 	{
 		std::vector<InputLayoutDesc> desc;
@@ -914,8 +906,8 @@ namespace Alimer
 
 				struct Triangles
 				{
-					GPUBuffer vertexBuffer;
-					GPUBuffer indexBuffer;
+					GraphicsBuffer* vertexBuffer;
+					GraphicsBuffer* indexBuffer;
 					uint32_t indexCount = 0;
 					uint32_t indexOffset = 0;
 					uint32_t vertexCount = 0;
@@ -923,12 +915,12 @@ namespace Alimer
 					uint32_t vertexStride = 0;
 					IndexFormat indexFormat = IndexFormat::UInt32;
 					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
-					GPUBuffer transform3x4Buffer;
+                    GraphicsBuffer* transform3x4Buffer;
 					uint32_t transform3x4BufferOffset = 0;
 				} triangles;
 				struct Procedural_AABBs
 				{
-					GPUBuffer aabbBuffer;
+                    GraphicsBuffer* aabbBuffer;
 					uint32_t offset = 0;
 					uint32_t count = 0;
 					uint32_t stride = 0;
@@ -949,7 +941,7 @@ namespace Alimer
 				uint32_t Flags : 8;
 				GPUResource bottomlevel;
 			};
-			GPUBuffer instanceBuffer;
+            GraphicsBuffer* instanceBuffer;
 			uint32_t offset = 0;
 			uint32_t count = 0;
 		} toplevel;
@@ -1006,7 +998,7 @@ namespace Alimer
 
 	struct ShaderTable
 	{
-		const GPUBuffer* buffer = nullptr;
+		const GraphicsBuffer* buffer = nullptr;
 		uint64_t offset = 0;
 		uint64_t size = 0;
 		uint64_t stride = 0;

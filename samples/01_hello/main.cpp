@@ -43,9 +43,9 @@ namespace Alimer
         void OnDraw(CommandList commandList) override;
 
     private:
-        GPUBuffer vertexBuffer;
-        GPUBuffer indexBuffer;
-        GPUBuffer constantBuffer;
+        RefPtr<GraphicsBuffer> vertexBuffer;
+        RefPtr<GraphicsBuffer> indexBuffer;
+        RefPtr<GraphicsBuffer> constantBuffer;
         PipelineState pipeline;
     };
 
@@ -135,7 +135,7 @@ namespace Alimer
         bufferDesc.BindFlags = BIND_VERTEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(cubeData);
         //bufferDesc.StructureByteStride = sizeof(Vertex);
-        graphicsDevice->CreateBuffer(&bufferDesc, cubeData, &vertexBuffer);
+        vertexBuffer = graphicsDevice->CreateBuffer(bufferDesc, cubeData);
 
         // Index buffer
         const uint16_t indices[] = {
@@ -150,7 +150,7 @@ namespace Alimer
         bufferDesc.Usage = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_INDEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(indices);
-        graphicsDevice->CreateBuffer(&bufferDesc, indices, &indexBuffer);
+        indexBuffer = graphicsDevice->CreateBuffer(bufferDesc, indices);
 
         GPUBufferDesc bd;
         bd.Usage = USAGE_DYNAMIC;
@@ -158,7 +158,7 @@ namespace Alimer
         bd.BindFlags = BIND_CONSTANT_BUFFER;
         bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-        graphicsDevice->CreateBuffer(&bd, nullptr, &constantBuffer);
+        constantBuffer = graphicsDevice->CreateBuffer(bd, nullptr);
     }
 
     void HelloWorldApp::OnDraw(CommandList commandList)
@@ -170,23 +170,23 @@ namespace Alimer
         XMMATRIX view = XMMatrixLookAtLH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
         XMMATRIX proj = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
         XMMATRIX viewProj = XMMatrixMultiply(world, XMMatrixMultiply(view, proj));
-        
+
         //Matrix4x4 projectionMatrix;
         //Matrix4x4::CreatePerspectiveFieldOfView(Pi / 4.0f, aspect, 0.1f, 100, &projectionMatrix);
 
         XMFLOAT4X4 worldViewProjection;
         XMStoreFloat4x4(&worldViewProjection, viewProj);
-        graphicsDevice->UpdateBuffer(&constantBuffer, &worldViewProjection, commandList);
+        graphicsDevice->UpdateBuffer(commandList, constantBuffer, &worldViewProjection);
 
-        const GPUBuffer* vbs[] = {
-            &vertexBuffer,
+        const GraphicsBuffer* vbs[] = {
+            vertexBuffer,
         };
 
         uint32_t stride = sizeof(Vertex);
         graphicsDevice->BindVertexBuffers(vbs, 0, 1, &stride, nullptr, commandList);
-        graphicsDevice->BindIndexBuffer(&indexBuffer, IndexFormat::UInt16, 0, commandList);
+        graphicsDevice->BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0, commandList);
         graphicsDevice->BindPipelineState(&pipeline, commandList);
-        graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, &constantBuffer, 0, commandList);
+        graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0, commandList);
         graphicsDevice->DrawIndexed(36, 0, 0, commandList);
         /*context->PushDebugGroup("Frame");
         RenderPassDesc renderPass{};
@@ -203,6 +203,7 @@ namespace Alimer
     {
         Config config{};
         //config.preferredBackendType = GraphicsBackendType::Direct3D12;
+        config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";
         //config.fullscreen = true;
         //config.width = 1280;

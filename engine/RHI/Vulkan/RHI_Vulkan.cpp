@@ -236,7 +236,7 @@ namespace Alimer
                 std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
                 bool dirty = false;
 
-                const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+                const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
                 const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
                 int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
                 const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
@@ -255,7 +255,7 @@ namespace Alimer
             struct ResourceFrameAllocator
             {
                 GraphicsDevice_Vulkan* device = nullptr;
-                GPUBuffer				buffer;
+                RefPtr<GraphicsBuffer>buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
@@ -309,7 +309,7 @@ namespace Alimer
         GraphicsDevice_Vulkan(void* window, bool fullscreen, bool enableDebugLayer_);
         virtual ~GraphicsDevice_Vulkan();
 
-        bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
+        RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
         bool CreateShader(ShaderStage stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
@@ -325,7 +325,7 @@ namespace Alimer
         bool CreateRootSignature(RootSignature* rootsig) override;
 
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-        int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+        int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
         void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
         void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
@@ -366,9 +366,9 @@ namespace Alimer
         void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
         void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
-        void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
+        void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd) override;
+        void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
+        void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
         void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
@@ -377,14 +377,14 @@ namespace Alimer
         void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;
         void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
-        void DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-        void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
+        void UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size) override;
         void QueryBegin(const GPUQuery* query, CommandList cmd) override;
         void QueryEnd(const GPUQuery* query, CommandList cmd) override;
         void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
@@ -393,7 +393,7 @@ namespace Alimer
         void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
         void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-        void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+        void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) override;
         void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
 
         GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
@@ -1010,10 +1010,10 @@ namespace Alimer
                 return VK_BLEND_FACTOR_CONSTANT_COLOR;
             case BlendFactor::OneMinusBlendColor:
                 return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
-            case BlendFactor::BlendAlpha:
-                return VK_BLEND_FACTOR_CONSTANT_ALPHA;
-            case BlendFactor::OneMinusBlendAlpha:
-                return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
+                //case BlendFactor::BlendAlpha:
+                //    return VK_BLEND_FACTOR_CONSTANT_ALPHA;
+                //case BlendFactor::OneMinusBlendAlpha:
+                //    return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA;
             case BlendFactor::Source1Color:
                 return VK_BLEND_FACTOR_SRC1_COLOR;
             case BlendFactor::OneMinusSource1Color:
@@ -1476,20 +1476,19 @@ namespace Alimer
 
 
         // Destroyers:
-        struct Buffer_Vulkan
+        struct Buffer_Vulkan : public GraphicsBuffer
         {
-            std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
-            VmaAllocation allocation = nullptr;
-            VkBuffer resource = VK_NULL_HANDLE;
-            VkBufferView cbv = VK_NULL_HANDLE;
-            VkBufferView srv = VK_NULL_HANDLE;
-            VkBufferView uav = VK_NULL_HANDLE;
-            std::vector<VkBufferView> subresources_srv;
-            std::vector<VkBufferView> subresources_uav;
+            Buffer_Vulkan(const GPUBufferDesc& desc_)
+                : GraphicsBuffer(desc_)
+            {
+            }
 
-            GraphicsDevice::GPUAllocation dynamic[kCommanstListCount];
+            ~Buffer_Vulkan() override
+            {
+                Destroy();
+            }
 
-            ~Buffer_Vulkan()
+            void Destroy() override
             {
                 if (allocationhandler == nullptr)
                     return;
@@ -1509,7 +1508,19 @@ namespace Alimer
                 }
                 allocationhandler->destroylocker.unlock();
             }
+
+            std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
+            VmaAllocation allocation = nullptr;
+            VkBuffer resource = VK_NULL_HANDLE;
+            VkBufferView cbv = VK_NULL_HANDLE;
+            VkBufferView srv = VK_NULL_HANDLE;
+            VkBufferView uav = VK_NULL_HANDLE;
+            std::vector<VkBufferView> subresources_srv;
+            std::vector<VkBufferView> subresources_uav;
+
+            GraphicsDevice::GPUAllocation dynamic[kCommanstListCount];
         };
+
         struct Texture_Vulkan
         {
             std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
@@ -1743,7 +1754,7 @@ namespace Alimer
             bool dirty[kCommanstListCount] = {};
             std::vector<const DescriptorTable*> last_tables[kCommanstListCount];
             std::vector<VkDescriptorSet> last_descriptorsets[kCommanstListCount];
-            std::vector<const GPUBuffer*> root_descriptors[kCommanstListCount];
+            std::vector<const GraphicsBuffer*> root_descriptors[kCommanstListCount];
             std::vector<uint32_t> root_offsets[kCommanstListCount];
 
             struct RootRemap
@@ -1765,10 +1776,16 @@ namespace Alimer
             }
         };
 
-        Buffer_Vulkan* to_internal(const GPUBuffer* param)
+        Buffer_Vulkan* to_internal(GraphicsBuffer* param)
         {
-            return static_cast<Buffer_Vulkan*>(param->internal_state.get());
+            return static_cast<Buffer_Vulkan*>(param);
         }
+
+        const Buffer_Vulkan* to_internal(const GraphicsBuffer* param)
+        {
+            return static_cast<const Buffer_Vulkan*>(param);
+        }
+
         Texture_Vulkan* to_internal(const Texture* param)
         {
             return static_cast<Texture_Vulkan*>(param->internal_state.get());
@@ -1863,9 +1880,15 @@ namespace Alimer
     void GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::init(GraphicsDevice_Vulkan* device, size_t size)
     {
         this->device = device;
-        auto internal_state = std::make_shared<Buffer_Vulkan>();
-        internal_state->allocationhandler = device->allocationhandler;
-        buffer.internal_state = internal_state;
+
+        GPUBufferDesc bufferDesc = {};
+        bufferDesc.ByteWidth = (uint32_t)(size);
+        bufferDesc.Usage = USAGE_DYNAMIC;
+        bufferDesc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
+        bufferDesc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+        Buffer_Vulkan* newBuffer = new Buffer_Vulkan(bufferDesc);
+        newBuffer->allocationhandler = device->allocationhandler;
 
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -1883,19 +1906,18 @@ namespace Alimer
         allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
         allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+        res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &newBuffer->resource, &newBuffer->allocation, nullptr);
         assert(res == VK_SUCCESS);
 
-        void* pData = internal_state->allocation->GetMappedData();
+        void* pData = newBuffer->allocation->GetMappedData();
         dataCur = dataBegin = reinterpret_cast<uint8_t*>(pData);
         dataEnd = dataBegin + size;
 
         // Because the "buffer" is created by hand in this, fill the desc to indicate how it can be used:
-        this->buffer.desc.ByteWidth = (uint32_t)((size_t)dataEnd - (size_t)dataBegin);
-        this->buffer.desc.Usage = USAGE_DYNAMIC;
-        this->buffer.desc.BindFlags = BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_SHADER_RESOURCE;
-        this->buffer.desc.MiscFlags = RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+        ALIMER_ASSERT(bufferDesc.ByteWidth == (uint32_t)((size_t)dataEnd - (size_t)dataBegin));
+        buffer.Reset(newBuffer);
     }
+
     uint8_t* GraphicsDevice_Vulkan::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
     {
         dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
@@ -2002,6 +2024,7 @@ namespace Alimer
         memset(UAV_index, -1, sizeof(UAV_index));
         memset(SAM, 0, sizeof(SAM));
     }
+
     void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd, bool raytracing)
     {
         if (!dirty)
@@ -2215,8 +2238,8 @@ namespace Alimer
                 bufferInfos.back() = {};
 
                 const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_B;
-                const GPUBuffer* buffer = CBV[original_binding];
-                if (buffer == nullptr || !buffer->IsValid())
+                const GraphicsBuffer* buffer = CBV[original_binding];
+                if (buffer == nullptr)
                 {
                     bufferInfos.back().buffer = device->nullBuffer;
                     bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -2224,18 +2247,18 @@ namespace Alimer
                 else
                 {
                     auto internal_state = to_internal(buffer);
-                    if (buffer->desc.Usage == USAGE_DYNAMIC)
+                    if (buffer->GetDesc().Usage == USAGE_DYNAMIC)
                     {
                         const GPUAllocation& allocation = internal_state->dynamic[cmd];
                         bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
                         bufferInfos.back().offset = allocation.offset;
-                        bufferInfos.back().range = buffer->desc.ByteWidth;
+                        bufferInfos.back().range = buffer->GetDesc().ByteWidth;
                     }
                     else
                     {
                         bufferInfos.back().buffer = internal_state->resource;
                         bufferInfos.back().offset = 0;
-                        bufferInfos.back().range = buffer->desc.ByteWidth;
+                        bufferInfos.back().range = buffer->GetDesc().ByteWidth;
                     }
                 }
             }
@@ -2256,7 +2279,7 @@ namespace Alimer
                 else
                 {
                     int subresource = SRV_index[original_binding];
-                    const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                    const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                     if (subresource >= 0)
                     {
                         texelBufferViews.back() = to_internal(buffer)->subresources_srv[subresource];
@@ -2284,7 +2307,7 @@ namespace Alimer
                 else
                 {
                     int subresource = UAV_index[original_binding];
-                    const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                    const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                     if (subresource >= 0)
                     {
                         texelBufferViews.back() = to_internal(buffer)->subresources_uav[subresource];
@@ -2316,9 +2339,9 @@ namespace Alimer
                     else
                     {
                         int subresource = SRV_index[original_binding];
-                        const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                        const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                         bufferInfos.back().buffer = to_internal(buffer)->resource;
-                        bufferInfos.back().range = buffer->desc.ByteWidth;
+                        bufferInfos.back().range = buffer->GetDesc().ByteWidth;
                     }
                 }
                 else
@@ -2334,9 +2357,9 @@ namespace Alimer
                     else
                     {
                         int subresource = UAV_index[original_binding];
-                        const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                        const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                         bufferInfos.back().buffer = to_internal(buffer)->resource;
-                        bufferInfos.back().range = buffer->desc.ByteWidth;
+                        bufferInfos.back().range = buffer->GetDesc().ByteWidth;
                     }
                 }
             }
@@ -3821,40 +3844,36 @@ namespace Alimer
         return result;
     }
 
-    bool GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer)
+    RefPtr<GraphicsBuffer> GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
     {
-        auto internal_state = std::make_shared<Buffer_Vulkan>();
-        internal_state->allocationhandler = allocationhandler;
-        pBuffer->internal_state = internal_state;
-        pBuffer->type = GPUResource::GPU_RESOURCE_TYPE::BUFFER;
+        RefPtr<Buffer_Vulkan> result(new Buffer_Vulkan(desc));
+        result->allocationhandler = allocationhandler;
 
-        pBuffer->desc = *pDesc;
-
-        if (pDesc->Usage == USAGE_DYNAMIC && pDesc->BindFlags & BIND_CONSTANT_BUFFER)
+        if (desc.Usage == USAGE_DYNAMIC && desc.BindFlags & BIND_CONSTANT_BUFFER)
         {
             // this special case will use frame allocator
-            return true;
+            return result;
         }
 
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = pBuffer->desc.ByteWidth;
-        bufferInfo.usage = 0;
-        if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+        bufferInfo.size = desc.ByteWidth;
+        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        if (desc.BindFlags & BIND_VERTEX_BUFFER)
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         }
-        if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+        if (desc.BindFlags & BIND_INDEX_BUFFER)
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         }
-        if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+        if (desc.BindFlags & BIND_CONSTANT_BUFFER)
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         }
-        if (pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+        if (desc.BindFlags & BIND_SHADER_RESOURCE)
         {
-            if (pBuffer->desc.Format == FORMAT_UNKNOWN)
+            if (desc.Format == FORMAT_UNKNOWN)
             {
                 bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
@@ -3863,9 +3882,9 @@ namespace Alimer
                 bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
             }
         }
-        if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if (desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
-            if (pBuffer->desc.Format == FORMAT_UNKNOWN)
+            if (desc.Format == FORMAT_UNKNOWN)
             {
                 bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
@@ -3874,11 +3893,11 @@ namespace Alimer
                 bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
             }
         }
-        if (pBuffer->desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
+        if (desc.MiscFlags & RESOURCE_MISC_INDIRECT_ARGS)
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         }
-        if (pBuffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+        if (desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR;
         }
@@ -3886,22 +3905,15 @@ namespace Alimer
         {
             bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
         }
-        bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        bufferInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
         bufferInfo.flags = 0;
-
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-
-
         VkResult res;
 
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        if (pDesc->Usage == USAGE_STAGING)
+        if (desc.Usage == USAGE_STAGING)
         {
-            if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
+            if (desc.CPUAccessFlags & CPU_ACCESS_READ)
             {
                 allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
                 bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -3914,25 +3926,25 @@ namespace Alimer
             }
         }
 
-        res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+        res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &result->resource, &result->allocation, nullptr);
         assert(res == VK_SUCCESS);
 
         // Issue data copy on request:
         if (initialData != nullptr)
         {
-            GPUBufferDesc uploaddesc;
-            uploaddesc.ByteWidth = pDesc->ByteWidth;
-            uploaddesc.Usage = USAGE_STAGING;
-            GPUBuffer uploadbuffer;
-            bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-            ALIMER_ASSERT(upload_success);
-            VkBuffer upload_resource = to_internal(&uploadbuffer)->resource;
-            VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
+            GPUBufferDesc uploadBufferDesc = {};
+            uploadBufferDesc.ByteWidth = desc.ByteWidth;
+            uploadBufferDesc.Usage = USAGE_STAGING;
+
+            RefPtr<GraphicsBuffer> uploadbuffer = CreateBuffer(uploadBufferDesc, nullptr);
+            ALIMER_ASSERT(uploadbuffer.IsNotNull());
+            VkBuffer upload_resource = to_internal(uploadbuffer)->resource;
+            VmaAllocation upload_allocation = to_internal(uploadbuffer)->allocation;
 
             void* pData = upload_allocation->GetMappedData();
             ALIMER_ASSERT(pData != nullptr);
 
-            memcpy(pData, initialData, pBuffer->desc.ByteWidth);
+            memcpy(pData, initialData, desc.ByteWidth);
 
             copyQueueLock.lock();
             {
@@ -3954,13 +3966,13 @@ namespace Alimer
                 }
 
                 VkBufferCopy copyRegion = {};
-                copyRegion.size = pBuffer->desc.ByteWidth;
+                copyRegion.size = desc.ByteWidth;
                 copyRegion.srcOffset = 0;
                 copyRegion.dstOffset = 0;
 
                 VkBufferMemoryBarrier barrier = {};
                 barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-                barrier.buffer = internal_state->resource;
+                barrier.buffer = result->resource;
                 barrier.srcAccessMask = 0;
                 barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                 barrier.size = VK_WHOLE_SIZE;
@@ -3978,31 +3990,30 @@ namespace Alimer
                     0, nullptr
                 );
 
-
-                vkCmdCopyBuffer(frame.copyCommandBuffer, upload_resource, internal_state->resource, 1, &copyRegion);
+                vkCmdCopyBuffer(frame.copyCommandBuffer, upload_resource, result->resource, 1, &copyRegion);
 
 
                 VkAccessFlags tmp = barrier.srcAccessMask;
                 barrier.srcAccessMask = barrier.dstAccessMask;
                 barrier.dstAccessMask = 0;
 
-                if (pBuffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+                if (desc.BindFlags & BIND_CONSTANT_BUFFER)
                 {
                     barrier.dstAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
                 }
-                if (pBuffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+                if (desc.BindFlags & BIND_VERTEX_BUFFER)
                 {
                     barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
                 }
-                if (pBuffer->desc.BindFlags & BIND_INDEX_BUFFER)
+                if (desc.BindFlags & BIND_INDEX_BUFFER)
                 {
                     barrier.dstAccessMask |= VK_ACCESS_INDEX_READ_BIT;
                 }
-                if (pBuffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+                if (desc.BindFlags & BIND_SHADER_RESOURCE)
                 {
                     barrier.dstAccessMask |= VK_ACCESS_SHADER_READ_BIT;
                 }
-                if (pBuffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+                if (desc.BindFlags & BIND_UNORDERED_ACCESS)
                 {
                     barrier.dstAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
                 }
@@ -4025,16 +4036,16 @@ namespace Alimer
         }
 
         // Create resource views if needed
-        if (pDesc->BindFlags & BIND_SHADER_RESOURCE)
+        if (desc.BindFlags & BIND_SHADER_RESOURCE)
         {
-            CreateSubresource(pBuffer, SRV, 0);
+            CreateSubresource(result, SRV, 0);
         }
-        if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+        if (desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
-            CreateSubresource(pBuffer, UAV, 0);
+            CreateSubresource(result, UAV, 0);
         }
 
-        return res == VK_SUCCESS;
+        return result;
     }
 
     bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
@@ -4161,14 +4172,15 @@ namespace Alimer
         // Issue data copy on request:
         if (pInitialData != nullptr)
         {
-            GPUBufferDesc uploaddesc;
-            uploaddesc.ByteWidth = (uint32_t)internal_state->allocation->GetSize();
-            uploaddesc.Usage = USAGE_STAGING;
-            GPUBuffer uploadbuffer;
-            bool upload_success = CreateBuffer(&uploaddesc, nullptr, &uploadbuffer);
-            assert(upload_success);
-            VkBuffer upload_resource = to_internal(&uploadbuffer)->resource;
-            VmaAllocation upload_allocation = to_internal(&uploadbuffer)->allocation;
+            GPUBufferDesc uploadBufferDesc = {};
+            uploadBufferDesc.ByteWidth = (uint32_t)internal_state->allocation->GetSize();
+            uploadBufferDesc.Usage = USAGE_STAGING;
+
+            RefPtr<GraphicsBuffer> uploadBuffer = CreateBuffer(uploadBufferDesc, nullptr);
+            assert(uploadBuffer.IsNotNull());
+
+            VkBuffer upload_resource = to_internal(uploadBuffer.Get())->resource;
+            VmaAllocation upload_allocation = to_internal(uploadBuffer.Get())->allocation;
 
             void* pData = upload_allocation->GetMappedData();
             assert(pData != nullptr);
@@ -5870,7 +5882,7 @@ namespace Alimer
         }
         return -1;
     }
-    int GraphicsDevice_Vulkan::CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+    int GraphicsDevice_Vulkan::CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
     {
         auto internal_state = to_internal(buffer);
         const GPUBufferDesc& desc = buffer->GetDesc();
@@ -5973,7 +5985,7 @@ namespace Alimer
             }
             else if (resource->IsBuffer())
             {
-                const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                 auto internal_state = to_internal(buffer);
                 descriptor.bufferInfo.buffer = internal_state->resource;
                 descriptor.bufferInfo.offset = offset;
@@ -5991,7 +6003,7 @@ namespace Alimer
             }
             else if (resource->IsBuffer())
             {
-                const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                 auto internal_state = to_internal(buffer);
                 descriptor.bufferView = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
             }
@@ -6088,7 +6100,7 @@ namespace Alimer
             }
             else if (resource->IsBuffer())
             {
-                const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                 auto internal_state = to_internal(buffer);
                 descriptor.bufferInfo.buffer = internal_state->resource;
                 descriptor.bufferInfo.offset = offset;
@@ -6106,7 +6118,7 @@ namespace Alimer
             }
             else if (resource->IsBuffer())
             {
-                const GPUBuffer* buffer = (const GPUBuffer*)resource;
+                const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                 auto internal_state = to_internal(buffer);
                 descriptor.bufferView = subresource < 0 ? internal_state->uav : internal_state->subresources_uav[subresource];
             }
@@ -6197,10 +6209,10 @@ namespace Alimer
 
         if (resource->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
         {
-            const GPUBuffer* buffer = (const GPUBuffer*)resource;
+            const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
             auto internal_state = to_internal(buffer);
             memory = internal_state->allocation->GetMemory();
-            mapping->rowpitch = (uint32_t)buffer->desc.ByteWidth;
+            mapping->rowpitch = (uint32_t)buffer->GetDesc().ByteWidth;
         }
         else if (resource->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
         {
@@ -6230,7 +6242,7 @@ namespace Alimer
     {
         if (resource->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
         {
-            const GPUBuffer* buffer = (const GPUBuffer*)resource;
+            const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
             auto internal_state = to_internal(buffer);
             vkUnmapMemory(device, internal_state->allocation->GetMemory());
         }
@@ -6292,7 +6304,7 @@ namespace Alimer
         else if (pResource->IsBuffer())
         {
             nameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
-            nameInfo.objectHandle = (uint64_t)to_internal((const GPUBuffer*)pResource)->resource;
+            nameInfo.objectHandle = (uint64_t)to_internal((const GraphicsBuffer*)pResource)->resource;
         }
         else if (pResource->IsAccelerationStructure())
         {
@@ -6737,25 +6749,25 @@ namespace Alimer
         }
     }
 
-    void GraphicsDevice_Vulkan::BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd)
+    void GraphicsDevice_Vulkan::BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd)
     {
         assert(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
         auto& descriptors = GetFrameResources().descriptors[cmd];
-        if (buffer->desc.Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer)
+        if (buffer->GetDesc().Usage == USAGE_DYNAMIC || descriptors.CBV[slot] != buffer)
         {
             descriptors.CBV[slot] = buffer;
             descriptors.dirty = true;
         }
     }
 
-    void GraphicsDevice_Vulkan::BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
+    void GraphicsDevice_Vulkan::BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd)
     {
         VkDeviceSize voffsets[8] = {};
         VkBuffer vbuffers[8] = {};
         assert(count <= 8);
         for (uint32_t i = 0; i < count; ++i)
         {
-            if (vertexBuffers[i] == nullptr || !vertexBuffers[i]->IsValid())
+            if (vertexBuffers[i] == nullptr)
             {
                 vbuffers[i] = nullBuffer;
             }
@@ -6773,7 +6785,7 @@ namespace Alimer
         vkCmdBindVertexBuffers(GetDirectCommandList(cmd), static_cast<uint32_t>(slot), static_cast<uint32_t>(count), vbuffers, voffsets);
     }
 
-    void GraphicsDevice_Vulkan::BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd)
     {
         if (indexBuffer != nullptr)
         {
@@ -6850,14 +6862,14 @@ namespace Alimer
         vkCmdDrawIndexed(GetDirectCommandList(cmd), static_cast<uint32_t>(indexCount), static_cast<uint32_t>(instanceCount), startIndexLocation, baseVertexLocation, startInstanceLocation);
     }
 
-    void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
         vkCmdDrawIndirect(GetDirectCommandList(cmd), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
     }
 
-    void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
@@ -6870,7 +6882,7 @@ namespace Alimer
         vkCmdDispatch(GetDirectCommandList(cmd), threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
 
-    void GraphicsDevice_Vulkan::DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predispatch(cmd);
         auto internal_state = to_internal(args);
@@ -6883,7 +6895,7 @@ namespace Alimer
         cmdDrawMeshTasksNV(GetDirectCommandList(cmd), threadGroupCountX * threadGroupCountY * threadGroupCountZ, 0);
     }
 
-    void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
@@ -6992,11 +7004,11 @@ namespace Alimer
         }
         else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
         {
-            auto internal_state_src = to_internal((const GPUBuffer*)pSrc);
-            auto internal_state_dst = to_internal((const GPUBuffer*)pDst);
+            auto internal_state_src = to_internal((const GraphicsBuffer*)pSrc);
+            auto internal_state_dst = to_internal((const GraphicsBuffer*)pDst);
 
-            const GPUBufferDesc& src_desc = ((const GPUBuffer*)pSrc)->GetDesc();
-            const GPUBufferDesc& dst_desc = ((const GPUBuffer*)pDst)->GetDesc();
+            const GPUBufferDesc& src_desc = ((const GraphicsBuffer*)pSrc)->GetDesc();
+            const GPUBufferDesc& dst_desc = ((const GraphicsBuffer*)pDst)->GetDesc();
 
             VkBufferCopy copy = {};
             copy.srcOffset = 0;
@@ -7010,26 +7022,30 @@ namespace Alimer
             );
         }
     }
-    void GraphicsDevice_Vulkan::UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize)
+    void GraphicsDevice_Vulkan::UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size)
     {
-        assert(buffer->desc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
-        assert((int)buffer->desc.ByteWidth >= dataSize || dataSize < 0 && "Data size is too big!");
+        const GPUBufferDesc& bufferDesc = buffer->GetDesc();
 
-        if (dataSize == 0)
-        {
-            return;
-        }
+        assert(bufferDesc.Usage != USAGE_IMMUTABLE && "Cannot update IMMUTABLE GPUBuffer!");
+        assert(bufferDesc.ByteWidth >= size && "Data size is too big!");
+
         auto internal_state = to_internal(buffer);
 
-        dataSize = std::min((int)buffer->desc.ByteWidth, dataSize);
-        dataSize = (dataSize >= 0 ? dataSize : buffer->desc.ByteWidth);
+        if (size == 0)
+        {
+            size = bufferDesc.ByteWidth;
+        }
+        else
+        {
+            size = Alimer::Min<uint64_t>(bufferDesc.ByteWidth, size);
+        }
 
 
-        if (buffer->desc.Usage == USAGE_DYNAMIC && buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+        if (bufferDesc.Usage == USAGE_DYNAMIC && bufferDesc.BindFlags & BIND_CONSTANT_BUFFER)
         {
             // Dynamic buffer will be used from host memory directly:
-            GPUAllocation allocation = AllocateGPU(dataSize, cmd);
-            memcpy(allocation.data, data, dataSize);
+            GPUAllocation allocation = AllocateGPU(size, cmd);
+            memcpy(allocation.data, data, size);
             internal_state->dynamic[cmd] = allocation;
             GetFrameResources().descriptors[cmd].dirty = true;
         }
@@ -7047,32 +7063,32 @@ namespace Alimer
             barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
             barrier.buffer = internal_state->resource;
             barrier.srcAccessMask = 0;
-            if (buffer->desc.BindFlags & BIND_CONSTANT_BUFFER)
+            if (bufferDesc.BindFlags & BIND_CONSTANT_BUFFER)
             {
                 barrier.srcAccessMask |= VK_ACCESS_UNIFORM_READ_BIT;
                 stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             }
-            if (buffer->desc.BindFlags & BIND_VERTEX_BUFFER)
+            if (bufferDesc.BindFlags & BIND_VERTEX_BUFFER)
             {
                 barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
                 stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
             }
-            if (buffer->desc.BindFlags & BIND_INDEX_BUFFER)
+            if (bufferDesc.BindFlags & BIND_INDEX_BUFFER)
             {
                 barrier.srcAccessMask |= VK_ACCESS_INDEX_READ_BIT;
                 stages |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
             }
-            if (buffer->desc.BindFlags & BIND_SHADER_RESOURCE)
+            if (bufferDesc.BindFlags & BIND_SHADER_RESOURCE)
             {
                 barrier.srcAccessMask |= VK_ACCESS_SHADER_READ_BIT;
                 stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             }
-            if (buffer->desc.BindFlags & BIND_UNORDERED_ACCESS)
+            if (bufferDesc.BindFlags & BIND_UNORDERED_ACCESS)
             {
                 barrier.srcAccessMask |= VK_ACCESS_SHADER_WRITE_BIT;
                 stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             }
-            if (buffer->desc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
+            if (bufferDesc.MiscFlags & RESOURCE_MISC_RAY_TRACING)
             {
                 barrier.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
                 stages = VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
@@ -7094,19 +7110,17 @@ namespace Alimer
 
 
             // issue data copy:
-            uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(dataSize, 1);
-            memcpy(dest, data, dataSize);
+            uint8_t* dest = GetFrameResources().resourceBuffer[cmd].allocate(size, 1);
+            memcpy(dest, data, size);
 
             VkBufferCopy copyRegion = {};
-            copyRegion.size = dataSize;
+            copyRegion.size = size;
             copyRegion.srcOffset = GetFrameResources().resourceBuffer[cmd].calculateOffset(dest);
             copyRegion.dstOffset = 0;
 
             vkCmdCopyBuffer(GetDirectCommandList(cmd),
-                std::static_pointer_cast<Buffer_Vulkan>(GetFrameResources().resourceBuffer[cmd].buffer.internal_state)->resource,
+                to_internal(GetFrameResources().resourceBuffer[cmd].buffer.Get())->resource,
                 internal_state->resource, 1, &copyRegion);
-
-
 
             // reverse barrier:
             std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
@@ -7322,17 +7336,17 @@ namespace Alimer
                     geometry.geometry.triangles.vertexFormat = _ConvertFormat(x.triangles.vertexFormat);
                     geometry.geometry.triangles.indexType = x.triangles.indexFormat == IndexFormat::UInt16 ? VkIndexType::VK_INDEX_TYPE_UINT16 : VkIndexType::VK_INDEX_TYPE_UINT32;
 
-                    addressinfo.buffer = to_internal(&x.triangles.vertexBuffer)->resource;
+                    addressinfo.buffer = to_internal(x.triangles.vertexBuffer)->resource;
                     geometry.geometry.triangles.vertexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) +
                         x.triangles.vertexByteOffset;
 
-                    addressinfo.buffer = to_internal(&x.triangles.indexBuffer)->resource;
+                    addressinfo.buffer = to_internal(x.triangles.indexBuffer)->resource;
                     geometry.geometry.triangles.indexData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo) +
                         x.triangles.indexOffset * (x.triangles.indexFormat == IndexFormat::UInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
 
                     if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
                     {
-                        addressinfo.buffer = to_internal(&x.triangles.transform3x4Buffer)->resource;
+                        addressinfo.buffer = to_internal(x.triangles.transform3x4Buffer)->resource;
                         geometry.geometry.triangles.transformData.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
                         offset.transformOffset = x.triangles.transform3x4BufferOffset;
                     }
@@ -7345,7 +7359,7 @@ namespace Alimer
                     geometry.geometry.aabbs.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
                     geometry.geometry.aabbs.stride = x.aabbs.stride;
 
-                    addressinfo.buffer = to_internal(&x.aabbs.aabbBuffer)->resource;
+                    addressinfo.buffer = to_internal(x.aabbs.aabbBuffer)->resource;
                     geometry.geometry.aabbs.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
 
                     offset.primitiveCount = x.aabbs.offset;
@@ -7371,7 +7385,7 @@ namespace Alimer
             geometry.geometry.instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
             geometry.geometry.instances.arrayOfPointers = VK_FALSE;
 
-            addressinfo.buffer = to_internal(&dst->desc.toplevel.instanceBuffer)->resource;
+            addressinfo.buffer = to_internal(dst->desc.toplevel.instanceBuffer)->resource;
             geometry.geometry.instances.data.deviceAddress = vkGetBufferDeviceAddress(device, &addressinfo);
 
             auto& offset = offsetinfos.back();
@@ -7464,7 +7478,7 @@ namespace Alimer
             x = nullptr;
         }
     }
-    void GraphicsDevice_Vulkan::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd)
+    void GraphicsDevice_Vulkan::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd)
     {
         const RootSignature* rootsig = nullptr;
         switch (bindpoint)
@@ -7513,7 +7527,7 @@ namespace Alimer
             switch (rootsig_internal->last_tables[cmd][remap.space]->resources[remap.rangeIndex].binding)
             {
             case ROOT_CONSTANTBUFFER:
-                bufferInfo.range = std::min(buffer->desc.ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
+                bufferInfo.range = std::min(buffer->GetDesc().ByteWidth, device_properties.properties.limits.maxUniformBufferRange);
                 write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
                 break;
             case ROOT_RAWBUFFER:
@@ -7574,7 +7588,7 @@ namespace Alimer
         uint8_t* dest = allocator.allocate(dataSize, 256);
         assert(dest != nullptr);
 
-        result.buffer = &allocator.buffer;
+        result.buffer = allocator.buffer;
         result.offset = (uint32_t)allocator.calculateOffset(dest);
         result.data = (void*)dest;
         return result;

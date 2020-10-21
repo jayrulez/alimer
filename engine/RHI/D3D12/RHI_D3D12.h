@@ -112,7 +112,7 @@ namespace Alimer
 
             ComPtr<ID3D12CommandQueue> copyQueue;
             ComPtr<ID3D12CommandAllocator> copyAllocator;
-            ComPtr<ID3D12CommandList> copyCommandList;
+            ComPtr<ID3D12GraphicsCommandList> copyCommandList;
 
             struct DescriptorTableFrameAllocator
             {
@@ -132,7 +132,7 @@ namespace Alimer
                 bool heaps_bound = false;
                 bool dirty = false;
 
-                const GPUBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+                const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
                 const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
                 int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
                 const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
@@ -157,7 +157,7 @@ namespace Alimer
             struct ResourceFrameAllocator
             {
                 GraphicsDevice_DX12* device = nullptr;
-                GPUBuffer				buffer;
+                RefPtr<GraphicsBuffer>	buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
@@ -212,7 +212,7 @@ namespace Alimer
         ~GraphicsDevice_DX12() override;
 
         void GetAdapter(IDXGIAdapter1** ppAdapter);
-        bool CreateBuffer(const GPUBufferDesc* pDesc, const void* initialData, GPUBuffer* pBuffer) override;
+        RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateInputLayout(const InputLayoutDesc* pInputElementDescs, uint32_t NumElements, const Shader* shader, InputLayout* pInputLayout) override;
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
@@ -228,7 +228,7 @@ namespace Alimer
         bool CreateRootSignature(RootSignature* rootsig) override;
 
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
-        int CreateSubresource(GPUBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+        int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
         void WriteShadingRateValue(ShadingRate rate, void* dest) override;
         void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
@@ -268,9 +268,9 @@ namespace Alimer
         void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
         void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(ShaderStage stage, const GPUBuffer* buffer, uint32_t slot, CommandList cmd) override;
-        void BindVertexBuffers(const GPUBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GPUBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
+        void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd) override;
+        void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
+        void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
         void BindShadingRate(ShadingRate rate, CommandList cmd) override;
@@ -281,14 +281,14 @@ namespace Alimer
         void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;
         void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
         void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
-        void DrawInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void DrawIndexedInstancedIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchMeshIndirect(const GPUBuffer* args, uint32_t args_offset, CommandList cmd) override;
+        void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
         void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-        void UpdateBuffer(const GPUBuffer* buffer, const void* data, CommandList cmd, int dataSize = -1) override;
+        void UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size) override;
         void QueryBegin(const GPUQuery* query, CommandList cmd) override;
         void QueryEnd(const GPUQuery* query, CommandList cmd) override;
         void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
@@ -297,7 +297,7 @@ namespace Alimer
         void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
 
         void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-        void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GPUBuffer* buffer, uint32_t offset, CommandList cmd) override;
+        void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) override;
         void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
 
         GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
