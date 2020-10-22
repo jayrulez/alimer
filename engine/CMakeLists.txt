@@ -55,11 +55,11 @@ endif()
 
 if (ALIMER_D3D12)
     define_engine_source_files(RHI/D3DCommon)
-    define_engine_source_files(RHI/D3D12)
+    #define_engine_source_files(RHI/D3D12)
 endif()
 
 if (ALIMER_VULKAN)
-    define_engine_source_files(RHI/Vulkan)
+    #define_engine_source_files(RHI/Vulkan)
 endif()
 
 if (ALIMER_IMGUI)

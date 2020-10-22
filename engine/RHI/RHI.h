@@ -82,6 +82,17 @@ namespace Alimer
         GPUBufferDesc desc;
     };
 
+    class ALIMER_API Sampler : public GraphicsResource
+    {
+    public:
+    protected:
+        Sampler()
+            : GraphicsResource(Type::Sampler)
+        {
+
+        }
+    };
+
     class GraphicsDevice
     {
     protected:
@@ -118,10 +129,9 @@ namespace Alimer
         virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) = 0;
         virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
-        virtual bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) = 0;
-        virtual bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) = 0;
+        virtual RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) = 0;
         virtual bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) = 0;
-        bool CreatePipelineState(const PipelineStateDesc* descriptor, PipelineState* pipelineState);
+        bool CreateRenderPipeline(const RenderPipelineDescriptor* descriptor, PipelineState* pipelineState);
         virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
         virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
         virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
@@ -256,7 +266,7 @@ namespace Alimer
         virtual void InsertDebugMarker(CommandList cmd, const char* name) = 0;
 
     private:
-        virtual bool CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso) = 0;
+        virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) = 0;
     };
 
     uint32_t GetVertexFormatNumComponents(VertexFormat format);

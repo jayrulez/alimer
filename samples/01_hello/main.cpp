@@ -57,27 +57,55 @@ namespace Alimer
     {
         Float3 position;
         Color color;
+        Float2 uv;
     };
 
     /* TODO: Until we fix resource creation */
     Shader vertexShader;
     Shader pixelShader;
+    Texture texture;
+    RefPtr<Sampler> sampler;
 
     void HelloWorldApp::Initialize()
     {
         auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
         graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", &vertexShader);
         graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", &pixelShader);
-        PipelineStateDesc psoDesc = {};
-        psoDesc.vs = &vertexShader;
-        psoDesc.ps = &pixelShader;
-        //psoDesc.pt = TRIANGLELIST;
-        psoDesc.rasterizationState.cullMode = CullMode::Back;
-        psoDesc.depthStencilState.depthWriteEnabled = true;
-        psoDesc.depthStencilState.depthCompare = CompareFunction::LessEqual;
-        psoDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
-        psoDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
-        graphicsDevice->CreatePipelineState(&psoDesc, &pipeline);
+
+        RenderPipelineDescriptor renderPipelineDesc = {};
+        renderPipelineDesc.vs = &vertexShader;
+        renderPipelineDesc.ps = &pixelShader;
+        renderPipelineDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
+        renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
+        renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
+        /*renderPipelineDesc.colorAttachments[0].blendEnable = true;
+        renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
+        renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
+        renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
+        renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;*/
+        graphicsDevice->CreateRenderPipeline(&renderPipelineDesc, &pipeline);
+
+        uint32_t pixels[4 * 4] = {
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+            0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+            0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        };
+        TextureDesc textureDesc = {};
+        textureDesc.Width = 4;
+        textureDesc.Height = 4;
+        textureDesc.Format = FORMAT_R8G8B8A8_UNORM;
+        textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+        SubresourceData textureData = {};
+        textureData.pSysMem = pixels;
+        textureData.SysMemPitch = 4u * graphicsDevice->GetFormatStride(textureDesc.Format);
+        graphicsDevice->CreateTexture(&textureDesc, &textureData, &texture);
+
+        SamplerDescriptor samplerDesc = {};
+        samplerDesc.minFilter = FilterMode::Nearest;
+        samplerDesc.magFilter = FilterMode::Nearest;
+        samplerDesc.mipFilter = FilterMode::Nearest;
+        sampler = graphicsDevice->CreateSampler(&samplerDesc);
 
         /*Vertex quadVertices[] =
         {
@@ -89,36 +117,36 @@ namespace Alimer
 
         float cubeData[] =
         {
-            /* positions        colors */
-            -1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
-             1.0, -1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
-             1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
-            -1.0,  1.0, -1.0,   1.0, 0.0, 0.0, 1.0,
+            /* pos                  color                       uvs */
+            -1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 0.0f,
+             1.0f, -1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 0.0f,
+             1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     1.0f, 1.0f,
+            -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.0f, 1.0f,     0.0f, 1.0f,
 
-            -1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
-             1.0, -1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
-             1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
-            -1.0,  1.0,  1.0,   0.0, 1.0, 0.0, 1.0,
+            -1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 0.0f,
+             1.0f, -1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 0.0f,
+             1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     1.0f, 1.0f,
+            -1.0f,  1.0f,  1.0f,    0.0f, 1.0f, 0.0f, 1.0f,     0.0f, 1.0f,
 
-            -1.0, -1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
-            -1.0,  1.0, -1.0,   0.0, 0.0, 1.0, 1.0,
-            -1.0,  1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
-            -1.0, -1.0,  1.0,   0.0, 0.0, 1.0, 1.0,
+            -1.0f, -1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 0.0f,
+            -1.0f,  1.0f, -1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 0.0f,
+            -1.0f,  1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     1.0f, 1.0f,
+            -1.0f, -1.0f,  1.0f,    0.0f, 0.0f, 1.0f, 1.0f,     0.0f, 1.0f,
 
-            1.0, -1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
-            1.0,  1.0, -1.0,   1.0, 0.5, 0.0, 1.0,
-            1.0,  1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
-            1.0, -1.0,  1.0,   1.0, 0.5, 0.0, 1.0,
+             1.0f, -1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 0.0f,
+             1.0f,  1.0f, -1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 0.0f,
+             1.0f,  1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     1.0f, 1.0f,
+             1.0f, -1.0f,  1.0f,    1.0f, 0.5f, 0.0f, 1.0f,     0.0f, 1.0f,
 
-            -1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
-            -1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
-             1.0, -1.0,  1.0,   0.0, 0.5, 1.0, 1.0,
-             1.0, -1.0, -1.0,   0.0, 0.5, 1.0, 1.0,
+            -1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 0.0f,
+            -1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 0.0f,
+             1.0f, -1.0f,  1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     1.0f, 1.0f,
+             1.0f, -1.0f, -1.0f,    0.0f, 0.5f, 1.0f, 1.0f,     0.0f, 1.0f,
 
-            -1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0,
-            -1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
-             1.0,  1.0,  1.0,   1.0, 0.0, 0.5, 1.0,
-             1.0,  1.0, -1.0,   1.0, 0.0, 0.5, 1.0
+            -1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 0.0f,
+            -1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 0.0f,
+             1.0f,  1.0f,  1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     1.0f, 1.0f,
+             1.0f,  1.0f, -1.0f,    1.0f, 0.0f, 0.5f, 1.0f,     0.0f, 1.0f
         };
 
         GPUBufferDesc bufferDesc{};
@@ -178,6 +206,8 @@ namespace Alimer
         graphicsDevice->BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0, commandList);
         graphicsDevice->BindPipelineState(&pipeline, commandList);
         graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0, commandList);
+        graphicsDevice->BindResource(ShaderStage::Fragment, &texture, 0, commandList);
+        graphicsDevice->BindSampler(ShaderStage::Fragment, sampler, 0, commandList);
         graphicsDevice->DrawIndexed(36, 0, 0, commandList);
         /*context->PushDebugGroup("Frame");
         RenderPassDesc renderPass{};
@@ -187,15 +217,15 @@ namespace Alimer
         context->EndRenderPass();
         context->PopDebugGroup();*/
 
-        time += 0.1f;
+        time += 0.03f;
     }
 
     Application* CreateApplication()
     {
         Config config{};
-        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
+        config.preferredBackendType = GraphicsBackendType::Direct3D11;
         //config.preferredBackendType = GraphicsBackendType::Direct3D12;
-        config.preferredBackendType = GraphicsBackendType::Vulkan;
+        //config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";
         //config.fullscreen = true;
         //config.width = 1280;

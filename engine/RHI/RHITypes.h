@@ -34,9 +34,9 @@ using namespace DirectX;
 namespace Alimer
 {
 	struct Shader;
-	struct BlendState;
 	struct GPUResource;
 	class GraphicsBuffer;
+    class Sampler;
 	struct Texture;
 	struct RootSignature;
     using CommandList = uint8_t;
@@ -148,15 +148,16 @@ namespace Alimer
         Max,
     };
 
-	enum COLOR_WRITE_ENABLE
+	enum class ColorWriteMask : uint32_t
 	{
-		COLOR_WRITE_DISABLE = 0,
-		COLOR_WRITE_ENABLE_RED = 1,
-		COLOR_WRITE_ENABLE_GREEN = 2,
-		COLOR_WRITE_ENABLE_BLUE = 4,
-		COLOR_WRITE_ENABLE_ALPHA = 8,
-		COLOR_WRITE_ENABLE_ALL = (((COLOR_WRITE_ENABLE_RED | COLOR_WRITE_ENABLE_GREEN) | COLOR_WRITE_ENABLE_BLUE) | COLOR_WRITE_ENABLE_ALPHA)
+        None = 0x00000000,
+        Red = 0x00000001,
+        Green = 0x00000002,
+        Blue = 0x00000004,
+        Alpha = 0x00000008,
+        All = 0x0000000F,
 	};
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(ColorWriteMask, uint32);
 
     enum class FrontFace : uint32_t
     {
@@ -187,10 +188,11 @@ namespace Alimer
 
     enum class SamplerAddressMode : uint32_t
     {
-        ClampToEdge,
-        Repeat,
-        MirrorRepeat,
-        ClampToBorder
+        Wrap,
+        Mirror,
+        Clamp,
+        Border,
+        MirrorOnce,
     };
 
 	enum class FilterMode : uint32_t
@@ -457,9 +459,9 @@ namespace Alimer
 			TEXTURE_2D,
 			TEXTURE_3D,
 		} type = TEXTURE_2D;
-		uint32_t Width = 0;
-		uint32_t Height = 0;
-		uint32_t Depth = 0;
+		uint32_t Width = 1;
+		uint32_t Height = 1;
+		uint32_t Depth = 1;
 		uint32_t ArraySize = 1;
 		uint32_t MipLevels = 1;
 		FORMAT Format = FORMAT_UNKNOWN;
@@ -474,68 +476,19 @@ namespace Alimer
 
 	struct SamplerDescriptor
 	{
-        FilterMode magFilter = FilterMode::Nearest;
-        FilterMode minFilter = FilterMode::Nearest;
-        FilterMode mipmapFilter = FilterMode::Nearest;
-        SamplerAddressMode addressModeU = SamplerAddressMode::ClampToEdge;
-        SamplerAddressMode addressModeV = SamplerAddressMode::ClampToEdge;
-        SamplerAddressMode addressModeW = SamplerAddressMode::ClampToEdge;
+        FilterMode magFilter = FilterMode::Linear;
+        FilterMode minFilter = FilterMode::Linear;
+        FilterMode mipFilter = FilterMode::Linear;
+        SamplerAddressMode addressModeU = SamplerAddressMode::Wrap;
+        SamplerAddressMode addressModeV = SamplerAddressMode::Wrap;
+        SamplerAddressMode addressModeW = SamplerAddressMode::Wrap;
         float mipLodBias;
 		uint32_t maxAnisotropy = 1u;
-        CompareFunction compareFunction = CompareFunction::Never;
+        CompareFunction compareFunction = CompareFunction::Undefined;
         float lodMinClamp = 0.0f;
-        float lodMaxClamp = 1000.0f;
+        float lodMaxClamp = FLT_MAX;
         SamplerBorderColor borderColor = SamplerBorderColor::TransparentBlack;
         const char* label;
-	};
-
-	struct RasterizationStateDescriptor
-	{
-        FrontFace frontFace = FrontFace::CCW;
-        CullMode cullMode = CullMode::None;
-		int32_t depthBias = 0;
-        float depthBiasSlopeScale = 0.0f;
-        float depthBiasClamp = 0.0f;
-        bool depthClipEnable = true;
-		bool conservativeRasterizationEnable = false;
-		uint32_t forcedSampleCount = 0;
-	};
-
-	struct StencilStateFaceDescriptor
-	{
-        CompareFunction compare = CompareFunction::Always;
-        StencilOperation failOp = StencilOperation::Keep;
-        StencilOperation depthFailOp = StencilOperation::Keep;
-        StencilOperation passOp = StencilOperation::Keep;
-	};
-
-	struct DepthStencilStateDescriptor
-	{
-        bool                        depthWriteEnabled = false;
-        CompareFunction             depthCompare = CompareFunction::Always;
-        StencilStateFaceDescriptor  stencilFront;
-        StencilStateFaceDescriptor  stencilBack;
-		uint8_t                     stencilReadMask = 0xff;
-		uint8_t                     stencilWriteMask = 0xff;
-	};
-
-	struct RenderTargetBlendStateDesc
-	{
-		bool BlendEnable = false;
-        BlendFactor SrcBlend = BlendFactor::One;
-        BlendFactor DestBlend = BlendFactor::Zero;
-        BlendOperation BlendOp = BlendOperation::Add;
-        BlendFactor SrcBlendAlpha = BlendFactor::One;
-        BlendFactor DestBlendAlpha = BlendFactor::Zero;
-        BlendOperation BlendOpAlpha = BlendOperation::Add;
-		uint8_t RenderTargetWriteMask = COLOR_WRITE_ENABLE_ALL;
-	};
-
-	struct BlendStateDesc
-	{
-		bool AlphaToCoverageEnable = false;
-		bool IndependentBlendEnable = false;
-		RenderTargetBlendStateDesc RenderTarget[kMaxColorAttachments];
 	};
 
 	struct GPUBufferDesc
@@ -580,7 +533,50 @@ namespace Alimer
         VertexBufferLayoutDescriptor    layouts[kMaxVertexBufferBindings];
     };
 
-	struct PipelineStateDesc
+    struct RasterizationStateDescriptor
+    {
+        FrontFace frontFace = FrontFace::CCW;
+        CullMode cullMode = CullMode::Back;
+        int32_t depthBias = 0;
+        float depthBiasSlopeScale = 0.0f;
+        float depthBiasClamp = 0.0f;
+        bool depthClipEnable = true;
+        bool conservativeRasterizationEnable = false;
+        uint32_t forcedSampleCount = 0;
+    };
+
+    struct StencilStateFaceDescriptor
+    {
+        StencilOperation failOp = StencilOperation::Keep;
+        StencilOperation depthFailOp = StencilOperation::Keep;
+        StencilOperation passOp = StencilOperation::Keep;
+        CompareFunction compare = CompareFunction::Always;
+    };
+
+    struct DepthStencilStateDescriptor
+    {
+        bool                        depthWriteEnabled = true;
+        CompareFunction             depthCompare = CompareFunction::Less;
+        StencilStateFaceDescriptor  stencilFront;
+        StencilStateFaceDescriptor  stencilBack;
+        uint8_t                     stencilReadMask = 0xff;
+        uint8_t                     stencilWriteMask = 0xff;
+    };
+
+    struct ColorAttachmentDescriptor
+    {
+        FORMAT format;
+        bool blendEnable = false;
+        BlendFactor srcColorBlendFactor = BlendFactor::One;
+        BlendFactor dstColorBlendFactor = BlendFactor::Zero;
+        BlendOperation colorBlendOp = BlendOperation::Add;
+        BlendFactor srcAlphaBlendFactor = BlendFactor::One;
+        BlendFactor dstAlphaBlendFactor = BlendFactor::Zero;
+        BlendOperation alphaBlendOp = BlendOperation::Add;
+        ColorWriteMask colorWriteMask = ColorWriteMask::All;
+    };
+
+	struct RenderPipelineDescriptor
 	{
 		const RootSignature*            rootSignature = nullptr;
 		const Shader*				    vs = nullptr;
@@ -590,13 +586,16 @@ namespace Alimer
 		const Shader*				    gs = nullptr;
 		const Shader*				    ms = nullptr;
 		const Shader*				    as = nullptr;
-		const BlendState*			    bs = nullptr;
-		uint32_t					    sampleMask = 0xFFFFFFFF;
-        RasterizationStateDescriptor    rasterizationState;
-		DepthStencilStateDescriptor	    depthStencilState;
         VertexDescriptor                vertexDescriptor;
         PrimitiveTopology			    primitiveTopology = PrimitiveTopology::TriangleList;
+        RasterizationStateDescriptor    rasterizationState;
+		DepthStencilStateDescriptor	    depthStencilState;
+        ColorAttachmentDescriptor       colorAttachments[kMaxColorAttachments];
+        uint32_t                        sampleCount = 1;
+        uint32_t                        sampleMask = 0xFFFFFFFF;
+        bool                            alphaToCoverageEnable = false;
 	};
+
 	struct GPUBarrier
 	{
 		enum TYPE
@@ -810,12 +809,6 @@ namespace Alimer
 		const RootSignature* rootSignature = nullptr;
 	};
 
-	struct Sampler : public GraphicsDeviceChild
-	{
-        //SamplerDescriptor desc;
-        //const SamplerDescriptor& GetDesc() const { return desc; }
-	};
-
 	struct GPUResource : public GraphicsDeviceChild
 	{
 		enum class GPU_RESOURCE_TYPE
@@ -828,13 +821,6 @@ namespace Alimer
 		inline bool IsTexture() const { return type == GPU_RESOURCE_TYPE::TEXTURE; }
 		inline bool IsBuffer() const { return type == GPU_RESOURCE_TYPE::BUFFER; }
 		inline bool IsAccelerationStructure() const { return type == GPU_RESOURCE_TYPE::RAYTRACING_ACCELERATION_STRUCTURE; }
-	};
-
-	struct BlendState : public GraphicsDeviceChild
-	{
-		BlendStateDesc desc;
-
-		const BlendStateDesc& GetDesc() const { return desc; }
 	};
 
 	struct Texture : public GPUResource
@@ -854,9 +840,9 @@ namespace Alimer
 	struct PipelineState : public GraphicsDeviceChild
 	{
 		size_t hash = 0;
-		PipelineStateDesc desc;
+		RenderPipelineDescriptor desc;
 
-		const PipelineStateDesc& GetDesc() const { return desc; }
+		const RenderPipelineDescriptor& GetDesc() const { return desc; }
 	};
 
 	struct RenderPass : public GraphicsDeviceChild
@@ -1067,7 +1053,7 @@ namespace Alimer
 	};
 	struct StaticSampler
 	{
-		Sampler sampler;
+		Sampler* sampler;
 		uint32_t slot = 0;
 	};
 	struct DescriptorTable : public GraphicsDeviceChild
@@ -1191,4 +1177,46 @@ namespace std
             return hash;
         }
     };
+
+    template<>
+    struct hash<Alimer::ColorAttachmentDescriptor>
+    {
+        std::size_t operator()(const Alimer::ColorAttachmentDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.format);
+            Alimer::hash_combine(hash, desc.blendEnable);
+            Alimer::hash_combine(hash, (uint32_t)desc.srcColorBlendFactor);
+            Alimer::hash_combine(hash, (uint32_t)desc.dstColorBlendFactor);
+            Alimer::hash_combine(hash, (uint32_t)desc.colorBlendOp);
+            Alimer::hash_combine(hash, (uint32_t)desc.srcAlphaBlendFactor);
+            Alimer::hash_combine(hash, (uint32_t)desc.dstAlphaBlendFactor);
+            Alimer::hash_combine(hash, (uint32_t)desc.alphaBlendOp);
+            Alimer::hash_combine(hash, (uint32_t)desc.colorWriteMask);
+            return hash;
+        }
+    };
+
+    template<>
+    struct hash<Alimer::SamplerDescriptor>
+    {
+        std::size_t operator()(const Alimer::SamplerDescriptor& desc) const noexcept
+        {
+            std::size_t hash = 0;
+            Alimer::hash_combine(hash, (uint32_t)desc.magFilter);
+            Alimer::hash_combine(hash, (uint32_t)desc.minFilter);
+            Alimer::hash_combine(hash, (uint32_t)desc.mipFilter);
+            Alimer::hash_combine(hash, (uint32_t)desc.addressModeU);
+            Alimer::hash_combine(hash, (uint32_t)desc.addressModeV);
+            Alimer::hash_combine(hash, (uint32_t)desc.addressModeW);
+            Alimer::hash_combine(hash, desc.mipLodBias);
+            Alimer::hash_combine(hash, desc.maxAnisotropy);
+            Alimer::hash_combine(hash, (uint32_t)desc.compareFunction);
+            Alimer::hash_combine(hash, desc.lodMinClamp);
+            Alimer::hash_combine(hash, desc.lodMaxClamp);
+            Alimer::hash_combine(hash, (uint32_t)desc.borderColor);
+            return hash;
+        }
+    };
+    
 }

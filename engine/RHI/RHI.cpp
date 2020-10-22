@@ -39,7 +39,7 @@ namespace Alimer
     {
         if (backendType == GraphicsBackendType::Count)
         {
-#if defined(ALIMER_D3D12) 
+#if defined(ALIMER_D3D12) && defined(TODO)
             if (GraphicsDevice_DX12::IsAvailable())
                 backendType = GraphicsBackendType::Direct3D12;
 #endif
@@ -56,7 +56,7 @@ namespace Alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_D3D12)
+#if defined(ALIMER_D3D12) && defined(TODO)
         case GraphicsBackendType::Direct3D12:
             if (GraphicsDevice_DX12::IsAvailable())
             {
@@ -74,7 +74,7 @@ namespace Alimer
             break;
 #endif
 
-#if defined(ALIMER_VULKAN)
+#if defined(ALIMER_VULKAN) && defined(TODO)
         case GraphicsBackendType::Vulkan:
             if (IsVulkanBackendAvailable())
             {
@@ -90,9 +90,9 @@ namespace Alimer
         return nullptr;
     }
 
-    static PipelineStateDesc PipelineStateDesc_Defaults(const PipelineStateDesc* desc)
+    static RenderPipelineDescriptor RenderPipelineDescriptor_Defaults(const RenderPipelineDescriptor* desc)
     {
-        PipelineStateDesc def = *desc;
+        RenderPipelineDescriptor def = *desc;
 
         uint32_t autoOffset[kMaxVertexBufferBindings] = {};
 
@@ -131,10 +131,10 @@ namespace Alimer
         return def;
     }
 
-    bool GraphicsDevice::CreatePipelineState(const PipelineStateDesc* descriptor, PipelineState* pipelineState)
+    bool GraphicsDevice::CreateRenderPipeline(const RenderPipelineDescriptor* descriptor, PipelineState* pipelineState)
     {
-        PipelineStateDesc descDef = PipelineStateDesc_Defaults(descriptor);
-        return CreatePipelineStateCore(&descDef, pipelineState);
+        RenderPipelineDescriptor descDef = RenderPipelineDescriptor_Defaults(descriptor);
+        return CreateRenderPipelineCore(&descDef, pipelineState);
     }
 
     bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const

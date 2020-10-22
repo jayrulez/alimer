@@ -111,27 +111,96 @@ namespace Alimer
 
             return _flag;
         }
-        constexpr uint32_t _ParseColorWriteMask(uint32_t value)
+
+        /* BlendState */
+        constexpr D3D11_BLEND _ConvertBlend(BlendFactor value)
         {
-            uint32_t _flag = 0;
-
-            if (value == D3D11_COLOR_WRITE_ENABLE_ALL)
+            switch (value)
             {
-                return D3D11_COLOR_WRITE_ENABLE_ALL;
+            case BlendFactor::Zero:
+                return D3D11_BLEND_ZERO;
+            case BlendFactor::One:
+                return D3D11_BLEND_ONE;
+            case BlendFactor::SourceColor:
+                return D3D11_BLEND_SRC_COLOR;
+            case BlendFactor::OneMinusSourceColor:
+                return D3D11_BLEND_INV_SRC_COLOR;
+            case BlendFactor::SourceAlpha:
+                return D3D11_BLEND_SRC_ALPHA;
+            case BlendFactor::OneMinusSourceAlpha:
+                return D3D11_BLEND_INV_SRC_ALPHA;
+            case BlendFactor::DestinationColor:
+                return D3D11_BLEND_DEST_COLOR;
+            case BlendFactor::OneMinusDestinationColor:
+                return D3D11_BLEND_INV_DEST_COLOR;
+            case BlendFactor::DestinationAlpha:
+                return D3D11_BLEND_DEST_ALPHA;
+            case BlendFactor::OneMinusDestinationAlpha:
+                return D3D11_BLEND_INV_DEST_ALPHA;
+            case BlendFactor::SourceAlphaSaturated:
+                return D3D11_BLEND_SRC_ALPHA_SAT;
+            case BlendFactor::BlendColor:
+                //case BlendFactor::BlendAlpha:
+                return D3D11_BLEND_BLEND_FACTOR;
+            case BlendFactor::OneMinusBlendColor:
+                //case BlendFactor::OneMinusBlendAlpha:
+                return D3D11_BLEND_INV_BLEND_FACTOR;
+            case BlendFactor::Source1Color:
+                return D3D11_BLEND_SRC1_COLOR;
+            case BlendFactor::OneMinusSource1Color:
+                return D3D11_BLEND_INV_SRC1_COLOR;
+            case BlendFactor::Source1Alpha:
+                return D3D11_BLEND_SRC1_ALPHA;
+            case BlendFactor::OneMinusSource1Alpha:
+                return D3D11_BLEND_INV_SRC1_ALPHA;
+            default:
+                ALIMER_UNREACHABLE();
+                return D3D11_BLEND_ZERO;
             }
-            else
-            {
-                if (value & COLOR_WRITE_ENABLE_RED)
-                    _flag |= D3D11_COLOR_WRITE_ENABLE_RED;
-                if (value & COLOR_WRITE_ENABLE_GREEN)
-                    _flag |= D3D11_COLOR_WRITE_ENABLE_GREEN;
-                if (value & COLOR_WRITE_ENABLE_BLUE)
-                    _flag |= D3D11_COLOR_WRITE_ENABLE_BLUE;
-                if (value & COLOR_WRITE_ENABLE_ALPHA)
-                    _flag |= D3D11_COLOR_WRITE_ENABLE_ALPHA;
-            }
+        }
 
-            return _flag;
+        constexpr D3D11_BLEND_OP _ConvertBlendOp(BlendOperation value)
+        {
+            switch (value)
+            {
+            case BlendOperation::Add:
+                return D3D11_BLEND_OP_ADD;
+            case BlendOperation::Subtract:
+                return D3D11_BLEND_OP_SUBTRACT;
+            case BlendOperation::ReverseSubtract:
+                return D3D11_BLEND_OP_REV_SUBTRACT;
+            case BlendOperation::Min:
+                return D3D11_BLEND_OP_MIN;
+            case BlendOperation::Max:
+                return D3D11_BLEND_OP_MAX;
+            default:
+                ALIMER_UNREACHABLE();
+                return D3D11_BLEND_OP_ADD;
+            }
+        }
+
+        constexpr uint8_t _ConvertColorWriteMask(ColorWriteMask writeMask)
+        {
+            static_assert(static_cast<D3D11_COLOR_WRITE_ENABLE>(ColorWriteMask::Red) == D3D11_COLOR_WRITE_ENABLE_RED, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D11_COLOR_WRITE_ENABLE>(ColorWriteMask::Green) == D3D11_COLOR_WRITE_ENABLE_GREEN, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D11_COLOR_WRITE_ENABLE>(ColorWriteMask::Blue) == D3D11_COLOR_WRITE_ENABLE_BLUE, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D11_COLOR_WRITE_ENABLE>(ColorWriteMask::Alpha) == D3D11_COLOR_WRITE_ENABLE_ALPHA, "ColorWriteMask values must match");
+            return static_cast<uint8_t>(writeMask);
+        }
+
+        D3D11_RENDER_TARGET_BLEND_DESC1 _ConvertColorAttachment(const ColorAttachmentDescriptor* descriptor) {
+            D3D11_RENDER_TARGET_BLEND_DESC1 blendDesc;
+            blendDesc.BlendEnable = descriptor->blendEnable;
+            blendDesc.SrcBlend = _ConvertBlend(descriptor->srcColorBlendFactor);
+            blendDesc.DestBlend = _ConvertBlend(descriptor->dstColorBlendFactor);
+            blendDesc.BlendOp = _ConvertBlendOp(descriptor->colorBlendOp);
+            blendDesc.SrcBlendAlpha = _ConvertBlend(descriptor->srcAlphaBlendFactor);
+            blendDesc.DestBlendAlpha = _ConvertBlend(descriptor->dstAlphaBlendFactor);
+            blendDesc.BlendOpAlpha = _ConvertBlendOp(descriptor->alphaBlendOp);
+            blendDesc.RenderTargetWriteMask = _ConvertColorWriteMask(descriptor->colorWriteMask);
+            blendDesc.LogicOpEnable = false;
+            blendDesc.LogicOp = D3D11_LOGIC_OP_NOOP;
+            return blendDesc;
         }
 
         constexpr D3D11_FILTER_TYPE _ConvertFilterType(FilterMode filter)
@@ -172,20 +241,19 @@ namespace Alimer
         {
             switch (value)
             {
-            case SamplerAddressMode::ClampToEdge:
-                return D3D11_TEXTURE_ADDRESS_CLAMP;
-                //case SamplerAddressMode::MirrorClampToEdge:
-                //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
-            case SamplerAddressMode::Repeat:
-                return D3D11_TEXTURE_ADDRESS_WRAP;
-            case SamplerAddressMode::MirrorRepeat:
+            case SamplerAddressMode::Mirror:
                 return D3D11_TEXTURE_ADDRESS_MIRROR;
-            case SamplerAddressMode::ClampToBorder:
-                return D3D11_TEXTURE_ADDRESS_BORDER;
-            default:
+            case SamplerAddressMode::Clamp:
                 return D3D11_TEXTURE_ADDRESS_CLAMP;
+            case SamplerAddressMode::Border:
+                return D3D11_TEXTURE_ADDRESS_BORDER;
+            case SamplerAddressMode::MirrorOnce:
+                return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+
+            case SamplerAddressMode::Wrap:
+            default:
+                return D3D11_TEXTURE_ADDRESS_WRAP;
             }
-            return D3D11_TEXTURE_ADDRESS_CLAMP;
         }
 
         constexpr D3D11_COMPARISON_FUNC _ConvertComparisonFunc(CompareFunction value)
@@ -262,70 +330,7 @@ namespace Alimer
             }
             return D3D11_STENCIL_OP_KEEP;
         }
-        constexpr D3D11_BLEND _ConvertBlend(BlendFactor value)
-        {
-            switch (value)
-            {
-            case BlendFactor::Zero:
-                return D3D11_BLEND_ZERO;
-            case BlendFactor::One:
-                return D3D11_BLEND_ONE;
-            case BlendFactor::SourceColor:
-                return D3D11_BLEND_SRC_COLOR;
-            case BlendFactor::OneMinusSourceColor:
-                return D3D11_BLEND_INV_SRC_COLOR;
-            case BlendFactor::SourceAlpha:
-                return D3D11_BLEND_SRC_ALPHA;
-            case BlendFactor::OneMinusSourceAlpha:
-                return D3D11_BLEND_INV_SRC_ALPHA;
-            case BlendFactor::DestinationColor:
-                return D3D11_BLEND_DEST_COLOR;
-            case BlendFactor::OneMinusDestinationColor:
-                return D3D11_BLEND_INV_DEST_COLOR;
-            case BlendFactor::DestinationAlpha:
-                return D3D11_BLEND_DEST_ALPHA;
-            case BlendFactor::OneMinusDestinationAlpha:
-                return D3D11_BLEND_INV_DEST_ALPHA;
-            case BlendFactor::SourceAlphaSaturated:
-                return D3D11_BLEND_SRC_ALPHA_SAT;
-            case BlendFactor::BlendColor:
-                //case BlendFactor::BlendAlpha:
-                return D3D11_BLEND_BLEND_FACTOR;
-            case BlendFactor::OneMinusBlendColor:
-                //case BlendFactor::OneMinusBlendAlpha:
-                return D3D11_BLEND_INV_BLEND_FACTOR;
-            case BlendFactor::Source1Color:
-                return D3D11_BLEND_SRC1_COLOR;
-            case BlendFactor::OneMinusSource1Color:
-                return D3D11_BLEND_INV_SRC1_COLOR;
-            case BlendFactor::Source1Alpha:
-                return D3D11_BLEND_SRC1_ALPHA;
-            case BlendFactor::OneMinusSource1Alpha:
-                return D3D11_BLEND_INV_SRC1_ALPHA;
-            default:
-                ALIMER_UNREACHABLE();
-                return D3D11_BLEND_ZERO;
-            }
-        }
-        constexpr D3D11_BLEND_OP _ConvertBlendOp(BlendOperation value)
-        {
-            switch (value)
-            {
-            case BlendOperation::Add:
-                return D3D11_BLEND_OP_ADD;
-            case BlendOperation::Subtract:
-                return D3D11_BLEND_OP_SUBTRACT;
-            case BlendOperation::ReverseSubtract:
-                return D3D11_BLEND_OP_REV_SUBTRACT;
-            case BlendOperation::Min:
-                return D3D11_BLEND_OP_MIN;
-            case BlendOperation::Max:
-                return D3D11_BLEND_OP_MAX;
-            default:
-                ALIMER_UNREACHABLE();
-                return D3D11_BLEND_OP_ADD;
-            }
-        }
+        
         constexpr D3D11_USAGE _ConvertUsage(USAGE value)
         {
             switch (value)
@@ -1048,14 +1053,28 @@ namespace Alimer
         {
             ComPtr<ID3D11ComputeShader> resource;
         };
-        struct BlendState_DX11
+
+        struct Sampler_DX11 : public Sampler
         {
-            ComPtr<ID3D11BlendState> resource;
+            ID3D11SamplerState* handle;
+
+            ~Sampler_DX11() override
+            {
+            }
+
+            void Destroy() override
+            {
+            }
+
+#ifdef _DEBUG
+            void SetName(const std::string& newName) override
+            {
+                Sampler::SetName(newName);
+                handle->SetPrivateData(g_D3DDebugObjectName, (UINT)newName.length(), newName.c_str());
+            }
+#endif
         };
-        struct Sampler_DX11
-        {
-            ComPtr<ID3D11SamplerState> resource;
-        };
+
         struct Query_DX11
         {
             ComPtr<ID3D11Query> resource;
@@ -1065,31 +1084,31 @@ namespace Alimer
         {
             ID3D11RasterizerState* rasterizerState;
             ID3D11DepthStencilState* depthStencilState;
+            ID3D11BlendState1* blendState;
             ComPtr<ID3D11InputLayout> inputLayout;
             uint32_t vertexBufferStrides[kMaxVertexBufferBindings];
         };
+
+        /* New interface*/
+        const Buffer_DX11* to_internal(const GraphicsBuffer* param)
+        {
+            return static_cast<const Buffer_DX11*>(param);
+        }
+
+        const Sampler_DX11* to_internal(const Sampler* param)
+        {
+            return static_cast<const Sampler_DX11*>(param);
+        }
 
         Resource_DX11* to_internal(const GPUResource* param)
         {
             return static_cast<Resource_DX11*>(param->internal_state.get());
         }
 
-        const Buffer_DX11* to_internal(const GraphicsBuffer* param)
-        {
-            return static_cast<const Buffer_DX11*>(param);
-        }
 
         Texture_DX11* to_internal(const Texture* param)
         {
             return static_cast<Texture_DX11*>(param->internal_state.get());
-        }
-        BlendState_DX11* to_internal(const BlendState* param)
-        {
-            return static_cast<BlendState_DX11*>(param->internal_state.get());
-        }
-        Sampler_DX11* to_internal(const Sampler* param)
-        {
-            return static_cast<Sampler_DX11*>(param->internal_state.get());
         }
         Query_DX11* to_internal(const GPUQuery* param)
         {
@@ -1135,7 +1154,7 @@ namespace Alimer
             return;
 
         const PipelineState* pso = active_pso[cmd];
-        const PipelineStateDesc& desc = pso != nullptr ? pso->GetDesc() : PipelineStateDesc();
+        const RenderPipelineDescriptor& desc = pso != nullptr ? pso->GetDesc() : RenderPipelineDescriptor();
         auto internal_state = to_internal(pso);
 
         ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_cast<VertexShader_DX11*>(desc.vs->internal_state.get())->resource.Get();
@@ -1169,26 +1188,25 @@ namespace Alimer
             prev_gs[cmd] = gs;
         }
 
-        ID3D11BlendState* bs = desc.bs == nullptr ? nullptr : to_internal(desc.bs)->resource.Get();
-        if (bs != prev_bs[cmd] || desc.sampleMask != prev_samplemask[cmd] ||
-            blendFactor[cmd].x != prev_blendfactor[cmd].x ||
-            blendFactor[cmd].y != prev_blendfactor[cmd].y ||
-            blendFactor[cmd].z != prev_blendfactor[cmd].z ||
-            blendFactor[cmd].w != prev_blendfactor[cmd].w
+        if (internal_state->blendState != prev_bs[cmd]
+            || desc.sampleMask != prev_samplemask[cmd]
+            || blendFactor[cmd].x != prev_blendfactor[cmd].x
+            || blendFactor[cmd].y != prev_blendfactor[cmd].y
+            || blendFactor[cmd].z != prev_blendfactor[cmd].z
+            || blendFactor[cmd].w != prev_blendfactor[cmd].w
             )
         {
             const float fact[4] = { blendFactor[cmd].x, blendFactor[cmd].y, blendFactor[cmd].z, blendFactor[cmd].w };
-            deviceContexts[cmd]->OMSetBlendState(bs, fact, desc.sampleMask);
-            prev_bs[cmd] = bs;
+            deviceContexts[cmd]->OMSetBlendState(internal_state->blendState, fact, desc.sampleMask);
+            prev_bs[cmd] = internal_state->blendState;
             prev_blendfactor[cmd] = blendFactor[cmd];
             prev_samplemask[cmd] = desc.sampleMask;
         }
 
-        ID3D11RasterizerState* rs = internal_state->rasterizerState;
-        if (rs != prev_rs[cmd])
+        if (internal_state->rasterizerState != prev_rs[cmd])
         {
-            deviceContexts[cmd]->RSSetState(rs);
-            prev_rs[cmd] = rs;
+            deviceContexts[cmd]->RSSetState(internal_state->rasterizerState);
+            prev_rs[cmd] = internal_state->rasterizerState;
         }
 
         ID3D11DepthStencilState* dss = internal_state->depthStencilState;
@@ -1454,8 +1472,7 @@ namespace Alimer
         CreateBackBufferResources();
 
         emptyresource = std::make_shared<EmptyResourceHandle>();
-
-        //wiBackLog::post("Created GraphicsDevice_DX11");
+        LOGI("Direct3D11 Graphics Device created");
     }
 
     GraphicsDevice_DX11::~GraphicsDevice_DX11()
@@ -1463,6 +1480,7 @@ namespace Alimer
         blendStateCache.clear();
         rasterizerStateCache.clear();
         depthStencilStateCache.clear();
+        samplerCache.clear();
     }
 
     void GraphicsDevice_DX11::CreateBackBufferResources()
@@ -1756,33 +1774,6 @@ namespace Alimer
 #endif
     }
 
-    bool GraphicsDevice_DX11::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
-    {
-        auto internal_state = std::make_shared<BlendState_DX11>();
-        pBlendState->internal_state = internal_state;
-
-        D3D11_BLEND_DESC desc;
-        desc.AlphaToCoverageEnable = pBlendStateDesc->AlphaToCoverageEnable;
-        desc.IndependentBlendEnable = pBlendStateDesc->IndependentBlendEnable;
-        for (int i = 0; i < 8; ++i)
-        {
-            desc.RenderTarget[i].BlendEnable = pBlendStateDesc->RenderTarget[i].BlendEnable;
-            desc.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlend);
-            desc.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlend);
-            desc.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOp);
-            desc.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].SrcBlendAlpha);
-            desc.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc->RenderTarget[i].DestBlendAlpha);
-            desc.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc->RenderTarget[i].BlendOpAlpha);
-            desc.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc->RenderTarget[i].RenderTargetWriteMask);
-        }
-
-        pBlendState->desc = *pBlendStateDesc;
-        HRESULT hr = device->CreateBlendState(&desc, &internal_state->resource);
-        assert(SUCCEEDED(hr));
-
-        return SUCCEEDED(hr);
-    }
-
     ID3D11DepthStencilState* GraphicsDevice_DX11::GetDepthStencilState(const DepthStencilStateDescriptor& descriptor)
     {
         std::size_t hash = std::hash<DepthStencilStateDescriptor>{}(descriptor);
@@ -1887,18 +1878,59 @@ namespace Alimer
         return it->second.Get();
     }
 
-    bool GraphicsDevice_DX11::CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState)
+    ID3D11BlendState1* GraphicsDevice_DX11::GetBlendState(const RenderPipelineDescriptor* descriptor)
     {
-        auto internal_state = std::make_shared<Sampler_DX11>();
-        pSamplerState->internal_state = internal_state;
+        size_t hash = 0;
+        Alimer::hash_combine(hash, descriptor->alphaToCoverageEnable);
+        for (uint32_t i = 0; i < kMaxColorAttachments; ++i)
+        {
+            Alimer::hash_combine(hash, descriptor->colorAttachments[i]);
+        }
+
+        auto it = blendStateCache.find(hash);
+        if (it == blendStateCache.end())
+        {
+            D3D11_BLEND_DESC1 d3d11Desc = {};
+            d3d11Desc.AlphaToCoverageEnable = descriptor->alphaToCoverageEnable;
+            d3d11Desc.IndependentBlendEnable = TRUE;
+
+            for (uint32_t i = 0; i < kMaxColorAttachments; ++i)
+            {
+                d3d11Desc.RenderTarget[i] = _ConvertColorAttachment(&descriptor->colorAttachments[i]);
+            }
+
+            ComPtr<ID3D11Device1> device1;
+            ThrowIfFailed(device.As(&device1));
+
+            ComPtr<ID3D11BlendState1> state;
+            ThrowIfFailed(device1->CreateBlendState1(&d3d11Desc, &state));
+
+            it = blendStateCache.insert({ hash, std::move(state) }).first;
+            return it->second.Get();
+        }
+
+        return it->second.Get();
+    }
+
+    RefPtr<Sampler> GraphicsDevice_DX11::CreateSampler(const SamplerDescriptor* descriptor)
+    {
+        size_t hash = std::hash<SamplerDescriptor>{}(*descriptor);
+
+        RefPtr<Sampler_DX11> result(new Sampler_DX11());
+        auto it = samplerCache.find(hash);
+        if (it != samplerCache.end())
+        {
+            result->handle = it->second.Get();
+            return result;
+        }
 
         D3D11_SAMPLER_DESC desc;
         desc.Filter = _ConvertFilter(
             descriptor->minFilter,
             descriptor->magFilter,
-            descriptor->mipmapFilter,
+            descriptor->mipFilter,
             descriptor->compareFunction != CompareFunction::Undefined,
-            descriptor->maxAnisotropy
+            descriptor->maxAnisotropy > 1
         );
 
         desc.AddressU = _ConvertAddressMode(descriptor->addressModeU);
@@ -1939,11 +1971,18 @@ namespace Alimer
         desc.MinLOD = descriptor->lodMinClamp;
         desc.MaxLOD = descriptor->lodMaxClamp;
 
-        HRESULT hr = device->CreateSamplerState(&desc, &internal_state->resource);
-        assert(SUCCEEDED(hr));
+        ComPtr<ID3D11SamplerState> state;
+        HRESULT hr = device->CreateSamplerState(&desc, state.GetAddressOf());
+        if (FAILED(hr))
+        {
+            return nullptr;
+        }
 
-        return SUCCEEDED(hr);
+        it = samplerCache.insert({ hash, std::move(state) }).first;
+        result->handle = it->second.Get();
+        return result;
     }
+
     bool GraphicsDevice_DX11::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
     {
         auto internal_state = std::make_shared<Query_DX11>();
@@ -1980,24 +2019,25 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-
-    bool GraphicsDevice_DX11::CreatePipelineStateCore(const PipelineStateDesc* desc, PipelineState* pso)
+    
+    bool GraphicsDevice_DX11::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX11>();
-        internal_state->rasterizerState = GetRasterizerState(desc->rasterizationState, 1u);
-        internal_state->depthStencilState = GetDepthStencilState(desc->depthStencilState);
+        internal_state->rasterizerState = GetRasterizerState(descriptor->rasterizationState, descriptor->sampleCount);
+        internal_state->depthStencilState = GetDepthStencilState(descriptor->depthStencilState);
+        internal_state->blendState = GetBlendState(descriptor);
 
         // TODO: Cache
         uint32_t inputElementsCount = 0;
         std::array<D3D11_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
         for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
         {
-            const VertexAttributeDescriptor* attrDesc = &desc->vertexDescriptor.attributes[i];
+            const VertexAttributeDescriptor* attrDesc = &descriptor->vertexDescriptor.attributes[i];
             if (attrDesc->format == VertexFormat::Invalid) {
                 break;
             }
 
-            const VertexBufferLayoutDescriptor* layoutDesc = &desc->vertexDescriptor.layouts[i];
+            const VertexBufferLayoutDescriptor* layoutDesc = &descriptor->vertexDescriptor.layouts[i];
 
             D3D11_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputElementsCount++];
             inputElementDesc->SemanticName = "ATTRIBUTE";
@@ -2020,13 +2060,12 @@ namespace Alimer
         HRESULT hr = device->CreateInputLayout(
             inputElements.data(),
             inputElementsCount,
-            desc->vs->code.data(),
-            desc->vs->code.size(),
+            descriptor->vs->code.data(),
+            descriptor->vs->code.size(),
             internal_state->inputLayout.ReleaseAndGetAddressOf());
 
         pso->internal_state = internal_state;
-
-        pso->desc = *desc;
+        pso->desc = *descriptor;
 
         return true;
     }
@@ -3069,30 +3108,30 @@ namespace Alimer
 
     void GraphicsDevice_DX11::BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd)
     {
-        if (sampler != nullptr && sampler->IsValid())
+        if (sampler != nullptr)
         {
             auto internal_state = to_internal(sampler);
-            ID3D11SamplerState* SAM = internal_state->resource.Get();
+            ID3D11SamplerState* state = internal_state->handle;
 
             switch (stage)
             {
             case ShaderStage::Vertex:
-                deviceContexts[cmd]->VSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->VSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Hull:
-                deviceContexts[cmd]->HSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->HSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Domain:
-                deviceContexts[cmd]->DSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->DSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Geometry:
-                deviceContexts[cmd]->GSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->GSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Fragment:
-                deviceContexts[cmd]->PSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->PSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Compute:
-                deviceContexts[cmd]->CSSetSamplers(slot, 1, &SAM);
+                deviceContexts[cmd]->CSSetSamplers(slot, 1, &state);
                 break;
             case ShaderStage::Mesh:
             case ShaderStage::Amplification:

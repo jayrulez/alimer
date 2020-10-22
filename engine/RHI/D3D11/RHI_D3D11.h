@@ -91,9 +91,10 @@ namespace Alimer
 
         std::atomic<CommandList> cmd_count{ 0 };
 
-        std::unordered_map<size_t, ComPtr<ID3D11BlendState>> blendStateCache;
+        std::unordered_map<size_t, ComPtr<ID3D11BlendState1>> blendStateCache;
         std::unordered_map<size_t, ComPtr<ID3D11RasterizerState>> rasterizerStateCache;
         std::unordered_map<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStateCache;
+        std::unordered_map<size_t, ComPtr<ID3D11SamplerState>> samplerCache;
 
         struct EmptyResourceHandle {}; // only care about control-block
         std::shared_ptr<EmptyResourceHandle> emptyresource;
@@ -107,12 +108,13 @@ namespace Alimer
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
-        bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
         ID3D11DepthStencilState* GetDepthStencilState(const DepthStencilStateDescriptor& descriptor);
         ID3D11RasterizerState* GetRasterizerState(const RasterizationStateDescriptor& descriptor, uint32_t sampleCount);
-        bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
+        ID3D11BlendState1* GetBlendState(const RenderPipelineDescriptor* descriptor);
+
+        RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;

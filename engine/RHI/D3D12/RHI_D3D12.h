@@ -216,10 +216,9 @@ namespace Alimer
         bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
-        bool CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState) override;
-        bool CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState) override;
+        RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso) override;
+        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
         bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
         bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
