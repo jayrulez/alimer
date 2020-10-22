@@ -49,8 +49,18 @@ namespace Alimer
         PipelineState pipeline;
     };
 
+
+    /* TODO: Until we fix resource creation */
+    Shader* vertexShader;
+    Shader* pixelShader;
+    Texture* texture;
+    RefPtr<Sampler> sampler;
+
     HelloWorldApp::~HelloWorldApp()
     {
+        delete vertexShader;
+        delete pixelShader;
+        delete texture;
     }
 
     struct Vertex
@@ -60,24 +70,22 @@ namespace Alimer
         Float2 uv;
     };
 
-    /* TODO: Until we fix resource creation */
-    Shader vertexShader;
-    Shader pixelShader;
-    Texture texture;
-    RefPtr<Sampler> sampler;
 
     void HelloWorldApp::Initialize()
     {
         auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
-        graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", &vertexShader);
-        graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", &pixelShader);
+        vertexShader = new Shader();
+        pixelShader = new Shader();
+        graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", vertexShader);
+        graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", pixelShader);
 
         RenderPipelineDescriptor renderPipelineDesc = {};
-        renderPipelineDesc.vs = &vertexShader;
-        renderPipelineDesc.ps = &pixelShader;
+        renderPipelineDesc.vs = vertexShader;
+        renderPipelineDesc.ps = pixelShader;
         renderPipelineDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
         renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
         renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
+        renderPipelineDesc.colorAttachments[0].format = graphicsDevice->GetBackBufferFormat();
         /*renderPipelineDesc.colorAttachments[0].blendEnable = true;
         renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
         renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
@@ -94,17 +102,18 @@ namespace Alimer
         TextureDesc textureDesc = {};
         textureDesc.Width = 4;
         textureDesc.Height = 4;
-        textureDesc.Format = FORMAT_R8G8B8A8_UNORM;
+        textureDesc.format = PixelFormat::FORMAT_R8G8B8A8_UNORM;
         textureDesc.BindFlags = BIND_SHADER_RESOURCE;
         SubresourceData textureData = {};
         textureData.pSysMem = pixels;
-        textureData.SysMemPitch = 4u * graphicsDevice->GetFormatStride(textureDesc.Format);
-        graphicsDevice->CreateTexture(&textureDesc, &textureData, &texture);
+        textureData.SysMemPitch = 4u * graphicsDevice->GetFormatStride(textureDesc.format);
+        texture = new Texture();
+        graphicsDevice->CreateTexture(&textureDesc, &textureData, texture);
 
         SamplerDescriptor samplerDesc = {};
         samplerDesc.minFilter = FilterMode::Nearest;
         samplerDesc.magFilter = FilterMode::Nearest;
-        samplerDesc.mipFilter = FilterMode::Nearest;
+        samplerDesc.mipmapFilter = FilterMode::Nearest;
         sampler = graphicsDevice->CreateSampler(&samplerDesc);
 
         /*Vertex quadVertices[] =
@@ -206,7 +215,7 @@ namespace Alimer
         graphicsDevice->BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0, commandList);
         graphicsDevice->BindPipelineState(&pipeline, commandList);
         graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0, commandList);
-        graphicsDevice->BindResource(ShaderStage::Fragment, &texture, 0, commandList);
+        graphicsDevice->BindResource(ShaderStage::Fragment, texture, 0, commandList);
         graphicsDevice->BindSampler(ShaderStage::Fragment, sampler, 0, commandList);
         graphicsDevice->DrawIndexed(36, 0, 0, commandList);
         /*context->PushDebugGroup("Frame");
@@ -223,8 +232,8 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        config.preferredBackendType = GraphicsBackendType::Direct3D11;
-        //config.preferredBackendType = GraphicsBackendType::Direct3D12;
+        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
+        config.preferredBackendType = GraphicsBackendType::Direct3D12;
         //config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";
         //config.fullscreen = true;

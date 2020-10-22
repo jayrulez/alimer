@@ -180,7 +180,6 @@ namespace Alimer
 
         std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
         std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[kCommanstListCount];
-        size_t prev_pipeline_hash[kCommanstListCount] = {};
         const PipelineState* active_pso[kCommanstListCount] = {};
         const Shader* active_cs[kCommanstListCount] = {};
         const RaytracingPipelineState* active_rt[kCommanstListCount] = {};

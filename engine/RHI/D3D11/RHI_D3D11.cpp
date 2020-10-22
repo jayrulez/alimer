@@ -247,8 +247,8 @@ namespace Alimer
                 return D3D11_TEXTURE_ADDRESS_CLAMP;
             case SamplerAddressMode::Border:
                 return D3D11_TEXTURE_ADDRESS_BORDER;
-            case SamplerAddressMode::MirrorOnce:
-                return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+            //case SamplerAddressMode::MirrorOnce:
+            //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
 
             case SamplerAddressMode::Wrap:
             default:
@@ -372,7 +372,7 @@ namespace Alimer
             desc.Width = pDesc->Width;
             desc.MipLevels = pDesc->MipLevels;
             desc.ArraySize = pDesc->ArraySize;
-            desc.Format = D3DConvertPixelFormat(pDesc->format);
+            desc.Format = PixelFormatToDXGIFormat(pDesc->format);
             desc.Usage = _ConvertUsage(pDesc->Usage);
             desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
             desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
@@ -387,7 +387,7 @@ namespace Alimer
             desc.Height = pDesc->Height;
             desc.MipLevels = pDesc->MipLevels;
             desc.ArraySize = pDesc->ArraySize;
-            desc.Format = D3DConvertPixelFormat(pDesc->format);
+            desc.Format = PixelFormatToDXGIFormat(pDesc->format);
             desc.SampleDesc.Count = pDesc->SampleCount;
             desc.SampleDesc.Quality = 0;
             desc.Usage = _ConvertUsage(pDesc->Usage);
@@ -404,7 +404,7 @@ namespace Alimer
             desc.Height = pDesc->Height;
             desc.Depth = pDesc->Depth;
             desc.MipLevels = pDesc->MipLevels;
-            desc.Format = D3DConvertPixelFormat(pDesc->format);
+            desc.Format = PixelFormatToDXGIFormat(pDesc->format);
             desc.Usage = _ConvertUsage(pDesc->Usage);
             desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
             desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
@@ -1012,7 +1012,7 @@ namespace Alimer
             DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
             swapChainDesc.Width = RESOLUTIONWIDTH;
             swapChainDesc.Height = RESOLUTIONHEIGHT;
-            swapChainDesc.Format = D3DConvertPixelFormat(GetBackBufferFormat());
+            swapChainDesc.Format = PixelFormatToDXGIFormat(GetBackBufferFormat());
             swapChainDesc.Stereo = false;
             swapChainDesc.SampleDesc.Count = 1; // Don't use multi-sampling.
             swapChainDesc.SampleDesc.Quality = 0;
@@ -1289,7 +1289,7 @@ namespace Alimer
             SafeRelease(renderTargetView);
             SafeRelease(backBufferTexture);
 
-            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, D3DConvertPixelFormat(GetBackBufferFormat()), 0);
+            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, PixelFormatToDXGIFormat(GetBackBufferFormat()), 0);
             assert(SUCCEEDED(hr));
 
             CreateBackBufferResources();
@@ -1700,7 +1700,7 @@ namespace Alimer
         desc.Filter = _ConvertFilter(
             descriptor->minFilter,
             descriptor->magFilter,
-            descriptor->mipFilter,
+            descriptor->mipmapFilter,
             descriptor->compareFunction != CompareFunction::Undefined,
             descriptor->maxAnisotropy > 1
         );
@@ -1877,7 +1877,7 @@ namespace Alimer
                 srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                srv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
+                srv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -1996,7 +1996,7 @@ namespace Alimer
                 uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                uav_desc.Format = D3DConvertPixelFormat(texture->desc.format);
+                uav_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -2076,7 +2076,7 @@ namespace Alimer
                 rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                rtv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
+                rtv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -2172,7 +2172,7 @@ namespace Alimer
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
                 break;
             default:
-                dsv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
+                dsv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -2280,7 +2280,7 @@ namespace Alimer
             {
                 // This is a Typed Buffer
                 uint32_t stride = GetFormatStride(desc.format);
-                srv_desc.Format = D3DConvertPixelFormat(desc.format);
+                srv_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
                 srv_desc.Buffer.FirstElement = (UINT)offset / stride;
                 srv_desc.Buffer.NumElements = Alimer::Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
@@ -2332,7 +2332,7 @@ namespace Alimer
             {
                 // This is a Typed Buffer
                 uint32_t stride = GetFormatStride(desc.format);
-                uav_desc.Format = D3DConvertPixelFormat(desc.format);
+                uav_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 uav_desc.Buffer.FirstElement = (UINT)offset / stride;
                 uav_desc.Buffer.NumElements = Alimer::Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
             }
@@ -2685,7 +2685,7 @@ namespace Alimer
                             if (src_counter == dst_counter)
                             {
                                 auto src_internal = to_internal(src.texture);
-                                deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, D3DConvertPixelFormat(attachment.texture->desc.format));
+                                deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, PixelFormatToDXGIFormat(attachment.texture->desc.format));
                                 break;
                             }
                             src_counter++;

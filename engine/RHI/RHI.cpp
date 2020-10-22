@@ -39,7 +39,7 @@ namespace Alimer
     {
         if (backendType == GraphicsBackendType::Count)
         {
-#if defined(ALIMER_D3D12) && defined(TODO)
+#if defined(ALIMER_D3D12) 
             if (GraphicsDevice_DX12::IsAvailable())
                 backendType = GraphicsBackendType::Direct3D12;
 #endif
@@ -56,7 +56,7 @@ namespace Alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_D3D12) && defined(TODO)
+#if defined(ALIMER_D3D12)
         case GraphicsBackendType::Direct3D12:
             if (GraphicsDevice_DX12::IsAvailable())
             {

@@ -157,7 +157,7 @@ namespace Alimer
         Alpha = 0x00000008,
         All = 0x0000000F,
 	};
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(ColorWriteMask, uint32);
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(ColorWriteMask, uint32_t);
 
     enum class FrontFace : uint32_t
     {
@@ -191,8 +191,7 @@ namespace Alimer
         Wrap,
         Mirror,
         Clamp,
-        Border,
-        MirrorOnce,
+        Border
     };
 
 	enum class FilterMode : uint32_t
@@ -478,7 +477,7 @@ namespace Alimer
 	{
         FilterMode magFilter = FilterMode::Linear;
         FilterMode minFilter = FilterMode::Linear;
-        FilterMode mipFilter = FilterMode::Linear;
+        FilterMode mipmapFilter = FilterMode::Linear;
         SamplerAddressMode addressModeU = SamplerAddressMode::Wrap;
         SamplerAddressMode addressModeV = SamplerAddressMode::Wrap;
         SamplerAddressMode addressModeW = SamplerAddressMode::Wrap;
@@ -1205,7 +1204,7 @@ namespace std
             std::size_t hash = 0;
             Alimer::hash_combine(hash, (uint32_t)desc.magFilter);
             Alimer::hash_combine(hash, (uint32_t)desc.minFilter);
-            Alimer::hash_combine(hash, (uint32_t)desc.mipFilter);
+            Alimer::hash_combine(hash, (uint32_t)desc.mipmapFilter);
             Alimer::hash_combine(hash, (uint32_t)desc.addressModeU);
             Alimer::hash_combine(hash, (uint32_t)desc.addressModeV);
             Alimer::hash_combine(hash, (uint32_t)desc.addressModeW);

@@ -173,7 +173,7 @@ namespace Alimer
         }
     }
 
-    constexpr DXGI_FORMAT D3DConvertPixelFormat(PixelFormat value)
+    constexpr DXGI_FORMAT PixelFormatToDXGIFormat(PixelFormat value)
     {
         switch (value)
         {

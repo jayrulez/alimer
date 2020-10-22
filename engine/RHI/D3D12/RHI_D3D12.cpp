@@ -56,29 +56,6 @@ namespace Alimer
     {
         // Engine -> Native converters
 
-        inline uint32_t _ParseColorWriteMask(uint32_t value)
-        {
-            uint32_t _flag = 0;
-
-            if (value == D3D12_COLOR_WRITE_ENABLE_ALL)
-            {
-                return D3D12_COLOR_WRITE_ENABLE_ALL;
-            }
-            else
-            {
-                if (value & COLOR_WRITE_ENABLE_RED)
-                    _flag |= D3D12_COLOR_WRITE_ENABLE_RED;
-                if (value & COLOR_WRITE_ENABLE_GREEN)
-                    _flag |= D3D12_COLOR_WRITE_ENABLE_GREEN;
-                if (value & COLOR_WRITE_ENABLE_BLUE)
-                    _flag |= D3D12_COLOR_WRITE_ENABLE_BLUE;
-                if (value & COLOR_WRITE_ENABLE_ALPHA)
-                    _flag |= D3D12_COLOR_WRITE_ENABLE_ALPHA;
-            }
-
-            return _flag;
-        }
-
         constexpr D3D12_FILTER_TYPE _ConvertFilterType(FilterMode filter)
         {
             switch (filter)
@@ -117,21 +94,22 @@ namespace Alimer
         {
             switch (value)
             {
-            case SamplerAddressMode::ClampToEdge:
-                return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-                //case SamplerAddressMode::MirrorClampToEdge:
-                //    return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
-            case SamplerAddressMode::Repeat:
-                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-            case SamplerAddressMode::MirrorRepeat:
+            case SamplerAddressMode::Mirror:
                 return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
-            case SamplerAddressMode::ClampToBorder:
-                return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-            default:
+
+            case SamplerAddressMode::Clamp:
                 return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+            case SamplerAddressMode::Border:
+                return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+            //case SamplerAddressMode::MirrorOnce:
+            //    return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+
+            case SamplerAddressMode::Wrap:
+            default:
+                return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
             }
-            return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         }
+
         constexpr D3D12_COMPARISON_FUNC _ConvertComparisonFunc(CompareFunction value)
         {
             switch (value)
@@ -271,6 +249,15 @@ namespace Alimer
                 return D3D12_BLEND_OP_ADD;
             }
         }
+        constexpr uint8_t _ConvertColorWriteMask(ColorWriteMask writeMask)
+        {
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Red) == D3D12_COLOR_WRITE_ENABLE_RED, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Green) == D3D12_COLOR_WRITE_ENABLE_GREEN, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Blue) == D3D12_COLOR_WRITE_ENABLE_BLUE, "ColorWriteMask values must match");
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Alpha) == D3D12_COLOR_WRITE_ENABLE_ALPHA, "ColorWriteMask values must match");
+            return static_cast<uint8_t>(writeMask);
+        }
+
         constexpr D3D12_INPUT_CLASSIFICATION _ConvertInputClassification(InputStepMode value)
         {
             switch (value)
@@ -283,211 +270,6 @@ namespace Alimer
                 ALIMER_UNREACHABLE();
                 return D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
             }
-        }
-        constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
-        {
-            switch (value)
-            {
-            case FORMAT_UNKNOWN:
-                return DXGI_FORMAT_UNKNOWN;
-                break;
-            case FORMAT_R32G32B32A32_FLOAT:
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                break;
-            case FORMAT_R32G32B32A32_UINT:
-                return DXGI_FORMAT_R32G32B32A32_UINT;
-                break;
-            case FORMAT_R32G32B32A32_SINT:
-                return DXGI_FORMAT_R32G32B32A32_SINT;
-                break;
-            case FORMAT_R32G32B32_FLOAT:
-                return DXGI_FORMAT_R32G32B32_FLOAT;
-                break;
-            case FORMAT_R32G32B32_UINT:
-                return DXGI_FORMAT_R32G32B32_UINT;
-                break;
-            case FORMAT_R32G32B32_SINT:
-                return DXGI_FORMAT_R32G32B32_SINT;
-                break;
-            case FORMAT_R16G16B16A16_FLOAT:
-                return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                break;
-            case FORMAT_R16G16B16A16_UNORM:
-                return DXGI_FORMAT_R16G16B16A16_UNORM;
-                break;
-            case FORMAT_R16G16B16A16_UINT:
-                return DXGI_FORMAT_R16G16B16A16_UINT;
-                break;
-            case FORMAT_R16G16B16A16_SNORM:
-                return DXGI_FORMAT_R16G16B16A16_SNORM;
-                break;
-            case FORMAT_R16G16B16A16_SINT:
-                return DXGI_FORMAT_R16G16B16A16_SINT;
-                break;
-            case FORMAT_R32G32_FLOAT:
-                return DXGI_FORMAT_R32G32_FLOAT;
-                break;
-            case FORMAT_R32G32_UINT:
-                return DXGI_FORMAT_R32G32_UINT;
-                break;
-            case FORMAT_R32G32_SINT:
-                return DXGI_FORMAT_R32G32_SINT;
-                break;
-            case FORMAT_R32G8X24_TYPELESS:
-                return DXGI_FORMAT_R32G8X24_TYPELESS;
-                break;
-            case FORMAT_D32_FLOAT_S8X24_UINT:
-                return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-                break;
-            case FORMAT_R10G10B10A2_UNORM:
-                return DXGI_FORMAT_R10G10B10A2_UNORM;
-                break;
-            case FORMAT_R10G10B10A2_UINT:
-                return DXGI_FORMAT_R10G10B10A2_UINT;
-                break;
-            case FORMAT_R11G11B10_FLOAT:
-                return DXGI_FORMAT_R11G11B10_FLOAT;
-                break;
-            case FORMAT_R8G8B8A8_UNORM:
-                return DXGI_FORMAT_R8G8B8A8_UNORM;
-                break;
-            case FORMAT_R8G8B8A8_UNORM_SRGB:
-                return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-                break;
-            case FORMAT_R8G8B8A8_UINT:
-                return DXGI_FORMAT_R8G8B8A8_UINT;
-                break;
-            case FORMAT_R8G8B8A8_SNORM:
-                return DXGI_FORMAT_R8G8B8A8_SNORM;
-                break;
-            case FORMAT_R8G8B8A8_SINT:
-                return DXGI_FORMAT_R8G8B8A8_SINT;
-                break;
-            case FORMAT_R16G16_FLOAT:
-                return DXGI_FORMAT_R16G16_FLOAT;
-                break;
-            case FORMAT_R16G16_UNORM:
-                return DXGI_FORMAT_R16G16_UNORM;
-                break;
-            case FORMAT_R16G16_UINT:
-                return DXGI_FORMAT_R16G16_UINT;
-                break;
-            case FORMAT_R16G16_SNORM:
-                return DXGI_FORMAT_R16G16_SNORM;
-                break;
-            case FORMAT_R16G16_SINT:
-                return DXGI_FORMAT_R16G16_SINT;
-                break;
-            case FORMAT_R32_TYPELESS:
-                return DXGI_FORMAT_R32_TYPELESS;
-                break;
-            case FORMAT_D32_FLOAT:
-                return DXGI_FORMAT_D32_FLOAT;
-                break;
-            case FORMAT_R32_FLOAT:
-                return DXGI_FORMAT_R32_FLOAT;
-                break;
-            case FORMAT_R32_UINT:
-                return DXGI_FORMAT_R32_UINT;
-                break;
-            case FORMAT_R32_SINT:
-                return DXGI_FORMAT_R32_SINT;
-                break;
-            case FORMAT_R8G8_UNORM:
-                return DXGI_FORMAT_R8G8_UNORM;
-                break;
-            case FORMAT_R8G8_UINT:
-                return DXGI_FORMAT_R8G8_UINT;
-                break;
-            case FORMAT_R8G8_SNORM:
-                return DXGI_FORMAT_R8G8_SNORM;
-                break;
-            case FORMAT_R8G8_SINT:
-                return DXGI_FORMAT_R8G8_SINT;
-                break;
-            case FORMAT_R16_TYPELESS:
-                return DXGI_FORMAT_R16_TYPELESS;
-                break;
-            case FORMAT_R16_FLOAT:
-                return DXGI_FORMAT_R16_FLOAT;
-                break;
-            case FORMAT_D16_UNORM:
-                return DXGI_FORMAT_D16_UNORM;
-                break;
-            case FORMAT_R16_UNORM:
-                return DXGI_FORMAT_R16_UNORM;
-                break;
-            case FORMAT_R16_UINT:
-                return DXGI_FORMAT_R16_UINT;
-                break;
-            case FORMAT_R16_SNORM:
-                return DXGI_FORMAT_R16_SNORM;
-                break;
-            case FORMAT_R16_SINT:
-                return DXGI_FORMAT_R16_SINT;
-                break;
-            case FORMAT_R8_UNORM:
-                return DXGI_FORMAT_R8_UNORM;
-                break;
-            case FORMAT_R8_UINT:
-                return DXGI_FORMAT_R8_UINT;
-                break;
-            case FORMAT_R8_SNORM:
-                return DXGI_FORMAT_R8_SNORM;
-                break;
-            case FORMAT_R8_SINT:
-                return DXGI_FORMAT_R8_SINT;
-                break;
-            case FORMAT_BC1_UNORM:
-                return DXGI_FORMAT_BC1_UNORM;
-                break;
-            case FORMAT_BC1_UNORM_SRGB:
-                return DXGI_FORMAT_BC1_UNORM_SRGB;
-                break;
-            case FORMAT_BC2_UNORM:
-                return DXGI_FORMAT_BC2_UNORM;
-                break;
-            case FORMAT_BC2_UNORM_SRGB:
-                return DXGI_FORMAT_BC2_UNORM_SRGB;
-                break;
-            case FORMAT_BC3_UNORM:
-                return DXGI_FORMAT_BC3_UNORM;
-                break;
-            case FORMAT_BC3_UNORM_SRGB:
-                return DXGI_FORMAT_BC3_UNORM_SRGB;
-                break;
-            case FORMAT_BC4_UNORM:
-                return DXGI_FORMAT_BC4_UNORM;
-                break;
-            case FORMAT_BC4_SNORM:
-                return DXGI_FORMAT_BC4_SNORM;
-                break;
-            case FORMAT_BC5_UNORM:
-                return DXGI_FORMAT_BC5_UNORM;
-                break;
-            case FORMAT_BC5_SNORM:
-                return DXGI_FORMAT_BC5_SNORM;
-                break;
-            case FORMAT_B8G8R8A8_UNORM:
-                return DXGI_FORMAT_B8G8R8A8_UNORM;
-                break;
-            case FORMAT_B8G8R8A8_UNORM_SRGB:
-                return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-                break;
-            case FORMAT_BC6H_UF16:
-                return DXGI_FORMAT_BC6H_UF16;
-                break;
-            case FORMAT_BC6H_SF16:
-                return DXGI_FORMAT_BC6H_SF16;
-                break;
-            case FORMAT_BC7_UNORM:
-                return DXGI_FORMAT_BC7_UNORM;
-                break;
-            case FORMAT_BC7_UNORM_SRGB:
-                return DXGI_FORMAT_BC7_UNORM_SRGB;
-                break;
-            }
-            return DXGI_FORMAT_UNKNOWN;
         }
         inline D3D12_SUBRESOURCE_DATA _ConvertSubresourceData(const SubresourceData& pInitialData)
         {
@@ -602,213 +384,6 @@ namespace Alimer
         }
 
         // Native -> Engine converters
-
-        constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
-        {
-            switch (value)
-            {
-            case DXGI_FORMAT_UNKNOWN:
-                return FORMAT_UNKNOWN;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_FLOAT:
-                return FORMAT_R32G32B32A32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_UINT:
-                return FORMAT_R32G32B32A32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_SINT:
-                return FORMAT_R32G32B32A32_SINT;
-                break;
-            case DXGI_FORMAT_R32G32B32_FLOAT:
-                return FORMAT_R32G32B32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32B32_UINT:
-                return FORMAT_R32G32B32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32B32_SINT:
-                return FORMAT_R32G32B32_SINT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_FLOAT:
-                return FORMAT_R16G16B16A16_FLOAT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_UNORM:
-                return FORMAT_R16G16B16A16_UNORM;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_UINT:
-                return FORMAT_R16G16B16A16_UINT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_SNORM:
-                return FORMAT_R16G16B16A16_SNORM;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_SINT:
-                return FORMAT_R16G16B16A16_SINT;
-                break;
-            case DXGI_FORMAT_R32G32_FLOAT:
-                return FORMAT_R32G32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32_UINT:
-                return FORMAT_R32G32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32_SINT:
-                return FORMAT_R32G32_SINT;
-                break;
-            case DXGI_FORMAT_R32G8X24_TYPELESS:
-                return FORMAT_R32G8X24_TYPELESS;
-                break;
-            case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-                return FORMAT_D32_FLOAT_S8X24_UINT;
-                break;
-            case DXGI_FORMAT_R10G10B10A2_UNORM:
-                return FORMAT_R10G10B10A2_UNORM;
-                break;
-            case DXGI_FORMAT_R10G10B10A2_UINT:
-                return FORMAT_R10G10B10A2_UINT;
-                break;
-            case DXGI_FORMAT_R11G11B10_FLOAT:
-                return FORMAT_R11G11B10_FLOAT;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UNORM:
-                return FORMAT_R8G8B8A8_UNORM;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-                return FORMAT_R8G8B8A8_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UINT:
-                return FORMAT_R8G8B8A8_UINT;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_SNORM:
-                return FORMAT_R8G8B8A8_SNORM;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_SINT:
-                return FORMAT_R8G8B8A8_SINT;
-                break;
-            case DXGI_FORMAT_R16G16_FLOAT:
-                return FORMAT_R16G16_FLOAT;
-                break;
-            case DXGI_FORMAT_R16G16_UNORM:
-                return FORMAT_R16G16_UNORM;
-                break;
-            case DXGI_FORMAT_R16G16_UINT:
-                return FORMAT_R16G16_UINT;
-                break;
-            case DXGI_FORMAT_R16G16_SNORM:
-                return FORMAT_R16G16_SNORM;
-                break;
-            case DXGI_FORMAT_R16G16_SINT:
-                return FORMAT_R16G16_SINT;
-                break;
-            case DXGI_FORMAT_R32_TYPELESS:
-                return FORMAT_R32_TYPELESS;
-                break;
-            case DXGI_FORMAT_D32_FLOAT:
-                return FORMAT_D32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32_FLOAT:
-                return FORMAT_R32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32_UINT:
-                return FORMAT_R32_UINT;
-                break;
-            case DXGI_FORMAT_R32_SINT:
-                return FORMAT_R32_SINT;
-                break;
-            case DXGI_FORMAT_R8G8_UNORM:
-                return FORMAT_R8G8_UNORM;
-                break;
-            case DXGI_FORMAT_R8G8_UINT:
-                return FORMAT_R8G8_UINT;
-                break;
-            case DXGI_FORMAT_R8G8_SNORM:
-                return FORMAT_R8G8_SNORM;
-                break;
-            case DXGI_FORMAT_R8G8_SINT:
-                return FORMAT_R8G8_SINT;
-                break;
-            case DXGI_FORMAT_R16_TYPELESS:
-                return FORMAT_R16_TYPELESS;
-                break;
-            case DXGI_FORMAT_R16_FLOAT:
-                return FORMAT_R16_FLOAT;
-                break;
-            case DXGI_FORMAT_D16_UNORM:
-                return FORMAT_D16_UNORM;
-                break;
-            case DXGI_FORMAT_R16_UNORM:
-                return FORMAT_R16_UNORM;
-                break;
-            case DXGI_FORMAT_R16_UINT:
-                return FORMAT_R16_UINT;
-                break;
-            case DXGI_FORMAT_R16_SNORM:
-                return FORMAT_R16_SNORM;
-                break;
-            case DXGI_FORMAT_R16_SINT:
-                return FORMAT_R16_SINT;
-                break;
-            case DXGI_FORMAT_R8_UNORM:
-                return FORMAT_R8_UNORM;
-                break;
-            case DXGI_FORMAT_R8_UINT:
-                return FORMAT_R8_UINT;
-                break;
-            case DXGI_FORMAT_R8_SNORM:
-                return FORMAT_R8_SNORM;
-                break;
-            case DXGI_FORMAT_R8_SINT:
-                return FORMAT_R8_SINT;
-                break;
-            case DXGI_FORMAT_BC1_UNORM:
-                return FORMAT_BC1_UNORM;
-                break;
-            case DXGI_FORMAT_BC1_UNORM_SRGB:
-                return FORMAT_BC1_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC2_UNORM:
-                return FORMAT_BC2_UNORM;
-                break;
-            case DXGI_FORMAT_BC2_UNORM_SRGB:
-                return FORMAT_BC2_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC3_UNORM:
-                return FORMAT_BC3_UNORM;
-                break;
-            case DXGI_FORMAT_BC3_UNORM_SRGB:
-                return FORMAT_BC3_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC4_UNORM:
-                return FORMAT_BC4_UNORM;
-                break;
-            case DXGI_FORMAT_BC4_SNORM:
-                return FORMAT_BC4_SNORM;
-                break;
-            case DXGI_FORMAT_BC5_UNORM:
-                return FORMAT_BC5_UNORM;
-                break;
-            case DXGI_FORMAT_BC5_SNORM:
-                return FORMAT_BC5_SNORM;
-                break;
-            case DXGI_FORMAT_B8G8R8A8_UNORM:
-                return FORMAT_B8G8R8A8_UNORM;
-                break;
-            case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-                return FORMAT_B8G8R8A8_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC6H_UF16:
-                return FORMAT_BC6H_UF16;
-                break;
-            case DXGI_FORMAT_BC6H_SF16:
-                return FORMAT_BC6H_SF16;
-                break;
-            case DXGI_FORMAT_BC7_UNORM:
-                return FORMAT_BC7_UNORM;
-                break;
-            case DXGI_FORMAT_BC7_UNORM_SRGB:
-                return FORMAT_BC7_UNORM_SRGB;
-                break;
-            }
-            return FORMAT_UNKNOWN;
-        }
-
         constexpr TextureDesc _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
         {
             TextureDesc retVal;
@@ -829,7 +404,7 @@ namespace Alimer
                 retVal.Depth = desc.DepthOrArraySize;
                 break;
             }
-            retVal.Format = _ConvertFormat_Inv(desc.Format);
+            retVal.format = PixelFormatFromDXGIFormat(desc.Format);
             retVal.Width = (uint32_t)desc.Width;
             retVal.Height = desc.Height;
             retVal.MipLevels = desc.MipLevels;
@@ -941,18 +516,24 @@ namespace Alimer
                 allocationhandler->destroylocker.unlock();
             }
         };
-        struct Sampler_DX12
+        struct Sampler_DX12 : public Sampler
         {
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
             D3D12_SAMPLER_DESC descriptor;
 
             ~Sampler_DX12()
             {
+                Destroy();
+            }
+
+            void Destroy() override
+            {
                 allocationhandler->destroylocker.lock();
                 uint64_t framecount = allocationhandler->framecount;
                 allocationhandler->destroylocker.unlock();
             }
         };
+
         struct Query_DX12
         {
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
@@ -1099,9 +680,9 @@ namespace Alimer
         {
             return static_cast<Texture_DX12*>(param->internal_state.get());
         }
-        Sampler_DX12* to_internal(const Sampler* param)
+        const Sampler_DX12* to_internal(const Sampler* param)
         {
-            return static_cast<Sampler_DX12*>(param->internal_state.get());
+            return static_cast<const Sampler_DX12*>(param);
         }
         Query_DX12* to_internal(const GPUQuery* param)
         {
@@ -1659,7 +1240,7 @@ namespace Alimer
                         dst.ptr += (heap.ringOffset + index) * device->sampler_descriptor_size;
 
                         const Sampler* sampler = SAM[x.BaseShaderRegister];
-                        if (sampler == nullptr || !sampler->IsValid())
+                        if (sampler == nullptr)
                         {
                             device->device->CreateSampler(&sampler_desc, dst);
                         }
@@ -1745,281 +1326,8 @@ namespace Alimer
             return;
 
         const PipelineState* pso = active_pso[cmd];
-        size_t pipeline_hash = prev_pipeline_hash[cmd];
-
-        auto internal_state = to_internal(pso);
-
-        ID3D12PipelineState* pipeline = nullptr;
-        auto it = pipelines_global.find(pipeline_hash);
-        if (it == pipelines_global.end())
-        {
-            for (auto& x : pipelines_worker[cmd])
-            {
-                if (pipeline_hash == x.first)
-                {
-                    pipeline = x.second.Get();
-                    break;
-                }
-            }
-
-            if (pipeline == nullptr)
-            {
-                struct PSO_STREAM
-                {
-                    CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
-                    CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-                    CD3DX12_PIPELINE_STATE_STREAM_HS HS;
-                    CD3DX12_PIPELINE_STATE_STREAM_DS DS;
-                    CD3DX12_PIPELINE_STATE_STREAM_GS GS;
-                    CD3DX12_PIPELINE_STATE_STREAM_PS PS;
-                    CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
-                    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
-                    CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
-                    CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
-                    CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
-                    CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE STRIP;
-                    CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSFormat;
-                    CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
-                    CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
-                    CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
-
-                    CD3DX12_PIPELINE_STATE_STREAM_MS MS;
-                    CD3DX12_PIPELINE_STATE_STREAM_AS AS;
-                } stream = {};
-
-                if (pso->desc.vs != nullptr)
-                {
-                    stream.VS = { pso->desc.vs->code.data(), pso->desc.vs->code.size() };
-                }
-                if (pso->desc.hs != nullptr)
-                {
-                    stream.HS = { pso->desc.hs->code.data(), pso->desc.hs->code.size() };
-                }
-                if (pso->desc.ds != nullptr)
-                {
-                    stream.DS = { pso->desc.ds->code.data(), pso->desc.ds->code.size() };
-                }
-                if (pso->desc.gs != nullptr)
-                {
-                    stream.GS = { pso->desc.gs->code.data(), pso->desc.gs->code.size() };
-                }
-                if (pso->desc.ps != nullptr)
-                {
-                    stream.PS = { pso->desc.ps->code.data(), pso->desc.ps->code.size() };
-                }
-
-                if (pso->desc.ms != nullptr)
-                {
-                    stream.MS = { pso->desc.ms->code.data(), pso->desc.ms->code.size() };
-                }
-                if (pso->desc.as != nullptr)
-                {
-                    stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
-                }
-
-                DepthStencilStateDescriptor depthStencilState = pso->desc.depthStencilState;
-                CD3DX12_DEPTH_STENCIL_DESC dss = {};
-                dss.DepthEnable = depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
-                dss.DepthWriteMask = depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-                dss.DepthFunc = _ConvertComparisonFunc(depthStencilState.depthCompare);
-                dss.StencilEnable = StencilTestEnabled(&depthStencilState) ? TRUE : FALSE;
-                dss.StencilReadMask = depthStencilState.stencilReadMask;
-                dss.StencilWriteMask = depthStencilState.stencilWriteMask;
-                dss.FrontFace = _ConvertStencilOpDesc(depthStencilState.stencilFront);
-                dss.BackFace = _ConvertStencilOpDesc(depthStencilState.stencilBack);
-                stream.DSS = dss;
-
-                BlendStateDesc pBlendStateDesc = pso->desc.bs != nullptr ? pso->desc.bs->GetDesc() : BlendStateDesc();
-                CD3DX12_BLEND_DESC bd = {};
-                bd.AlphaToCoverageEnable = pBlendStateDesc.AlphaToCoverageEnable;
-                bd.IndependentBlendEnable = pBlendStateDesc.IndependentBlendEnable;
-                for (int i = 0; i < 8; ++i)
-                {
-                    bd.RenderTarget[i].BlendEnable = pBlendStateDesc.RenderTarget[i].BlendEnable;
-                    bd.RenderTarget[i].SrcBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlend);
-                    bd.RenderTarget[i].DestBlend = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlend);
-                    bd.RenderTarget[i].BlendOp = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOp);
-                    bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].SrcBlendAlpha);
-                    bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(pBlendStateDesc.RenderTarget[i].DestBlendAlpha);
-                    bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(pBlendStateDesc.RenderTarget[i].BlendOpAlpha);
-                    bd.RenderTarget[i].RenderTargetWriteMask = _ParseColorWriteMask(pBlendStateDesc.RenderTarget[i].RenderTargetWriteMask);
-                }
-                stream.BD = bd;
-
-                // InputLayout
-                D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
-                std::array<D3D12_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
-                for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
-                {
-                    const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[i];
-                    if (attrDesc->format == VertexFormat::Invalid) {
-                        break;
-                    }
-
-                    const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[i];
-
-                    D3D12_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputLayoutDesc.NumElements++];
-                    inputElementDesc->SemanticName = "ATTRIBUTE";
-                    inputElementDesc->SemanticIndex = i;
-                    inputElementDesc->Format = D3DConvertVertexFormat(attrDesc->format);
-                    inputElementDesc->InputSlot = attrDesc->bufferIndex;
-                    inputElementDesc->AlignedByteOffset = attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
-                    if (layoutDesc->stepMode == InputStepMode::Vertex)
-                    {
-                        inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-                        inputElementDesc->InstanceDataStepRate = 0;
-                    }
-                    else
-                    {
-                        inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-                        inputElementDesc->InstanceDataStepRate = 1;
-                    }
-                }
-
-                inputLayoutDesc.pInputElementDescs = inputElements.data();
-                stream.IL = inputLayoutDesc;
-
-                DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
-                D3D12_RT_FORMAT_ARRAY formats = {};
-                formats.NumRenderTargets = 0;
-                DXGI_SAMPLE_DESC sampleDesc = {};
-                sampleDesc.Count = 1;
-                sampleDesc.Quality = 0;
-                if (active_renderpass[cmd] == nullptr)
-                {
-                    formats.NumRenderTargets = 1;
-                    formats.RTFormats[0] = _ConvertFormat(BACKBUFFER_FORMAT);
-                }
-                else
-                {
-                    for (auto& attachment : active_renderpass[cmd]->desc.attachments)
-                    {
-                        if (attachment.type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
-                            continue;
-
-                        switch (attachment.type)
-                        {
-                        case RenderPassAttachment::RENDERTARGET:
-                            switch (attachment.texture->desc.Format)
-                            {
-                            case FORMAT_R16_TYPELESS:
-                                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
-                                break;
-                            case FORMAT_R32_TYPELESS:
-                                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
-                                break;
-                            case FORMAT_R24G8_TYPELESS:
-                                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-                                break;
-                            case FORMAT_R32G8X24_TYPELESS:
-                                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
-                                break;
-                            default:
-                                formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
-                                break;
-                            }
-                            formats.NumRenderTargets++;
-                            break;
-                        case RenderPassAttachment::DEPTH_STENCIL:
-                            switch (attachment.texture->desc.Format)
-                            {
-                            case FORMAT_R16_TYPELESS:
-                                DSFormat = DXGI_FORMAT_D16_UNORM;
-                                break;
-                            case FORMAT_R32_TYPELESS:
-                                DSFormat = DXGI_FORMAT_D32_FLOAT;
-                                break;
-                            case FORMAT_R24G8_TYPELESS:
-                                DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-                                break;
-                            case FORMAT_R32G8X24_TYPELESS:
-                                DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-                                break;
-                            default:
-                                DSFormat = _ConvertFormat(attachment.texture->desc.Format);
-                                break;
-                            }
-                            break;
-                        default:
-                            assert(0);
-                            break;
-                        }
-
-                        sampleDesc.Count = attachment.texture->desc.SampleCount;
-                        sampleDesc.Quality = 0;
-                    }
-                }
-                stream.DSFormat = DSFormat;
-                stream.Formats = formats;
-                stream.SampleDesc = sampleDesc;
-                stream.SampleMask = pso->desc.sampleMask;
-
-                RasterizationStateDescriptor rasterizationState = pso->desc.rasterizationState;
-                CD3DX12_RASTERIZER_DESC rs = {};
-                rs.FillMode = D3D12_FILL_MODE_SOLID;
-                rs.CullMode = _ConvertCullMode(rasterizationState.cullMode);
-                rs.FrontCounterClockwise = (rasterizationState.frontFace == FrontFace::CCW) ? TRUE : FALSE;
-                rs.DepthBias = rasterizationState.depthBias;
-                rs.DepthBiasClamp = rasterizationState.depthBiasClamp;
-                rs.SlopeScaledDepthBias = rasterizationState.depthBiasSlopeScale;
-                rs.DepthClipEnable = rasterizationState.depthClipEnable;
-                rs.MultisampleEnable = (sampleDesc.Count > 1) ? TRUE : FALSE;
-                rs.AntialiasedLineEnable = FALSE;
-                rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && rasterizationState.conservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
-                rs.ForcedSampleCount = rasterizationState.forcedSampleCount;
-                stream.RS = rs;
-
-                switch (pso->desc.primitiveTopology)
-                {
-                case PrimitiveTopology::PointList:
-                    stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-                    break;
-                case PrimitiveTopology::LineList:
-                case PrimitiveTopology::LineStrip:
-                    stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-                    break;
-                case PrimitiveTopology::TriangleList:
-                case PrimitiveTopology::TriangleStrip:
-                    stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-                    break;
-                case PrimitiveTopology::PatchList:
-                    stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-                    break;
-                default:
-                    stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
-                    break;
-                }
-
-                stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-
-                if (pso->desc.rootSignature == nullptr)
-                {
-                    stream.pRootSignature = internal_state->rootSignature.Get();
-                }
-                else
-                {
-                    stream.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
-                }
-
-                D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
-                streamDesc.pPipelineStateSubobjectStream = &stream;
-                streamDesc.SizeInBytes = sizeof(stream);
-
-                ComPtr<ID3D12PipelineState> newpso;
-                HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&newpso));
-                assert(SUCCEEDED(hr));
-
-                pipelines_worker[cmd].push_back(std::make_pair(pipeline_hash, newpso));
-                pipeline = newpso.Get();
-            }
-        }
-        else
-        {
-            pipeline = it->second.Get();
-        }
-        assert(pipeline != nullptr);
-
-        GetDirectCommandList(cmd)->SetPipelineState(pipeline);
+        //auto internal_state = to_internal(pso);
+        //GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 
         if (prev_pt[cmd] != pso->desc.primitiveTopology)
         {
@@ -2256,7 +1564,7 @@ namespace Alimer
         DXGI_SWAP_CHAIN_DESC1 sd = {};
         sd.Width = RESOLUTIONWIDTH;
         sd.Height = RESOLUTIONHEIGHT;
-        sd.Format = _ConvertFormat(GetBackBufferFormat());
+        sd.Format = PixelFormatToDXGIFormat(GetBackBufferFormat());
         sd.Stereo = false;
         sd.SampleDesc.Count = 1; // Don't use multi-sampling.
         sd.SampleDesc.Quality = 0;
@@ -2588,7 +1896,7 @@ namespace Alimer
                 backBuffers[fr].Reset();
             }
 
-            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, PixelFormatToDXGIFormat(GetBackBufferFormat()), 0);
             assert(SUCCEEDED(hr));
 
             for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
@@ -2764,7 +2072,7 @@ namespace Alimer
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
         D3D12_RESOURCE_DESC desc;
-        desc.Format = _ConvertFormat(pDesc->Format);
+        desc.Format = PixelFormatToDXGIFormat(pDesc->format);
         desc.Width = pDesc->Width;
         desc.Height = pDesc->Height;
         desc.MipLevels = pDesc->MipLevels;
@@ -2777,7 +2085,7 @@ namespace Alimer
         if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
         {
             desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-            allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+            allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
             if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
             {
                 desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
@@ -2790,7 +2098,7 @@ namespace Alimer
         if (pDesc->BindFlags & BIND_RENDER_TARGET)
         {
             desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-            allocationDesc.Flags |= D3D12MA::ALLOCATION_FLAG_COMMITTED;
+            allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
         if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
         {
@@ -3242,19 +2550,10 @@ namespace Alimer
 #endif
     }
 
-    bool GraphicsDevice_DX12::CreateBlendState(const BlendStateDesc* pBlendStateDesc, BlendState* pBlendState)
+    RefPtr<Sampler> GraphicsDevice_DX12::CreateSampler(const SamplerDescriptor* descriptor)
     {
-        pBlendState->internal_state = allocationhandler;
-
-        pBlendState->desc = *pBlendStateDesc;
-        return true;
-    }
-
-    bool GraphicsDevice_DX12::CreateSampler(const SamplerDescriptor* descriptor, Sampler* pSamplerState)
-    {
-        auto internal_state = std::make_shared<Sampler_DX12>();
-        internal_state->allocationhandler = allocationhandler;
-        pSamplerState->internal_state = internal_state;
+        RefPtr<Sampler_DX12> result(new Sampler_DX12());
+        result->allocationhandler = allocationhandler;
 
         D3D12_SAMPLER_DESC desc;
         desc.Filter = _ConvertFilter(
@@ -3262,7 +2561,7 @@ namespace Alimer
             descriptor->magFilter,
             descriptor->mipmapFilter,
             descriptor->compareFunction != CompareFunction::Undefined,
-            descriptor->maxAnisotropy
+            descriptor->maxAnisotropy > 1
         );
         desc.AddressU = _ConvertAddressMode(descriptor->addressModeU);
         desc.AddressV = _ConvertAddressMode(descriptor->addressModeV);
@@ -3303,10 +2602,11 @@ namespace Alimer
         desc.MinLOD = descriptor->lodMinClamp;
         desc.MaxLOD = descriptor->lodMaxClamp;
 
-        internal_state->descriptor = desc;
+        result->descriptor = desc;
 
-        return true;
+        return result;
     }
+
     bool GraphicsDevice_DX12::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
     {
         auto internal_state = std::make_shared<Query_DX12>();
@@ -3353,30 +2653,17 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX12::CreatePipelineStateCore(const PipelineStateDesc* pDesc, PipelineState* pso)
+    bool GraphicsDevice_DX12::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX12>();
         internal_state->allocationhandler = allocationhandler;
         pso->internal_state = internal_state;
 
-        pso->desc = *pDesc;
+        pso->desc = *descriptor;
 
         pso->hash = 0;
-        Alimer::hash_combine(pso->hash, pDesc->ms);
-        Alimer::hash_combine(pso->hash, pDesc->as);
-        Alimer::hash_combine(pso->hash, pDesc->vs);
-        Alimer::hash_combine(pso->hash, pDesc->ps);
-        Alimer::hash_combine(pso->hash, pDesc->hs);
-        Alimer::hash_combine(pso->hash, pDesc->ds);
-        Alimer::hash_combine(pso->hash, pDesc->gs);
-        Alimer::hash_combine(pso->hash, pDesc->vertexDescriptor);
-        Alimer::hash_combine(pso->hash, pDesc->bs);
-        Alimer::hash_combine(pso->hash, pDesc->sampleMask);
-        Alimer::hash_combine(pso->hash, pDesc->rasterizationState);
-        Alimer::hash_combine(pso->hash, pDesc->depthStencilState);
-        Alimer::hash_combine(pso->hash, pDesc->primitiveTopology);
 
-        if (pDesc->rootSignature == nullptr)
+        if (descriptor->rootSignature == nullptr)
         {
             // Root signature comes from reflection data when there is no root signature specified:
 
@@ -3435,13 +2722,13 @@ namespace Alimer
                 }
             };
 
-            insert_shader(pDesc->ms);
-            insert_shader(pDesc->as);
-            insert_shader(pDesc->vs);
-            insert_shader(pDesc->hs);
-            insert_shader(pDesc->ds);
-            insert_shader(pDesc->gs);
-            insert_shader(pDesc->ps);
+            insert_shader(descriptor->ms);
+            insert_shader(descriptor->as);
+            insert_shader(descriptor->vs);
+            insert_shader(descriptor->hs);
+            insert_shader(descriptor->ds);
+            insert_shader(descriptor->gs);
+            insert_shader(descriptor->ps);
 
             std::vector<D3D12_ROOT_PARAMETER> params;
 
@@ -3483,12 +2770,281 @@ namespace Alimer
             }
             hr = device->CreateRootSignature(0, rootSigBlob->GetBufferPointer(), rootSigBlob->GetBufferSize(), IID_PPV_ARGS(&internal_state->rootSignature));
             assert(SUCCEEDED(hr));
-
-            return SUCCEEDED(hr);
         }
+
+        struct PSO_STREAM
+        {
+            CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pRootSignature;
+            CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+            CD3DX12_PIPELINE_STATE_STREAM_HS HS;
+            CD3DX12_PIPELINE_STATE_STREAM_DS DS;
+            CD3DX12_PIPELINE_STATE_STREAM_GS GS;
+            CD3DX12_PIPELINE_STATE_STREAM_PS PS;
+            CD3DX12_PIPELINE_STATE_STREAM_RASTERIZER RS;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL DSS;
+            CD3DX12_PIPELINE_STATE_STREAM_BLEND_DESC BD;
+            CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PT;
+            CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT IL;
+            CD3DX12_PIPELINE_STATE_STREAM_IB_STRIP_CUT_VALUE STRIP;
+            CD3DX12_PIPELINE_STATE_STREAM_DEPTH_STENCIL_FORMAT DSFormat;
+            CD3DX12_PIPELINE_STATE_STREAM_RENDER_TARGET_FORMATS Formats;
+            CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_DESC SampleDesc;
+            CD3DX12_PIPELINE_STATE_STREAM_SAMPLE_MASK SampleMask;
+
+            CD3DX12_PIPELINE_STATE_STREAM_MS MS;
+            CD3DX12_PIPELINE_STATE_STREAM_AS AS;
+        } stream = {};
+
+        if (pso->desc.vs != nullptr)
+        {
+            stream.VS = { pso->desc.vs->code.data(), pso->desc.vs->code.size() };
+        }
+        if (pso->desc.hs != nullptr)
+        {
+            stream.HS = { pso->desc.hs->code.data(), pso->desc.hs->code.size() };
+        }
+        if (pso->desc.ds != nullptr)
+        {
+            stream.DS = { pso->desc.ds->code.data(), pso->desc.ds->code.size() };
+        }
+        if (pso->desc.gs != nullptr)
+        {
+            stream.GS = { pso->desc.gs->code.data(), pso->desc.gs->code.size() };
+        }
+        if (pso->desc.ps != nullptr)
+        {
+            stream.PS = { pso->desc.ps->code.data(), pso->desc.ps->code.size() };
+        }
+
+        if (pso->desc.ms != nullptr)
+        {
+            stream.MS = { pso->desc.ms->code.data(), pso->desc.ms->code.size() };
+        }
+        if (pso->desc.as != nullptr)
+        {
+            stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
+        }
+
+        DepthStencilStateDescriptor depthStencilState = pso->desc.depthStencilState;
+        CD3DX12_DEPTH_STENCIL_DESC dss = {};
+        dss.DepthEnable = depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
+        dss.DepthWriteMask = depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+        dss.DepthFunc = _ConvertComparisonFunc(depthStencilState.depthCompare);
+        dss.StencilEnable = StencilTestEnabled(&depthStencilState) ? TRUE : FALSE;
+        dss.StencilReadMask = depthStencilState.stencilReadMask;
+        dss.StencilWriteMask = depthStencilState.stencilWriteMask;
+        dss.FrontFace = _ConvertStencilOpDesc(depthStencilState.stencilFront);
+        dss.BackFace = _ConvertStencilOpDesc(depthStencilState.stencilBack);
+        stream.DSS = dss;
+
+        CD3DX12_BLEND_DESC bd = {};
+        bd.AlphaToCoverageEnable = descriptor->alphaToCoverageEnable;
+        bd.IndependentBlendEnable = TRUE;
+        for (uint32_t i = 0; i < kMaxColorAttachments; ++i)
+        {
+            bd.RenderTarget[i].BlendEnable = descriptor->colorAttachments[i].blendEnable;
+            bd.RenderTarget[i].SrcBlend = _ConvertBlend(descriptor->colorAttachments[i].srcColorBlendFactor);
+            bd.RenderTarget[i].DestBlend = _ConvertBlend(descriptor->colorAttachments[i].dstColorBlendFactor);
+            bd.RenderTarget[i].BlendOp = _ConvertBlendOp(descriptor->colorAttachments[i].colorBlendOp);
+            bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(descriptor->colorAttachments[i].srcAlphaBlendFactor);
+            bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(descriptor->colorAttachments[i].dstAlphaBlendFactor);
+            bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(descriptor->colorAttachments[i].alphaBlendOp);
+            bd.RenderTarget[i].RenderTargetWriteMask = _ConvertColorWriteMask(descriptor->colorAttachments[i].colorWriteMask);
+        }
+        stream.BD = bd;
+
+        // InputLayout
+        D3D12_INPUT_LAYOUT_DESC inputLayoutDesc = {};
+        std::array<D3D12_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
+        for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
+        {
+            const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[i];
+            if (attrDesc->format == VertexFormat::Invalid) {
+                break;
+            }
+
+            const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[i];
+
+            D3D12_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputLayoutDesc.NumElements++];
+            inputElementDesc->SemanticName = "ATTRIBUTE";
+            inputElementDesc->SemanticIndex = i;
+            inputElementDesc->Format = D3DConvertVertexFormat(attrDesc->format);
+            inputElementDesc->InputSlot = attrDesc->bufferIndex;
+            inputElementDesc->AlignedByteOffset = attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
+            if (layoutDesc->stepMode == InputStepMode::Vertex)
+            {
+                inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                inputElementDesc->InstanceDataStepRate = 0;
+            }
+            else
+            {
+                inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+                inputElementDesc->InstanceDataStepRate = 1;
+            }
+        }
+
+        inputLayoutDesc.pInputElementDescs = inputElements.data();
+        stream.IL = inputLayoutDesc;
+
+        DXGI_FORMAT DSFormat = DXGI_FORMAT_UNKNOWN;
+        D3D12_RT_FORMAT_ARRAY formats = {};
+        formats.NumRenderTargets = 0;
+
+        for (uint32_t i = 0; i < kMaxColorAttachments; ++i)
+        {
+            if (descriptor->colorAttachments[i].format == PixelFormat::Invalid)
+                break;
+
+            switch (descriptor->colorAttachments[i].format)
+            {
+            case PixelFormat::FORMAT_R16_TYPELESS:
+                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
+                break;
+            case PixelFormat::FORMAT_R32_TYPELESS:
+                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+                break;
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
+                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+                break;
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
+                formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+                break;
+            default:
+                formats.RTFormats[formats.NumRenderTargets] = PixelFormatToDXGIFormat(descriptor->colorAttachments[i].format);
+                break;
+            }
+
+            formats.NumRenderTargets++;
+        }
+
+        /*if (active_renderpass[cmd] == nullptr)
+        {
+            formats.NumRenderTargets = 1;
+            formats.RTFormats[0] = PixelFormatToDXGIFormat(BACKBUFFER_FORMAT);
+        }
+        else
+        {
+            for (auto& attachment : active_renderpass[cmd]->desc.attachments)
+            {
+                if (attachment.type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
+                    continue;
+
+                switch (attachment.type)
+                {
+                case RenderPassAttachment::RENDERTARGET:
+                    switch (attachment.texture->desc.format)
+                    {
+                    case PixelFormat::FORMAT_R16_TYPELESS:
+                        formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R16_UNORM;
+                        break;
+                    case PixelFormat::FORMAT_R32_TYPELESS:
+                        formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT;
+                        break;
+                    case PixelFormat::FORMAT_R24G8_TYPELESS:
+                        formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+                        break;
+                    case PixelFormat::FORMAT_R32G8X24_TYPELESS:
+                        formats.RTFormats[formats.NumRenderTargets] = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+                        break;
+                    default:
+                        formats.RTFormats[formats.NumRenderTargets] = _ConvertFormat(attachment.texture->desc.Format);
+                        break;
+                    }
+                    formats.NumRenderTargets++;
+                    break;
+                case RenderPassAttachment::DEPTH_STENCIL:
+                    switch (attachment.texture->desc.Format)
+                    {
+                    case FORMAT_R16_TYPELESS:
+                        DSFormat = DXGI_FORMAT_D16_UNORM;
+                        break;
+                    case FORMAT_R32_TYPELESS:
+                        DSFormat = DXGI_FORMAT_D32_FLOAT;
+                        break;
+                    case FORMAT_R24G8_TYPELESS:
+                        DSFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+                        break;
+                    case FORMAT_R32G8X24_TYPELESS:
+                        DSFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+                        break;
+                    default:
+                        DSFormat = _ConvertFormat(attachment.texture->desc.Format);
+                        break;
+                    }
+                    break;
+                default:
+                    assert(0);
+                    break;
+                }
+
+                sampleDesc.Count = attachment.texture->desc.SampleCount;
+                sampleDesc.Quality = 0;
+            }
+        }*/
+        stream.DSFormat = DSFormat;
+        stream.Formats = formats;
+
+        DXGI_SAMPLE_DESC sampleDesc = { descriptor->sampleCount, 0 };
+        stream.SampleDesc = sampleDesc;
+        stream.SampleMask = descriptor->sampleMask;
+
+        RasterizationStateDescriptor rasterizationState = pso->desc.rasterizationState;
+        CD3DX12_RASTERIZER_DESC rs = {};
+        rs.FillMode = D3D12_FILL_MODE_SOLID;
+        rs.CullMode = _ConvertCullMode(rasterizationState.cullMode);
+        rs.FrontCounterClockwise = (rasterizationState.frontFace == FrontFace::CCW) ? TRUE : FALSE;
+        rs.DepthBias = rasterizationState.depthBias;
+        rs.DepthBiasClamp = rasterizationState.depthBiasClamp;
+        rs.SlopeScaledDepthBias = rasterizationState.depthBiasSlopeScale;
+        rs.DepthClipEnable = rasterizationState.depthClipEnable;
+        rs.MultisampleEnable = (sampleDesc.Count > 1) ? TRUE : FALSE;
+        rs.AntialiasedLineEnable = FALSE;
+        rs.ConservativeRaster = ((CONSERVATIVE_RASTERIZATION && rasterizationState.conservativeRasterizationEnable) ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+        rs.ForcedSampleCount = rasterizationState.forcedSampleCount;
+        stream.RS = rs;
+
+        switch (pso->desc.primitiveTopology)
+        {
+        case PrimitiveTopology::PointList:
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+            break;
+        case PrimitiveTopology::LineList:
+        case PrimitiveTopology::LineStrip:
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+            break;
+        case PrimitiveTopology::TriangleList:
+        case PrimitiveTopology::TriangleStrip:
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            break;
+        case PrimitiveTopology::PatchList:
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+            break;
+        default:
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+            break;
+        }
+
+        stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
+
+        if (pso->desc.rootSignature == nullptr)
+        {
+            stream.pRootSignature = internal_state->rootSignature.Get();
+        }
+        else
+        {
+            stream.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
+        }
+
+        D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+        streamDesc.pPipelineStateSubobjectStream = &stream;
+        streamDesc.SizeInBytes = sizeof(stream);
+
+        HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+        assert(SUCCEEDED(hr));
 
         return true;
     }
+
     bool GraphicsDevice_DX12::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
     {
         auto internal_state = std::make_shared<RenderPass_DX12>();
@@ -3500,7 +3056,7 @@ namespace Alimer
         Alimer::hash_combine(renderpass->hash, pDesc->attachments.size());
         for (auto& attachment : pDesc->attachments)
         {
-            Alimer::hash_combine(renderpass->hash, attachment.texture->desc.Format);
+            Alimer::hash_combine(renderpass->hash, attachment.texture->desc.format);
             Alimer::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
         }
 
@@ -3618,7 +3174,7 @@ namespace Alimer
                     geometry.Triangles.VertexBuffer.StartAddress = to_internal(x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
                     geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertexStride;
                     geometry.Triangles.VertexCount = x.triangles.vertexCount;
-                    geometry.Triangles.VertexFormat = _ConvertFormat(x.triangles.vertexFormat);
+                    geometry.Triangles.VertexFormat = D3DConvertVertexFormat(x.triangles.vertexFormat);
                     geometry.Triangles.IndexFormat = (x.triangles.indexFormat == IndexFormat::UInt16 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT);
                     geometry.Triangles.IndexBuffer = to_internal(x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
                         (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset * (x.triangles.indexFormat == IndexFormat::UInt16 ? sizeof(uint16_t) : sizeof(uint32_t));
@@ -3920,7 +3476,7 @@ namespace Alimer
 
         for (auto& x : table->staticsamplers)
         {
-            auto sampler_internal_state = to_internal(&x.sampler);
+            auto sampler_internal_state = to_internal(x.sampler);
 
             internal_state->staticsamplers.emplace_back();
             auto& desc = internal_state->staticsamplers.back();
@@ -4154,22 +3710,22 @@ namespace Alimer
             srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                srv_desc.Format = _ConvertFormat(texture->desc.Format);
+                srv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -4264,22 +3820,22 @@ namespace Alimer
             D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                uav_desc.Format = _ConvertFormat(texture->desc.Format);
+                uav_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -4335,22 +3891,22 @@ namespace Alimer
             D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                rtv_desc.Format = _ConvertFormat(texture->desc.Format);
+                rtv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -4422,22 +3978,22 @@ namespace Alimer
             D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
                 break;
             default:
-                dsv_desc.Format = _ConvertFormat(texture->desc.Format);
+                dsv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
                 break;
             }
 
@@ -4536,8 +4092,8 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.Format);
-                srv_desc.Format = _ConvertFormat(desc.Format);
+                uint32_t stride = GetFormatStride(desc.format);
+                srv_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
                 srv_desc.Buffer.FirstElement = offset / stride;
                 srv_desc.Buffer.NumElements = Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
@@ -4578,8 +4134,8 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.Format);
-                uav_desc.Format = _ConvertFormat(desc.Format);
+                uint32_t stride = GetFormatStride(desc.format);
+                uav_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 uav_desc.Buffer.FirstElement = (UINT)offset / stride;
                 uav_desc.Buffer.NumElements = Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
             }
@@ -4745,7 +4301,7 @@ namespace Alimer
                     srv.Buffer.FirstElement += offset / srv.Buffer.StructureByteStride;
                     break;
                 case TYPEDBUFFER:
-                    srv.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().Format);
+                    srv.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().format);
                     break;
                 }
                 device->CreateShaderResourceView(internal_state->resource.Get(), &srv, dst);
@@ -4823,7 +4379,7 @@ namespace Alimer
                     uav.Buffer.FirstElement += offset / uav.Buffer.StructureByteStride;
                     break;
                 case RWTYPEDBUFFER:
-                    uav.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().Format);
+                    uav.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().format);
                     break;
                 }
                 device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav, dst);
@@ -4841,7 +4397,7 @@ namespace Alimer
         size_t remap = table_internal->sampler_heap.write_remap[rangeIndex];
         dst.ptr += (remap + arrayIndex) * (size_t)sampler_descriptor_size;
 
-        if (sampler == nullptr || !sampler->IsValid())
+        if (sampler == nullptr)
         {
             D3D12_SAMPLER_DESC sam = {};
             sam.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
@@ -5043,7 +4599,6 @@ namespace Alimer
         GetDirectCommandList(cmd)->RSSetScissorRects(8, pRects);
 
         prev_pt[cmd] = static_cast<PrimitiveTopology>(-1);
-        prev_pipeline_hash[cmd] = 0;
         active_pso[cmd] = nullptr;
         active_cs[cmd] = nullptr;
         active_rt[cmd] = nullptr;
@@ -5219,7 +4774,7 @@ namespace Alimer
             auto texture_internal = to_internal(texture);
 
             D3D12_CLEAR_VALUE clear_value;
-            clear_value.Format = _ConvertFormat(texture->desc.Format);
+            clear_value.Format = PixelFormatToDXGIFormat(texture->desc.format);
 
             if (attachment.type == RenderPassAttachment::RENDERTARGET)
             {
@@ -5552,7 +5107,7 @@ namespace Alimer
             }
             else
             {
-                assert(texture->desc.Format == FORMAT_R8_UINT);
+                assert(texture->desc.format == PixelFormat::FORMAT_R8_UINT);
                 GetDirectCommandList(cmd)->RSSetShadingRateImage(to_internal(texture)->resource.Get());
             }
         }
@@ -5565,16 +5120,19 @@ namespace Alimer
         {
             Alimer::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
         }
-        if (prev_pipeline_hash[cmd] == pipeline_hash)
+
+        if (active_pso[cmd] == pso)
         {
             return;
         }
-        prev_pipeline_hash[cmd] = pipeline_hash;
+
+        auto internal_state = to_internal(pso);
+        GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 
         if (pso->desc.rootSignature == nullptr)
         {
             active_rootsig_graphics[cmd] = nullptr;
-            GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso)->rootSignature.Get());
+            GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
         }
         else if (active_pso[cmd] != pso && active_rootsig_graphics[cmd] != pso->desc.rootSignature)
         {
@@ -5593,7 +5151,6 @@ namespace Alimer
 
         if (active_cs[cmd] != cs)
         {
-            prev_pipeline_hash[cmd] = 0;
             GetFrameResources().descriptors[cmd].dirty = true;
             active_cs[cmd] = cs;
 
@@ -5925,7 +5482,6 @@ namespace Alimer
     {
         if (rtpso != active_rt[cmd])
         {
-            prev_pipeline_hash[cmd] = 0;
             active_rt[cmd] = rtpso;
             GetFrameResources().descriptors[cmd].dirty = true;
 
