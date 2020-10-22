@@ -102,7 +102,7 @@ namespace Alimer
         int RESOLUTIONHEIGHT = 0;
         bool enableDebugLayer = false;
         bool FULLSCREEN = false;
-        FORMAT BACKBUFFER_FORMAT = FORMAT_R10G10B10A2_UNORM;
+        PixelFormat BACKBUFFER_FORMAT = PixelFormat::FORMAT_R10G10B10A2_UNORM;
         static const uint32_t BACKBUFFER_COUNT = 2;
         bool TESSELLATION = false;
         bool CONSERVATIVE_RASTERIZATION = false;
@@ -183,16 +183,16 @@ namespace Alimer
 
         bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
-        uint32_t GetFormatStride(FORMAT value) const;
-        bool IsFormatUnorm(FORMAT value) const;
-        bool IsFormatBlockCompressed(FORMAT value) const;
-        bool IsFormatStencilSupport(FORMAT value) const;
+        uint32_t GetFormatStride(PixelFormat value) const;
+        bool IsFormatUnorm(PixelFormat value) const;
+        bool IsFormatBlockCompressed(PixelFormat value) const;
+        bool IsFormatStencilSupport(PixelFormat value) const;
 
         inline XMMATRIX GetScreenProjection() const
         {
             return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
         }
-        inline FORMAT GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
+        inline PixelFormat GetBackBufferFormat() const { return BACKBUFFER_FORMAT; }
         static constexpr uint32_t GetBackBufferCount() { return BACKBUFFER_COUNT; }
 
         inline bool IsDebugDevice() const { return enableDebugLayer; }

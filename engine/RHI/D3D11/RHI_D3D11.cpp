@@ -330,7 +330,7 @@ namespace Alimer
             }
             return D3D11_STENCIL_OP_KEEP;
         }
-        
+
         constexpr D3D11_USAGE _ConvertUsage(USAGE value)
         {
             switch (value)
@@ -365,217 +365,6 @@ namespace Alimer
                 return D3D11_INPUT_PER_VERTEX_DATA;
             }
         }
-        constexpr DXGI_FORMAT _ConvertFormat(FORMAT value)
-        {
-            switch (value)
-            {
-            case FORMAT_UNKNOWN:
-                return DXGI_FORMAT_UNKNOWN;
-                break;
-            case FORMAT_R32G32B32A32_FLOAT:
-                return DXGI_FORMAT_R32G32B32A32_FLOAT;
-                break;
-            case FORMAT_R32G32B32A32_UINT:
-                return DXGI_FORMAT_R32G32B32A32_UINT;
-                break;
-            case FORMAT_R32G32B32A32_SINT:
-                return DXGI_FORMAT_R32G32B32A32_SINT;
-                break;
-            case FORMAT_R32G32B32_FLOAT:
-                return DXGI_FORMAT_R32G32B32_FLOAT;
-                break;
-            case FORMAT_R32G32B32_UINT:
-                return DXGI_FORMAT_R32G32B32_UINT;
-                break;
-            case FORMAT_R32G32B32_SINT:
-                return DXGI_FORMAT_R32G32B32_SINT;
-                break;
-            case FORMAT_R16G16B16A16_FLOAT:
-                return DXGI_FORMAT_R16G16B16A16_FLOAT;
-                break;
-            case FORMAT_R16G16B16A16_UNORM:
-                return DXGI_FORMAT_R16G16B16A16_UNORM;
-                break;
-            case FORMAT_R16G16B16A16_UINT:
-                return DXGI_FORMAT_R16G16B16A16_UINT;
-                break;
-            case FORMAT_R16G16B16A16_SNORM:
-                return DXGI_FORMAT_R16G16B16A16_SNORM;
-                break;
-            case FORMAT_R16G16B16A16_SINT:
-                return DXGI_FORMAT_R16G16B16A16_SINT;
-                break;
-            case FORMAT_R32G32_FLOAT:
-                return DXGI_FORMAT_R32G32_FLOAT;
-                break;
-            case FORMAT_R32G32_UINT:
-                return DXGI_FORMAT_R32G32_UINT;
-                break;
-            case FORMAT_R32G32_SINT:
-                return DXGI_FORMAT_R32G32_SINT;
-                break;
-            case FORMAT_R32G8X24_TYPELESS:
-                return DXGI_FORMAT_R32G8X24_TYPELESS;
-                break;
-            case FORMAT_D32_FLOAT_S8X24_UINT:
-                return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-                break;
-            case FORMAT_R10G10B10A2_UNORM:
-                return DXGI_FORMAT_R10G10B10A2_UNORM;
-                break;
-            case FORMAT_R10G10B10A2_UINT:
-                return DXGI_FORMAT_R10G10B10A2_UINT;
-                break;
-            case FORMAT_R11G11B10_FLOAT:
-                return DXGI_FORMAT_R11G11B10_FLOAT;
-                break;
-            case FORMAT_R8G8B8A8_UNORM:
-                return DXGI_FORMAT_R8G8B8A8_UNORM;
-                break;
-            case FORMAT_R8G8B8A8_UNORM_SRGB:
-                return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-                break;
-            case FORMAT_R8G8B8A8_UINT:
-                return DXGI_FORMAT_R8G8B8A8_UINT;
-                break;
-            case FORMAT_R8G8B8A8_SNORM:
-                return DXGI_FORMAT_R8G8B8A8_SNORM;
-                break;
-            case FORMAT_R8G8B8A8_SINT:
-                return DXGI_FORMAT_R8G8B8A8_SINT;
-                break;
-            case FORMAT_R16G16_FLOAT:
-                return DXGI_FORMAT_R16G16_FLOAT;
-                break;
-            case FORMAT_R16G16_UNORM:
-                return DXGI_FORMAT_R16G16_UNORM;
-                break;
-            case FORMAT_R16G16_UINT:
-                return DXGI_FORMAT_R16G16_UINT;
-                break;
-            case FORMAT_R16G16_SNORM:
-                return DXGI_FORMAT_R16G16_SNORM;
-                break;
-            case FORMAT_R16G16_SINT:
-                return DXGI_FORMAT_R16G16_SINT;
-                break;
-            case FORMAT_R32_TYPELESS:
-                return DXGI_FORMAT_R32_TYPELESS;
-                break;
-            case FORMAT_D32_FLOAT:
-                return DXGI_FORMAT_D32_FLOAT;
-                break;
-            case FORMAT_R32_FLOAT:
-                return DXGI_FORMAT_R32_FLOAT;
-                break;
-            case FORMAT_R32_UINT:
-                return DXGI_FORMAT_R32_UINT;
-                break;
-            case FORMAT_R32_SINT:
-                return DXGI_FORMAT_R32_SINT;
-                break;
-            case FORMAT_R24G8_TYPELESS:
-                return DXGI_FORMAT_R24G8_TYPELESS;
-                break;
-            case FORMAT_D24_UNORM_S8_UINT:
-                return DXGI_FORMAT_D24_UNORM_S8_UINT;
-                break;
-            case FORMAT_R8G8_UNORM:
-                return DXGI_FORMAT_R8G8_UNORM;
-                break;
-            case FORMAT_R8G8_UINT:
-                return DXGI_FORMAT_R8G8_UINT;
-                break;
-            case FORMAT_R8G8_SNORM:
-                return DXGI_FORMAT_R8G8_SNORM;
-                break;
-            case FORMAT_R8G8_SINT:
-                return DXGI_FORMAT_R8G8_SINT;
-                break;
-            case FORMAT_R16_TYPELESS:
-                return DXGI_FORMAT_R16_TYPELESS;
-                break;
-            case FORMAT_R16_FLOAT:
-                return DXGI_FORMAT_R16_FLOAT;
-                break;
-            case FORMAT_D16_UNORM:
-                return DXGI_FORMAT_D16_UNORM;
-                break;
-            case FORMAT_R16_UNORM:
-                return DXGI_FORMAT_R16_UNORM;
-                break;
-            case FORMAT_R16_UINT:
-                return DXGI_FORMAT_R16_UINT;
-                break;
-            case FORMAT_R16_SNORM:
-                return DXGI_FORMAT_R16_SNORM;
-                break;
-            case FORMAT_R16_SINT:
-                return DXGI_FORMAT_R16_SINT;
-                break;
-            case FORMAT_R8_UNORM:
-                return DXGI_FORMAT_R8_UNORM;
-                break;
-            case FORMAT_R8_UINT:
-                return DXGI_FORMAT_R8_UINT;
-                break;
-            case FORMAT_R8_SNORM:
-                return DXGI_FORMAT_R8_SNORM;
-                break;
-            case FORMAT_R8_SINT:
-                return DXGI_FORMAT_R8_SINT;
-                break;
-            case FORMAT_BC1_UNORM:
-                return DXGI_FORMAT_BC1_UNORM;
-                break;
-            case FORMAT_BC1_UNORM_SRGB:
-                return DXGI_FORMAT_BC1_UNORM_SRGB;
-                break;
-            case FORMAT_BC2_UNORM:
-                return DXGI_FORMAT_BC2_UNORM;
-                break;
-            case FORMAT_BC2_UNORM_SRGB:
-                return DXGI_FORMAT_BC2_UNORM_SRGB;
-                break;
-            case FORMAT_BC3_UNORM:
-                return DXGI_FORMAT_BC3_UNORM;
-                break;
-            case FORMAT_BC3_UNORM_SRGB:
-                return DXGI_FORMAT_BC3_UNORM_SRGB;
-                break;
-            case FORMAT_BC4_UNORM:
-                return DXGI_FORMAT_BC4_UNORM;
-                break;
-            case FORMAT_BC4_SNORM:
-                return DXGI_FORMAT_BC4_SNORM;
-                break;
-            case FORMAT_BC5_UNORM:
-                return DXGI_FORMAT_BC5_UNORM;
-                break;
-            case FORMAT_BC5_SNORM:
-                return DXGI_FORMAT_BC5_SNORM;
-                break;
-            case FORMAT_B8G8R8A8_UNORM:
-                return DXGI_FORMAT_B8G8R8A8_UNORM;
-                break;
-            case FORMAT_B8G8R8A8_UNORM_SRGB:
-                return DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-                break;
-            case FORMAT_BC6H_UF16:
-                return DXGI_FORMAT_BC6H_UF16;
-                break;
-            case FORMAT_BC6H_SF16:
-                return DXGI_FORMAT_BC6H_SF16;
-                break;
-            case FORMAT_BC7_UNORM:
-                return DXGI_FORMAT_BC7_UNORM;
-                break;
-            case FORMAT_BC7_UNORM_SRGB:
-                return DXGI_FORMAT_BC7_UNORM_SRGB;
-                break;
-            }
-            return DXGI_FORMAT_UNKNOWN;
-        }
 
         inline D3D11_TEXTURE1D_DESC _ConvertTextureDesc1D(const TextureDesc* pDesc)
         {
@@ -583,7 +372,7 @@ namespace Alimer
             desc.Width = pDesc->Width;
             desc.MipLevels = pDesc->MipLevels;
             desc.ArraySize = pDesc->ArraySize;
-            desc.Format = _ConvertFormat(pDesc->Format);
+            desc.Format = D3DConvertPixelFormat(pDesc->format);
             desc.Usage = _ConvertUsage(pDesc->Usage);
             desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
             desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
@@ -598,7 +387,7 @@ namespace Alimer
             desc.Height = pDesc->Height;
             desc.MipLevels = pDesc->MipLevels;
             desc.ArraySize = pDesc->ArraySize;
-            desc.Format = _ConvertFormat(pDesc->Format);
+            desc.Format = D3DConvertPixelFormat(pDesc->format);
             desc.SampleDesc.Count = pDesc->SampleCount;
             desc.SampleDesc.Quality = 0;
             desc.Usage = _ConvertUsage(pDesc->Usage);
@@ -615,7 +404,7 @@ namespace Alimer
             desc.Height = pDesc->Height;
             desc.Depth = pDesc->Depth;
             desc.MipLevels = pDesc->MipLevels;
-            desc.Format = _ConvertFormat(pDesc->Format);
+            desc.Format = D3DConvertPixelFormat(pDesc->format);
             desc.Usage = _ConvertUsage(pDesc->Usage);
             desc.BindFlags = _ParseBindFlags(pDesc->BindFlags);
             desc.CPUAccessFlags = _ParseCPUAccessFlags(pDesc->CPUAccessFlags);
@@ -690,217 +479,7 @@ namespace Alimer
             return _flag;
         }
 
-        constexpr FORMAT _ConvertFormat_Inv(DXGI_FORMAT value)
-        {
-            switch (value)
-            {
-            case DXGI_FORMAT_UNKNOWN:
-                return FORMAT_UNKNOWN;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_FLOAT:
-                return FORMAT_R32G32B32A32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_UINT:
-                return FORMAT_R32G32B32A32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32B32A32_SINT:
-                return FORMAT_R32G32B32A32_SINT;
-                break;
-            case DXGI_FORMAT_R32G32B32_FLOAT:
-                return FORMAT_R32G32B32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32B32_UINT:
-                return FORMAT_R32G32B32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32B32_SINT:
-                return FORMAT_R32G32B32_SINT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_FLOAT:
-                return FORMAT_R16G16B16A16_FLOAT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_UNORM:
-                return FORMAT_R16G16B16A16_UNORM;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_UINT:
-                return FORMAT_R16G16B16A16_UINT;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_SNORM:
-                return FORMAT_R16G16B16A16_SNORM;
-                break;
-            case DXGI_FORMAT_R16G16B16A16_SINT:
-                return FORMAT_R16G16B16A16_SINT;
-                break;
-            case DXGI_FORMAT_R32G32_FLOAT:
-                return FORMAT_R32G32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32G32_UINT:
-                return FORMAT_R32G32_UINT;
-                break;
-            case DXGI_FORMAT_R32G32_SINT:
-                return FORMAT_R32G32_SINT;
-                break;
-            case DXGI_FORMAT_R32G8X24_TYPELESS:
-                return FORMAT_R32G8X24_TYPELESS;
-                break;
-            case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
-                return FORMAT_D32_FLOAT_S8X24_UINT;
-                break;
-            case DXGI_FORMAT_R10G10B10A2_UNORM:
-                return FORMAT_R10G10B10A2_UNORM;
-                break;
-            case DXGI_FORMAT_R10G10B10A2_UINT:
-                return FORMAT_R10G10B10A2_UINT;
-                break;
-            case DXGI_FORMAT_R11G11B10_FLOAT:
-                return FORMAT_R11G11B10_FLOAT;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UNORM:
-                return FORMAT_R8G8B8A8_UNORM;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-                return FORMAT_R8G8B8A8_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_UINT:
-                return FORMAT_R8G8B8A8_UINT;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_SNORM:
-                return FORMAT_R8G8B8A8_SNORM;
-                break;
-            case DXGI_FORMAT_R8G8B8A8_SINT:
-                return FORMAT_R8G8B8A8_SINT;
-                break;
-            case DXGI_FORMAT_R16G16_FLOAT:
-                return FORMAT_R16G16_FLOAT;
-                break;
-            case DXGI_FORMAT_R16G16_UNORM:
-                return FORMAT_R16G16_UNORM;
-                break;
-            case DXGI_FORMAT_R16G16_UINT:
-                return FORMAT_R16G16_UINT;
-                break;
-            case DXGI_FORMAT_R16G16_SNORM:
-                return FORMAT_R16G16_SNORM;
-                break;
-            case DXGI_FORMAT_R16G16_SINT:
-                return FORMAT_R16G16_SINT;
-                break;
-            case DXGI_FORMAT_R32_TYPELESS:
-                return FORMAT_R32_TYPELESS;
-                break;
-            case DXGI_FORMAT_D32_FLOAT:
-                return FORMAT_D32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32_FLOAT:
-                return FORMAT_R32_FLOAT;
-                break;
-            case DXGI_FORMAT_R32_UINT:
-                return FORMAT_R32_UINT;
-                break;
-            case DXGI_FORMAT_R32_SINT:
-                return FORMAT_R32_SINT;
-                break;
-            case DXGI_FORMAT_R24G8_TYPELESS:
-                return FORMAT_R24G8_TYPELESS;
-                break;
-            case DXGI_FORMAT_D24_UNORM_S8_UINT:
-                return FORMAT_D24_UNORM_S8_UINT;
-                break;
-            case DXGI_FORMAT_R8G8_UNORM:
-                return FORMAT_R8G8_UNORM;
-                break;
-            case DXGI_FORMAT_R8G8_UINT:
-                return FORMAT_R8G8_UINT;
-                break;
-            case DXGI_FORMAT_R8G8_SNORM:
-                return FORMAT_R8G8_SNORM;
-                break;
-            case DXGI_FORMAT_R8G8_SINT:
-                return FORMAT_R8G8_SINT;
-                break;
-            case DXGI_FORMAT_R16_TYPELESS:
-                return FORMAT_R16_TYPELESS;
-                break;
-            case DXGI_FORMAT_R16_FLOAT:
-                return FORMAT_R16_FLOAT;
-                break;
-            case DXGI_FORMAT_D16_UNORM:
-                return FORMAT_D16_UNORM;
-                break;
-            case DXGI_FORMAT_R16_UNORM:
-                return FORMAT_R16_UNORM;
-                break;
-            case DXGI_FORMAT_R16_UINT:
-                return FORMAT_R16_UINT;
-                break;
-            case DXGI_FORMAT_R16_SNORM:
-                return FORMAT_R16_SNORM;
-                break;
-            case DXGI_FORMAT_R16_SINT:
-                return FORMAT_R16_SINT;
-                break;
-            case DXGI_FORMAT_R8_UNORM:
-                return FORMAT_R8_UNORM;
-                break;
-            case DXGI_FORMAT_R8_UINT:
-                return FORMAT_R8_UINT;
-                break;
-            case DXGI_FORMAT_R8_SNORM:
-                return FORMAT_R8_SNORM;
-                break;
-            case DXGI_FORMAT_R8_SINT:
-                return FORMAT_R8_SINT;
-                break;
-            case DXGI_FORMAT_BC1_UNORM:
-                return FORMAT_BC1_UNORM;
-                break;
-            case DXGI_FORMAT_BC1_UNORM_SRGB:
-                return FORMAT_BC1_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC2_UNORM:
-                return FORMAT_BC2_UNORM;
-                break;
-            case DXGI_FORMAT_BC2_UNORM_SRGB:
-                return FORMAT_BC2_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC3_UNORM:
-                return FORMAT_BC3_UNORM;
-                break;
-            case DXGI_FORMAT_BC3_UNORM_SRGB:
-                return FORMAT_BC3_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC4_UNORM:
-                return FORMAT_BC4_UNORM;
-                break;
-            case DXGI_FORMAT_BC4_SNORM:
-                return FORMAT_BC4_SNORM;
-                break;
-            case DXGI_FORMAT_BC5_UNORM:
-                return FORMAT_BC5_UNORM;
-                break;
-            case DXGI_FORMAT_BC5_SNORM:
-                return FORMAT_BC5_SNORM;
-                break;
-            case DXGI_FORMAT_B8G8R8A8_UNORM:
-                return FORMAT_B8G8R8A8_UNORM;
-                break;
-            case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-                return FORMAT_B8G8R8A8_UNORM_SRGB;
-                break;
-            case DXGI_FORMAT_BC6H_UF16:
-                return FORMAT_BC6H_UF16;
-                break;
-            case DXGI_FORMAT_BC6H_SF16:
-                return FORMAT_BC6H_SF16;
-                break;
-            case DXGI_FORMAT_BC7_UNORM:
-                return FORMAT_BC7_UNORM;
-                break;
-            case DXGI_FORMAT_BC7_UNORM_SRGB:
-                return FORMAT_BC7_UNORM_SRGB;
-                break;
-            }
-            return FORMAT_UNKNOWN;
-        }
+
         constexpr USAGE _ConvertUsage_Inv(D3D11_USAGE value)
         {
             switch (value)
@@ -923,20 +502,6 @@ namespace Alimer
             return USAGE_DEFAULT;
         }
 
-        inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE1D_DESC* pDesc)
-        {
-            TextureDesc desc;
-            desc.Width = pDesc->Width;
-            desc.MipLevels = pDesc->MipLevels;
-            desc.ArraySize = pDesc->ArraySize;
-            desc.Format = _ConvertFormat_Inv(pDesc->Format);
-            desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
-            desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
-            desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
-            desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
-
-            return desc;
-        }
         inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE2D_DESC* pDesc)
         {
             TextureDesc desc;
@@ -944,23 +509,8 @@ namespace Alimer
             desc.Height = pDesc->Height;
             desc.MipLevels = pDesc->MipLevels;
             desc.ArraySize = pDesc->ArraySize;
-            desc.Format = _ConvertFormat_Inv(pDesc->Format);
+            desc.format = PixelFormatFromDXGIFormat(pDesc->Format);
             desc.SampleCount = pDesc->SampleDesc.Count;
-            desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
-            desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
-            desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
-            desc.MiscFlags = _ParseResourceMiscFlags_Inv(pDesc->MiscFlags);
-
-            return desc;
-        }
-        inline TextureDesc _ConvertTextureDesc_Inv(const D3D11_TEXTURE3D_DESC* pDesc)
-        {
-            TextureDesc desc;
-            desc.Width = pDesc->Width;
-            desc.Height = pDesc->Height;
-            desc.Depth = pDesc->Depth;
-            desc.MipLevels = pDesc->MipLevels;
-            desc.Format = _ConvertFormat_Inv(pDesc->Format);
             desc.Usage = _ConvertUsage_Inv(pDesc->Usage);
             desc.BindFlags = _ParseBindFlags_Inv(pDesc->BindFlags);
             desc.CPUAccessFlags = _ParseCPUAccessFlags_Inv(pDesc->CPUAccessFlags);
@@ -1147,6 +697,30 @@ namespace Alimer
 #endif
     }
     using namespace DX11_Internal;
+
+    namespace
+    {
+#if defined(_DEBUG)
+        // Check for SDK Layer support.
+        inline bool SdkLayersAvailable() noexcept
+        {
+            HRESULT hr = D3D11CreateDevice(
+                nullptr,
+                D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+                nullptr,
+                D3D11_CREATE_DEVICE_DEBUG,  // Check for the SDK layers.
+                nullptr,                    // Any feature level will do.
+                0,
+                D3D11_SDK_VERSION,
+                nullptr,                    // No need to keep the D3D device reference.
+                nullptr,                    // No need to know the feature level.
+                nullptr                     // No need to keep the D3D device context reference.
+            );
+
+            return SUCCEEDED(hr);
+        }
+#endif
+    }
 
     void GraphicsDevice_DX11::pso_validate(CommandList cmd)
     {
@@ -1344,97 +918,135 @@ namespace Alimer
         RESOLUTIONHEIGHT = int(window->Bounds.Height * dpiscale);
 #endif
 
-        HRESULT hr = E_FAIL;
+        CreateFactory();
 
-        uint32_t createDeviceFlags = 0;
-
-        if (enableDebugLayer_)
+        // Get adapter and create device
         {
-            createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-        }
+            ComPtr<IDXGIAdapter1> adapter;
+            GetAdapter(adapter.GetAddressOf());
 
-        D3D_DRIVER_TYPE driverTypes[] =
-        {
-            D3D_DRIVER_TYPE_HARDWARE,
-            D3D_DRIVER_TYPE_WARP,
-            D3D_DRIVER_TYPE_REFERENCE,
-        };
-        uint32_t numDriverTypes = _countof(driverTypes);
+            UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-        D3D_FEATURE_LEVEL featureLevels[] =
-        {
-            D3D_FEATURE_LEVEL_11_1,
-            D3D_FEATURE_LEVEL_11_0,
-        };
-        uint32_t numFeatureLevels = _countof(featureLevels);
-
-        for (uint32_t driverTypeIndex = 0; driverTypeIndex < numDriverTypes; driverTypeIndex++)
-        {
-            driverType = driverTypes[driverTypeIndex];
-            hr = D3D11CreateDevice(nullptr, driverType, nullptr, createDeviceFlags, featureLevels, numFeatureLevels, D3D11_SDK_VERSION, &device
-                , &featureLevel, &immediateContext);
-
-            if (SUCCEEDED(hr))
-                break;
-        }
-
-        if (FAILED(hr))
-        {
-            //std::stringstream ss("");
-            //ss << "Failed to create the graphics device! ERROR: " << std::hex << hr;
-            //wiHelper::messageBox(ss.str(), "Error!");
-            //wiPlatform::Exit();
-        }
-
-        ComPtr<IDXGIDevice2> pDXGIDevice;
-        hr = device.As(&pDXGIDevice);
-
-        ComPtr<IDXGIAdapter> pDXGIAdapter;
-        hr = pDXGIDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&pDXGIAdapter);
-
-        ComPtr<IDXGIFactory2> pIDXGIFactory;
-        pDXGIAdapter->GetParent(__uuidof(IDXGIFactory2), (void**)&pIDXGIFactory);
-
-
-        DXGI_SWAP_CHAIN_DESC1 sd = { 0 };
-        sd.Width = RESOLUTIONWIDTH;
-        sd.Height = RESOLUTIONHEIGHT;
-        sd.Format = _ConvertFormat(GetBackBufferFormat());
-        sd.Stereo = false;
-        sd.SampleDesc.Count = 1; // Don't use multi-sampling.
-        sd.SampleDesc.Quality = 0;
-        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.BufferCount = 2; // Use double-buffering to minimize latency.
-        sd.Flags = 0;
-        sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-
-#ifndef PLATFORM_UWP
-        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        sd.Scaling = DXGI_SCALING_STRETCH;
-
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-        fullscreenDesc.RefreshRate.Numerator = 60;
-        fullscreenDesc.RefreshRate.Denominator = 1;
-        fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-        fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-        fullscreenDesc.Windowed = !fullscreen;
-        hr = pIDXGIFactory->CreateSwapChainForHwnd(device.Get(), (HWND)window, &sd, &fullscreenDesc, nullptr, &swapChain);
-#else
-        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-        sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
-
-        hr = pIDXGIFactory->CreateSwapChainForCoreWindow(device.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &swapChain);
+#if defined(_DEBUG)
+            if (enableDebugLayer_)
+            {
+                if (SdkLayersAvailable())
+                {
+                    // If the project is in a debug build, enable debugging via SDK Layers with this flag.
+                    creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+                }
+                else
+                {
+                    OutputDebugStringA("WARNING: Direct3D Debug Device is not available\n");
+                }
+            }
 #endif
 
-        if (FAILED(hr))
-        {
-            //wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
-            //wiPlatform::Exit();
+            static const D3D_FEATURE_LEVEL s_featureLevels[] =
+            {
+                D3D_FEATURE_LEVEL_11_1,
+                D3D_FEATURE_LEVEL_11_0
+            };
+
+            // Create the Direct3D 11 API device object and a corresponding context.
+            ID3D11Device* tempDevice;
+            ID3D11DeviceContext* tempContext;
+
+            HRESULT hr = E_FAIL;
+            if (adapter)
+            {
+                hr = D3D11CreateDevice(
+                    adapter.Get(),
+                    D3D_DRIVER_TYPE_UNKNOWN,
+                    nullptr,
+                    creationFlags,
+                    s_featureLevels,
+                    _countof(s_featureLevels),
+                    D3D11_SDK_VERSION,
+                    &tempDevice,
+                    &featureLevel,
+                    &tempContext
+                );
+            }
+            else
+            {
+                throw std::exception("No Direct3D hardware device found");
+            }
+
+            ThrowIfFailed(hr);
+
+#ifndef NDEBUG
+            ID3D11Debug* d3dDebug;
+            if (SUCCEEDED(tempDevice->QueryInterface(&d3dDebug)))
+            {
+                ID3D11InfoQueue* d3dInfoQueue;
+                if (SUCCEEDED(d3dDebug->QueryInterface(&d3dInfoQueue)))
+                {
+#ifdef _DEBUG
+                    d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+                    d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+#endif
+                    D3D11_MESSAGE_ID hide[] =
+                    {
+                        D3D11_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+                    };
+                    D3D11_INFO_QUEUE_FILTER filter = {};
+                    filter.DenyList.NumIDs = _countof(hide);
+                    filter.DenyList.pIDList = hide;
+                    d3dInfoQueue->AddStorageFilterEntries(&filter);
+                    d3dInfoQueue->Release();
+                }
+                d3dDebug->Release();
+            }
+#endif
+
+            ThrowIfFailed(tempDevice->QueryInterface(&device));
+            ThrowIfFailed(tempContext->QueryInterface(&immediateContext));
+
+            tempContext->Release();
+            tempDevice->Release();
         }
 
-        // Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-        // ensures that the application will only render after each VSync, minimizing power consumption.
-        hr = pDXGIDevice->SetMaximumFrameLatency(1);
+        // Create Swapchain
+        {
+            DXGI_SWAP_CHAIN_DESC1 swapChainDesc = { 0 };
+            swapChainDesc.Width = RESOLUTIONWIDTH;
+            swapChainDesc.Height = RESOLUTIONHEIGHT;
+            swapChainDesc.Format = D3DConvertPixelFormat(GetBackBufferFormat());
+            swapChainDesc.Stereo = false;
+            swapChainDesc.SampleDesc.Count = 1; // Don't use multi-sampling.
+            swapChainDesc.SampleDesc.Quality = 0;
+            swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            swapChainDesc.BufferCount = 2; // Use double-buffering to minimize latency.
+            swapChainDesc.Flags = 0;
+            swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+
+#ifndef PLATFORM_UWP
+            swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+            swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+            fsSwapChainDesc.Windowed = !fullscreen;
+            ThrowIfFailed(dxgiFactory2->CreateSwapChainForHwnd(device, (HWND)window, &swapChainDesc, &fsSwapChainDesc, nullptr, &swapChain));
+
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            ThrowIfFailed(dxgiFactory2->MakeWindowAssociation((HWND)window, DXGI_MWA_NO_ALT_ENTER));
+#else
+            sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+            sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+
+            ThrowIfFailed(dxgiFactory2->CreateSwapChainForCoreWindow(device, reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &swapChain));
+#endif
+
+            IDXGIDevice1* dxgiDevice;
+            if (SUCCEEDED(device->QueryInterface(&dxgiDevice)))
+            {
+                // Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
+                // ensures that the application will only render after each VSync, minimizing power consumption.
+                ThrowIfFailed(dxgiDevice->SetMaximumFrameLatency(1));
+                dxgiDevice->Release();
+            }
+        }
 
 
         D3D_FEATURE_LEVEL aquiredFeatureLevel = device->GetFeatureLevel();
@@ -1447,7 +1059,7 @@ namespace Alimer
         //hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS1, &features_1, sizeof(features_1));
 
         D3D11_FEATURE_DATA_D3D11_OPTIONS2 features_2;
-        hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof(features_2));
+        HRESULT hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS2, &features_2, sizeof(features_2));
         CONSERVATIVE_RASTERIZATION = features_2.ConservativeRasterizationTier >= D3D11_CONSERVATIVE_RASTERIZATION_TIER_1;
         RASTERIZER_ORDERED_VIEWS = features_2.ROVsSupported == TRUE;
 
@@ -1481,19 +1093,186 @@ namespace Alimer
         rasterizerStateCache.clear();
         depthStencilStateCache.clear();
         samplerCache.clear();
+
+        // Command Lists
+        {
+            for (uint32_t i = 0; i < kCommanstListCount; i++)
+            {
+                if (!deviceContexts[i])
+                    break;
+
+                SafeRelease(userDefinedAnnotations[i]);
+                SafeRelease(deviceContexts[i]);
+                frame_allocators[i].buffer.Reset();
+            }
+        }
+
+        // SwapChain
+        {
+            SafeRelease(renderTargetView);
+            SafeRelease(backBufferTexture);
+            SafeRelease(swapChain);
+        }
+
+        SafeRelease(immediateContext);
+
+#ifdef _DEBUG
+        ULONG refCount = device->Release();
+        if (refCount)
+        {
+            LOGD("Direct3D11: There are {} unreleased references left on the D3D device!", refCount);
+
+            ID3D11Debug* d3d11Debug = nullptr;
+            if (SUCCEEDED(device->QueryInterface(&d3d11Debug)))
+            {
+                d3d11Debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL | D3D11_RLDO_IGNORE_INTERNAL);
+                d3d11Debug->Release();
+            }
+
+        }
+#else
+        device->Release();
+#endif
+
+        device = nullptr;
+
+        // DXGI Factory
+        {
+            SafeRelease(dxgiFactory2);
+
+#ifdef _DEBUG
+            IDXGIDebug1* dxgiDebug1;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            if (DXGIGetDebugInterface1 &&
+                SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#else
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+#endif
+            {
+                dxgiDebug1->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug1->Release();
+            }
+#endif
+        }
+    }
+
+    void GraphicsDevice_DX11::CreateFactory()
+    {
+        SafeRelease(dxgiFactory2);
+
+#if defined(_DEBUG) 
+        bool debugDXGI = false;
+        if (enableDebugLayer)
+        {
+            IDXGIInfoQueue* dxgiInfoQueue;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiInfoQueue))))
+            {
+                debugDXGI = true;
+
+                ThrowIfFailed(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&dxgiFactory2)));
+
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+                dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+
+                DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+                {
+                    80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+                };
+                DXGI_INFO_QUEUE_FILTER filter = {};
+                filter.DenyList.NumIDs = _countof(hide);
+                filter.DenyList.pIDList = hide;
+                dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+                dxgiInfoQueue->Release();
+            }
+        }
+
+        if (!debugDXGI)
+#endif
+        {
+            ThrowIfFailed(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory2)));
+        }
+    }
+
+    void GraphicsDevice_DX11::GetAdapter(IDXGIAdapter1** ppAdapter)
+    {
+        *ppAdapter = nullptr;
+
+        ComPtr<IDXGIAdapter1> adapter;
+
+#if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
+        IDXGIFactory6* dxgiFactory6 = nullptr;
+        HRESULT hr = dxgiFactory2->QueryInterface(&dxgiFactory6);
+        if (SUCCEEDED(hr))
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
+                    adapterIndex,
+                    DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+#ifdef _DEBUG
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
+#endif
+
+                break;
+            }
+        }
+        SafeRelease(dxgiFactory6);
+#endif
+
+        if (!adapter)
+        {
+            for (UINT adapterIndex = 0;
+                SUCCEEDED(dxgiFactory2->EnumAdapters1(
+                    adapterIndex,
+                    adapter.ReleaseAndGetAddressOf()));
+                adapterIndex++)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                ThrowIfFailed(adapter->GetDesc1(&desc));
+
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                {
+                    // Don't select the Basic Render Driver adapter.
+                    continue;
+                }
+
+#ifdef _DEBUG
+                wchar_t buff[256] = {};
+                swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId, desc.Description);
+                OutputDebugStringW(buff);
+#endif
+
+                break;
+            }
+        }
+
+        *ppAdapter = adapter.Detach();
     }
 
     void GraphicsDevice_DX11::CreateBackBufferResources()
     {
         HRESULT hr;
 
-        hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer);
+        hr = swapChain->GetBuffer(0, IID_PPV_ARGS(&backBufferTexture));
         if (FAILED(hr)) {
             //wiHelper::messageBox("BackBuffer creation Failed!", "Error!");
             //wiPlatform::Exit();
         }
 
-        hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, &renderTargetView);
+        hr = device->CreateRenderTargetView(backBufferTexture, nullptr, &renderTargetView);
         if (FAILED(hr)) {
             //wiHelper::messageBox("Main Rendertarget creation Failed!", "Error!");
             //wiPlatform::Exit();
@@ -1507,10 +1286,10 @@ namespace Alimer
             RESOLUTIONWIDTH = width;
             RESOLUTIONHEIGHT = height;
 
-            backBuffer.Reset();
-            renderTargetView.Reset();
+            SafeRelease(renderTargetView);
+            SafeRelease(backBufferTexture);
 
-            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, _ConvertFormat(GetBackBufferFormat()), 0);
+            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, D3DConvertPixelFormat(GetBackBufferFormat()), 0);
             assert(SUCCEEDED(hr));
 
             CreateBackBufferResources();
@@ -1520,14 +1299,14 @@ namespace Alimer
     Texture GraphicsDevice_DX11::GetBackBuffer()
     {
         auto internal_state = std::make_shared<Texture_DX11>();
-        internal_state->resource = backBuffer;
+        internal_state->resource =  backBufferTexture;
 
         Texture result;
         result.internal_state = internal_state;
         result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
 
         D3D11_TEXTURE2D_DESC desc;
-        backBuffer->GetDesc(&desc);
+        backBufferTexture->GetDesc(&desc);
         result.desc = _ConvertTextureDesc_Inv(&desc);
 
         return result;
@@ -1820,8 +1599,8 @@ namespace Alimer
 
             if (CONSERVATIVE_RASTERIZATION && descriptor.conservativeRasterizationEnable)
             {
-                ComPtr<ID3D11Device3> device3;
-                if (SUCCEEDED(device.As(&device3)))
+                ID3D11Device3* device3;
+                if (SUCCEEDED(device->QueryInterface(&device3)))
                 {
                     D3D11_RASTERIZER_DESC2 desc2;
                     desc2.FillMode = desc.FillMode;
@@ -1839,35 +1618,31 @@ namespace Alimer
 
                     ComPtr<ID3D11RasterizerState2> rasterizerState2;
                     ThrowIfFailed(device3->CreateRasterizerState2(&desc2, &rasterizerState2));
-
+                    device3->Release();
                     it = rasterizerStateCache.insert({ hash, std::move(rasterizerState2) }).first;
                     return it->second.Get();
                 }
             }
             else if (RASTERIZER_ORDERED_VIEWS && descriptor.forcedSampleCount > 0)
             {
-                ComPtr<ID3D11Device1> device1;
-                if (SUCCEEDED(device.As(&device1)))
-                {
-                    D3D11_RASTERIZER_DESC1 desc1;
-                    desc1.FillMode = desc.FillMode;
-                    desc1.CullMode = desc.CullMode;
-                    desc1.FrontCounterClockwise = desc.FrontCounterClockwise;
-                    desc1.DepthBias = desc.DepthBias;
-                    desc1.DepthBiasClamp = desc.DepthBiasClamp;
-                    desc1.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
-                    desc1.DepthClipEnable = desc.DepthClipEnable;
-                    desc1.ScissorEnable = desc.ScissorEnable;
-                    desc1.MultisampleEnable = desc.MultisampleEnable;
-                    desc1.AntialiasedLineEnable = desc.AntialiasedLineEnable;
-                    desc1.ForcedSampleCount = descriptor.forcedSampleCount;
+                D3D11_RASTERIZER_DESC1 desc1;
+                desc1.FillMode = desc.FillMode;
+                desc1.CullMode = desc.CullMode;
+                desc1.FrontCounterClockwise = desc.FrontCounterClockwise;
+                desc1.DepthBias = desc.DepthBias;
+                desc1.DepthBiasClamp = desc.DepthBiasClamp;
+                desc1.SlopeScaledDepthBias = desc.SlopeScaledDepthBias;
+                desc1.DepthClipEnable = desc.DepthClipEnable;
+                desc1.ScissorEnable = desc.ScissorEnable;
+                desc1.MultisampleEnable = desc.MultisampleEnable;
+                desc1.AntialiasedLineEnable = desc.AntialiasedLineEnable;
+                desc1.ForcedSampleCount = descriptor.forcedSampleCount;
 
-                    ComPtr<ID3D11RasterizerState1> rasterizerState1;
-                    ThrowIfFailed(device1->CreateRasterizerState1(&desc1, &rasterizerState1));
+                ComPtr<ID3D11RasterizerState1> rasterizerState1;
+                ThrowIfFailed(device->CreateRasterizerState1(&desc1, &rasterizerState1));
 
-                    it = rasterizerStateCache.insert({ hash, std::move(rasterizerState1) }).first;
-                    return it->second.Get();
-                }
+                it = rasterizerStateCache.insert({ hash, std::move(rasterizerState1) }).first;
+                return it->second.Get();
             }
 
             ComPtr<ID3D11RasterizerState> rasterizerState;
@@ -1899,11 +1674,8 @@ namespace Alimer
                 d3d11Desc.RenderTarget[i] = _ConvertColorAttachment(&descriptor->colorAttachments[i]);
             }
 
-            ComPtr<ID3D11Device1> device1;
-            ThrowIfFailed(device.As(&device1));
-
             ComPtr<ID3D11BlendState1> state;
-            ThrowIfFailed(device1->CreateBlendState1(&d3d11Desc, &state));
+            ThrowIfFailed(device->CreateBlendState1(&d3d11Desc, &state));
 
             it = blendStateCache.insert({ hash, std::move(state) }).first;
             return it->second.Get();
@@ -2019,7 +1791,7 @@ namespace Alimer
 
         return SUCCEEDED(hr);
     }
-    
+
     bool GraphicsDevice_DX11::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso)
     {
         auto internal_state = std::make_shared<PipelineState_DX11>();
@@ -2090,22 +1862,22 @@ namespace Alimer
             D3D11_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 srv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                srv_desc.Format = _ConvertFormat(texture->desc.Format);
+                srv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
                 break;
             }
 
@@ -2209,22 +1981,22 @@ namespace Alimer
             D3D11_UNORDERED_ACCESS_VIEW_DESC uav_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 uav_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                uav_desc.Format = _ConvertFormat(texture->desc.Format);
+                uav_desc.Format = D3DConvertPixelFormat(texture->desc.format);
                 break;
             }
 
@@ -2289,22 +2061,22 @@ namespace Alimer
             D3D11_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 rtv_desc.Format = DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
                 break;
             default:
-                rtv_desc.Format = _ConvertFormat(texture->desc.Format);
+                rtv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
                 break;
             }
 
@@ -2385,22 +2157,22 @@ namespace Alimer
             D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
 
             // Try to resolve resource format:
-            switch (texture->desc.Format)
+            switch (texture->desc.format)
             {
-            case FORMAT_R16_TYPELESS:
+            case PixelFormat::FORMAT_R16_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D16_UNORM;
                 break;
-            case FORMAT_R32_TYPELESS:
+            case PixelFormat::FORMAT_R32_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
                 break;
-            case FORMAT_R24G8_TYPELESS:
+            case PixelFormat::FORMAT_R24G8_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
                 break;
-            case FORMAT_R32G8X24_TYPELESS:
+            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
                 break;
             default:
-                dsv_desc.Format = _ConvertFormat(texture->desc.Format);
+                dsv_desc.Format = D3DConvertPixelFormat(texture->desc.format);
                 break;
             }
 
@@ -2507,8 +2279,8 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.Format);
-                srv_desc.Format = _ConvertFormat(desc.Format);
+                uint32_t stride = GetFormatStride(desc.format);
+                srv_desc.Format = D3DConvertPixelFormat(desc.format);
                 srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
                 srv_desc.Buffer.FirstElement = (UINT)offset / stride;
                 srv_desc.Buffer.NumElements = Alimer::Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
@@ -2559,8 +2331,8 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.Format);
-                uav_desc.Format = _ConvertFormat(desc.Format);
+                uint32_t stride = GetFormatStride(desc.format);
+                uav_desc.Format = D3DConvertPixelFormat(desc.format);
                 uav_desc.Buffer.FirstElement = (UINT)offset / stride;
                 uav_desc.Buffer.NumElements = Alimer::Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
             }
@@ -2682,10 +2454,9 @@ namespace Alimer
 
     void GraphicsDevice_DX11::PresentBegin(CommandList cmd)
     {
-        ID3D11RenderTargetView* RTV = renderTargetView.Get();
-        deviceContexts[cmd]->OMSetRenderTargets(1, &RTV, 0);
+        deviceContexts[cmd]->OMSetRenderTargets(1, &renderTargetView, 0);
         float ClearColor[4] = { 0, 0, 0, 1.0f }; // red,green,blue,alpha
-        deviceContexts[cmd]->ClearRenderTargetView(RTV, ClearColor);
+        deviceContexts[cmd]->ClearRenderTargetView(renderTargetView, ClearColor);
     }
     void GraphicsDevice_DX11::PresentEnd(CommandList cmd)
     {
@@ -2703,11 +2474,8 @@ namespace Alimer
             // need to create one more command list:
             ALIMER_ASSERT(cmd < kCommanstListCount);
 
-            HRESULT hr = device->CreateDeferredContext(0, &deviceContexts[cmd]);
-            assert(SUCCEEDED(hr));
-
-            hr = deviceContexts[cmd].As(&userDefinedAnnotations[cmd]);
-            assert(SUCCEEDED(hr));
+            ThrowIfFailed(device->CreateDeferredContext1(0, &deviceContexts[cmd]));
+            ThrowIfFailed(deviceContexts[cmd]->QueryInterface(&userDefinedAnnotations[cmd]));
 
             // Temporary allocations will use the following buffer type:
             GPUBufferDesc frameAllocatorDesc;
@@ -2778,13 +2546,16 @@ namespace Alimer
         {
             CommandList cmd_last = cmd_count.load();
             cmd_count.store(0);
+
+            ID3D11CommandList* commandList = nullptr;
             for (CommandList cmd = 0; cmd < cmd_last; ++cmd)
             {
-                deviceContexts[cmd]->FinishCommandList(false, &commandLists[cmd]);
-                immediateContext->ExecuteCommandList(commandLists[cmd].Get(), false);
-                commandLists[cmd].Reset();
+                deviceContexts[cmd]->FinishCommandList(false, &commandList);
+                immediateContext->ExecuteCommandList(commandList, false);
+                commandList->Release();
             }
         }
+
         immediateContext->ClearState();
 
         FRAMECOUNT++;
@@ -2866,8 +2637,11 @@ namespace Alimer
                 if (attachment.loadop == RenderPassAttachment::LOADOP_CLEAR)
                 {
                     uint32_t _flags = D3D11_CLEAR_DEPTH;
-                    if (IsFormatStencilSupport(texture->desc.Format))
+                    if (IsFormatStencilSupport(texture->desc.format))
+                    {
                         _flags |= D3D11_CLEAR_STENCIL;
+                    }
+
                     deviceContexts[cmd]->ClearDepthStencilView(DSV, _flags, texture->desc.clear.depthstencil.depth, texture->desc.clear.depthstencil.stencil);
                 }
             }
@@ -2911,7 +2685,7 @@ namespace Alimer
                             if (src_counter == dst_counter)
                             {
                                 auto src_internal = to_internal(src.texture);
-                                deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, _ConvertFormat(attachment.texture->desc.Format));
+                                deviceContexts[cmd]->ResolveSubresource(dst_internal->resource.Get(), 0, src_internal->resource.Get(), 0, D3DConvertPixelFormat(attachment.texture->desc.format));
                                 break;
                             }
                             src_counter++;
@@ -3403,6 +3177,6 @@ namespace Alimer
         auto wName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[cmd]->SetMarker(wName.c_str());
     }
-}
+    }
 
 #endif // defined(ALIMER_D3D11)

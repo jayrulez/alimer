@@ -208,9 +208,9 @@ namespace Alimer
         OpaqueWhite,
     };
 
-	enum FORMAT
+	enum class PixelFormat : uint32_t
 	{
-		FORMAT_UNKNOWN,
+        Invalid = 0,
 
 		FORMAT_R32G32B32A32_FLOAT,
 		FORMAT_R32G32B32A32_UINT,
@@ -464,7 +464,7 @@ namespace Alimer
 		uint32_t Depth = 1;
 		uint32_t ArraySize = 1;
 		uint32_t MipLevels = 1;
-		FORMAT Format = FORMAT_UNKNOWN;
+        PixelFormat format = PixelFormat::FORMAT_R8G8B8A8_UNORM;
 		uint32_t SampleCount = 1;
 		USAGE Usage = USAGE_DEFAULT;
 		uint32_t BindFlags = 0;
@@ -499,7 +499,7 @@ namespace Alimer
 		uint32_t CPUAccessFlags = 0;
 		uint32_t MiscFlags = 0;
 		uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
-		FORMAT Format = FORMAT_UNKNOWN; // only needed for typed buffer!
+        PixelFormat format = PixelFormat::Invalid; // only needed for typed buffer!
 	};
 
 	struct GPUQueryDesc
@@ -565,7 +565,7 @@ namespace Alimer
 
     struct ColorAttachmentDescriptor
     {
-        FORMAT format;
+        PixelFormat format;
         bool blendEnable = false;
         BlendFactor srcColorBlendFactor = BlendFactor::One;
         BlendFactor dstColorBlendFactor = BlendFactor::Zero;
@@ -902,7 +902,7 @@ namespace Alimer
 					uint32_t vertexByteOffset = 0;
 					uint32_t vertexStride = 0;
 					IndexFormat indexFormat = IndexFormat::UInt32;
-					FORMAT vertexFormat = FORMAT_R32G32B32_FLOAT;
+                    VertexFormat vertexFormat = VertexFormat::Float3;
                     GraphicsBuffer* transform3x4Buffer;
 					uint32_t transform3x4BufferOffset = 0;
 				} triangles;

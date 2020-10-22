@@ -39,17 +39,6 @@ namespace Alimer
     class GraphicsDevice_DX11 : public GraphicsDevice
     {
     private:
-        D3D_DRIVER_TYPE driverType;
-        D3D_FEATURE_LEVEL featureLevel;
-        ComPtr<ID3D11Device> device;
-        ComPtr<IDXGISwapChain1> swapChain;
-        ComPtr<ID3D11RenderTargetView> renderTargetView;
-        ComPtr<ID3D11Texture2D> backBuffer;
-        ComPtr<ID3D11DeviceContext> immediateContext;
-        ComPtr<ID3D11DeviceContext> deviceContexts[kCommanstListCount];
-        ComPtr<ID3D11CommandList> commandLists[kCommanstListCount];
-        ComPtr<ID3DUserDefinedAnnotation> userDefinedAnnotations[kCommanstListCount];
-
         uint32_t	stencilRef[kCommanstListCount];
         XMFLOAT4	blendFactor[kCommanstListCount];
 
@@ -177,5 +166,22 @@ namespace Alimer
         void PushDebugGroup(CommandList cmd, const char* name) override;
         void PopDebugGroup(CommandList cmd) override;
         void InsertDebugMarker(CommandList cmd, const char* name) override;
+
+    private:
+        void CreateFactory();
+        void GetAdapter(IDXGIAdapter1** ppAdapter);
+
+        IDXGIFactory2* dxgiFactory2 = nullptr;
+        ID3D11Device1* device = nullptr;
+        ID3D11DeviceContext1* immediateContext = nullptr;
+        D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
+
+        IDXGISwapChain1* swapChain = nullptr;
+        ID3D11Texture2D* backBufferTexture = nullptr;
+        ID3D11RenderTargetView* renderTargetView = nullptr;
+
+
+        ID3D11DeviceContext1* deviceContexts[kCommanstListCount] = {};
+        ID3DUserDefinedAnnotation* userDefinedAnnotations[kCommanstListCount] = {};
     };
 }
