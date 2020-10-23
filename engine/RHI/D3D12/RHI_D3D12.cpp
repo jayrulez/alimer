@@ -455,7 +455,7 @@ namespace Alimer
             }
 
 #ifdef _DEBUG
-            void SetName(const std::string& newName) override
+            void SetName(const String& newName) override
             {
                 GraphicsBuffer::SetName(newName);
 
@@ -590,11 +590,11 @@ namespace Alimer
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
             ComPtr<ID3D12StateObject> resource;
 
-            std::vector<std::wstring> export_strings;
-            std::vector<D3D12_EXPORT_DESC> exports;
-            std::vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
-            std::vector<std::wstring> group_strings;
-            std::vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
+            Vector<WString> export_strings;
+            Vector<D3D12_EXPORT_DESC> exports;
+            Vector<D3D12_DXIL_LIBRARY_DESC> library_descs;
+            Vector<WString> group_strings;
+            Vector<D3D12_HIT_GROUP_DESC> hitgroup_descs;
 
             ~RTPipelineState_DX12()
             {
@@ -2483,8 +2483,8 @@ namespace Alimer
         ComPtr<IDxcBlobEncoding> sourceBlob;
         ThrowIfFailed(dxcLibrary->CreateBlobWithEncodingOnHeapCopy(source, (UINT32)strlen(source), CP_UTF8, &sourceBlob));
 
-        std::wstring entryPointW = ToUtf16(entryPoint);
-        std::vector<const wchar_t*> arguments;
+        WString entryPointW = ToUtf16(entryPoint);
+        Vector<const wchar_t*> arguments;
         arguments.push_back(L"/Zpc"); // Column major
 #ifdef _DEBUG
         arguments.push_back(L"/Zi");
@@ -3053,11 +3053,11 @@ namespace Alimer
         renderpass->desc = *pDesc;
 
         renderpass->hash = 0;
-        Alimer::hash_combine(renderpass->hash, pDesc->attachments.size());
+        CombineHash(renderpass->hash, pDesc->attachments.size());
         for (auto& attachment : pDesc->attachments)
         {
-            Alimer::hash_combine(renderpass->hash, attachment.texture->desc.format);
-            Alimer::hash_combine(renderpass->hash, attachment.texture->desc.SampleCount);
+            CombineHash(renderpass->hash, attachment.texture->desc.format);
+            CombineHash(renderpass->hash, attachment.texture->desc.SampleCount);
         }
 
         // Beginning barriers:
@@ -5114,13 +5114,6 @@ namespace Alimer
     }
     void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
     {
-        size_t pipeline_hash = 0;
-        Alimer::hash_combine(pipeline_hash, pso->hash);
-        if (active_renderpass[cmd] != nullptr)
-        {
-            Alimer::hash_combine(pipeline_hash, active_renderpass[cmd]->hash);
-        }
-
         if (active_pso[cmd] == pso)
         {
             return;

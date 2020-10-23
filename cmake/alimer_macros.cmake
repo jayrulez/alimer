@@ -89,24 +89,46 @@ function(alimer_add_plugin name files)
 	set_target_properties(${name} PROPERTIES FOLDER Plugins)
 endfunction()
 
-function(alimer_copy_required_dlls TARGET_NAME)
-	if(WIN32 OR WINDOWS_STORE)
-		# Copy DXIL
-    	set(VS_WINDOWS_SDK_BIN_DIR "$(WindowsSdkDir)/bin/${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}/x64")
-    	set(VS_DXIL_SIGNER_PATH  "\"${VS_WINDOWS_SDK_BIN_DIR}/dxil.dll\"" CACHE INTERNAL "dxil.dll path")
-		set(DXC_COMPILER_PATH  "\"${ALIMER_THIRD_PARTY_DIR}/dxc/bin/dxcompiler.dll\"" CACHE INTERNAL "dxcompiler.dll path")
-
-		add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${VS_DXIL_SIGNER_PATH}
-			"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
-		)
-
-		# Copy dxcompiler (third_party/dxc/bin)
-		add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-			${DXC_COMPILER_PATH}
-			"\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
-		)
-	endif ()
-endfunction()
+# Macro for setting symbolic link on platform that supports it
+function (create_symlink SOURCE DESTINATION)
+    # Make absolute paths so they work more reliably on cmake-gui
+    if (IS_ABSOLUTE ${SOURCE})
+        set (ABS_SOURCE ${SOURCE})
+    else ()
+        set (ABS_SOURCE ${CMAKE_SOURCE_DIR}/${SOURCE})
+    endif ()
+    if (IS_ABSOLUTE ${DESTINATION})
+        set (ABS_DESTINATION ${DESTINATION})
+    else ()
+        set (ABS_DESTINATION ${CMAKE_BINARY_DIR}/${DESTINATION})
+    endif ()
+    if (CMAKE_HOST_WIN32)
+        if (IS_DIRECTORY ${ABS_SOURCE})
+            set (SLASH_D /D)
+        else ()
+            unset (SLASH_D)
+        endif ()
+        set (RESULT_CODE 1)
+        if(${CMAKE_SYSTEM_VERSION} GREATER_EQUAL 6.0)
+            if (NOT EXISTS ${ABS_DESTINATION})
+                # Have to use string-REPLACE as file-TO_NATIVE_PATH does not work as expected with MinGW on "backward slash" host system
+                string (REPLACE / \\ BACKWARD_ABS_DESTINATION ${ABS_DESTINATION})
+                string (REPLACE / \\ BACKWARD_ABS_SOURCE ${ABS_SOURCE})
+                execute_process (COMMAND cmd /C mklink ${SLASH_D} ${BACKWARD_ABS_DESTINATION} ${BACKWARD_ABS_SOURCE} OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE RESULT_CODE)
+            endif ()
+        endif ()
+        if (NOT "${RESULT_CODE}" STREQUAL "0")
+            if (SLASH_D)
+                set (COMMAND COMMAND ${CMAKE_COMMAND} -E copy_directory ${ABS_SOURCE} ${ABS_DESTINATION})
+            else ()
+                set (COMMAND COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ABS_SOURCE} ${ABS_DESTINATION})
+            endif ()
+            # Fallback to copy only one time
+            if (NOT EXISTS ${ABS_DESTINATION})
+                execute_process (${COMMAND})
+            endif ()
+        endif ()
+    else ()
+        execute_process (COMMAND ${CMAKE_COMMAND} -E create_symlink ${ABS_SOURCE} ${ABS_DESTINATION})
+    endif ()
+endfunction ()

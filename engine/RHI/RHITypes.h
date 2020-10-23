@@ -24,10 +24,9 @@
 
 #include "Core/Assert.h"
 #include "Core/Hash.h"
+#include "Core/Containers.h"
+#include "Core/String.h"
 #include <DirectXMath.h>
-#include <memory>
-#include <vector>
-#include <string>
 
 using namespace DirectX;
 
@@ -951,8 +950,9 @@ namespace Alimer
 			INTERSECTION,
 		} type = RAYGENERATION;
 		const Shader* shader = nullptr;
-		std::string function_name;
+		String function_name;
 	};
+
 	struct ShaderHitGroup
 	{
 		enum TYPE
@@ -961,7 +961,7 @@ namespace Alimer
 			TRIANGLES,
 			PROCEDURAL,
 		} type = TRIANGLES;
-		std::string name;
+		String name;
 		uint32_t general_shader = ~0;
 		uint32_t closesthit_shader = ~0;
 		uint32_t anyhit_shader = ~0;
@@ -970,8 +970,8 @@ namespace Alimer
 	struct RaytracingPipelineStateDesc
 	{
 		const RootSignature* rootSignature = nullptr;
-		std::vector<ShaderLibrary> shaderlibraries;
-		std::vector<ShaderHitGroup> hitgroups;
+		Vector<ShaderLibrary> shaderlibraries;
+		Vector<ShaderHitGroup> hitgroups;
 		uint32_t max_trace_recursion_depth = 1;
 		uint32_t max_attribute_size_in_bytes = 0;
 		uint32_t max_payload_size_in_bytes = 0;
@@ -1091,14 +1091,14 @@ namespace std
         std::size_t operator()(const Alimer::RasterizationStateDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.frontFace);
-            Alimer::hash_combine(hash, (uint32_t)desc.cullMode);
-            Alimer::hash_combine(hash, desc.depthBias);
-            Alimer::hash_combine(hash, desc.depthBiasSlopeScale);
-            Alimer::hash_combine(hash, desc.depthBiasClamp);
-            Alimer::hash_combine(hash, desc.depthClipEnable);
-            Alimer::hash_combine(hash, desc.conservativeRasterizationEnable);
-            Alimer::hash_combine(hash, desc.forcedSampleCount);
+            Alimer::CombineHash(hash, desc.frontFace);
+            Alimer::CombineHash(hash, desc.cullMode);
+            Alimer::CombineHash(hash, desc.depthBias);
+            Alimer::CombineHash(hash, desc.depthBiasSlopeScale);
+            Alimer::CombineHash(hash, desc.depthBiasClamp);
+            Alimer::CombineHash(hash, desc.depthClipEnable);
+            Alimer::CombineHash(hash, desc.conservativeRasterizationEnable);
+            Alimer::CombineHash(hash, desc.forcedSampleCount);
             return hash;
         }
     };
@@ -1109,10 +1109,10 @@ namespace std
         std::size_t operator()(const Alimer::StencilStateFaceDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.compare);
-            Alimer::hash_combine(hash, (uint32_t)desc.failOp);
-            Alimer::hash_combine(hash, (uint32_t)desc.depthFailOp);
-            Alimer::hash_combine(hash, (uint32_t)desc.passOp);
+            Alimer::CombineHash(hash, (uint32_t)desc.compare);
+            Alimer::CombineHash(hash, (uint32_t)desc.failOp);
+            Alimer::CombineHash(hash, (uint32_t)desc.depthFailOp);
+            Alimer::CombineHash(hash, (uint32_t)desc.passOp);
             return hash;
         }
     };
@@ -1123,12 +1123,12 @@ namespace std
         std::size_t operator()(const Alimer::DepthStencilStateDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, desc.depthWriteEnabled);
-            Alimer::hash_combine(hash, (uint32_t)desc.depthCompare);
-            Alimer::hash_combine(hash, desc.stencilFront);
-            Alimer::hash_combine(hash, desc.stencilBack);
-            Alimer::hash_combine(hash, desc.stencilReadMask);
-            Alimer::hash_combine(hash, desc.stencilWriteMask);
+            Alimer::CombineHash(hash, desc.depthWriteEnabled);
+            Alimer::CombineHash(hash, (uint32_t)desc.depthCompare);
+            Alimer::CombineHash(hash, desc.stencilFront);
+            Alimer::CombineHash(hash, desc.stencilBack);
+            Alimer::CombineHash(hash, desc.stencilReadMask);
+            Alimer::CombineHash(hash, desc.stencilWriteMask);
             return hash;
         }
     };
@@ -1139,8 +1139,8 @@ namespace std
         std::size_t operator()(const Alimer::VertexBufferLayoutDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.stride);
-            Alimer::hash_combine(hash, (uint32_t)desc.stepMode);
+            Alimer::CombineHash(hash, (uint32_t)desc.stride);
+            Alimer::CombineHash(hash, (uint32_t)desc.stepMode);
             return hash;
         }
     };
@@ -1151,9 +1151,9 @@ namespace std
         std::size_t operator()(const Alimer::VertexAttributeDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.format);
-            Alimer::hash_combine(hash, desc.offset);
-            Alimer::hash_combine(hash, desc.bufferIndex);
+            Alimer::CombineHash(hash, (uint32_t)desc.format);
+            Alimer::CombineHash(hash, desc.offset);
+            Alimer::CombineHash(hash, desc.bufferIndex);
             return hash;
         }
     };
@@ -1170,7 +1170,7 @@ namespace std
                 if (desc.attributes[i].format != Alimer::VertexFormat::Invalid)
                     break;
 
-                Alimer::hash_combine(hash, desc.attributes[i]);
+                Alimer::CombineHash(hash, desc.attributes[i]);
             }
 
             return hash;
@@ -1183,15 +1183,15 @@ namespace std
         std::size_t operator()(const Alimer::ColorAttachmentDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.format);
-            Alimer::hash_combine(hash, desc.blendEnable);
-            Alimer::hash_combine(hash, (uint32_t)desc.srcColorBlendFactor);
-            Alimer::hash_combine(hash, (uint32_t)desc.dstColorBlendFactor);
-            Alimer::hash_combine(hash, (uint32_t)desc.colorBlendOp);
-            Alimer::hash_combine(hash, (uint32_t)desc.srcAlphaBlendFactor);
-            Alimer::hash_combine(hash, (uint32_t)desc.dstAlphaBlendFactor);
-            Alimer::hash_combine(hash, (uint32_t)desc.alphaBlendOp);
-            Alimer::hash_combine(hash, (uint32_t)desc.colorWriteMask);
+            Alimer::CombineHash(hash, desc.format);
+            Alimer::CombineHash(hash, desc.blendEnable);
+            Alimer::CombineHash(hash, desc.srcColorBlendFactor);
+            Alimer::CombineHash(hash, desc.dstColorBlendFactor);
+            Alimer::CombineHash(hash, desc.colorBlendOp);
+            Alimer::CombineHash(hash, desc.srcAlphaBlendFactor);
+            Alimer::CombineHash(hash, desc.dstAlphaBlendFactor);
+            Alimer::CombineHash(hash, desc.alphaBlendOp);
+            Alimer::CombineHash(hash, desc.colorWriteMask);
             return hash;
         }
     };
@@ -1202,18 +1202,18 @@ namespace std
         std::size_t operator()(const Alimer::SamplerDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            Alimer::hash_combine(hash, (uint32_t)desc.magFilter);
-            Alimer::hash_combine(hash, (uint32_t)desc.minFilter);
-            Alimer::hash_combine(hash, (uint32_t)desc.mipmapFilter);
-            Alimer::hash_combine(hash, (uint32_t)desc.addressModeU);
-            Alimer::hash_combine(hash, (uint32_t)desc.addressModeV);
-            Alimer::hash_combine(hash, (uint32_t)desc.addressModeW);
-            Alimer::hash_combine(hash, desc.mipLodBias);
-            Alimer::hash_combine(hash, desc.maxAnisotropy);
-            Alimer::hash_combine(hash, (uint32_t)desc.compareFunction);
-            Alimer::hash_combine(hash, desc.lodMinClamp);
-            Alimer::hash_combine(hash, desc.lodMaxClamp);
-            Alimer::hash_combine(hash, (uint32_t)desc.borderColor);
+            Alimer::CombineHash(hash, desc.magFilter);
+            Alimer::CombineHash(hash, desc.minFilter);
+            Alimer::CombineHash(hash, desc.mipmapFilter);
+            Alimer::CombineHash(hash, desc.addressModeU);
+            Alimer::CombineHash(hash, desc.addressModeV);
+            Alimer::CombineHash(hash, desc.addressModeW);
+            Alimer::CombineHash(hash, desc.mipLodBias);
+            Alimer::CombineHash(hash, desc.maxAnisotropy);
+            Alimer::CombineHash(hash, desc.compareFunction);
+            Alimer::CombineHash(hash, desc.lodMinClamp);
+            Alimer::CombineHash(hash, desc.lodMaxClamp);
+            Alimer::CombineHash(hash, desc.borderColor);
             return hash;
         }
     };

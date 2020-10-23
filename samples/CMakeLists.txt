@@ -14,7 +14,7 @@ function(add_sample sample_name)
 	target_link_libraries(${sample_name} Alimer)
 
     if (MSVC)
-        set_property(TARGET ${sample_name} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+        set_property(TARGET ${sample_name} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${sample_name}>")
     endif ()
     
     if (WINDOWS_STORE)

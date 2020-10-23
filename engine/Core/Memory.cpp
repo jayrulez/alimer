@@ -20,23 +20,10 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "IO/Stream.h"
+#include "Core/Memory.h"
 
 namespace Alimer
 {
-    using FilePath = String;
-
-    namespace File
-    {
-        ALIMER_API bool Exists(const FilePath& path);
-        ALIMER_API String ReadAllText(const FilePath& path);
-        ALIMER_API Vector<uint8_t> ReadAllBytes(const FilePath& path);
-    }
-
-    namespace Directory
-    {
-        ALIMER_API bool Exists(const FilePath& path);
-    }
-}
+    uint64_t ALIMER_THREADLOCAL MemoryCounter::Allocs = 0;
+    uint64_t ALIMER_THREADLOCAL MemoryCounter::Frees = 0;
+} 

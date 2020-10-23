@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "Core/Containers.h"
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
 #include "RHI/RHITypes.h"
@@ -101,7 +102,7 @@ namespace Alimer
         State state;
         AssetManager assets;
         bool headless = false;
-        std::unique_ptr<Window> window{ nullptr };
+        UniquePtr<Window> window{ nullptr };
         std::shared_ptr<GraphicsDevice> graphicsDevice{ nullptr };
     };
 

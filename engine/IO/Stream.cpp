@@ -22,8 +22,6 @@
 
 #include "IO/Stream.h"
 
-using namespace std;
-
 namespace Alimer
 {
     Stream::Stream()
@@ -31,11 +29,11 @@ namespace Alimer
 
     }
 
-    std::string Stream::ReadString(int length)
+    String Stream::ReadString(int length)
     {
         if (length >= 0)
         {
-            std::string str;
+            String str;
             str.resize(length);
             Read(str.data(), length);
             str[length] = '\0';
@@ -43,7 +41,7 @@ namespace Alimer
         }
         else
         {
-            std::string str;
+            String str;
             char next;
             while (Read(&next, 1) && next != '\0')
             {
@@ -54,15 +52,15 @@ namespace Alimer
         }
     }
 
-    std::string Stream::ReadLine()
+    String Stream::ReadLine()
     {
-        std::string string;
+        String string;
         ReadLine(string);
         return string;
 
     }
 
-    int64_t Stream::ReadLine(std::string& writeTo)
+    int64_t Stream::ReadLine(String& writeTo)
     {
         const int bufferSize = 512;
         char buffer[bufferSize];
@@ -148,21 +146,21 @@ namespace Alimer
         return ret;
     }
 
-    std::string Stream::ReadFileID()
+    String Stream::ReadFileID()
     {
         return ReadString(4);
     }
 
-    vector<uint8_t> Stream::ReadBytes(uint32_t count)
+    Vector<uint8_t> Stream::ReadBytes(uint32_t count)
     {
-        vector<uint8_t> result(count > 0 ? count : Length());
+        Vector<uint8_t> result(count > 0 ? count : Length());
         Read(result.data(), static_cast<int64_t>(result.size()));
         return result;
     }
 
-    vector<uint8_t> Stream::ReadBuffer()
+    Vector<uint8_t> Stream::ReadBuffer()
     {
-        vector<uint8_t> ret(ReadVLE());
+        Vector<uint8_t> ret(ReadVLE());
         if (ret.size())
         {
             Read(ret.data(), static_cast<int64_t>(ret.size()));
@@ -176,7 +174,7 @@ namespace Alimer
         return Read<unsigned char>() != 0;
     }
 
-    template<> std::string Stream::Read<std::string>()
+    template<> String Stream::Read<String>()
     {
         return ReadString();
     }
@@ -186,7 +184,7 @@ namespace Alimer
         return StringId32(Read<uint32_t>());
     }
 
-    void Stream::WriteFileID(const std::string& value)
+    void Stream::WriteFileID(const String& value)
     {
         Write(value.c_str(), Min<uint64_t>(value.length(), 4));
         for (size_t i = value.length(); i < 4; ++i)
@@ -195,7 +193,7 @@ namespace Alimer
         }
     }
 
-    void Stream::WriteBuffer(const std::vector<uint8_t>& value)
+    void Stream::WriteBuffer(const Vector<uint8_t>& value)
     {
         uint32_t numBytes = static_cast<uint32_t>(value.size());
 
@@ -208,34 +206,34 @@ namespace Alimer
 
     void Stream::WriteVLE(uint32_t value)
     {
-        unsigned char data[4];
+        uint8_t data[4];
 
         if (value < 0x80)
-            Write((unsigned char)value);
+            Write((uint8_t)value);
         else if (value < 0x4000)
         {
-            data[0] = (unsigned char)value | 0x80;
-            data[1] = (unsigned char)(value >> 7);
+            data[0] = (uint8_t)value | 0x80;
+            data[1] = (uint8_t)(value >> 7);
             Write(data, 2);
         }
         else if (value < 0x200000)
         {
-            data[0] = (unsigned char)value | 0x80;
-            data[1] = (unsigned char)((value >> 7) | 0x80);
-            data[2] = (unsigned char)(value >> 14);
+            data[0] = (uint8_t)value | 0x80;
+            data[1] = (uint8_t)((value >> 7) | 0x80);
+            data[2] = (uint8_t)(value >> 14);
             Write(data, 3);
         }
         else
         {
-            data[0] = (unsigned char)value | 0x80;
-            data[1] = (unsigned char)((value >> 7) | 0x80);
-            data[2] = (unsigned char)((value >> 14) | 0x80);
-            data[3] = (unsigned char)(value >> 21);
+            data[0] = (uint8_t)value | 0x80;
+            data[1] = (uint8_t)((value >> 7) | 0x80);
+            data[2] = (uint8_t)((value >> 14) | 0x80);
+            data[3] = (uint8_t)(value >> 21);
             Write(data, 4);
         }
     }
 
-    void Stream::WriteLine(const std::string& value)
+    void Stream::WriteLine(const String& value)
     {
         Write(value.c_str(), value.length());
         Write('\r');
@@ -247,7 +245,7 @@ namespace Alimer
         Write<uint8_t>(value ? 1 : 0);
     }
 
-    template<> void Stream::Write<std::string>(const std::string& value)
+    template<> void Stream::Write<String>(const String& value)
     {
         // Write content and null terminator
         Write(value.c_str(), value.length() + 1);

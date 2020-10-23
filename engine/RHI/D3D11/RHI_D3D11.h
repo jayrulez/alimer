@@ -25,9 +25,10 @@
 
 #include "RHI/RHI.h"
 #include "RHI/D3DCommon/RHI_D3D.h"
+#include "Core/Containers.h"
+
 #define D3D11_NO_HELPERS
 #include <d3d11_3.h>
-
 #include <atomic>
 
 namespace Alimer
@@ -80,10 +81,10 @@ namespace Alimer
 
         std::atomic<CommandList> cmd_count{ 0 };
 
-        std::unordered_map<size_t, ComPtr<ID3D11BlendState1>> blendStateCache;
-        std::unordered_map<size_t, ComPtr<ID3D11RasterizerState>> rasterizerStateCache;
-        std::unordered_map<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStateCache;
-        std::unordered_map<size_t, ComPtr<ID3D11SamplerState>> samplerCache;
+        UnorderedMap<size_t, ComPtr<ID3D11BlendState1>> blendStateCache;
+        UnorderedMap<size_t, ComPtr<ID3D11RasterizerState>> rasterizerStateCache;
+        UnorderedMap<size_t, ComPtr<ID3D11DepthStencilState>> depthStencilStateCache;
+        UnorderedMap<size_t, ComPtr<ID3D11SamplerState>> samplerCache;
 
         struct EmptyResourceHandle {}; // only care about control-block
         std::shared_ptr<EmptyResourceHandle> emptyresource;

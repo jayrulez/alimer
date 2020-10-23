@@ -41,24 +41,24 @@ namespace Alimer::File
         return true;
     }
 
-    std::string ReadAllText(const std::string& path)
+    String ReadAllText(const FilePath& path)
     {
         if (!Exists(path))
             return EMPTY_STRING;
 
         FileStream stream(path, FileMode::Read);
-        std::string result = stream.ReadString();
+        String result = stream.ReadString();
         return result;
     }
 
 
-    std::vector<uint8_t> ReadAllBytes(const std::string& path)
+    Vector<uint8_t> ReadAllBytes(const FilePath& path)
     {
         if (!Exists(path))
             return {};
 
         FileStream stream(path, FileMode::Read);
-        std::vector<uint8_t> result = stream.ReadBytes();
+        Vector<uint8_t> result = stream.ReadBytes();
         return result;
     }
 }

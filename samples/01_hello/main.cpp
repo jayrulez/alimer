@@ -232,8 +232,8 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
-        config.preferredBackendType = GraphicsBackendType::Direct3D12;
+        config.preferredBackendType = GraphicsBackendType::Direct3D11;
+        //config.preferredBackendType = GraphicsBackendType::Direct3D12;
         //config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";
         //config.fullscreen = true;

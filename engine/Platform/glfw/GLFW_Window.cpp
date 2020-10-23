@@ -64,7 +64,7 @@ namespace Alimer
         }
     }
 
-    WindowImpl::WindowImpl(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
+    WindowImpl::WindowImpl(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
         : title{ title }
         , id{}
     {

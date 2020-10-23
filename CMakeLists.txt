@@ -183,4 +183,29 @@ install (FILES
 )
 
 # CMake modules
-install (DIRECTORY ${CMAKE_SOURCE_DIR}/cmake/ DESTINATION cmake/cmake/)
+install (DIRECTORY ${CMAKE_SOURCE_DIR}/cmake/ DESTINATION cmake/)
+
+# Install data files
+file (MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+if (NOT ANDROID)
+    foreach(dir assets)
+        if (MSVC OR "${CMAKE_GENERATOR}" STREQUAL "Xcode")
+            foreach (CONFIG ${CMAKE_CONFIGURATION_TYPES})
+                create_symlink(${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}/${dir})
+            endforeach ()
+        else()
+            create_symlink(${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dir})
+        endif ()
+        install (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${dir} DESTINATION ${DEST_BIN_DIR_CONFIG}/)
+    endforeach()
+
+    # DLLs
+    if(WIN32 AND NOT (WINDOWS_STORE))
+        install (FILES
+            ${ALIMER_THIRD_PARTY_DIR}/dxc/bin/dxil.dll
+            ${ALIMER_THIRD_PARTY_DIR}/dxc/bin/dxcompiler.dll
+            DESTINATION ${DEST_BIN_DIR_CONFIG}
+        )
+    endif ()
+endif ()

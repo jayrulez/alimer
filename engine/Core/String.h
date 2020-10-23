@@ -22,24 +22,36 @@
 
 #pragma once
 
-#include "PlatformDef.h"
+#include "Core/Memory.h"
 #include <fmt/format.h>
 
 namespace Alimer
 {
-    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
-    extern const std::string EMPTY_STRING;
+    /** Basic string that uses framework's memory allocators. */
+    template <typename T>
+    using BasicString = std::basic_string<T, std::char_traits<T>, StdAlloc<T>>;
 
-    template<typename T> constexpr typename std::underlying_type<T>::type ecast(T x)
-    {
-        return static_cast<typename std::underlying_type<T>::type>(x);
-    }
+    /**	Basic string stream that uses framework's memory allocators. */
+    template <typename T>
+    using BasicStringStream = std::basic_stringstream<T, std::char_traits<T>, StdAlloc<T>>;
+
+    /** Narrow string used for handling narrow encoded text (either locale specific ANSI or UTF-8). */
+    using String = BasicString<char>;
+
+    /** Wide string used primarily for handling Unicode text (UTF-32 on Linux, UTF-16 on Windows, generally). */
+    using WString = BasicString<wchar_t>;
+
+    /** Wide string stream used for primarily for constructing narrow strings. */
+    using StringStream = BasicStringStream<char>;
+
+    static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
+    extern const String EMPTY_STRING;
 
 #ifdef _WIN32
-    ALIMER_API std::string ToUtf8(const wchar_t* wstr, size_t len);
-    ALIMER_API std::string ToUtf8(const std::wstring& wstr);
+    ALIMER_API String ToUtf8(const wchar_t* wstr, size_t len);
+    ALIMER_API String ToUtf8(const WString& wstr);
 
-    ALIMER_API std::wstring ToUtf16(const char* str, size_t len);
-    ALIMER_API std::wstring ToUtf16(const std::string& str);
+    ALIMER_API WString ToUtf16(const char* str, size_t len);
+    ALIMER_API WString ToUtf16(const String& str);
 #endif
 }

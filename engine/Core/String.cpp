@@ -21,7 +21,7 @@
 //
 
 #include "Core/String.h"
-#include "Core/Hash.h"
+#include "Core/Containers.h"
 
 #ifdef _WIN32
 #   include "PlatformIncl.h"
@@ -34,37 +34,37 @@
 
 namespace Alimer
 {
-    const std::string EMPTY_STRING{};
+    const String EMPTY_STRING{};
 
 #ifdef _WIN32
-    std::string ToUtf8(const wchar_t* wstr, size_t len)
+    String ToUtf8(const wchar_t* wstr, size_t len)
     {
-        std::vector<char> char_buffer;
+        Vector<char> char_buffer;
         auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
             return "";
         char_buffer.resize(ret);
         WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr, nullptr);
-        return std::string(char_buffer.data(), char_buffer.size());
+        return String(char_buffer.data(), char_buffer.size());
     }
 
-    std::string ToUtf8(const std::wstring& wstr)
+    String ToUtf8(const WString& wstr)
     {
         return ToUtf8(wstr.data(), wstr.size());
     }
 
-    std::wstring ToUtf16(const char* str, size_t len)
+    WString ToUtf16(const char* str, size_t len)
     {
-        std::vector<wchar_t> wchar_buffer;
+        Vector<wchar_t> wchar_buffer;
         auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return std::wstring(wchar_buffer.data(), wchar_buffer.size());
+        return WString(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    std::wstring ToUtf16(const std::string& str)
+    WString ToUtf16(const String& str)
     {
         return ToUtf16(str.data(), str.size());
     }

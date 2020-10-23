@@ -22,9 +22,7 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-#include <vector>
+#include "Core/Containers.h"
 #include "Platform/Window.h"
 
 namespace Alimer::Platform
@@ -68,7 +66,7 @@ namespace Alimer::Platform
     };
 
     /// Return the current platform name.
-    ALIMER_API std::string GetName();
+    ALIMER_API String GetName();
 
     /// Return the current platform ID.
     ALIMER_API PlatformId GetId();
@@ -76,7 +74,7 @@ namespace Alimer::Platform
     /// Return the current platform family.
     ALIMER_API PlatformFamily GetFamily();
 
-    ALIMER_API const std::vector<std::string>& GetArguments();
+    ALIMER_API const Vector<String>& GetArguments();
 
 #ifdef _WIN32
     enum class WindowsVersion
@@ -89,7 +87,7 @@ namespace Alimer::Platform
     };
 
     /// Parse arguments from the command line.
-    ALIMER_API const std::vector<std::string>& ParseArguments(const wchar_t* cmdLine);
+    ALIMER_API const Vector<String>& ParseArguments(const wchar_t* cmdLine);
 
     /// Return the current windows version.
     ALIMER_API WindowsVersion GetWindowsVersion();

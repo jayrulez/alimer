@@ -38,7 +38,7 @@ namespace Alimer
     {
     public:
         FileStream();
-        FileStream(const std::string& path, FileMode mode = FileMode::Read);
+        FileStream(const String& path, FileMode mode = FileMode::Read);
         FileStream(FileStream&& src) noexcept;
         FileStream& operator=(FileStream&& src) noexcept;
         virtual ~FileStream();

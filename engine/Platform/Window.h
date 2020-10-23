@@ -52,7 +52,7 @@ namespace Alimer
         constexpr static const int Centered = std::numeric_limits<int32_t>::max();
 
         /// Constructor.
-        Window(const std::string& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
+        Window(const String& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
 
         /// Destructor.
         virtual ~Window() = default;
@@ -78,8 +78,8 @@ namespace Alimer
         void SetMinimumSize(const SizeI& size) noexcept;
         SizeI GetMinimumSize() const noexcept;
 
-        std::string GetTitle() const noexcept;
-        void SetTitle(const std::string& str) noexcept;
+        String GetTitle() const noexcept;
+        void SetTitle(const String& str) noexcept;
 
     private:
         std::unique_ptr<WindowImpl> impl;

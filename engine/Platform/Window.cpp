@@ -28,7 +28,7 @@
 
 namespace Alimer
 {
-    Window::Window(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
+    Window::Window(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
         : impl(new WindowImpl(title, x, y, width, height, flags))
     {
     }
@@ -103,12 +103,12 @@ namespace Alimer
         return impl->GetMinimumSize();
     }
 
-    std::string Window::GetTitle() const noexcept
+    String Window::GetTitle() const noexcept
     {
         return impl->GetTitle();
     }
 
-    void Window::SetTitle(const std::string& str) noexcept
+    void Window::SetTitle(const String& str) noexcept
     {
         impl->SetTitle(str);
     }

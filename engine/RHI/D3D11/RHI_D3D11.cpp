@@ -549,7 +549,7 @@ namespace Alimer
             }
 
 #ifdef _DEBUG
-            void SetName(const std::string& newName) override
+            void SetName(const String& newName) override
             {
                 GraphicsBuffer::SetName(newName);
 
@@ -617,7 +617,7 @@ namespace Alimer
             }
 
 #ifdef _DEBUG
-            void SetName(const std::string& newName) override
+            void SetName(const String& newName) override
             {
                 Sampler::SetName(newName);
                 handle->SetPrivateData(g_D3DDebugObjectName, (UINT)newName.length(), newName.c_str());
@@ -1656,10 +1656,10 @@ namespace Alimer
     ID3D11BlendState1* GraphicsDevice_DX11::GetBlendState(const RenderPipelineDescriptor* descriptor)
     {
         size_t hash = 0;
-        Alimer::hash_combine(hash, descriptor->alphaToCoverageEnable);
+        CombineHash(hash, descriptor->alphaToCoverageEnable);
         for (uint32_t i = 0; i < kMaxColorAttachments; ++i)
         {
-            Alimer::hash_combine(hash, descriptor->colorAttachments[i]);
+            CombineHash(hash, descriptor->colorAttachments[i]);
         }
 
         auto it = blendStateCache.find(hash);

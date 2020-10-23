@@ -50,10 +50,10 @@ namespace Alimer
         inline bool IsAccelerationStructure() const { return type == Type::AccelerationStructure; }
 
         /// Set the resource name.
-        virtual void SetName(const std::string& newName) { name = newName; }
+        virtual void SetName(const String& newName) { name = newName; }
 
         /// Get the resource name
-        const std::string& GetName() const { return name; }
+        const String& GetName() const { return name; }
 
     protected:
         GraphicsResource(Type type_)
@@ -63,7 +63,7 @@ namespace Alimer
         }
 
         Type type;
-        std::string name;
+        String name;
     };
 
     class ALIMER_API GraphicsBuffer : public GraphicsResource

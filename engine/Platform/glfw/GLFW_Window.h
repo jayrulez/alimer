@@ -31,7 +31,7 @@ namespace Alimer
     class WindowImpl final
     {
     public:
-        WindowImpl(const std::string& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags);
+        WindowImpl(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags);
         ~WindowImpl();
 
         bool IsOpen() const noexcept;
@@ -81,8 +81,8 @@ namespace Alimer
             return minSize;
         }
 
-        std::string GetTitle() const noexcept { return title; }
-        void SetTitle(const std::string& str) noexcept
+        String GetTitle() const noexcept { return title; }
+        void SetTitle(const String& str) noexcept
         {
             title = str;
             glfwSetWindowTitle(window, str.c_str());
@@ -90,7 +90,7 @@ namespace Alimer
 
     private:
         GLFWwindow* window{ nullptr };
-        std::string title{};
+        String title{};
         uint32_t id;
         SizeI minSize{};
         SizeI maxSize{};

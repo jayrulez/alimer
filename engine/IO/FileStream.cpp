@@ -48,7 +48,7 @@ namespace Alimer
     {
     }
 
-    FileStream::FileStream(const std::string& path, FileMode mode)
+    FileStream::FileStream(const String& path, FileMode mode)
         : mode{ mode }
     {
 #ifdef _WIN32

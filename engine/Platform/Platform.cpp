@@ -31,9 +31,9 @@
 
 namespace Alimer::Platform
 {
-    static std::vector<std::string> arguments;
+    static Vector<String> arguments;
 
-    std::string GetName()
+    String GetName()
     {
         return ALIMER_PLATFORM_NAME;
     }
@@ -48,13 +48,13 @@ namespace Alimer::Platform
         return PlatformFamily::Desktop;
     }
 
-    const std::vector<std::string>& Platform::GetArguments()
+    const Vector<String>& Platform::GetArguments()
     {
         return arguments;
     }
 
 #if ALIMER_PLATFORM_WINDOWS
-    const std::vector<std::string>& ParseArguments(const wchar_t* cmdLine)
+    const Vector<String>& ParseArguments(const wchar_t* cmdLine)
     {
         arguments.clear();
 
@@ -65,8 +65,8 @@ namespace Alimer::Platform
         argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
         // Ignore the first argument containing the application full path
-        std::vector<std::wstring> arg_strings(argv + 1, argv + argc);
-        std::vector<std::string>  args;
+        Vector<WString> arg_strings(argv + 1, argv + argc);
+        Vector<String>  args;
 
         for (auto& arg : arg_strings)
         {

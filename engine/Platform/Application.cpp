@@ -75,7 +75,7 @@ namespace Alimer
         if (config.fullscreen)
             windowFlags |= WindowFlags::Fullscreen;
 
-        window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
+        window = MakeUnique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init graphics
         bool enableDebugLayer = false;
