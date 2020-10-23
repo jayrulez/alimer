@@ -131,10 +131,15 @@ namespace Alimer
         return def;
     }
 
-    bool GraphicsDevice::CreateRenderPipeline(const RenderPipelineDescriptor* descriptor, PipelineState* pipelineState)
+    RefPtr<RenderPipeline> GraphicsDevice::CreateRenderPipeline(const RenderPipelineDescriptor* descriptor)
     {
         RenderPipelineDescriptor descDef = RenderPipelineDescriptor_Defaults(descriptor);
-        return CreateRenderPipelineCore(&descDef, pipelineState);
+        RefPtr<RenderPipeline> pipeline;
+        if (!CreateRenderPipelineCore(&descDef, pipeline.GetAddressOf())) {
+            return nullptr;
+        }
+
+        return pipeline;
     }
 
     bool GraphicsDevice::CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const
@@ -169,10 +174,86 @@ namespace Alimer
         return false;
     }
 
-    uint32_t GraphicsDevice::GetFormatStride(PixelFormat value) const
+    
+    bool GraphicsDevice::IsFormatBlockCompressed(PixelFormat value) const
     {
         switch (value)
         {
+        case PixelFormat::FORMAT_BC1_UNORM:
+        case PixelFormat::FORMAT_BC1_UNORM_SRGB:
+        case PixelFormat::FORMAT_BC2_UNORM:
+        case PixelFormat::FORMAT_BC2_UNORM_SRGB:
+        case PixelFormat::FORMAT_BC3_UNORM:
+        case PixelFormat::FORMAT_BC3_UNORM_SRGB:
+        case PixelFormat::FORMAT_BC4_UNORM:
+        case PixelFormat::FORMAT_BC4_SNORM:
+        case PixelFormat::FORMAT_BC5_UNORM:
+        case PixelFormat::FORMAT_BC5_SNORM:
+        case PixelFormat::FORMAT_BC6H_UF16:
+        case PixelFormat::FORMAT_BC6H_SF16:
+        case PixelFormat::FORMAT_BC7_UNORM:
+        case PixelFormat::FORMAT_BC7_UNORM_SRGB:
+            return true;
+        }
+
+        return false;
+    }
+
+    bool GraphicsDevice::IsFormatStencilSupport(PixelFormat value) const
+    {
+        switch (value)
+        {
+        case PixelFormat::FORMAT_R32G8X24_TYPELESS:
+        case PixelFormat::FORMAT_D32_FLOAT_S8X24_UINT:
+        case PixelFormat::FORMAT_R24G8_TYPELESS:
+        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
+            return true;
+        }
+
+        return false;
+    }
+
+    float GraphicsDevice::GetScreenWidth() const
+    {
+        return (float)GetResolutionWidth() / 1.0f; // wiPlatform::GetDPIScaling();
+    }
+
+    float GraphicsDevice::GetScreenHeight() const
+    {
+        return (float)GetResolutionHeight() / 1.0f; //wiPlatform::GetDPIScaling();
+    }
+
+    bool GraphicsDevice::IsFormatUnorm(PixelFormat value) const
+    {
+        switch (value)
+        {
+        case PixelFormat::R8UNorm:
+        case PixelFormat::FORMAT_R16G16B16A16_UNORM:
+        case PixelFormat::FORMAT_R10G10B10A2_UNORM:
+        case PixelFormat::FORMAT_R8G8B8A8_UNORM:
+        case PixelFormat::FORMAT_R8G8B8A8_UNORM_SRGB:
+        case PixelFormat::FORMAT_B8G8R8A8_UNORM:
+        case PixelFormat::FORMAT_B8G8R8A8_UNORM_SRGB:
+        case PixelFormat::FORMAT_R16G16_UNORM:
+        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
+        case PixelFormat::FORMAT_R8G8_UNORM:
+        case PixelFormat::FORMAT_D16_UNORM:
+        case PixelFormat::FORMAT_R16_UNORM:
+            return true;
+        }
+
+        return false;
+    }
+
+    uint32_t GetPixelFormatSize(PixelFormat value)
+    {
+        switch (value)
+        {
+        case PixelFormat::R8UNorm:
+        case PixelFormat::R8SNorm:
+        case PixelFormat::R8UInt:
+        case PixelFormat::R8SInt:
+            return 1;
 
         case PixelFormat::FORMAT_R32G32B32A32_FLOAT:
         case PixelFormat::FORMAT_R32G32B32A32_UINT:
@@ -249,12 +330,6 @@ namespace Alimer
         case PixelFormat::FORMAT_R16_SINT:
             return 2;
 
-        case PixelFormat::FORMAT_R8_UNORM:
-        case PixelFormat::FORMAT_R8_UINT:
-        case PixelFormat::FORMAT_R8_SNORM:
-        case PixelFormat::FORMAT_R8_SINT:
-            return 1;
-
         default:
             assert(0); // didn't catch format!
             break;
@@ -263,75 +338,6 @@ namespace Alimer
         return 16;
     }
 
-    bool GraphicsDevice::IsFormatUnorm(PixelFormat value) const
-    {
-        switch (value)
-        {
-        case PixelFormat::FORMAT_R16G16B16A16_UNORM:
-        case PixelFormat::FORMAT_R10G10B10A2_UNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_R16G16_UNORM:
-        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-        case PixelFormat::FORMAT_R8G8_UNORM:
-        case PixelFormat::FORMAT_D16_UNORM:
-        case PixelFormat::FORMAT_R16_UNORM:
-        case PixelFormat::FORMAT_R8_UNORM:
-            return true;
-        }
-
-        return false;
-    }
-
-    bool GraphicsDevice::IsFormatBlockCompressed(PixelFormat value) const
-    {
-        switch (value)
-        {
-        case PixelFormat::FORMAT_BC1_UNORM:
-        case PixelFormat::FORMAT_BC1_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC2_UNORM:
-        case PixelFormat::FORMAT_BC2_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC3_UNORM:
-        case PixelFormat::FORMAT_BC3_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC4_UNORM:
-        case PixelFormat::FORMAT_BC4_SNORM:
-        case PixelFormat::FORMAT_BC5_UNORM:
-        case PixelFormat::FORMAT_BC5_SNORM:
-        case PixelFormat::FORMAT_BC6H_UF16:
-        case PixelFormat::FORMAT_BC6H_SF16:
-        case PixelFormat::FORMAT_BC7_UNORM:
-        case PixelFormat::FORMAT_BC7_UNORM_SRGB:
-            return true;
-        }
-
-        return false;
-    }
-
-    bool GraphicsDevice::IsFormatStencilSupport(PixelFormat value) const
-    {
-        switch (value)
-        {
-        case PixelFormat::FORMAT_R32G8X24_TYPELESS:
-        case PixelFormat::FORMAT_D32_FLOAT_S8X24_UINT:
-        case PixelFormat::FORMAT_R24G8_TYPELESS:
-        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-            return true;
-        }
-
-        return false;
-    }
-
-    float GraphicsDevice::GetScreenWidth() const
-    {
-        return (float)GetResolutionWidth() / 1.0f; // wiPlatform::GetDPIScaling();
-    }
-
-    float GraphicsDevice::GetScreenHeight() const
-    {
-        return (float)GetResolutionHeight() / 1.0f; //wiPlatform::GetDPIScaling();
-    }
 
     uint32_t GetVertexFormatNumComponents(VertexFormat format)
     {

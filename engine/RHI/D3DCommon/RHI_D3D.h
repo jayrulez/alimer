@@ -179,6 +179,17 @@ namespace Alimer
         {
         case PixelFormat::Invalid:
             return DXGI_FORMAT_UNKNOWN;
+            // 8-bit formats
+        case PixelFormat::R8UNorm:
+            return DXGI_FORMAT_R8_UNORM;
+        case PixelFormat::R8SNorm:
+            return DXGI_FORMAT_R8_SNORM;
+        case PixelFormat::R8UInt:
+            return DXGI_FORMAT_R8_UINT;
+        case PixelFormat::R8SInt:
+            return DXGI_FORMAT_R8_SINT;
+            break;
+
         case PixelFormat::FORMAT_R32G32B32A32_FLOAT:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;
             break;
@@ -310,15 +321,7 @@ namespace Alimer
             return DXGI_FORMAT_R16_SNORM;
         case PixelFormat::FORMAT_R16_SINT:
             return DXGI_FORMAT_R16_SINT;
-        case PixelFormat::FORMAT_R8_UNORM:
-            return DXGI_FORMAT_R8_UNORM;
-        case PixelFormat::FORMAT_R8_UINT:
-            return DXGI_FORMAT_R8_UINT;
-        case PixelFormat::FORMAT_R8_SNORM:
-            return DXGI_FORMAT_R8_SNORM;
-        case PixelFormat::FORMAT_R8_SINT:
-            return DXGI_FORMAT_R8_SINT;
-            break;
+        
         case PixelFormat::FORMAT_BC1_UNORM:
             return DXGI_FORMAT_BC1_UNORM;
             break;
@@ -379,6 +382,16 @@ namespace Alimer
         {
         case DXGI_FORMAT_UNKNOWN:
             return PixelFormat::Invalid;
+            // 8-bit formats
+        case DXGI_FORMAT_R8_UNORM:
+            return PixelFormat::R8UNorm;
+        case DXGI_FORMAT_R8_SNORM:
+            return PixelFormat::R8SNorm;
+        case DXGI_FORMAT_R8_UINT:
+            return PixelFormat::R8UInt;
+        case DXGI_FORMAT_R8_SINT:
+            return PixelFormat::R8SInt;
+
         case DXGI_FORMAT_R32G32B32A32_FLOAT:
             return PixelFormat::FORMAT_R32G32B32A32_FLOAT;
         case DXGI_FORMAT_R32G32B32A32_UINT:
@@ -508,18 +521,7 @@ namespace Alimer
         case DXGI_FORMAT_R16_SINT:
             return PixelFormat::FORMAT_R16_SINT;
             break;
-        case DXGI_FORMAT_R8_UNORM:
-            return PixelFormat::FORMAT_R8_UNORM;
-            break;
-        case DXGI_FORMAT_R8_UINT:
-            return PixelFormat::FORMAT_R8_UINT;
-            break;
-        case DXGI_FORMAT_R8_SNORM:
-            return PixelFormat::FORMAT_R8_SNORM;
-            break;
-        case DXGI_FORMAT_R8_SINT:
-            return PixelFormat::FORMAT_R8_SINT;
-            break;
+        
         case DXGI_FORMAT_BC1_UNORM:
             return PixelFormat::FORMAT_BC1_UNORM;
             break;

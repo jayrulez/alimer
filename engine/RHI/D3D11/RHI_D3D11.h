@@ -58,7 +58,7 @@ namespace Alimer
         ID3D11InputLayout* prev_il[kCommanstListCount] = {};
         PrimitiveTopology prev_pt[kCommanstListCount] = {};
 
-        const PipelineState* active_pso[kCommanstListCount] = {};
+        const RenderPipeline* active_pso[kCommanstListCount] = {};
         bool dirty_pso[kCommanstListCount] = {};
         void pso_validate(CommandList cmd);
 
@@ -104,7 +104,7 @@ namespace Alimer
 
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) override;
+        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** renderPipeline) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
 
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
@@ -146,7 +146,7 @@ namespace Alimer
         void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
         void BindStencilRef(uint32_t value, CommandList cmd) override;
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
-        void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
+        void SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline) override;
         void BindComputeShader(const Shader* cs, CommandList cmd) override;
         void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
         void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;

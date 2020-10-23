@@ -176,11 +176,11 @@ namespace Alimer
 
         Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
 
-        PrimitiveTopology prev_pt[kCommanstListCount] = {};
+        D3D_PRIMITIVE_TOPOLOGY prev_pt[kCommanstListCount] = {};
 
         std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
         std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[kCommanstListCount];
-        const PipelineState* active_pso[kCommanstListCount] = {};
+        const RenderPipeline* active_pso[kCommanstListCount] = {};
         const Shader* active_cs[kCommanstListCount] = {};
         const RaytracingPipelineState* active_rt[kCommanstListCount] = {};
         const RootSignature* active_rootsig_graphics[kCommanstListCount] = {};
@@ -217,7 +217,7 @@ namespace Alimer
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) override;
+        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** renderPipeline) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
         bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
         bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
@@ -272,7 +272,7 @@ namespace Alimer
         void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
         void BindShadingRate(ShadingRate rate, CommandList cmd) override;
         void BindShadingRateImage(const Texture* texture, CommandList cmd) override;
-        void BindPipelineState(const PipelineState* pso, CommandList cmd) override;
+        void SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline) override;
         void BindComputeShader(const Shader* cs, CommandList cmd) override;
         void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
         void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;

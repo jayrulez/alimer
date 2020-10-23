@@ -36,6 +36,7 @@ namespace Alimer
             Buffer,
             Texture,
             Sampler,
+            RenderPipeline,
             AccelerationStructure,
         };
 
@@ -93,6 +94,16 @@ namespace Alimer
         }
     };
 
+    class ALIMER_API RenderPipeline : public GraphicsResource
+    {
+    protected:
+        RenderPipeline()
+            : GraphicsResource(Type::RenderPipeline)
+        {
+
+        }
+    };
+
     class GraphicsDevice
     {
     protected:
@@ -131,7 +142,7 @@ namespace Alimer
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) = 0;
         virtual bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) = 0;
-        bool CreateRenderPipeline(const RenderPipelineDescriptor* descriptor, PipelineState* pipelineState);
+        RefPtr<RenderPipeline> CreateRenderPipeline(const RenderPipelineDescriptor* descriptor);
         virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
         virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) { return false; }
         virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) { return false; }
@@ -183,7 +194,6 @@ namespace Alimer
 
         bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
-        uint32_t GetFormatStride(PixelFormat value) const;
         bool IsFormatUnorm(PixelFormat value) const;
         bool IsFormatBlockCompressed(PixelFormat value) const;
         bool IsFormatStencilSupport(PixelFormat value) const;
@@ -221,7 +231,7 @@ namespace Alimer
         virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
         virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
         virtual void BindShadingRateImage(const Texture* texture, CommandList cmd) {}
-        virtual void BindPipelineState(const PipelineState* pso, CommandList cmd) = 0;
+        virtual void SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline) = 0;
         virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
         virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
         virtual void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) = 0;
@@ -266,12 +276,9 @@ namespace Alimer
         virtual void InsertDebugMarker(CommandList cmd, const char* name) = 0;
 
     private:
-        virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso) = 0;
+        virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;
     };
 
-    uint32_t GetVertexFormatNumComponents(VertexFormat format);
-    uint32_t GetVertexFormatComponentSize(VertexFormat format);
-    uint32_t GetVertexFormatSize(VertexFormat format);
 
     bool StencilTestEnabled(const DepthStencilStateDescriptor* descriptor);
 }

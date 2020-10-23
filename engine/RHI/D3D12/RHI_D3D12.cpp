@@ -560,24 +560,36 @@ namespace Alimer
                 }
             }
         };
-        struct PipelineState_DX12
+        struct PipelineState_DX12 : public RenderPipeline
         {
+            RenderPipelineDescriptor desc;
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-            ComPtr<ID3D12PipelineState> resource;
+            ComPtr<ID3D12PipelineState> handle;
             ComPtr<ID3D12RootSignature> rootSignature;
+
+            D3D12_PRIMITIVE_TOPOLOGY primitiveTopology;
 
             std::vector<D3D12_DESCRIPTOR_RANGE> resources;
             std::vector<D3D12_DESCRIPTOR_RANGE> samplers;
 
-            ~PipelineState_DX12()
+            ~PipelineState_DX12() override
+            {
+                Destroy();
+            }
+
+            void Destroy() override
             {
                 allocationhandler->destroylocker.lock();
                 uint64_t framecount = allocationhandler->framecount;
-                if (resource) allocationhandler->destroyer_pipelines.push_back(std::make_pair(resource, framecount));
+                if (handle) {
+                    allocationhandler->destroyer_pipelines.push_back(std::make_pair(handle, framecount));
+                }
+
                 if (rootSignature) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(rootSignature, framecount));
                 allocationhandler->destroylocker.unlock();
             }
         };
+
         struct BVH_DX12 : public Resource_DX12
         {
             D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS desc = {};
@@ -661,11 +673,7 @@ namespace Alimer
             }
         };
 
-        Resource_DX12* to_internal(const GPUResource* param)
-        {
-            return static_cast<Resource_DX12*>(param->internal_state.get());
-        }
-
+        /* New Interface */
         Buffer_DX12* to_internal(GraphicsBuffer* param)
         {
             return static_cast<Buffer_DX12*>(param);
@@ -675,6 +683,17 @@ namespace Alimer
         {
             return static_cast<const Buffer_DX12*>(param);
         }
+
+        const PipelineState_DX12* to_internal(const RenderPipeline* param)
+        {
+            return static_cast<const PipelineState_DX12*>(param);
+        }
+
+        Resource_DX12* to_internal(const GPUResource* param)
+        {
+            return static_cast<Resource_DX12*>(param->internal_state.get());
+        }
+
 
         Texture_DX12* to_internal(const Texture* param)
         {
@@ -689,10 +708,6 @@ namespace Alimer
             return static_cast<Query_DX12*>(param->internal_state.get());
         }
         PipelineState_DX12* to_internal(const Shader* param)
-        {
-            return static_cast<PipelineState_DX12*>(param->internal_state.get());
-        }
-        PipelineState_DX12* to_internal(const PipelineState* param)
         {
             return static_cast<PipelineState_DX12*>(param->internal_state.get());
         }
@@ -1325,51 +1340,22 @@ namespace Alimer
         if (!dirty_pso[cmd])
             return;
 
-        const PipelineState* pso = active_pso[cmd];
-        //auto internal_state = to_internal(pso);
+        const RenderPipeline* pso = active_pso[cmd];
+        auto internal_state = to_internal(pso);
         //GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
 
-        if (prev_pt[cmd] != pso->desc.primitiveTopology)
-        {
-            prev_pt[cmd] = pso->desc.primitiveTopology;
-
-            D3D12_PRIMITIVE_TOPOLOGY d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-            switch (pso->desc.primitiveTopology)
-            {
-            case PrimitiveTopology::PointList:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-                break;
-            case PrimitiveTopology::LineList:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-                break;
-            case PrimitiveTopology::LineStrip:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-                break;
-            case PrimitiveTopology::TriangleList:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-                break;
-            case PrimitiveTopology::TriangleStrip:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-                break;
-            case PrimitiveTopology::PatchList:
-                d3dType = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-                break;
-            default:
-                break;
-            };
-            GetDirectCommandList(cmd)->IASetPrimitiveTopology(d3dType);
-        }
     }
 
     void GraphicsDevice_DX12::predraw(CommandList cmd)
     {
         pso_validate(cmd);
 
-        if (active_pso[cmd]->desc.rootSignature == nullptr)
+        if (to_internal(active_pso[cmd])->desc.rootSignature == nullptr)
         {
             GetFrameResources().descriptors[cmd].validate(true, cmd);
         }
     }
+
     void GraphicsDevice_DX12::predispatch(CommandList cmd)
     {
         if (active_cs[cmd]->rootSignature == nullptr)
@@ -1791,7 +1777,7 @@ namespace Alimer
             assert(SUCCEEDED(hr));
         }
 
-        //wiBackLog::post("Created GraphicsDevice_DX12");
+        LOGI("Direct3D12 Graphics Device created");
     }
 
     GraphicsDevice_DX12::~GraphicsDevice_DX12()
@@ -2459,7 +2445,7 @@ namespace Alimer
                     streamDesc.pPipelineStateSubobjectStream = &stream;
                     streamDesc.SizeInBytes = sizeof(stream);
 
-                    hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+                    hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->handle));
                     assert(SUCCEEDED(hr));
                 }
             }
@@ -2653,15 +2639,11 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX12::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso)
+    bool GraphicsDevice_DX12::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline)
     {
-        auto internal_state = std::make_shared<PipelineState_DX12>();
+        RefPtr<PipelineState_DX12> internal_state(new PipelineState_DX12());
         internal_state->allocationhandler = allocationhandler;
-        pso->internal_state = internal_state;
-
-        pso->desc = *descriptor;
-
-        pso->hash = 0;
+        internal_state->desc = *descriptor;
 
         if (descriptor->rootSignature == nullptr)
         {
@@ -2795,37 +2777,37 @@ namespace Alimer
             CD3DX12_PIPELINE_STATE_STREAM_AS AS;
         } stream = {};
 
-        if (pso->desc.vs != nullptr)
+        if (descriptor->vs != nullptr)
         {
-            stream.VS = { pso->desc.vs->code.data(), pso->desc.vs->code.size() };
+            stream.VS = { descriptor->vs->code.data(), descriptor->vs->code.size() };
         }
-        if (pso->desc.hs != nullptr)
+        if (descriptor->hs != nullptr)
         {
-            stream.HS = { pso->desc.hs->code.data(), pso->desc.hs->code.size() };
+            stream.HS = { descriptor->hs->code.data(), descriptor->hs->code.size() };
         }
-        if (pso->desc.ds != nullptr)
+        if (descriptor->ds != nullptr)
         {
-            stream.DS = { pso->desc.ds->code.data(), pso->desc.ds->code.size() };
+            stream.DS = { descriptor->ds->code.data(), descriptor->ds->code.size() };
         }
-        if (pso->desc.gs != nullptr)
+        if (descriptor->gs != nullptr)
         {
-            stream.GS = { pso->desc.gs->code.data(), pso->desc.gs->code.size() };
+            stream.GS = { descriptor->gs->code.data(), descriptor->gs->code.size() };
         }
-        if (pso->desc.ps != nullptr)
+        if (descriptor->ps != nullptr)
         {
-            stream.PS = { pso->desc.ps->code.data(), pso->desc.ps->code.size() };
-        }
-
-        if (pso->desc.ms != nullptr)
-        {
-            stream.MS = { pso->desc.ms->code.data(), pso->desc.ms->code.size() };
-        }
-        if (pso->desc.as != nullptr)
-        {
-            stream.AS = { pso->desc.as->code.data(), pso->desc.as->code.size() };
+            stream.PS = { descriptor->ps->code.data(), descriptor->ps->code.size() };
         }
 
-        DepthStencilStateDescriptor depthStencilState = pso->desc.depthStencilState;
+        if (descriptor->ms != nullptr)
+        {
+            stream.MS = { descriptor->ms->code.data(), descriptor->ms->code.size() };
+        }
+        if (descriptor->as != nullptr)
+        {
+            stream.AS = { descriptor->as->code.data(), descriptor->as->code.size() };
+        }
+
+        DepthStencilStateDescriptor depthStencilState = descriptor->depthStencilState;
         CD3DX12_DEPTH_STENCIL_DESC dss = {};
         dss.DepthEnable = depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
         dss.DepthWriteMask = depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
@@ -2858,12 +2840,12 @@ namespace Alimer
         std::array<D3D12_INPUT_ELEMENT_DESC, kMaxVertexAttributes> inputElements;
         for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
         {
-            const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[i];
+            const VertexAttributeDescriptor* attrDesc = &descriptor->vertexDescriptor.attributes[i];
             if (attrDesc->format == VertexFormat::Invalid) {
                 break;
             }
 
-            const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[i];
+            const VertexBufferLayoutDescriptor* layoutDesc = &descriptor->vertexDescriptor.layouts[i];
 
             D3D12_INPUT_ELEMENT_DESC* inputElementDesc = &inputElements[inputLayoutDesc.NumElements++];
             inputElementDesc->SemanticName = "ATTRIBUTE";
@@ -2988,7 +2970,7 @@ namespace Alimer
         stream.SampleDesc = sampleDesc;
         stream.SampleMask = descriptor->sampleMask;
 
-        RasterizationStateDescriptor rasterizationState = pso->desc.rasterizationState;
+        RasterizationStateDescriptor rasterizationState = descriptor->rasterizationState;
         CD3DX12_RASTERIZER_DESC rs = {};
         rs.FillMode = D3D12_FILL_MODE_SOLID;
         rs.CullMode = _ConvertCullMode(rasterizationState.cullMode);
@@ -3003,45 +2985,64 @@ namespace Alimer
         rs.ForcedSampleCount = rasterizationState.forcedSampleCount;
         stream.RS = rs;
 
-        switch (pso->desc.primitiveTopology)
+        internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        switch (descriptor->primitiveTopology)
         {
         case PrimitiveTopology::PointList:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
             break;
+
         case PrimitiveTopology::LineList:
-        case PrimitiveTopology::LineStrip:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
             break;
+
+        case PrimitiveTopology::LineStrip:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+            break;
+
         case PrimitiveTopology::TriangleList:
-        case PrimitiveTopology::TriangleStrip:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             break;
+
+        case PrimitiveTopology::TriangleStrip:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            break;
+
         case PrimitiveTopology::PatchList:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
             break;
+
         default:
+            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
             break;
         }
 
         stream.STRIP = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
-        if (pso->desc.rootSignature == nullptr)
+        if (descriptor->rootSignature == nullptr)
         {
             stream.pRootSignature = internal_state->rootSignature.Get();
         }
         else
         {
-            stream.pRootSignature = to_internal(pso->desc.rootSignature)->resource.Get();
+            stream.pRootSignature = to_internal(descriptor->rootSignature)->resource.Get();
         }
 
         D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
         streamDesc.pPipelineStateSubobjectStream = &stream;
         streamDesc.SizeInBytes = sizeof(stream);
 
-        HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->resource));
+        HRESULT hr = device->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&internal_state->handle));
         assert(SUCCEEDED(hr));
 
+        *pipeline = internal_state.Detach();
         return true;
     }
 
@@ -4092,7 +4093,7 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.format);
+                uint32_t stride = GetPixelFormatSize(desc.format);
                 srv_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 srv_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
                 srv_desc.Buffer.FirstElement = offset / stride;
@@ -4134,7 +4135,7 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.format);
+                uint32_t stride = GetPixelFormatSize(desc.format);
                 uav_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 uav_desc.Buffer.FirstElement = (UINT)offset / stride;
                 uav_desc.Buffer.NumElements = Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
@@ -4301,7 +4302,7 @@ namespace Alimer
                     srv.Buffer.FirstElement += offset / srv.Buffer.StructureByteStride;
                     break;
                 case TYPEDBUFFER:
-                    srv.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().format);
+                    srv.Buffer.FirstElement += offset / GetPixelFormatSize(buffer->GetDesc().format);
                     break;
                 }
                 device->CreateShaderResourceView(internal_state->resource.Get(), &srv, dst);
@@ -4379,7 +4380,7 @@ namespace Alimer
                     uav.Buffer.FirstElement += offset / uav.Buffer.StructureByteStride;
                     break;
                 case RWTYPEDBUFFER:
-                    uav.Buffer.FirstElement += offset / GetFormatStride(buffer->GetDesc().format);
+                    uav.Buffer.FirstElement += offset / GetPixelFormatSize(buffer->GetDesc().format);
                     break;
                 }
                 device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &uav, dst);
@@ -4598,7 +4599,7 @@ namespace Alimer
         }
         GetDirectCommandList(cmd)->RSSetScissorRects(8, pRects);
 
-        prev_pt[cmd] = static_cast<PrimitiveTopology>(-1);
+        prev_pt[cmd] = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
         active_pso[cmd] = nullptr;
         active_cs[cmd] = nullptr;
         active_rt[cmd] = nullptr;
@@ -5107,35 +5108,42 @@ namespace Alimer
             }
             else
             {
-                assert(texture->desc.format == PixelFormat::FORMAT_R8_UINT);
+                ALIMER_ASSERT(texture->desc.format == PixelFormat::R8UInt);
                 GetDirectCommandList(cmd)->RSSetShadingRateImage(to_internal(texture)->resource.Get());
             }
         }
     }
-    void GraphicsDevice_DX12::BindPipelineState(const PipelineState* pso, CommandList cmd)
+    void GraphicsDevice_DX12::SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline)
     {
-        if (active_pso[cmd] == pso)
+        if (active_pso[commandList] == pipeline)
         {
             return;
         }
 
-        auto internal_state = to_internal(pso);
-        GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
+        auto internal_state = to_internal(pipeline);
+        GetDirectCommandList(commandList)->SetPipelineState(internal_state->handle.Get());
 
-        if (pso->desc.rootSignature == nullptr)
+        if (prev_pt[commandList] != internal_state->primitiveTopology)
         {
-            active_rootsig_graphics[cmd] = nullptr;
-            GetDirectCommandList(cmd)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
-        }
-        else if (active_pso[cmd] != pso && active_rootsig_graphics[cmd] != pso->desc.rootSignature)
-        {
-            active_rootsig_graphics[cmd] = pso->desc.rootSignature;
-            GetDirectCommandList(cmd)->SetGraphicsRootSignature(to_internal(pso->desc.rootSignature)->resource.Get());
+            prev_pt[commandList] = internal_state->primitiveTopology;
+
+            GetDirectCommandList(commandList)->IASetPrimitiveTopology(internal_state->primitiveTopology);
         }
 
-        GetFrameResources().descriptors[cmd].dirty = true;
-        active_pso[cmd] = pso;
-        dirty_pso[cmd] = true;
+        if (internal_state->desc.rootSignature == nullptr)
+        {
+            active_rootsig_graphics[commandList] = nullptr;
+            GetDirectCommandList(commandList)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
+        }
+        else if (active_pso[commandList] != pipeline && active_rootsig_graphics[commandList] != internal_state->desc.rootSignature)
+        {
+            active_rootsig_graphics[commandList] = internal_state->desc.rootSignature;
+            GetDirectCommandList(commandList)->SetGraphicsRootSignature(to_internal(internal_state->desc.rootSignature)->resource.Get());
+        }
+
+        GetFrameResources().descriptors[commandList].dirty = true;
+        active_pso[commandList] = pipeline;
+        dirty_pso[commandList] = true;
     }
 
     void GraphicsDevice_DX12::BindComputeShader(const Shader* cs, CommandList cmd)
@@ -5148,7 +5156,7 @@ namespace Alimer
             active_cs[cmd] = cs;
 
             auto internal_state = to_internal(cs);
-            GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
+            GetDirectCommandList(cmd)->SetPipelineState(internal_state->handle.Get());
 
             if (cs->rootSignature == nullptr)
             {
@@ -5557,7 +5565,7 @@ namespace Alimer
         {
         default:
         case GRAPHICS:
-            rootsig = active_pso[cmd]->desc.rootSignature;
+            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
             break;
         case COMPUTE:
             rootsig = active_cs[cmd]->rootSignature;
@@ -5566,6 +5574,7 @@ namespace Alimer
             rootsig = active_rt[cmd]->desc.rootSignature;
             break;
         }
+
         auto rootsig_internal = to_internal(rootsig);
         uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
         auto& descriptors = GetFrameResources().descriptors[cmd];
@@ -5607,7 +5616,7 @@ namespace Alimer
         {
         default:
         case GRAPHICS:
-            rootsig = active_pso[cmd]->desc.rootSignature;
+            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
             break;
         case COMPUTE:
             rootsig = active_cs[cmd]->rootSignature;
@@ -5676,7 +5685,7 @@ namespace Alimer
         {
         default:
         case GRAPHICS:
-            rootsig = active_pso[cmd]->desc.rootSignature;
+            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
             break;
         case COMPUTE:
             rootsig = active_cs[cmd]->rootSignature;

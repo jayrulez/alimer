@@ -209,6 +209,11 @@ namespace Alimer
 	enum class PixelFormat : uint32_t
 	{
         Invalid = 0,
+        // 8-bit formats
+        R8UNorm,
+        R8SNorm,
+        R8UInt,
+        R8SInt,
 
 		FORMAT_R32G32B32A32_FLOAT,
 		FORMAT_R32G32B32A32_UINT,
@@ -264,11 +269,6 @@ namespace Alimer
 		FORMAT_R16_UINT,
 		FORMAT_R16_SNORM,
 		FORMAT_R16_SINT,
-
-		FORMAT_R8_UNORM,
-		FORMAT_R8_UINT,
-		FORMAT_R8_SNORM,
-		FORMAT_R8_SINT,
 
 		FORMAT_BC1_UNORM,
 		FORMAT_BC1_UNORM_SRGB,
@@ -835,14 +835,6 @@ namespace Alimer
 		const GPUQueryDesc& GetDesc() const { return desc; }
 	};
 
-	struct PipelineState : public GraphicsDeviceChild
-	{
-		size_t hash = 0;
-		RenderPipelineDescriptor desc;
-
-		const RenderPipelineDescriptor& GetDesc() const { return desc; }
-	};
-
 	struct RenderPass : public GraphicsDeviceChild
 	{
 		size_t hash = 0;
@@ -1081,6 +1073,11 @@ namespace Alimer
 		std::vector<RootConstantRange> rootconstants;
 	};
 
+
+    ALIMER_API uint32_t GetPixelFormatSize(PixelFormat value);
+    ALIMER_API uint32_t GetVertexFormatNumComponents(VertexFormat format);
+    ALIMER_API uint32_t GetVertexFormatComponentSize(VertexFormat format);
+    ALIMER_API uint32_t GetVertexFormatSize(VertexFormat format);
 }
 
 namespace std

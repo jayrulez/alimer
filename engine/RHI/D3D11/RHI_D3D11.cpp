@@ -247,8 +247,8 @@ namespace Alimer
                 return D3D11_TEXTURE_ADDRESS_CLAMP;
             case SamplerAddressMode::Border:
                 return D3D11_TEXTURE_ADDRESS_BORDER;
-            //case SamplerAddressMode::MirrorOnce:
-            //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
+                //case SamplerAddressMode::MirrorOnce:
+                //    return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
 
             case SamplerAddressMode::Wrap:
             default:
@@ -610,6 +610,7 @@ namespace Alimer
 
             ~Sampler_DX11() override
             {
+                Destroy();
             }
 
             void Destroy() override
@@ -630,13 +631,30 @@ namespace Alimer
             ComPtr<ID3D11Query> resource;
         };
 
-        struct PipelineState_DX11
+        struct PipelineState_DX11 : public RenderPipeline
         {
+            RenderPipelineDescriptor desc;
             ID3D11RasterizerState* rasterizerState;
             ID3D11DepthStencilState* depthStencilState;
             ID3D11BlendState1* blendState;
             ComPtr<ID3D11InputLayout> inputLayout;
             uint32_t vertexBufferStrides[kMaxVertexBufferBindings];
+
+            ~PipelineState_DX11() override
+            {
+                Destroy();
+            }
+
+            void Destroy() override
+            {
+            }
+
+#ifdef _DEBUG
+            void SetName(const String& newName) override
+            {
+                RenderPipeline::SetName(newName);
+            }
+#endif
         };
 
         /* New interface*/
@@ -648,6 +666,11 @@ namespace Alimer
         const Sampler_DX11* to_internal(const Sampler* param)
         {
             return static_cast<const Sampler_DX11*>(param);
+        }
+
+        const PipelineState_DX11* to_internal(const RenderPipeline* param)
+        {
+            return static_cast<const PipelineState_DX11*>(param);
         }
 
         Resource_DX11* to_internal(const GPUResource* param)
@@ -664,10 +687,7 @@ namespace Alimer
         {
             return static_cast<Query_DX11*>(param->internal_state.get());
         }
-        PipelineState_DX11* to_internal(const PipelineState* param)
-        {
-            return static_cast<PipelineState_DX11*>(param->internal_state.get());
-        }
+
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
         static HINSTANCE d3dcompiler_dll = nullptr;
@@ -727,9 +747,9 @@ namespace Alimer
         if (!dirty_pso[cmd])
             return;
 
-        const PipelineState* pso = active_pso[cmd];
-        const RenderPipelineDescriptor& desc = pso != nullptr ? pso->GetDesc() : RenderPipelineDescriptor();
-        auto internal_state = to_internal(pso);
+        const RenderPipeline* pipeline = active_pso[cmd];
+        auto internal_state = to_internal(pipeline);
+        const RenderPipelineDescriptor& desc = internal_state->desc;
 
         ID3D11VertexShader* vs = desc.vs == nullptr ? nullptr : static_cast<VertexShader_DX11*>(desc.vs->internal_state.get())->resource.Get();
         if (vs != prev_vs[cmd])
@@ -1299,7 +1319,7 @@ namespace Alimer
     Texture GraphicsDevice_DX11::GetBackBuffer()
     {
         auto internal_state = std::make_shared<Texture_DX11>();
-        internal_state->resource =  backBufferTexture;
+        internal_state->resource = backBufferTexture;
 
         Texture result;
         result.internal_state = internal_state;
@@ -1792,9 +1812,10 @@ namespace Alimer
         return SUCCEEDED(hr);
     }
 
-    bool GraphicsDevice_DX11::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, PipelineState* pso)
+    bool GraphicsDevice_DX11::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline)
     {
-        auto internal_state = std::make_shared<PipelineState_DX11>();
+        RefPtr<PipelineState_DX11> internal_state(new PipelineState_DX11());
+        internal_state->desc = *descriptor;
         internal_state->rasterizerState = GetRasterizerState(descriptor->rasterizationState, descriptor->sampleCount);
         internal_state->depthStencilState = GetDepthStencilState(descriptor->depthStencilState);
         internal_state->blendState = GetBlendState(descriptor);
@@ -1836,9 +1857,7 @@ namespace Alimer
             descriptor->vs->code.size(),
             internal_state->inputLayout.ReleaseAndGetAddressOf());
 
-        pso->internal_state = internal_state;
-        pso->desc = *descriptor;
-
+        *pipeline = internal_state.Detach();
         return true;
     }
 
@@ -2279,7 +2298,7 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.format);
+                uint32_t stride = GetPixelFormatSize(desc.format);
                 srv_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 srv_desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
                 srv_desc.Buffer.FirstElement = (UINT)offset / stride;
@@ -2331,7 +2350,7 @@ namespace Alimer
             else
             {
                 // This is a Typed Buffer
-                uint32_t stride = GetFormatStride(desc.format);
+                uint32_t stride = GetPixelFormatSize(desc.format);
                 uav_desc.Format = PixelFormatToDXGIFormat(desc.format);
                 uav_desc.Buffer.FirstElement = (UINT)offset / stride;
                 uav_desc.Buffer.NumElements = Alimer::Min((UINT)size, desc.ByteWidth - (UINT)offset) / stride;
@@ -2490,7 +2509,7 @@ namespace Alimer
 
         }
 
-        BindPipelineState(nullptr, cmd);
+        SetRenderPipeline(cmd, nullptr);
         BindComputeShader(nullptr, cmd);
 
         D3D11_VIEWPORT vp = {};
@@ -2978,13 +2997,13 @@ namespace Alimer
         blendFactor[cmd].w = a;
     }
 
-    void GraphicsDevice_DX11::BindPipelineState(const PipelineState* pso, CommandList cmd)
+    void GraphicsDevice_DX11::SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline)
     {
-        if (active_pso[cmd] == pso)
+        if (active_pso[commandList] == pipeline)
             return;
 
-        active_pso[cmd] = pso;
-        dirty_pso[cmd] = true;
+        active_pso[commandList] = pipeline;
+        dirty_pso[commandList] = true;
     }
 
     void GraphicsDevice_DX11::BindComputeShader(const Shader* cs, CommandList cmd)
@@ -3177,6 +3196,6 @@ namespace Alimer
         auto wName = ToUtf16(name, strlen(name));
         userDefinedAnnotations[cmd]->SetMarker(wName.c_str());
     }
-    }
+}
 
 #endif // defined(ALIMER_D3D11)

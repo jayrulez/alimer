@@ -46,7 +46,7 @@ namespace Alimer
         RefPtr<GraphicsBuffer> vertexBuffer;
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
-        PipelineState pipeline;
+        RefPtr<RenderPipeline> pipeline;
     };
 
 
@@ -91,7 +91,7 @@ namespace Alimer
         renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
         renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
         renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;*/
-        graphicsDevice->CreateRenderPipeline(&renderPipelineDesc, &pipeline);
+        pipeline = graphicsDevice->CreateRenderPipeline(&renderPipelineDesc);
 
         uint32_t pixels[4 * 4] = {
             0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
@@ -106,7 +106,7 @@ namespace Alimer
         textureDesc.BindFlags = BIND_SHADER_RESOURCE;
         SubresourceData textureData = {};
         textureData.pSysMem = pixels;
-        textureData.SysMemPitch = 4u * graphicsDevice->GetFormatStride(textureDesc.format);
+        textureData.SysMemPitch = 4u * GetPixelFormatSize(textureDesc.format);
         texture = new Texture();
         graphicsDevice->CreateTexture(&textureDesc, &textureData, texture);
 
@@ -213,7 +213,7 @@ namespace Alimer
         uint32_t stride = sizeof(Vertex);
         graphicsDevice->BindVertexBuffers(vbs, 0, 1, &stride, nullptr, commandList);
         graphicsDevice->BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0, commandList);
-        graphicsDevice->BindPipelineState(&pipeline, commandList);
+        graphicsDevice->SetRenderPipeline(commandList, pipeline);
         graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0, commandList);
         graphicsDevice->BindResource(ShaderStage::Fragment, texture, 0, commandList);
         graphicsDevice->BindSampler(ShaderStage::Fragment, sampler, 0, commandList);
@@ -232,8 +232,8 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        config.preferredBackendType = GraphicsBackendType::Direct3D11;
-        //config.preferredBackendType = GraphicsBackendType::Direct3D12;
+        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
+        config.preferredBackendType = GraphicsBackendType::Direct3D12;
         //config.preferredBackendType = GraphicsBackendType::Vulkan;
         config.title = "Spinning Cube";
         //config.fullscreen = true;
