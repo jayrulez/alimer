@@ -61,58 +61,23 @@ namespace Alimer
     class GraphicsDevice_DX12 final : public GraphicsDevice
     {
     private:
-        UINT dxgiFactoryFlags = 0;
-        ComPtr<IDXGIFactory4> dxgiFactory;
-        ComPtr<ID3D12Device5> device;
-        ComPtr<ID3D12CommandQueue> directQueue;
-        ComPtr<ID3D12Fence> frameFence;
-        HANDLE frameFenceEvent;
-
-        uint32_t backbuffer_index = 0;
-        Microsoft::WRL::ComPtr<ID3D12Resource> backBuffers[BACKBUFFER_COUNT];
-
-        Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchIndirectCommandSignature;
-        Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawInstancedIndirectCommandSignature;
-        Microsoft::WRL::ComPtr<ID3D12CommandSignature> drawIndexedInstancedIndirectCommandSignature;
-        Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatchMeshIndirectCommandSignature;
-
-        Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_timestamp;
-        Microsoft::WRL::ComPtr<ID3D12QueryHeap> querypool_occlusion;
-        static const size_t timestamp_query_count = 1024;
-        static const size_t occlusion_query_count = 1024;
-        Microsoft::WRL::ComPtr<ID3D12Resource> querypool_timestamp_readback;
-        Microsoft::WRL::ComPtr<ID3D12Resource> querypool_occlusion_readback;
-        D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
-        D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
-
         D3D12_FEATURE_DATA_D3D12_OPTIONS features_0;
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 features_5;
         D3D12_FEATURE_DATA_D3D12_OPTIONS6 features_6;
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 features_7;
 
-        uint32_t rtv_descriptor_size = 0;
-        uint32_t dsv_descriptor_size = 0;
-        uint32_t resource_descriptor_size = 0;
-        uint32_t sampler_descriptor_size = 0;
-
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_RTV;
-        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorheap_DSV;
-
-        D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
-        D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
-
         std::mutex copyQueueLock;
         bool copyQueueUse = false;
-        Microsoft::WRL::ComPtr<ID3D12Fence> copyFence; // GPU only
+        ID3D12Fence* copyFence = nullptr; // GPU only
 
         struct FrameResources
         {
-            ComPtr<ID3D12CommandAllocator> commandAllocators[kCommanstListCount];
-            ComPtr<ID3D12CommandList> commandLists[kCommanstListCount];
+            ID3D12CommandQueue* copyQueue = nullptr;
+            ID3D12CommandAllocator* copyAllocator = nullptr;
+            ID3D12GraphicsCommandList* copyCommandList = nullptr;
 
-            ComPtr<ID3D12CommandQueue> copyQueue;
-            ComPtr<ID3D12CommandAllocator> copyAllocator;
-            ComPtr<ID3D12GraphicsCommandList> copyCommandList;
+            ID3D12CommandAllocator* commandAllocators[kCommanstListCount] = {};
+            ID3D12GraphicsCommandList6* commandLists[kCommanstListCount] = {};
 
             struct DescriptorTableFrameAllocator
             {
@@ -120,7 +85,7 @@ namespace Alimer
                 struct DescriptorHeap
                 {
                     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-                    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_GPU;
+                    ID3D12DescriptorHeap* heap_GPU;
                     D3D12_CPU_DESCRIPTOR_HANDLE start_cpu = {};
                     D3D12_GPU_DESCRIPTOR_HANDLE start_gpu = {};
                     uint32_t ringOffset = 0;
@@ -146,6 +111,7 @@ namespace Alimer
                 };
 
                 void init(GraphicsDevice_DX12* device);
+                void shutdown();
 
                 void reset();
                 void request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd);
@@ -157,7 +123,7 @@ namespace Alimer
             struct ResourceFrameAllocator
             {
                 GraphicsDevice_DX12* device = nullptr;
-                RefPtr<GraphicsBuffer>	buffer;
+                RefPtr<GraphicsBuffer>buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
@@ -172,14 +138,10 @@ namespace Alimer
         };
         FrameResources frames[BACKBUFFER_COUNT];
         FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
-        inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return static_cast<ID3D12GraphicsCommandList6*>(GetFrameResources().commandLists[cmd].Get()); }
-
-        Microsoft::WRL::ComPtr<IDXGISwapChain3> swapChain;
+        inline ID3D12GraphicsCommandList6* GetDirectCommandList(CommandList cmd) { return GetFrameResources().commandLists[cmd]; }
 
         D3D_PRIMITIVE_TOPOLOGY prev_pt[kCommanstListCount] = {};
 
-        std::unordered_map<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>> pipelines_global;
-        std::vector<std::pair<size_t, Microsoft::WRL::ComPtr<ID3D12PipelineState>>> pipelines_worker[kCommanstListCount];
         const RenderPipeline* active_pso[kCommanstListCount] = {};
         const Shader* active_cs[kCommanstListCount] = {};
         const RaytracingPipelineState* active_rt[kCommanstListCount] = {};
@@ -190,7 +152,6 @@ namespace Alimer
         D3D12_SHADING_RATE prev_shadingrate[kCommanstListCount] = {};
 
         bool dirty_pso[kCommanstListCount] = {};
-        void pso_validate(CommandList cmd);
 
         void predraw(CommandList cmd);
         void predispatch(CommandList cmd);
@@ -303,11 +264,48 @@ namespace Alimer
         void PopDebugGroup(CommandList cmd) override;
         void InsertDebugMarker(CommandList cmd, const char* name)  override;
 
+    private:
+        UINT dxgiFactoryFlags = 0;
+        IDXGIFactory4* dxgiFactory4 = nullptr;
+        ID3D12Device5* device = nullptr;
+        ID3D12CommandQueue* directQueue;
+        ID3D12Fence* frameFence;
+        HANDLE frameFenceEvent;
 
+        IDXGISwapChain3* swapChain;
+        uint32_t backbufferIndex = 0;
+        ID3D12Resource* backBuffers[BACKBUFFER_COUNT];
+
+        ID3D12CommandSignature* dispatchIndirectCommandSignature = nullptr;
+        ID3D12CommandSignature* drawInstancedIndirectCommandSignature = nullptr;
+        ID3D12CommandSignature* drawIndexedInstancedIndirectCommandSignature = nullptr;
+        ID3D12CommandSignature* dispatchMeshIndirectCommandSignature = nullptr;
+
+        static constexpr size_t timestamp_query_count = 1024;
+        static constexpr size_t occlusion_query_count = 1024;
+        ID3D12QueryHeap* querypool_timestamp = nullptr;
+        ID3D12QueryHeap* querypool_occlusion = nullptr;
+        ID3D12Resource* querypool_timestamp_readback = nullptr;
+        ID3D12Resource* querypool_occlusion_readback = nullptr;
+        D3D12MA::Allocation* allocation_querypool_timestamp_readback = nullptr;
+        D3D12MA::Allocation* allocation_querypool_occlusion_readback = nullptr;
+
+        uint32_t rtv_descriptor_size = 0;
+        uint32_t dsv_descriptor_size = 0;
+        uint32_t resource_descriptor_size = 0;
+        uint32_t sampler_descriptor_size = 0;
+
+        ID3D12DescriptorHeap* descriptorheap_RTV = nullptr;
+        ID3D12DescriptorHeap* descriptorheap_DSV = nullptr;
+        D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
+
+    public:
+        // TODO:
         struct AllocationHandler
         {
             D3D12MA::Allocator* allocator = nullptr;
-            Microsoft::WRL::ComPtr<ID3D12Device> device;
+            ID3D12Device* device;
             uint64_t framecount = 0;
             std::mutex destroylocker;
             std::deque<std::pair<D3D12MA::Allocation*, uint64_t>> destroyer_allocations;
@@ -315,14 +313,12 @@ namespace Alimer
             std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_timestamp;
             std::deque<std::pair<uint32_t, uint64_t>> destroyer_queries_occlusion;
             std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12PipelineState>, uint64_t>> destroyer_pipelines;
-            std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12RootSignature>, uint64_t>> destroyer_rootSignatures;
+            std::deque<std::pair<ID3D12RootSignature*, uint64_t>> destroyer_rootSignatures;
             std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12StateObject>, uint64_t>> destroyer_stateobjects;
             std::deque<std::pair<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>, uint64_t>> destroyer_descriptorHeaps;
 
             ThreadSafeRingBuffer<uint32_t, timestamp_query_count> free_timestampqueries;
             ThreadSafeRingBuffer<uint32_t, occlusion_query_count> free_occlusionqueries;
-
-            ~AllocationHandler();
 
             // Deferred destroy of resources that the GPU is already finished with:
             void Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT);

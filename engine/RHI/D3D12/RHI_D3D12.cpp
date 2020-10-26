@@ -101,8 +101,8 @@ namespace Alimer
                 return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
             case SamplerAddressMode::Border:
                 return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-            //case SamplerAddressMode::MirrorOnce:
-            //    return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+                //case SamplerAddressMode::MirrorOnce:
+                //    return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 
             case SamplerAddressMode::Wrap:
             default:
@@ -565,7 +565,7 @@ namespace Alimer
             RenderPipelineDescriptor desc;
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
             ComPtr<ID3D12PipelineState> handle;
-            ComPtr<ID3D12RootSignature> rootSignature;
+            ID3D12RootSignature* rootSignature = nullptr;
 
             D3D12_PRIMITIVE_TOPOLOGY primitiveTopology;
 
@@ -585,7 +585,10 @@ namespace Alimer
                     allocationhandler->destroyer_pipelines.push_back(std::make_pair(handle, framecount));
                 }
 
-                if (rootSignature) allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(rootSignature, framecount));
+                if (rootSignature) {
+                    allocationhandler->destroyer_rootSignatures.push_back(std::make_pair(rootSignature, framecount));
+                }
+
                 allocationhandler->destroylocker.unlock();
             }
         };
@@ -651,7 +654,7 @@ namespace Alimer
         struct RootSignature_DX12
         {
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
-            ComPtr<ID3D12RootSignature> resource;
+            ID3D12RootSignature* resource = nullptr;
             std::vector<D3D12_ROOT_PARAMETER> params;
 
             std::vector<uint32_t> table_bind_point_remap;
@@ -759,14 +762,6 @@ namespace Alimer
     using namespace DX12_Internal;
 
     // Allocators:
-    GraphicsDevice_DX12::AllocationHandler::~AllocationHandler()
-    {
-        Update(~0, 0); // destroy all remaining
-        if (allocator) {
-            allocator->Release();
-        }
-    }
-
     void GraphicsDevice_DX12::AllocationHandler::Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
     {
         destroylocker.lock();
@@ -838,8 +833,9 @@ namespace Alimer
         {
             if (destroyer_rootSignatures.front().second + BACKBUFFER_COUNT < FRAMECOUNT)
             {
+                auto item = destroyer_rootSignatures.front();
                 destroyer_rootSignatures.pop_front();
-                // comptr auto delete
+                item.first->Release();
             }
             else
             {
@@ -935,10 +931,12 @@ namespace Alimer
 
         return retVal;
     }
+
     void GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::clear()
     {
         dataCur = dataBegin;
     }
+
     uint64_t GraphicsDevice_DX12::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
     {
         assert(address >= dataBegin && address < dataEnd);
@@ -955,6 +953,19 @@ namespace Alimer
         heaps_resource.resize(1);
         heaps_sampler.resize(1);
     }
+
+    void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::shutdown()
+    {
+        for (auto& x : heaps_resource)
+        {
+            SafeRelease(x.heap_GPU);
+        }
+        for (auto& x : heaps_sampler)
+        {
+            SafeRelease(x.heap_GPU);
+        }
+    }
+
     void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::reset()
     {
         dirty = true;
@@ -977,6 +988,7 @@ namespace Alimer
         memset(UAV_index, -1, sizeof(UAV_index));
         memset(SAM, 0, sizeof(SAM));
     }
+
     void GraphicsDevice_DX12::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources, uint32_t samplers, CommandList cmd)
     {
         // This function allocatesGPU visible descriptor heaps that can fit the requested table sizes.
@@ -1079,8 +1091,8 @@ namespace Alimer
         {
             // definitely re-index the heap blocks!
             ID3D12DescriptorHeap* heaps[] = {
-                heaps_resource[current_resource_heap].heap_GPU.Get(),
-                heaps_sampler[current_sampler_heap].heap_GPU.Get()
+                heaps_resource[current_resource_heap].heap_GPU,
+                heaps_sampler[current_sampler_heap].heap_GPU
             };
             device->GetDirectCommandList(cmd)->SetDescriptorHeaps(_countof(heaps), heaps);
         }
@@ -1334,22 +1346,8 @@ namespace Alimer
         return handles;
     }
 
-
-    void GraphicsDevice_DX12::pso_validate(CommandList cmd)
-    {
-        if (!dirty_pso[cmd])
-            return;
-
-        const RenderPipeline* pso = active_pso[cmd];
-        auto internal_state = to_internal(pso);
-        //GetDirectCommandList(cmd)->SetPipelineState(internal_state->resource.Get());
-
-    }
-
     void GraphicsDevice_DX12::predraw(CommandList cmd)
     {
-        pso_validate(cmd);
-
         if (to_internal(active_pso[cmd])->desc.rootSignature == nullptr)
         {
             GetFrameResources().descriptors[cmd].validate(true, cmd);
@@ -1500,7 +1498,7 @@ namespace Alimer
 #endif
         }
 
-        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+        ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
 
         // Get adapter and create device
         {
@@ -1519,7 +1517,7 @@ namespace Alimer
 
             D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
             allocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-            allocatorDesc.pDevice = device.Get();
+            allocatorDesc.pDevice = device;
             allocatorDesc.pAdapter = adapter.Get();
 
             allocationhandler = std::make_shared<AllocationHandler>();
@@ -1535,65 +1533,64 @@ namespace Alimer
         directQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
         directQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         directQueueDesc.NodeMask = 0;
-        hr = device->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&directQueue));
-        assert(SUCCEEDED(hr));
+        ThrowIfFailed(device->CreateCommandQueue(&directQueueDesc, IID_PPV_ARGS(&directQueue)));
+        directQueue->SetName(L"Graphics Command Queue");
 
         // Create fences for command queue:
         hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameFence));
         assert(SUCCEEDED(hr));
-        frameFenceEvent = CreateEventEx(NULL, FALSE, FALSE, EVENT_ALL_ACCESS);
-
+        frameFenceEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_MODIFY_STATE | SYNCHRONIZE);
 
         // Create swapchain
-        ComPtr<IDXGISwapChain1> _swapChain;
+        {
+            IDXGISwapChain1* tempChain;
 
-        DXGI_SWAP_CHAIN_DESC1 sd = {};
-        sd.Width = RESOLUTIONWIDTH;
-        sd.Height = RESOLUTIONHEIGHT;
-        sd.Format = PixelFormatToDXGIFormat(GetBackBufferFormat());
-        sd.Stereo = false;
-        sd.SampleDesc.Count = 1; // Don't use multi-sampling.
-        sd.SampleDesc.Quality = 0;
-        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.BufferCount = BACKBUFFER_COUNT;
-        sd.Flags = 0;
-        sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+            DXGI_SWAP_CHAIN_DESC1 sd = {};
+            sd.Width = RESOLUTIONWIDTH;
+            sd.Height = RESOLUTIONHEIGHT;
+            sd.Format = PixelFormatToDXGIFormat(GetBackBufferFormat());
+            sd.Stereo = false;
+            sd.SampleDesc.Count = 1; // Don't use multi-sampling.
+            sd.SampleDesc.Quality = 0;
+            sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+            sd.BufferCount = BACKBUFFER_COUNT;
+            sd.Flags = 0;
+            sd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
 #ifndef PLATFORM_UWP
-        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-        sd.Scaling = DXGI_SCALING_STRETCH;
+            sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+            sd.Scaling = DXGI_SCALING_STRETCH;
 
-        DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
-        fullscreenDesc.RefreshRate.Numerator = 60;
-        fullscreenDesc.RefreshRate.Denominator = 1;
-        fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
-        fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-        fullscreenDesc.Windowed = !fullscreen;
-        hr = dxgiFactory->CreateSwapChainForHwnd(directQueue.Get(), (HWND)window, &sd, &fullscreenDesc, nullptr, &_swapChain);
+            DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc;
+            fullscreenDesc.RefreshRate.Numerator = 60;
+            fullscreenDesc.RefreshRate.Denominator = 1;
+            fullscreenDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED; // needs to be unspecified for correct fullscreen scaling!
+            fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
+            fullscreenDesc.Windowed = !fullscreen;
+            hr = dxgiFactory4->CreateSwapChainForHwnd(directQueue, (HWND)window, &sd, &fullscreenDesc, nullptr, &tempChain);
 
-        // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
-        hr = dxgiFactory->MakeWindowAssociation((HWND)window, DXGI_MWA_NO_ALT_ENTER);
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            hr = dxgiFactory4->MakeWindowAssociation((HWND)window, DXGI_MWA_NO_ALT_ENTER);
 #else
-        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
-        sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
+            sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
+            sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-        hr = pIDXGIFactory->CreateSwapChainForCoreWindow(directQueue.Get(), reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swapChain);
+            hr = dxgiFactory4->CreateSwapChainForCoreWindow(directQueue, reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr, &_swtempChainapChain);
 #endif
 
-        if (FAILED(hr))
-        {
-            //wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
-            assert(0);
-            //wiPlatform::Exit();
+            if (FAILED(hr))
+            {
+                //wiHelper::messageBox("Failed to create a swapchain for the graphics device!", "Error!");
+                assert(0);
+                //wiPlatform::Exit();
+            }
+
+            ThrowIfFailed(tempChain->QueryInterface(&swapChain));
+            tempChain->Release();
         }
-
-        hr = _swapChain.As(&swapChain);
-        assert(SUCCEEDED(hr));
-
 
 
         // Create common descriptor heaps
-
         {
             D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
             heapDesc.NodeMask = 0;
@@ -1621,10 +1618,9 @@ namespace Alimer
         sampler_descriptor_size = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
         // Create frame-resident resources:
-        for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+        for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
         {
-            hr = swapChain->GetBuffer(fr, IID_PPV_ARGS(&backBuffers[fr]));
-            assert(SUCCEEDED(hr));
+            ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffers[i])));
 
             // Create copy queue:
             {
@@ -1633,20 +1629,15 @@ namespace Alimer
                 copyQueueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
                 copyQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
                 copyQueueDesc.NodeMask = 0;
-                hr = device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&frames[fr].copyQueue));
-                assert(SUCCEEDED(hr));
-                hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[fr].copyAllocator));
-                assert(SUCCEEDED(hr));
-                hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[fr].copyAllocator.Get(), nullptr, IID_PPV_ARGS(&frames[fr].copyCommandList));
-                assert(SUCCEEDED(hr));
 
-                hr = static_cast<ID3D12GraphicsCommandList*>(frames[fr].copyCommandList.Get())->Close();
-                assert(SUCCEEDED(hr));
+                ThrowIfFailed(device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&frames[i].copyQueue)));
+                ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[i].copyAllocator)));
+                ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[i].copyAllocator, nullptr, IID_PPV_ARGS(&frames[i].copyCommandList)));
+                ThrowIfFailed(frames[i].copyCommandList->Close());
             }
         }
 
-        hr = device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence));
-        assert(SUCCEEDED(hr));
+        ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence)));
 
         // Query features:
 
@@ -1683,46 +1674,47 @@ namespace Alimer
         MESH_SHADER = features_7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
 
         // Create common indirect command signatures:
-
-        D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
-
-        D3D12_INDIRECT_ARGUMENT_DESC dispatchArgs[1];
-        dispatchArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-
-        D3D12_INDIRECT_ARGUMENT_DESC drawInstancedArgs[1];
-        drawInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
-
-        D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs[1];
-        drawIndexedInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-
-        cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
-        cmd_desc.NumArgumentDescs = 1;
-        cmd_desc.pArgumentDescs = dispatchArgs;
-        hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature));
-        assert(SUCCEEDED(hr));
-
-        cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
-        cmd_desc.NumArgumentDescs = 1;
-        cmd_desc.pArgumentDescs = drawInstancedArgs;
-        hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
-        assert(SUCCEEDED(hr));
-
-        cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
-        cmd_desc.NumArgumentDescs = 1;
-        cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
-        hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
-        assert(SUCCEEDED(hr));
-
-        if (MESH_SHADER)
         {
-            D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
-            dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+            D3D12_COMMAND_SIGNATURE_DESC cmd_desc = {};
+
+            D3D12_INDIRECT_ARGUMENT_DESC dispatchArgs[1];
+            dispatchArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+            D3D12_INDIRECT_ARGUMENT_DESC drawInstancedArgs[1];
+            drawInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+            D3D12_INDIRECT_ARGUMENT_DESC drawIndexedInstancedArgs[1];
+            drawIndexedInstancedArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 
             cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
             cmd_desc.NumArgumentDescs = 1;
-            cmd_desc.pArgumentDescs = dispatchMeshArgs;
-            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
+            cmd_desc.pArgumentDescs = dispatchArgs;
+            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchIndirectCommandSignature));
             assert(SUCCEEDED(hr));
+
+            cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
+            cmd_desc.NumArgumentDescs = 1;
+            cmd_desc.pArgumentDescs = drawInstancedArgs;
+            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
+            assert(SUCCEEDED(hr));
+
+            cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
+            cmd_desc.NumArgumentDescs = 1;
+            cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
+            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
+            assert(SUCCEEDED(hr));
+
+            if (MESH_SHADER)
+            {
+                D3D12_INDIRECT_ARGUMENT_DESC dispatchMeshArgs[1];
+                dispatchMeshArgs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+
+                cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
+                cmd_desc.NumArgumentDescs = 1;
+                cmd_desc.pArgumentDescs = dispatchMeshArgs;
+                hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
+                assert(SUCCEEDED(hr));
+            }
         }
 
         // GPU Queries:
@@ -1784,11 +1776,108 @@ namespace Alimer
     {
         WaitForGPU();
 
-        CloseHandle(frameFenceEvent);
+        // SwapChain
+        {
+            for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
+            {
+                SafeRelease(backBuffers[i]);
+            }
 
-        allocation_querypool_timestamp_readback->Release();
-        allocation_querypool_occlusion_readback->Release();
-    }
+            SafeRelease(swapChain);
+        }
+
+        // Frame fence
+        {
+            SafeRelease(frameFence);
+            CloseHandle(frameFenceEvent);
+            SafeRelease(copyFence);
+        }
+
+        // Command signatures
+        {
+            SafeRelease(dispatchIndirectCommandSignature);
+            SafeRelease(drawInstancedIndirectCommandSignature);
+            SafeRelease(drawIndexedInstancedIndirectCommandSignature);
+            SafeRelease(dispatchMeshIndirectCommandSignature);
+        }
+
+        // Frame data
+        {
+            for (uint32_t frameIndex = 0; frameIndex < BACKBUFFER_COUNT; ++frameIndex)
+            {
+                for (uint32_t i = 0; i < kCommanstListCount; i++)
+                {
+                    SafeRelease(frames[frameIndex].copyCommandList);
+                    SafeRelease(frames[frameIndex].copyAllocator);
+                    SafeRelease(frames[frameIndex].copyQueue);
+
+                    if (!frames[frameIndex].commandLists[i])
+                        break;
+
+                    SafeRelease(frames[frameIndex].commandAllocators[i]);
+                    SafeRelease(frames[frameIndex].commandLists[i]);
+                    frames[frameIndex].descriptors[i].shutdown();
+                    frames[frameIndex].resourceBuffer[i].buffer.Reset();
+                }
+            }
+        }
+
+        SafeRelease(directQueue);
+
+        // Descriptor Heaps
+        {
+            SafeRelease(descriptorheap_RTV);
+            SafeRelease(descriptorheap_DSV);
+        }
+
+        {
+            SafeRelease(querypool_timestamp);
+            SafeRelease(querypool_occlusion);
+            SafeRelease(querypool_timestamp_readback);
+            SafeRelease(querypool_occlusion_readback);
+            SafeRelease(allocation_querypool_timestamp_readback);
+            SafeRelease(allocation_querypool_occlusion_readback);
+        }
+
+        allocationhandler->Update(~0, 0); // destroy all remaining
+        if (allocationhandler->allocator) {
+            allocationhandler->allocator->Release();
+        }
+
+#ifdef _DEBUG
+        ULONG refCount = device->Release();
+        if (refCount)
+        {
+            LOGD("Direct3D12: There are {} unreleased references left on the D3D device!", refCount);
+
+            ID3D12DebugDevice* d3d12DebugDevice = nullptr;
+            if (SUCCEEDED(device->QueryInterface(&d3d12DebugDevice)))
+            {
+                d3d12DebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+                d3d12DebugDevice->Release();
+            }
+
+        }
+#else
+        device->Release();
+#endif
+
+        device = nullptr;
+
+        // DXGI Factory
+        {
+            SafeRelease(dxgiFactory4);
+
+#ifdef _DEBUG
+            IDXGIDebug1* dxgiDebug1;
+            if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
+            {
+                dxgiDebug1->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug1->Release();
+            }
+#endif
+        }
+        }
 
     void GraphicsDevice_DX12::GetAdapter(IDXGIAdapter1** ppAdapter)
     {
@@ -1798,7 +1887,7 @@ namespace Alimer
 
 #if defined(__dxgi1_6_h__) && defined(NTDDI_WIN10_RS4)
         IDXGIFactory6* dxgiFactory6 = nullptr;
-        HRESULT hr = dxgiFactory->QueryInterface(&dxgiFactory6);
+        HRESULT hr = dxgiFactory4->QueryInterface(&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
             for (UINT adapterIndex = 0;
@@ -1835,7 +1924,7 @@ namespace Alimer
 
         if (!adapter)
         {
-            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory->EnumAdapters1(adapterIndex, adapter.ReleaseAndGetAddressOf())); ++adapterIndex)
+            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory4->EnumAdapters1(adapterIndex, adapter.ReleaseAndGetAddressOf())); ++adapterIndex)
             {
                 DXGI_ADAPTER_DESC1 desc;
                 adapter->GetDesc1(&desc);
@@ -1877,9 +1966,9 @@ namespace Alimer
             RESOLUTIONWIDTH = width;
             RESOLUTIONHEIGHT = height;
 
-            for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
+            for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
             {
-                backBuffers[fr].Reset();
+                SafeRelease(backBuffers[i]);
             }
 
             HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, PixelFormatToDXGIFormat(GetBackBufferFormat()), 0);
@@ -1898,7 +1987,7 @@ namespace Alimer
     {
         auto internal_state = std::make_shared<Texture_DX12>();
         internal_state->allocationhandler = allocationhandler;
-        internal_state->resource = backBuffers[backbuffer_index];
+        internal_state->resource = backBuffers[backbufferIndex];
         internal_state->rtv = {};
         internal_state->rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
@@ -2010,10 +2099,10 @@ namespace Alimer
 
                     HRESULT hr = frame.copyAllocator->Reset();
                     assert(SUCCEEDED(hr));
-                    hr = frame.copyCommandList->Reset(frame.copyAllocator.Get(), nullptr);
+                    hr = frame.copyCommandList->Reset(frame.copyAllocator, nullptr);
                     assert(SUCCEEDED(hr));
                 }
-                frame.copyCommandList.Get()->CopyBufferRegion(result->resource.Get(), 0, upload_resource, 0, desc.ByteWidth);
+                frame.copyCommandList->CopyBufferRegion(result->resource.Get(), 0, upload_resource, 0, desc.ByteWidth);
             }
             copyQueueLock.unlock();
         }
@@ -2216,7 +2305,7 @@ namespace Alimer
 
                     HRESULT hr = frame.copyAllocator->Reset();
                     assert(SUCCEEDED(hr));
-                    hr = frame.copyCommandList->Reset(frame.copyAllocator.Get(), nullptr);
+                    hr = frame.copyCommandList->Reset(frame.copyAllocator, nullptr);
                     assert(SUCCEEDED(hr));
                 }
 
@@ -2438,7 +2527,7 @@ namespace Alimer
                         CD3DX12_PIPELINE_STATE_STREAM_CS CS;
                     } stream;
 
-                    stream.pRootSignature = internal_state->rootSignature.Get();
+                    stream.pRootSignature = internal_state->rootSignature;
                     stream.CS = { pShader->code.data(), pShader->code.size() };
 
                     D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
@@ -3028,11 +3117,11 @@ namespace Alimer
 
         if (descriptor->rootSignature == nullptr)
         {
-            stream.pRootSignature = internal_state->rootSignature.Get();
+            stream.pRootSignature = internal_state->rootSignature;
         }
         else
         {
-            stream.pRootSignature = to_internal(descriptor->rootSignature)->resource.Get();
+            stream.pRootSignature = to_internal(descriptor->rootSignature)->resource;
         }
 
         D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
@@ -3305,11 +3394,11 @@ namespace Alimer
             if (pDesc->rootSignature == nullptr)
             {
                 auto shader_internal = to_internal(pDesc->shaderlibraries.front().shader); // think better way
-                global_rootsig.pGlobalRootSignature = shader_internal->rootSignature.Get();
+                global_rootsig.pGlobalRootSignature = shader_internal->rootSignature;
             }
             else
             {
-                global_rootsig.pGlobalRootSignature = to_internal(pDesc->rootSignature)->resource.Get();
+                global_rootsig.pGlobalRootSignature = to_internal(pDesc->rootSignature)->resource;
             }
             subobject.pDesc = &global_rootsig;
         }
@@ -4497,23 +4586,23 @@ namespace Alimer
     {
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.pResource = backBuffers[backbuffer_index].Get();
+        barrier.Transition.pResource = backBuffers[backbufferIndex];
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
         GetDirectCommandList(cmd)->ResourceBarrier(1, &barrier);
 
-        const float clearcolor[] = { 0, 0, 0, 1 };
-        device->CreateRenderTargetView(backBuffers[backbuffer_index].Get(), nullptr, rtv_descriptor_heap_start);
+        const float clearColor[] = { 0, 0, 0, 1 };
+        device->CreateRenderTargetView(backBuffers[backbufferIndex], nullptr, rtv_descriptor_heap_start);
 
         D3D12_RENDER_PASS_RENDER_TARGET_DESC RTV = {};
         RTV.cpuDescriptor = rtv_descriptor_heap_start;
         RTV.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-        RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearcolor[0];
-        RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearcolor[1];
-        RTV.BeginningAccess.Clear.ClearValue.Color[2] = clearcolor[2];
-        RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearcolor[3];
+        RTV.BeginningAccess.Clear.ClearValue.Color[0] = clearColor[0];
+        RTV.BeginningAccess.Clear.ClearValue.Color[1] = clearColor[1];
+        RTV.BeginningAccess.Clear.ClearValue.Color[2] = clearColor[2];
+        RTV.BeginningAccess.Clear.ClearValue.Color[3] = clearColor[3];
         RTV.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
         GetDirectCommandList(cmd)->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
     }
@@ -4525,7 +4614,7 @@ namespace Alimer
         // Indicate that the back buffer will now be used to present.
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.pResource = backBuffers[backbuffer_index].Get();
+        barrier.Transition.pResource = backBuffers[backbufferIndex];
         barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
         barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -4534,14 +4623,38 @@ namespace Alimer
 
         SubmitCommandLists();
 
-        HRESULT hr = swapChain->Present(VSYNC, 0);
-        assert(SUCCEEDED(hr));
-        backbuffer_index = (backbuffer_index + 1) % BACKBUFFER_COUNT;
+        HRESULT hr;
+        if (!VSYNC)
+        {
+            hr = swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+        }
+        else
+        {
+            hr = swapChain->Present(1, 0);
+        }
+
+        // If the device was reset we must completely reinitialize the renderer.
+        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+        {
+#ifdef _DEBUG
+            char buff[64] = {};
+            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
+                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
+            OutputDebugStringA(buff);
+#endif
+            //HandleDeviceLost();
+            return;
+        }
+
+
+        backbufferIndex = (backbufferIndex + 1) % BACKBUFFER_COUNT;
 
         // Output information is cached on the DXGI Factory. If it is stale we need to create a new factory.
-        if (!dxgiFactory->IsCurrent())
+        if (!dxgiFactory4->IsCurrent())
         {
-            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(dxgiFactory.ReleaseAndGetAddressOf())));
+            SafeRelease(dxgiFactory4);
+
+            ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
         }
     }
 
@@ -4557,15 +4670,15 @@ namespace Alimer
             for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
             {
                 hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frames[fr].commandAllocators[cmd]));
-                hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd].Get(), nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
-                hr = static_cast<ID3D12GraphicsCommandList5*>(frames[fr].commandLists[cmd].Get())->Close();
+                hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frames[fr].commandAllocators[cmd], nullptr, IID_PPV_ARGS(&frames[fr].commandLists[cmd]));
+                hr = frames[fr].commandLists[cmd]->Close();
 
                 frames[fr].descriptors[cmd].init(this);
                 frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
 
                 std::wstringstream wss;
                 wss << "cmd" << cmd;
-                frames[fr].commandLists[cmd].Get()->SetName(wss.str().c_str());
+                frames[fr].commandLists[cmd]->SetName(wss.str().c_str());
             }
         }
 
@@ -4574,7 +4687,7 @@ namespace Alimer
 
         HRESULT hr = GetFrameResources().commandAllocators[cmd]->Reset();
         assert(SUCCEEDED(hr));
-        hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd].Get(), nullptr);
+        hr = GetDirectCommandList(cmd)->Reset(GetFrameResources().commandAllocators[cmd], nullptr);
         assert(SUCCEEDED(hr));
 
         GetFrameResources().descriptors[cmd].reset();
@@ -4629,16 +4742,16 @@ namespace Alimer
         {
             copyQueueUse = false;
             auto& frame = GetFrameResources();
-            static_cast<ID3D12GraphicsCommandList*>(frame.copyCommandList.Get())->Close();
+            frame.copyCommandList->Close();
             ID3D12CommandList* commandlists[] = {
-                frame.copyCommandList.Get()
+                frame.copyCommandList
             };
             frame.copyQueue->ExecuteCommandLists(1, commandlists);
 
             // Signal and increment the fence value.
-            HRESULT hr = frame.copyQueue->Signal(copyFence.Get(), FRAMECOUNT);
+            HRESULT hr = frame.copyQueue->Signal(copyFence, FRAMECOUNT);
             assert(SUCCEEDED(hr));
-            hr = frame.copyQueue->Wait(copyFence.Get(), FRAMECOUNT);
+            hr = frame.copyQueue->Wait(copyFence, FRAMECOUNT);
             assert(SUCCEEDED(hr));
         }
 
@@ -4658,13 +4771,13 @@ namespace Alimer
                     switch (x.type)
                     {
                     case GPU_QUERY_TYPE_TIMESTAMP:
-                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, x.index, 1, querypool_timestamp_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, x.index, 1, querypool_timestamp_readback, (uint64_t)x.index * sizeof(uint64_t));
                         break;
                     case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, x.index, 1, querypool_occlusion_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, x.index, 1, querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
                         break;
                     case GPU_QUERY_TYPE_OCCLUSION:
-                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, x.index, 1, querypool_occlusion_readback.Get(), (uint64_t)x.index * sizeof(uint64_t));
+                        GetDirectCommandList(cmd)->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, x.index, 1, querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
                         break;
                     }
                 }
@@ -4676,37 +4789,21 @@ namespace Alimer
                 cmdLists[counter] = GetDirectCommandList(cmd);
                 cmds[counter] = cmd;
                 counter++;
-
-                for (auto& x : pipelines_worker[cmd])
-                {
-                    if (pipelines_global.count(x.first) == 0)
-                    {
-                        pipelines_global[x.first] = x.second;
-                    }
-                    else
-                    {
-                        allocationhandler->destroylocker.lock();
-                        allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-                        allocationhandler->destroylocker.unlock();
-                    }
-                }
-                pipelines_worker[cmd].clear();
             }
 
             directQueue->ExecuteCommandLists(counter, cmdLists);
         }
 
         // This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
-        FRAMECOUNT++;
-        HRESULT hr = directQueue->Signal(frameFence.Get(), FRAMECOUNT);
+        HRESULT hr = directQueue->Signal(frameFence, ++FRAMECOUNT);
 
         // Determine the last frame that we should not wait on:
-        const uint64_t lastFrameToAllowLatency = Max(uint64_t(BACKBUFFER_COUNT - 1u), FRAMECOUNT) - (BACKBUFFER_COUNT - 1);
+        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
 
         // Wait if too many frames are being incomplete:
-        if (frameFence->GetCompletedValue() < lastFrameToAllowLatency)
+        if ((FRAMECOUNT - GPUFrameCount) >= BACKBUFFER_COUNT)
         {
-            hr = frameFence->SetEventOnCompletion(lastFrameToAllowLatency, frameFenceEvent);
+            hr = frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
             WaitForSingleObject(frameFenceEvent, INFINITE);
         }
 
@@ -4717,32 +4814,13 @@ namespace Alimer
 
     void GraphicsDevice_DX12::WaitForGPU()
     {
-        if (frameFence->GetCompletedValue() < FRAMECOUNT)
-        {
-            HRESULT result = frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
-            WaitForSingleObject(frameFenceEvent, INFINITE);
-        }
+        directQueue->Signal(frameFence, ++FRAMECOUNT);
+        frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
+        WaitForSingleObject(frameFenceEvent, INFINITE);
     }
 
     void GraphicsDevice_DX12::ClearPipelineStateCache()
     {
-        allocationhandler->destroylocker.lock();
-        for (auto& x : pipelines_global)
-        {
-            allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-        }
-        pipelines_global.clear();
-
-        for (int i = 0; i < _countof(pipelines_worker); ++i)
-        {
-            for (auto& x : pipelines_worker[i])
-            {
-                allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-            }
-            pipelines_worker[i].clear();
-        }
-
-        allocationhandler->destroylocker.unlock();
     }
 
     void GraphicsDevice_DX12::RenderPassBegin(const RenderPass* renderpass, CommandList cmd)
@@ -5133,12 +5211,12 @@ namespace Alimer
         if (internal_state->desc.rootSignature == nullptr)
         {
             active_rootsig_graphics[commandList] = nullptr;
-            GetDirectCommandList(commandList)->SetGraphicsRootSignature(internal_state->rootSignature.Get());
+            GetDirectCommandList(commandList)->SetGraphicsRootSignature(internal_state->rootSignature);
         }
         else if (active_pso[commandList] != pipeline && active_rootsig_graphics[commandList] != internal_state->desc.rootSignature)
         {
             active_rootsig_graphics[commandList] = internal_state->desc.rootSignature;
-            GetDirectCommandList(commandList)->SetGraphicsRootSignature(to_internal(internal_state->desc.rootSignature)->resource.Get());
+            GetDirectCommandList(commandList)->SetGraphicsRootSignature(to_internal(internal_state->desc.rootSignature)->resource);
         }
 
         GetFrameResources().descriptors[commandList].dirty = true;
@@ -5161,12 +5239,12 @@ namespace Alimer
             if (cs->rootSignature == nullptr)
             {
                 active_rootsig_compute[cmd] = nullptr;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature.Get());
+                GetDirectCommandList(cmd)->SetComputeRootSignature(internal_state->rootSignature);
             }
             else if (active_rootsig_compute[cmd] != cs->rootSignature)
             {
                 active_rootsig_compute[cmd] = cs->rootSignature;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(cs->rootSignature)->resource.Get());
+                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(cs->rootSignature)->resource);
             }
         }
     }
@@ -5199,14 +5277,14 @@ namespace Alimer
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        GetDirectCommandList(cmd)->ExecuteIndirect(drawInstancedIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
     void GraphicsDevice_DX12::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        GetDirectCommandList(cmd)->ExecuteIndirect(drawIndexedInstancedIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
     void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
@@ -5219,7 +5297,7 @@ namespace Alimer
     {
         predispatch(cmd);
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
     void GraphicsDevice_DX12::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
@@ -5232,7 +5310,7 @@ namespace Alimer
     {
         predraw(cmd);
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchMeshIndirectCommandSignature.Get(), 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchMeshIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
     void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
@@ -5330,13 +5408,13 @@ namespace Alimer
         switch (query->desc.Type)
         {
         case GPU_QUERY_TYPE_TIMESTAMP:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+            GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
             break;
         }
     }
@@ -5348,13 +5426,13 @@ namespace Alimer
         switch (query->desc.Type)
         {
         case GPU_QUERY_TYPE_TIMESTAMP:
-            GetDirectCommandList(cmd)->EndQuery(querypool_timestamp.Get(), D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+            GetDirectCommandList(cmd)->EndQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
-            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion.Get(), D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
             break;
         }
 
@@ -5366,48 +5444,49 @@ namespace Alimer
 
     void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
     {
-        D3D12_RESOURCE_BARRIER barrierdescs[8];
+        D3D12_RESOURCE_BARRIER barrierDescs[8];
 
         for (uint32_t i = 0; i < numBarriers; ++i)
         {
             const GPUBarrier& barrier = barriers[i];
-            D3D12_RESOURCE_BARRIER& barrierdesc = barrierdescs[i];
+            D3D12_RESOURCE_BARRIER& barrierDesc = barrierDescs[i];
 
             switch (barrier.type)
             {
             default:
             case GPUBarrier::MEMORY_BARRIER:
             {
-                barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-                barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                barrierdesc.UAV.pResource = barrier.memory.resource == nullptr ? nullptr : to_internal(barrier.memory.resource)->resource.Get();
+                barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+                barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                barrierDesc.UAV.pResource = barrier.memory.resource == nullptr ? nullptr : to_internal(barrier.memory.resource)->resource.Get();
             }
             break;
             case GPUBarrier::IMAGE_BARRIER:
             {
-                barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                barrierdesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
-                barrierdesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
-                barrierdesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
-                barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                barrierDesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
+                barrierDesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
+                barrierDesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
+                barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             }
             break;
             case GPUBarrier::BUFFER_BARRIER:
             {
-                barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                barrierdesc.Transition.pResource = to_internal(barrier.buffer.buffer)->resource.Get();
-                barrierdesc.Transition.StateBefore = _ConvertBufferState(barrier.buffer.state_before);
-                barrierdesc.Transition.StateAfter = _ConvertBufferState(barrier.buffer.state_after);
-                barrierdesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                barrierDesc.Transition.pResource = to_internal(barrier.buffer.buffer)->resource.Get();
+                barrierDesc.Transition.StateBefore = _ConvertBufferState(barrier.buffer.state_before);
+                barrierDesc.Transition.StateAfter = _ConvertBufferState(barrier.buffer.state_after);
+                barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
             }
             break;
             }
         }
 
-        GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierdescs);
+        GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierDescs);
     }
+
     void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
     {
         auto dst_internal = to_internal(dst);
@@ -5494,12 +5573,12 @@ namespace Alimer
                 // we just take the first shader (todo: better)
                 active_cs[cmd] = rtpso->desc.shaderlibraries.front().shader;
                 active_rootsig_compute[cmd] = nullptr;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature.Get());
+                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature);
             }
             else if (active_rootsig_compute[cmd] != rtpso->desc.rootSignature)
             {
                 active_rootsig_compute[cmd] = rtpso->desc.rootSignature;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(rtpso->desc.rootSignature)->resource.Get());
+                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(rtpso->desc.rootSignature)->resource);
             }
         }
     }
