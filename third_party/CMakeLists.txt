@@ -24,8 +24,41 @@ set_property(TARGET spirv-cross-util PROPERTY FOLDER "ThirdParty")
 # dxc
 add_library(dxc INTERFACE)
 set(DXC_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dxc/include)
-target_sources(dxc INTERFACE ${DXC_INCLUDE_DIR}/dxcapi.h)
+target_sources(dxc INTERFACE 
+    ${DXC_INCLUDE_DIR}/dxcapi.h
+    ${DXC_INCLUDE_DIR}/d3d12shader.h
+    ${DXC_INCLUDE_DIR}/WinAdapter.h
+    )
 target_include_directories(dxc INTERFACE ${DXC_INCLUDE_DIR})
+
+if(WIN32)
+    set(dxil_name "dxil.dll")
+    set(dxcompiler_name "dxcompiler.dll")
+else()
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        set(dxcompiler_name "libdxcompiler.dylib")
+    else()
+        set(dxcompiler_name "libdxcompiler.so")
+    endif()
+endif()
+
+if (dxil_name)
+    add_custom_target(CopyDxcompiler ALL
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/${dxil_name}" ${ALIMER_BIN_DIR}/${dxil_name}
+        COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/${dxcompiler_name}" ${ALIMER_BIN_DIR}/${dxcompiler_name}
+        COMMENT "Copying dxil and dxcompiler binaries..."
+    )
+else()
+    set(dxcompiler_source_name "${CMAKE_CURRENT_SOURCE_DIR}/dxc/bin/${dxcompiler_name}")
+    add_custom_target(CopyDxcompiler ALL
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${dxcompiler_source_name}
+        ${ALIMER_BIN_DIR}/${dxcompiler_name}
+        COMMENT "Copying dxil and dxcompiler binaries..."
+    )
+endif ()
+
+set_target_properties(CopyDxcompiler PROPERTIES FOLDER "ThirdParty")
 
 if (ALIMER_VULKAN)
     # vulkan

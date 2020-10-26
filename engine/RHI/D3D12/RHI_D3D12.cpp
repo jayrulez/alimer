@@ -32,8 +32,8 @@
 #include <pix.h>
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER)
-#include <d3d12shader.h>
-#include "dxcapi.h"
+#   include "dxcapi.h"
+#   include "d3d12shader.h"
 #endif
 
 #include <array>

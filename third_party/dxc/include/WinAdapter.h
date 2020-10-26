@@ -233,7 +233,7 @@
 
 #define E_ABORT (HRESULT)0x80004004
 #define E_ACCESSDENIED (HRESULT)0x80070005
-#define E_BOUNDS  (HRESULT)0x8000000B
+#define E_BOUNDS (HRESULT)0x8000000B
 #define E_FAIL (HRESULT)0x80004005
 #define E_HANDLE (HRESULT)0x80070006
 #define E_INVALIDARG (HRESULT)0x80070057
@@ -561,29 +561,21 @@ enum tagSTATFLAG {
 
 //===--------------------- UUID Related Macros ----------------------------===//
 
-static size_t UuidStrHash(const char *key) {
-  long hashVal = 0;
-  while (*key != '\0') {
-    hashVal = (hashVal << 4) + *(key++);
-    long g = hashVal & 0xF0000000L;
-    if (g != 0) hashVal ^= g >> 24;
-    hashVal &= ~g;
-  }
-  return hashVal;
-}
-
 #ifdef __EMULATE_UUID
+
+size_t UuidStrHash(const char* k);
 
 // The following macros are defined to facilitate the lack of 'uuid' on Linux.
 #define DECLARE_CROSS_PLATFORM_UUIDOF(T)                                       \
 public:                                                                        \
-  static REFIID uuidof() { return reinterpret_cast<REFIID>(T##_ID); }              \
+  static REFIID uuidof() { return reinterpret_cast<REFIID>(T##_ID); }          \
                                                                                \
 private:                                                                       \
   __attribute__((visibility("default"))) static const size_t T##_ID;
 
 #define DEFINE_CROSS_PLATFORM_UUIDOF(T)                                        \
-  __attribute__((visibility("default"))) const size_t T::T##_ID = UuidStrHash(#T);
+  __attribute__((visibility("default"))) const size_t T::T##_ID =              \
+      UuidStrHash(#T);
 #define __uuidof(T) T::uuidof()
 #define IID_PPV_ARGS(ppType)                                                   \
   (**(ppType)).uuidof(), reinterpret_cast<void **>(ppType)
@@ -603,7 +595,7 @@ template <typename T> inline void **IID_PPV_ARGS_Helper(T **pp) {
 //===--------------------- COM Interfaces ---------------------------------===//
 
 struct __declspec(uuid("00000000-0000-0000-C000-000000000046")) IUnknown {
-  IUnknown() : m_count(0) {};
+  IUnknown() : m_count(0){};
   virtual HRESULT QueryInterface(REFIID riid, void **ppvObject) = 0;
   virtual ULONG AddRef();
   virtual ULONG Release();

@@ -124,7 +124,10 @@ elseif(UNIX)
   find_package(PkgConfig)
 endif()
 
-# Third Party 
+set(ALIMER_BIN_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}")
+
+
+# Third Party
 add_subdirectory(third_party)
 
 if (ALIMER_BUILD_TOOLS)
@@ -192,7 +195,7 @@ if (NOT ANDROID)
     foreach(dir assets)
         if (MSVC OR "${CMAKE_GENERATOR}" STREQUAL "Xcode")
             foreach (CONFIG ${CMAKE_CONFIGURATION_TYPES})
-                create_symlink(${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}/${dir})
+                create_symlink(${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${ALIMER_BIN_DIR}/${dir})
             endforeach ()
         else()
             create_symlink(${CMAKE_CURRENT_SOURCE_DIR}/${dir} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${dir})

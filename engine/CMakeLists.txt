@@ -174,6 +174,7 @@ endif ()
 
 if (ALIMER_D3D12)
     target_link_libraries(${PROJECT_NAME} PRIVATE dxc)
+    add_dependencies(${PROJECT_NAME} CopyDxcompiler)
 endif ()
 
 if (ALIMER_VULKAN)
