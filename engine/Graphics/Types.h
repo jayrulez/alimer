@@ -44,11 +44,7 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
     /* Forward declarations */
-    class GraphicsBuffer;
     class Texture;
-    class SwapChain;
-    class ResourceUploadBatch;
-    class CommandContext;
 
     enum class GraphicsDeviceFlags : uint32
     {
@@ -79,8 +75,6 @@ namespace Alimer
         Direct3D11,
         /// Vulkan backend.
         Vulkan,
-        /// Metal backend.
-        Metal,
         /// Default best platform supported backend.
         Count
     };
@@ -325,7 +319,7 @@ namespace Alimer
         uint32_t vendorId;
 
         /// Gets the adapter name.
-        std::string adapterName;
+        String adapterName;
 
         /// Gets the adapter type.
         GPUAdapterType adapterType;
@@ -358,5 +352,21 @@ namespace Alimer
     ALIMER_FORCE_INLINE bool IsMicrosoft(uint32 vendorId)
     {
         return vendorId == KnownVendorId_Microsoft;
+    }
+
+    /* Helper methods */
+    ALIMER_FORCE_INLINE uint32_t CalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u)
+    {
+        uint32_t mipLevels = 0;
+        uint32_t size = Max(Max(width, height), depth);
+        while (1u << mipLevels <= size) {
+            ++mipLevels;
+        }
+
+        if (1u << mipLevels < size) {
+            ++mipLevels;
+        }
+
+        return mipLevels;
     }
 }

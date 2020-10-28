@@ -25,7 +25,7 @@
 #include "Platform/Event.h"
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
-#include "RHI/RHI.h"
+#include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 
 namespace Alimer
@@ -78,12 +78,7 @@ namespace Alimer
         window = MakeUnique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init graphics
-        bool enableDebugLayer = false;
-#ifdef _DEBUG
-        enableDebugLayer = true;
-#endif
-
-        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), config.preferredBackendType, false, enableDebugLayer);
+        graphicsDevice = GraphicsDevice::Create(config.preferredBackendType, config.deviceFlags);
         if (!graphicsDevice)
         {
             headless = true;
@@ -117,11 +112,11 @@ namespace Alimer
 
     void Application::Tick()
     {
-        CommandList commandList = graphicsDevice->BeginCommandList();
-        graphicsDevice->PresentBegin(commandList);
-        graphicsDevice->PushDebugGroup(commandList, "Frame");
+        //CommandList commandList = graphicsDevice->BeginCommandList();
+        //graphicsDevice->PresentBegin(commandList);
+        //graphicsDevice->PushDebugGroup(commandList, "Frame");
 
-        OnDraw(commandList);
+        OnDraw();
 
         /*VGPUColor color = { 1.0f, 0.78f, 0.05f, 1.0f };
         vgpuPushDebugGroup("Frame", &color);
@@ -134,8 +129,8 @@ namespace Alimer
         context->EndRenderPass();
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);*/
-        graphicsDevice->PopDebugGroup(commandList);
-        graphicsDevice->PresentEnd(commandList);
+        //graphicsDevice->PopDebugGroup(commandList);
+        //graphicsDevice->PresentEnd(commandList);
     }
 
     const Config* Application::GetConfig()

@@ -19,15 +19,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #pragma once
 
-#include "RHI/RHITypes.h"
-#include <memory>
+#include "D3D12Backend.h"
 
 namespace Alimer
 {
-    bool IsVulkanBackendAvailable();
-    std::shared_ptr<GraphicsDevice> CreateVulkanGraphicsDevice(void* windowHandle, bool fullscreen, bool enableDebugLayer);
+    class D3D12CommandQueue final 
+    {
+    public:
+        D3D12CommandQueue(D3D12GraphicsDevice& device, D3D12_COMMAND_LIST_TYPE type);
+        ~D3D12CommandQueue();
+
+        ID3D12CommandQueue* GetHandle() const { return handle.Get(); }
+
+    private:
+        D3D12GraphicsDevice& device;
+        const D3D12_COMMAND_LIST_TYPE type;
+
+        ComPtr<ID3D12CommandQueue> handle;
+
+        ComPtr<ID3D12Fence> fence;
+        HANDLE fenceEvent;
+        uint64_t nextFenceValue;
+        uint64_t lastCompletedFenceValue;
+    };
 }

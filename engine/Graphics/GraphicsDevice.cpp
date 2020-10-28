@@ -26,7 +26,10 @@
 #include "Graphics/GraphicsDevice.h"
 
 #if defined(ALIMER_D3D11)
-#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+//#include "Graphics/D3D11/D3D11GraphicsDevice.h"
+#endif
+#if defined(ALIMER_D3D12)
+#include "Graphics/D3D12/D3D12GraphicsDevice.h"
 #endif
 #if defined(ALIMER_VULKAN)
 //#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
@@ -34,19 +37,22 @@
 
 namespace Alimer
 {
-    GraphicsDevice* GraphicsDevice::Instance = nullptr;
-
-    std::set<GraphicsBackendType> GraphicsDevice::GetAvailableBackends()
+    Set<GraphicsBackendType> GraphicsDevice::GetAvailableBackends()
     {
-        static std::set<GraphicsBackendType> backends;
+        static Set<GraphicsBackendType> backends;
 
         if (backends.empty())
         {
             backends.insert(GraphicsBackendType::Null);
 
+#if defined(ALIMER_D3D12)
+            if (D3D12GraphicsDevice::IsAvailable())
+                backends.insert(GraphicsBackendType::Direct3D12);
+#endif
+
 #if defined(ALIMER_D3D11)
-            if(D3D11GraphicsDevice::IsAvailable())
-                backends.insert(GraphicsBackendType::Direct3D11);
+            //if(D3D11GraphicsDevice::IsAvailable())
+            //    backends.insert(GraphicsBackendType::Direct3D11);
 #endif
 
 #if defined(ALIMER_VULKAN)
@@ -58,20 +64,13 @@ namespace Alimer
         return backends;
     }
 
-    bool GraphicsDevice::Initialize(WindowHandle windowHandle, GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
+    std::shared_ptr<GraphicsDevice> GraphicsDevice::Create(GraphicsBackendType preferredBackendType, GraphicsDeviceFlags flags)
     {
-        if (Instance != nullptr)
-        {
-            return true;
-        }
-
         GraphicsBackendType backendType = preferredBackendType;
         if (backendType == GraphicsBackendType::Count)
         {
             const auto availableBackends = GetAvailableBackends();
-            if (availableBackends.find(GraphicsBackendType::Metal) != availableBackends.end())
-                backendType = GraphicsBackendType::Metal;
-            else if (availableBackends.find(GraphicsBackendType::Direct3D12) != availableBackends.end())
+            if (availableBackends.find(GraphicsBackendType::Direct3D12) != availableBackends.end())
                 backendType = GraphicsBackendType::Direct3D12;
             else if (availableBackends.find(GraphicsBackendType::Direct3D11) != availableBackends.end())
                 backendType = GraphicsBackendType::Direct3D11;
@@ -83,24 +82,27 @@ namespace Alimer
 
         switch (backendType)
         {
+#if defined(ALIMER_D3D12)
+        case GraphicsBackendType::Direct3D12:
+            LOGI("Using Direct3D 12 render driver");
+            return std::make_shared<D3D12GraphicsDevice>(flags);
+#endif
 
 #if defined(ALIMER_D3D11)
         case GraphicsBackendType::Direct3D11:
             LOGI("Using Direct3D 11 render driver");
-            Instance = new D3D11GraphicsDevice(windowHandle, flags);
+            //Instance = new D3D11GraphicsDevice(windowHandle, flags);
             break;
 #endif
 
         case Alimer::GraphicsBackendType::Vulkan:
-            break;
-        case Alimer::GraphicsBackendType::Metal:
             break;
         default:
             // TODO: Create null
             break;
         }
 
-        return Instance != nullptr;
+        return nullptr;
     }
 
     /*void GraphicsDevice::AddGraphicsResource(GraphicsResource* resource)

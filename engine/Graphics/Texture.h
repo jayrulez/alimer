@@ -74,7 +74,7 @@ namespace Alimer
 
     protected:
         /// Constructor
-        Texture(const TextureDescription& desc);
+        Texture(GraphicsDevice& device, const TextureDescription& desc);
 
         TextureDescription desc;
         TextureLayout layout;

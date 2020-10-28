@@ -24,8 +24,8 @@
 
 namespace Alimer
 {
-    Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(Type::Texture)
+    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
+        : GraphicsResource(device, Type::Texture)
         , desc{ desc }
         , layout(desc.initialLayout)
     {

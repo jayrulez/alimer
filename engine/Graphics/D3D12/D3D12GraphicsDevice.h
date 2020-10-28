@@ -33,14 +33,14 @@
 
 namespace Alimer
 {
+    class D3D12CommandQueue;
     class D3D12DescriptorHeap;
-    class D3D12SwapChain;
 
     class D3D12GraphicsDevice final : public GraphicsDevice
     {
     public:
         static bool IsAvailable();
-        D3D12GraphicsDevice(WindowHandle windowHandle, GraphicsDeviceFlags flags);
+        D3D12GraphicsDevice(GraphicsDeviceFlags flags);
         ~D3D12GraphicsDevice();
 
         bool IsDeviceLost() const override;
@@ -49,13 +49,17 @@ namespace Alimer
         void EndFrame();
         void SetDeviceLost();
 
+        RefPtr<SwapChain> CreateSwapChain(WindowHandle windowHandle, PixelFormat backbufferFormat) override;
+
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 
-        IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory; }
+        IDXGIFactory4* GetDXGIFactory() const noexcept { return dxgiFactory.Get(); }
         bool IsTearingSupported() const noexcept { return isTearingSupported; }
         ID3D12Device* GetD3DDevice() const { return d3dDevice; }
-        ID3D12CommandQueue* GetGraphicsQueue() const { return graphicsQueue; }
-        ID3D12CommandQueue* GetComputeQueue() const { return computeQueue; }
+
+        D3D12CommandQueue& GetCommandQueue(D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT) const;
+        ID3D12CommandQueue* GetGraphicsQueue() const;
+
         void* GetNativeHandle() const override { return d3dDevice; }
 
         void ReleaseResource(IUnknown* resource);
@@ -77,7 +81,7 @@ namespace Alimer
         D3D_FEATURE_LEVEL d3dMinFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         DWORD dxgiFactoryFlags = 0;
-        IDXGIFactory4* dxgiFactory = nullptr;
+        ComPtr<IDXGIFactory4> dxgiFactory;
         bool isTearingSupported = false;
         ID3D12Device* d3dDevice = nullptr;
         D3D12MA::Allocator* allocator = nullptr;
@@ -85,8 +89,9 @@ namespace Alimer
         bool shuttingDown = false;
         bool deviceLost = false;
 
-        ID3D12CommandQueue* graphicsQueue;
-        ID3D12CommandQueue* computeQueue;
+        std::unique_ptr<D3D12CommandQueue> directCommandQueue;
+        std::unique_ptr<D3D12CommandQueue> computeCommandQueue;
+        std::unique_ptr<D3D12CommandQueue> copyCommandQueue;
 
         D3D12DescriptorHeap* rtvHeap;
         D3D12DescriptorHeap* dsvHeap;
@@ -102,7 +107,5 @@ namespace Alimer
         ID3D12Fence* frameFence;
         HANDLE frameFenceEvent;
         uint32_t frameIndex = 0;
-
-        D3D12SwapChain* swapChain = nullptr;
     };
 }

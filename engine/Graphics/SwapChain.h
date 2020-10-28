@@ -22,47 +22,31 @@
 
 #pragma once
 
+#include "Platform/WindowHandle.h"
 #include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    class Window;
-
     class ALIMER_API SwapChain : public GraphicsResource
     {
     public:
-        Window* GetWindow() const { return window; }
-        void SetWindow(Window* newWindow) { window = newWindow; }
+        // Number of swapchain back buffers.
+        static constexpr uint32_t kBufferCount = 3;
 
-        bool GetAutoResizeDrawable() const noexcept { return autoResizeDrawable; }
-        void SetAutoResizeDrawable(bool value) noexcept { autoResizeDrawable = value; }
-
-        SizeI GetDrawableSize() const noexcept { return drawableSize; }
-        void SetDrawableSize(const SizeI& value) noexcept { drawableSize = value; }
-
-        PixelFormat GetColorFormat() const noexcept { return colorFormat; }
-        void SetColorFormat(PixelFormat value) noexcept { colorFormat = value; }
-
-        PixelFormat GetDepthStencilFormat() const noexcept { return depthStencilFormat; }
-        void SetDepthStencilFormat(PixelFormat value) noexcept { depthStencilFormat = value; }
-
-        uint32_t GetSampleCount() const noexcept { return sampleCount; }
-        void SetSampleCount(uint32_t value) noexcept { sampleCount = value; }
-
-        virtual bool CreateOrResize() = 0;
+        PixelFormat GetBackbufferFormat() const noexcept { return colorFormat; }
 
         virtual Texture* GetCurrentTexture() const = 0;
+        virtual uint32_t Present() = 0;
 
     protected:
         /// Constructor.
-        SwapChain();
+        SwapChain(GraphicsDevice& device, WindowHandle windowHandle);
 
-        Window* window = nullptr;
-        bool autoResizeDrawable = true;
-        SizeI drawableSize;
+        uint32_t width = 0;
+        uint32_t height = 0;
         PixelFormat colorFormat = PixelFormat::BGRA8Unorm;
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        uint32_t sampleCount = 1u;
         bool verticalSync = true;
+        bool isFullscreen = false;
+        uint32_t currentBackBufferIndex = 0;
     };
 }

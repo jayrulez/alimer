@@ -31,14 +31,14 @@ namespace Alimer
     PFN_DXC_CREATE_INSTANCE DxcCreateInstance = nullptr;
 #endif
 
-    void D3D12SetObjectName(ID3D12Object* obj, const std::string& name)
+    void D3D12SetObjectName(ID3D12Object* obj, const String& name)
     {
 #ifdef _DEBUG
         if (obj != nullptr)
         {
             if (!name.empty())
             {
-                std::wstring wideStr = ToUtf16(name);
+                WString wideStr = ToUtf16(name);
                 obj->SetName(wideStr.c_str());
             }
             else

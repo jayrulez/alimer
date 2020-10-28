@@ -40,7 +40,7 @@ namespace Alimer
 
     protected:
         /// Constructor
-        GraphicsBuffer(BufferUsage usage, uint32_t count, uint32_t stride);
+        GraphicsBuffer(GraphicsDevice& device, BufferUsage usage, uint32_t count, uint32_t stride);
 
         BufferUsage usage;
         uint32_t count;

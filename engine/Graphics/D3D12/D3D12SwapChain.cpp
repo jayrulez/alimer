@@ -25,24 +25,25 @@
 
 namespace Alimer
 {
-    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, uint32_t bufferCount)
-        : device{ device }
+    D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, PixelFormat backbufferFormat)
+        : SwapChain(*device, windowHandle)
+        , tearingSupported(device->IsTearingSupported())
     {
         UINT swapChainFlags = 0;
-
-        if (device->IsTearingSupported())
+        if (tearingSupported) {
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+        }
 
         // Create a descriptor for the swap chain.
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-        swapChainDesc.Width = 0;
-        swapChainDesc.Height = 0;
-        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(PixelFormat::BGRA8Unorm));
-        swapChainDesc.Stereo = FALSE;
+        swapChainDesc.Width = width;
+        swapChainDesc.Height = height;
+        swapChainDesc.Format = ToDXGIFormat(SRGBToLinearFormat(backbufferFormat));
+        swapChainDesc.Stereo = false;
         swapChainDesc.SampleDesc.Count = 1;
         swapChainDesc.SampleDesc.Quality = 0;
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swapChainDesc.BufferCount = bufferCount;
+        swapChainDesc.BufferCount = kBufferCount;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -53,7 +54,7 @@ namespace Alimer
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
         swapChainDesc.Flags = swapChainFlags;
 
-        IDXGISwapChain1* tempSwapChain;
+        ComPtr<IDXGISwapChain1> swapChain1;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         ALIMER_ASSERT(IsWindow(windowHandle));
@@ -68,7 +69,7 @@ namespace Alimer
             &swapChainDesc,
             &fsSwapChainDesc,
             nullptr,
-            &tempSwapChain
+            swapChain1.GetAddressOf()
         ));
 
         // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
@@ -80,12 +81,11 @@ namespace Alimer
             windowHandle,
             &swapChainDesc,
             nullptr,
-            &tempSwapChain
+            swapChain1.GetAddressOf()
         ));
 #endif
 
-        ThrowIfFailed(tempSwapChain->QueryInterface(&handle));
-        tempSwapChain->Release();
+        ThrowIfFailed(swapChain1.As(&handle));
         AfterReset();
     }
 
@@ -96,7 +96,7 @@ namespace Alimer
 
     void D3D12SwapChain::Destroy()
     {
-        SafeRelease(handle);
+        handle.Reset();
     }
 
     void D3D12SwapChain::AfterReset()
@@ -115,38 +115,36 @@ namespace Alimer
             //colorTextures[index].Reset(new D3D12Texture(device, backBuffer, TextureLayout::Present));
         }
 
-        backBufferIndex = handle->GetCurrentBackBufferIndex();
+        currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
     }
 
-    void D3D12SwapChain::Present(bool verticalSync)
+    Texture* D3D12SwapChain::GetCurrentTexture() const
+    {
+        return nullptr;
+    }
+
+    uint32_t D3D12SwapChain::Present()
     {
         //auto d3dContext = static_cast<D3D12CommandContext*>(device->GetImmediateContext());
         //d3dContext->TransitionResource(StaticCast<D3D12Texture>(colorTextures[backBufferIndex]).Get(), TextureLayout::Present);
         //device->GetImmediateContext()->Flush();
 
 
-        UINT syncInterval = 1;
-        UINT presentFlags = 0;
-
-        if (!verticalSync)
-        {
-            syncInterval = 0;
-
-            if (!isFullscreen && device->IsTearingSupported())
-            {
-                presentFlags |= DXGI_PRESENT_ALLOW_TEARING;
-            }
-        }
-
+        UINT syncInterval = verticalSync ? 1 : 0;
+        UINT presentFlags = tearingSupported && !isFullscreen && !verticalSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
         HRESULT hr = handle->Present(syncInterval, presentFlags);
 
         // Handle device lost result.
-        if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+        if (hr == DXGI_ERROR_DEVICE_REMOVED
+            || hr == DXGI_ERROR_DEVICE_RESET
+            || hr == DXGI_ERROR_DRIVER_INTERNAL_ERROR)
         {
-            device->SetDeviceLost();
+            //device->SetDeviceLost();
+            return static_cast<uint32_t>(-1);
         }
 
         ThrowIfFailed(hr);
-        backBufferIndex = handle->GetCurrentBackBufferIndex();
+        currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
+        return currentBackBufferIndex;
     }
 }

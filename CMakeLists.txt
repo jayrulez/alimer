@@ -1,9 +1,8 @@
 # CMake version
 cmake_minimum_required (VERSION 3.14)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# Use solution folders to organize projects
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Project declaration
 project (
@@ -11,7 +10,7 @@ project (
     VERSION "0.1.0"
     DESCRIPTION "Cross-platform modern C++ 2D and 3D game engine."
     HOMEPAGE_URL "https://github.com/amerkoleci/alimer"
-    LANGUAGES C CXX
+    LANGUAGES CXX
 )
 
 # For build type to relese if not specified
@@ -19,9 +18,6 @@ if (NOT CMAKE_BUILD_TYPE)
     message(WARNING "CMAKE_BUILD_TYPE not set, forcing it to Debug")
 	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
-
-# Enable folders in IDE (VisualStudio)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Build version
 set (ALIMER_VERSION_MAJOR 0)

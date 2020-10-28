@@ -24,8 +24,8 @@
 
 namespace Alimer
 {
-    GraphicsBuffer::GraphicsBuffer(BufferUsage usage, uint32_t count, uint32_t stride)
-        : GraphicsResource(Type::Buffer)
+    GraphicsBuffer::GraphicsBuffer(GraphicsDevice& device, BufferUsage usage, uint32_t count, uint32_t stride)
+        : GraphicsResource(device, Type::Buffer)
         , usage{ usage }
         , count{ count }
         , stride{ stride }

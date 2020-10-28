@@ -21,12 +21,21 @@
 //
 
 #include "Graphics/SwapChain.h"
+#include "PlatformIncl.h"
 
 namespace Alimer
 {
-    SwapChain::SwapChain()
-        : GraphicsResource(Type::SwapChain)
+    SwapChain::SwapChain(GraphicsDevice& device, WindowHandle windowHandle)
+        : GraphicsResource(device, Type::SwapChain)
     {
+#if ALIMER_PLATFORM_WINDOWS
+        RECT windowRect;
+        ::GetClientRect(windowHandle, &windowRect);
 
+        width = static_cast<uint32_t>(windowRect.right - windowRect.left);
+        height = static_cast<uint32_t>(windowRect.bottom - windowRect.top);
+#elif ALIMER_PLATFORM_UWP
+#else
+#endif
     }
 }

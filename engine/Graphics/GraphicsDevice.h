@@ -23,26 +23,28 @@
 #pragma once
 
 #include "Core/Ptr.h"
+#include "Core/Containers.h"
 #include "Graphics/Types.h"
 #include "Platform/WindowHandle.h"
-#include <memory>
-#include <set>
 #include <mutex>
 
 namespace Alimer
 {
+    class GraphicsResource;
+    class ResourceUploadBatch;
+    class GraphicsBuffer;
+    class Texture;
+    class SwapChain;
+
     class ALIMER_API GraphicsDevice 
     {
     public:
-        /// The single instance of the graphics device.
-        static GraphicsDevice* Instance;
-
         /// Destructor
         virtual ~GraphicsDevice() = default;
 
-        static std::set<GraphicsBackendType> GetAvailableBackends();
+        static Set<GraphicsBackendType> GetAvailableBackends();
 
-        static bool Initialize(WindowHandle windowHandle, GraphicsBackendType preferredBackendType = GraphicsBackendType::Count, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
+        static std::shared_ptr<GraphicsDevice> Create(GraphicsBackendType preferredBackendType = GraphicsBackendType::Count, GraphicsDeviceFlags flags = GraphicsDeviceFlags::None);
 
         /// Get whether device is lost.
         virtual bool IsDeviceLost() const = 0;
@@ -53,22 +55,16 @@ namespace Alimer
         virtual bool BeginFrame() = 0;
         virtual void EndFrame() = 0;
 
-        /**
-        * Get the native handle (ID3D12Device, ID3D11Device1, VkDevice)
-        */
+        /// Get the native handle (ID3D12Device, ID3D11Device1, VkDevice)
         virtual void* GetNativeHandle() const = 0;
-
-        //virtual CommandContext* GetImmediateContext() const = 0;
-        //virtual RefPtr<ResourceUploadBatch> CreateResourceUploadBatch() = 0;
-        //virtual SwapChain* CreateSwapChain() = 0;
-        //virtual GraphicsBuffer* CreateBuffer(BufferUsage usage, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
-        //virtual GraphicsBuffer* CreateStaticBuffer(ResourceUploadBatch* batch, BufferUsage usage, const void* data, uint32_t count, uint32_t stride, const char* label = nullptr) = 0;
 
         /// Gets the device backend type.
         GraphicsBackendType GetBackendType() const { return caps.backendType; }
 
         /// Get the device caps.
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
+
+        virtual RefPtr<SwapChain> CreateSwapChain(WindowHandle windowHandle, PixelFormat backbufferFormat = PixelFormat::BGRA8Unorm) = 0;
 
     protected:
         GraphicsDevice() = default;
@@ -90,22 +86,5 @@ namespace Alimer
         /// GPU objects.
         //std::vector<GraphicsResource*> gpuObjects;
     };
-
-
-    /* Helper methods */
-    inline uint32_t RHICalculateMipLevels(uint32_t width, uint32_t height, uint32_t depth = 1u)
-    {
-        uint32_t mipLevels = 0;
-        uint32_t size = Max(Max(width, height), depth);
-        while (1u << mipLevels <= size) {
-            ++mipLevels;
-        }
-
-        if (1u << mipLevels < size) {
-            ++mipLevels;
-        }
-
-        return mipLevels;
-    }
 }
 

@@ -24,8 +24,9 @@
 
 namespace Alimer
 {
-    GraphicsResource::GraphicsResource(Type type_)
-        : type(type_)
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type)
+        : device{ device }
+        , type{ type }
     {
 
     }

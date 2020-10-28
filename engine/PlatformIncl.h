@@ -25,14 +25,13 @@
 #include "PlatformDef.h"
 
 #if ALIMER_PLATFORM_WINDOWS
-#define NOMINMAX
-#define NODRAWTEXT
-#define NOGDI
-#define NOBITMAP
-#define NOMCX
-#define NOSERVICE
-#define NOHELP
+#ifndef NOMINMAX
+#define NOMINMAX // prevent windows redefining min/max
+#endif
+
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #elif ALIMER_PLATFORM_UWP
 #pragma warning(push)

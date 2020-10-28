@@ -43,19 +43,19 @@ define_engine_source_files(
     Math
     IO
     Assets
-    RHI
+    Graphics
     Scene
 )
 
 # Graphics backend
 if (ALIMER_D3D11)
-    define_engine_source_files(RHI/D3DCommon)
-    define_engine_source_files(RHI/D3D11)
+    define_engine_source_files(Graphics/D3D)
+    #define_engine_source_files(Graphics/D3D11)
 endif()
 
 if (ALIMER_D3D12)
-    define_engine_source_files(RHI/D3DCommon)
-    define_engine_source_files(RHI/D3D12)
+    define_engine_source_files(Graphics/D3D)
+    define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_VULKAN)
@@ -90,6 +90,9 @@ else ()
     add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 endif ()
 target_compile_definitions(${PROJECT_NAME} PRIVATE ALIMER_COMPILE)
+
+# Enable C++17 compiler features.
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -153,14 +156,20 @@ elseif(APPLE)
 elseif(WINDOWS_STORE)
     set_target_properties(${PROJECT_NAME} PROPERTIES VS_WINDOWS_TARGET_PLATFORM_MIN_VERSION "${ALIMER_UWP_VERSION_MIN}")
 
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+    )
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:__cplusplus")
     # we need this when using /permissive
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:twoPhase-")
 elseif (WIN32)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_SECURE_NO_WARNINGS)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC _CRT_NONSTDC_NO_WARNINGS)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC UNICODE _UNICODE)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+        _CRT_SECURE_NO_WARNINGS
+        _CRT_NONSTDC_NO_WARNINGS
+        NOMINMAX
+        UNICODE _UNICODE
+    )
 
     set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)

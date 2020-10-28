@@ -62,9 +62,18 @@ namespace Alimer
     template <typename T>
     using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-    template<typename T> void SafeRelease(T*& resource)
+    template <typename T>
+    constexpr void SafeDelete(T*& resource)
     {
-        if (resource != nullptr) {
+        delete resource;
+        resource = nullptr;
+    }
+
+    template <typename T>
+    constexpr void SafeRelease(T& resource)
+    {
+        if (resource)
+        {
             resource->Release();
             resource = nullptr;
         }

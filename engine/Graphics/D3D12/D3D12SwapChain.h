@@ -23,27 +23,25 @@
 #pragma once
 
 #include "Platform/WindowHandle.h"
-#include "Graphics/Texture.h"
+#include "Graphics/SwapChain.h"
 #include "D3D12Backend.h"
 
 namespace Alimer
 {
-    class D3D12SwapChain final
+    class D3D12SwapChain final : public SwapChain
     {
     public:
-        D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, uint32_t bufferCount);
-        ~D3D12SwapChain();
-        void Destroy();
-        void Present(bool verticalSync);
+        D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, PixelFormat backbufferFormat);
+        ~D3D12SwapChain() override;
+        void Destroy() override;
+
+        Texture* GetCurrentTexture() const override;
+        uint32_t Present() override;
 
     private:
         void AfterReset();
 
-        D3D12GraphicsDevice* device;
-        IDXGISwapChain3* handle;
-        uint32_t width = 0;
-        uint32_t height = 0;
-        bool isFullscreen = false;
-        uint32_t backBufferIndex = 0;
+        bool tearingSupported;
+        ComPtr<IDXGISwapChain3> handle;
     };
 }

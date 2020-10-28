@@ -52,7 +52,7 @@ namespace Alimer
 
     class D3D12GraphicsDevice;
 
-    void D3D12SetObjectName(ID3D12Object* obj, const std::string& name);
+    void D3D12SetObjectName(ID3D12Object* obj, const String& name);
 
     static constexpr D3D12_RESOURCE_STATES D3D12ResourceState(TextureLayout value)
     {

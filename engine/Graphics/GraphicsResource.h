@@ -22,12 +22,15 @@
 
 #pragma once
 
+#include "Core/Ptr.h"
 #include "Graphics/Types.h"
 
 namespace Alimer
 {
-    /// Defines a base RHI resource class.
-    class ALIMER_API GraphicsResource
+    class GraphicsDevice;
+
+    /// Defines a base graphics resource class.
+    class ALIMER_API GraphicsResource : public RefCounted
     {
     public:
         enum class Type
@@ -44,7 +47,10 @@ namespace Alimer
         virtual void Destroy() = 0;
 
         /// Get the resource type.
-        ALIMER_FORCE_INLINE Type GetType() const { return type; }
+        Type GetType() const { return type; }
+
+        /// Get the Device that created this resource.
+        GraphicsDevice& GetDevice() const { return device; }
 
         /// Set the resource name.
         virtual void SetName(const std::string& newName) { name = newName; }
@@ -53,9 +59,9 @@ namespace Alimer
         const std::string& GetName() const { return name; }
 
     protected:
-        GraphicsResource(Type type_);
+        GraphicsResource(GraphicsDevice& device, Type type);
 
-    protected:
+        GraphicsDevice& device;
         Type type;
         std::string name;
     };
