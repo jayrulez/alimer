@@ -24,14 +24,19 @@
 
 #include "Core/Object.h"
 #include "Graphics/GraphicsResource.h"
+#include "Graphics/BackendTypes.h"
 
 namespace Alimer
 {
-    class ALIMER_API Texture : public Object, public GraphicsResource
+    class ALIMER_API Texture final : public Object, public GraphicsResource
     {
         ALIMER_OBJECT(Texture, Object);
 
     public:
+        Texture(GraphicsDevice& device, TextureHandle handle, const Extent3D& extent, PixelFormat format, TextureLayout layout, TextureUsage usage = TextureUsage::Sampled, TextureSampleCount sampleCount = TextureSampleCount::Count1);
+        ~Texture() override;
+        void Destroy() override;
+
         /// Get the texture pixel format.
         PixelFormat GetFormat() const { return desc.format; }
 
@@ -72,11 +77,19 @@ namespace Alimer
             return baseSize > 0u ? baseSize : 1u;
         }
 
+        TextureHandle GetHandle() const { return handle; }
+
+        void SetName(const std::string& newName) override;
+
     protected:
         /// Constructor
         Texture(GraphicsDevice& device, const TextureDescription& desc);
 
         TextureDescription desc;
         TextureLayout layout;
+
+        TextureHandle handle{};
+        AllocationHandle allocation{};
+        TextureApiFormat apiFormat;
     };
 }

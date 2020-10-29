@@ -22,7 +22,6 @@
 
 #pragma once
 
-#include "Core/Ptr.h"
 #include "Graphics/Types.h"
 
 namespace Alimer
@@ -30,7 +29,7 @@ namespace Alimer
     class GraphicsDevice;
 
     /// Defines a base graphics resource class.
-    class ALIMER_API GraphicsResource : public RefCounted
+    class ALIMER_API GraphicsResource 
     {
     public:
         enum class Type

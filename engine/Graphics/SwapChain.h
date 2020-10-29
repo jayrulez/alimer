@@ -22,16 +22,20 @@
 
 #pragma once
 
+#include "Core/Ptr.h"
 #include "Platform/WindowHandle.h"
 #include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    class ALIMER_API SwapChain : public GraphicsResource
+    class ALIMER_API SwapChain : public GraphicsResource, public RefCounted
     {
     public:
         // Number of swapchain back buffers.
         static constexpr uint32_t kBufferCount = 3;
+
+        void SetVerticalSync(bool value) { verticalSync = value; }
+        bool GetVerticalSync() const { return verticalSync; }
 
         PixelFormat GetBackbufferFormat() const noexcept { return colorFormat; }
 

@@ -27,6 +27,8 @@
 #include "Math/Color.h"
 #include "Math/Matrix4x4.h"
 #include "Graphics/GraphicsBuffer.h"
+#include "Graphics/CommandContext.h"
+#include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 
 namespace Alimer
@@ -45,6 +47,9 @@ namespace Alimer
         void OnDraw() override;
 
     private:
+        UniquePtr<Window> window2;
+        RefPtr<SwapChain> swapChain2;
+
         RefPtr<GraphicsBuffer> vertexBuffer;
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
@@ -75,6 +80,10 @@ namespace Alimer
 
     void HelloWorldApp::Initialize()
     {
+        //window2 = MakeUnique<Window>("Window 2");
+        //swapChain2 = graphicsDevice->CreateSwapChain(window2->GetHandle());
+        //swapChain2->SetVerticalSync(false);
+
 #if TODO
         /*auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
 vertexShader = new Shader();
@@ -196,6 +205,10 @@ sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
 
     void HelloWorldApp::OnDraw()
     {
+        //auto& context = graphicsDevice->BeginCommands("Frame");
+        //context.PushDebugGroup("Frame");
+        //context.PopDebugGroup();
+
 #if TODO
         static float time = 0.0f;
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
@@ -233,6 +246,7 @@ sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
         context->PopDebugGroup();*/
         time += 0.03f;
 #endif // TODO
+        //swapChain2->Present();
     }
 
     Application* CreateApplication()
@@ -241,6 +255,11 @@ sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
         //config.preferredBackendType = GraphicsBackendType::Direct3D11;
         config.preferredBackendType = GraphicsBackendType::Direct3D12;
         //config.preferredBackendType = GraphicsBackendType::Vulkan;
+        // Direct3D12 has issue with debug layer
+#ifdef _DEBUG
+       //config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
+#endif
+
         config.title = "Spinning Cube";
         //config.fullscreen = true;
         //config.width = 1280;

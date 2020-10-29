@@ -50,6 +50,7 @@ namespace Alimer
         void SetDeviceLost();
 
         RefPtr<SwapChain> CreateSwapChain(WindowHandle windowHandle, PixelFormat backbufferFormat) override;
+        CommandContext& BeginCommands(const std::string& id) override;
 
         D3D12_CPU_DESCRIPTOR_HANDLE AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count);
 

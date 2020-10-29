@@ -25,9 +25,8 @@
 #include "Core/Assert.h"
 #include "Core/Log.h"
 #include "Graphics/GraphicsResource.h"
+#include "Graphics/BackendTypes.h"
 #include "Graphics/D3D/D3DHelpers.h"
-
-#include <d3d12.h>
 #include "D3D12MemAlloc.h"
 
 // To use graphics and CPU markup events with the latest version of PIX, change this to include <pix3.h>
@@ -109,24 +108,4 @@ namespace Alimer
         D3D12_RESOURCE_STATES transitioningState;
         D3D12_GPU_VIRTUAL_ADDRESS gpuVirtualAddress;
     };
-
-    class D3D12CommandAllocatorPool
-    {
-    public:
-        D3D12CommandAllocatorPool(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE type);
-        ~D3D12CommandAllocatorPool();
-        void Shutdown();
-
-        ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
-        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
-
-    private:
-        ID3D12Device* device;
-        const D3D12_COMMAND_LIST_TYPE type;
-
-        std::vector<ID3D12CommandAllocator*> allocatorPool;
-        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
-        std::mutex allocatorMutex;
-    };
-
 }

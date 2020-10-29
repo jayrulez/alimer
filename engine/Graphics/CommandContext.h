@@ -26,10 +26,12 @@
 
 namespace Alimer
 {
-    class ALIMER_API CommandContext
+    struct CommandBufferApiData;
+
+    class ALIMER_API CommandContext : public std::enable_shared_from_this<CommandContext>
     {
     public:
-        virtual ~CommandContext() = default;
+        ~CommandContext();
 
         virtual void PushDebugGroup(const std::string& name) = 0;
         virtual void PopDebugGroup() = 0;
@@ -46,6 +48,9 @@ namespace Alimer
         //virtual void BindBufferData(uint32_t slot, const void* data, uint32_t size) = 0;
 
     protected:
-        CommandContext();
+        CommandContext(GraphicsDevice& device);
+
+        GraphicsDevice& device;
+        CommandBufferApiData* apiData;
     };
 }

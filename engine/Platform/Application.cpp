@@ -25,6 +25,7 @@
 #include "Platform/Event.h"
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
+#include "Graphics/SwapChain.h"
 #include "Graphics/GraphicsDevice.h"
 #include "UI/ImGuiLayer.h"
 
@@ -45,6 +46,7 @@ namespace Alimer
 
     Application::~Application()
     {
+        swapChain.Reset();
         //ImGuiLayer::Shutdown();
         graphicsDevice.reset();
         s_appCurrent = nullptr;
@@ -83,8 +85,11 @@ namespace Alimer
         {
             headless = true;
         }
-
-        ImGuiLayer::Initialize();
+        else
+        {
+            swapChain =  graphicsDevice->CreateSwapChain(window->GetHandle());
+            ImGuiLayer::Initialize();
+        }
 
         Initialize();
     }
@@ -130,7 +135,7 @@ namespace Alimer
         agpu_bind_pipeline(render_pipeline);
         agpu_draw(3, 1, 0);*/
         //graphicsDevice->PopDebugGroup(commandList);
-        //graphicsDevice->PresentEnd(commandList);
+        swapChain->Present();
     }
 
     const Config* Application::GetConfig()

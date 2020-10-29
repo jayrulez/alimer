@@ -25,13 +25,9 @@
 #include "Math/MathHelper.h"
 #include "Graphics/GraphicsDevice.h"
 
-#if defined(ALIMER_D3D11)
-//#include "Graphics/D3D11/D3D11GraphicsDevice.h"
-#endif
 #if defined(ALIMER_D3D12)
 #include "Graphics/D3D12/D3D12GraphicsDevice.h"
-#endif
-#if defined(ALIMER_VULKAN)
+#elif defined(ALIMER_VULKAN)
 //#include "Graphics/Vulkan/VulkanGraphicsDevice.h"
 #endif
 

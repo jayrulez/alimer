@@ -34,7 +34,66 @@
 
 namespace Alimer
 {
-    const String EMPTY_STRING{};
+    const std::string kEmptyString{};
+    const std::wstring kEmptyWString{};
+    const char kWhitespaceASCII[] = " \f\n\r\t\v";
+
+    std::string TrimString(const std::string& input, const std::string& trimChars)
+    {
+        auto begin = input.find_first_not_of(trimChars);
+        if (begin == std::string::npos)
+        {
+            return "";
+        }
+
+        std::string::size_type end = input.find_last_not_of(trimChars);
+        if (end == std::string::npos)
+        {
+            return input.substr(begin);
+        }
+
+        return input.substr(begin, end - begin + 1);
+    }
+
+    std::vector<std::string> SplitString(const std::string& input, const std::string& delimiters,
+        WhitespaceHandling whitespace, SplitResult resultType)
+    {
+        std::vector<std::string> result;
+        if (input.empty())
+        {
+            return result;
+        }
+
+        std::string::size_type start = 0;
+        while (start != std::string::npos)
+        {
+            auto end = input.find_first_of(delimiters, start);
+
+            std::string piece;
+            if (end == std::string::npos)
+            {
+                piece = input.substr(start);
+                start = std::string::npos;
+            }
+            else
+            {
+                piece = input.substr(start, end - start);
+                start = end + 1;
+            }
+
+            if (whitespace == WhitespaceHandling::TrimWhitespace)
+            {
+                piece = TrimString(piece, kWhitespaceASCII);
+            }
+
+            if (resultType == SplitResult::All || !piece.empty())
+            {
+                result.push_back(std::move(piece));
+            }
+        }
+
+        return result;
+    }
 
 #ifdef _WIN32
     String ToUtf8(const wchar_t* wstr, size_t len)

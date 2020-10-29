@@ -27,25 +27,32 @@
 
 namespace Alimer
 {
-    /** Basic string that uses framework's memory allocators. */
-    template <typename T>
-    using BasicString = std::basic_string<T, std::char_traits<T>, StdAlloc<T>>;
-
-    /**	Basic string stream that uses framework's memory allocators. */
-    template <typename T>
-    using BasicStringStream = std::basic_stringstream<T, std::char_traits<T>, StdAlloc<T>>;
-
-    /** Narrow string used for handling narrow encoded text (either locale specific ANSI or UTF-8). */
-    using String = BasicString<char>;
-
-    /** Wide string used primarily for handling Unicode text (UTF-32 on Linux, UTF-16 on Windows, generally). */
-    using WString = BasicString<wchar_t>;
-
-    /** Wide string stream used for primarily for constructing narrow strings. */
-    using StringStream = BasicStringStream<char>;
+    using String = std::string;
+    using WString = std::wstring;
 
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
-    extern const String EMPTY_STRING;
+
+    extern const std::string kEmptyString;
+    extern const std::wstring kEmptyWString;
+    extern const char kWhitespaceASCII[];
+
+    enum class WhitespaceHandling
+    {
+        KeepWhitespace,
+        TrimWhitespace
+    };
+
+    enum class SplitResult
+    {
+        All,
+        NonEmpty,
+    };
+
+
+    ALIMER_API std::string TrimString(const std::string& input, const std::string& trimChars);
+
+    ALIMER_API std::vector<std::string> SplitString(const std::string& input, const std::string& delimiters, WhitespaceHandling whitespace, SplitResult resultType);
+
 
 #ifdef _WIN32
     ALIMER_API String ToUtf8(const wchar_t* wstr, size_t len);

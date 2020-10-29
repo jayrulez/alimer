@@ -20,9 +20,28 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
+#pragma once
+
+#include "AlimerConfig.h"
+#if defined(ALIMER_D3D12)
+#include <d3d12.h>
+// Forward declare memory allocator classes
+namespace D3D12MA
+{
+    class Allocator;
+    class Allocation;
+};
+#elif defined(ALIMER_VULKAN)
+#endif /* defined(ALIMER_VULKAN) */
 
 namespace Alimer
 {
-    
+#if defined(ALIMER_D3D12)
+    using AllocationHandle = D3D12MA::Allocation*;
+    using TextureHandle = ID3D12Resource*;
+    using BufferHandle = ID3D12Resource*;
+    using TextureApiFormat = DXGI_FORMAT;
+#elif defined(ALIMER_VULKAN)
+    using TextureApiFormat = VkFormat;
+#endif /* defined(ALIMER_VULKAN) */
 }

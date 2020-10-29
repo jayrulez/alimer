@@ -44,7 +44,7 @@ namespace Alimer::File
     String ReadAllText(const FilePath& path)
     {
         if (!Exists(path))
-            return EMPTY_STRING;
+            return kEmptyString;
 
         FileStream stream(path, FileMode::Read);
         String result = stream.ReadString();

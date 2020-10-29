@@ -44,7 +44,11 @@ namespace Alimer
     static constexpr uint32_t KnownVendorId_Qualcomm = 0x5143;
 
     /* Forward declarations */
+    class GraphicsResource;
     class Texture;
+    class GraphicsBuffer;
+    class SwapChain;
+    class GraphicsDevice;
 
     enum class GraphicsDeviceFlags : uint32
     {
@@ -114,6 +118,18 @@ namespace Alimer
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 
+    enum class TextureSampleCount : uint32_t
+    {
+        None = 0,
+        Count1 = 1,
+        Count2 = 2,
+        Count4 = 4,
+        Count8 = 8,
+        Count16 = 16,
+        Count32 = 32,
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureSampleCount, uint32_t);
+
     enum class TextureLayout : uint32
     {
         Undefined,
@@ -138,6 +154,13 @@ namespace Alimer
     };
 
     /* Structs */
+    struct Extent3D
+    {
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+    };
+
     /// A 3D rectangular region for the viewport clipping.
     class ALIMER_API RHIViewport
     {

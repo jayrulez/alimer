@@ -26,11 +26,42 @@
 
 namespace Alimer
 {
+    class D3D12CommandContext;
+
+    class D3D12CommandAllocatorPool
+    {
+    public:
+        D3D12CommandAllocatorPool(ID3D12Device* device, D3D12_COMMAND_LIST_TYPE Type);
+        ~D3D12CommandAllocatorPool();
+        void Shutdown();
+
+        ID3D12CommandAllocator* RequestAllocator(uint64_t completedFenceValue);
+        void DiscardAllocator(uint64_t fenceValue, ID3D12CommandAllocator* commandAllocator);
+
+        inline size_t Size() { return allocatorPool.size(); }
+
+    private:
+        ID3D12Device* device;
+        const D3D12_COMMAND_LIST_TYPE type;
+
+        std::vector<ID3D12CommandAllocator*> allocatorPool;
+        std::queue<std::pair<uint64_t, ID3D12CommandAllocator*>> readyAllocators;
+        std::mutex allocatorMutex;
+    };
+
     class D3D12CommandQueue final 
     {
     public:
         D3D12CommandQueue(D3D12GraphicsDevice& device, D3D12_COMMAND_LIST_TYPE type);
         ~D3D12CommandQueue();
+
+        uint64_t Signal();
+        bool IsFenceComplete(uint64_t fenceValue);
+        void WaitForFenceValue(uint64_t fenceValue);
+        void WaitForIdle(void) { WaitForFenceValue(Signal()); }
+
+        ID3D12CommandAllocator* RequestAllocator();
+        D3D12CommandContext& RequestCommandBuffer(const std::string& id);
 
         ID3D12CommandQueue* GetHandle() const { return handle.Get(); }
 
@@ -38,11 +69,15 @@ namespace Alimer
         D3D12GraphicsDevice& device;
         const D3D12_COMMAND_LIST_TYPE type;
 
-        ComPtr<ID3D12CommandQueue> handle;
+        D3D12CommandAllocatorPool allocatorPool;
 
+        ComPtr<ID3D12CommandQueue> handle;
         ComPtr<ID3D12Fence> fence;
         HANDLE fenceEvent;
-        uint64_t nextFenceValue;
+        std::atomic_uint64_t nextFenceValue;
         uint64_t lastCompletedFenceValue;
+
+        std::queue<D3D12CommandContext*> availableContexts;
+        std::vector<std::unique_ptr<D3D12CommandContext> > contextPool;
     };
 }

@@ -28,6 +28,8 @@
 
 namespace Alimer
 {
+    class D3D12CommandQueue;
+
     class D3D12SwapChain final : public SwapChain
     {
     public:
@@ -41,7 +43,11 @@ namespace Alimer
     private:
         void AfterReset();
 
+        D3D12CommandQueue& commandQueue;
         bool tearingSupported;
         ComPtr<IDXGISwapChain3> handle;
+        uint64_t fenceValues[kBufferCount];  // The fence values to wait for before leaving the Present method.
+
+        RefPtr<Texture> backBufferTextures[kBufferCount];
     };
 }

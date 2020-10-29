@@ -22,11 +22,12 @@
 
 #pragma once
 
+#include "Core/Ptr.h"
 #include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    class GraphicsBuffer : public GraphicsResource
+    class GraphicsBuffer : public GraphicsResource, public RefCounted
     {
     public:
         /// Gets buffer usage.

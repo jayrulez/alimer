@@ -39,16 +39,10 @@ namespace Alimer
         bool resizable = true;
 
         GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
-#ifdef _DEBUG
-        GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::DebugRuntime;
-#else
         GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
-#endif
 
         std::string rootDirectory = "Assets";
     };
-
-    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
@@ -106,6 +100,7 @@ namespace Alimer
         bool headless = false;
         UniquePtr<Window> window{ nullptr };
         std::shared_ptr<GraphicsDevice> graphicsDevice;
+        RefPtr<SwapChain> swapChain;
     };
 
     extern Application* CreateApplication(void);

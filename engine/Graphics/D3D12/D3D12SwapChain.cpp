@@ -21,14 +21,20 @@
 //
 
 #include "D3D12SwapChain.h"
+#include "D3D12CommandQueue.h"
+#include "Graphics/Texture.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
 {
     D3D12SwapChain::D3D12SwapChain(D3D12GraphicsDevice* device, WindowHandle windowHandle, PixelFormat backbufferFormat)
         : SwapChain(*device, windowHandle)
+        , commandQueue(device->GetCommandQueue(D3D12_COMMAND_LIST_TYPE_DIRECT))
         , tearingSupported(device->IsTearingSupported())
+        , fenceValues{ 0 }
     {
+        colorFormat = backbufferFormat;
+
         UINT swapChainFlags = 0;
         if (tearingSupported) {
             swapChainFlags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
@@ -86,6 +92,10 @@ namespace Alimer
 #endif
 
         ThrowIfFailed(swapChain1.As(&handle));
+
+        // Set maximum frame latency to reduce input latency, required DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
+        //ThrowIfFailed(handle->SetMaximumFrameLatency(kBufferCount - 1));
+
         AfterReset();
     }
 
@@ -108,11 +118,17 @@ namespace Alimer
         height = swapChainDesc.Height;
 
         //colorTextures.resize(swapChainDesc.BufferCount);
-        for (uint32 index = 0; index < swapChainDesc.BufferCount; ++index)
+        for (uint32 i = 0; i < swapChainDesc.BufferCount; ++i)
         {
-            //ID3D12Resource* backBuffer;
-            //ThrowIfFailed(handle->GetBuffer(index, IID_PPV_ARGS(&backBuffer)));
-            //colorTextures[index].Reset(new D3D12Texture(device, backBuffer, TextureLayout::Present));
+            ComPtr<ID3D12Resource> backBuffer;
+            ThrowIfFailed(handle->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+            backBufferTextures[i] = new Texture(device,
+                backBuffer.Get(),
+                { width, height, 1u },
+                colorFormat,
+                TextureLayout::Present);
+            backBufferTextures[i]->SetName("Backbuffer[" + std::to_string(i) + "]");
         }
 
         currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
@@ -129,7 +145,6 @@ namespace Alimer
         //d3dContext->TransitionResource(StaticCast<D3D12Texture>(colorTextures[backBufferIndex]).Get(), TextureLayout::Present);
         //device->GetImmediateContext()->Flush();
 
-
         UINT syncInterval = verticalSync ? 1 : 0;
         UINT presentFlags = tearingSupported && !isFullscreen && !verticalSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
         HRESULT hr = handle->Present(syncInterval, presentFlags);
@@ -144,7 +159,13 @@ namespace Alimer
         }
 
         ThrowIfFailed(hr);
+
+        fenceValues[currentBackBufferIndex] = commandQueue.Signal();
         currentBackBufferIndex = handle->GetCurrentBackBufferIndex();
+
+        auto fenceValue = fenceValues[currentBackBufferIndex];
+        commandQueue.WaitForFenceValue(fenceValue);
+
         return currentBackBufferIndex;
     }
 }

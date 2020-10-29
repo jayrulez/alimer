@@ -20,8 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if TODO
-#include "D3D12Texture.h"
+#include "Graphics/Texture.h"
 #include "D3D12GraphicsDevice.h"
 
 namespace Alimer
@@ -72,21 +71,22 @@ namespace Alimer
         }
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, ID3D12Resource* resource, TextureLayout initialLayout)
-        : Texture(ConvertResourceDesc(resource->GetDesc(), initialLayout))
-        , device{ device }
-        , resource{ resource }
+    Texture::Texture(GraphicsDevice& device, TextureHandle handle, const Extent3D& extent, PixelFormat format, TextureLayout layout, TextureUsage usage, TextureSampleCount sampleCount)
+        : GraphicsResource(device, Type::Texture)
+        , handle{ handle }
+        , allocation{}
+        , layout{ layout }
+        , apiFormat(ToDXGIFormatWitUsage(format, usage))
     {
-        RTV = device->AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1u);
-        device->GetD3DDevice()->CreateRenderTargetView(resource, nullptr, RTV);
+
     }
 
-    D3D12Texture::D3D12Texture(D3D12GraphicsDevice* device, const TextureDescription& desc, const void* initialData)
-        : Texture(desc)
-        , device{ device }
+    Texture::Texture(GraphicsDevice& device, const TextureDescription& desc)
+        : GraphicsResource(device, Type::Texture)
+        , desc{ desc }
+        , layout(desc.initialLayout)
+        , apiFormat(ToDXGIFormatWitUsage(desc.format, desc.usage))
     {
-        const DXGI_FORMAT dxgiFormat = ToDXGIFormatWitUsage(desc.format, desc.usage);
-
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -105,7 +105,7 @@ namespace Alimer
         }
 
         resourceDesc.MipLevels = desc.mipLevels;
-        resourceDesc.Format = dxgiFormat;
+        resourceDesc.Format = apiFormat;
         resourceDesc.SampleDesc.Count = desc.sampleCount;
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -189,99 +189,20 @@ namespace Alimer
          }*/
     }
 
-    D3D12Texture::~D3D12Texture()
+    Texture::~Texture()
     {
         Destroy();
     }
 
-    void D3D12Texture::Destroy()
+    void Texture::Destroy()
     {
-        device->ReleaseResource(resource);
+        //device.ReleaseResource(resource);
         SafeRelease(allocation);
     }
 
-    void D3D12Texture::BackendSetName()
+    void Texture::SetName(const std::string& newName)
     {
-        auto wideName = ToUtf16(name);
-        resource->SetName(wideName.c_str());
-    }
-
-    void D3D12Texture::SetLayout(TextureLayout newLayout)
-    {
-        layout = newLayout;
-    }
-
-    void D3D12Texture::UploadTextureData(const void* initData)
-    {
-        // Get a GPU upload buffer
-        /*UploadContext uploadContext = _device->ResourceUploadBegin(sizeInBytes);
-
-        UploadTextureData(initData, uploadContext.commandList, uploadContext.Resource, uploadContext.CPUAddress, uploadContext.ResourceOffset);
-
-        _device->ResourceUploadEnd(uploadContext);*/
-    }
-
-    void D3D12Texture::UploadTextureData(const void* initData, ID3D12GraphicsCommandList* cmdList, ID3D12Resource* uploadResource, void* uploadCPUMem, uint64_t resourceOffset)
-    {
-        /*D3D12_RESOURCE_DESC textureDesc = resource->GetDesc();
-        const uint64_t arraySize = _desc.type == TextureType::TextureCube ? _desc.depth * 6 : _desc.depth;
-
-        const uint64_t numSubResources = max(1u, _desc.mipLevels) * arraySize;
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT* layouts = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * numSubResources);
-        uint32_t* numRows = (uint32_t*)_alloca(sizeof(uint32_t) * numSubResources);
-        uint64_t* rowSizes = (uint64_t*)_alloca(sizeof(uint64_t) * numSubResources);
-
-        uint64_t textureMemSize = 0;
-        _device->GetD3DDevice()->GetCopyableFootprints(&textureDesc, 0, uint32_t(numSubResources), 0, layouts, numRows, rowSizes, &textureMemSize);
-
-        // Get a GPU upload buffer
-        uint8_t* uploadMem = reinterpret_cast<uint8_t*>(uploadCPUMem);
-
-        const uint8_t* srcMem = reinterpret_cast<const uint8_t*>(initData);
-        const uint64_t srcTexelSize = GetFormatBitsPerPixel(_desc.format) / 8;
-
-        for (uint64_t arrayIdx = 0; arrayIdx < arraySize; ++arrayIdx)
-        {
-            uint64_t mipWidth = _desc.width;
-            for (uint64_t mipIdx = 0; mipIdx < _desc.mipLevels; ++mipIdx)
-            {
-                const uint64_t subResourceIdx = mipIdx + (arrayIdx * _desc.mipLevels);
-
-                const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIdx];
-                const uint64_t subResourceHeight = numRows[subResourceIdx];
-                const uint64_t subResourcePitch = subResourceLayout.Footprint.RowPitch;
-                const uint64_t subResourceDepth = subResourceLayout.Footprint.Depth;
-                const uint64_t srcPitch = mipWidth * srcTexelSize;
-                uint8_t* dstSubResourceMem = uploadMem + subResourceLayout.Offset;
-
-                for (uint64_t z = 0; z < subResourceDepth; ++z)
-                {
-                    for (uint64_t y = 0; y < subResourceHeight; ++y)
-                    {
-                        memcpy(dstSubResourceMem, srcMem, min(subResourcePitch, srcPitch));
-                        dstSubResourceMem += subResourcePitch;
-                        srcMem += srcPitch;
-                    }
-                }
-
-                mipWidth = max(mipWidth / 2, 1ull);
-            }
-        }
-
-        for (uint64_t subResourceIdx = 0; subResourceIdx < numSubResources; ++subResourceIdx)
-        {
-            D3D12_TEXTURE_COPY_LOCATION dst = {};
-            dst.pResource = resource;
-            dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-            dst.SubresourceIndex = uint32_t(subResourceIdx);
-            D3D12_TEXTURE_COPY_LOCATION src = {};
-            src.pResource = uploadResource;
-            src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            src.PlacedFootprint = layouts[subResourceIdx];
-            src.PlacedFootprint.Offset += resourceOffset;
-            cmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
-        }*/
+        auto wideName = ToUtf16(newName);
+        handle->SetName(wideName.c_str());
     }
 }
-
-#endif // TODO

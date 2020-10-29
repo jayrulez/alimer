@@ -35,6 +35,7 @@ namespace Alimer
     class GraphicsBuffer;
     class Texture;
     class SwapChain;
+    class CommandContext;
 
     class ALIMER_API GraphicsDevice 
     {
@@ -65,6 +66,7 @@ namespace Alimer
         const GraphicsDeviceCaps& GetCaps() const { return caps; }
 
         virtual RefPtr<SwapChain> CreateSwapChain(WindowHandle windowHandle, PixelFormat backbufferFormat = PixelFormat::BGRA8Unorm) = 0;
+        virtual CommandContext& BeginCommands(const std::string& id = "") = 0;
 
     protected:
         GraphicsDevice() = default;

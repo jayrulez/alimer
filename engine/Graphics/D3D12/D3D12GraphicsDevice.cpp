@@ -24,6 +24,7 @@
 //#include "D3D12Buffer.h"
 #include "D3D12SwapChain.h"
 #include "D3D12CommandQueue.h"
+#include "D3D12CommandContext.h"
 #include "D3D12DescriptorHeap.h"
 #include "D3D12GraphicsDevice.h"
 
@@ -41,18 +42,6 @@ namespace Alimer
         available_initialized = true;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) 
-        static HMODULE dxgiDLL = LoadLibraryA("dxgi.dll");
-        if (!dxgiDLL) {
-            return false;
-        }
-        CreateDXGIFactory2 = reinterpret_cast<PFN_CREATE_DXGI_FACTORY2>(GetProcAddress(dxgiDLL, "CreateDXGIFactory2"));
-        if (!CreateDXGIFactory2)
-        {
-            return false;
-        }
-
-        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
-
         static HMODULE d3d12DLL = LoadLibraryA("d3d12.dll");
         if (!d3d12DLL) {
             return false;
@@ -217,6 +206,7 @@ namespace Alimer
 
     D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
+        WaitForGPU();
         shuttingDown = true;
 
         // Command queues
@@ -290,10 +280,9 @@ namespace Alimer
 
     void D3D12GraphicsDevice::WaitForGPU()
     {
-        // Wait for the GPU to fully catch up with the CPU
-        //ThrowIfFailed(graphicsQueue->Signal(frameFence, ++frameCount));
-        //ThrowIfFailed(frameFence->SetEventOnCompletion(frameCount, frameFenceEvent));
-        //WaitForSingleObject(frameFenceEvent, INFINITE);
+        directCommandQueue->WaitForIdle();
+        computeCommandQueue->WaitForIdle();
+        copyCommandQueue->WaitForIdle();
 
         ExecuteDeferredReleases();
     }
@@ -402,6 +391,11 @@ namespace Alimer
     RefPtr<SwapChain> D3D12GraphicsDevice::CreateSwapChain(WindowHandle windowHandle, PixelFormat backbufferFormat)
     {
         return MakeRefPtr<D3D12SwapChain>(this, windowHandle, backbufferFormat);
+    }
+
+    CommandContext& D3D12GraphicsDevice::BeginCommands(const std::string& id)
+    {
+        return GetCommandQueue().RequestCommandBuffer(id);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12GraphicsDevice::AllocateCpuDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 count)
