@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,15 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#include "TextureLoader.h"
-#include "AssetManager.h"
-//#include "Graphics/Texture.h"
+#pragma once
+
+#include "RHI/RHITypes.h"
+#include <memory>
 
 namespace Alimer
 {
-    TextureLoader::TextureLoader(AssetManager& assets)
-        : AssetLoader(assets, {}/* Texture::GetTypeStatic()*/)
-    {
-    }
+    bool IsVulkanBackendAvailable();
+    std::shared_ptr<GraphicsDevice> CreateVulkanGraphicsDevice(void* windowHandle, bool fullscreen, bool enableDebugLayer);
 }

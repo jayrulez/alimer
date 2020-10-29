@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -19,15 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#include "TextureLoader.h"
-#include "AssetManager.h"
-//#include "Graphics/Texture.h"
+#include "RHI_D3D.h"
 
 namespace Alimer
 {
-    TextureLoader::TextureLoader(AssetManager& assets)
-        : AssetLoader(assets, {}/* Texture::GetTypeStatic()*/)
-    {
-    }
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
 }

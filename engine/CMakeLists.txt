@@ -43,15 +43,22 @@ define_engine_source_files(
     Math
     IO
     Assets
-    Graphics
+    RHI
     Scene
 )
 
 # Graphics backend
+if (ALIMER_D3D11)
+    define_engine_source_files(RHI/D3D)
+    define_engine_source_files(RHI/D3D11)
+endif()
+
 if (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D)
-    define_engine_source_files(Graphics/D3D12)
-elseif (ALIMER_VULKAN)
+    define_engine_source_files(RHI/D3D)
+    define_engine_source_files(RHI/D3D12)
+endif()
+
+if (ALIMER_VULKAN)
     #define_engine_source_files(Graphics/Vulkan)
 endif()
 
@@ -175,7 +182,7 @@ if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
 endif ()
 
 if (ALIMER_D3D12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi dxc)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dxc)
     add_dependencies(${PROJECT_NAME} CopyDxcompiler)
 endif ()
 

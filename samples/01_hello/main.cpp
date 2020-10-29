@@ -26,10 +26,7 @@
 #include "Core/Math.h"
 #include "Math/Color.h"
 #include "Math/Matrix4x4.h"
-#include "Graphics/GraphicsBuffer.h"
-#include "Graphics/CommandContext.h"
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/RHI.h"
 
 namespace Alimer
 {
@@ -44,30 +41,30 @@ namespace Alimer
         ~HelloWorldApp() override;
 
         void Initialize() override;
-        void OnDraw() override;
+        void OnDraw(CommandList& commandList) override;
 
     private:
-        UniquePtr<Window> window2;
-        RefPtr<SwapChain> swapChain2;
+        //UniquePtr<Window> window2;
+        //RefPtr<SwapChain> swapChain2;
 
         RefPtr<GraphicsBuffer> vertexBuffer;
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
-        //RefPtr<RenderPipeline> pipeline;
+        RefPtr<RenderPipeline> pipeline;
     };
 
 
     /* TODO: Until we fix resource creation */
-    //Shader* vertexShader;
-    //Shader* pixelShader;
-    //Texture* texture;
-    //RefPtr<Sampler> sampler;
+    Shader* vertexShader;
+    Shader* pixelShader;
+    Texture* texture;
+    RefPtr<Sampler> sampler;
 
     HelloWorldApp::~HelloWorldApp()
     {
-        //delete vertexShader;
-        //delete pixelShader;
-        //delete texture;
+        delete vertexShader;
+        delete pixelShader;
+        delete texture;
     }
 
     struct Vertex
@@ -84,57 +81,56 @@ namespace Alimer
         //swapChain2 = graphicsDevice->CreateSwapChain(window2->GetHandle());
         //swapChain2->SetVerticalSync(false);
 
-#if TODO
-        /*auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
-vertexShader = new Shader();
-pixelShader = new Shader();
-graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", vertexShader);
-graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", pixelShader);
+        auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
+        vertexShader = new Shader();
+        pixelShader = new Shader();
+        graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", vertexShader);
+        graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", pixelShader);
 
-RenderPipelineDescriptor renderPipelineDesc = {};
-renderPipelineDesc.vs = vertexShader;
-renderPipelineDesc.ps = pixelShader;
-renderPipelineDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
-renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
-renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
-renderPipelineDesc.colorAttachments[0].format = graphicsDevice->GetBackBufferFormat();
-//renderPipelineDesc.colorAttachments[0].blendEnable = true;
-//renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
-//renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
-//renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
-//renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;
-pipeline = graphicsDevice->CreateRenderPipeline(&renderPipelineDesc);
+        RenderPipelineDescriptor renderPipelineDesc = {};
+        renderPipelineDesc.vs = vertexShader;
+        renderPipelineDesc.ps = pixelShader;
+        renderPipelineDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
+        renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
+        renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
+        renderPipelineDesc.colorAttachments[0].format = graphicsDevice->GetBackBufferFormat();
+        //renderPipelineDesc.colorAttachments[0].blendEnable = true;
+        //renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
+        //renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
+        //renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
+        //renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;
+        pipeline = graphicsDevice->CreateRenderPipeline(&renderPipelineDesc);
 
-uint32_t pixels[4 * 4] = {
-    0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
-    0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
-    0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
-    0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
-};
-TextureDesc textureDesc = {};
-textureDesc.Width = 4;
-textureDesc.Height = 4;
-textureDesc.format = PixelFormat::FORMAT_R8G8B8A8_UNORM;
-textureDesc.BindFlags = BIND_SHADER_RESOURCE;
-SubresourceData textureData = {};
-textureData.pSysMem = pixels;
-textureData.SysMemPitch = 4u * GetPixelFormatSize(textureDesc.format);
-texture = new Texture();
-graphicsDevice->CreateTexture(&textureDesc, &textureData, texture);
+        uint32_t pixels[4 * 4] = {
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+            0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000,
+            0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+        };
+        TextureDesc textureDesc = {};
+        textureDesc.Width = 4;
+        textureDesc.Height = 4;
+        textureDesc.format = PixelFormat::FORMAT_R8G8B8A8_UNORM;
+        textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+        SubresourceData textureData = {};
+        textureData.pSysMem = pixels;
+        textureData.SysMemPitch = 4u * GetPixelFormatSize(textureDesc.format);
+        texture = new Texture();
+        graphicsDevice->CreateTexture(&textureDesc, &textureData, texture);
 
-SamplerDescriptor samplerDesc = {};
-samplerDesc.minFilter = FilterMode::Nearest;
-samplerDesc.magFilter = FilterMode::Nearest;
-samplerDesc.mipmapFilter = FilterMode::Nearest;
-sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
+        SamplerDescriptor samplerDesc = {};
+        samplerDesc.minFilter = FilterMode::Nearest;
+        samplerDesc.magFilter = FilterMode::Nearest;
+        samplerDesc.mipmapFilter = FilterMode::Nearest;
+        sampler = graphicsDevice->CreateSampler(&samplerDesc);
 
-/*Vertex quadVertices[] =
-{
-    { { -0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-    { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-    { { 0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-    { { -0.5f, -0.5, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-};*/
+        /*Vertex quadVertices[] =
+        {
+            { { -0.5f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+            { { 0.5f, 0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+            { { 0.5f, -0.5, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+            { { -0.5f, -0.5, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
+        };*/
 
         float cubeData[] =
         {
@@ -199,17 +195,10 @@ sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
         bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
         constantBuffer = graphicsDevice->CreateBuffer(bd, nullptr);
-#endif // TODO
-
     }
 
-    void HelloWorldApp::OnDraw()
+    void HelloWorldApp::OnDraw(CommandList& commandList)
     {
-        //auto& context = graphicsDevice->BeginCommands("Frame");
-        //context.PushDebugGroup("Frame");
-        //context.PopDebugGroup();
-
-#if TODO
         static float time = 0.0f;
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
 
@@ -245,16 +234,11 @@ sampler = graphicsDevice->CreateSampler(&samplerDesc);*/
         context->EndRenderPass();
         context->PopDebugGroup();*/
         time += 0.03f;
-#endif // TODO
-        //swapChain2->Present();
     }
 
     Application* CreateApplication()
     {
         Config config{};
-        //config.preferredBackendType = GraphicsBackendType::Direct3D11;
-        config.preferredBackendType = GraphicsBackendType::Direct3D12;
-        //config.preferredBackendType = GraphicsBackendType::Vulkan;
         // Direct3D12 has issue with debug layer
 #ifdef _DEBUG
        //config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;

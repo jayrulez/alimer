@@ -25,8 +25,7 @@
 #include "Platform/Event.h"
 #include "Platform/Application.h"
 #include "IO/FileSystem.h"
-#include "Graphics/SwapChain.h"
-#include "Graphics/GraphicsDevice.h"
+#include "RHI/RHI.h"
 #include "UI/ImGuiLayer.h"
 
 namespace Alimer
@@ -46,7 +45,6 @@ namespace Alimer
 
     Application::~Application()
     {
-        swapChain.Reset();
         //ImGuiLayer::Shutdown();
         graphicsDevice.reset();
         s_appCurrent = nullptr;
@@ -79,15 +77,17 @@ namespace Alimer
 
         window = MakeUnique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
-        // Init graphics
-        graphicsDevice = GraphicsDevice::Create(config.preferredBackendType, config.deviceFlags);
+        // Init graphics device.
+        GraphicsDevice::Desc deviceDesc = {};
+        deviceDesc.backendType = GraphicsBackendType::Count;
+        deviceDesc.flags = config.deviceFlags;
+        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), deviceDesc);
         if (!graphicsDevice)
         {
             headless = true;
         }
         else
         {
-            swapChain =  graphicsDevice->CreateSwapChain(window->GetHandle());
             ImGuiLayer::Initialize();
         }
 
@@ -117,25 +117,12 @@ namespace Alimer
 
     void Application::Tick()
     {
-        //CommandList commandList = graphicsDevice->BeginCommandList();
-        //graphicsDevice->PresentBegin(commandList);
-        //graphicsDevice->PushDebugGroup(commandList, "Frame");
-
-        OnDraw();
-
-        /*VGPUColor color = { 1.0f, 0.78f, 0.05f, 1.0f };
-        vgpuPushDebugGroup("Frame", &color);
-
-        VGPURenderPassDescriptor renderPass = {};
-        renderPass.colorAttachmentCount = 1u;
-        vgpuBeginRenderPass(&renderPass);
-        vgpuEndRenderPass();
-        context->BeginRenderPass(renderPass);
-        context->EndRenderPass();
-        agpu_bind_pipeline(render_pipeline);
-        agpu_draw(3, 1, 0);*/
-        //graphicsDevice->PopDebugGroup(commandList);
-        swapChain->Present();
+        CommandList commandList = graphicsDevice->BeginCommandList();
+        graphicsDevice->PresentBegin(commandList);
+        graphicsDevice->PushDebugGroup(commandList, "Frame");
+        OnDraw(commandList);
+        graphicsDevice->PopDebugGroup(commandList);
+        graphicsDevice->PresentEnd(commandList);
     }
 
     const Config* Application::GetConfig()

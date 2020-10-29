@@ -25,7 +25,7 @@
 #include "Core/Containers.h"
 #include "Platform/Window.h"
 #include "Assets/AssetManager.h"
-#include "Graphics/Types.h"
+#include "RHI/RHITypes.h"
 #include <memory>
 
 namespace Alimer
@@ -38,7 +38,6 @@ namespace Alimer
         bool fullscreen = false; 
         bool resizable = true;
 
-        GraphicsBackendType preferredBackendType = GraphicsBackendType::Count;
         GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
 
         std::string rootDirectory = "Assets";
@@ -86,7 +85,7 @@ namespace Alimer
 
     protected:
         virtual void Initialize() {}
-        virtual void OnDraw() {}
+        virtual void OnDraw(CommandList& commandList) {}
 
     private:
         void InitBeforeRun();
@@ -100,7 +99,6 @@ namespace Alimer
         bool headless = false;
         UniquePtr<Window> window{ nullptr };
         std::shared_ptr<GraphicsDevice> graphicsDevice;
-        RefPtr<SwapChain> swapChain;
     };
 
     extern Application* CreateApplication(void);
