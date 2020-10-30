@@ -29,5 +29,5 @@
 namespace Alimer
 {
     bool IsVulkanBackendAvailable();
-    std::shared_ptr<GraphicsDevice> CreateVulkanGraphicsDevice(void* windowHandle, bool fullscreen, bool enableDebugLayer);
+    std::shared_ptr<GraphicsDevice> CreateVulkanGraphicsDevice(WindowHandle window, const GraphicsDevice::Desc& desc);
 }

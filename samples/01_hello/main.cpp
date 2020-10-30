@@ -51,6 +51,7 @@ namespace Alimer
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
         RefPtr<RenderPipeline> pipeline;
+        RefPtr<Sampler> sampler;
     };
 
 
@@ -58,7 +59,6 @@ namespace Alimer
     Shader* vertexShader;
     Shader* pixelShader;
     Texture* texture;
-    RefPtr<Sampler> sampler;
 
     HelloWorldApp::~HelloWorldApp()
     {
@@ -233,12 +233,18 @@ namespace Alimer
     Application* CreateApplication()
     {
         Config config{};
-        // Direct3D12 has issue with debug layer
-#ifdef _DEBUG
-       //config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
-#endif
+
         //config.backendType = GraphicsBackendType::Direct3D11;
-        config.backendType = GraphicsBackendType::Direct3D12;
+        //config.backendType = GraphicsBackendType::Direct3D12;
+        config.backendType = GraphicsBackendType::Vulkan;
+
+#ifdef _DEBUG
+        // Direct3D12 has issue with debug layer
+        if (config.backendType == GraphicsBackendType::Vulkan)
+        {
+            config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
+        }
+#endif
 
         config.title = "Spinning Cube";
         //config.fullscreen = true;

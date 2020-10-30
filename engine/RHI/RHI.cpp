@@ -76,11 +76,11 @@ namespace Alimer
             break;
 #endif
 
-#if defined(ALIMER_VULKAN) && defined(TODO)
+#if defined(ALIMER_VULKAN)
         case GraphicsBackendType::Vulkan:
             if (IsVulkanBackendAvailable())
             {
-                return CreateVulkanGraphicsDevice(windowHandle, fullscreen, enableDebugLayer);
+                return CreateVulkanGraphicsDevice(windowHandle, desc);
             }
             break;
 #endif
@@ -99,10 +99,15 @@ namespace Alimer
         GetClientRect(window, &rect);
         backbufferWidth = static_cast<uint32_t>(rect.right - rect.left);
         backbufferHeight = static_cast<uint32_t>(rect.bottom - rect.top);
-#else ALIMER_PLATFORM_UWP
+#elif ALIMER_PLATFORM_UWP
         float dpiscale = wiPlatform::GetDPIScaling();
         backbufferWidth = int(window->Bounds.Width * dpiscale);
         backbufferHeight = int(window->Bounds.Height * dpiscale);
+#elif SDL2
+        int width, height;
+        SDL_GetWindowSize(window, &width, &height);
+        RESOLUTIONWIDTH = width;
+        RESOLUTIONHEIGHT = height;
 #endif
         verticalSync = desc.verticalSync;
         BACKBUFFER_FORMAT = desc.backbufferFormat;

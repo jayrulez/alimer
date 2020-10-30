@@ -204,15 +204,10 @@ namespace Alimer
         case PixelFormat::Invalid:
             return DXGI_FORMAT_UNKNOWN;
             // 8-bit formats
-        case PixelFormat::R8UNorm:
-            return DXGI_FORMAT_R8_UNORM;
-        case PixelFormat::R8SNorm:
-            return DXGI_FORMAT_R8_SNORM;
-        case PixelFormat::R8UInt:
-            return DXGI_FORMAT_R8_UINT;
-        case PixelFormat::R8SInt:
-            return DXGI_FORMAT_R8_SINT;
-            break;
+        case PixelFormat::R8UNorm:      return DXGI_FORMAT_R8_UNORM;
+        case PixelFormat::R8SNorm:      return DXGI_FORMAT_R8_SNORM;
+        case PixelFormat::R8UInt:       return DXGI_FORMAT_R8_UINT;
+        case PixelFormat::R8SInt:       return DXGI_FORMAT_R8_SINT;
 
         case PixelFormat::FORMAT_R32G32B32A32_FLOAT:
             return DXGI_FORMAT_R32G32B32A32_FLOAT;

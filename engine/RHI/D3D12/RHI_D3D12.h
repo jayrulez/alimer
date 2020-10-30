@@ -143,7 +143,6 @@ namespace Alimer
         FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 
         D3D12_CommandList* commandLists[kCommandListCount] = {};
-
         std::atomic_uint32_t commandListsCount{ 0 };
 
     public:
@@ -192,23 +191,6 @@ namespace Alimer
         void PresentEnd(ID3D12GraphicsCommandList6* commandList);
 
         Texture GetBackBuffer() override;
-
-        ///////////////Thread-sensitive////////////////////////
-
-#if TODO
-        void QueryBegin(const GPUQuery* query, CommandList cmd) override;
-        void QueryEnd(const GPUQuery* query, CommandList cmd) override;
-        void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;
-        void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) override;
-        void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) override;
-        void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) override;
-
-        void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) override;
-        void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) override;
-        void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) override;
-
-#endif // TODO
-
 
     private:
         D3D_FEATURE_LEVEL minFeatureLevel;
