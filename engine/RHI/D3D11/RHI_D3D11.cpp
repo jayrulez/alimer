@@ -935,7 +935,7 @@ namespace Alimer
             UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-            const bool enableDebugLayer = any(desc.flags | GraphicsDeviceFlags::DebugRuntime);
+            const bool enableDebugLayer = any(desc.flags & GraphicsDeviceFlags::DebugRuntime);
             if (enableDebugLayer)
             {
                 if (SdkLayersAvailable())

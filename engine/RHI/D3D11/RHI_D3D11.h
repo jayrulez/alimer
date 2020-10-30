@@ -40,33 +40,33 @@ namespace Alimer
     class GraphicsDevice_DX11 : public GraphicsDevice
     {
     private:
-        uint32_t	stencilRef[kCommanstListCount];
-        XMFLOAT4	blendFactor[kCommanstListCount];
+        uint32_t	stencilRef[kCommandListCount];
+        XMFLOAT4	blendFactor[kCommandListCount];
 
-        ID3D11VertexShader* prev_vs[kCommanstListCount] = {};
-        ID3D11PixelShader* prev_ps[kCommanstListCount] = {};
-        ID3D11HullShader* prev_hs[kCommanstListCount] = {};
-        ID3D11DomainShader* prev_ds[kCommanstListCount] = {};
-        ID3D11GeometryShader* prev_gs[kCommanstListCount] = {};
-        ID3D11ComputeShader* prev_cs[kCommanstListCount] = {};
-        XMFLOAT4 prev_blendfactor[kCommanstListCount] = {};
-        uint32_t prev_samplemask[kCommanstListCount] = {};
-        ID3D11BlendState* prev_bs[kCommanstListCount] = {};
-        ID3D11RasterizerState* prev_rs[kCommanstListCount] = {};
-        uint32_t prev_stencilRef[kCommanstListCount] = {};
-        ID3D11DepthStencilState* prev_dss[kCommanstListCount] = {};
-        ID3D11InputLayout* prev_il[kCommanstListCount] = {};
-        PrimitiveTopology prev_pt[kCommanstListCount] = {};
+        ID3D11VertexShader* prev_vs[kCommandListCount] = {};
+        ID3D11PixelShader* prev_ps[kCommandListCount] = {};
+        ID3D11HullShader* prev_hs[kCommandListCount] = {};
+        ID3D11DomainShader* prev_ds[kCommandListCount] = {};
+        ID3D11GeometryShader* prev_gs[kCommandListCount] = {};
+        ID3D11ComputeShader* prev_cs[kCommandListCount] = {};
+        XMFLOAT4 prev_blendfactor[kCommandListCount] = {};
+        uint32_t prev_samplemask[kCommandListCount] = {};
+        ID3D11BlendState* prev_bs[kCommandListCount] = {};
+        ID3D11RasterizerState* prev_rs[kCommandListCount] = {};
+        uint32_t prev_stencilRef[kCommandListCount] = {};
+        ID3D11DepthStencilState* prev_dss[kCommandListCount] = {};
+        ID3D11InputLayout* prev_il[kCommandListCount] = {};
+        PrimitiveTopology prev_pt[kCommandListCount] = {};
 
-        const RenderPipeline* active_pso[kCommanstListCount] = {};
-        bool dirty_pso[kCommanstListCount] = {};
+        const RenderPipeline* active_pso[kCommandListCount] = {};
+        bool dirty_pso[kCommandListCount] = {};
         void pso_validate(CommandList cmd);
 
-        const RenderPass* active_renderpass[kCommanstListCount] = {};
+        const RenderPass* active_renderpass[kCommandListCount] = {};
 
-        ID3D11UnorderedAccessView* raster_uavs[kCommanstListCount][8] = {};
-        uint8_t raster_uavs_slot[kCommanstListCount] = {};
-        uint8_t raster_uavs_count[kCommanstListCount] = {};
+        ID3D11UnorderedAccessView* raster_uavs[kCommandListCount][8] = {};
+        uint8_t raster_uavs_slot[kCommandListCount] = {};
+        uint8_t raster_uavs_count[kCommandListCount] = {};
 
         struct GPUAllocator
         {
@@ -74,7 +74,7 @@ namespace Alimer
             size_t byteOffset = 0;
             uint64_t residentFrame = 0;
             bool dirty = false;
-        } frame_allocators[kCommanstListCount];
+        } frame_allocators[kCommandListCount];
         void commit_allocations(CommandList cmd);
 
         void CreateBackBufferResources();
@@ -182,7 +182,7 @@ namespace Alimer
         ID3D11RenderTargetView* renderTargetView = nullptr;
 
 
-        ID3D11DeviceContext1* deviceContexts[kCommanstListCount] = {};
-        ID3DUserDefinedAnnotation* userDefinedAnnotations[kCommanstListCount] = {};
+        ID3D11DeviceContext1* deviceContexts[kCommandListCount] = {};
+        ID3DUserDefinedAnnotation* userDefinedAnnotations[kCommandListCount] = {};
     };
 }

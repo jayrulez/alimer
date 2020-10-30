@@ -212,27 +212,21 @@ namespace Alimer
 
         XMFLOAT4X4 worldViewProjection;
         XMStoreFloat4x4(&worldViewProjection, viewProj);
-        graphicsDevice->UpdateBuffer(commandList, constantBuffer, &worldViewProjection);
+        commandList.UpdateBuffer(constantBuffer, &worldViewProjection);
 
         const GraphicsBuffer* vbs[] = {
             vertexBuffer,
         };
 
         uint32_t stride = sizeof(Vertex);
-        graphicsDevice->BindVertexBuffers(vbs, 0, 1, &stride, nullptr, commandList);
-        graphicsDevice->BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0, commandList);
-        graphicsDevice->SetRenderPipeline(commandList, pipeline);
-        graphicsDevice->BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0, commandList);
-        graphicsDevice->BindResource(ShaderStage::Fragment, texture, 0, commandList);
-        graphicsDevice->BindSampler(ShaderStage::Fragment, sampler, 0, commandList);
-        graphicsDevice->DrawIndexed(36, 0, 0, commandList);
-        /*context->PushDebugGroup("Frame");
-        RenderPassDesc renderPass{};
-        renderPass.colorAttachments[0].texture = windowSwapChain->GetCurrentTexture();
-        renderPass.colorAttachments[0].clearColor = Colors::CornflowerBlue;
-        context->BeginRenderPass(renderPass);
-        context->EndRenderPass();
-        context->PopDebugGroup();*/
+        commandList.BindVertexBuffers(vbs, 0, 1, &stride, nullptr);
+        commandList.BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0);
+        commandList.SetRenderPipeline(pipeline);
+        commandList.BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0);
+        commandList.BindResource(ShaderStage::Fragment, texture, 0);
+        commandList.BindSampler(ShaderStage::Fragment, sampler, 0);
+        commandList.DrawIndexed(36);
+
         time += 0.03f;
     }
 

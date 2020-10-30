@@ -32,6 +32,7 @@ using namespace DirectX;
 
 namespace Alimer
 {
+    class CommandList;
     class GraphicsDevice;
 	struct Shader;
 	struct GPUResource;
@@ -39,7 +40,6 @@ namespace Alimer
     class Sampler;
 	struct Texture;
 	struct RootSignature;
-    using CommandList = uint8_t;
 
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
@@ -47,7 +47,7 @@ namespace Alimer
     static constexpr uint32_t kMaxVertexAttributeOffset = 2047u;
     static constexpr uint32_t kMaxVertexBufferStride = 2048u;
     static constexpr uint32_t kMaxViewportAndScissorRects = 8u;
-    static constexpr CommandList kCommanstListCount = 16;
+    static constexpr uint32_t kCommandListCount = 16;
 
     static constexpr uint32_t KnownVendorId_AMD = 0x1002;
     static constexpr uint32_t KnownVendorId_Intel = 0x8086;
@@ -779,13 +779,15 @@ namespace Alimer
 		uint32_t SysMemPitch = 0;
 		uint32_t SysMemSlicePitch = 0;
 	};
-	struct Rect
+
+	struct ScissorRect
 	{
-		int32_t left = 0;
-		int32_t top = 0;
-		int32_t right = 0;
-		int32_t bottom = 0;
+		int32_t x = 0;
+		int32_t y = 0;
+		int32_t width = 0;
+		int32_t height = 0;
 	};
+
 	struct Mapping
 	{
 		enum FLAGS

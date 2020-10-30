@@ -105,12 +105,73 @@ namespace Alimer
         }
     };
 
+    struct GPUAllocation
+    {
+        void* data = nullptr;	// application can write to this. Reads might be not supported or slow. The offset is already applied
+        const GraphicsBuffer* buffer = nullptr;   // application can bind it to the GPU
+        uint32_t offset = 0;			// allocation's offset from the GPUbuffer's beginning
+
+        // Returns true if the allocation was successful
+        inline bool IsValid() const { return data != nullptr && buffer != nullptr; }
+    };
+
+    class ALIMER_API CommandList
+    {
+    public:
+        virtual void PresentBegin() = 0;
+        virtual void PresentEnd() = 0;
+
+        virtual void PushDebugGroup(const char* name) = 0;
+        virtual void PopDebugGroup() = 0;
+        virtual void InsertDebugMarker(const char* name) = 0;
+
+        virtual void RenderPassBegin(const RenderPass* renderpass) = 0;
+        virtual void RenderPassEnd() = 0;
+        virtual void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
+        virtual void SetViewport(const Viewport& viewport) = 0;
+        virtual void SetViewports(uint32_t viewportCount, const Viewport* pViewports) = 0;
+        virtual void SetScissorRect(const ScissorRect& rect) = 0;
+        virtual void SetScissorRects(uint32_t scissorCount, const ScissorRect* rects) = 0;
+        virtual void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) = 0;
+        virtual void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) = 0;
+        virtual void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) = 0;
+        virtual void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) = 0;
+        virtual void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) = 0;
+        virtual void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot) = 0;
+        virtual void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets) = 0;
+        virtual void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset) = 0;
+
+        virtual void BindStencilRef(uint32_t value) = 0;
+        virtual void BindBlendFactor(float r, float g, float b, float a) = 0;
+        virtual void BindShadingRate(ShadingRate rate) {}
+        virtual void BindShadingRateImage(const Texture* texture) {}
+
+        virtual void SetRenderPipeline(RenderPipeline* pipeline) = 0;
+        virtual void BindComputeShader(const Shader* shader) = 0;
+        virtual void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) = 0;
+        virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t firstIndex = 0, int32_t baseVertex = 0, uint32_t firstInstance = 0) = 0;
+        virtual void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
+        virtual void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
+
+        // Allocates temporary memory that the CPU can write and GPU can read. 
+        //	It is only alive for one frame and automatically invalidated after that.
+        //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
+        //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
+        virtual GPUAllocation AllocateGPU(size_t dataSize) = 0;
+
+        virtual void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
+    };
+
+
     class GraphicsDevice
     {
-    protected:
-        static const uint32_t BACKBUFFER_COUNT = 2;
+    public:
+        static constexpr uint32_t BACKBUFFER_COUNT = 2;
 
+    protected:
         uint64_t FRAMECOUNT = 0;
+        uint64_t frameIndex = 0;
+
         PixelFormat BACKBUFFER_FORMAT = PixelFormat::FORMAT_R10G10B10A2_UNORM;
         bool TESSELLATION = false;
         bool CONSERVATIVE_RASTERIZATION = false;
@@ -171,10 +232,7 @@ namespace Alimer
 
         virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
-        virtual void PresentBegin(CommandList cmd) = 0;
-        virtual void PresentEnd(CommandList cmd) = 0;
-
-        virtual CommandList BeginCommandList() = 0;
+        virtual CommandList& BeginCommandList() = 0;
         virtual void SubmitCommandLists() = 0;
 
         virtual void WaitForGPU() = 0;
@@ -183,6 +241,7 @@ namespace Alimer
         inline bool GetVSyncEnabled() const { return verticalSync; }
         virtual void SetVSyncEnabled(bool value) { verticalSync = value; }
         inline uint64_t GetFrameCount() const { return FRAMECOUNT; }
+        inline uint64_t GetFrameIndex() const { return GetFrameCount() % BACKBUFFER_COUNT; }
 
         // Returns native resolution width of back buffer in pixels:
         inline uint32_t GetResolutionWidth() const { return backbufferWidth; }
@@ -217,38 +276,13 @@ namespace Alimer
 
         ///////////////Thread-sensitive////////////////////////
 
-        virtual void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) = 0;
-        virtual void RenderPassEnd(CommandList cmd) = 0;
-        virtual void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) = 0;
-        virtual void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) = 0;
-        virtual void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-        virtual void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
-        virtual void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) = 0;
-        virtual void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) = 0;
-        virtual void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) = 0;
-        virtual void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) = 0;
-        virtual void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) = 0;
-        virtual void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd) = 0;
-        virtual void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) = 0;
-        virtual void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) = 0;
-        virtual void BindStencilRef(uint32_t value, CommandList cmd) = 0;
-        virtual void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) = 0;
-        virtual void BindShadingRate(ShadingRate rate, CommandList cmd) {}
-        virtual void BindShadingRateImage(const Texture* texture, CommandList cmd) {}
-        virtual void SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline) = 0;
-        virtual void BindComputeShader(const Shader* cs, CommandList cmd) = 0;
-        virtual void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) = 0;
-        virtual void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) = 0;
-        virtual void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) = 0;
-        virtual void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) = 0;
-        virtual void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
-        virtual void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
+#if TODO
         virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
         virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
         virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
         virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) {}
         virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
-        virtual void UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
+        
         virtual void QueryBegin(const GPUQuery* query, CommandList cmd) = 0;
         virtual void QueryEnd(const GPUQuery* query, CommandList cmd) = 0;
         virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
@@ -260,24 +294,8 @@ namespace Alimer
         virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) {}
         virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
 
-        struct GPUAllocation
-        {
-            void* data = nullptr;		// application can write to this. Reads might be not supported or slow. The offset is already applied
-            const GraphicsBuffer* buffer = nullptr;   // application can bind it to the GPU
-            uint32_t                offset = 0;			// allocation's offset from the GPUbuffer's beginning
+#endif // todo
 
-            // Returns true if the allocation was successful
-            inline bool IsValid() const { return data != nullptr && buffer != nullptr; }
-        };
-        // Allocates temporary memory that the CPU can write and GPU can read. 
-        //	It is only alive for one frame and automatically invalidated after that.
-        //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
-        //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
-        virtual GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) = 0;
-
-        virtual void PushDebugGroup(CommandList cmd, const char* name) = 0;
-        virtual void PopDebugGroup(CommandList cmd) = 0;
-        virtual void InsertDebugMarker(CommandList cmd, const char* name) = 0;
 
     protected:
         virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;

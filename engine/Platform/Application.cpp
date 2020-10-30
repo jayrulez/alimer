@@ -117,12 +117,12 @@ namespace Alimer
 
     void Application::Tick()
     {
-        CommandList commandList = graphicsDevice->BeginCommandList();
-        graphicsDevice->PresentBegin(commandList);
-        graphicsDevice->PushDebugGroup(commandList, "Frame");
+        CommandList& commandList = graphicsDevice->BeginCommandList();
+        commandList.PresentBegin();
+        commandList.PushDebugGroup("Frame");
         OnDraw(commandList);
-        graphicsDevice->PopDebugGroup(commandList);
-        graphicsDevice->PresentEnd(commandList);
+        commandList.PopDebugGroup();
+        commandList.PresentEnd();
     }
 
     const Config* Application::GetConfig()
