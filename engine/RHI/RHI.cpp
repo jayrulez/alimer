@@ -23,7 +23,7 @@
 #include "AlimerConfig.h"
 #include "RHI.h"
 
-#if defined(ALIMER_D3D11) && defined(TODO)
+#if defined(ALIMER_D3D11)
 #   include "RHI/D3D11/RHI_D3D11.h"
 #endif
 #if defined(ALIMER_D3D12)
@@ -49,7 +49,7 @@ namespace Alimer
             if (backendType == GraphicsBackendType::Count)
             {
 
-#if defined(ALIMER_D3D11)&& defined(TODO)
+#if defined(ALIMER_D3D11)
                 if (GraphicsDevice_DX11::IsAvailable())
                     backendType = GraphicsBackendType::Direct3D11;
 #endif
@@ -67,7 +67,7 @@ namespace Alimer
             break;
 #endif
 
-#if defined(ALIMER_D3D11)&& defined(TODO)
+#if defined(ALIMER_D3D11)
         case GraphicsBackendType::Direct3D11:
             if (GraphicsDevice_DX11::IsAvailable())
             {

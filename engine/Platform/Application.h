@@ -38,6 +38,7 @@ namespace Alimer
         bool fullscreen = false; 
         bool resizable = true;
 
+        GraphicsBackendType backendType = GraphicsBackendType::Count;
         GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
 
         std::string rootDirectory = "Assets";

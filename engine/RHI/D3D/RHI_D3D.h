@@ -32,6 +32,8 @@
 #   define NOMINMAX
 #endif
 
+#include <d3dcommon.h>
+
 #if defined(NTDDI_WIN10_RS2)
 #   include <dxgi1_6.h>
 #else
@@ -101,6 +103,28 @@ namespace Alimer
         if (FAILED(hr))
         {
             throw com_exception(hr);
+        }
+    }
+
+    constexpr D3D_PRIMITIVE_TOPOLOGY D3DPrimitiveTopology(PrimitiveTopology topology)
+    {
+        switch (topology)
+        {
+        case PrimitiveTopology::PointList:
+            return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+        case PrimitiveTopology::LineList:
+            return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+        case PrimitiveTopology::LineStrip:
+            return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+        case PrimitiveTopology::TriangleList:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        case PrimitiveTopology::TriangleStrip:
+            return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+        case PrimitiveTopology::PatchList:
+            return D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+        default:
+            ALIMER_UNREACHABLE();
+            return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
         }
     }
 

@@ -1005,11 +1005,11 @@ namespace Alimer
 		uint32_t Depth = 1;
 	};
 
-	enum BINDPOINT
+	enum class PipelineBindPoint : uint32_t
 	{
-		GRAPHICS,
-		COMPUTE,
-		RAYTRACING,
+		Graphics,
+		Compute,
+		Raytracing,
 	};
 
 	enum RESOURCEBINDING

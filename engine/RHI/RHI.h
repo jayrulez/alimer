@@ -118,12 +118,22 @@ namespace Alimer
     class ALIMER_API CommandList
     {
     public:
+        virtual ~CommandList() = default;
+
         virtual void PresentBegin() = 0;
         virtual void PresentEnd() = 0;
 
         virtual void PushDebugGroup(const char* name) = 0;
         virtual void PopDebugGroup() = 0;
         virtual void InsertDebugMarker(const char* name) = 0;
+
+        // Allocates temporary memory that the CPU can write and GPU can read. 
+        //	It is only alive for one frame and automatically invalidated after that.
+        //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
+        //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
+        virtual GPUAllocation AllocateGPU(size_t dataSize) = 0;
+        virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) = 0;
+        virtual void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
 
         virtual void RenderPassBegin(const RenderPass* renderpass) = 0;
         virtual void RenderPassEnd() = 0;
@@ -153,13 +163,21 @@ namespace Alimer
         virtual void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
         virtual void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
 
-        // Allocates temporary memory that the CPU can write and GPU can read. 
-        //	It is only alive for one frame and automatically invalidated after that.
-        //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
-        //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
-        virtual GPUAllocation AllocateGPU(size_t dataSize) = 0;
+        virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) = 0;
+        virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
+        virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) {}
+        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset) {}
 
-        virtual void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
+        virtual void QueryBegin(const GPUQuery* query) = 0;
+        virtual void QueryEnd(const GPUQuery* query) = 0;
+        virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers) = 0;
+        virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, const RaytracingAccelerationStructure* src = nullptr) {}
+        virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso) {}
+        virtual void DispatchRays(const DispatchRaysDesc* desc) {}
+
+        virtual void BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table) {}
+        virtual void BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset) {}
+        virtual void BindRootConstants(PipelineBindPoint bindPoint, uint32_t index, const void* srcData) {}
     };
 
 
@@ -273,29 +291,6 @@ namespace Alimer
         inline size_t GetShaderIdentifierSize() const { return SHADER_IDENTIFIER_SIZE; }
         inline size_t GetTopLevelAccelerationStructureInstanceSize() const { return TOPLEVEL_ACCELERATION_STRUCTURE_INSTANCE_SIZE; }
         inline uint32_t GetVariableRateShadingTileSize() const { return VARIABLE_RATE_SHADING_TILE_SIZE; }
-
-        ///////////////Thread-sensitive////////////////////////
-
-#if TODO
-        virtual void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) = 0;
-        virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) = 0;
-        virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) {}
-        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) {}
-        virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) = 0;
-        
-        virtual void QueryBegin(const GPUQuery* query, CommandList cmd) = 0;
-        virtual void QueryEnd(const GPUQuery* query, CommandList cmd) = 0;
-        virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) = 0;
-        virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src = nullptr) {}
-        virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd) {}
-        virtual void DispatchRays(const DispatchRaysDesc* desc, CommandList cmd) {}
-
-        virtual void BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd) {}
-        virtual void BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd) {}
-        virtual void BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd) {}
-
-#endif // todo
-
 
     protected:
         virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;

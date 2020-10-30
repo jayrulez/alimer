@@ -79,7 +79,7 @@ namespace Alimer
 
         // Init graphics device.
         GraphicsDevice::Desc deviceDesc = {};
-        deviceDesc.backendType = GraphicsBackendType::Count;
+        deviceDesc.backendType = config.backendType;
         deviceDesc.flags = config.deviceFlags;
         graphicsDevice = GraphicsDevice::Create(window->GetHandle(), deviceDesc);
         if (!graphicsDevice)

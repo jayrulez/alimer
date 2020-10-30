@@ -566,8 +566,7 @@ namespace Alimer
             std::shared_ptr<GraphicsDevice_DX12::AllocationHandler> allocationhandler;
             ComPtr<ID3D12PipelineState> handle;
             ID3D12RootSignature* rootSignature = nullptr;
-
-            D3D12_PRIMITIVE_TOPOLOGY primitiveTopology;
+            D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
 
             std::vector<D3D12_DESCRIPTOR_RANGE> resources;
             std::vector<D3D12_DESCRIPTOR_RANGE> samplers;
@@ -802,12 +801,31 @@ namespace Alimer
         void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
         void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
 
-        GPUAllocation AllocateGPU(size_t dataSize) override;
+        void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) override;
+        void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
+        void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) override;
+        void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
 
+        GPUAllocation AllocateGPU(size_t dataSize) override;
         void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) override;
+        void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) override;
+
+        void ResolveQueryData();
+        void QueryBegin(const GPUQuery* query) override;
+        void QueryEnd(const GPUQuery* query) override;
+        void Barrier(const GPUBarrier* barriers, uint32_t numBarriers) override;
+        void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, const RaytracingAccelerationStructure* src = nullptr) override;
+        void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso) override;
+        void DispatchRays(const DispatchRaysDesc* desc) override;
+
+        void BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table) override;
+        void BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset) override;
+        void BindRootConstants(PipelineBindPoint bindPoint, uint32_t index, const void* srcData) override;
 
     private:
         void PrepareDraw();
+        void PrepareDispatch();
+        void PrepareRaytrace();
 
     public: // TODO: Make private when we fix
         GraphicsDevice_DX12* device;
@@ -825,11 +843,19 @@ namespace Alimer
         D3D_PRIMITIVE_TOPOLOGY prev_pt = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
         bool dirty_pso = false;
         RenderPipeline* active_pso = nullptr;
+        const Shader* active_cs = nullptr;
+
+    private:
         const RootSignature* active_rootsig_graphics = nullptr;
+        const RootSignature* active_rootsig_compute = nullptr;
         const RaytracingPipelineState* active_rt = nullptr;
 
-        const Shader* active_cs = nullptr;
-        const RootSignature* active_rootsig_compute = nullptr;
+        struct Query_Resolve
+        {
+            GPU_QUERY_TYPE type;
+            uint32_t index;
+        };
+        std::vector<Query_Resolve> query_resolves;
     };
 
 
@@ -1420,24 +1446,6 @@ namespace Alimer
         return handles;
     }
 
-#if TODO
-
-    void GraphicsDevice_DX12::predispatch(CommandList cmd)
-    {
-        if (active_cs[cmd]->rootSignature == nullptr)
-        {
-            GetFrameResources().descriptors[cmd].validate(false, cmd);
-        }
-    }
-    void GraphicsDevice_DX12::preraytrace(CommandList cmd)
-    {
-        if (active_rt[cmd]->desc.rootSignature == nullptr)
-        {
-            GetFrameResources().descriptors[cmd].validate(false, cmd);
-        }
-    }
-#endif // TODO
-
 
     bool GraphicsDevice_DX12::IsAvailable()
     {
@@ -1937,7 +1945,10 @@ namespace Alimer
                 d3d12DebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
                 d3d12DebugDevice->Release();
             }
-
+        }
+        else
+        {
+            LOGD("Direct3D12: No memory leaks detected");
         }
 #else
         device->Release();
@@ -3155,36 +3166,24 @@ namespace Alimer
         rs.ForcedSampleCount = rasterizationState.forcedSampleCount;
         stream.RS = rs;
 
-        internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+        internal_state->primitiveTopology = D3DPrimitiveTopology(descriptor->primitiveTopology);
         switch (descriptor->primitiveTopology)
         {
         case PrimitiveTopology::PointList:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
             break;
 
         case PrimitiveTopology::LineList:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-            break;
-
         case PrimitiveTopology::LineStrip:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
             break;
 
         case PrimitiveTopology::TriangleList:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-            stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-            break;
-
         case PrimitiveTopology::TriangleStrip:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             break;
 
         case PrimitiveTopology::PatchList:
-            internal_state->primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
             stream.PT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
             break;
 
@@ -4752,16 +4751,6 @@ namespace Alimer
         prev_shadingrate = D3D12_SHADING_RATE_1X1;
     }
 
-    void D3D12_CommandList::PresentBegin()
-    {
-        device->PresentBegin(handle);
-    }
-
-    void D3D12_CommandList::PresentEnd()
-    {
-        device->PresentEnd(handle);
-    }
-
     CommandList& GraphicsDevice_DX12::BeginCommandList()
     {
         std::atomic_uint32_t cmd = commandListsCount.fetch_add(1);
@@ -4864,22 +4853,7 @@ namespace Alimer
             for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
             {
                 // Perform query resolves (must be outside of render pass):
-                for (auto& x : query_resolves[cmd])
-                {
-                    switch (x.type)
-                    {
-                    case GPU_QUERY_TYPE_TIMESTAMP:
-                        commandLists[cmd]->handle->ResolveQueryData(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, x.index, 1, querypool_timestamp_readback, (uint64_t)x.index * sizeof(uint64_t));
-                        break;
-                    case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-                        commandLists[cmd]->handle->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, x.index, 1, querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
-                        break;
-                    case GPU_QUERY_TYPE_OCCLUSION:
-                        commandLists[cmd]->handle->ResolveQueryData(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, x.index, 1, querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
-                        break;
-                    }
-                }
-                query_resolves[cmd].clear();
+                commandLists[cmd]->ResolveQueryData();
 
                 HRESULT hr = commandLists[cmd]->handle->Close();
                 assert(SUCCEEDED(hr));
@@ -4918,6 +4892,17 @@ namespace Alimer
 
     void GraphicsDevice_DX12::ClearPipelineStateCache()
     {
+    }
+
+    /* D3D12_CommandList */
+    void D3D12_CommandList::PresentBegin()
+    {
+        device->PresentBegin(handle);
+    }
+
+    void D3D12_CommandList::PresentEnd()
+    {
+        device->PresentEnd(handle);
     }
 
     void D3D12_CommandList::RenderPassBegin(const RenderPass* renderpass)
@@ -5383,6 +5368,22 @@ namespace Alimer
         }
     }
 
+    void D3D12_CommandList::PrepareDispatch()
+    {
+        if (active_cs->rootSignature == nullptr)
+        {
+            device->GetFrameResources().descriptors[index].validate(false, this);
+        }
+    }
+
+    void D3D12_CommandList::PrepareRaytrace()
+    {
+        if (active_rt->desc.rootSignature == nullptr)
+        {
+            device->GetFrameResources().descriptors[index].validate(false, this);
+        }
+    }
+
     void D3D12_CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
         PrepareDraw();
@@ -5491,35 +5492,35 @@ namespace Alimer
         }
     }
 
-#if TODO
-
-    void GraphicsDevice_DX12::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
+    void D3D12_CommandList::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
     {
-        predispatch(cmd);
-        GetDirectCommandList(cmd)->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+        PrepareDispatch();
+        handle->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
 
-    void GraphicsDevice_DX12::DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
+    void D3D12_CommandList::DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset)
     {
-        predispatch(cmd);
+        PrepareDispatch();
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        handle->ExecuteIndirect(device->dispatchIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
-    void GraphicsDevice_DX12::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd)
+    void D3D12_CommandList::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
     {
-        predraw(cmd);
-        GetDirectCommandList(cmd)->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
+        PrepareDraw();
+        handle->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
     }
 
-    void GraphicsDevice_DX12::DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd)
+    void D3D12_CommandList::DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset)
     {
-        predraw(cmd);
+
+        PrepareDraw();
+
         auto internal_state = to_internal(args);
-        GetDirectCommandList(cmd)->ExecuteIndirect(dispatchMeshIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        handle->ExecuteIndirect(device->dispatchMeshIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
-    void GraphicsDevice_DX12::CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd)
+    void D3D12_CommandList::CopyResource(const GPUResource* pDst, const GPUResource* pSrc)
     {
         auto internal_state_src = to_internal(pSrc);
         auto internal_state_dst = to_internal(pDst);
@@ -5529,63 +5530,82 @@ namespace Alimer
         {
             CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), 0);
             CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_src->footprint);
-            GetDirectCommandList(cmd)->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+            handle->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
         }
         else if (desc_src.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_dst.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
         {
             CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_dst->footprint);
             CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), 0);
-            GetDirectCommandList(cmd)->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+            handle->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
         }
         else
         {
-            GetDirectCommandList(cmd)->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
+            handle->CopyResource(internal_state_dst->resource.Get(), internal_state_src->resource.Get());
         }
     }
 
-    
-    void GraphicsDevice_DX12::QueryBegin(const GPUQuery* query, CommandList cmd)
+    void D3D12_CommandList::ResolveQueryData()
+    {
+        for (auto& x : query_resolves)
+        {
+            switch (x.type)
+            {
+            case GPU_QUERY_TYPE_TIMESTAMP:
+                handle->ResolveQueryData(device->querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, x.index, 1, device->querypool_timestamp_readback, (uint64_t)x.index * sizeof(uint64_t));
+                break;
+            case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+                handle->ResolveQueryData(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, x.index, 1, device->querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
+                break;
+            case GPU_QUERY_TYPE_OCCLUSION:
+                handle->ResolveQueryData(device->querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, x.index, 1, device->querypool_occlusion_readback, (uint64_t)x.index * sizeof(uint64_t));
+                break;
+            }
+        }
+        query_resolves.clear();
+    }
+
+    void D3D12_CommandList::QueryBegin(const GPUQuery* query)
     {
         auto internal_state = to_internal(query);
 
         switch (query->desc.Type)
         {
         case GPU_QUERY_TYPE_TIMESTAMP:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+            handle->BeginQuery(device->querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            handle->BeginQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
-            GetDirectCommandList(cmd)->BeginQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+            handle->BeginQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
             break;
         }
     }
 
-    void GraphicsDevice_DX12::QueryEnd(const GPUQuery* query, CommandList cmd)
+    void D3D12_CommandList::QueryEnd(const GPUQuery* query)
     {
         auto internal_state = to_internal(query);
 
         switch (query->desc.Type)
         {
         case GPU_QUERY_TYPE_TIMESTAMP:
-            GetDirectCommandList(cmd)->EndQuery(querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
+            handle->EndQuery(device->querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            handle->EndQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
-            GetDirectCommandList(cmd)->EndQuery(querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
+            handle->EndQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
             break;
         }
 
-        query_resolves[cmd].emplace_back();
-        Query_Resolve& resolver = query_resolves[cmd].back();
+        query_resolves.emplace_back();
+        Query_Resolve& resolver = query_resolves.back();
         resolver.type = query->desc.Type;
         resolver.index = internal_state->query_index;
     }
 
-    void GraphicsDevice_DX12::Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd)
+    void D3D12_CommandList::Barrier(const GPUBarrier* barriers, uint32_t numBarriers)
     {
         D3D12_RESOURCE_BARRIER barrierDescs[8];
 
@@ -5627,10 +5647,10 @@ namespace Alimer
             }
         }
 
-        GetDirectCommandList(cmd)->ResourceBarrier(numBarriers, barrierDescs);
+        handle->ResourceBarrier(numBarriers, barrierDescs);
     }
 
-    void GraphicsDevice_DX12::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, CommandList cmd, const RaytracingAccelerationStructure* src)
+    void D3D12_CommandList::BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, const RaytracingAccelerationStructure* src)
     {
         auto dst_internal = to_internal(dst);
 
@@ -5698,36 +5718,37 @@ namespace Alimer
         }
         desc.DestAccelerationStructureData = dst_internal->resource->GetGPUVirtualAddress();
         desc.ScratchAccelerationStructureData = to_internal(dst_internal->scratch)->resource->GetGPUVirtualAddress();
-        GetDirectCommandList(cmd)->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+        handle->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
     }
 
-    void GraphicsDevice_DX12::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso, CommandList cmd)
+    void D3D12_CommandList::BindRaytracingPipelineState(const RaytracingPipelineState* rtpso)
     {
-        if (rtpso != active_rt[cmd])
+        if (rtpso != active_rt)
         {
-            active_rt[cmd] = rtpso;
-            GetFrameResources().descriptors[cmd].dirty = true;
+            active_rt = rtpso;
+            device->GetFrameResources().descriptors[index].dirty = true;
 
             auto internal_state = to_internal(rtpso);
-            GetDirectCommandList(cmd)->SetPipelineState1(internal_state->resource.Get());
+            handle->SetPipelineState1(internal_state->resource.Get());
 
             if (rtpso->desc.rootSignature == nullptr)
             {
                 // we just take the first shader (todo: better)
-                active_cs[cmd] = rtpso->desc.shaderlibraries.front().shader;
-                active_rootsig_compute[cmd] = nullptr;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(active_cs[cmd])->rootSignature);
+                active_cs = rtpso->desc.shaderlibraries.front().shader;
+                active_rootsig_compute = nullptr;
+                handle->SetComputeRootSignature(to_internal(active_cs)->rootSignature);
             }
-            else if (active_rootsig_compute[cmd] != rtpso->desc.rootSignature)
+            else if (active_rootsig_compute != rtpso->desc.rootSignature)
             {
-                active_rootsig_compute[cmd] = rtpso->desc.rootSignature;
-                GetDirectCommandList(cmd)->SetComputeRootSignature(to_internal(rtpso->desc.rootSignature)->resource);
+                active_rootsig_compute = rtpso->desc.rootSignature;
+                handle->SetComputeRootSignature(to_internal(rtpso->desc.rootSignature)->resource);
             }
         }
     }
-    void GraphicsDevice_DX12::DispatchRays(const DispatchRaysDesc* desc, CommandList cmd)
+
+    void D3D12_CommandList::DispatchRays(const DispatchRaysDesc* desc)
     {
-        preraytrace(cmd);
+        PrepareRaytrace();
 
         D3D12_DISPATCH_RAYS_DESC dispatchrays_desc = {};
 
@@ -5777,74 +5798,75 @@ namespace Alimer
                 desc->callable.stride;
         }
 
-        GetDirectCommandList(cmd)->DispatchRays(&dispatchrays_desc);
+        handle->DispatchRays(&dispatchrays_desc);
     }
 
-    void GraphicsDevice_DX12::BindDescriptorTable(BINDPOINT bindpoint, uint32_t space, const DescriptorTable* table, CommandList cmd)
+    void D3D12_CommandList::BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table)
     {
         const RootSignature* rootsig = nullptr;
-        switch (bindpoint)
+        switch (bindPoint)
         {
         default:
-        case GRAPHICS:
-            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
+        case PipelineBindPoint::Graphics:
+            rootsig = to_internal(active_pso)->desc.rootSignature;
             break;
-        case COMPUTE:
-            rootsig = active_cs[cmd]->rootSignature;
+        case PipelineBindPoint::Compute:
+            rootsig = active_cs->rootSignature;
             break;
-        case Alimer::RAYTRACING:
-            rootsig = active_rt[cmd]->desc.rootSignature;
+        case PipelineBindPoint::Raytracing:
+            rootsig = active_rt->desc.rootSignature;
             break;
         }
 
         auto rootsig_internal = to_internal(rootsig);
         uint32_t bind_point_remap = rootsig_internal->table_bind_point_remap[space];
-        auto& descriptors = GetFrameResources().descriptors[cmd];
-        auto handles = descriptors.commit(table, cmd);
+        auto& descriptors = device->GetFrameResources().descriptors[index];
+        auto handles = descriptors.commit(table, this);
         if (handles.resource_handle.ptr != 0)
         {
-            switch (bindpoint)
+            switch (bindPoint)
             {
             default:
-            case GRAPHICS:
-                GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.resource_handle);
+            case PipelineBindPoint::Graphics:
+                handle->SetGraphicsRootDescriptorTable(bind_point_remap, handles.resource_handle);
                 break;
-            case COMPUTE:
-            case Alimer::RAYTRACING:
-                GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.resource_handle);
+            case PipelineBindPoint::Compute:
+            case PipelineBindPoint::Raytracing:
+                handle->SetComputeRootDescriptorTable(bind_point_remap, handles.resource_handle);
                 break;
             }
             bind_point_remap++;
         }
         if (handles.sampler_handle.ptr != 0)
         {
-            switch (bindpoint)
+            switch (bindPoint)
             {
             default:
-            case GRAPHICS:
-                GetDirectCommandList(cmd)->SetGraphicsRootDescriptorTable(bind_point_remap, handles.sampler_handle);
+            case PipelineBindPoint::Graphics:
+                handle->SetGraphicsRootDescriptorTable(bind_point_remap, handles.sampler_handle);
                 break;
-            case COMPUTE:
-            case Alimer::RAYTRACING:
-                GetDirectCommandList(cmd)->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
+            case PipelineBindPoint::Compute:
+            case PipelineBindPoint::Raytracing:
+                handle->SetComputeRootDescriptorTable(bind_point_remap, handles.sampler_handle);
                 break;
             }
         }
     }
-    void GraphicsDevice_DX12::BindRootDescriptor(BINDPOINT bindpoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset, CommandList cmd)
+
+    void D3D12_CommandList::BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset)
     {
         const RootSignature* rootsig = nullptr;
-        switch (bindpoint)
+        switch (bindPoint)
         {
         default:
-        case GRAPHICS:
-            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
+        case PipelineBindPoint::Graphics:
+            rootsig = to_internal(active_pso)->desc.rootSignature;
             break;
-        case COMPUTE:
-            rootsig = active_cs[cmd]->rootSignature;
+        case PipelineBindPoint::Compute:
+            rootsig = active_cs->rootSignature;
             break;
-        case Alimer::RAYTRACING:
-            rootsig = active_rt[cmd]->desc.rootSignature;
+        case PipelineBindPoint::Raytracing:
+            rootsig = active_rt->desc.rootSignature;
             break;
         }
         auto rootsig_internal = to_internal(rootsig);
@@ -5856,43 +5878,43 @@ namespace Alimer
         switch (binding)
         {
         case ROOT_CONSTANTBUFFER:
-            switch (bindpoint)
+            switch (bindPoint)
             {
             default:
-            case GRAPHICS:
-                GetDirectCommandList(cmd)->SetGraphicsRootConstantBufferView(index, address);
+            case PipelineBindPoint::Graphics:
+                handle->SetGraphicsRootConstantBufferView(index, address);
                 break;
-            case COMPUTE:
-            case Alimer::RAYTRACING:
-                GetDirectCommandList(cmd)->SetComputeRootConstantBufferView(index, address);
+            case PipelineBindPoint::Compute:
+            case PipelineBindPoint::Raytracing:
+                handle->SetComputeRootConstantBufferView(index, address);
                 break;
             }
             break;
         case ROOT_RAWBUFFER:
         case ROOT_STRUCTUREDBUFFER:
-            switch (bindpoint)
+            switch (bindPoint)
             {
             default:
-            case GRAPHICS:
-                GetDirectCommandList(cmd)->SetGraphicsRootShaderResourceView(index, address);
+            case PipelineBindPoint::Graphics:
+                handle->SetGraphicsRootShaderResourceView(index, address);
                 break;
-            case COMPUTE:
-            case Alimer::RAYTRACING:
-                GetDirectCommandList(cmd)->SetComputeRootShaderResourceView(index, address);
+            case PipelineBindPoint::Compute:
+            case PipelineBindPoint::Raytracing:
+                handle->SetComputeRootShaderResourceView(index, address);
                 break;
             }
             break;
         case ROOT_RWRAWBUFFER:
         case ROOT_RWSTRUCTUREDBUFFER:
-            switch (bindpoint)
+            switch (bindPoint)
             {
             default:
-            case GRAPHICS:
-                GetDirectCommandList(cmd)->SetGraphicsRootUnorderedAccessView(index, address);
+            case PipelineBindPoint::Graphics:
+                handle->SetGraphicsRootUnorderedAccessView(index, address);
                 break;
-            case COMPUTE:
-            case Alimer::RAYTRACING:
-                GetDirectCommandList(cmd)->SetComputeRootUnorderedAccessView(index, address);
+            case PipelineBindPoint::Compute:
+            case PipelineBindPoint::Raytracing:
+                handle->SetComputeRootUnorderedAccessView(index, address);
                 break;
             }
             break;
@@ -5900,50 +5922,49 @@ namespace Alimer
             break;
         }
     }
-    void GraphicsDevice_DX12::BindRootConstants(BINDPOINT bindpoint, uint32_t index, const void* srcdata, CommandList cmd)
+
+    void D3D12_CommandList::BindRootConstants(PipelineBindPoint bindPoint, uint32_t index, const void* srcData)
     {
         const RootSignature* rootsig = nullptr;
-        switch (bindpoint)
+        switch (bindPoint)
         {
         default:
-        case GRAPHICS:
-            rootsig = to_internal(active_pso[cmd])->desc.rootSignature;
+        case PipelineBindPoint::Graphics:
+            rootsig = to_internal(active_pso)->desc.rootSignature;
             break;
-        case COMPUTE:
-            rootsig = active_cs[cmd]->rootSignature;
+        case PipelineBindPoint::Compute:
+            rootsig = active_cs->rootSignature;
             break;
-        case Alimer::RAYTRACING:
-            rootsig = active_rt[cmd]->desc.rootSignature;
+        case PipelineBindPoint::Raytracing:
+            rootsig = active_rt->desc.rootSignature;
             break;
         }
         auto rootsig_internal = to_internal(rootsig);
         const RootConstantRange& range = rootsig->rootconstants[index];
 
-        switch (bindpoint)
+        switch (bindPoint)
         {
         default:
-        case GRAPHICS:
-            GetDirectCommandList(cmd)->SetGraphicsRoot32BitConstants(
+        case PipelineBindPoint::Graphics:
+            handle->SetGraphicsRoot32BitConstants(
                 rootsig_internal->root_constant_bind_remap + index,
                 range.size / sizeof(uint32_t),
-                srcdata,
+                srcData,
                 range.offset / sizeof(uint32_t)
             );
             break;
-        case COMPUTE:
-        case Alimer::RAYTRACING:
-            GetDirectCommandList(cmd)->SetComputeRoot32BitConstants(
+        case PipelineBindPoint::Compute:
+        case PipelineBindPoint::Raytracing:
+            handle->SetComputeRoot32BitConstants(
                 rootsig_internal->root_constant_bind_remap + index,
                 range.size / sizeof(uint32_t),
-                srcdata,
+                srcData,
                 range.offset / sizeof(uint32_t)
             );
             break;
         }
     }
 
-
-#endif // TODO
     void D3D12_CommandList::PushDebugGroup(const char* name)
     {
         PIXBeginEvent(handle, PIX_COLOR_DEFAULT, name);

@@ -237,6 +237,8 @@ namespace Alimer
 #ifdef _DEBUG
        //config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
 #endif
+        //config.backendType = GraphicsBackendType::Direct3D11;
+        config.backendType = GraphicsBackendType::Direct3D12;
 
         config.title = "Spinning Cube";
         //config.fullscreen = true;

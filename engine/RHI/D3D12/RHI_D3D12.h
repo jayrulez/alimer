@@ -144,16 +144,6 @@ namespace Alimer
 
         D3D12_CommandList* commandLists[kCommandListCount] = {};
 
-        //void predispatch(CommandList cmd);
-        //void preraytrace(CommandList cmd);
-
-        struct Query_Resolve
-        {
-            GPU_QUERY_TYPE type;
-            UINT index;
-        };
-        std::vector<Query_Resolve> query_resolves[kCommandListCount] = {};
-
         std::atomic_uint32_t commandListsCount{ 0 };
 
     public:
@@ -206,12 +196,6 @@ namespace Alimer
         ///////////////Thread-sensitive////////////////////////
 
 #if TODO
-        
-        void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
         void QueryBegin(const GPUQuery* query, CommandList cmd) override;
         void QueryEnd(const GPUQuery* query, CommandList cmd) override;
         void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override;

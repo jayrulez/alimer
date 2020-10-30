@@ -33,53 +33,18 @@
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    extern PFN_D3D11_CREATE_DEVICE D3D11CreateDevice;
-#endif
+    class D3D11_CommandList;
 
     class GraphicsDevice_DX11 : public GraphicsDevice
     {
+        friend class D3D11_CommandList;
+
     private:
-        uint32_t	stencilRef[kCommandListCount];
-        XMFLOAT4	blendFactor[kCommandListCount];
-
-        ID3D11VertexShader* prev_vs[kCommandListCount] = {};
-        ID3D11PixelShader* prev_ps[kCommandListCount] = {};
-        ID3D11HullShader* prev_hs[kCommandListCount] = {};
-        ID3D11DomainShader* prev_ds[kCommandListCount] = {};
-        ID3D11GeometryShader* prev_gs[kCommandListCount] = {};
-        ID3D11ComputeShader* prev_cs[kCommandListCount] = {};
-        XMFLOAT4 prev_blendfactor[kCommandListCount] = {};
-        uint32_t prev_samplemask[kCommandListCount] = {};
-        ID3D11BlendState* prev_bs[kCommandListCount] = {};
-        ID3D11RasterizerState* prev_rs[kCommandListCount] = {};
-        uint32_t prev_stencilRef[kCommandListCount] = {};
-        ID3D11DepthStencilState* prev_dss[kCommandListCount] = {};
-        ID3D11InputLayout* prev_il[kCommandListCount] = {};
-        PrimitiveTopology prev_pt[kCommandListCount] = {};
-
-        const RenderPipeline* active_pso[kCommandListCount] = {};
-        bool dirty_pso[kCommandListCount] = {};
-        void pso_validate(CommandList cmd);
-
-        const RenderPass* active_renderpass[kCommandListCount] = {};
-
-        ID3D11UnorderedAccessView* raster_uavs[kCommandListCount][8] = {};
-        uint8_t raster_uavs_slot[kCommandListCount] = {};
-        uint8_t raster_uavs_count[kCommandListCount] = {};
-
-        struct GPUAllocator
-        {
-            RefPtr<GraphicsBuffer> buffer;
-            size_t byteOffset = 0;
-            uint64_t residentFrame = 0;
-            bool dirty = false;
-        } frame_allocators[kCommandListCount];
-        void commit_allocations(CommandList cmd);
+        D3D11_CommandList* commandLists[kCommandListCount] = {};
 
         void CreateBackBufferResources();
 
-        std::atomic<CommandList> cmd_count{ 0 };
+        std::atomic_uint32_t commandListsCount{ 0 };
 
         UnorderedMap<size_t, ComPtr<ID3D11BlendState1>> blendStateCache;
         UnorderedMap<size_t, ComPtr<ID3D11RasterizerState>> rasterizerStateCache;
@@ -116,58 +81,19 @@ namespace Alimer
 
         void SetName(GPUResource* pResource, const char* name) override;
 
-        void PresentBegin(CommandList cmd) override;
-        void PresentEnd(CommandList cmd) override;
-
         void WaitForGPU() override;
 
-        CommandList BeginCommandList() override;
+        CommandList& BeginCommandList() override;
         void SubmitCommandLists() override;
+        void PresentEnd();
 
         void Resize(uint32_t width, uint32_t height) override;
 
         Texture GetBackBuffer() override;
 
+        ID3D11Device1* GetD3DDevice() const { return device; }
+
         ///////////////Thread-sensitive////////////////////////
-
-        void RenderPassBegin(const RenderPass* renderpass, CommandList cmd) override;
-        void RenderPassEnd(CommandList cmd) override;
-        void BindScissorRects(uint32_t numRects, const Rect* rects, CommandList cmd) override;
-        void BindViewports(uint32_t NumViewports, const Viewport* pViewports, CommandList cmd) override;
-        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-        void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, CommandList cmd, int subresource = -1) override;
-        void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count, CommandList cmd) override;
-        void UnbindResources(uint32_t slot, uint32_t num, CommandList cmd) override;
-        void UnbindUAVs(uint32_t slot, uint32_t num, CommandList cmd) override;
-        void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot, CommandList cmd) override;
-        void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot, CommandList cmd) override;
-        void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets, CommandList cmd) override;
-        void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset, CommandList cmd) override;
-        void BindStencilRef(uint32_t value, CommandList cmd) override;
-        void BindBlendFactor(float r, float g, float b, float a, CommandList cmd) override;
-        void SetRenderPipeline(CommandList commandList, const RenderPipeline* pipeline) override;
-        void BindComputeShader(const Shader* cs, CommandList cmd) override;
-        void Draw(uint32_t vertexCount, uint32_t startVertexLocation, CommandList cmd) override;
-        void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, CommandList cmd) override;
-        void DrawInstanced(uint32_t vertexCount, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
-        void DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount, uint32_t startIndexLocation, uint32_t baseVertexLocation, uint32_t startInstanceLocation, CommandList cmd) override;
-        void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ, CommandList cmd) override;
-        void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset, CommandList cmd) override;
-        void CopyResource(const GPUResource* pDst, const GPUResource* pSrc, CommandList cmd) override;
-        void UpdateBuffer(CommandList cmd, GraphicsBuffer* buffer, const void* data, uint64_t size) override;
-        void QueryBegin(const GPUQuery* query, CommandList cmd) override;
-        void QueryEnd(const GPUQuery* query, CommandList cmd) override;
-        void Barrier(const GPUBarrier* barriers, uint32_t numBarriers, CommandList cmd) override {}
-
-        GPUAllocation AllocateGPU(size_t dataSize, CommandList cmd) override;
-
-        void PushDebugGroup(CommandList cmd, const char* name) override;
-        void PopDebugGroup(CommandList cmd) override;
-        void InsertDebugMarker(CommandList cmd, const char* name) override;
-
     private:
         void CreateFactory();
         void GetAdapter(IDXGIAdapter1** ppAdapter);
@@ -180,9 +106,6 @@ namespace Alimer
         IDXGISwapChain1* swapChain = nullptr;
         ID3D11Texture2D* backBufferTexture = nullptr;
         ID3D11RenderTargetView* renderTargetView = nullptr;
-
-
-        ID3D11DeviceContext1* deviceContexts[kCommandListCount] = {};
-        ID3DUserDefinedAnnotation* userDefinedAnnotations[kCommandListCount] = {};
+        
     };
 }

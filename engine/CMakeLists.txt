@@ -50,7 +50,7 @@ define_engine_source_files(
 # Graphics backend
 if (ALIMER_D3D11)
     define_engine_source_files(RHI/D3D)
-    #define_engine_source_files(RHI/D3D11)
+    define_engine_source_files(RHI/D3D11)
 endif()
 
 if (ALIMER_D3D12)
