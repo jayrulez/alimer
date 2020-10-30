@@ -126,10 +126,13 @@ const char* VkResultToString(VkResult result)
 
 namespace Alimer
 {
-    struct FrameResources;
-    struct DescriptorTableFrameAllocator;
+    class GraphicsDevice_Vulkan;
+    class Vulkan_CommandList;
 
-    struct QueueFamilyIndices {
+    struct FrameResources;
+
+    struct QueueFamilyIndices
+    {
         int graphicsFamily = -1;
         int presentFamily = -1;
         int copyFamily = -1;
@@ -139,17 +142,47 @@ namespace Alimer
         }
     };
 
-    class GraphicsDevice_Vulkan;
+    struct DescriptorTableFrameAllocator
+    {
+        GraphicsDevice_Vulkan* device;
+        VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
+        uint32_t poolSize = 256;
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites;
+        std::vector<VkDescriptorBufferInfo> bufferInfos;
+        std::vector<VkDescriptorImageInfo> imageInfos;
+        std::vector<VkBufferView> texelBufferViews;
+        std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
+        bool dirty = false;
+
+        const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
+        const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+        int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
+        const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
+        int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
+        const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
+
+        void init(GraphicsDevice_Vulkan* device);
+        void destroy();
+
+        void reset();
+        void validate(bool graphics, Vulkan_CommandList* commandList, bool raytracing = false);
+        VkDescriptorSet commit(const DescriptorTable* table);
+    };
 
     class Vulkan_CommandList final : public CommandList
     {
+        friend struct DescriptorTableFrameAllocator;
+
     public:
-        Vulkan_CommandList(GraphicsDevice_Vulkan* device, uint32_t queueFamilyIndex);
+        Vulkan_CommandList(GraphicsDevice_Vulkan* device, uint32_t index, uint32_t queueFamilyIndex);
         ~Vulkan_CommandList() override;
 
         inline VkCommandBuffer GetDirectCommandList() { return commandBuffers[frameIndex]; }
 
         void Reset(uint32_t frameIndex);
+        VkCommandBuffer End();
+
         void PresentBegin() override;
         void PresentEnd() override;
 
@@ -195,13 +228,29 @@ namespace Alimer
         void Barrier(const GPUBarrier* barriers, uint32_t numBarriers) override;
 
     private:
+        void FlushPipeline();
         void PrepareDraw();
 
     private:
         GraphicsDevice_Vulkan* device;
-        VkCommandPool commandPools[GraphicsDevice::BACKBUFFER_COUNT] = {};
-        VkCommandBuffer commandBuffers[GraphicsDevice::BACKBUFFER_COUNT] = {};
+        uint32_t index;
+
+        VkCommandPool commandPools[kMaxInflightFrames] = {};
+        VkCommandBuffer commandBuffers[kMaxInflightFrames] = {};
         uint32_t frameIndex = 0;
+
+        VkViewport viewports[kMaxViewportAndScissorRects] = {};
+        VkRect2D scissors[kMaxViewportAndScissorRects] = {};
+
+        const RenderPass* active_renderpass = nullptr;
+        size_t prev_pipeline_hash = 0;
+        RenderPipeline* active_pso = nullptr;
+        const Shader* active_cs = nullptr;
+        const RaytracingPipelineState* active_rt = nullptr;
+        bool dirty_pso = false;
+
+        DescriptorTableFrameAllocator descriptors[kMaxInflightFrames];
+        std::vector<std::pair<size_t, VkPipeline>> pipelines_worker;
     };
 
     class GraphicsDevice_Vulkan final : public GraphicsDevice
@@ -291,35 +340,6 @@ namespace Alimer
             VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
             std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
-            struct DescriptorTableFrameAllocator
-            {
-                GraphicsDevice_Vulkan* device;
-                VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-                uint32_t poolSize = 256;
-
-                std::vector<VkWriteDescriptorSet> descriptorWrites;
-                std::vector<VkDescriptorBufferInfo> bufferInfos;
-                std::vector<VkDescriptorImageInfo> imageInfos;
-                std::vector<VkBufferView> texelBufferViews;
-                std::vector<VkWriteDescriptorSetAccelerationStructureNV> accelerationStructureViews;
-                bool dirty = false;
-
-                const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-                const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
-                int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
-                const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
-                int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
-                const Sampler* SAM[GPU_SAMPLER_HEAP_COUNT];
-
-                void init(GraphicsDevice_Vulkan* device);
-                void destroy();
-
-                void reset();
-                //void validate(bool graphics, CommandList cmd, bool raytracing = false);
-                VkDescriptorSet commit(const DescriptorTable* table);
-            };
-            DescriptorTableFrameAllocator descriptors[kCommandListCount];
-
             struct ResourceFrameAllocator
             {
                 GraphicsDevice_Vulkan* device = nullptr;
@@ -341,14 +361,6 @@ namespace Alimer
         FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 
         std::unordered_map<size_t, VkPipeline> pipelines_global;
-        std::vector<std::pair<size_t, VkPipeline>> pipelines_worker[kCommandListCount];
-        size_t prev_pipeline_hash[kCommandListCount] = {};
-        RenderPipeline* active_pso[kCommandListCount] = {};
-        const Shader* active_cs[kCommandListCount] = {};
-        const RaytracingPipelineState* active_rt[kCommandListCount] = {};
-        const RenderPass* active_renderpass[kCommandListCount] = {};
-
-        bool dirty_pso[kCommandListCount] = {};
 
         Vulkan_CommandList* commandLists[kCommandListCount] = {};
         std::atomic_uint32_t commandListsCount{ 0 };
@@ -1951,7 +1963,8 @@ namespace Alimer
         return static_cast<uint64_t>(address - dataBegin);
     }
 
-    void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::init(GraphicsDevice_Vulkan* device)
+    /* DescriptorTableFrameAllocator */
+    void DescriptorTableFrameAllocator::init(GraphicsDevice_Vulkan* device)
     {
         this->device = device;
 
@@ -2007,7 +2020,8 @@ namespace Alimer
         reset();
 
     }
-    void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::destroy()
+
+    void DescriptorTableFrameAllocator::destroy()
     {
         if (descriptorPool != VK_NULL_HANDLE)
         {
@@ -2015,7 +2029,8 @@ namespace Alimer
             descriptorPool = VK_NULL_HANDLE;
         }
     }
-    void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::reset()
+
+    void DescriptorTableFrameAllocator::reset()
     {
         dirty = true;
 
@@ -2033,15 +2048,14 @@ namespace Alimer
         memset(SAM, 0, sizeof(SAM));
     }
 
-#if TODO
-    void GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, CommandList cmd, bool raytracing)
+    void DescriptorTableFrameAllocator::validate(bool graphics, Vulkan_CommandList* commandList, bool raytracing)
     {
         if (!dirty)
             return;
         dirty = true;
 
-        auto pso_internal = graphics ? to_internal(device->active_pso[cmd]) : nullptr;
-        auto cs_internal = graphics ? nullptr : to_internal(device->active_cs[cmd]);
+        auto pso_internal = graphics ? to_internal(commandList->active_pso) : nullptr;
+        auto cs_internal = graphics ? nullptr : to_internal(commandList->active_cs);
 
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
         VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
@@ -2056,8 +2070,7 @@ namespace Alimer
             descriptorSetLayout = cs_internal->descriptorSetLayout;
         }
 
-        VkDescriptorSetAllocateInfo allocInfo = {};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        VkDescriptorSetAllocateInfo allocInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO  };
         allocInfo.descriptorPool = descriptorPool;
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &descriptorSetLayout;
@@ -2109,7 +2122,7 @@ namespace Alimer
 
                 const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_S;
                 const Sampler* sampler = SAM[original_binding];
-                if (sampler == nullptr || !sampler->IsValid())
+                if (sampler == nullptr)
                 {
                     imageInfos.back().sampler = device->nullSampler;
                 }
@@ -2258,7 +2271,7 @@ namespace Alimer
                     auto internal_state = to_internal(buffer);
                     if (buffer->GetDesc().Usage == USAGE_DYNAMIC)
                     {
-                        const GPUAllocation& allocation = internal_state->dynamic[cmd];
+                        const GPUAllocation& allocation = internal_state->dynamic[commandList->index];
                         bufferInfos.back().buffer = to_internal(allocation.buffer)->resource;
                         bufferInfos.back().offset = allocation.offset;
                         bufferInfos.back().range = buffer->GetDesc().ByteWidth;
@@ -2401,14 +2414,13 @@ namespace Alimer
 
         vkUpdateDescriptorSets(device->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 
-        vkCmdBindDescriptorSets(device->GetDirectCommandList(cmd),
+        vkCmdBindDescriptorSets(commandList->GetDirectCommandList(),
             graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS : (raytracing ? VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR : VK_PIPELINE_BIND_POINT_COMPUTE),
             pipelineLayout, 0, 1, &descriptorSet, 0, nullptr
         );
     }
-#endif // TODO
 
-    VkDescriptorSet GraphicsDevice_Vulkan::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table)
+    VkDescriptorSet DescriptorTableFrameAllocator::commit(const DescriptorTable* table)
     {
         auto internal_state = to_internal(table);
 
@@ -3111,23 +3123,12 @@ namespace Alimer
             vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
             vkDestroyCommandPool(device, frame.copyCommandPool, nullptr);
 
-            for (auto& descriptormanager : frame.descriptors)
-            {
-                descriptormanager.destroy();
-            }
         }
 
         vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
         vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(device, copySema, nullptr);
 
-        for (auto& x : pipelines_worker)
-        {
-            for (auto& y : x)
-            {
-                vkDestroyPipeline(device, y.second, nullptr);
-            }
-        }
         for (auto& x : pipelines_global)
         {
             vkDestroyPipeline(device, x.second, nullptr);
@@ -4287,7 +4288,7 @@ namespace Alimer
         pShader->internal_state = nullptr;
         return false;
 #endif
-}
+    }
 
     RefPtr<Sampler> GraphicsDevice_Vulkan::CreateSampler(const SamplerDescriptor* descriptor)
     {
@@ -4446,27 +4447,25 @@ namespace Alimer
             insert_shader(descriptor->gs);
             insert_shader(descriptor->ps);
 
-            VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo = {};
-            descriptorSetlayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
             descriptorSetlayoutInfo.pBindings = internal_state->layoutBindings.data();
             descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(internal_state->layoutBindings.size());
-            VkResult res = vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &internal_state->descriptorSetLayout);
-            assert(res == VK_SUCCESS);
+            VK_CHECK(vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &internal_state->descriptorSetLayout));
 
-            VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-            pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
             pipelineLayoutInfo.pSetLayouts = &internal_state->descriptorSetLayout;
             pipelineLayoutInfo.setLayoutCount = 1;
             pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-            res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout);
-            assert(res == VK_SUCCESS);
-
-            return res == VK_SUCCESS;
+            VK_CHECK(
+                vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &internal_state->pipelineLayout)
+            );
         }
 
+        *pipeline = internal_state.Detach();
         return true;
     }
+
     bool GraphicsDevice_Vulkan::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
     {
         auto internal_state = std::make_shared<RenderPass_Vulkan>();
@@ -5869,7 +5868,7 @@ namespace Alimer
         {
             QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice, surface);
 
-            commandLists[cmd] = new Vulkan_CommandList(this, queueFamilyIndices.graphicsFamily);
+            commandLists[cmd] = new Vulkan_CommandList(this, cmd, queueFamilyIndices.graphicsFamily);
         }
 
         commandLists[cmd]->Reset(GetFrameIndex());
@@ -5887,9 +5886,6 @@ namespace Alimer
             viewports[i].maxDepth = 1;
         }
         vkCmdSetViewport(commandBuffer, 0, ALIMER_STATIC_ARRAY_SIZE(viewports), viewports);
-
-        // reset descriptor allocators:
-        GetFrameResources().descriptors[cmd].reset();
 
         // reset immediate resource allocators:
         GetFrameResources().resourceBuffer[cmd].clear();
@@ -5910,13 +5906,6 @@ namespace Alimer
             vkCmdResetQueryPool(commandBuffer, querypool_occlusion, x, 1);
         }
         occlusions_to_reset.clear();
-
-        prev_pipeline_hash[cmd] = 0;
-        active_pso[cmd] = nullptr;
-        active_cs[cmd] = nullptr;
-        active_rt[cmd] = nullptr;
-        active_renderpass[cmd] = VK_NULL_HANDLE;
-        dirty_pso[cmd] = false;
 
         return *commandLists[cmd];
     }
@@ -5988,26 +5977,9 @@ namespace Alimer
             commandListsCount.store(0);
             for (uint32_t cmd = 0; cmd < cmd_last; ++cmd)
             {
-                commandBuffers[counter] = commandLists[cmd]->GetDirectCommandList();
-
-                VkResult res = vkEndCommandBuffer(commandBuffers[counter]);
-                assert(res == VK_SUCCESS);
+                commandBuffers[counter] = commandLists[counter]->End();
                 counter++;
 
-                for (auto& x : pipelines_worker[cmd])
-                {
-                    if (pipelines_global.count(x.first) == 0)
-                    {
-                        pipelines_global[x.first] = x.second;
-                    }
-                    else
-                    {
-                        allocationhandler->destroylocker.lock();
-                        allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
-                        allocationhandler->destroylocker.unlock();
-                    }
-                }
-                pipelines_worker[cmd].clear();
             }
 
             VkSubmitInfo submitInfo = {};
@@ -6086,20 +6058,21 @@ namespace Alimer
         }
         pipelines_global.clear();
 
-        for (int i = 0; i < ALIMER_STATIC_ARRAY_SIZE(pipelines_worker); ++i)
+        /*for (int i = 0; i < ALIMER_STATIC_ARRAY_SIZE(pipelines_worker); ++i)
         {
             for (auto& x : pipelines_worker[i])
             {
                 allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, FRAMECOUNT));
             }
             pipelines_worker[i].clear();
-        }
+        }*/
         allocationhandler->destroylocker.unlock();
     }
 
     /* Vulkan_CommandList */
-    Vulkan_CommandList::Vulkan_CommandList(GraphicsDevice_Vulkan* device, uint32_t queueFamilyIndex)
-        : device{ device }
+    Vulkan_CommandList::Vulkan_CommandList(GraphicsDevice_Vulkan* device_, uint32_t index_, uint32_t queueFamilyIndex)
+        : device(device_)
+        , index(index_)
     {
         VkResult res;
 
@@ -6127,6 +6100,16 @@ namespace Alimer
 
     Vulkan_CommandList::~Vulkan_CommandList()
     {
+        for (auto& pair : pipelines_worker)
+        {
+            vkDestroyPipeline(device->GetVkDevice(), pair.second, nullptr);
+        }
+
+        for (uint32_t i = 0; i < ALIMER_STATIC_ARRAY_SIZE(descriptors); i++)
+        {
+            descriptors[i].destroy();
+        }
+
         for (uint32_t i = 0; i < ALIMER_STATIC_ARRAY_SIZE(commandPools); i++)
         {
             vkDestroyCommandPool(device->GetVkDevice(), commandPools[i], nullptr);
@@ -6159,6 +6142,38 @@ namespace Alimer
 
         float blendConstants[] = { 1,1,1,1 };
         vkCmdSetBlendConstants(commandBuffers[frameIndex], blendConstants);
+
+        // reset descriptor allocators:
+        descriptors[frameIndex].reset();
+
+        active_renderpass = nullptr;
+        prev_pipeline_hash = 0;
+        active_pso = nullptr;
+        active_cs = nullptr;
+        active_rt = nullptr;
+        dirty_pso = false;
+    }
+
+    VkCommandBuffer Vulkan_CommandList::End()
+    {
+        VK_CHECK(vkEndCommandBuffer(GetDirectCommandList()));
+
+        for (auto& x : pipelines_worker)
+        {
+            if (device->pipelines_global.count(x.first) == 0)
+            {
+                device->pipelines_global[x.first] = x.second;
+            }
+            else
+            {
+                device->allocationhandler->destroylocker.lock();
+                device->allocationhandler->destroyer_pipelines.push_back(std::make_pair(x.second, device->GetFrameCount()));
+                device->allocationhandler->destroylocker.unlock();
+            }
+        }
+        pipelines_worker.clear();
+
+        return GetDirectCommandList();
     }
 
     void Vulkan_CommandList::PresentBegin()
@@ -6203,106 +6218,667 @@ namespace Alimer
 
     void Vulkan_CommandList::PushDebugGroup(const char* name)
     {
+        if (!device->debugUtils)
+            return;
+
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        label.color[0] = 0;
+        label.color[1] = 0;
+        label.color[2] = 0;
+        label.color[3] = 1;
+        vkCmdBeginDebugUtilsLabelEXT(GetDirectCommandList(), &label);
     }
 
     void Vulkan_CommandList::PopDebugGroup()
     {
+        if (!device->debugUtils)
+            return;
+
+        vkCmdEndDebugUtilsLabelEXT(GetDirectCommandList());
     }
 
     void Vulkan_CommandList::InsertDebugMarker(const char* name)
     {
+        if (!device->debugUtils)
+            return;
+
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        label.pLabelName = name;
+        label.color[0] = 0;
+        label.color[1] = 0;
+        label.color[2] = 0;
+        label.color[3] = 1;
+        vkCmdInsertDebugUtilsLabelEXT(GetDirectCommandList(), &label);
     }
 
     void Vulkan_CommandList::RenderPassBegin(const RenderPass* renderpass)
     {
+        active_renderpass = renderpass;
+
+        auto internal_state = to_internal(renderpass);
+        vkCmdBeginRenderPass(GetDirectCommandList(), &internal_state->beginInfo, VK_SUBPASS_CONTENTS_INLINE);
     }
 
     void Vulkan_CommandList::RenderPassEnd()
     {
+        vkCmdEndRenderPass(GetDirectCommandList());
+        active_renderpass = nullptr;
     }
 
     void Vulkan_CommandList::SetViewport(float x, float y, float width, float height, float minDepth, float maxDepth)
     {
+        viewports[0].x = x;
+        viewports[0].y = y;
+        viewports[0].width = width;
+        viewports[0].height = height;
+        viewports[0].minDepth = minDepth;
+        viewports[0].maxDepth = maxDepth;
+        vkCmdSetViewport(GetDirectCommandList(), 0, 1, &viewports[0]);
     }
 
     void Vulkan_CommandList::SetViewport(const Viewport& viewport)
     {
+        viewports[0].x = viewport.x;
+        viewports[0].y = viewport.y;
+        viewports[0].width = viewport.width;
+        viewports[0].height = viewport.height;
+        viewports[0].minDepth = viewport.minDepth;
+        viewports[0].maxDepth = viewport.maxDepth;
+        vkCmdSetViewport(GetDirectCommandList(), 0, 1, &viewports[0]);
     }
 
     void Vulkan_CommandList::SetViewports(uint32_t viewportCount, const Viewport* pViewports)
     {
+        ALIMER_ASSERT(viewportCount <= kMaxViewportAndScissorRects);
+
+        for (uint32_t i = 0; i < viewportCount; ++i)
+        {
+            viewports[i].x = pViewports[i].x;
+            viewports[i].y = pViewports[i].y;
+            viewports[i].width = pViewports[i].width;
+            viewports[i].height = pViewports[i].height;
+            viewports[i].minDepth = pViewports[i].minDepth;
+            viewports[i].maxDepth = pViewports[i].maxDepth;
+        }
+
+        vkCmdSetViewport(GetDirectCommandList(), 0, viewportCount, viewports);
     }
 
     void Vulkan_CommandList::SetScissorRect(const ScissorRect& rect)
     {
+        scissors[0].offset.x = rect.x;
+        scissors[0].offset.y = rect.y;
+        scissors[0].extent.width = uint32_t(rect.width);
+        scissors[0].extent.height = uint32_t(rect.height);
+        vkCmdSetScissor(GetDirectCommandList(), 0, 1, &scissors[0]);
     }
 
     void Vulkan_CommandList::SetScissorRects(uint32_t scissorCount, const ScissorRect* rects)
     {
+        ALIMER_ASSERT(rects != nullptr);
+        ALIMER_ASSERT(scissorCount <= kMaxViewportAndScissorRects);
+
+        for (uint32_t i = 0; i < scissorCount; ++i)
+        {
+            scissors[i].offset.x = int32_t(rects[i].x);
+            scissors[i].offset.y = int32_t(rects[i].y);
+            scissors[i].extent.width = uint32_t(rects[i].width);
+            scissors[i].extent.height = uint32_t(rects[i].height);
+        }
+
+        vkCmdSetScissor(GetDirectCommandList(), 0, scissorCount, scissors);
     }
 
     void Vulkan_CommandList::BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource)
     {
+        ALIMER_ASSERT(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
+        if (descriptors[frameIndex].SRV[slot] != resource
+            || descriptors[frameIndex].SRV_index[slot] != subresource)
+        {
+            descriptors[frameIndex].SRV[slot] = resource;
+            descriptors[frameIndex].SRV_index[slot] = subresource;
+            descriptors[frameIndex].dirty = true;
+        }
     }
 
     void Vulkan_CommandList::BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count)
     {
+        if (resources != nullptr)
+        {
+            for (uint32_t i = 0; i < count; ++i)
+            {
+                BindResource(stage, resources[i], slot + i, -1);
+            }
+        }
     }
 
     void Vulkan_CommandList::BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource)
     {
+        ALIMER_ASSERT(slot < GPU_RESOURCE_HEAP_UAV_COUNT);
+        if (descriptors[frameIndex].UAV[slot] != resource
+            || descriptors[frameIndex].UAV_index[slot] != subresource)
+        {
+            descriptors[frameIndex].UAV[slot] = resource;
+            descriptors[frameIndex].UAV_index[slot] = subresource;
+            descriptors[frameIndex].dirty = true;
+        }
     }
 
     void Vulkan_CommandList::BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count)
     {
+        if (resources != nullptr)
+        {
+            for (uint32_t i = 0; i < count; ++i)
+            {
+                BindUAV(stage, resources[i], slot + i, -1);
+            }
+        }
     }
 
     void Vulkan_CommandList::BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot)
     {
+        ALIMER_ASSERT(slot < GPU_SAMPLER_HEAP_COUNT);
+        if (descriptors[frameIndex].SAM[slot] != sampler)
+        {
+            descriptors[frameIndex].SAM[slot] = sampler;
+            descriptors[frameIndex].dirty = true;
+        }
     }
 
     void Vulkan_CommandList::BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot)
     {
+        ALIMER_ASSERT(slot < GPU_RESOURCE_HEAP_CBV_COUNT);
+        if (buffer->GetDesc().Usage == USAGE_DYNAMIC
+            || descriptors[frameIndex].CBV[slot] != buffer)
+        {
+            descriptors[frameIndex].CBV[slot] = buffer;
+            descriptors[frameIndex].dirty = true;
+        }
     }
 
     void Vulkan_CommandList::BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets)
     {
+        VkDeviceSize voffsets[8] = {};
+        VkBuffer vbuffers[8] = {};
+        assert(count <= 8);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            if (vertexBuffers[i] == nullptr)
+            {
+                vbuffers[i] = device->nullBuffer;
+            }
+            else
+            {
+                auto internal_state = to_internal(vertexBuffers[i]);
+                vbuffers[i] = internal_state->resource;
+                if (offsets != nullptr)
+                {
+                    voffsets[i] = (VkDeviceSize)offsets[i];
+                }
+            }
+        }
+
+        vkCmdBindVertexBuffers(GetDirectCommandList(), slot, count, vbuffers, voffsets);
     }
 
     void Vulkan_CommandList::BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset)
     {
+        if (indexBuffer != nullptr)
+        {
+            auto internal_state = to_internal(indexBuffer);
+            vkCmdBindIndexBuffer(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)offset, format == IndexFormat::UInt16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+        }
     }
 
     void Vulkan_CommandList::BindStencilRef(uint32_t value)
     {
+        vkCmdSetStencilReference(GetDirectCommandList(), VK_STENCIL_FRONT_AND_BACK, value);
     }
 
     void Vulkan_CommandList::BindBlendFactor(float r, float g, float b, float a)
     {
+        float blendConstants[] = { r, g, b, a };
+        vkCmdSetBlendConstants(GetDirectCommandList(), blendConstants);
     }
 
     void Vulkan_CommandList::SetRenderPipeline(RenderPipeline* pipeline)
     {
+        size_t pipeline_hash = 0;
+        Alimer::CombineHash(pipeline_hash, to_internal(pipeline)->hash);
+        if (active_renderpass != nullptr)
+        {
+            Alimer::CombineHash(pipeline_hash, active_renderpass->hash);
+        }
+
+        if (prev_pipeline_hash == pipeline_hash)
+        {
+            return;
+        }
+        prev_pipeline_hash = pipeline_hash;
+
+        descriptors[frameIndex].dirty = true;
+        active_pso = pipeline;
+        dirty_pso = true;
     }
 
     void Vulkan_CommandList::BindComputeShader(const Shader* shader)
     {
+        ALIMER_ASSERT(shader->stage == ShaderStage::Compute);
+
+        if (active_cs != shader)
+        {
+            descriptors[frameIndex].dirty = true;
+            active_cs = shader;
+            auto internal_state = to_internal(shader);
+            vkCmdBindPipeline(GetDirectCommandList(), VK_PIPELINE_BIND_POINT_COMPUTE, internal_state->pipeline_cs);
+        }
+    }
+
+    void Vulkan_CommandList::FlushPipeline()
+    {
+        if (!dirty_pso)
+            return;
+
+        auto pso = to_internal(active_pso);
+        size_t pipeline_hash = prev_pipeline_hash;
+
+        VkPipeline pipeline = VK_NULL_HANDLE;
+        auto it = device->pipelines_global.find(pipeline_hash);
+        if (it == device->pipelines_global.end())
+        {
+            for (auto& x : pipelines_worker)
+            {
+                if (pipeline_hash == x.first)
+                {
+                    pipeline = x.second;
+                    break;
+                }
+            }
+
+            if (pipeline == VK_NULL_HANDLE)
+            {
+                VkGraphicsPipelineCreateInfo pipelineInfo { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
+                //pipelineInfo.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+                if (pso->desc.rootSignature == nullptr)
+                {
+                    pipelineInfo.layout = to_internal(pso)->pipelineLayout;
+                }
+                else
+                {
+                    pipelineInfo.layout = to_internal(pso->desc.rootSignature)->pipelineLayout;
+                }
+                pipelineInfo.renderPass = active_renderpass == nullptr ? device->defaultRenderPass : to_internal(active_renderpass)->renderpass;
+                pipelineInfo.subpass = 0;
+                pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+
+                // Shaders:
+
+                uint32_t shaderStageCount = 0;
+                VkPipelineShaderStageCreateInfo shaderStages[static_cast<uint32_t>(ShaderStage::Count) - 1];
+                if (pso->desc.ms != nullptr && pso->desc.ms->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.ms)->stageInfo;
+                }
+                if (pso->desc.as != nullptr && pso->desc.as->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.as)->stageInfo;
+                }
+                if (pso->desc.vs != nullptr && pso->desc.vs->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.vs)->stageInfo;
+                }
+                if (pso->desc.hs != nullptr && pso->desc.hs->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.hs)->stageInfo;
+                }
+                if (pso->desc.ds != nullptr && pso->desc.ds->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.ds)->stageInfo;
+                }
+                if (pso->desc.gs != nullptr && pso->desc.gs->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.gs)->stageInfo;
+                }
+                if (pso->desc.ps != nullptr && pso->desc.ps->IsValid())
+                {
+                    shaderStages[shaderStageCount++] = to_internal(pso->desc.ps)->stageInfo;
+                }
+                pipelineInfo.stageCount = shaderStageCount;
+                pipelineInfo.pStages = shaderStages;
+
+                // Fixed function states
+                // Input layout:
+                VkPipelineVertexInputStateCreateInfo vertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+
+                uint32_t vertexBindingDescriptionCount = 0;
+                uint32_t vertexAttributeDescriptionCount = 0;
+                std::array<VkVertexInputBindingDescription, kMaxVertexBufferBindings> vertexBindingDescriptions;
+                std::array<VkVertexInputAttributeDescription, kMaxVertexAttributes> vertexAttributeDescriptions;
+
+                // Layout first
+                for (uint32_t binding = 0; binding < kMaxVertexBufferBindings; ++binding)
+                {
+                    const VertexBufferLayoutDescriptor* layoutDesc = &pso->desc.vertexDescriptor.layouts[binding];
+                    if (layoutDesc->stride == 0) {
+                        break;
+                    }
+
+                    VkVertexInputBindingDescription* vkVertexBindingDescription = &vertexBindingDescriptions[vertexBindingDescriptionCount++];
+                    vkVertexBindingDescription->binding = binding;
+                    vkVertexBindingDescription->stride = layoutDesc->stride;
+                    vkVertexBindingDescription->inputRate = layoutDesc->stepMode == InputStepMode::Vertex ? VK_VERTEX_INPUT_RATE_VERTEX : VK_VERTEX_INPUT_RATE_INSTANCE;
+                }
+
+                for (uint32_t location = 0; location < kMaxVertexAttributes; ++location)
+                {
+                    const VertexAttributeDescriptor* attrDesc = &pso->desc.vertexDescriptor.attributes[location];
+                    if (attrDesc->format == VertexFormat::Invalid) {
+                        break;
+                    }
+
+                    VkVertexInputAttributeDescription* vkVertexAttributeDesc = &vertexAttributeDescriptions[vertexAttributeDescriptionCount++];
+                    vkVertexAttributeDesc->location = location;
+                    vkVertexAttributeDesc->binding = attrDesc->bufferIndex;
+                    vkVertexAttributeDesc->format = _ConvertVertexFormat(attrDesc->format);
+                    vkVertexAttributeDesc->offset = attrDesc->offset;
+                }
+
+                vertexInputInfo.vertexBindingDescriptionCount = vertexBindingDescriptionCount;
+                vertexInputInfo.pVertexBindingDescriptions = vertexBindingDescriptions.data();
+                vertexInputInfo.vertexAttributeDescriptionCount = vertexAttributeDescriptionCount;
+                vertexInputInfo.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
+                pipelineInfo.pVertexInputState = &vertexInputInfo;
+
+                // Primitive type:
+                VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+                inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+                switch (pso->desc.primitiveTopology)
+                {
+                case PrimitiveTopology::PointList:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+                    break;
+                case PrimitiveTopology::LineList:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+                    break;
+                case PrimitiveTopology::LineStrip:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+                    break;
+                case PrimitiveTopology::TriangleList:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+                    break;
+                case PrimitiveTopology::TriangleStrip:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+                    break;
+                case PrimitiveTopology::PatchList:
+                    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+                    break;
+                default:
+                    break;
+                }
+                inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+                pipelineInfo.pInputAssemblyState = &inputAssembly;
+
+                // Rasterization State:
+                const RasterizationStateDescriptor& rasterizationState = pso->desc.rasterizationState;
+                // depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
+                VkPipelineRasterizationDepthClipStateCreateInfoEXT depthclip = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT };
+                depthclip.depthClipEnable = VK_TRUE;
+
+                VkPipelineRasterizationStateCreateInfo rasterizer = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+                rasterizer.pNext = &depthclip;
+                rasterizer.depthClampEnable = VK_TRUE;
+                rasterizer.rasterizerDiscardEnable = VK_FALSE;
+                rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+                switch (rasterizationState.cullMode)
+                {
+                case CullMode::Back:
+                    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+                    break;
+                case CullMode::Front:
+                    rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+                    break;
+                case CullMode::None:
+                default:
+                    rasterizer.cullMode = VK_CULL_MODE_NONE;
+                    break;
+                }
+
+                rasterizer.frontFace = (rasterizationState.frontFace == FrontFace::CCW) ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+                rasterizer.depthBiasEnable = rasterizationState.depthBias != 0 || rasterizationState.depthBiasSlopeScale != 0;
+                rasterizer.depthBiasConstantFactor = static_cast<float>(rasterizationState.depthBias);
+                rasterizer.depthBiasClamp = rasterizationState.depthBiasClamp;
+                rasterizer.depthBiasSlopeFactor = rasterizationState.depthBiasSlopeScale;
+                rasterizer.lineWidth = 1.0f;
+
+                // depth clip is extension in Vulkan 1.1:
+                depthclip.depthClipEnable = rasterizationState.depthClipEnable ? VK_TRUE : VK_FALSE;
+                pipelineInfo.pRasterizationState = &rasterizer;
+
+                // Viewport, Scissor:
+                VkViewport viewport = {};
+                viewport.x = 0;
+                viewport.y = 0;
+                viewport.width = 65535;
+                viewport.height = 65535;
+                viewport.minDepth = 0;
+                viewport.maxDepth = 1;
+
+                VkRect2D scissor = {};
+                scissor.extent.width = 65535;
+                scissor.extent.height = 65535;
+
+                VkPipelineViewportStateCreateInfo viewportState = {};
+                viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+                viewportState.viewportCount = 1;
+                viewportState.pViewports = &viewport;
+                viewportState.scissorCount = 1;
+                viewportState.pScissors = &scissor;
+
+                pipelineInfo.pViewportState = &viewportState;
+
+
+                // Depth-Stencil:
+                VkPipelineDepthStencilStateCreateInfo depthstencil = {};
+                depthstencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+                depthstencil.depthTestEnable = (pso->desc.depthStencilState.depthCompare != CompareFunction::Always || pso->desc.depthStencilState.depthWriteEnabled) ? VK_TRUE : VK_FALSE;
+                depthstencil.depthWriteEnable = pso->desc.depthStencilState.depthWriteEnabled ? VK_FALSE : VK_TRUE;
+                depthstencil.depthCompareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.depthCompare);
+
+                depthstencil.stencilTestEnable = StencilTestEnabled(&pso->desc.depthStencilState) ? VK_TRUE : VK_FALSE;
+
+                depthstencil.front.compareMask = pso->desc.depthStencilState.stencilReadMask;
+                depthstencil.front.writeMask = pso->desc.depthStencilState.stencilWriteMask;
+                depthstencil.front.reference = 0; // runtime supplied
+                depthstencil.front.compareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.stencilFront.compare);
+                depthstencil.front.passOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.passOp);
+                depthstencil.front.failOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.failOp);
+                depthstencil.front.depthFailOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilFront.depthFailOp);
+
+                depthstencil.back.compareMask = pso->desc.depthStencilState.stencilReadMask;
+                depthstencil.back.writeMask = pso->desc.depthStencilState.stencilWriteMask;
+                depthstencil.back.reference = 0; // runtime supplied
+                depthstencil.back.compareOp = _ConvertComparisonFunc(pso->desc.depthStencilState.stencilBack.compare);
+                depthstencil.back.passOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.passOp);
+                depthstencil.back.failOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.failOp);
+                depthstencil.back.depthFailOp = _ConvertStencilOp(pso->desc.depthStencilState.stencilBack.depthFailOp);
+
+                depthstencil.depthBoundsTestEnable = VK_FALSE;
+                pipelineInfo.pDepthStencilState = &depthstencil;
+
+
+                // MSAA:
+                VkPipelineMultisampleStateCreateInfo multisampling = {};
+                multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+                multisampling.sampleShadingEnable = VK_FALSE;
+                multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+                if (active_renderpass != nullptr
+                    && active_renderpass->desc.attachments.size() > 0)
+                {
+                    multisampling.rasterizationSamples = (VkSampleCountFlagBits)active_renderpass->desc.attachments[0].texture->desc.SampleCount;
+                }
+                multisampling.minSampleShading = 1.0f;
+                VkSampleMask samplemask = pso->desc.sampleMask;
+                multisampling.pSampleMask = &samplemask;
+                multisampling.alphaToCoverageEnable = VK_FALSE;
+                multisampling.alphaToOneEnable = VK_FALSE;
+
+                pipelineInfo.pMultisampleState = &multisampling;
+
+                // Blending:
+                uint32_t numBlendAttachments = 0;
+                VkPipelineColorBlendAttachmentState colorBlendAttachments[8];
+                const size_t blend_loopCount = active_renderpass == nullptr ? 1u : active_renderpass->desc.attachments.size();
+                for (size_t i = 0; i < blend_loopCount; ++i)
+                {
+                    if (active_renderpass != nullptr
+                        && active_renderpass->desc.attachments[i].type != RenderPassAttachment::RENDERTARGET)
+                    {
+                        continue;
+                    }
+
+
+                    ColorAttachmentDescriptor desc = pso->desc.colorAttachments[numBlendAttachments];
+                    VkPipelineColorBlendAttachmentState& attachment = colorBlendAttachments[numBlendAttachments];
+                    numBlendAttachments++;
+
+                    attachment.blendEnable = desc.blendEnable ? VK_TRUE : VK_FALSE;
+
+                    attachment.colorWriteMask = 0;
+                    if (any(desc.colorWriteMask & ColorWriteMask::Red))
+                    {
+                        attachment.colorWriteMask |= VK_COLOR_COMPONENT_R_BIT;
+                    }
+                    if (any(desc.colorWriteMask & ColorWriteMask::Green))
+                    {
+                        attachment.colorWriteMask |= VK_COLOR_COMPONENT_G_BIT;
+                    }
+                    if (any(desc.colorWriteMask & ColorWriteMask::Blue))
+                    {
+                        attachment.colorWriteMask |= VK_COLOR_COMPONENT_B_BIT;
+                    }
+                    if (any(desc.colorWriteMask & ColorWriteMask::Alpha))
+                    {
+                        attachment.colorWriteMask |= VK_COLOR_COMPONENT_A_BIT;
+                    }
+
+                    attachment.srcColorBlendFactor = _ConvertBlend(desc.srcColorBlendFactor);
+                    attachment.dstColorBlendFactor = _ConvertBlend(desc.dstColorBlendFactor);
+                    attachment.colorBlendOp = _ConvertBlendOp(desc.colorBlendOp);
+                    attachment.srcAlphaBlendFactor = _ConvertBlend(desc.srcAlphaBlendFactor);
+                    attachment.dstAlphaBlendFactor = _ConvertBlend(desc.dstAlphaBlendFactor);
+                    attachment.alphaBlendOp = _ConvertBlendOp(desc.alphaBlendOp);
+                }
+
+                VkPipelineColorBlendStateCreateInfo colorBlending = {};
+                colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+                colorBlending.logicOpEnable = VK_FALSE;
+                colorBlending.logicOp = VK_LOGIC_OP_COPY;
+                colorBlending.attachmentCount = numBlendAttachments;
+                colorBlending.pAttachments = colorBlendAttachments;
+                colorBlending.blendConstants[0] = 1.0f;
+                colorBlending.blendConstants[1] = 1.0f;
+                colorBlending.blendConstants[2] = 1.0f;
+                colorBlending.blendConstants[3] = 1.0f;
+
+                pipelineInfo.pColorBlendState = &colorBlending;
+
+
+                // Tessellation:
+                VkPipelineTessellationStateCreateInfo tessellationInfo = {};
+                tessellationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+                tessellationInfo.patchControlPoints = 3;
+
+                pipelineInfo.pTessellationState = &tessellationInfo;
+
+
+
+
+                // Dynamic state will be specified at runtime:
+                VkDynamicState dynamicStates[] = {
+                    VK_DYNAMIC_STATE_VIEWPORT,
+                    VK_DYNAMIC_STATE_SCISSOR,
+                    VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+                    VK_DYNAMIC_STATE_BLEND_CONSTANTS
+                };
+
+                VkPipelineDynamicStateCreateInfo dynamicState = {};
+                dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+                dynamicState.dynamicStateCount = ALIMER_STATIC_ARRAY_SIZE(dynamicStates);
+                dynamicState.pDynamicStates = dynamicStates;
+
+                pipelineInfo.pDynamicState = &dynamicState;
+
+                VkResult res = vkCreateGraphicsPipelines(device->GetVkDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline);
+                assert(res == VK_SUCCESS);
+
+                pipelines_worker.push_back(std::make_pair(pipeline_hash, pipeline));
+            }
+        }
+        else
+        {
+            pipeline = it->second;
+        }
+        assert(pipeline != VK_NULL_HANDLE);
+
+        vkCmdBindPipeline(GetDirectCommandList(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    }
+
+    void Vulkan_CommandList::PrepareDraw()
+    {
+        FlushPipeline();
+
+        auto internal_state_pso = to_internal(active_pso);
+
+        if (internal_state_pso->desc.rootSignature == nullptr)
+        {
+            descriptors[frameIndex].validate(true, this);
+        }
+        else
+        {
+            auto rootsig_internal = to_internal(internal_state_pso->desc.rootSignature);
+            if (rootsig_internal->dirty[index])
+            {
+                rootsig_internal->dirty[index] = false;
+                vkCmdBindDescriptorSets(
+                    GetDirectCommandList(),
+                    VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    rootsig_internal->pipelineLayout,
+                    0,
+                    (uint32_t)rootsig_internal->last_descriptorsets[index].size(),
+                    rootsig_internal->last_descriptorsets[index].data(),
+                    (uint32_t)rootsig_internal->root_offsets[index].size(),
+                    rootsig_internal->root_offsets[index].data()
+                );
+            }
+        }
     }
 
     void Vulkan_CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
     {
+        PrepareDraw();
+        vkCmdDraw(GetDirectCommandList(), vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
     void Vulkan_CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
     {
+        PrepareDraw();
+        vkCmdDrawIndexed(GetDirectCommandList(), indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
     }
 
     void Vulkan_CommandList::DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset)
     {
+        PrepareDraw();
+        auto internal_state = to_internal(args);
+        vkCmdDrawIndirect(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsInstanced));
     }
 
     void Vulkan_CommandList::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset)
     {
+        PrepareDraw();
+        auto internal_state = to_internal(args);
+        vkCmdDrawIndexedIndirect(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)args_offset, 1, (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
     }
 
     void Vulkan_CommandList::Dispatch(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
@@ -6315,6 +6891,124 @@ namespace Alimer
 
     void Vulkan_CommandList::CopyResource(const GPUResource* pDst, const GPUResource* pSrc)
     {
+        if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE
+            && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::TEXTURE)
+        {
+            auto internal_state_src = to_internal((const Texture*)pSrc);
+            auto internal_state_dst = to_internal((const Texture*)pDst);
+
+            const TextureDesc& src_desc = ((const Texture*)pSrc)->GetDesc();
+            const TextureDesc& dst_desc = ((const Texture*)pDst)->GetDesc();
+
+            if (src_desc.Usage & USAGE_STAGING)
+            {
+                VkBufferImageCopy copy = {};
+                copy.imageExtent.width = dst_desc.Width;
+                copy.imageExtent.height = dst_desc.Height;
+                copy.imageExtent.depth = 1;
+                copy.imageExtent.width = dst_desc.Width;
+                copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                copy.imageSubresource.layerCount = 1;
+                vkCmdCopyBufferToImage(
+                    GetDirectCommandList(),
+                    internal_state_src->staging_resource,
+                    internal_state_dst->resource,
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1,
+                    &copy
+                );
+            }
+            else if (dst_desc.Usage & USAGE_STAGING)
+            {
+                VkBufferImageCopy copy = {};
+                copy.imageExtent.width = src_desc.Width;
+                copy.imageExtent.height = src_desc.Height;
+                copy.imageExtent.depth = 1;
+                copy.imageExtent.width = src_desc.Width;
+                copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                copy.imageSubresource.layerCount = 1;
+                vkCmdCopyImageToBuffer(
+                    GetDirectCommandList(),
+                    internal_state_src->resource,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    internal_state_dst->staging_resource,
+                    1,
+                    &copy
+                );
+            }
+            else
+            {
+                VkImageCopy copy = {};
+                copy.extent.width = dst_desc.Width;
+                copy.extent.height = dst_desc.Height;
+                copy.extent.depth = std::max(1u, dst_desc.Depth);
+
+                copy.srcOffset.x = 0;
+                copy.srcOffset.y = 0;
+                copy.srcOffset.z = 0;
+
+                copy.dstOffset.x = 0;
+                copy.dstOffset.y = 0;
+                copy.dstOffset.z = 0;
+
+                if (src_desc.BindFlags & BIND_DEPTH_STENCIL)
+                {
+                    copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                    if (device->IsFormatStencilSupport(src_desc.format))
+                    {
+                        copy.srcSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+                    }
+                }
+                else
+                {
+                    copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                }
+                copy.srcSubresource.baseArrayLayer = 0;
+                copy.srcSubresource.layerCount = src_desc.ArraySize;
+                copy.srcSubresource.mipLevel = 0;
+
+                if (dst_desc.BindFlags & BIND_DEPTH_STENCIL)
+                {
+                    copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                    if (device->IsFormatStencilSupport(dst_desc.format))
+                    {
+                        copy.dstSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+                    }
+                }
+                else
+                {
+                    copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                }
+                copy.dstSubresource.baseArrayLayer = 0;
+                copy.dstSubresource.layerCount = dst_desc.ArraySize;
+                copy.dstSubresource.mipLevel = 0;
+
+                vkCmdCopyImage(GetDirectCommandList(),
+                    internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                    internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    1, &copy
+                );
+            }
+        }
+        else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
+        {
+            auto internal_state_src = to_internal((const GraphicsBuffer*)pSrc);
+            auto internal_state_dst = to_internal((const GraphicsBuffer*)pDst);
+
+            const GPUBufferDesc& src_desc = ((const GraphicsBuffer*)pSrc)->GetDesc();
+            const GPUBufferDesc& dst_desc = ((const GraphicsBuffer*)pDst)->GetDesc();
+
+            VkBufferCopy copy = {};
+            copy.srcOffset = 0;
+            copy.dstOffset = 0;
+            copy.size = (VkDeviceSize)std::min(src_desc.ByteWidth, dst_desc.ByteWidth);
+
+            vkCmdCopyBuffer(GetDirectCommandList(),
+                internal_state_src->resource,
+                internal_state_dst->resource,
+                1, &copy
+            );
+        }
     }
 
     GPUAllocation Vulkan_CommandList::AllocateGPU(size_t dataSize)
@@ -6334,14 +7028,136 @@ namespace Alimer
 
     void Vulkan_CommandList::QueryBegin(const GPUQuery* query)
     {
+        auto internal_state = to_internal(query);
+
+        switch (query->desc.Type)
+        {
+        case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+            vkCmdBeginQuery(GetDirectCommandList(), device->querypool_occlusion, (uint32_t)internal_state->query_index, 0);
+            break;
+        case GPU_QUERY_TYPE_OCCLUSION:
+            vkCmdBeginQuery(GetDirectCommandList(), device->querypool_occlusion, (uint32_t)internal_state->query_index, VK_QUERY_CONTROL_PRECISE_BIT);
+            break;
+        }
     }
 
     void Vulkan_CommandList::QueryEnd(const GPUQuery* query)
     {
+        auto internal_state = to_internal(query);
+
+        switch (query->desc.Type)
+        {
+        case GPU_QUERY_TYPE_TIMESTAMP:
+            vkCmdWriteTimestamp(GetDirectCommandList(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, device->querypool_timestamp, internal_state->query_index);
+            break;
+        case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
+            vkCmdEndQuery(GetDirectCommandList(), device->querypool_occlusion, internal_state->query_index);
+            break;
+        case GPU_QUERY_TYPE_OCCLUSION:
+            vkCmdEndQuery(GetDirectCommandList(), device->querypool_occlusion, internal_state->query_index);
+            break;
+        }
     }
 
     void Vulkan_CommandList::Barrier(const GPUBarrier* barriers, uint32_t numBarriers)
     {
+        VkMemoryBarrier memorybarriers[8];
+        VkImageMemoryBarrier imagebarriers[8];
+        VkBufferMemoryBarrier bufferbarriers[8];
+        uint32_t memorybarrier_count = 0;
+        uint32_t imagebarrier_count = 0;
+        uint32_t bufferbarrier_count = 0;
+
+        for (uint32_t i = 0; i < numBarriers; ++i)
+        {
+            const GPUBarrier& barrier = barriers[i];
+
+            switch (barrier.type)
+            {
+            default:
+            case GPUBarrier::MEMORY_BARRIER:
+            {
+                VkMemoryBarrier& barrierdesc = memorybarriers[memorybarrier_count++];
+                barrierdesc.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+                barrierdesc.pNext = nullptr;
+                barrierdesc.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+                barrierdesc.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+                if (device->RAYTRACING)
+                {
+                    barrierdesc.srcAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+                    barrierdesc.dstAccessMask |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+                }
+            }
+            break;
+            case GPUBarrier::IMAGE_BARRIER:
+            {
+                const TextureDesc& desc = barrier.image.texture->GetDesc();
+                auto internal_state = to_internal(barrier.image.texture);
+
+                VkImageMemoryBarrier& barrierdesc = imagebarriers[imagebarrier_count++];
+                barrierdesc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrierdesc.pNext = nullptr;
+                barrierdesc.image = internal_state->resource;
+                barrierdesc.oldLayout = _ConvertImageLayout(barrier.image.layout_before);
+                barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
+                barrierdesc.srcAccessMask = _ParseImageLayout(barrier.image.layout_before);
+                barrierdesc.dstAccessMask = _ParseImageLayout(barrier.image.layout_after);
+                if (desc.BindFlags & BIND_DEPTH_STENCIL)
+                {
+                    barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+                    if (device->IsFormatStencilSupport(desc.format))
+                    {
+                        barrierdesc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+                    }
+                }
+                else
+                {
+                    barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+                }
+                barrierdesc.subresourceRange.baseArrayLayer = 0;
+                barrierdesc.subresourceRange.layerCount = desc.ArraySize;
+                barrierdesc.subresourceRange.baseMipLevel = 0;
+                barrierdesc.subresourceRange.levelCount = desc.MipLevels;
+                barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            }
+            break;
+            case GPUBarrier::BUFFER_BARRIER:
+            {
+                auto internal_state = to_internal(barrier.buffer.buffer);
+
+                VkBufferMemoryBarrier& barrierdesc = bufferbarriers[bufferbarrier_count++];
+                barrierdesc.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+                barrierdesc.pNext = nullptr;
+                barrierdesc.buffer = internal_state->resource;
+                barrierdesc.size = barrier.buffer.buffer->GetDesc().ByteWidth;
+                barrierdesc.offset = 0;
+                barrierdesc.srcAccessMask = _ParseBufferState(barrier.buffer.state_before);
+                barrierdesc.dstAccessMask = _ParseBufferState(barrier.buffer.state_after);
+                barrierdesc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrierdesc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            }
+            break;
+            }
+        }
+
+        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+        if (device->RAYTRACING)
+        {
+            srcStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+            dstStage |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+        }
+
+        vkCmdPipelineBarrier(GetDirectCommandList(),
+            srcStage,
+            dstStage,
+            0,
+            memorybarrier_count, memorybarriers,
+            bufferbarrier_count, bufferbarriers,
+            imagebarrier_count, imagebarriers
+        );
     }
 
     bool IsVulkanBackendAvailable()
@@ -6353,4 +7169,4 @@ namespace Alimer
     {
         return std::make_shared<GraphicsDevice_Vulkan>(window, desc);
     }
-    }
+}

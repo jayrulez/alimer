@@ -41,6 +41,7 @@ namespace Alimer
 	struct Texture;
 	struct RootSignature;
 
+    static constexpr uint32_t kMaxInflightFrames = 2;
     static constexpr uint32_t kMaxColorAttachments = 8u;
     static constexpr uint32_t kMaxVertexBufferBindings = 8u;
     static constexpr uint32_t kMaxVertexAttributes = 16u;

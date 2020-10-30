@@ -5119,6 +5119,7 @@ namespace Alimer
 
     void D3D12_CommandList::SetViewports(uint32_t viewportCount, const Viewport* pViewports)
     {
+        ALIMER_ASSERT(pViewports != nullptr);
         ALIMER_ASSERT(viewportCount <= kMaxViewportAndScissorRects);
 
         for (uint32_t i = 0; i < viewportCount; ++i)

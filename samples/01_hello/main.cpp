@@ -236,7 +236,7 @@ namespace Alimer
 
         //config.backendType = GraphicsBackendType::Direct3D11;
         //config.backendType = GraphicsBackendType::Direct3D12;
-        config.backendType = GraphicsBackendType::Vulkan;
+        //config.backendType = GraphicsBackendType::Vulkan;
 
 #ifdef _DEBUG
         // Direct3D12 has issue with debug layer
