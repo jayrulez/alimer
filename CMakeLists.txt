@@ -72,7 +72,7 @@ option(ALIMER_PHYSICS "Enable Physics system" ON)
 option(ALIMER_IMGUI "Enable ImGui system" ON)
 
 if (WIN32)
-    set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Select Graphics API [D3D12 | Vulkan]")
+    set(ALIMER_GRAPHICS_API Vulkan CACHE STRING "Select Graphics API [D3D12 | Vulkan]")
     set_property(CACHE ALIMER_GRAPHICS_API PROPERTY STRINGS D3D12 Vulkan)
 elseif (WINDOWS_STORE)
     set(ALIMER_GRAPHICS_API D3D12 CACHE STRING "Use D3D12 Graphics API" FORCE)

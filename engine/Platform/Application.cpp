@@ -30,9 +30,9 @@
 
 namespace Alimer
 {
-    static Application *s_appCurrent = nullptr;
+    static Application* s_appCurrent = nullptr;
 
-    Application::Application(const Config &config) :
+    Application::Application(const Config& config) :
         name("Alimer"), config{config}, state(State::Uninitialized), assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
@@ -42,22 +42,22 @@ namespace Alimer
 
     Application::~Application()
     {
-        //ImGuiLayer::Shutdown();
+        // ImGuiLayer::Shutdown();
         graphicsDevice.reset();
         s_appCurrent = nullptr;
     }
 
-    Application *Application::Current()
+    Application* Application::Current()
     {
         return s_appCurrent;
     }
 
-    const std::string &Application::GetName() const
+    const std::string& Application::GetName() const
     {
         return name;
     }
 
-    void Application::SetName(const std::string &name_)
+    void Application::SetName(const std::string& name_)
     {
         name = name_;
     }
@@ -117,8 +117,8 @@ namespace Alimer
         OnDraw();
     }
 
-    const Config *Application::GetConfig()
+    const Config* Application::GetConfig()
     {
         return &config;
     }
-} // namespace Alimer
+}

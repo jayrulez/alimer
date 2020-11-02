@@ -31,13 +31,13 @@ namespace Alimer
         Continue,
     };
 
-    typedef AssertFailBehavior (*AssertHandler)(const char *condition, const char *msg, const char *file, int line);
+    typedef AssertFailBehavior (*AssertHandler)(const char* condition, const char* msg, const char* file, int line);
 
     ALIMER_API AssertHandler GetAssertHandler();
     ALIMER_API void          SetAssertHandler(AssertHandler newHandler);
 
-    ALIMER_API AssertFailBehavior ReportAssertFailure(const char *condition, const char *file, int line, const char *msg, ...);
-} // namespace Alimer
+    ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line, const char* msg, ...);
+}
 
 /** Assert macro */
 #ifndef ALIMER_ENABLE_ASSERT
@@ -50,34 +50,31 @@ namespace Alimer
 
 #if ALIMER_ENABLE_ASSERT
 
-#    define ALIMER_ASSERT(cond)                                                  \
-        do                                                                       \
-        {                                                                        \
-            if (!(cond))                                                         \
-            {                                                                    \
-                if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == \
-                    Alimer::AssertFailBehavior::Halt)                            \
-                    ALIMER_DEBUG_BREAK();                                        \
-            }                                                                    \
+#    define ALIMER_ASSERT(cond)                                                                                    \
+        do                                                                                                         \
+        {                                                                                                          \
+            if (!(cond))                                                                                           \
+            {                                                                                                      \
+                if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == Alimer::AssertFailBehavior::Halt) \
+                    ALIMER_DEBUG_BREAK();                                                                          \
+            }                                                                                                      \
         } while (0)
 
-#    define ALIMER_ASSERT_MSG(cond, msg, ...)                                                     \
-        do                                                                                        \
-        {                                                                                         \
-            if (!(cond))                                                                          \
-            {                                                                                     \
-                if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-                    Alimer::AssertFailBehavior::Halt)                                             \
-                    ALIMER_DEBUG_BREAK();                                                         \
-            }                                                                                     \
+#    define ALIMER_ASSERT_MSG(cond, msg, ...)                                                                                       \
+        do                                                                                                                          \
+        {                                                                                                                           \
+            if (!(cond))                                                                                                            \
+            {                                                                                                                       \
+                if (Alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == Alimer::AssertFailBehavior::Halt) \
+                    ALIMER_DEBUG_BREAK();                                                                                           \
+            }                                                                                                                       \
         } while (0)
 
-#    define ALIMER_ASSERT_FAIL(msg, ...)                                                  \
-        do                                                                                \
-        {                                                                                 \
-            if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == \
-                Alimer::AssertFailBehavior::Halt)                                         \
-                ALIMER_DEBUG_BREAK();                                                     \
+#    define ALIMER_ASSERT_FAIL(msg, ...)                                                                                    \
+        do                                                                                                                  \
+        {                                                                                                                   \
+            if (Alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == Alimer::AssertFailBehavior::Halt) \
+                ALIMER_DEBUG_BREAK();                                                                                       \
         } while (0)
 
 #    define ALIMER_VERIFY(cond) ALIMER_ASSERT(cond)
