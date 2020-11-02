@@ -41,7 +41,8 @@ namespace alimer
         /// Check current type is type of specified type.
         bool IsTypeOf(const TypeInfo* typeInfo) const;
         /// Check current type is type of specified class type.
-        template <typename T> bool IsTypeOf() const
+        template <typename T>
+        bool IsTypeOf() const
         {
             return IsTypeOf(T::GetTypeInfoStatic());
         }
@@ -72,9 +73,11 @@ namespace alimer
     };
 
     class ObjectFactory;
-    template <class T> class ObjectFactoryImpl;
+    template <class T>
+    class ObjectFactoryImpl;
 
     class Input;
+    class Graphics;
 
     /// Base class for objects with type identification, subsystem access
     class ALIMER_API Object : public RefCounted
@@ -102,17 +105,20 @@ namespace alimer
         /// Check current instance is type of specified type.
         bool IsInstanceOf(const TypeInfo* typeInfo) const;
         /// Check current instance is type of specified class.
-        template <typename T> bool IsInstanceOf() const
+        template <typename T>
+        bool IsInstanceOf() const
         {
             return IsInstanceOf(T::GetTypeInfoStatic());
         }
         /// Cast the object to specified most derived class.
-        template <typename T> T* Cast()
+        template <typename T>
+        T* Cast()
         {
             return IsInstanceOf<T>() ? static_cast<T*>(this) : nullptr;
         }
         /// Cast the object to specified most derived class.
-        template <typename T> const T* Cast() const
+        template <typename T>
+        const T* Cast() const
         {
             return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr;
         }
@@ -120,13 +126,15 @@ namespace alimer
         /// Register an object as a subsystem that can be accessed globally. Note that the subsystems container does not own the objects.
         static void RegisterSubsystem(Object* subsystem);
         static void RegisterSubsystem(Input* subsystem);
+        static void RegisterSubsystem(Graphics* subsystem);
 
         /// Remove a subsystem by object pointer.
         static void RemoveSubsystem(Object* subsystem);
         /// Remove a subsystem by type.
         static void RemoveSubsystem(StringId32 type);
         /// Template version of removing a subsystem.
-        template <class T> static void RemoveSubsystem()
+        template <class T>
+        static void RemoveSubsystem()
         {
             RemoveSubsystem(T::GetTypeStatic());
         }
@@ -142,25 +150,22 @@ namespace alimer
         {
             return static_cast<T*>(GetSubsystem(T::GetTypeStatic()));
         }
-        template <> static Input* GetSubsystem<Input>()
-        {
-            return GetInput();
-        }
 
         /// Register an object factory, template version.
         template <class T> static void RegisterFactory()
         {
             RegisterFactory(new ObjectFactoryImpl<T>());
         }
+
         /// Create and return an object through a factory, template version.
         template <class T> static inline RefPtr<T> CreateObject()
         {
             return StaticCast<T>(CreateObject(T::GetTypeStatic()));
         }
-
-        /// Return input subsystem.
-        static Input* GetInput();
     };
+
+    template <> ALIMER_API Input* Object::GetSubsystem<Input>();
+    template <> ALIMER_API Graphics* Object::GetSubsystem<Graphics>();
 
     /// Base class for object factories.
     class ALIMER_API ObjectFactory
@@ -196,7 +201,8 @@ namespace alimer
     };
 
     /// Template implementation of the object factory.
-    template <class T> class ObjectFactoryImpl : public ObjectFactory
+    template <class T>
+    class ObjectFactoryImpl : public ObjectFactory
     {
     public:
         /// Construct.

@@ -24,13 +24,13 @@
 
 #include "Platform/Application.h"
 
-namespace Alimer
+namespace alimer
 {
     class Gui;
 
     class Editor final : public Application
     {
-       // ALIMER_OBJECT(Editor, Application);
+        ALIMER_OBJECT(Editor, Application);
 
     public:
         /// Constructor.

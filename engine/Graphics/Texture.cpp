@@ -20,11 +20,11 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/Texture.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type) :
-        device{device}, type{type}
+    Texture::Texture(GraphicsDevice& device) :
+        GraphicsResource(device, Type::Texture)
     {}
 }

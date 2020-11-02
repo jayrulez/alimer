@@ -20,19 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsDevice.h"
-#include "VulkanBackend.h"
-#define VMA_IMPLEMENTATION
-#include "vk_mem_alloc.h"
+#pragma once
+
+#include "Core/Object.h"
+#include "Graphics/GraphicsResource.h"
 
 namespace alimer
 {
-    GraphicsDevice::GraphicsDevice(Window& window) : window{window}
+    class ALIMER_API Texture final : public GraphicsResource, public Object
     {
-        VkResult result = volkInitialize();
-        if (result)
-        {
-            VK_THROW(result, "Failed to initialize volk.");
-        }
-    }
+        ALIMER_OBJECT(Texture, Object);
+
+    public:
+        Texture(GraphicsDevice& device);
+        ~Texture() = default;
+
+        void Destroy() override;
+    };
 }

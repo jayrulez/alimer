@@ -22,9 +22,10 @@
 
 #include "Platform/Application.h"
 #include "Core/Log.h"
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
 #include "IO/FileSystem.h"
 #include "Platform/Event.h"
+#include "Platform/Input.h"
 #include "Platform/Platform.h"
 #include "UI/ImGuiLayer.h"
 
@@ -46,7 +47,8 @@ namespace alimer
     Application::~Application()
     {
         // ImGuiLayer::Shutdown();
-        graphicsDevice.reset();
+        RemoveSubsystem<Input>();
+        RemoveSubsystem<Graphics>();
         s_appCurrent = nullptr;
     }
 
@@ -67,31 +69,26 @@ namespace alimer
 
     void Application::InitBeforeRun()
     {
-        // Create main window.
-        WindowFlags windowFlags = WindowFlags::None;
-        if (config.resizable)
-            windowFlags |= WindowFlags::Resizable;
-
-        if (config.fullscreen)
-            windowFlags |= WindowFlags::Fullscreen;
-
-        window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
-
-        // Init graphics device.
-        graphicsDevice = std::make_unique<GraphicsDevice>(*window);
-
-        /*GraphicsDevice::Desc deviceDesc = {};
-        deviceDesc.backendType = config.backendType;
-        deviceDesc.flags = config.deviceFlags;
-        graphicsDevice = GraphicsDevice::Create(window->GetHandle(), deviceDesc);
-        if (!graphicsDevice)
+        if (!headless)
         {
-            headless = true;
-        }
-        else
-        {
+            // Create main window.
+            WindowFlags windowFlags = WindowFlags::None;
+            if (config.resizable)
+                windowFlags |= WindowFlags::Resizable;
+
+            if (config.fullscreen)
+                windowFlags |= WindowFlags::Fullscreen;
+
+            window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
+
+            // Input module
+            RegisterSubsystem(new Input());
+
+            // Init graphics device.
+            GraphicsSettings settings{};
+            RegisterSubsystem(new Graphics(*window, settings));
             ImGuiLayer::Initialize();
-        }*/
+        }
 
         Initialize();
     }

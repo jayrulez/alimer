@@ -22,21 +22,48 @@
 
 #pragma once
 
-#include "PlatformDef.h"
+#include "Core/Object.h"
+#include "Graphics/PixelFormat.h"
 #include <string>
-//#include "Graphics/Types.h"
 
 namespace alimer
 {
     class Window;
+    struct GraphicsImpl;
 
-    /// Defines a GraphicsDevice
-    class ALIMER_API GraphicsDevice final
+#ifdef _DEBUG
+#    define DEFAULT_ENABLE_DEBUG_LAYER true
+#else
+#    define DEFAULT_ENABLE_DEBUG_LAYER false
+#endif
+
+    struct GraphicsSettings final
     {
+        std::string applicationName    = "Alimer";
+        PixelFormat colorFormat        = PixelFormat::BGRA8UnormSrgb;
+        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
+        bool        enableDebugLayer   = DEFAULT_ENABLE_DEBUG_LAYER;
+        bool        verticalSync       = false;
+    };
+
+    /// Defines a Graphics module
+    class ALIMER_API Graphics final : public Object
+    {
+        ALIMER_OBJECT(Graphics, Object);
+
     public:
-        GraphicsDevice(Window& window);
+        /// Constructor
+        Graphics(Window& window, const GraphicsSettings& settings);
+        virtual ~Graphics();
 
     private:
-        Window& window;
+        void Shutdown();
+
+        GraphicsImpl* apiData{nullptr};
+        Window&       window;
+        PixelFormat   colorFormat;
+        PixelFormat   depthStencilFormat;
+        bool          enableDebugLayer;
+        bool          verticalSync;
     };
 }

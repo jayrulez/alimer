@@ -84,9 +84,15 @@ namespace alimer
         /// Get the main window.
         Window& GetWindow() const;
 
-        AssetManager& GetAssets() { return assets; }
+        AssetManager& GetAssets()
+        {
+            return assets;
+        }
 
-        const AssetManager& GetAssets() const { return assets; }
+        const AssetManager& GetAssets() const
+        {
+            return assets;
+        }
 
     protected:
         virtual void Initialize() {}
@@ -103,7 +109,6 @@ namespace alimer
         AssetManager                    assets;
         bool                            headless = false;
         std::unique_ptr<Window>         window{nullptr};
-        std::unique_ptr<GraphicsDevice> graphicsDevice;
     };
 
     extern Application* CreateApplication(void);

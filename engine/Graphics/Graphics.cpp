@@ -20,7 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsDevice.h"
+#include "Graphics/Graphics.h"
+#include "Core/Log.h"
 
 namespace alimer
-{}
+{
+    Graphics ::~Graphics()
+    {
+        Shutdown();
+    }
+}
