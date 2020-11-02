@@ -28,15 +28,15 @@
 //#include "RHI/RHITypes.h"
 #include <memory>
 
-namespace Alimer
+namespace alimer
 {
     struct Config
     {
         const char* title;
-        uint32_t width = 1280;
-        uint32_t height = 720;
-        bool fullscreen = false;
-        bool resizable = true;
+        uint32_t    width      = 1280;
+        uint32_t    height     = 720;
+        bool        fullscreen = false;
+        bool        resizable  = true;
 
         // GraphicsBackendType backendType = GraphicsBackendType::Count;
         // GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
@@ -82,40 +82,27 @@ namespace Alimer
         const Config* GetConfig();
 
         /// Get the main window.
-        Window* GetMainWindow() const
-        {
-            return window.get();
-        }
+        Window& GetWindow() const;
 
-        AssetManager& GetAssets()
-        {
-            return assets;
-        }
+        AssetManager& GetAssets() { return assets; }
 
-        const AssetManager& GetAssets() const
-        {
-            return assets;
-        }
+        const AssetManager& GetAssets() const { return assets; }
 
     protected:
-        virtual void Initialize()
-        {
-        }
-        virtual void OnDraw()
-        {
-        }
+        virtual void Initialize() {}
+        virtual void OnDraw() {}
 
     private:
         void InitBeforeRun();
 
         std::string name{};
-        Config config;
+        Config      config;
 
     protected:
-        State state;
-        AssetManager assets;
-        bool headless = false;
-        UniquePtr<Window> window{nullptr};
+        State                           state;
+        AssetManager                    assets;
+        bool                            headless = false;
+        std::unique_ptr<Window>         window{nullptr};
         std::unique_ptr<GraphicsDevice> graphicsDevice;
     };
 

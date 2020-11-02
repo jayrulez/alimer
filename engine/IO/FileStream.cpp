@@ -23,33 +23,17 @@
 #include "IO/FileStream.h"
 #include "PlatformIncl.h"
 
-namespace Alimer
+namespace alimer
 {
 #ifdef _WIN32
-    static const wchar_t* openModes[] =
-    {
-        L"rb",
-        L"wb",
-        L"rb+"
-    };
+    static const wchar_t* openModes[] = {L"rb", L"wb", L"rb+"};
 #else
-    static const char* openModes[] =
-    {
-        "rb",
-        "wb",
-        "rb+"
-    };
+    static const char* openModes[] = {"rb", "wb", "rb+"};
 #endif
 
-    FileStream::FileStream()
-        : handle(nullptr)
-        , mode(FileMode::Read)
-        , length(0)
-    {
-    }
+    FileStream::FileStream() : handle(nullptr), mode(FileMode::Read), length(0) {}
 
-    FileStream::FileStream(const String& path, FileMode mode)
-        : mode{ mode }
+    FileStream::FileStream(const std::string& path, FileMode mode) : mode{mode}
     {
 #ifdef _WIN32
         handle = _wfopen(ToUtf16(path).c_str(), openModes[static_cast<uint32>(mode)]);
@@ -57,24 +41,24 @@ namespace Alimer
         handle = fopen(path.c_str(), openModes[static_cast<uint32>(mode)]);
 #endif
 
-        fseek((FILE*)handle, 0, SEEK_END);
-        length = ftell((FILE*)handle);
-        fseek((FILE*)handle, 0, SEEK_SET);
+        fseek((FILE*) handle, 0, SEEK_END);
+        length = ftell((FILE*) handle);
+        fseek((FILE*) handle, 0, SEEK_SET);
     }
 
     FileStream::FileStream(FileStream&& src) noexcept
     {
-        handle = src.handle;
-        mode = src.mode;
-        length = src.length;
+        handle     = src.handle;
+        mode       = src.mode;
+        length     = src.length;
         src.handle = nullptr;
     }
 
     FileStream& FileStream::operator=(FileStream&& src) noexcept
     {
-        handle = src.handle;
-        mode = src.mode;
-        length = src.length;
+        handle     = src.handle;
+        mode       = src.mode;
+        length     = src.length;
         src.handle = nullptr;
         return *this;
     }
@@ -88,11 +72,11 @@ namespace Alimer
     {
         if (handle != nullptr)
         {
-            fclose((FILE*)handle);
+            fclose((FILE*) handle);
         }
 
         handle = nullptr;
-        mode = FileMode::Read;
+        mode   = FileMode::Read;
     }
 
     int64_t FileStream::Length() const
@@ -102,7 +86,7 @@ namespace Alimer
 
     int64_t FileStream::Position() const
     {
-        return ftell((FILE*)handle);
+        return ftell((FILE*) handle);
     }
 
     bool FileStream::CanSeek() const
@@ -122,19 +106,19 @@ namespace Alimer
 
     int64_t FileStream::Seek(int64_t position)
     {
-        fseek((FILE*)handle, (long)position, SEEK_SET);
+        fseek((FILE*) handle, (long) position, SEEK_SET);
         return position;
     }
 
     int64_t FileStream::Read(void* buffer, int64_t length)
     {
-        size_t ret = fread(buffer, length, 1, (FILE*)handle);
+        size_t ret = fread(buffer, length, 1, (FILE*) handle);
         return static_cast<int64_t>(ret);
     }
 
     uint64_t FileStream::Write(const void* buffer, uint64_t length)
     {
-        size_t ret = fwrite(buffer, length, 1, (FILE*)handle);
+        size_t ret = fwrite(buffer, length, 1, (FILE*) handle);
         return static_cast<int64_t>(ret);
     }
 }

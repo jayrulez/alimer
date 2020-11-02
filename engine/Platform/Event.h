@@ -24,7 +24,7 @@
 
 #include "PlatformDef.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class EventType : uint8_t
     {

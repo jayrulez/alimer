@@ -22,11 +22,11 @@
 
 #pragma once
 
+#include "Core/Containers.h"
 #include "Core/String.h"
 #include "Core/StringId.h"
-#include "Core/Containers.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Abstract stream for reading and writing.
     class ALIMER_API Stream
@@ -90,14 +90,14 @@ namespace Alimer
         }
 
         /// Read a byte buffer.
-        Vector<uint8_t> ReadBytes(uint32_t count = 0);
+        std::vector<uint8_t> ReadBytes(uint32_t count = 0);
 
         /// Read a byte buffer, with size prepended as a VLE value.
-        Vector<uint8_t> ReadBuffer();
+        std::vector<uint8_t> ReadBuffer();
         /// Write a four-letter file ID. If the string is not long enough, spaces will be appended.
         void WriteFileID(const String& value);
         /// Write a byte buffer, with size encoded as VLE.
-        void WriteBuffer(const Vector<uint8_t>& buffer);
+        void WriteBuffer(const std::vector<uint8_t>& buffer);
         /// Write a variable-length encoded unsigned integer, which can use 29 bits maximum.
         void WriteVLE(uint32_t value);
         /// Write a text line. Char codes 13 & 10 will be automatically appended.
@@ -110,10 +110,10 @@ namespace Alimer
         }
     };
 
-    template<> ALIMER_API bool Stream::Read();
-    template<> ALIMER_API String Stream::Read();
-    template<> ALIMER_API StringId32 Stream::Read();
-    template<> ALIMER_API void Stream::Write(const bool& value);
-    template<> ALIMER_API void Stream::Write(const String& value);
-    template<> ALIMER_API void Stream::Write(const StringId32& value);
+    template <> ALIMER_API bool       Stream::Read();
+    template <> ALIMER_API String     Stream::Read();
+    template <> ALIMER_API StringId32 Stream::Read();
+    template <> ALIMER_API void       Stream::Write(const bool& value);
+    template <> ALIMER_API void       Stream::Write(const String& value);
+    template <> ALIMER_API void       Stream::Write(const StringId32& value);
 }

@@ -25,10 +25,9 @@
 #include "Math/MathHelper.h"
 #include "Math/Size.h"
 
-namespace Alimer
+namespace alimer
 {
-    template <typename T>
-    struct ALIMER_API TRect
+    template <typename T> struct ALIMER_API TRect
     {
     public:
         union
@@ -57,10 +56,7 @@ namespace Alimer
         T Bottom() const { return y + height; }
 
         /// Gets a value that indicates whether the rectangle is empty.
-        ALIMER_FORCE_INLINE bool IsEmpty() const
-        {
-            return (x == 0 && y == 0 && width == 0 && height == 0);
-        }
+        ALIMER_FORCE_INLINE bool IsEmpty() const { return (x == 0 && y == 0 && width == 0 && height == 0); }
 
         /*
         /// Return as string.
@@ -70,6 +66,6 @@ namespace Alimer
         }*/
     };
 
-    using Rect = TRect<float>;
+    using Rect  = TRect<float>;
     using RectI = TRect<int32_t>;
 }

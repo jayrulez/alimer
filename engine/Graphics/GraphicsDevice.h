@@ -26,16 +26,17 @@
 #include <string>
 //#include "Graphics/Types.h"
 
-namespace Alimer
+namespace alimer
 {
-    class GraphicsDevice;
+    class Window;
 
-    /**
-    * Defines a GraphicsDevice
-    */
+    /// Defines a GraphicsDevice
     class ALIMER_API GraphicsDevice final
     {
-      public:
-    };
+    public:
+        GraphicsDevice(Window& window);
 
-} // namespace Alimer
+    private:
+        Window& window;
+    };
+}

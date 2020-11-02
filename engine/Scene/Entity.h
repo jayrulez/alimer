@@ -26,7 +26,7 @@
 #include "Core/String.h"
 #include "Math/Matrix4x4.h"
 
-namespace Alimer
+namespace alimer
 {
     class EntityManager;
 
@@ -49,9 +49,9 @@ namespace Alimer
     private:
         void SetEntityManager(EntityManager* newManager);
 
-        std::string  name;
+        std::string name;
         /// Parent scene node.
-        Entity* parent{ nullptr };
-        EntityManager* manager{ nullptr };
+        Entity*        parent{nullptr};
+        EntityManager* manager{nullptr};
     };
 }

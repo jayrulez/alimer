@@ -179,7 +179,7 @@ if (ALIMER_D3D12)
 endif ()
 
 if (ALIMER_VULKAN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan spirv-cross-core)
 endif()
 
 if (ALIMER_IMGUI)

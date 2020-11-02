@@ -25,7 +25,7 @@
 #include "Scene/Entity.h"
 #include <unordered_set>
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API EntityManager
     {

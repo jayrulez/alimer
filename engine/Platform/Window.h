@@ -22,23 +22,23 @@
 
 #pragma once
 
-#include "Platform/WindowHandle.h"
 #include "Core/Object.h"
 #include "Math/Size.h"
+#include "Platform/WindowHandle.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class WindowFlags : uint32_t
     {
-        None = 0,
-        Fullscreen = 1 << 0,
+        None              = 0,
+        Fullscreen        = 1 << 0,
         FullscreenDesktop = 1 << 1,
-        Hidden = 1 << 2,
-        Borderless = 1 << 3,
-        Resizable = 1 << 4,
-        Minimized = 1 << 5,
-        Maximized = 1 << 6,
-        HighDpi = 1 << 7,
+        Hidden            = 1 << 2,
+        Borderless        = 1 << 3,
+        Resizable         = 1 << 4,
+        Minimized         = 1 << 5,
+        Maximized         = 1 << 6,
+        HighDpi           = 1 << 7,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
@@ -52,34 +52,35 @@ namespace Alimer
         constexpr static const int Centered = std::numeric_limits<int32_t>::max();
 
         /// Constructor.
-        Window(const String& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
+        Window(const String& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u,
+               WindowFlags flags = WindowFlags::None);
 
         /// Destructor.
         virtual ~Window() = default;
 
-        bool IsOpen() const noexcept;
+        bool     IsOpen() const noexcept;
         uint32_t GetId() const noexcept;
 
         /// Get the native window handle.
         WindowHandle GetHandle() const;
 
-        void SetBrightness(float value);
+        void  SetBrightness(float value);
         float GetBrightness() const noexcept;
 
-        void SetSize(int32_t width, int32_t height) noexcept;
-        void SetSize(const SizeI& size) noexcept;
+        void  SetSize(int32_t width, int32_t height) noexcept;
+        void  SetSize(const SizeI& size) noexcept;
         SizeI GetSize() const noexcept;
 
-        void SetMaximumSize(int32_t width, int32_t height) noexcept;
-        void SetMaximumSize(const SizeI& size) noexcept;
+        void  SetMaximumSize(int32_t width, int32_t height) noexcept;
+        void  SetMaximumSize(const SizeI& size) noexcept;
         SizeI GetMaximumSize() const noexcept;
 
-        void SetMinimumSize(int32_t width, int32_t height) noexcept;
-        void SetMinimumSize(const SizeI& size) noexcept;
+        void  SetMinimumSize(int32_t width, int32_t height) noexcept;
+        void  SetMinimumSize(const SizeI& size) noexcept;
         SizeI GetMinimumSize() const noexcept;
 
         String GetTitle() const noexcept;
-        void SetTitle(const String& str) noexcept;
+        void   SetTitle(const String& str) noexcept;
 
     private:
         std::unique_ptr<WindowImpl> impl;

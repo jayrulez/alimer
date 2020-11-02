@@ -22,13 +22,10 @@
 
 #include "Math/Quaternion.h"
 
-namespace Alimer
+namespace alimer
 {
-    const Quaternion Quaternion::Zero = { 0.0f, 0.0f, 0.0f, 0.0f };
-    const Quaternion Quaternion::Identity = { 0.0f, 0.0f, 0.0f, 1.0f };
+    const Quaternion Quaternion::Zero     = {0.0f, 0.0f, 0.0f, 0.0f};
+    const Quaternion Quaternion::Identity = {0.0f, 0.0f, 0.0f, 1.0f};
 
-    std::string Quaternion::ToString() const
-    {
-        return fmt::format("{} {} {} {}", x, y, z, w);
-    }
+    std::string Quaternion::ToString() const { return fmt::format("{} {} {} {}", x, y, z, w); }
 }

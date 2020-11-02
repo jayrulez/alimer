@@ -24,7 +24,7 @@
 
 #include "Core/Math.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Class specifying a four-dimensional quaternion.
     struct ALIMER_API Quaternion
@@ -50,8 +50,8 @@ namespace Alimer
         Quaternion& operator=(Quaternion&&) = default;
 
         // Comparison operators
-        bool operator == (const Quaternion& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
-        bool operator != (const Quaternion& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
+        bool operator==(const Quaternion& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
+        bool operator!=(const Quaternion& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
 
         /// Return float data.
         const float* Data() const { return &x; }

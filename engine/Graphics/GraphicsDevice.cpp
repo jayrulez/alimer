@@ -22,6 +22,5 @@
 
 #include "Graphics/GraphicsDevice.h"
 
-namespace Alimer
-{
-} // namespace Alimer
+namespace alimer
+{}

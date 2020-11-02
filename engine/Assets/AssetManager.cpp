@@ -26,18 +26,15 @@
 /* Built-in loaders */
 #include "TextureLoader.h"
 
-namespace Alimer
+namespace alimer
 {
-    AssetManager::AssetManager(const std::string& rootDirectory)
-        : rootDirectory{ rootDirectory }
+    AssetManager::AssetManager(const std::string& rootDirectory) :
+        rootDirectory{rootDirectory}
     {
         AddLoader(std::make_unique<TextureLoader>(*this));
     }
 
-    AssetManager::~AssetManager()
-    {
-
-    }
+    AssetManager::~AssetManager() {}
 
     void AssetManager::AddLoader(std::unique_ptr<AssetLoader> loader)
     {

@@ -21,23 +21,20 @@
 //
 
 #include "Core/Log.h"
-#include "Platform/Platform.h"
 #include "Platform/Application.h"
+#include "Platform/Platform.h"
 
 namespace
 {
-    std::unique_ptr<Alimer::Application> g_application;
+    std::unique_ptr<alimer::Application> g_application;
 }
 
 #if defined(__ANDROID__)
-void android_main(android_app* state)
-{
-}
-#elif ALIMER_PLATFORM_WINDOWS 
-#   include "PlatformIncl.h"
-#   include <DirectXMath.h>
-#   include <objbase.h>
-
+void android_main(android_app* state) {}
+#elif ALIMER_PLATFORM_WINDOWS
+#    include "PlatformIncl.h"
+#    include <DirectXMath.h>
+#    include <objbase.h>
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
 {
@@ -54,24 +51,25 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
     if (FAILED(hr))
         return EXIT_FAILURE;
 
-#ifdef _DEBUG
-    if (AllocConsole()) {
+#    ifdef _DEBUG
+    if (AllocConsole())
+    {
         FILE* fp;
         freopen_s(&fp, "conin$", "r", stdin);
         freopen_s(&fp, "conout$", "w", stdout);
         freopen_s(&fp, "conout$", "w", stderr);
     }
-#endif
+#    endif
 
-    Alimer::Platform::ParseArguments(GetCommandLineW());
+    alimer::Platform::ParseArguments(GetCommandLineW());
 
     // Only error handle in release
-#ifndef DEBUG
+#    ifndef DEBUG
     try
     {
-#endif
+#    endif
 
-        g_application = std::unique_ptr<Alimer::Application>(Alimer::CreateApplication());
+        g_application = std::unique_ptr<alimer::Application>(alimer::CreateApplication());
 
         if (g_application)
         {
@@ -80,30 +78,25 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 
         g_application.reset();
 
-#ifndef DEBUG
+#    ifndef DEBUG
     }
     catch (const std::exception& e)
     {
         LOGE(e.what());
         return EXIT_FAILURE;
     }
-#endif
+#    endif
 
-#if ALIMER_PLATFORM_WINDOWS 
+#    if ALIMER_PLATFORM_WINDOWS
     CoUninitialize();
-#endif
+#    endif
 
     return EXIT_SUCCESS;
 }
 
 #elif ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
-#   include "platform/uwp/windows_platform.h"
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
-{
-}
+#    include "platform/uwp/windows_platform.h"
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {}
 #else
-int main(int argc, char* argv[])
-{
-
-}
+int main(int argc, char* argv[]) {}
 #endif

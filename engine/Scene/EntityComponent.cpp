@@ -24,9 +24,7 @@
 #include "Scene/Entity.h"
 #include "Scene/EntityManager.h"
 
-namespace Alimer
+namespace alimer
 {
-    EntityComponent::EntityComponent()
-    {
-    }
+    EntityComponent::EntityComponent() {}
 }

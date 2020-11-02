@@ -26,7 +26,7 @@
 #include "Core/String.h"
 #include "Math/Matrix4x4.h"
 
-namespace Alimer
+namespace alimer
 {
     class Entity;
 
@@ -47,6 +47,6 @@ namespace Alimer
 
     private:
         /// owning entity.
-        Entity* entity{ nullptr };
+        Entity* entity{nullptr};
     };
 }

@@ -21,23 +21,17 @@
 //
 
 #include "Core/StringId.h"
-#include "Core/String.h"
 #include "Core/Hash.h"
+#include "Core/String.h"
 
-namespace Alimer
+namespace alimer
 {
     const StringId32 StringId32::Zero;
 
     /* StringId32 */
-    StringId32::StringId32(const char* str) noexcept
-    {
-        value = Murmur32(str, (uint32_t)strlen(str), 0);
-    }
+    StringId32::StringId32(const char* str) noexcept { value = Murmur32(str, (uint32_t) strlen(str), 0); }
 
-    StringId32::StringId32(const std::string& str) noexcept
-    {
-        value = Murmur32(str.c_str(), (uint32_t)str.length(), 0);
-    }
+    StringId32::StringId32(const std::string& str) noexcept { value = Murmur32(str.c_str(), (uint32_t) str.length(), 0); }
 
     std::string StringId32::ToString() const
     {

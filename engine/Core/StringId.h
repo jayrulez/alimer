@@ -24,7 +24,7 @@
 
 #include "Core/String.h"
 
-namespace Alimer
+namespace alimer
 {
     /// 32-bit hash value for a string.
     class ALIMER_API StringId32
@@ -103,9 +103,9 @@ namespace Alimer
 namespace std
 {
     template<>
-    class hash<Alimer::StringId32> {
+    class hash<alimer::StringId32> {
     public:
-        size_t operator()(const Alimer::StringId32& value) const
+        size_t operator()(const alimer::StringId32& value) const
         {
             return value.Value();
         }

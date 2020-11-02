@@ -23,19 +23,11 @@
 #include "Scene/Entity.h"
 #include "Scene/EntityManager.h"
 
-namespace Alimer
+namespace alimer
 {
-    Entity::Entity(const std::string& name)
-        : name{ name }
-    {
-    }
+    Entity::Entity(const std::string& name) : name{name} {}
 
-    Entity::~Entity()
-    {
-    }
+    Entity::~Entity() {}
 
-    void Entity::SetEntityManager(EntityManager* newManager)
-    {
-        manager = newManager;
-    }
+    void Entity::SetEntityManager(EntityManager* newManager) { manager = newManager; }
 }

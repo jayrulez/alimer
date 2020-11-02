@@ -30,7 +30,7 @@ struct HWND__;
 struct IUnknown;
 #endif
 
-namespace Alimer
+namespace alimer
 {
 #if ALIMER_PLATFORM_WINDOWS
     using WindowHandle = HWND__*;
@@ -40,7 +40,7 @@ namespace Alimer
     struct WindowHandle
     {
         Display* display;
-        Window window;
+        Window   window;
     };
 #endif
 }

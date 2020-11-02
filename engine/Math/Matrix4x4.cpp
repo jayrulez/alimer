@@ -22,21 +22,10 @@
 
 #include "Math/Matrix4x4.h"
 
-namespace Alimer
+namespace alimer
 {
-    const Matrix4x4 Matrix4x4::Zero = {
-        0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 0.0f
-    };
-
-    const Matrix4x4 Matrix4x4::Identity = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
+    const Matrix4x4 Matrix4x4::Zero     = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    const Matrix4x4 Matrix4x4::Identity = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
     Matrix4x4::Matrix4x4(const float* data) noexcept
     {
@@ -68,9 +57,9 @@ namespace Alimer
         ALIMER_ASSERT(result);
         ALIMER_ASSERT(zFarPlane != zNearPlane);
 
-        float yScale = 1.0f / tan(fieldOfView * 0.5f);
-        float xScale = yScale / aspectRatio;
-        const float negFarRange = Alimer::IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
+        float       yScale      = 1.0f / tan(fieldOfView * 0.5f);
+        float       xScale      = yScale / aspectRatio;
+        const float negFarRange = IsInf(zFarPlane) ? -1.0f : zFarPlane / (zNearPlane - zFarPlane);
 
         result->m11 = xScale;
         result->m12 = 0.0f;
@@ -117,7 +106,8 @@ namespace Alimer
         result->m44 = 1.0f;
     }
 
-    void Matrix4x4::CreateOrthographicOffCenter(float left, float right, float bottom, float top, float zNearPlane, float zFarPlane, Matrix4x4* result)
+    void Matrix4x4::CreateOrthographicOffCenter(float left, float right, float bottom, float top, float zNearPlane, float zFarPlane,
+                                                Matrix4x4* result)
     {
         ALIMER_ASSERT(result);
         ALIMER_ASSERT(right != left);
@@ -141,10 +131,7 @@ namespace Alimer
 
     std::string Matrix4x4::ToString() const
     {
-        return fmt::format("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
-            m11, m12, m13, m14,
-            m21, m22, m23, m24,
-            m31, m32, m33, m34,
-            m41, m42, m43, m44);
+        return fmt::format("{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}", m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34,
+                           m41, m42, m43, m44);
     }
 }

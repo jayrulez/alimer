@@ -22,11 +22,11 @@
 
 #include "Platform/Event.h"
 #if defined(GLFW_BACKEND)
-#   include "Platform/glfw/GLFW_Window.h"
+#    include "Platform/glfw/GLFW_Window.h"
 #endif
 #include <deque>
 
-namespace Alimer
+namespace alimer
 {
     namespace
     {

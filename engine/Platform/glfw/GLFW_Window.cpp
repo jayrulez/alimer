@@ -20,20 +20,21 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
 #include "GLFW_Window.h"
+#include "Core/Log.h"
 #include "Platform/Event.h"
 
 #ifdef _WIN32
-#   define GLFW_EXPOSE_NATIVE_WIN32
+#    define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 #include <GLFW/glfw3native.h>
 
-namespace Alimer
+namespace alimer
 {
     namespace
     {
         uint32 s_windowCount = 0;
+
         void OnGLFWError(int code, const char* description)
         {
             LOGE("GLFW Error {} - {}", description, code);
@@ -45,11 +46,10 @@ namespace Alimer
             return windows;
         }
 
-
         inline uint32_t RegisterWindow(WindowImpl* impl)
         {
-            static uint32_t id{ 0 };
-            auto& windows = GetWindows();
+            static uint32_t id{0};
+            auto&           windows = GetWindows();
             windows.emplace_back(impl);
             return ++id;
         }
@@ -57,16 +57,13 @@ namespace Alimer
         inline void UnregisterWindow(uint32_t id)
         {
             auto& windows = GetWindows();
-            windows.erase(std::remove_if(std::begin(windows), std::end(windows),
-                [id](const auto& win) { return win->GetId() == id; }),
-                std::end(windows)
-            );
+            windows.erase(std::remove_if(std::begin(windows), std::end(windows), [id](const auto& win) { return win->GetId() == id; }),
+                          std::end(windows));
         }
     }
 
-    WindowImpl::WindowImpl(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
-        : title{ title }
-        , id{}
+    WindowImpl::WindowImpl(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags) :
+        title{title}, id{}
     {
         // Init glfw at first call
         if (s_windowCount == 0)
@@ -103,7 +100,7 @@ namespace Alimer
 
         if (any(flags & WindowFlags::FullscreenDesktop))
         {
-            monitor = glfwGetPrimaryMonitor();
+            monitor   = glfwGetPrimaryMonitor();
             auto mode = glfwGetVideoMode(monitor);
 
             glfwWindowHint(GLFW_RED_BITS, mode->redBits);
@@ -134,7 +131,8 @@ namespace Alimer
 
         s_windowCount--;
 
-        if (s_windowCount == 0) {
+        if (s_windowCount == 0)
+        {
             glfwTerminate();
         }
     }
@@ -151,14 +149,14 @@ namespace Alimer
 #elif defined(GLFW_EXPOSE_NATIVE_X11)
         WindowHandle handle{};
         handle.display = glfwGetX11Display(window);
-        handle.window = glfwGetX11Window(window);
+        handle.window  = glfwGetX11Window(window);
         return handle;
 #elif defined(GLFW_EXPOSE_NATIVE_COCOA)
         return glfwGetCocoaWindow(window);
 #elif defined(GLFW_EXPOSE_NATIVE_WAYLAND)
         WindowHandle handle{};
         handle.display = glfwGetWaylandDisplay();
-        handle.window = glfwGetWaylandWindow(window);
+        handle.window  = glfwGetWaylandWindow(window);
         return handle;
 #else
         return nullptr;
@@ -172,13 +170,14 @@ namespace Alimer
         static bool reported = false;
         if (!reported)
         {
-            auto& windows = GetWindows();
-            auto allClosed = std::all_of(std::begin(windows), std::end(windows), [](const auto& e) { return glfwWindowShouldClose(e->GetGLFWwindow()); });
+            auto& windows   = GetWindows();
+            auto  allClosed = std::all_of(std::begin(windows), std::end(windows),
+                                         [](const auto& e) { return glfwWindowShouldClose(e->GetGLFWwindow()); });
             if (allClosed)
             {
                 reported = true;
 
-                Event evt {};
+                Event evt{};
                 evt.type = EventType::Quit;
                 PushEvent(std::move(evt));
             }

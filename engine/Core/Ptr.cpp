@@ -22,10 +22,9 @@
 
 #include "Core/Ptr.h"
 
-namespace Alimer
+namespace alimer
 {
-    RefCounted::RefCounted()
-        : refCount(new RefCount())
+    RefCounted::RefCounted() : refCount(new RefCount())
     {
         // Hold a weak ref to self to avoid possible double delete of the refcount
         refCount->weakRefs++;
@@ -67,14 +66,11 @@ namespace Alimer
         return refs;
     }
 
-    int32_t RefCounted::Refs() const
-    {
-        return refCount->refs;
-    }
+    int32_t RefCounted::Refs() const { return refCount->refs; }
 
     int32_t RefCounted::WeakRefs() const
     {
         // Subtract one to not return the internally held reference
         return refCount->weakRefs - 1;
     }
-} 
+}

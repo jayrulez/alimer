@@ -24,18 +24,14 @@
 
 #include "Core/Object.h"
 
-namespace Alimer
+namespace alimer
 {
     class AssetManager;
 
-    class ALIMER_API AssetLoader 
+    class ALIMER_API AssetLoader
     {
     public:
-        AssetLoader(AssetManager& assets, StringId32 type)
-            : assets{ assets }
-            , type{ type }
-        {
-        }
+        AssetLoader(AssetManager& assets, StringId32 type) : assets{assets}, type{type} {}
 
         virtual ~AssetLoader() = default;
 
@@ -46,10 +42,13 @@ namespace Alimer
         AssetLoader& operator=(AssetLoader&&) = delete;
 
         /// Return type of the loaded object.
-        StringId32 GetType() const noexcept { return type; }
+        StringId32 GetType() const noexcept
+        {
+            return type;
+        }
 
     protected:
         AssetManager& assets;
-        StringId32 type;
+        StringId32    type;
     };
 }

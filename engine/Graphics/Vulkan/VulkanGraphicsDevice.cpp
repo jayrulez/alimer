@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020 Amer Koleci and contributors.
+// Copyright (c) 2019-2020 Amer Koleci and contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,41 +20,19 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "PlatformDef.h"
+#include "Graphics/GraphicsDevice.h"
+#include "VulkanBackend.h"
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
 
 namespace alimer
 {
-    class ALIMER_API Stopwatch final
+    GraphicsDevice::GraphicsDevice(Window& window) : window{window}
     {
-    public:
-        static constexpr uint64 TicksPerMillisecond = 10000;
-        static constexpr uint64 TicksPerSecond      = 10000000;
-
-        /// Constructor.
-        Stopwatch();
-        /// Destructor.
-        ~Stopwatch();
-
-        void Reset();
-        void Start();
-        void Stop();
-        void Restart();
-
-        bool IsRunning() const
+        VkResult result = volkInitialize();
+        if (result)
         {
-            return isRunning;
+            VK_THROW(result, "Failed to initialize volk.");
         }
-        uint64 GetElapsedTicks() const;
-        uint64 GetElapsedMilliseconds() const;
-
-        static uint64 GetFrequency();
-        static uint64 GetTimestamp();
-
-    private:
-        bool   isRunning;
-        uint64 elapsed;
-        uint64 startTimeStamp;
-    };
+    }
 }

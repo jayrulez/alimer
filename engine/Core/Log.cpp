@@ -23,33 +23,25 @@
 #include "Core/Log.h"
 
 #if defined(__APPLE__)
-#  include <TargetConditionals.h>
+#    include <TargetConditionals.h>
 #endif
 
 #if defined(__ANDROID__)
-#  include <android/log.h>
+#    include <android/log.h>
 #elif TARGET_OS_IOS || TARGET_OS_TV
-#  include <sys/syslog.h>
+#    include <sys/syslog.h>
 #elif TARGET_OS_MAC || defined(__linux__)
-#  include <unistd.h>
+#    include <unistd.h>
 #elif defined(_WIN32)
-#   include "PlatformIncl.h"
-#   include <array>
+#    include "PlatformIncl.h"
+#    include <array>
 #elif defined(__EMSCRIPTEN__)
-#  include <emscripten.h>
+#    include <emscripten.h>
 #endif
 
-namespace Alimer::Log
+namespace alimer::Log
 {
-    static const char* LogLevelPefixes[uint32_t(Level::Count)] = {
-        "VERBOSE",
-        "DEBUG",
-        "INFO",
-        "WARN",
-        "ERROR",
-        "FATAL",
-        "OFF"
-    };
+    static const char* LogLevelPefixes[uint32_t(Level::Count)] = {"VERBOSE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "OFF"};
 
 #if defined(_DEBUG) && defined(_WIN32)
     WORD SetConsoleForegroundColor(HANDLE consoleOutput, WORD attribs)
@@ -61,7 +53,7 @@ namespace Alimer::Log
         back_color &= static_cast<WORD>(~(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY));
         // keep the background color unchanged
         ::SetConsoleTextAttribute(consoleOutput, attribs | back_color);
-        return orig_buffer_info.wAttributes; // return orig attribs
+        return orig_buffer_info.wAttributes;        // return orig attribs
     }
 #endif
 
@@ -80,42 +72,41 @@ namespace Alimer::Log
         void Log(Level level, const std::string& message);
 
     private:
-        bool ShouldLog(Level msgLevel) const
-        {
-            return msgLevel >= level;
-        }
+        bool ShouldLog(Level msgLevel) const { return msgLevel >= level; }
 
         std::string name;
-        Level level;
+        Level       level;
 
 #if defined(_DEBUG) && defined(_WIN32)
         std::array<WORD, size_t(Level::Count)> consoleColors;
 #endif
     };
 
-    Logger::Logger(const std::string& name_)
-        : name(name_)
+    Logger::Logger(const std::string& name_) :
+        name(name_)
 #ifdef _DEBUG
-        , level(Level::Debug)
+        ,
+        level(Level::Debug)
 #else
-        , level(Level::Info)
+        ,
+        level(Level::Info)
 #endif
     {
 #if defined(_DEBUG) && defined(_WIN32)
-        const WORD BOLD = FOREGROUND_INTENSITY;
-        const WORD RED = FOREGROUND_RED;
-        const WORD GREEN = FOREGROUND_GREEN;
-        const WORD CYAN = FOREGROUND_GREEN | FOREGROUND_BLUE;
-        const WORD WHITE = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+        const WORD BOLD   = FOREGROUND_INTENSITY;
+        const WORD RED    = FOREGROUND_RED;
+        const WORD GREEN  = FOREGROUND_GREEN;
+        const WORD CYAN   = FOREGROUND_GREEN | FOREGROUND_BLUE;
+        const WORD WHITE  = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
         const WORD YELLOW = FOREGROUND_RED | FOREGROUND_GREEN;
 
-        consoleColors[(uint32_t)Level::Verbose] = WHITE;
-        consoleColors[(uint32_t)Level::Debug] = CYAN;
-        consoleColors[(uint32_t)Level::Info] = GREEN;
-        consoleColors[(uint32_t)Level::Warn] = YELLOW | BOLD;
-        consoleColors[(uint32_t)Level::Error] = RED | BOLD;                         // red bold
-        consoleColors[(uint32_t)Level::Fatal] = BACKGROUND_RED | WHITE | BOLD; // white bold on red background
-        consoleColors[(uint32_t)Level::Off] = 0;
+        consoleColors[(uint32_t) Level::Verbose] = WHITE;
+        consoleColors[(uint32_t) Level::Debug]   = CYAN;
+        consoleColors[(uint32_t) Level::Info]    = GREEN;
+        consoleColors[(uint32_t) Level::Warn]    = YELLOW | BOLD;
+        consoleColors[(uint32_t) Level::Error]   = RED | BOLD;                           // red bold
+        consoleColors[(uint32_t) Level::Fatal]   = BACKGROUND_RED | WHITE | BOLD;        // white bold on red background
+        consoleColors[(uint32_t) Level::Off]     = 0;
 #endif
     }
 
@@ -129,43 +120,70 @@ namespace Alimer::Log
         int priority = 0;
         switch (level)
         {
-        case LogLevel::Verbose: priority = ANDROID_LOG_VERBOSE; break;
-        case LogLevel::Debug: priority = ANDROID_LOG_DEBUG; break;
-        case LogLevel::Info: priority = ANDROID_LOG_INFO; break;
-        case LogLevel::Warn: priority = ANDROID_LOG_WARN; break;
-        case LogLevel::Error: priority = ANDROID_LOG_ERROR; break;
-        case LogLevel::Fatal: priority = ANDROID_LOG_FATAL; break;
-        default: return;
+            case LogLevel::Verbose:
+                priority = ANDROID_LOG_VERBOSE;
+                break;
+            case LogLevel::Debug:
+                priority = ANDROID_LOG_DEBUG;
+                break;
+            case LogLevel::Info:
+                priority = ANDROID_LOG_INFO;
+                break;
+            case LogLevel::Warn:
+                priority = ANDROID_LOG_WARN;
+                break;
+            case LogLevel::Error:
+                priority = ANDROID_LOG_ERROR;
+                break;
+            case LogLevel::Fatal:
+                priority = ANDROID_LOG_FATAL;
+                break;
+            default:
+                return;
         }
         __android_log_print(priority, name.c_str(), "%s", message.c_str());
 #elif TARGET_OS_IOS || TARGET_OS_TV
         int priority = 0;
         switch (level)
         {
-        case LogLevel::Verbose: priority = LOG_DEBUG; break;
-        case LogLevel::Debug: priority = LOG_DEBUG; break;
-        case LogLevel::Info: priority = LOG_INFO; break;
-        case LogLevel::Warn: priority = LOG_WARNING; break;
-        case LogLevel::Error: priority = LOG_ERR; break;
-        case LogLevel::Fatal: priority = LOG_CRIT; break;
-        default: return;
+            case LogLevel::Verbose:
+                priority = LOG_DEBUG;
+                break;
+            case LogLevel::Debug:
+                priority = LOG_DEBUG;
+                break;
+            case LogLevel::Info:
+                priority = LOG_INFO;
+                break;
+            case LogLevel::Warn:
+                priority = LOG_WARNING;
+                break;
+            case LogLevel::Error:
+                priority = LOG_ERR;
+                break;
+            case LogLevel::Fatal:
+                priority = LOG_CRIT;
+                break;
+            default:
+                return;
         }
         syslog(priority, "%s", message.c_str());
 #elif TARGET_OS_MAC || defined(__linux__)
         int fd = 0;
         switch (level)
         {
-        case LogLevel::Warn:
-        case LogLevel::Error:
-        case LogLevel::Fatal:
-            fd = STDERR_FILENO;
-            break;
-        case LogLevel::Verbose:
-        case LogLevel::Debug:
-        case LogLevel::Info:
-            fd = STDOUT_FILENO;
-            break;
-        default: return;
+            case LogLevel::Warn:
+            case LogLevel::Error:
+            case LogLevel::Fatal:
+                fd = STDERR_FILENO;
+                break;
+            case LogLevel::Verbose:
+            case LogLevel::Debug:
+            case LogLevel::Info:
+                fd = STDOUT_FILENO;
+                break;
+            default:
+                return;
         }
 
         std::vector<char> output(str.begin(), str.end());
@@ -184,86 +202,68 @@ namespace Alimer::Log
             offset += static_cast<std::size_t>(written);
         }
 #elif defined(_WIN32)
-        std::string fmt_str = fmt::format("[{}] {}\r\n", LogLevelPefixes[(uint32_t)level], message.c_str());
+        std::string fmt_str = fmt::format("[{}] {}\r\n", LogLevelPefixes[(uint32_t) level], message.c_str());
         OutputDebugStringA(fmt_str.c_str());
 
-#  ifdef _DEBUG
+#    ifdef _DEBUG
         HANDLE consoleOutput;
         switch (level)
         {
-        case Level::Warn:
-        case Level::Error:
-        case Level::Fatal:
-            consoleOutput = GetStdHandle(STD_ERROR_HANDLE);
-            break;
-        case Level::Verbose:
-        case Level::Debug:
-        case Level::Info:
-            consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-            break;
-        default: return;
+            case Level::Warn:
+            case Level::Error:
+            case Level::Fatal:
+                consoleOutput = GetStdHandle(STD_ERROR_HANDLE);
+                break;
+            case Level::Verbose:
+            case Level::Debug:
+            case Level::Info:
+                consoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+                break;
+            default:
+                return;
         }
 
         WriteConsoleA(consoleOutput, "[", 1, nullptr, nullptr);
-        auto orig_attribs = SetConsoleForegroundColor(consoleOutput, consoleColors[(uint32_t)level]);
-        WriteConsoleA(consoleOutput, LogLevelPefixes[(uint32_t)level], static_cast<DWORD>(strlen(LogLevelPefixes[(uint32_t)level])), nullptr, nullptr);
+        auto orig_attribs = SetConsoleForegroundColor(consoleOutput, consoleColors[(uint32_t) level]);
+        WriteConsoleA(consoleOutput, LogLevelPefixes[(uint32_t) level], static_cast<DWORD>(strlen(LogLevelPefixes[(uint32_t) level])),
+                      nullptr, nullptr);
         // reset to orig colors
         ::SetConsoleTextAttribute(consoleOutput, orig_attribs);
 
         fmt_str = fmt::format("] {}\n", message.c_str());
         WriteConsoleA(consoleOutput, fmt_str.c_str(), static_cast<DWORD>(fmt_str.length()), nullptr, nullptr);
-#  endif
+#    endif
 #elif defined(__EMSCRIPTEN__)
         int flags = EM_LOG_CONSOLE;
         switch (level)
         {
-        case Log::Level::error:
-            flags |= EM_LOG_ERROR;
-            break;
-        case Log::Level::warning:
-            flags |= EM_LOG_WARN;
-            break;
-        case Log::Level::info:
-        case Log::Level::all:
-            break;
-        default: return;
-    }
+            case Log::Level::error:
+                flags |= EM_LOG_ERROR;
+                break;
+            case Log::Level::warning:
+                flags |= EM_LOG_WARN;
+                break;
+            case Log::Level::info:
+            case Log::Level::all:
+                break;
+            default:
+                return;
+        }
         emscripten_log(flags, "%s", str.c_str());
 #endif
-}
-
-    void Write(Level level, const std::string& message)
-    {
-        Logger::GetDefault()->Log(level, message);
     }
 
-    void Verbose(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Verbose, message);
-    }
+    void Write(Level level, const std::string& message) { Logger::GetDefault()->Log(level, message); }
 
-    void Debug(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Debug, message);
-    }
+    void Verbose(const std::string& message) { Logger::GetDefault()->Log(Level::Verbose, message); }
 
-    void Info(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Info, message);
-    }
+    void Debug(const std::string& message) { Logger::GetDefault()->Log(Level::Debug, message); }
 
-    void Warn(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Warn, message);
-    }
+    void Info(const std::string& message) { Logger::GetDefault()->Log(Level::Info, message); }
 
-    void Error(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Error, message);
-    }
+    void Warn(const std::string& message) { Logger::GetDefault()->Log(Level::Warn, message); }
 
-    void Fatal(const std::string& message)
-    {
-        Logger::GetDefault()->Log(Level::Fatal, message);
-    }
+    void Error(const std::string& message) { Logger::GetDefault()->Log(Level::Error, message); }
+
+    void Fatal(const std::string& message) { Logger::GetDefault()->Log(Level::Fatal, message); }
 }

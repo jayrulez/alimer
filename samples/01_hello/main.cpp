@@ -28,23 +28,20 @@
 #include <DirectXMath.h>
 //#include "RHI/RHI.h"
 
-namespace Alimer
+namespace alimer
 {
     class HelloWorldApp final : public Application
     {
-      public:
-        HelloWorldApp(const Config &config) :
-            Application(config)
-        {
-        }
+    public:
+        HelloWorldApp(const Config& config) : Application(config) {}
         ~HelloWorldApp() override;
 
         void Initialize() override;
         void OnDraw() override;
 
-      private:
-        //UniquePtr<Window> window2;
-        //RefPtr<SwapChain> swapChain2;
+    private:
+        // UniquePtr<Window> window2;
+        // RefPtr<SwapChain> swapChain2;
 
         /* RefPtr<GraphicsBuffer> vertexBuffer;
         RefPtr<GraphicsBuffer> indexBuffer;
@@ -54,15 +51,15 @@ namespace Alimer
     };
 
     /* TODO: Until we fix resource creation */
-    //Shader* vertexShader;
-    //Shader* pixelShader;
-    //Texture* texture;
+    // Shader* vertexShader;
+    // Shader* pixelShader;
+    // Texture* texture;
 
     HelloWorldApp::~HelloWorldApp()
     {
-        //delete vertexShader;
-        //delete pixelShader;
-        //delete texture;
+        // delete vertexShader;
+        // delete pixelShader;
+        // delete texture;
     }
 
     struct Vertex
@@ -75,9 +72,9 @@ namespace Alimer
     void HelloWorldApp::Initialize()
     {
 #if TODO
-        //window2 = MakeUnique<Window>("Window 2");
-        //swapChain2 = graphicsDevice->CreateSwapChain(window2->GetHandle());
-        //swapChain2->SetVerticalSync(false);
+        // window2 = MakeUnique<Window>("Window 2");
+        // swapChain2 = graphicsDevice->CreateSwapChain(window2->GetHandle());
+        // swapChain2->SetVerticalSync(false);
 
         auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
         vertexShader      = new Shader();
@@ -92,30 +89,16 @@ namespace Alimer
         renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
         renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
         renderPipelineDesc.colorAttachments[0].format            = graphicsDevice->GetBackBufferFormat();
-        //renderPipelineDesc.colorAttachments[0].blendEnable = true;
-        //renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
-        //renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
-        //renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
-        //renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;
+        // renderPipelineDesc.colorAttachments[0].blendEnable = true;
+        // renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
+        // renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
+        // renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
+        // renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;
         pipeline = graphicsDevice->CreateRenderPipeline(&renderPipelineDesc);
 
         uint32_t pixels[4 * 4] = {
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
         };
         TextureDesc textureDesc     = {};
         textureDesc.Width           = 4;
@@ -142,54 +125,36 @@ namespace Alimer
             { { -0.5f, -0.5, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
         };*/
 
-        float cubeData[] =
-            {
-                /* pos                  color                       uvs */
-                -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-                1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-                -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+        float cubeData[] = {
+            /* pos                  color                       uvs */
+            -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-                -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-                1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-                -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,  1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-                -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-                -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-                -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-                -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f,  -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+            -1.0f, 1.0f,  1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-                1.0f, -1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-                1.0f, 1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
-                1.0f, 1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f,
-                1.0f, -1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
+            1.0f,  -1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f,  1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f,  -1.0f, 1.0f,  1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-                -1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f,
-                -1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 0.0f,
-                1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f,
-                1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, -1.0f, 1.0f,  0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 0.0f,
+            1.0f,  -1.0f, 1.0f,  0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-                -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f,
-                -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f,
-                1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f,
-                1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 1.0f};
+            -1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f,  1.0f,  1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f,
+            1.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 1.0f};
 
         GPUBufferDesc bufferDesc{};
         bufferDesc.Usage     = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_VERTEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(cubeData);
-        //bufferDesc.StructureByteStride = sizeof(Vertex);
+        // bufferDesc.StructureByteStride = sizeof(Vertex);
         vertexBuffer = graphicsDevice->CreateBuffer(bufferDesc, cubeData);
 
         // Index buffer
-        const uint16_t indices[] = {
-            0, 1, 2, 0, 2, 3,
-            6, 5, 4, 7, 6, 4,
-            8, 9, 10, 8, 10, 11,
-            14, 13, 12, 15, 14, 12,
-            16, 17, 18, 16, 18, 19,
-            22, 21, 20, 23, 22, 20};
+        const uint16_t indices[] = {0,  1,  2,  0,  2,  3,  6,  5,  4,  7,  6,  4,  8,  9,  10, 8,  10, 11,
+                                    14, 13, 12, 15, 14, 12, 16, 17, 18, 16, 18, 19, 22, 21, 20, 23, 22, 20};
 
         bufferDesc.Usage     = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_INDEX_BUFFER;
@@ -203,7 +168,7 @@ namespace Alimer
         bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
         constantBuffer = graphicsDevice->CreateBuffer(bd, nullptr);
-#endif // TODO
+#endif        // TODO
     }
 
     void HelloWorldApp::OnDraw()
@@ -217,14 +182,14 @@ namespace Alimer
         XMMATRIX proj     = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
         XMMATRIX viewProj = XMMatrixMultiply(world, XMMatrixMultiply(view, proj));
 
-        //Matrix4x4 projectionMatrix;
-        //Matrix4x4::CreatePerspectiveFieldOfView(Pi / 4.0f, aspect, 0.1f, 100, &projectionMatrix);
+        // Matrix4x4 projectionMatrix;
+        // Matrix4x4::CreatePerspectiveFieldOfView(Pi / 4.0f, aspect, 0.1f, 100, &projectionMatrix);
 
         XMFLOAT4X4 worldViewProjection;
         XMStoreFloat4x4(&worldViewProjection, viewProj);
         commandList.UpdateBuffer(constantBuffer, &worldViewProjection);
 
-        const GraphicsBuffer *vbs[] = {
+        const GraphicsBuffer* vbs[] = {
             vertexBuffer,
         };
 
@@ -236,32 +201,32 @@ namespace Alimer
         commandList.BindResource(ShaderStage::Fragment, texture, 0);
         commandList.BindSampler(ShaderStage::Fragment, sampler, 0);
         commandList.DrawIndexed(36);
-#endif // TODO
+#endif        // TODO
 
         time += 0.03f;
     }
 
-    Application *CreateApplication()
+    Application* CreateApplication()
     {
         Config config{};
 
-        //config.backendType = GraphicsBackendType::Direct3D11;
-        //config.backendType = GraphicsBackendType::Direct3D12;
-        //config.backendType = GraphicsBackendType::Vulkan;
+        // config.backendType = GraphicsBackendType::Direct3D11;
+        // config.backendType = GraphicsBackendType::Direct3D12;
+        // config.backendType = GraphicsBackendType::Vulkan;
 
 #ifdef _DEBUG
         // Direct3D12 has issue with debug layer
-        //if (config.backendType == GraphicsBackendType::Vulkan)
+        // if (config.backendType == GraphicsBackendType::Vulkan)
         //{
-         //   config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
+        //   config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
         //}
 #endif
 
         config.title = "Spinning Cube";
-        //config.fullscreen = true;
-        //config.width = 1280;
-        //config.height = 720;
+        // config.fullscreen = true;
+        // config.width = 1280;
+        // config.height = 720;
 
         return new HelloWorldApp(config);
     }
-} // namespace Alimer
+}        // namespace Alimer

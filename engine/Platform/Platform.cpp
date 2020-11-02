@@ -20,16 +20,16 @@
 // THE SOFTWARE.
 //
 
+#include "Platform/Platform.h"
 #include "Core/Assert.h"
 #include "Core/Log.h"
-#include "Platform/Platform.h"
 #include "Platform/Application.h"
 #include "PlatformIncl.h"
 #if ALIMER_PLATFORM_WINDOWS
-#   include <shellapi.h>
+#    include <shellapi.h>
 #endif
 
-namespace Alimer::Platform
+namespace alimer::Platform
 {
     static Vector<String> arguments;
 
@@ -70,7 +70,7 @@ namespace Alimer::Platform
 
         for (auto& arg : arg_strings)
         {
-            args.push_back(Alimer::ToUtf8(arg));
+            args.push_back(alimer::ToUtf8(arg));
         }
 
         return arguments;
@@ -79,7 +79,8 @@ namespace Alimer::Platform
     Platform::WindowsVersion Platform::GetWindowsVersion()
     {
         WindowsVersion version = WindowsVersion::Unknown;
-        auto RtlGetVersion = reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
+        auto           RtlGetVersion =
+            reinterpret_cast<LONG(WINAPI*)(LPOSVERSIONINFOEXW)>(GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
         ALIMER_VERIFY_MSG(RtlGetVersion, "Failed to get address to RtlGetVersion from ntdll.dll");
 
         RTL_OSVERSIONINFOEXW osinfo;

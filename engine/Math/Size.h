@@ -24,7 +24,7 @@
 
 #include "Core/String.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Defines a floating-point size.
     struct ALIMER_API Size
@@ -43,7 +43,7 @@ namespace Alimer
         Size(const Size&) = default;
         Size& operator=(const Size&) = default;
 
-        Size(Size&&) = default;
+        Size(Size&&)  = default;
         Size& operator=(Size&&) = default;
 
         /// Gets a value that indicates whether the size is empty.

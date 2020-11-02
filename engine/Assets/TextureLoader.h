@@ -24,7 +24,7 @@
 
 #include "Assets/AssetLoader.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API TextureLoader final : public AssetLoader
     {

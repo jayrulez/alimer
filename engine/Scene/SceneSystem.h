@@ -24,7 +24,7 @@
 
 #include "Scene/EntityManager.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API SceneSystem final : public EntityManager
     {
@@ -33,6 +33,7 @@ namespace Alimer
         ~SceneSystem();
 
         void SetRootEntity(Entity* entity);
+
         Entity* GetRootEntity() const { return rootEntity.Get(); }
 
     private:

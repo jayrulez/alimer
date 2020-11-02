@@ -35,12 +35,9 @@
 #    undef NOMINMAX
 #endif
 
-namespace Alimer
+namespace alimer
 {
-    AssertFailBehavior DefaultHandler(const char *condition,
-                                      const char *msg,
-                                      const char *file,
-                                      const int   line)
+    AssertFailBehavior DefaultHandler(const char* condition, const char* msg, const char* file, const int line)
     {
         const uint64_t BufferSize = 2048;
         char           buffer[BufferSize];
@@ -67,7 +64,7 @@ namespace Alimer
         return AssertFailBehavior::Halt;
     }
 
-    AssertHandler &GetAssertHandlerInstance()
+    AssertHandler& GetAssertHandlerInstance()
     {
         static AssertHandler s_handler = &DefaultHandler;
         return s_handler;
@@ -83,9 +80,9 @@ namespace Alimer
         GetAssertHandlerInstance() = newHandler;
     }
 
-    AssertFailBehavior ReportAssertFailure(const char *condition, const char *file, const int line, const char *msg, ...)
+    AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, const int line, const char* msg, ...)
     {
-        const char *message = nullptr;
+        const char* message = nullptr;
         if (msg != nullptr)
         {
             char messageBuffer[1024];
@@ -101,4 +98,4 @@ namespace Alimer
 
         return GetAssertHandlerInstance()(condition, message, file, line);
     }
-} // namespace Alimer
+}

@@ -22,21 +22,16 @@
 
 #include "Scene/SceneSystem.h"
 
-namespace Alimer
+namespace alimer
 {
-    SceneSystem::SceneSystem()
-    {
+    SceneSystem::SceneSystem() {}
 
-    }
-
-    SceneSystem::~SceneSystem()
-    {
-
-    }
+    SceneSystem::~SceneSystem() {}
 
     void SceneSystem::SetRootEntity(Entity* entity)
     {
-        if (rootEntity.Get() == entity) return;
+        if (rootEntity.Get() == entity)
+            return;
 
         if (rootEntity)
         {

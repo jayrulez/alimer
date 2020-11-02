@@ -23,19 +23,19 @@
 #pragma once
 
 #include "Core/Object.h"
-#include <vector>
 #include <bitset>
+#include <vector>
 
-namespace Alimer
+namespace alimer
 {
     /// Defines input key modifiers.
     enum class ModifierKeys : uint8_t
     {
-        None = 0,
-        Alt = 0x01,
+        None    = 0,
+        Alt     = 0x01,
         Control = 0x02,
-        Shift = 0x04,
-        Meta = 0x08,
+        Shift   = 0x04,
+        Meta    = 0x08,
         Count
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(ModifierKeys, uint8_t);
@@ -90,17 +90,17 @@ namespace Alimer
                     Count
                 };
 
-                ModifierKeys modifiers{ ModifierKeys::None };
+                ModifierKeys                                    modifiers{ModifierKeys::None};
                 std::bitset<static_cast<uint32_t>(Bits::Count)> bits;
             };
 
-            bool Test(uint32_t slot, ModifierKeys modifiers, ActionSlot::Bits bit) const;
-            bool dirty{ false };
+            bool                    Test(uint32_t slot, ModifierKeys modifiers, ActionSlot::Bits bit) const;
+            bool                    dirty{false};
             std::vector<ActionSlot> actionSlots;
         };
 
-        int32_t mousePositionX;
-        int32_t mousePositionY;
+        int32_t     mousePositionX;
+        int32_t     mousePositionY;
         ActionState mouseButtons;
     };
 }

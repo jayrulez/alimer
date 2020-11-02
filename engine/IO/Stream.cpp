@@ -22,12 +22,9 @@
 
 #include "IO/Stream.h"
 
-namespace Alimer
+namespace alimer
 {
-    Stream::Stream()
-    {
-
-    }
+    Stream::Stream() {}
 
     String Stream::ReadString(int length)
     {
@@ -42,7 +39,7 @@ namespace Alimer
         else
         {
             String str;
-            char next;
+            char   next;
             while (Read(&next, 1) && next != '\0')
             {
                 str += next;
@@ -57,23 +54,22 @@ namespace Alimer
         String string;
         ReadLine(string);
         return string;
-
     }
 
     int64_t Stream::ReadLine(String& writeTo)
     {
         const int bufferSize = 512;
-        char buffer[bufferSize];
+        char      buffer[bufferSize];
 
-        int64_t pos = Position();
+        int64_t pos    = Position();
         int64_t length = 0;
-        int64_t count = 0;
-        bool hit = false;
+        int64_t count  = 0;
+        bool    hit    = false;
 
         // read chunk-by-chunk
         do
         {
-            count = (int)Read(buffer, bufferSize);
+            count = (int) Read(buffer, bufferSize);
             pos += count;
 
             // check for a newline
@@ -108,8 +104,8 @@ namespace Alimer
                 }
 
             // copy to string
-            writeTo.resize((int)(length + end));
-            memcpy(writeTo.data() + length, buffer, (size_t)end);
+            writeTo.resize((int) (length + end));
+            memcpy(writeTo.data() + length, buffer, (size_t) end);
             *(writeTo.data() + length + end) = '\0';
 
             // increment length
@@ -120,29 +116,28 @@ namespace Alimer
         return length;
     }
 
-
     uint32_t Stream::ReadVLE()
     {
         uint32_t ret;
-        unsigned char byte;
+        uint8_t  byte;
 
-        byte = Read<unsigned char>();
-        ret = byte & 0x7f;
+        byte = Read<uint8_t>();
+        ret  = byte & 0x7f;
         if (byte < 0x80)
             return ret;
 
-        byte = Read<unsigned char>();
-        ret |= ((unsigned)(byte & 0x7f)) << 7;
+        byte = Read<uint8_t>();
+        ret |= ((uint32_t)(byte & 0x7f)) << 7;
         if (byte < 0x80)
             return ret;
 
-        byte = Read<unsigned char>();
-        ret |= ((unsigned)(byte & 0x7f)) << 14;
+        byte = Read<uint8_t>();
+        ret |= ((uint32_t)(byte & 0x7f)) << 14;
         if (byte < 0x80)
             return ret;
 
-        byte = Read<unsigned char>();
-        ret |= ((unsigned)byte) << 21;
+        byte = Read<uint8_t>();
+        ret |= ((uint32_t) byte) << 21;
         return ret;
     }
 
@@ -151,16 +146,16 @@ namespace Alimer
         return ReadString(4);
     }
 
-    Vector<uint8_t> Stream::ReadBytes(uint32_t count)
+    std::vector<uint8_t> Stream::ReadBytes(uint32_t count)
     {
-        Vector<uint8_t> result(count > 0 ? count : Length());
+        std::vector<uint8_t> result(count > 0 ? count : Length());
         Read(result.data(), static_cast<int64_t>(result.size()));
         return result;
     }
 
-    Vector<uint8_t> Stream::ReadBuffer()
+    std::vector<uint8_t> Stream::ReadBuffer()
     {
-        Vector<uint8_t> ret(ReadVLE());
+        std::vector<uint8_t> ret(ReadVLE());
         if (ret.size())
         {
             Read(ret.data(), static_cast<int64_t>(ret.size()));
@@ -169,17 +164,17 @@ namespace Alimer
         return ret;
     }
 
-    template<> bool Stream::Read<bool>()
+    template <> bool Stream::Read<bool>()
     {
-        return Read<unsigned char>() != 0;
+        return Read<uint8_t>() != 0;
     }
 
-    template<> String Stream::Read<String>()
+    template <> String Stream::Read<String>()
     {
         return ReadString();
     }
 
-    template<> StringId32 Stream::Read<StringId32>()
+    template <> StringId32 Stream::Read<StringId32>()
     {
         return StringId32(Read<uint32_t>());
     }
@@ -193,7 +188,7 @@ namespace Alimer
         }
     }
 
-    void Stream::WriteBuffer(const Vector<uint8_t>& value)
+    void Stream::WriteBuffer(const std::vector<uint8_t>& value)
     {
         uint32_t numBytes = static_cast<uint32_t>(value.size());
 
@@ -209,23 +204,23 @@ namespace Alimer
         uint8_t data[4];
 
         if (value < 0x80)
-            Write((uint8_t)value);
+            Write((uint8_t) value);
         else if (value < 0x4000)
         {
-            data[0] = (uint8_t)value | 0x80;
+            data[0] = (uint8_t) value | 0x80;
             data[1] = (uint8_t)(value >> 7);
             Write(data, 2);
         }
         else if (value < 0x200000)
         {
-            data[0] = (uint8_t)value | 0x80;
+            data[0] = (uint8_t) value | 0x80;
             data[1] = (uint8_t)((value >> 7) | 0x80);
             data[2] = (uint8_t)(value >> 14);
             Write(data, 3);
         }
         else
         {
-            data[0] = (uint8_t)value | 0x80;
+            data[0] = (uint8_t) value | 0x80;
             data[1] = (uint8_t)((value >> 7) | 0x80);
             data[2] = (uint8_t)((value >> 14) | 0x80);
             data[3] = (uint8_t)(value >> 21);
@@ -240,18 +235,18 @@ namespace Alimer
         Write('\n');
     }
 
-    template<> void Stream::Write<bool>(const bool& value)
+    template <> void Stream::Write<bool>(const bool& value)
     {
         Write<uint8_t>(value ? 1 : 0);
     }
 
-    template<> void Stream::Write<String>(const String& value)
+    template <> void Stream::Write<String>(const String& value)
     {
         // Write content and null terminator
         Write(value.c_str(), value.length() + 1);
     }
 
-    template<> void Stream::Write<StringId32>(const StringId32& value)
+    template <> void Stream::Write<StringId32>(const StringId32& value)
     {
         Write(value.Value());
     }

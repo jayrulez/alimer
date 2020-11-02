@@ -23,7 +23,7 @@
 #include "Physics/RigidBodyComponent.h"
 #include "Scene/Entity.h"
 
-namespace Alimer
+namespace alimer
 {
     RigidBodyComponent::RigidBodyComponent()
     {

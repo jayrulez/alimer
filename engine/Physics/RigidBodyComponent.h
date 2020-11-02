@@ -24,7 +24,7 @@
 
 #include "Scene/EntityComponent.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API RigidBodyComponent : public EntityComponent
     {
@@ -33,7 +33,6 @@ namespace Alimer
     public:
         RigidBodyComponent();
         ~RigidBodyComponent() override;
-
 
     private:
     };

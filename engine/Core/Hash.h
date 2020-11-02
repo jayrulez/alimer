@@ -23,10 +23,10 @@
 #pragma once
 
 #include "PlatformDef.h"
-#include <utility>
 #include <type_traits>
+#include <utility>
 
-namespace Alimer
+namespace alimer
 {
     /**
      * Hash for enum types, to be used instead of std::hash<T> when T is an enum.
@@ -74,7 +74,7 @@ namespace Alimer
     constexpr size_t StringHash(const char* input)
     {
         // https://stackoverflow.com/questions/2111667/compile-time-string-hashing
-        size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
+        size_t       hash  = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
         const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
 
         while (*input)

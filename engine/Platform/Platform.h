@@ -25,7 +25,7 @@
 #include "Core/Containers.h"
 #include "Platform/Window.h"
 
-namespace Alimer::Platform
+namespace alimer::Platform
 {
     /// Identifiers the running platform type.
     enum class PlatformId

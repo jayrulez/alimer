@@ -22,10 +22,8 @@
 
 #include "Graphics/GraphicsResource.h"
 
-namespace Alimer
+namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice &device, Type type) :
-        device{device}, type{type}
-    {
-    }
-} // namespace Alimer
+    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type) : device{device}, type{type}
+    {}
+}

@@ -24,7 +24,7 @@
 
 #include "Core/Object.h"
 
-namespace Alimer
+namespace alimer
 {
     class ALIMER_API AssetImporter : public Object
     {

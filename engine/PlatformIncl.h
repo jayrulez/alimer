@@ -25,30 +25,30 @@
 #include "PlatformDef.h"
 
 #if ALIMER_PLATFORM_WINDOWS
-#ifndef NOMINMAX
-#define NOMINMAX // prevent windows redefining min/max
-#endif
+#    ifndef NOMINMAX
+#        define NOMINMAX        // prevent windows redefining min/max
+#    endif
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    include <windows.h>
 #elif ALIMER_PLATFORM_UWP
-#pragma warning(push)
-#pragma warning(disable: 4471)
-#include <Windows.UI.Core.h>
-#pragma warning(pop)
+#    pragma warning(push)
+#    pragma warning(disable : 4471)
+#    include <Windows.UI.Core.h>
+#    pragma warning(pop)
 #elif ALIMER_PLATFORM_ANDROID || ALIMER_PLATFORM_LINUX || ALIMER_PLATFORM_WEB
-#include <unistd.h>
-#include <signal.h>
-#include <dlfcn.h>
+#    include <dlfcn.h>
+#    include <signal.h>
+#    include <unistd.h>
 
-#if ALIMER_PLATFORM_ANDROID
-#	include <android/log.h>
-#elif ALIMER_PLATFORM_WEB
-#	include <emscripten/emscripten.h>
-#	include <emscripten/html5.h>
-#	include <emscripten/threading.h>
-#endif
+#    if ALIMER_PLATFORM_ANDROID
+#        include <android/log.h>
+#    elif ALIMER_PLATFORM_WEB
+#        include <emscripten/emscripten.h>
+#        include <emscripten/html5.h>
+#        include <emscripten/threading.h>
+#    endif
 
 #endif

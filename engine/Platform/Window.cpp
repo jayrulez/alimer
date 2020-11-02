@@ -23,15 +23,14 @@
 #include "Platform/Window.h"
 
 #if defined(GLFW_BACKEND)
-#   include "Platform/glfw/GLFW_Window.h"
+#    include "Platform/glfw/GLFW_Window.h"
 #endif
 
-namespace Alimer
+namespace alimer
 {
-    Window::Window(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
-        : impl(new WindowImpl(title, x, y, width, height, flags))
-    {
-    }
+    Window::Window(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags) :
+        impl(new WindowImpl(title, x, y, width, height, flags))
+    {}
 
     bool Window::IsOpen() const noexcept
     {

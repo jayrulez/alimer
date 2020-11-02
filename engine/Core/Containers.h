@@ -22,27 +22,20 @@
 
 #pragma once
 
-#include "Core/Memory.h"
 #include "Core/Hash.h"
+#include "Core/Memory.h"
 
 #include <set>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
-namespace Alimer
+namespace alimer
 {
     template <typename T>
     constexpr typename std::underlying_type<T>::type ecast(T x)
     {
         return static_cast<typename std::underlying_type<T>::type>(x);
     }
-
-    /**
-     * Smart pointer that retains shared ownership of an project through a pointer. Reference to the object must be unique.
-     * The object is destroyed automatically when the pointer to the object is destroyed.
-     */
-    template <typename T, typename Alloc = GenAlloc, typename Delete = Deleter<T, Alloc>>
-    using UniquePtr = std::unique_ptr<T, Delete>;
 
     /** Dynamically sized array that stores element contigously. */
     template <typename T, typename A = StdAlloc<T>>
@@ -55,19 +48,4 @@ namespace Alimer
     /** An associative container containing an ordered set of elements. */
     template <typename T, typename P = std::less<T>, typename A = StdAlloc<T>>
     using Set = std::set<T, P, A>;
-
-    template<typename Type, typename Alloc = GenAlloc, typename Delete = Deleter<Type, Alloc>>
-    UniquePtr<Type, Alloc, Delete> MakeUniquePtr(Type* data, Delete deleter = Delete())
-    {
-        return UniquePtr<Type, Alloc, Delete>(data, std::move(deleter));
-    }
-
-    /** Create a new unique pointer using a custom allocator category. */
-    template<typename Type, typename Alloc = GenAlloc, typename Delete = Deleter<Type, Alloc>, typename... Args>
-    UniquePtr<Type, Alloc, Delete> MakeUnique(Args &&... args)
-    {
-        Type* ptr = alimer_new<Type, Alloc>(std::forward<Args>(args)...);
-
-        return MakeUniquePtr<Type, Alloc, Delete>(ptr);
-    }
 }

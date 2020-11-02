@@ -25,16 +25,16 @@
 #include "Core/Memory.h"
 #include <fmt/format.h>
 
-namespace Alimer
+namespace alimer
 {
-    using String = std::string;
+    using String  = std::string;
     using WString = std::wstring;
 
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
 
-    extern const std::string kEmptyString;
+    extern const std::string  kEmptyString;
     extern const std::wstring kEmptyWString;
-    extern const char kWhitespaceASCII[];
+    extern const char         kWhitespaceASCII[];
 
     enum class WhitespaceHandling
     {
@@ -48,11 +48,10 @@ namespace Alimer
         NonEmpty,
     };
 
-
     ALIMER_API std::string TrimString(const std::string& input, const std::string& trimChars);
 
-    ALIMER_API std::vector<std::string> SplitString(const std::string& input, const std::string& delimiters, WhitespaceHandling whitespace, SplitResult resultType);
-
+    ALIMER_API std::vector<std::string> SplitString(const std::string& input, const std::string& delimiters, WhitespaceHandling whitespace,
+                                                    SplitResult resultType);
 
 #ifdef _WIN32
     ALIMER_API String ToUtf8(const wchar_t* wstr, size_t len);

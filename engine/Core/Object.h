@@ -25,7 +25,7 @@
 #include "Core/Ptr.h"
 #include "Core/StringId.h"
 
-namespace Alimer
+namespace alimer
 {
     /// Type info.
     class ALIMER_API TypeInfo final
@@ -41,14 +41,26 @@ namespace Alimer
         /// Check current type is type of specified type.
         bool IsTypeOf(const TypeInfo* typeInfo) const;
         /// Check current type is type of specified class type.
-        template<typename T> bool IsTypeOf() const { return IsTypeOf(T::GetTypeInfoStatic()); }
+        template <typename T> bool IsTypeOf() const
+        {
+            return IsTypeOf(T::GetTypeInfoStatic());
+        }
 
         /// Return type.
-        StringId32 GetType() const { return type; }
+        StringId32 GetType() const
+        {
+            return type;
+        }
         /// Return type name.
-        const std::string& GetTypeName() const { return typeName; }
+        const std::string& GetTypeName() const
+        {
+            return typeName;
+        }
         /// Return base type info.
-        const TypeInfo* GetBaseTypeInfo() const { return baseTypeInfo; }
+        const TypeInfo* GetBaseTypeInfo() const
+        {
+            return baseTypeInfo;
+        }
 
     private:
         /// Type.
@@ -81,17 +93,29 @@ namespace Alimer
         virtual const TypeInfo* GetTypeInfo() const = 0;
 
         /// Return type info static.
-        static const TypeInfo* GetTypeInfoStatic() { return nullptr; }
+        static const TypeInfo* GetTypeInfoStatic()
+        {
+            return nullptr;
+        }
         /// Check current instance is type of specified type.
         bool IsInstanceOf(StringId32 type) const;
         /// Check current instance is type of specified type.
         bool IsInstanceOf(const TypeInfo* typeInfo) const;
         /// Check current instance is type of specified class.
-        template<typename T> bool IsInstanceOf() const { return IsInstanceOf(T::GetTypeInfoStatic()); }
+        template <typename T> bool IsInstanceOf() const
+        {
+            return IsInstanceOf(T::GetTypeInfoStatic());
+        }
         /// Cast the object to specified most derived class.
-        template<typename T> T* Cast() { return IsInstanceOf<T>() ? static_cast<T*>(this) : nullptr; }
+        template <typename T> T* Cast()
+        {
+            return IsInstanceOf<T>() ? static_cast<T*>(this) : nullptr;
+        }
         /// Cast the object to specified most derived class.
-        template<typename T> const T* Cast() const { return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr; }
+        template <typename T> const T* Cast() const
+        {
+            return IsInstanceOf<T>() ? static_cast<const T*>(this) : nullptr;
+        }
 
         /// Register an object as a subsystem that can be accessed globally. Note that the subsystems container does not own the objects.
         static void RegisterSubsystem(Object* subsystem);
@@ -102,7 +126,10 @@ namespace Alimer
         /// Remove a subsystem by type.
         static void RemoveSubsystem(StringId32 type);
         /// Template version of removing a subsystem.
-        template <class T> static void RemoveSubsystem() { RemoveSubsystem(T::GetTypeStatic()); }
+        template <class T> static void RemoveSubsystem()
+        {
+            RemoveSubsystem(T::GetTypeStatic());
+        }
         /// Return a subsystem by type, or null if not registered.
         static Object* GetSubsystem(StringId32 type);
         /// Register an object factory.
@@ -111,13 +138,25 @@ namespace Alimer
         static RefPtr<Object> CreateObject(StringId32 objectType);
 
         /// Return a subsystem, template version.
-        template <class T> static T* GetSubsystem() { return static_cast<T*>(GetSubsystem(T::GetTypeStatic())); }
-        template <> static Input* GetSubsystem<Input>() { return GetInput(); }
+        template <class T> static T* GetSubsystem()
+        {
+            return static_cast<T*>(GetSubsystem(T::GetTypeStatic()));
+        }
+        template <> static Input* GetSubsystem<Input>()
+        {
+            return GetInput();
+        }
 
         /// Register an object factory, template version.
-        template <class T> static void RegisterFactory() { RegisterFactory(new ObjectFactoryImpl<T>()); }
+        template <class T> static void RegisterFactory()
+        {
+            RegisterFactory(new ObjectFactoryImpl<T>());
+        }
         /// Create and return an object through a factory, template version.
-        template <class T> static inline RefPtr<T> CreateObject() { return StaticCast<T>(CreateObject(T::GetTypeStatic())); }
+        template <class T> static inline RefPtr<T> CreateObject()
+        {
+            return StaticCast<T>(CreateObject(T::GetTypeStatic()));
+        }
 
         /// Return input subsystem.
         static Input* GetInput();
@@ -134,13 +173,22 @@ namespace Alimer
         virtual RefPtr<Object> Create() = 0;
 
         /// Return type info of objects created by this factory.
-        const TypeInfo* GetTypeInfo() const { return typeInfo; }
+        const TypeInfo* GetTypeInfo() const
+        {
+            return typeInfo;
+        }
 
         /// Return type hash of objects created by this factory.
-        StringId32 GetType() const { return typeInfo->GetType(); }
+        StringId32 GetType() const
+        {
+            return typeInfo->GetType();
+        }
 
         /// Return type name of objects created by this factory.
-        const std::string& GetTypeName() const { return typeInfo->GetTypeName(); }
+        const std::string& GetTypeName() const
+        {
+            return typeInfo->GetTypeName();
+        }
 
     protected:
         /// Type info.
@@ -158,17 +206,39 @@ namespace Alimer
         }
 
         /// Create an object of the specific type.
-        RefPtr<Object> Create() override { return RefPtr<Object>(new T()); }
+        RefPtr<Object> Create() override
+        {
+            return RefPtr<Object>(new T());
+        }
     };
 }
 
-#define ALIMER_OBJECT(typeName, baseTypeName) \
-    public: \
-        using ClassName = typeName; \
-        using Parent = baseTypeName; \
-        virtual Alimer::StringId32 GetType() const override { return GetTypeInfoStatic()->GetType(); } \
-        virtual const std::string& GetTypeName() const override { return GetTypeInfoStatic()->GetTypeName(); } \
-        virtual const Alimer::TypeInfo* GetTypeInfo() const override { return GetTypeInfoStatic(); } \
-        static Alimer::StringId32 GetTypeStatic() { return GetTypeInfoStatic()->GetType(); } \
-        static const std::string& GetTypeNameStatic() { return GetTypeInfoStatic()->GetTypeName(); } \
-        static const Alimer::TypeInfo* GetTypeInfoStatic() { static const Alimer::TypeInfo typeInfoStatic(#typeName, Parent::GetTypeInfoStatic()); return &typeInfoStatic; } \
+#define ALIMER_OBJECT(typeName, baseTypeName)                                                 \
+public:                                                                                       \
+    using ClassName = typeName;                                                               \
+    using Parent    = baseTypeName;                                                           \
+    virtual alimer::StringId32 GetType() const override                                       \
+    {                                                                                         \
+        return GetTypeInfoStatic()->GetType();                                                \
+    }                                                                                         \
+    virtual const std::string& GetTypeName() const override                                   \
+    {                                                                                         \
+        return GetTypeInfoStatic()->GetTypeName();                                            \
+    }                                                                                         \
+    virtual const alimer::TypeInfo* GetTypeInfo() const override                              \
+    {                                                                                         \
+        return GetTypeInfoStatic();                                                           \
+    }                                                                                         \
+    static alimer::StringId32 GetTypeStatic()                                                 \
+    {                                                                                         \
+        return GetTypeInfoStatic()->GetType();                                                \
+    }                                                                                         \
+    static const std::string& GetTypeNameStatic()                                             \
+    {                                                                                         \
+        return GetTypeInfoStatic()->GetTypeName();                                            \
+    }                                                                                         \
+    static const alimer::TypeInfo* GetTypeInfoStatic()                                        \
+    {                                                                                         \
+        static const alimer::TypeInfo typeInfoStatic(#typeName, Parent::GetTypeInfoStatic()); \
+        return &typeInfoStatic;                                                               \
+    }\

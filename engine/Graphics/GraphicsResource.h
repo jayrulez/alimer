@@ -26,14 +26,14 @@
 #include <string>
 //#include "Graphics/Types.h"
 
-namespace Alimer
+namespace alimer
 {
     class GraphicsDevice;
 
     /// Defines a base graphics resource class.
     class ALIMER_API GraphicsResource
     {
-      public:
+    public:
         enum class Type
         {
             Buffer,
@@ -54,29 +54,28 @@ namespace Alimer
         }
 
         /// Get the Device that created this resource.
-        GraphicsDevice &GetDevice() const
+        GraphicsDevice& GetDevice() const
         {
             return device;
         }
 
         /// Set the resource name.
-        virtual void SetName(const std::string &newName)
+        virtual void SetName(const std::string& newName)
         {
             name = newName;
         }
 
         /// Get the resource name
-        const std::string &GetName() const
+        const std::string& GetName() const
         {
             return name;
         }
 
-      protected:
-        GraphicsResource(GraphicsDevice &device, Type type);
+    protected:
+        GraphicsResource(GraphicsDevice& device, Type type);
 
-        GraphicsDevice &device;
+        GraphicsDevice& device;
         Type            type;
         std::string     name;
     };
-
-} // namespace Alimer
+}

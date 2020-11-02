@@ -23,30 +23,34 @@
 #pragma once
 
 #include "Core/Assert.h"
-#include <cstdlib>
 #include <cmath>
+#include <cstdlib>
 #include <limits>
 
 #ifdef _MSC_VER
-#   pragma warning(push)
-#   pragma warning(disable:4244) // Conversion from 'double' to 'float'
-#   pragma warning(disable:4702) // unreachable code
+#    pragma warning(push)
+#    pragma warning(disable : 4244)        // Conversion from 'double' to 'float'
+#    pragma warning(disable : 4702)        // unreachable code
 #endif
 
-namespace Alimer
+namespace alimer
 {
-    static constexpr float Pi = 3.1415926535897932f;
-    static constexpr float TwoPi = 6.28318530718f;
+    static constexpr float Pi      = 3.1415926535897932f;
+    static constexpr float TwoPi   = 6.28318530718f;
     static constexpr float PiOver2 = 1.57079632679f;
     static constexpr float PiOver4 = 0.78539816339f;
-    static constexpr float HalfPi = PiOver2;
+    static constexpr float HalfPi  = PiOver2;
 
     /// Check whether two floating point values are equal within accuracy.
     template <typename T> inline bool Equals(T lhs, T rhs, T eps) { return lhs + eps >= rhs && lhs - eps <= rhs; }
-    template <class T> inline bool Equals(T lhs, T rhs) { return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs; }
 
-    template<typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
-    
+    template <class T> inline bool Equals(T lhs, T rhs)
+    {
+        return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs;
+    }
+
+    template <typename T> inline T Sign(T v) { return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0)); }
+
     template <typename T> inline T sin(T v) { return std::sin(v); }
     template <typename T> inline T cos(T v) { return std::cos(v); }
     template <typename T> inline T tan(T v) { return std::tan(v); }
@@ -74,10 +78,7 @@ namespace Alimer
     /// Check whether a floating point value is positive or negative infinity.
     template <class T> inline bool IsInf(T value) { return std::isinf(value); }
 
-    template <typename T> inline bool IsPowerOfTwo(T value)
-    {
-        return !(value & (value - 1)) && value;
-    }
+    template <typename T> inline bool IsPowerOfTwo(T value) { return !(value & (value - 1)) && value; }
 
     /// Round up to next power of two.
     inline uint32_t NextPowerOfTwo(uint32_t value)
@@ -115,11 +116,11 @@ namespace Alimer
     /// Return a representation of the specified floating-point value as a single format bit layout.
     inline unsigned FloatToRawIntBits(float value)
     {
-        unsigned u = *((unsigned*)&value);
+        unsigned u = *((unsigned*) &value);
         return u;
     }
 }
 
 #ifdef _MSC_VER
-#   pragma warning(pop)
+#    pragma warning(pop)
 #endif

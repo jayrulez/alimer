@@ -24,7 +24,7 @@
 #include "IO/FileStream.h"
 #include "PlatformIncl.h"
 
-namespace Alimer::File
+namespace alimer::File
 {
     bool Exists(const FilePath& path)
     {
@@ -41,30 +41,28 @@ namespace Alimer::File
         return true;
     }
 
-    String ReadAllText(const FilePath& path)
+    std::string ReadAllText(const FilePath& path)
     {
         if (!Exists(path))
             return kEmptyString;
 
-        FileStream stream(path, FileMode::Read);
-        String result = stream.ReadString();
+        FileStream  stream(path, FileMode::Read);
+        std::string result = stream.ReadString();
         return result;
     }
 
-
-    Vector<uint8_t> ReadAllBytes(const FilePath& path)
+    std::vector<uint8_t> ReadAllBytes(const FilePath& path)
     {
         if (!Exists(path))
             return {};
 
-        FileStream stream(path, FileMode::Read);
-        Vector<uint8_t> result = stream.ReadBytes();
+        FileStream           stream(path, FileMode::Read);
+        std::vector<uint8_t> result = stream.ReadBytes();
         return result;
     }
 }
 
-
-namespace Alimer::Directory
+namespace alimer::Directory
 {
     bool Exists(const FilePath& path)
     {
@@ -78,6 +76,5 @@ namespace Alimer::Directory
 
         return true;
 #endif
-
     }
 }

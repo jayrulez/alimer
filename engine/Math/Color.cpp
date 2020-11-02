@@ -22,7 +22,7 @@
 
 #include "Math/Color.h"
 
-namespace Alimer
+namespace alimer
 {
     std::string Color::ToString() const
     {

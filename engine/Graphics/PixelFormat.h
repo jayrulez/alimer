@@ -25,7 +25,7 @@
 #include "Core/Assert.h"
 #include <string>
 
-namespace Alimer
+namespace alimer
 {
     /// Defines pixel format.
     enum class PixelFormat : uint32_t
@@ -102,8 +102,8 @@ namespace Alimer
     };
 
     /**
-    * Pixel format Type
-    */
+     * Pixel format Type
+     */
     enum class PixelFormatType
     {
         /// Unknown format Type.
@@ -211,23 +211,23 @@ namespace Alimer
         return kFormatDesc[(uint32_t) format].type;
     }
 
-    inline const std::string &to_string(PixelFormat format)
+    inline const std::string& to_string(PixelFormat format)
     {
         ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
         return kFormatDesc[(uint32_t) format].name;
     }
 
     /**
-    * Check if a format represents sRGB color space.
-    */
+     * Check if a format represents sRGB color space.
+     */
     inline bool IsSrgbFormat(PixelFormat format)
     {
         return (GetFormatType(format) == PixelFormatType::UnormSrgb);
     }
 
     /**
-    * Convert a SRGB format to linear. If the format is already linear no conversion will be made.
-    */
+     * Convert a SRGB format to linear. If the format is already linear no conversion will be made.
+     */
     inline PixelFormat SRGBToLinearFormat(PixelFormat format)
     {
         switch (format)
@@ -251,8 +251,8 @@ namespace Alimer
     }
 
     /**
-    * Convert an linear format to sRGB. If the format doesn't have a matching sRGB format no conversion will be made.
-    */
+     * Convert an linear format to sRGB. If the format doesn't have a matching sRGB format no conversion will be made.
+     */
     inline PixelFormat LinearToSRGBFormat(PixelFormat format)
     {
         switch (format)
@@ -273,4 +273,4 @@ namespace Alimer
                 return format;
         }
     }
-} // namespace Alimer
+}

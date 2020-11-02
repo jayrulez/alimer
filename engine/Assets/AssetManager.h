@@ -24,7 +24,7 @@
 
 #include "Core/Object.h"
 
-namespace Alimer
+namespace alimer
 {
     class AssetLoader;
 
@@ -38,15 +38,18 @@ namespace Alimer
         /// Destructor.
         ~AssetManager();
 
-        void AddLoader(std::unique_ptr<AssetLoader> loader);
-        void RemoveLoader(const AssetLoader* loader);
+        void         AddLoader(std::unique_ptr<AssetLoader> loader);
+        void         RemoveLoader(const AssetLoader* loader);
         AssetLoader* GetLoader(StringId32 type);
 
         /// Load content from name.
         RefPtr<Object> Load(StringId32 type, const std::string& name);
 
         /// Load content from name, template version.
-        template <class T> RefPtr<T> Load(const std::string& name) { return StaticCast<T>(Load(T::GetTypeStatic(), name)); }
+        template <class T> RefPtr<T> Load(const std::string& name)
+        {
+            return StaticCast<T>(Load(T::GetTypeStatic(), name));
+        }
 
     protected:
         std::string rootDirectory;

@@ -26,7 +26,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-namespace Alimer
+namespace alimer
 {
     class WindowImpl final
     {
@@ -35,13 +35,24 @@ namespace Alimer
         ~WindowImpl();
 
         bool IsOpen() const noexcept;
-        uint32_t GetId() const noexcept { return id; }
+
+        uint32_t GetId() const noexcept
+        {
+            return id;
+        }
 
         WindowHandle GetHandle() const;
-        GLFWwindow* GetGLFWwindow() const noexcept { return window; }
 
-        float GetBrightness() const noexcept { return 1.0f; }
-        void SetBrightness(float) { }
+        GLFWwindow* GetGLFWwindow() const noexcept
+        {
+            return window;
+        }
+
+        float GetBrightness() const noexcept
+        {
+            return 1.0f;
+        }
+        void SetBrightness(float) {}
 
         void SetSize(const SizeI& size) noexcept
         {
@@ -51,10 +62,10 @@ namespace Alimer
         SizeI GetSize() const noexcept
         {
             SizeI result{};
-            int w{};
-            int h{};
+            int   w{};
+            int   h{};
             glfwGetWindowSize(window, &w, &h);
-            result.width = static_cast<int32_t>(w);
+            result.width  = static_cast<int32_t>(w);
             result.height = static_cast<int32_t>(h);
             return result;
         }
@@ -81,7 +92,11 @@ namespace Alimer
             return minSize;
         }
 
-        String GetTitle() const noexcept { return title; }
+        String GetTitle() const noexcept
+        {
+            return title;
+        }
+
         void SetTitle(const String& str) noexcept
         {
             title = str;
@@ -89,11 +104,11 @@ namespace Alimer
         }
 
     private:
-        GLFWwindow* window{ nullptr };
-        String title{};
-        uint32_t id;
-        SizeI minSize{};
-        SizeI maxSize{};
+        GLFWwindow* window{nullptr};
+        String      title{};
+        uint32_t    id;
+        SizeI       minSize{};
+        SizeI       maxSize{};
     };
 
     void PumpEvents() noexcept;

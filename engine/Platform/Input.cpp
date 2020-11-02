@@ -22,7 +22,7 @@
 
 #include "Platform/Input.h"
 
-namespace Alimer
+namespace alimer
 {
     namespace
     {
@@ -33,7 +33,7 @@ namespace Alimer
 
         bool IsModifierMatch(uint32_t slot, ModifierKeys modifiers, ModifierKeys stateModifiers)
         {
-            const bool areModifiersActive = (modifiers & stateModifiers) == modifiers;
+            const bool areModifiersActive     = (modifiers & stateModifiers) == modifiers;
             const bool areOnlyModifiersActive = modifiers == stateModifiers;
             return IsModifierOnlyButton(slot) ? areModifiersActive : areOnlyModifiersActive;
         }
@@ -104,11 +104,11 @@ namespace Alimer
 
     void Input::ActionState::PostEvent(uint32_t button, bool down, ModifierKeys modifiers)
     {
-        ActionSlot& slot = actionSlots[button];
-        const bool wasHeld = slot.bits.test(static_cast<uint32_t>(ActionSlot::Bits::Held));
-        const bool isReleasing = wasHeld && !down;
-        const bool hasModifiersRemaining = modifiers != ModifierKeys::None;
-        const bool isModifierUpdate = IsModifierOnlyButton(button) && isReleasing && hasModifiersRemaining;
+        ActionSlot& slot                  = actionSlots[button];
+        const bool  wasHeld               = slot.bits.test(static_cast<uint32_t>(ActionSlot::Bits::Held));
+        const bool  isReleasing           = wasHeld && !down;
+        const bool  hasModifiersRemaining = modifiers != ModifierKeys::None;
+        const bool  isModifierUpdate      = IsModifierOnlyButton(button) && isReleasing && hasModifiersRemaining;
         if (isModifierUpdate)
         {
             slot.modifiers = modifiers;

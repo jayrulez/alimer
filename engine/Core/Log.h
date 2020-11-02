@@ -25,7 +25,7 @@
 #include "Core/Assert.h"
 #include "Core/String.h"
 
-namespace Alimer::Log
+namespace alimer::Log
 {
     enum class Level : uint32_t
     {
@@ -48,16 +48,20 @@ namespace Alimer::Log
     ALIMER_API void Fatal(const std::string& message);
 }
 
-#define LOGV(...) Alimer::Log::Verbose(fmt::format(__VA_ARGS__));
-#define LOGD(...) Alimer::Log::Debug(fmt::format(__VA_ARGS__));
-#define LOGI(...) Alimer::Log::Info(fmt::format(__VA_ARGS__));
-#define LOGW(...) Alimer::Log::Warn(fmt::format(__VA_ARGS__));
-#define LOGE(...) do { \
-    Alimer::Log::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
-    ALIMER_DEBUG_BREAK(); \
-    } while(0)
+#define LOGV(...) alimer::Log::Verbose(fmt::format(__VA_ARGS__));
+#define LOGD(...) alimer::Log::Debug(fmt::format(__VA_ARGS__));
+#define LOGI(...) alimer::Log::Info(fmt::format(__VA_ARGS__));
+#define LOGW(...) alimer::Log::Warn(fmt::format(__VA_ARGS__));
+#define LOGE(...)                                                                                    \
+    do                                                                                               \
+    {                                                                                                \
+        alimer::Log::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
+        ALIMER_DEBUG_BREAK();                                                                        \
+    } while (0)
 
-#define ALIMER_FATAL(...) do { \
-    Alimer::Log::Fatal(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
-    ALIMER_DEBUG_BREAK(); \
-    } while(0)
+#define ALIMER_FATAL(...)                                                                            \
+    do                                                                                               \
+    {                                                                                                \
+        alimer::Log::Fatal(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
+        ALIMER_DEBUG_BREAK();                                                                        \
+    } while (0)

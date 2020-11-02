@@ -28,12 +28,15 @@
 #include "Platform/Platform.h"
 #include "UI/ImGuiLayer.h"
 
-namespace Alimer
+namespace alimer
 {
     static Application* s_appCurrent = nullptr;
 
     Application::Application(const Config& config) :
-        name("Alimer"), config{config}, state(State::Uninitialized), assets(config.rootDirectory)
+        name("Alimer"),
+        config{config},
+        state(State::Uninitialized),
+        assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
@@ -72,9 +75,11 @@ namespace Alimer
         if (config.fullscreen)
             windowFlags |= WindowFlags::Fullscreen;
 
-        window = MakeUnique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
+        window = std::make_unique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init graphics device.
+        graphicsDevice = std::make_unique<GraphicsDevice>(*window);
+
         /*GraphicsDevice::Desc deviceDesc = {};
         deviceDesc.backendType = config.backendType;
         deviceDesc.flags = config.deviceFlags;
@@ -120,5 +125,10 @@ namespace Alimer
     const Config* Application::GetConfig()
     {
         return &config;
+    }
+
+    Window& Application::GetWindow() const
+    {
+        return *window;
     }
 }

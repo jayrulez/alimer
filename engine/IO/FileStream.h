@@ -24,7 +24,7 @@
 
 #include "IO/Stream.h"
 
-namespace Alimer
+namespace alimer
 {
     enum class FileMode
     {
@@ -38,25 +38,25 @@ namespace Alimer
     {
     public:
         FileStream();
-        FileStream(const String& path, FileMode mode = FileMode::Read);
+        FileStream(const std::string& path, FileMode mode = FileMode::Read);
         FileStream(FileStream&& src) noexcept;
         FileStream& operator=(FileStream&& src) noexcept;
         virtual ~FileStream();
 
-        virtual void Close() override;
-        virtual int64_t Length() const override;
-        virtual int64_t Position() const override;
-        virtual bool CanSeek() const override;
-        virtual bool CanRead() const override;
-        virtual bool CanWrite() const  override;
-        virtual int64_t Seek(int64_t position)  override;
-        virtual int64_t Read(void* buffer, int64_t length)  override;
+        virtual void     Close() override;
+        virtual int64_t  Length() const override;
+        virtual int64_t  Position() const override;
+        virtual bool     CanSeek() const override;
+        virtual bool     CanRead() const override;
+        virtual bool     CanWrite() const override;
+        virtual int64_t  Seek(int64_t position) override;
+        virtual int64_t  Read(void* buffer, int64_t length) override;
         virtual uint64_t Write(const void* buffer, uint64_t length) override;
 
     private:
         FileMode mode;
-        void* handle;
-        int64_t length;
+        void*    handle;
+        int64_t  length;
     };
 
 }

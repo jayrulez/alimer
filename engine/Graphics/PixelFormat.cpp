@@ -22,7 +22,7 @@
 
 #include "Graphics/PixelFormat.h"
 
-namespace Alimer
+namespace alimer
 {
     const PixelFormatDesc kFormatDesc[] = {
         // format                               name,                       type                            bpp         compression bits
@@ -103,4 +103,4 @@ namespace Alimer
         {PixelFormat::BC7RGBAUnorm, "BC7RGBAUnorm", PixelFormatType::UNorm, 8, {4, 4, 16, 1, 1}, {0, 0, 0, 0, 0, 0}},
         {PixelFormat::BC7RGBAUnormSrgb, "BC7RGBAUnormSrgb", PixelFormatType::UnormSrgb, 8, {4, 4, 16, 1, 1}, {0, 0, 0, 0, 0, 0}},
     };
-}        // namespace Alimer
+}

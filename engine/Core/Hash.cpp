@@ -22,24 +22,24 @@
 /// MurmurHash2, by Austin Appleby
 #include "Core/Hash.h"
 
-namespace Alimer
+namespace alimer
 {
     uint32 Murmur32(const void* key, uint32 len, uint32 seed)
     {
         // 'm' and 'r' are mixing constants generated offline.
         // They're not really 'magic', they just happen to work well.
         const unsigned int m = 0x5bd1e995;
-        const int r = 24;
+        const int          r = 24;
 
         // Initialize the hash to a 'random' value
         unsigned int h = seed ^ len;
 
         // Mix 4 bytes at a time into the hash
-        const uint8* data = (const uint8*)key;
+        const uint8* data = (const uint8*) key;
 
         while (len >= 4)
         {
-            unsigned int k = *(unsigned int*)data;
+            unsigned int k = *(unsigned int*) data;
 
             k *= m;
             k ^= k >> r;
@@ -55,10 +55,13 @@ namespace Alimer
         // Handle the last few bytes of the input array
         switch (len)
         {
-        case 3: h ^= data[2] << 16; // Fallthrough
-        case 2: h ^= data[1] << 8;  // Fallthrough
-        case 1: h ^= data[0];       // Fallthrough
-            h *= m;
+            case 3:
+                h ^= data[2] << 16;        // Fallthrough
+            case 2:
+                h ^= data[1] << 8;        // Fallthrough
+            case 1:
+                h ^= data[0];        // Fallthrough
+                h *= m;
         };
 
         // Do a few final mixes of the hash to ensure the last few
@@ -73,12 +76,12 @@ namespace Alimer
     uint64 Murmur64(const void* key, uint64 len, uint64 seed)
     {
         const uint64 m = 0xc6a4a7935bd1e995ull;
-        const int r = 47;
+        const int    r = 47;
 
         uint64 h = seed ^ (len * m);
 
-        const uint64* data = (const uint64*)key;
-        const uint64* end = data + (len / 8);
+        const uint64* data = (const uint64*) key;
+        const uint64* end  = data + (len / 8);
 
         while (data != end)
         {
@@ -92,18 +95,25 @@ namespace Alimer
             h *= m;
         }
 
-        const uint8* data2 = (const uint8*)data;
+        const uint8* data2 = (const uint8*) data;
 
         switch (len & 7)
         {
-        case 7: h ^= uint64(data2[6]) << 48; // Fallthrough
-        case 6: h ^= uint64(data2[5]) << 40; // Fallthrough
-        case 5: h ^= uint64(data2[4]) << 32; // Fallthrough
-        case 4: h ^= uint64(data2[3]) << 24; // Fallthrough
-        case 3: h ^= uint64(data2[2]) << 16; // Fallthrough
-        case 2: h ^= uint64(data2[1]) << 8;  // Fallthrough
-        case 1: h ^= uint64(data2[0]);       // Fallthrough
-            h *= m;
+            case 7:
+                h ^= uint64(data2[6]) << 48;        // Fallthrough
+            case 6:
+                h ^= uint64(data2[5]) << 40;        // Fallthrough
+            case 5:
+                h ^= uint64(data2[4]) << 32;        // Fallthrough
+            case 4:
+                h ^= uint64(data2[3]) << 24;        // Fallthrough
+            case 3:
+                h ^= uint64(data2[2]) << 16;        // Fallthrough
+            case 2:
+                h ^= uint64(data2[1]) << 8;        // Fallthrough
+            case 1:
+                h ^= uint64(data2[0]);        // Fallthrough
+                h *= m;
         };
 
         h ^= h >> r;

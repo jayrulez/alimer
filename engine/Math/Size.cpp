@@ -22,28 +22,16 @@
 
 #include "Math/Size.h"
 
-namespace Alimer
+namespace alimer
 {
-    const Size Size::Empty = { 0.0f, 0.0f };
-    const SizeI SizeI::Empty = { 0, 0 };
+    const Size  Size::Empty  = {0.0f, 0.0f};
+    const SizeI SizeI::Empty = {0, 0};
 
-    bool Size::IsEmpty() const
-    {
-        return (width == 0 && height == 0);
-    }
+    bool Size::IsEmpty() const { return (width == 0 && height == 0); }
 
-    std::string Size::ToString() const
-    {
-        return fmt::format("{} {}", width, height);
-    }
+    std::string Size::ToString() const { return fmt::format("{} {}", width, height); }
 
-    bool SizeI::IsEmpty() const
-    {
-        return (width == 0 && height == 0);
-    }
+    bool SizeI::IsEmpty() const { return (width == 0 && height == 0); }
 
-    std::string SizeI::ToString() const
-    {
-        return fmt::format("{} {}", width, height);
-    }
+    std::string SizeI::ToString() const { return fmt::format("{} {}", width, height); }
 }

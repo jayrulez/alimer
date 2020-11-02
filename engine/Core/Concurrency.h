@@ -23,7 +23,7 @@
 
 #include "PlatformDef.h"
 
-namespace Alimer
+namespace alimer
 {
     ALIMER_API int32_t AtomicIncrement(volatile int32_t* value);
     ALIMER_API int64_t AtomicIncrement(volatile int64_t* value);
