@@ -21,36 +21,38 @@
 //
 
 #include "Core/Assert.h"
-#include <cstdio>
 #include <cstdarg>
+#include <cstdio>
 #if defined(_WIN32) || defined(_WIN64)
-#ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#   define NOMINMAX
-#endif
-#include <Windows.h>
-#undef WIN32_LEAN_AND_MEAN
-#undef NOMINMAX
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <Windows.h>
+#    undef WIN32_LEAN_AND_MEAN
+#    undef NOMINMAX
 #endif
 
 namespace Alimer
 {
-    AssertFailBehavior DefaultHandler(const char* condition,
-        const char* msg,
-        const char* file,
-        const int line)
+    AssertFailBehavior DefaultHandler(const char *condition,
+                                      const char *msg,
+                                      const char *file,
+                                      const int   line)
     {
         const uint64_t BufferSize = 2048;
-        char buffer[BufferSize];
+        char           buffer[BufferSize];
         snprintf(buffer, BufferSize, "%s(%d): Assert Failure: ", file, line);
 
-        if (condition != nullptr) {
+        if (condition != nullptr)
+        {
             snprintf(buffer, BufferSize, "%s'%s' ", buffer, condition);
         }
 
-        if (msg != nullptr) {
+        if (msg != nullptr)
+        {
             snprintf(buffer, BufferSize, "%s%s", buffer, msg);
         }
 
@@ -65,7 +67,7 @@ namespace Alimer
         return AssertFailBehavior::Halt;
     }
 
-    AssertHandler& GetAssertHandlerInstance()
+    AssertHandler &GetAssertHandlerInstance()
     {
         static AssertHandler s_handler = &DefaultHandler;
         return s_handler;
@@ -81,9 +83,9 @@ namespace Alimer
         GetAssertHandlerInstance() = newHandler;
     }
 
-    AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, const int line, const char* msg, ...)
+    AssertFailBehavior ReportAssertFailure(const char *condition, const char *file, const int line, const char *msg, ...)
     {
-        const char* message = nullptr;
+        const char *message = nullptr;
         if (msg != nullptr)
         {
             char messageBuffer[1024];
@@ -99,4 +101,4 @@ namespace Alimer
 
         return GetAssertHandlerInstance()(condition, message, file, line);
     }
-} 
+} // namespace Alimer

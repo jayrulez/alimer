@@ -19,15 +19,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#pragma once
-
-#include "RHI/RHITypes.h"
-#include <memory>
+#include "Graphics/GraphicsResource.h"
 
 namespace Alimer
 {
-    bool IsVulkanBackendAvailable();
-    std::shared_ptr<GraphicsDevice> CreateVulkanGraphicsDevice(WindowHandle window, const GraphicsDevice::Desc& desc);
-}
+    GraphicsResource::GraphicsResource(GraphicsDevice &device, Type type) :
+        device{device}, type{type}
+    {
+    }
+} // namespace Alimer

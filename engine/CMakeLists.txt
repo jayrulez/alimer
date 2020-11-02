@@ -43,23 +43,15 @@ define_engine_source_files(
     Math
     IO
     Assets
-    RHI
+    Graphics
     Scene
 )
 
 # Graphics backend
-if (ALIMER_D3D11)
-    define_engine_source_files(RHI/D3D)
-    define_engine_source_files(RHI/D3D11)
-endif()
-
-if (ALIMER_D3D12)
-    define_engine_source_files(RHI/D3D)
-    define_engine_source_files(RHI/D3D12)
-endif()
-
 if (ALIMER_VULKAN)
-    define_engine_source_files(RHI/Vulkan)
+    define_engine_source_files(Graphics/Vulkan)
+elseif (ALIMER_D3D12)
+    define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_IMGUI)

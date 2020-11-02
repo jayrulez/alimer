@@ -22,33 +22,35 @@
 
 #pragma once
 
+#include "Assets/AssetManager.h"
 #include "Core/Containers.h"
 #include "Platform/Window.h"
-#include "Assets/AssetManager.h"
-#include "RHI/RHITypes.h"
+//#include "RHI/RHITypes.h"
 #include <memory>
 
 namespace Alimer
 {
     struct Config
     {
-        const char* title;
-        uint32_t width = 1280;
-        uint32_t height = 720;
-        bool fullscreen = false; 
-        bool resizable = true;
+        const char *title;
+        uint32_t    width      = 1280;
+        uint32_t    height     = 720;
+        bool        fullscreen = false;
+        bool        resizable  = true;
 
-        GraphicsBackendType backendType = GraphicsBackendType::Count;
-        GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
+        //GraphicsBackendType backendType = GraphicsBackendType::Count;
+        //GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
 
         std::string rootDirectory = "Assets";
     };
+
+    class GraphicsDevice;
 
     class ALIMER_API Application : public Object
     {
         ALIMER_OBJECT(Application, Object);
 
-    public:
+      public:
         enum class State
         {
             Uninitialized,
@@ -59,48 +61,63 @@ namespace Alimer
         };
 
         /// Constructor.
-        Application(const Config& config);
+        Application(const Config &config);
 
         /// Destructor.
         virtual ~Application();
 
         /// Gets the current Application instance.
-        static Application* Current();
+        static Application *Current();
 
         /// Setups all subsystem and run's platform main loop.
         void Run();
 
         void Tick();
 
-        const std::string& GetName() const;
-        void SetName(const std::string& name);
+        const std::string &GetName() const;
+
+        void SetName(const std::string &name);
 
         // Gets the config data used to run the application
-        const Config* GetConfig();
+        const Config *GetConfig();
 
         /// Get the main window.
-        Window* GetMainWindow() const { return window.get(); }
+        Window *GetMainWindow() const
+        {
+            return window.get();
+        }
 
-        AssetManager& GetAssets() { return assets; }
-        const AssetManager& GetAssets() const { return assets; }
+        AssetManager &GetAssets()
+        {
+            return assets;
+        }
 
-    protected:
-        virtual void Initialize() {}
-        virtual void OnDraw(CommandList& commandList) {}
+        const AssetManager &GetAssets() const
+        {
+            return assets;
+        }
 
-    private:
+      protected:
+        virtual void Initialize()
+        {
+        }
+        virtual void OnDraw()
+        {
+        }
+
+      private:
         void InitBeforeRun();
 
         std::string name{};
-        Config config;
+        Config      config;
 
-    protected:
-        State state;
-        AssetManager assets;
-        bool headless = false;
-        UniquePtr<Window> window{ nullptr };
-        std::shared_ptr<GraphicsDevice> graphicsDevice;
+      protected:
+        State                           state;
+        AssetManager                    assets;
+        bool                            headless = false;
+        UniquePtr<Window>               window{nullptr};
+        std::unique_ptr<GraphicsDevice> graphicsDevice;
     };
 
-    extern Application* CreateApplication(void);
-} 
+    extern Application *CreateApplication(void);
+} // namespace Alimer

@@ -19,15 +19,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#include "RHI_D3D.h"
+#pragma once
+
+#include "PlatformDef.h"
+#include <string>
+//#include "Graphics/Types.h"
 
 namespace Alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
-    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
-    PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
-#endif
-}
+    class GraphicsDevice;
+
+    /**
+    * Defines a GraphicsDevice
+    */
+    class ALIMER_API GraphicsDevice final
+    {
+      public:
+    };
+
+} // namespace Alimer

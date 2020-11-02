@@ -20,23 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "Core/Log.h"
-#include "Platform/Platform.h"
-#include "Platform/Event.h"
 #include "Platform/Application.h"
+#include "Core/Log.h"
+#include "Graphics/GraphicsDevice.h"
 #include "IO/FileSystem.h"
-#include "RHI/RHI.h"
+#include "Platform/Event.h"
+#include "Platform/Platform.h"
 #include "UI/ImGuiLayer.h"
 
 namespace Alimer
 {
-    static Application* s_appCurrent = nullptr;
+    static Application *s_appCurrent = nullptr;
 
-    Application::Application(const Config& config)
-        : name("Alimer")
-        , config{ config }
-        , state(State::Uninitialized)
-        , assets(config.rootDirectory)
+    Application::Application(const Config &config) :
+        name("Alimer"), config{config}, state(State::Uninitialized), assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
@@ -50,17 +47,17 @@ namespace Alimer
         s_appCurrent = nullptr;
     }
 
-    Application* Application::Current()
+    Application *Application::Current()
     {
         return s_appCurrent;
     }
 
-    const std::string& Application::GetName() const
+    const std::string &Application::GetName() const
     {
         return name;
     }
 
-    void Application::SetName(const std::string& name_)
+    void Application::SetName(const std::string &name_)
     {
         name = name_;
     }
@@ -78,7 +75,7 @@ namespace Alimer
         window = MakeUnique<Window>(config.title, Window::Centered, Window::Centered, config.width, config.height, windowFlags);
 
         // Init graphics device.
-        GraphicsDevice::Desc deviceDesc = {};
+        /*GraphicsDevice::Desc deviceDesc = {};
         deviceDesc.backendType = config.backendType;
         deviceDesc.flags = config.deviceFlags;
         graphicsDevice = GraphicsDevice::Create(window->GetHandle(), deviceDesc);
@@ -89,7 +86,7 @@ namespace Alimer
         else
         {
             ImGuiLayer::Initialize();
-        }
+        }*/
 
         Initialize();
     }
@@ -117,16 +114,11 @@ namespace Alimer
 
     void Application::Tick()
     {
-        CommandList& commandList = graphicsDevice->BeginCommandList();
-        commandList.PresentBegin();
-        commandList.PushDebugGroup("Frame");
-        OnDraw(commandList);
-        commandList.PopDebugGroup();
-        commandList.PresentEnd();
+        OnDraw();
     }
 
-    const Config* Application::GetConfig()
+    const Config *Application::GetConfig()
     {
         return &config;
     }
-}
+} // namespace Alimer
