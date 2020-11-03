@@ -22,12 +22,13 @@
 
 #pragma once
 
-#include "Math/MathHelper.h"
 #include "Math/Extent.h"
+#include "Math/MathHelper.h"
 
 namespace alimer
 {
-    template <typename T> struct ALIMER_API TRect
+    template <typename T>
+    struct ALIMER_API TRect
     {
     public:
         union
@@ -40,9 +41,12 @@ namespace alimer
         };
 
         constexpr TRect() = default;
-        constexpr TRect(T value) noexcept : x(value), y(value), width(value), height(value) {}
-        constexpr TRect(T x_, T y_, T width_, T height_) noexcept : x(x_), y(y_), width(width_), height(height_) {}
-        constexpr TRect(T width_, T height_) noexcept : x(T(0)), y(T(0)), width(width_), height(height_) {}
+        constexpr TRect(T value) noexcept
+            : x(value), y(value), width(value), height(value) {}
+        constexpr TRect(T x_, T y_, T width_, T height_) noexcept
+            : x(x_), y(y_), width(width_), height(height_) {}
+        constexpr TRect(T width_, T height_) noexcept
+            : x(T(0)), y(T(0)), width(width_), height(height_) {}
 
         TRect(const TRect&) = default;
         TRect& operator=(const TRect&) = default;
@@ -50,13 +54,28 @@ namespace alimer
         TRect(TRect&&) = default;
         TRect& operator=(TRect&&) = default;
 
-        T Left() const { return x; }
-        T Right() const { return x + width; }
-        T Top() const { return y; }
-        T Bottom() const { return y + height; }
+        T Left() const
+        {
+            return x;
+        }
+        T Right() const
+        {
+            return x + width;
+        }
+        T Top() const
+        {
+            return y;
+        }
+        T Bottom() const
+        {
+            return y + height;
+        }
 
         /// Gets a value that indicates whether the rectangle is empty.
-        ALIMER_FORCE_INLINE bool IsEmpty() const { return (x == 0 && y == 0 && width == 0 && height == 0); }
+        ALIMER_FORCE_INLINE bool IsEmpty() const
+        {
+            return (x == 0 && y == 0 && width == 0 && height == 0);
+        }
 
         /*
         /// Return as string.
@@ -66,6 +85,6 @@ namespace alimer
         }*/
     };
 
-    using Rect  = TRect<float>;
+    using Rect = TRect<float>;
     using RectI = TRect<int32_t>;
-}
+} // namespace alimer

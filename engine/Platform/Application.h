@@ -25,7 +25,6 @@
 #include "Assets/AssetManager.h"
 #include "Core/Containers.h"
 #include "Platform/Window.h"
-#include "Graphics/Resources.h"
 #include <memory>
 
 namespace alimer
@@ -33,10 +32,10 @@ namespace alimer
     struct Config
     {
         const char* title;
-        uint32_t    width      = 1280;
-        uint32_t    height     = 720;
-        bool        fullscreen = false;
-        bool        resizable  = true;
+        uint32_t width = 1280;
+        uint32_t height = 720;
+        bool fullscreen = false;
+        bool resizable = true;
 
         // GraphicsBackendType backendType = GraphicsBackendType::Count;
         // GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
@@ -45,6 +44,7 @@ namespace alimer
     };
 
     class GraphicsDevice;
+    class ImGuiLayer;
 
     class ALIMER_API Application : public Object
     {
@@ -95,20 +95,25 @@ namespace alimer
         }
 
     protected:
-        virtual void Initialize() {}
-        virtual void OnDraw() {}
+        virtual void Initialize()
+        {
+        }
+        virtual void OnDraw()
+        {
+        }
 
     private:
         void InitBeforeRun();
 
         std::string name{};
-        Config      config;
+        Config config;
 
     protected:
-        State                           state;
-        AssetManager                    assets;
-        bool                            headless = false;
-        std::unique_ptr<Window>         window{nullptr};
+        State state;
+        AssetManager assets;
+        bool headless = false;
+        std::unique_ptr<Window> window{nullptr};
+        std::unique_ptr<ImGuiLayer> imguiLayer{nullptr};
     };
 
     extern Application* CreateApplication(void);

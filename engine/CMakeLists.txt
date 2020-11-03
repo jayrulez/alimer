@@ -58,6 +58,19 @@ endif()
 
 if (ALIMER_IMGUI)
     define_engine_source_files(UI)
+
+    # Backends
+    set(IMGUI_BACKEND_FILES)
+
+    
+    if (ALIMER_VULKAN)
+        set(IMGUI_BACKEND_FILES ${IMGUI_BACKEND_FILES} 
+            UI/backends/imgui_impl_vulkan.cpp
+            UI/backends/imgui_impl_vulkan.h
+        )
+    endif()
+
+    set(SOURCE_FILES ${SOURCE_FILES} ${IMGUI_BACKEND_FILES})
 endif ()
 
 if (ALIMER_PHYSICS)

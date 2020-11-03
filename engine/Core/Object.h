@@ -146,26 +146,31 @@ namespace alimer
         static RefPtr<Object> CreateObject(StringId32 objectType);
 
         /// Return a subsystem, template version.
-        template <class T> static T* GetSubsystem()
+        template <class T>
+        static T* GetSubsystem()
         {
             return static_cast<T*>(GetSubsystem(T::GetTypeStatic()));
         }
 
         /// Register an object factory, template version.
-        template <class T> static void RegisterFactory()
+        template <class T>
+        static void RegisterFactory()
         {
             RegisterFactory(new ObjectFactoryImpl<T>());
         }
 
         /// Create and return an object through a factory, template version.
-        template <class T> static inline RefPtr<T> CreateObject()
+        template <class T>
+        static inline RefPtr<T> CreateObject()
         {
             return StaticCast<T>(CreateObject(T::GetTypeStatic()));
         }
     };
 
-    template <> ALIMER_API Input* Object::GetSubsystem<Input>();
-    template <> ALIMER_API Graphics* Object::GetSubsystem<Graphics>();
+    template <>
+    ALIMER_API Input* Object::GetSubsystem<Input>();
+    template <>
+    ALIMER_API Graphics* Object::GetSubsystem<Graphics>();
 
     /// Base class for object factories.
     class ALIMER_API ObjectFactory

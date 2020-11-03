@@ -22,52 +22,20 @@
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/GraphicsResource.h"
-#include "Platform/WindowHandle.h"
-#include <string>
+#include "UI/ImGuiLayer.h"
 
 namespace alimer
 {
-#ifdef _DEBUG
-#    define DEFAULT_ENABLE_DEBUG_LAYER true
-#else
-#    define DEFAULT_ENABLE_DEBUG_LAYER false
-#endif
+    class VulkanGraphics;
 
-    struct GraphicsSettings final
+    class VulkanImGuiRenderer final : public ImGuiRenderer
     {
-        std::string applicationName = "Alimer";
-        PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
-        bool enableDebugLayer = DEFAULT_ENABLE_DEBUG_LAYER;
-        bool verticalSync = false;
-    };
-
-    class ImGuiRenderer;
-
-    /// Defines a Graphics module
-    class ALIMER_API Graphics : public Object
-    {
-        ALIMER_OBJECT(Graphics, Object);
-
-        friend class ImGuiLayer;
-
     public:
-        static Graphics* Create(WindowHandle windowHandle, const GraphicsSettings& settings);
-
-        virtual bool BeginFrame() = 0;
-        virtual void EndFrame() = 0;
+        VulkanImGuiRenderer(VulkanGraphics& graphics, uint32_t imageCount);
+        ~VulkanImGuiRenderer();
+        void Shutdown() override;
 
     private:
-        virtual ImGuiRenderer* GetImGuiRenderer() = 0;
-
-    protected:
-        /// Constructor
-        Graphics(const GraphicsSettings& settings);
-
-        PixelFormat colorFormat{PixelFormat::Invalid};
-        PixelFormat depthStencilFormat;
-        bool enableDebugLayer;
-        bool verticalSync;
+        VulkanGraphics& graphics;
     };
 }

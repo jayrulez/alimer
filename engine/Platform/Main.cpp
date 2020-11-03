@@ -30,7 +30,9 @@ namespace
 }
 
 #if defined(__ANDROID__)
-void android_main(android_app* state) {}
+void android_main(android_app* state)
+{
+}
 #elif ALIMER_PLATFORM_WINDOWS
 #    include "PlatformIncl.h"
 #    include <DirectXMath.h>
@@ -63,7 +65,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 
     alimer::Platform::ParseArguments(GetCommandLineW());
 
-    // Only error handle in release
+// Only error handle in release
 #    ifndef DEBUG
     try
     {
@@ -96,7 +98,11 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 
 #elif ALIMER_PLATFORM_UWP || ALIMER_PLATFORM_XBOXONE
 #    include "platform/uwp/windows_platform.h"
-int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow) {}
+int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
+{
+}
 #else
-int main(int argc, char* argv[]) {}
+int main(int argc, char* argv[])
+{
+}
 #endif

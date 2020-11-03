@@ -20,23 +20,18 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Resources.h"
+#pragma once
+
+#include "Core/Object.h"
+#include "Graphics/GraphicsResource.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(Graphics& graphics_, Type type_) : graphics(&graphics_), type(type_) {}
-
-    GraphicsResource::GraphicsResource(GraphicsResource&& other) noexcept : graphics(other.graphics)
+    class ALIMER_API Texture : public GraphicsResource, public Object
     {
-        other.graphics = nullptr;
-    }
+        ALIMER_OBJECT(Texture, Object);
 
-    GraphicsResource& GraphicsResource::operator=(GraphicsResource&& other) noexcept
-    {
-        graphics       = other.graphics;
-        other.graphics = nullptr;
-        return *this;
-    }
-
-    Texture::Texture(Graphics& graphics_) : GraphicsResource(graphics_, Type::Texture) {}
+    public:
+        Texture();
+    };
 }

@@ -22,9 +22,7 @@
 
 #pragma once
 
-#include "Core/Object.h"
 #include "Graphics/PixelFormat.h"
-#include "Math/Extent.h"
 #include <string>
 
 namespace alimer
@@ -43,14 +41,13 @@ namespace alimer
             SwapChain
         };
 
-        explicit GraphicsResource(Graphics& graphics, Type type);
+        explicit GraphicsResource(Type type);
         virtual ~GraphicsResource() = default;
 
         GraphicsResource(GraphicsResource&) = delete;
         GraphicsResource& operator=(GraphicsResource&) = delete;
-
-        GraphicsResource(GraphicsResource&&) noexcept;
-        GraphicsResource& operator=(GraphicsResource&&) noexcept;
+        GraphicsResource(GraphicsResource&&) = delete;
+        GraphicsResource& operator=(GraphicsResource&&) = delete;
 
         /// Unconditionally destroy the GPU resource.
         virtual void Destroy() = 0;
@@ -61,14 +58,8 @@ namespace alimer
             return type;
         }
 
-        /// Get the Graphics that created this resource.
-        Graphics& GetGraphics() const
-        {
-            return *graphics;
-        }
-
         /// Set the name.
-        virtual void set_name(const std::string& newName)
+        virtual void SetName(const std::string& newName)
         {
             name = newName;
         }
@@ -80,19 +71,7 @@ namespace alimer
         }
 
     protected:
-        Graphics*   graphics;
-        Type        type;
+        Type type;
         std::string name;
-    };
-
-    class ALIMER_API Texture final : public GraphicsResource, public Object
-    {
-        ALIMER_OBJECT(Texture, Object);
-
-    public:
-        Texture(Graphics& graphics);
-        ~Texture() = default;
-
-        void Destroy() override;
     };
 }

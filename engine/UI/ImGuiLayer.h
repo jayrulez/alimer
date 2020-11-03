@@ -24,10 +24,27 @@
 
 #include "PlatformDef.h"
 
-namespace alimer::ImGuiLayer
+namespace alimer
 {
-    ALIMER_API void Initialize(void);
-    ALIMER_API void Shutdown(void);
+    class Graphics;
+
+    class ImGuiRenderer
+    {
+    public:
+        virtual ~ImGuiRenderer() = default;
+        virtual void Shutdown() = 0;
+    };
+
+    class ALIMER_API ImGuiLayer final
+    {
+    public:
+        ImGuiLayer(Graphics* graphics);
+        ~ImGuiLayer();
+
+    private:
+        ImGuiRenderer* renderer;
+    };
+
     // ALIMER_API void BeginFrame(Window* window, float deltaTime);
     // ALIMER_API void EndFrame(void);
 }

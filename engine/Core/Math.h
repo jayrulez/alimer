@@ -36,10 +36,25 @@ namespace alimer
         float y;
 
         /// Constructor.
-        Float2() noexcept : x(0.0f), y(0.0f) {}
-        constexpr explicit Float2(float value) noexcept : x(value), y(value) {}
-        constexpr Float2(float x_, float y_) noexcept : x(x_), y(y_) {}
-        explicit Float2(_In_reads_(2) const float* pArray) noexcept : x(pArray[0]), y(pArray[1]) {}
+        Float2() noexcept
+            : x(0.0f), y(0.0f)
+        {
+        }
+
+        constexpr explicit Float2(float value) noexcept
+            : x(value), y(value)
+        {
+        }
+
+        constexpr Float2(float x_, float y_) noexcept
+            : x(x_), y(y_)
+        {
+        }
+
+        explicit Float2(_In_reads_(2) const float* pArray) noexcept
+            : x(pArray[0]), y(pArray[1])
+        {
+        }
 
         Float2(const Float2&) = default;
         Float2& operator=(const Float2&) = default;
@@ -52,6 +67,7 @@ namespace alimer
         {
             return x == rhs.x && y == rhs.y;
         }
+
         bool operator!=(const Float2& rhs) const noexcept
         {
             return x != rhs.x || y != rhs.y;
@@ -82,14 +98,23 @@ namespace alimer
         int32_t y;
 
         Int2() = default;
-        constexpr explicit Int2(int32_t value) noexcept : x(value), y(value) {}
-        constexpr Int2(int32_t _x, int32_t _y) noexcept : x(_x), y(_y) {}
-        explicit Int2(_In_reads_(2) const int32_t* pArray) noexcept : x(pArray[0]), y(pArray[1]) {}
+        constexpr explicit Int2(int32_t value) noexcept
+            : x(value), y(value)
+        {
+        }
+        constexpr Int2(int32_t _x, int32_t _y) noexcept
+            : x(_x), y(_y)
+        {
+        }
+        explicit Int2(_In_reads_(2) const int32_t* pArray) noexcept
+            : x(pArray[0]), y(pArray[1])
+        {
+        }
 
         Int2(const Int2&) = default;
         Int2& operator=(const Int2&) = default;
 
-        Int2(Int2&&)  = default;
+        Int2(Int2&&) = default;
         Int2& operator=(Int2&&) = default;
 
         // Constants
@@ -107,7 +132,10 @@ namespace alimer
         /// Specifies the y-component of the vector.
         uint32_t y;
 
-        UInt2() noexcept : x(0), y(0) {}
+        UInt2() noexcept
+            : x(0), y(0)
+        {
+        }
 
         UInt2(const UInt2&) = default;
         UInt2& operator=(const UInt2&) = default;
@@ -115,8 +143,14 @@ namespace alimer
         UInt2(UInt2&&) = default;
         UInt2& operator=(UInt2&&) = default;
 
-        constexpr UInt2(uint32_t _x, uint32_t _y) noexcept : x(_x), y(_y) {}
-        explicit UInt2(_In_reads_(2) const uint32_t* pArray) noexcept : x(pArray[0]), y(pArray[1]) {}
+        constexpr UInt2(uint32_t _x, uint32_t _y) noexcept
+            : x(_x), y(_y)
+        {
+        }
+        explicit UInt2(_In_reads_(2) const uint32_t* pArray) noexcept
+            : x(pArray[0]), y(pArray[1])
+        {
+        }
 
         static const UInt2 Zero;
         static const UInt2 One;
@@ -135,11 +169,26 @@ namespace alimer
         float z;
 
         /// Constructor.
-        Float3() noexcept : x(0.0f), y(0.0f), z(0.0f) {}
-        constexpr explicit Float3(float value) noexcept : x(value), y(value), z(value) {}
-        constexpr Float3(float x_, float y_, float z_) noexcept : x(x_), y(y_), z(z_) {}
-        explicit Float3(_In_reads_(3) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]) {}
-        constexpr Float3(const Float2& vector, float z_) noexcept : x(vector.x), y(vector.y), z(z_) {}
+        Float3() noexcept
+            : x(0.0f), y(0.0f), z(0.0f)
+        {
+        }
+        constexpr explicit Float3(float value) noexcept
+            : x(value), y(value), z(value)
+        {
+        }
+        constexpr Float3(float x_, float y_, float z_) noexcept
+            : x(x_), y(y_), z(z_)
+        {
+        }
+        explicit Float3(_In_reads_(3) const float* data) noexcept
+            : x(data[0]), y(data[1]), z(data[2])
+        {
+        }
+        constexpr Float3(const Float2& vector, float z_) noexcept
+            : x(vector.x), y(vector.y), z(z_)
+        {
+        }
 
         Float3(const Float3&) = default;
         Float3& operator=(const Float3&) = default;
@@ -193,12 +242,30 @@ namespace alimer
         float w;
 
         /// Constructor.
-        Float4() noexcept : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
-        constexpr explicit Float4(float value) noexcept : x(value), y(value), z(value), w(value) {}
-        constexpr Float4(float x_, float y_, float z_, float w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
-        explicit Float4(_In_reads_(4) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]), w(data[3]) {}
-        constexpr Float4(const Float2& vector, float z_, float w_) noexcept : x(vector.x), y(vector.y), z(z_), w(w_) {}
-        constexpr Float4(const Float3& vector, float w_) noexcept : x(vector.x), y(vector.y), z(vector.z), w(w_) {}
+        Float4() noexcept
+            : x(0.0f), y(0.0f), z(0.0f), w(0.0f)
+        {
+        }
+        constexpr explicit Float4(float value) noexcept
+            : x(value), y(value), z(value), w(value)
+        {
+        }
+        constexpr Float4(float x_, float y_, float z_, float w_) noexcept
+            : x(x_), y(y_), z(z_), w(w_)
+        {
+        }
+        explicit Float4(_In_reads_(4) const float* data) noexcept
+            : x(data[0]), y(data[1]), z(data[2]), w(data[3])
+        {
+        }
+        constexpr Float4(const Float2& vector, float z_, float w_) noexcept
+            : x(vector.x), y(vector.y), z(z_), w(w_)
+        {
+        }
+        constexpr Float4(const Float3& vector, float w_) noexcept
+            : x(vector.x), y(vector.y), z(vector.z), w(w_)
+        {
+        }
 
         Float4(const Float4&) = default;
         Float4& operator=(const Float4&) = default;

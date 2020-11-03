@@ -24,5 +24,16 @@
 
 namespace alimer
 {
-    
+    VulkanTexture::VulkanTexture(VulkanGraphics& graphics)
+    {
+    }
+
+    VulkanTexture::~VulkanTexture()
+    {
+        Destroy();
+    }
+
+    void VulkanTexture::Destroy()
+    {
+    }
 }

@@ -20,6 +20,7 @@
 // THE SOFTWARE.
 //
 
+#include "AlimerConfig.h"
 #include "Platform/Application.h"
 #include "Core/Log.h"
 #include "Graphics/Graphics.h"
@@ -33,11 +34,8 @@ namespace alimer
 {
     static Application* s_appCurrent = nullptr;
 
-    Application::Application(const Config& config) :
-        name("Alimer"),
-        config{config},
-        state(State::Uninitialized),
-        assets(config.rootDirectory)
+    Application::Application(const Config& config)
+        : name("Alimer"), config{config}, state(State::Uninitialized), assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
 
@@ -46,7 +44,9 @@ namespace alimer
 
     Application::~Application()
     {
-        // ImGuiLayer::Shutdown();
+#if defined(ALIMER_IMGUI)
+        imguiLayer.reset();
+#endif
         RemoveSubsystem<Input>();
         RemoveSubsystem<Graphics>();
         s_appCurrent = nullptr;
@@ -86,8 +86,10 @@ namespace alimer
 
             // Init graphics device.
             GraphicsSettings settings{};
-            RegisterSubsystem(Graphics::Create(*window, settings));
-            ImGuiLayer::Initialize();
+            RegisterSubsystem(Graphics::Create(window->GetHandle(), settings));
+#if defined(ALIMER_IMGUI)
+            imguiLayer = std::make_unique<ImGuiLayer>(GetSubsystem<Graphics>());
+#endif
         }
 
         Initialize();
@@ -116,7 +118,13 @@ namespace alimer
 
     void Application::Tick()
     {
+        auto graphics = GetSubsystem<Graphics>();
+        if (!graphics->BeginFrame())
+            return;
+
         OnDraw();
+
+        graphics->EndFrame();
     }
 
     const Config* Application::GetConfig()

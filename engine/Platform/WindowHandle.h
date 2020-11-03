@@ -40,7 +40,7 @@ namespace alimer
     struct WindowHandle
     {
         Display* display;
-        Window   window;
+        Window window;
     };
 #endif
 }

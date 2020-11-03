@@ -22,20 +22,15 @@
 
 #pragma once
 
-#include "Core/Log.h"
 #include "Graphics/Graphics.h"
+#include "VulkanUtils.h"
 #include "vk_mem_alloc.h"
-#include "volk.h"
+#include <array>
+
+#define VK_DEFAULT_FENCE_TIMEOUT 100000000000
 
 namespace alimer
 {
-    /**
-     * @brief Helper function to convert a VkResult enum to a string
-     * @param format Vulkan result to convert.
-     * @return The string to return.
-     */
-    const std::string ToString(VkResult result);
-
     struct QueueFamilyIndices
     {
         uint32_t graphicsQueueFamilyIndex;
@@ -54,27 +49,64 @@ namespace alimer
         bool dedicated_allocation;
         bool bind_memory2;
         bool memory_budget;
+        bool image_format_list;
+        bool sampler_mirror_clamp_to_edge;
+        bool win32_full_screen_exclusive;
+        bool performance_query;
+        bool host_query_reset;
     };
+
+    class VulkanSwapchain;
 
     class VulkanGraphics final : public Graphics
     {
     public:
-        VulkanGraphics(Window& window, const GraphicsSettings& settings);
+        VulkanGraphics(WindowHandle windowHandle, const GraphicsSettings& settings);
         ~VulkanGraphics() override;
+
+        bool BeginFrame() override;
+        void EndFrame() override;
+
+        ImGuiRenderer* GetImGuiRenderer() override;
+
+        VkInstance GetVkInstance() const
+        {
+            return instance;
+        }
+
+        VkPhysicalDevice GetVkPhysicalDevice() const
+        {
+            return physicalDevice;
+        }
+
+        VkDevice GetVkDevice() const
+        {
+            return device;
+        }
+
+        uint32_t GetGraphicsQueueFamilyIndex() const
+        {
+            return queueFamilies.graphicsQueueFamilyIndex;
+        }
+
+        VkQueue GetGraphicsQueue() const
+        {
+            return graphicsQueue;
+        }
 
     private:
         struct InstanceFeatures
         {
-            bool debugUtils                   = false;
-            bool headless                     = false;
+            bool debugUtils = false;
+            bool headless = false;
             bool getPhysicalDeviceProperties2 = false;
-            bool getSurfaceCapabilities2      = false;
+            bool getSurfaceCapabilities2 = false;
         } instanceFeatues;
 
         struct VulkanQueue
         {
             uint32_t familyIndex;
-            VkQueue  queue;
+            VkQueue queue;
         };
 
         VkInstance instance{VK_NULL_HANDLE};
@@ -83,35 +115,30 @@ namespace alimer
 #endif
         VkSurfaceKHR surface{VK_NULL_HANDLE};
 
-        VkPhysicalDevice            physicalDevice{VK_NULL_HANDLE};
+        VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
         VkPhysicalDeviceProperties2 physicalDeviceProperties = {};
-        QueueFamilyIndices          queueFamilies{};
-        PhysicalDeviceExtensions    physicalDeviceExtensions{};
+        QueueFamilyIndices queueFamilies{};
+        PhysicalDeviceExtensions physicalDeviceExtensions{};
 
         VkDevice device{VK_NULL_HANDLE};
-        VkQueue  graphicsQueue{VK_NULL_HANDLE};
-        VkQueue  computeQueue{VK_NULL_HANDLE};
-        VkQueue  copyQueue{VK_NULL_HANDLE};
+        VkQueue graphicsQueue{VK_NULL_HANDLE};
+        VkQueue computeQueue{VK_NULL_HANDLE};
+        VkQueue copyQueue{VK_NULL_HANDLE};
 
-        VmaAllocator memory_allocator{VK_NULL_HANDLE};
+        VmaAllocator memoryAllocator{VK_NULL_HANDLE};
+
+        std::unique_ptr<VulkanSwapchain> swapchain{nullptr};
+
+        /// Whether a frame is active or not
+        bool frameActive{false};
+
+        VkSemaphore acquiredSemaphore{VK_NULL_HANDLE};
+
+        /// Current active frame index
+        uint32_t activeFrameIndex{0};
+
+        std::vector<std::unique_ptr<VulkanRenderFrame>> frames;
+
+        ImGuiRenderer* imguiRenderer{nullptr};
     };
 }
-
-/// @brief Helper macro to test the result of Vulkan calls which can return an error.
-#define VK_CHECK(x)                                                   \
-    do                                                                \
-    {                                                                 \
-        VkResult err = x;                                             \
-        if (err)                                                      \
-        {                                                             \
-            LOGE("Detected Vulkan error: {}", alimer::ToString(err)); \
-            abort();                                                  \
-        }                                                             \
-    } while (0)
-
-#define VK_THROW(result, msg)                                        \
-    do                                                               \
-    {                                                                \
-        LOGE("Vulkan: {}, error {}", msg, alimer::ToString(result)); \
-        abort();                                                     \
-    } while (0)

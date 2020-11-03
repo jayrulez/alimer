@@ -11,7 +11,7 @@
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
 //
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WAfRRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 // AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
@@ -22,55 +22,24 @@
 
 #include "VulkanBackend.h"
 #include "AlimerConfig.h"
-#include "Platform/Window.h"
+#include "VulkanSwapchain.h"
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
+#include <imgui.h>
+
+#if defined(ALIMER_IMGUI)
+#    include "VulkanImGuiRenderer.h"
+#endif
 
 namespace alimer
 {
-    const std::string ToString(VkResult result)
-    {
-        switch (result)
-        {
-#define STR(r)   \
-    case VK_##r: \
-        return #r
-            STR(NOT_READY);
-            STR(TIMEOUT);
-            STR(EVENT_SET);
-            STR(EVENT_RESET);
-            STR(INCOMPLETE);
-            STR(ERROR_OUT_OF_HOST_MEMORY);
-            STR(ERROR_OUT_OF_DEVICE_MEMORY);
-            STR(ERROR_INITIALIZATION_FAILED);
-            STR(ERROR_DEVICE_LOST);
-            STR(ERROR_MEMORY_MAP_FAILED);
-            STR(ERROR_LAYER_NOT_PRESENT);
-            STR(ERROR_EXTENSION_NOT_PRESENT);
-            STR(ERROR_FEATURE_NOT_PRESENT);
-            STR(ERROR_INCOMPATIBLE_DRIVER);
-            STR(ERROR_TOO_MANY_OBJECTS);
-            STR(ERROR_FORMAT_NOT_SUPPORTED);
-            STR(ERROR_SURFACE_LOST_KHR);
-            STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
-            STR(SUBOPTIMAL_KHR);
-            STR(ERROR_OUT_OF_DATE_KHR);
-            STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
-            STR(ERROR_VALIDATION_FAILED_EXT);
-            STR(ERROR_INVALID_SHADER_NV);
-#undef STR
-            default:
-                return "UNKNOWN_ERROR";
-        }
-    }
-
     namespace
     {
 #if defined(_DEBUG)
-        VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
-                                                                      VkDebugUtilsMessageTypeFlagsEXT             message_type,
+        VKAPI_ATTR VkBool32 VKAPI_CALL debug_utils_messenger_callback(VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+                                                                      VkDebugUtilsMessageTypeFlagsEXT message_type,
                                                                       const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-                                                                      void*                                       user_data)
+                                                                      void* user_data)
         {
             // Log debug messge
             if (message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
@@ -155,8 +124,8 @@ namespace alimer
 
             QueueFamilyIndices result;
             result.graphicsQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            result.computeQueueFamily       = VK_QUEUE_FAMILY_IGNORED;
-            result.copyQueueFamily          = VK_QUEUE_FAMILY_IGNORED;
+            result.computeQueueFamily = VK_QUEUE_FAMILY_IGNORED;
+            result.copyQueueFamily = VK_QUEUE_FAMILY_IGNORED;
 
             for (uint32_t i = 0; i < queueCount; i++)
             {
@@ -260,7 +229,7 @@ namespace alimer
                 {
                     result.memory_budget = true;
                 }
-                /*else if (strcmp(extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0)
+                else if (strcmp(extensions[i].extensionName, VK_KHR_IMAGE_FORMAT_LIST_EXTENSION_NAME) == 0)
                 {
                     result.image_format_list = true;
                 }
@@ -272,7 +241,15 @@ namespace alimer
                 {
                     result.win32_full_screen_exclusive = true;
                 }
-                else if (strcmp(extensions[i].extensionName, "VK_KHR_ray_tracing") == 0)
+                else if (strcmp(extensions[i].extensionName, VK_KHR_PERFORMANCE_QUERY_EXTENSION_NAME) == 0)
+                {
+                    result.performance_query = true;
+                }
+                else if (strcmp(extensions[i].extensionName, VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME) == 0)
+                {
+                    result.host_query_reset = true;
+                }
+                /*else if (strcmp(extensions[i].extensionName, "VK_KHR_ray_tracing") == 0)
                 {
                     result.raytracing = true;
                 }
@@ -308,8 +285,8 @@ namespace alimer
                 result.maintenance_1 = true;
                 result.maintenance_2 = true;
                 result.maintenance_3 = true;
-                // result.get_memory_requirements2 = true;
-                // result.bind_memory2             = true;
+                result.get_memory_requirements2 = true;
+                result.bind_memory2             = true;
                 // result.multiview                = true;
             }
 
@@ -335,7 +312,8 @@ namespace alimer
         }
     }
 
-    VulkanGraphics::VulkanGraphics(Window& window, const GraphicsSettings& settings) : Graphics(window, settings)
+    VulkanGraphics::VulkanGraphics(WindowHandle windowHandle, const GraphicsSettings& settings)
+        : Graphics(settings)
     {
         VkResult result = volkInitialize();
         if (result)
@@ -345,7 +323,7 @@ namespace alimer
 
         // Create instance first.
         {
-            const bool               headless = false;
+            const bool headless = false;
             std::vector<const char*> enabledInstanceLayers;
             std::vector<const char*> enabledInstanceExtensions;
 
@@ -439,17 +417,17 @@ namespace alimer
 #endif
 
             VkApplicationInfo app_info{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-            app_info.pApplicationName   = settings.applicationName.c_str();
+            app_info.pApplicationName = settings.applicationName.c_str();
             app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-            app_info.pEngineName        = "Alimer Engine";
-            app_info.engineVersion      = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
-            app_info.apiVersion         = volkGetInstanceVersion();
+            app_info.pEngineName = "Alimer Engine";
+            app_info.engineVersion = VK_MAKE_VERSION(ALIMER_VERSION_MAJOR, ALIMER_VERSION_MINOR, ALIMER_VERSION_PATCH);
+            app_info.apiVersion = volkGetInstanceVersion();
 
             VkInstanceCreateInfo instance_info{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-            instance_info.pApplicationInfo        = &app_info;
-            instance_info.enabledLayerCount       = static_cast<uint32_t>(enabledInstanceLayers.size());
-            instance_info.ppEnabledLayerNames     = enabledInstanceLayers.data();
-            instance_info.enabledExtensionCount   = static_cast<uint32_t>(enabledInstanceExtensions.size());
+            instance_info.pApplicationInfo = &app_info;
+            instance_info.enabledLayerCount = static_cast<uint32_t>(enabledInstanceLayers.size());
+            instance_info.ppEnabledLayerNames = enabledInstanceLayers.data();
+            instance_info.enabledExtensionCount = static_cast<uint32_t>(enabledInstanceExtensions.size());
             instance_info.ppEnabledExtensionNames = enabledInstanceExtensions.data();
 
 #if defined(_DEBUG)
@@ -458,7 +436,7 @@ namespace alimer
             {
                 debug_utils_create_info.messageSeverity =
                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-                debug_utils_create_info.messageType     = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+                debug_utils_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
                 debug_utils_create_info.pfnUserCallback = debug_utils_messenger_callback;
 
                 instance_info.pNext = &debug_utils_create_info;
@@ -508,7 +486,7 @@ namespace alimer
 #elif VK_USE_PLATFORM_WIN32_KHR
             VkWin32SurfaceCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
             createInfo.hinstance = GetModuleHandle(nullptr);
-            createInfo.hwnd = window.GetHandle();
+            createInfo.hwnd = windowHandle;
 
             VkResult result = vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
 #elif VK_USE_PLATFORM_MACOS_MVK
@@ -589,7 +567,7 @@ namespace alimer
 
         physicalDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
         vkGetPhysicalDeviceProperties2(physicalDevice, &physicalDeviceProperties);
-        queueFamilies            = QueryQueueFamilies(physicalDevice, surface);
+        queueFamilies = QueryQueueFamilies(physicalDevice, surface);
         physicalDeviceExtensions = QueryPhysicalDeviceExtensions(physicalDevice);
 
         // Create device
@@ -601,8 +579,8 @@ namespace alimer
             vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queue_family_properties_count, queue_family_properties.data());
 
             uint32_t universal_queue_index = 1;
-            uint32_t compute_queue_index   = 0;
-            uint32_t copy_queue_index      = 0;
+            uint32_t compute_queue_index = 0;
+            uint32_t copy_queue_index = 0;
 
             if (queueFamilies.computeQueueFamily == VK_QUEUE_FAMILY_IGNORED)
             {
@@ -625,13 +603,13 @@ namespace alimer
             }
 
             static const float graphics_queue_prio = 0.5f;
-            static const float compute_queue_prio  = 1.0f;
+            static const float compute_queue_prio = 1.0f;
             static const float transfer_queue_prio = 1.0f;
-            float              prio[3]             = {graphics_queue_prio, compute_queue_prio, transfer_queue_prio};
+            float prio[3] = {graphics_queue_prio, compute_queue_prio, transfer_queue_prio};
 
-            uint32_t                queueCreateCount           = 0;
-            VkDeviceQueueCreateInfo queueCreateInfo[3]         = {};
-            queueCreateInfo[queueCreateCount].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            uint32_t queueCreateCount = 0;
+            VkDeviceQueueCreateInfo queueCreateInfo[3] = {};
+            queueCreateInfo[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
             queueCreateInfo[queueCreateCount].queueFamilyIndex = queueFamilies.graphicsQueueFamilyIndex;
             queueCreateInfo[queueCreateCount].queueCount =
                 Min(universal_queue_index, queue_family_properties[queueFamilies.graphicsQueueFamilyIndex].queueCount);
@@ -640,7 +618,7 @@ namespace alimer
 
             if (queueFamilies.computeQueueFamily != queueFamilies.graphicsQueueFamilyIndex)
             {
-                queueCreateInfo[queueCreateCount].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                queueCreateInfo[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                 queueCreateInfo[queueCreateCount].queueFamilyIndex = queueFamilies.computeQueueFamily;
                 queueCreateInfo[queueCreateCount].queueCount =
                     Min(queueFamilies.copyQueueFamily == queueFamilies.computeQueueFamily ? 2u : 1u,
@@ -653,9 +631,9 @@ namespace alimer
             if (queueFamilies.copyQueueFamily != queueFamilies.graphicsQueueFamilyIndex &&
                 queueFamilies.copyQueueFamily != queueFamilies.computeQueueFamily)
             {
-                queueCreateInfo[queueCreateCount].sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                queueCreateInfo[queueCreateCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                 queueCreateInfo[queueCreateCount].queueFamilyIndex = queueFamilies.copyQueueFamily;
-                queueCreateInfo[queueCreateCount].queueCount       = 1;
+                queueCreateInfo[queueCreateCount].queueCount = 1;
                 queueCreateInfo[queueCreateCount].pQueuePriorities = prio + 2;
                 queueCreateCount++;
             }
@@ -685,7 +663,7 @@ namespace alimer
             }
 
             VkPhysicalDeviceFeatures2 features = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-            void**                    ppNext   = &features.pNext;
+            void** ppNext = &features.pNext;
 
             vkGetPhysicalDeviceFeatures2(physicalDevice, &features);
 
@@ -713,10 +691,10 @@ namespace alimer
             }
 
             VkDeviceCreateInfo createInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-            createInfo.pNext                   = &features;
-            createInfo.queueCreateInfoCount    = queueCreateCount;
-            createInfo.pQueueCreateInfos       = queueCreateInfo;
-            createInfo.enabledExtensionCount   = static_cast<uint32_t>(enabled_extensions.size());
+            createInfo.pNext = &features;
+            createInfo.queueCreateInfoCount = queueCreateCount;
+            createInfo.pQueueCreateInfos = queueCreateInfo;
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size());
             createInfo.ppEnabledExtensionNames = enabled_extensions.data();
 
             VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
@@ -743,34 +721,34 @@ namespace alimer
         // Create memory allocator (VMA)
         {
             VmaVulkanFunctions vma_vulkan_func{};
-            vma_vulkan_func.vkGetPhysicalDeviceProperties       = vkGetPhysicalDeviceProperties;
+            vma_vulkan_func.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
             vma_vulkan_func.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
-            vma_vulkan_func.vkAllocateMemory                    = vkAllocateMemory;
-            vma_vulkan_func.vkFreeMemory                        = vkFreeMemory;
-            vma_vulkan_func.vkMapMemory                         = vkMapMemory;
-            vma_vulkan_func.vkUnmapMemory                       = vkUnmapMemory;
-            vma_vulkan_func.vkFlushMappedMemoryRanges           = vkFlushMappedMemoryRanges;
-            vma_vulkan_func.vkInvalidateMappedMemoryRanges      = vkInvalidateMappedMemoryRanges;
-            vma_vulkan_func.vkBindBufferMemory                  = vkBindBufferMemory;
-            vma_vulkan_func.vkBindImageMemory                   = vkBindImageMemory;
-            vma_vulkan_func.vkGetBufferMemoryRequirements       = vkGetBufferMemoryRequirements;
-            vma_vulkan_func.vkGetImageMemoryRequirements        = vkGetImageMemoryRequirements;
-            vma_vulkan_func.vkCreateBuffer                      = vkCreateBuffer;
-            vma_vulkan_func.vkDestroyBuffer                     = vkDestroyBuffer;
-            vma_vulkan_func.vkCreateImage                       = vkCreateImage;
-            vma_vulkan_func.vkDestroyImage                      = vkDestroyImage;
-            vma_vulkan_func.vkCmdCopyBuffer                     = vkCmdCopyBuffer;
+            vma_vulkan_func.vkAllocateMemory = vkAllocateMemory;
+            vma_vulkan_func.vkFreeMemory = vkFreeMemory;
+            vma_vulkan_func.vkMapMemory = vkMapMemory;
+            vma_vulkan_func.vkUnmapMemory = vkUnmapMemory;
+            vma_vulkan_func.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+            vma_vulkan_func.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+            vma_vulkan_func.vkBindBufferMemory = vkBindBufferMemory;
+            vma_vulkan_func.vkBindImageMemory = vkBindImageMemory;
+            vma_vulkan_func.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+            vma_vulkan_func.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+            vma_vulkan_func.vkCreateBuffer = vkCreateBuffer;
+            vma_vulkan_func.vkDestroyBuffer = vkDestroyBuffer;
+            vma_vulkan_func.vkCreateImage = vkCreateImage;
+            vma_vulkan_func.vkDestroyImage = vkDestroyImage;
+            vma_vulkan_func.vkCmdCopyBuffer = vkCmdCopyBuffer;
 
             VmaAllocatorCreateInfo allocator_info{};
             allocator_info.physicalDevice = physicalDevice;
-            allocator_info.device         = device;
-            allocator_info.instance       = instance;
+            allocator_info.device = device;
+            allocator_info.instance = instance;
 
             if (physicalDeviceExtensions.get_memory_requirements2 && physicalDeviceExtensions.dedicated_allocation)
             {
                 allocator_info.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
                 vma_vulkan_func.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR;
-                vma_vulkan_func.vkGetImageMemoryRequirements2KHR  = vkGetImageMemoryRequirements2KHR;
+                vma_vulkan_func.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR;
             }
 
             /*if (is_extension_supported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) &&
@@ -781,12 +759,20 @@ namespace alimer
 
             allocator_info.pVulkanFunctions = &vma_vulkan_func;
 
-            result = vmaCreateAllocator(&allocator_info, &memory_allocator);
+            result = vmaCreateAllocator(&allocator_info, &memoryAllocator);
 
             if (result != VK_SUCCESS)
             {
                 VK_THROW(result, "Cannot create allocator");
             }
+        }
+
+        swapchain = std::make_unique<VulkanSwapchain>(*this, surface, settings.enableDebugLayer);
+        colorFormat = swapchain->GetColorFormat();
+
+        for (uint32_t i = 0; i < swapchain->GetImageCount(); ++i)
+        {
+            frames.emplace_back(std::make_unique<VulkanRenderFrame>(*this));
         }
     }
 
@@ -794,24 +780,27 @@ namespace alimer
     {
         VK_CHECK(vkDeviceWaitIdle(device));
 
-        if (memory_allocator != VK_NULL_HANDLE)
+#if defined(ALIMER_IMGUI)
+        delete imguiRenderer;
+        imguiRenderer = nullptr;
+#endif
+
+        swapchain.reset();
+        frames.clear();
+
+        if (memoryAllocator != VK_NULL_HANDLE)
         {
             VmaStats stats;
-            vmaCalculateStats(memory_allocator, &stats);
+            vmaCalculateStats(memoryAllocator, &stats);
 
             LOGI("Total device memory leaked: {} bytes.", stats.total.usedBytes);
 
-            vmaDestroyAllocator(memory_allocator);
+            vmaDestroyAllocator(memoryAllocator);
         }
 
         if (device != VK_NULL_HANDLE)
         {
             vkDestroyDevice(device, nullptr);
-        }
-
-        if (surface != VK_NULL_HANDLE)
-        {
-            vkDestroySurfaceKHR(instance, surface, nullptr);
         }
 
 #if defined(_DEBUG)
@@ -826,4 +815,79 @@ namespace alimer
             vkDestroyInstance(instance, nullptr);
         }
     }
+
+    bool VulkanGraphics::BeginFrame()
+    {
+        if (frameActive)
+        {
+            LOGW("Frame is still active, please call EndFrame first");
+            return false;
+        }
+
+        /*auto& previousFrame = *frames.at(activeFrameIndex);
+
+        acquiredSemaphore = previousFrame.RequestSemaphore();
+        VkResult result = swapchain->AcquireNextImage(activeFrameIndex, acquiredSemaphore, VK_NULL_HANDLE);
+        if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            //handle_surface_changes();
+            result = swapchain->AcquireNextImage(activeFrameIndex, acquiredSemaphore, VK_NULL_HANDLE);
+        }
+
+        if (result != VK_SUCCESS)
+        {
+            previousFrame.Reset();
+
+            return VK_NULL_HANDLE;
+        }*/
+
+        // Now the frame is active again
+        frameActive = true;
+
+        // Wait on all resource to be freed from the previous render to this frame
+        //frames.at(activeFrameIndex)->Reset();
+
+        return true;
+    }
+
+    void VulkanGraphics::EndFrame()
+    {
+        ALIMER_ASSERT_MSG(frameActive, "Frame is not active, please call BeginFrame first");
+
+        /*if (swapchain)
+        {
+            VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+
+            VkSwapchainKHR vk_swapchain = swapchain->GetHandle();
+
+            //presentInfo.waitSemaphoreCount = 1;
+            //presentInfo.pWaitSemaphores = &semaphore;
+            presentInfo.swapchainCount = 1;
+            presentInfo.pSwapchains = &vk_swapchain;
+            presentInfo.pImageIndices = &activeFrameIndex;
+
+            VkResult result = vkQueuePresentKHR(graphicsQueue, &presentInfo);
+
+            if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+            {
+                //handle_surface_changes();
+            }
+        }*/
+
+        // Frame is not active anymore
+        frameActive = false;
+    }
+
+#if defined(ALIMER_IMGUI)
+    ImGuiRenderer* VulkanGraphics::GetImGuiRenderer()
+    {
+        if (!imguiRenderer)
+        {
+            imguiRenderer = new VulkanImGuiRenderer(*this, 2u);
+        }
+
+        return imguiRenderer;
+        return nullptr;
+    }
+#endif
 }

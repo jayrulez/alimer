@@ -30,19 +30,17 @@
 
 namespace alimer
 {
-    Graphics::Graphics(Window& window, const GraphicsSettings& settings) :
-        window{window},
-        colorFormat(settings.colorFormat),
+    Graphics::Graphics(const GraphicsSettings& settings) :
         depthStencilFormat(settings.depthStencilFormat),
         enableDebugLayer(settings.enableDebugLayer),
         verticalSync(settings.verticalSync)
     {
     }
 
-    Graphics* Graphics::Create(Window& window, const GraphicsSettings& settings)
+    Graphics* Graphics::Create(WindowHandle windowHandle, const GraphicsSettings& settings)
     {
 #if defined(ALIMER_VULKAN)
-        return new VulkanGraphics(window, settings);
+        return new VulkanGraphics(windowHandle, settings);
 #else
         return nullptr;
 #endif

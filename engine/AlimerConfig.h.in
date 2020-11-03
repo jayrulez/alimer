@@ -44,4 +44,6 @@
 #cmakedefine ALIMER_VULKAN
 #cmakedefine ALIMER_METAL
 
+#cmakedefine ALIMER_IMGUI
+
 #endif

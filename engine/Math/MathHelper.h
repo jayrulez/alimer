@@ -28,9 +28,9 @@
 #include <limits>
 
 #ifdef _MSC_VER
-#    pragma warning(push)
-#    pragma warning(disable : 4244)        // Conversion from 'double' to 'float'
-#    pragma warning(disable : 4702)        // unreachable code
+#pragma warning(push)
+#pragma warning(disable : 4244) // Conversion from 'double' to 'float'
+#pragma warning(disable : 4702) // unreachable code
 #endif
 
 namespace alimer
@@ -42,103 +42,128 @@ namespace alimer
     static constexpr float HalfPi  = PiOver2;
 
     /// Check whether two floating point values are equal within accuracy.
-    template <typename T> inline bool Equals(T lhs, T rhs, T eps)
+    template <typename T>
+    inline bool Equals(T lhs, T rhs, T eps)
     {
         return lhs + eps >= rhs && lhs - eps <= rhs;
     }
 
-    template <class T> inline bool Equals(T lhs, T rhs)
+    template <class T>
+    inline bool Equals(T lhs, T rhs)
     {
         return lhs + std::numeric_limits<T>::epsilon() >= rhs && lhs - std::numeric_limits<T>::epsilon() <= rhs;
     }
 
-    template <typename T> inline T Sign(T v)
+    template <typename T>
+    inline T Sign(T v)
     {
         return v < T(0) ? T(-1) : (v > T(0) ? T(1) : T(0));
     }
 
-    template <typename T> inline T sin(T v)
+    template <typename T>
+    inline T sin(T v)
     {
         return std::sin(v);
     }
-    template <typename T> inline T cos(T v)
+    template <typename T>
+    inline T cos(T v)
     {
         return std::cos(v);
     }
-    template <typename T> inline T tan(T v)
+
+    /// Return tangent of an angle in degrees.
+    template <class T>
+    inline T Tan(T angle)
     {
-        return std::tan(v);
+        return std::tan(angle);
     }
-    template <typename T> inline T asin(T v)
+
+    template <typename T>
+    inline T asin(T v)
     {
         return std::asin(v);
     }
-    template <typename T> inline T acos(T v)
+    template <typename T>
+    inline T acos(T v)
     {
         return std::acos(v);
     }
-    template <typename T> inline T atan(T v)
+    template <typename T>
+    inline T atan(T v)
     {
         return std::atan(v);
     }
-    template <typename T> inline T log2(T v)
+    template <typename T>
+    inline T log2(T v)
     {
         return std::log2(v);
     }
-    template <typename T> inline T log10(T v)
+    template <typename T>
+    inline T log10(T v)
     {
         return std::log10(v);
     }
-    template <typename T> inline T log(T v)
+    template <typename T>
+    inline T log(T v)
     {
         return std::log(v);
     }
-    template <typename T> inline T exp2(T v)
+    template <typename T>
+    inline T exp2(T v)
     {
         return std::exp2(v);
     }
-    template <typename T> inline T exp(T v)
+    template <typename T>
+    inline T exp(T v)
     {
         return std::exp(v);
     }
-    template <typename T> inline T pow(T a, T b)
+    template <typename T>
+    inline T pow(T a, T b)
     {
         return std::pow(a, b);
     }
-    template <typename T> inline T ToRadians(T degrees)
+    template <typename T>
+    inline T ToRadians(T degrees)
     {
         return degrees * (Pi / 180.0f);
     }
-    template <typename T> inline T ToDegrees(T radians)
+    template <typename T>
+    inline T ToDegrees(T radians)
     {
         return radians * (180.0f / Pi);
     }
 
     /// Linear interpolation between two values.
-    template <typename T, typename U> inline T lerp(T lhs, T rhs, U t)
+    template <typename T, typename U>
+    inline T lerp(T lhs, T rhs, U t)
     {
         return lhs * (1.0 - t) + rhs * t;
     }
 
     /// Inverse linear interpolation between two values.
-    template <typename T> inline T inverse_lerp(T lhs, T rhs, T x)
+    template <typename T>
+    inline T inverse_lerp(T lhs, T rhs, T x)
     {
         return (x - lhs) / (rhs - lhs);
     }
 
     /// Check whether a floating point value is NaN.
-    template <class T> inline bool IsNaN(T value)
+    template <class T>
+    inline bool IsNaN(T value)
     {
         return std::isnan(value);
     }
 
     /// Check whether a floating point value is positive or negative infinity.
-    template <class T> inline bool IsInf(T value)
+    template <class T>
+    inline bool IsInf(T value)
     {
         return std::isinf(value);
     }
 
-    template <typename T> inline bool IsPowerOfTwo(T value)
+    template <typename T>
+    inline bool IsPowerOfTwo(T value)
     {
         return !(value & (value - 1)) && value;
     }
@@ -185,5 +210,5 @@ namespace alimer
 }
 
 #ifdef _MSC_VER
-#    pragma warning(pop)
+#pragma warning(pop)
 #endif

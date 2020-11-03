@@ -20,24 +20,12 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
 #include "Graphics/Texture.h"
-#include "VulkanUtils.h"
-#include "vk_mem_alloc.h"
 
 namespace alimer
 {
-    struct VulkanTexture final : public Texture
+    Texture::Texture()
+        : GraphicsResource(Type::Texture)
     {
-    public:
-        VulkanTexture(VulkanGraphics& graphics);
-        ~VulkanTexture() override;
-
-        void Destroy() override;
-
-        VkImage image{VK_NULL_HANDLE};
-        VmaAllocation allocation{VK_NULL_HANDLE};
-        VkImageLayout currentLayout{VK_IMAGE_LAYOUT_UNDEFINED};
-    };
+    }
 }
