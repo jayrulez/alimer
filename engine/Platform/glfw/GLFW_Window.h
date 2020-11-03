@@ -54,40 +54,40 @@ namespace alimer
         }
         void SetBrightness(float) {}
 
-        void SetSize(const SizeI& size) noexcept
+        void SetSize(const Extent2D& size) noexcept
         {
             glfwSetWindowSize(window, static_cast<int>(size.width), static_cast<int>(size.height));
         }
 
-        SizeI GetSize() const noexcept
+        Extent2D GetSize() const noexcept
         {
-            SizeI result{};
-            int   w{};
-            int   h{};
+            Extent2D result{};
+            int      w{};
+            int      h{};
             glfwGetWindowSize(window, &w, &h);
-            result.width  = static_cast<int32_t>(w);
-            result.height = static_cast<int32_t>(h);
+            result.width  = static_cast<uint32_t>(w);
+            result.height = static_cast<uint32_t>(h);
             return result;
         }
 
-        void SetMaximumSize(const SizeI& size) noexcept
+        void SetMaximumSize(const Extent2D& size) noexcept
         {
             maxSize = size;
             glfwSetWindowSizeLimits(window, GLFW_DONT_CARE, GLFW_DONT_CARE, static_cast<int>(size.width), static_cast<int>(size.height));
         }
 
-        SizeI GetMaximumSize() const noexcept
+        Extent2D GetMaximumSize() const noexcept
         {
             return maxSize;
         }
 
-        void SetMinimumSize(const SizeI& size) noexcept
+        void SetMinimumSize(const Extent2D& size) noexcept
         {
             minSize = size;
             glfwSetWindowSizeLimits(window, static_cast<int>(size.width), static_cast<int>(size.height), GLFW_DONT_CARE, GLFW_DONT_CARE);
         }
 
-        SizeI GetMinimumSize() const noexcept
+        Extent2D GetMinimumSize() const noexcept
         {
             return minSize;
         }
@@ -107,8 +107,8 @@ namespace alimer
         GLFWwindow* window{nullptr};
         String      title{};
         uint32_t    id;
-        SizeI       minSize{};
-        SizeI       maxSize{};
+        Extent2D    minSize{};
+        Extent2D    maxSize{};
     };
 
     void PumpEvents() noexcept;

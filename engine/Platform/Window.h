@@ -23,7 +23,7 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Math/Size.h"
+#include "Math/Extent.h"
 #include "Platform/WindowHandle.h"
 
 namespace alimer
@@ -58,7 +58,8 @@ namespace alimer
         /// Destructor.
         virtual ~Window() = default;
 
-        bool     IsOpen() const noexcept;
+        bool IsOpen() const noexcept;
+
         uint32_t GetId() const noexcept;
 
         /// Get the native window handle.
@@ -67,17 +68,17 @@ namespace alimer
         void  SetBrightness(float value);
         float GetBrightness() const noexcept;
 
-        void  SetSize(int32_t width, int32_t height) noexcept;
-        void  SetSize(const SizeI& size) noexcept;
-        SizeI GetSize() const noexcept;
+        void     SetSize(uint32_t width, uint32_t height) noexcept;
+        void     SetSize(const Extent2D& size) noexcept;
+        Extent2D GetSize() const noexcept;
 
-        void  SetMaximumSize(int32_t width, int32_t height) noexcept;
-        void  SetMaximumSize(const SizeI& size) noexcept;
-        SizeI GetMaximumSize() const noexcept;
+        void     SetMaximumSize(uint32_t width, uint32_t height) noexcept;
+        void     SetMaximumSize(const Extent2D& size) noexcept;
+        Extent2D GetMaximumSize() const noexcept;
 
-        void  SetMinimumSize(int32_t width, int32_t height) noexcept;
-        void  SetMinimumSize(const SizeI& size) noexcept;
-        SizeI GetMinimumSize() const noexcept;
+        void     SetMinimumSize(uint32_t width, uint32_t height) noexcept;
+        void     SetMinimumSize(const Extent2D& size) noexcept;
+        Extent2D GetMinimumSize() const noexcept;
 
         String GetTitle() const noexcept;
         void   SetTitle(const String& str) noexcept;

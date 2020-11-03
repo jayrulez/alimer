@@ -50,7 +50,9 @@ define_engine_source_files(
 # Graphics backend
 if (ALIMER_VULKAN)
     define_engine_source_files(Graphics/Vulkan)
-elseif (ALIMER_D3D12)
+endif()
+
+if (ALIMER_D3D12)
     define_engine_source_files(Graphics/D3D12)
 endif()
 

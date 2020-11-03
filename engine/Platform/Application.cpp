@@ -86,7 +86,7 @@ namespace alimer
 
             // Init graphics device.
             GraphicsSettings settings{};
-            RegisterSubsystem(new Graphics(*window, settings));
+            RegisterSubsystem(Graphics::Create(*window, settings));
             ImGuiLayer::Initialize();
         }
 

@@ -20,21 +20,9 @@
 // THE SOFTWARE.
 //
 
-#pragma once
-
-#include "Core/Object.h"
-#include "Graphics/GraphicsResource.h"
+#include "VulkanResources.h"
 
 namespace alimer
 {
-    class ALIMER_API Texture final : public GraphicsResource, public Object
-    {
-        ALIMER_OBJECT(Texture, Object);
-
-    public:
-        Texture(GraphicsDevice& device);
-        ~Texture() = default;
-
-        void Destroy() override;
-    };
+    
 }

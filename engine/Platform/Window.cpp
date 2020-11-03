@@ -57,47 +57,47 @@ namespace alimer
         return impl->GetBrightness();
     }
 
-    void Window::SetSize(int32_t width, int32_t height) noexcept
+    void Window::SetSize(uint32_t width, uint32_t height) noexcept
     {
-        impl->SetSize(SizeI(width, height));
+        impl->SetSize(Extent2D(width, height));
     }
 
-    void Window::SetSize(const SizeI& size) noexcept
+    void Window::SetSize(const Extent2D& size) noexcept
     {
         impl->SetSize(size);
     }
 
-    SizeI Window::GetSize() const noexcept
+    Extent2D Window::GetSize() const noexcept
     {
         return impl->GetSize();
     }
 
-    void Window::SetMaximumSize(int32_t width, int32_t height) noexcept
+    void Window::SetMaximumSize(uint32_t width, uint32_t height) noexcept
     {
-        impl->SetMaximumSize(SizeI(width, height));
+        impl->SetMaximumSize(Extent2D(width, height));
     }
 
-    void Window::SetMaximumSize(const SizeI& size) noexcept
+    void Window::SetMaximumSize(const Extent2D& size) noexcept
     {
         impl->SetMaximumSize(size);
     }
 
-    SizeI Window::GetMaximumSize() const noexcept
+    Extent2D Window::GetMaximumSize() const noexcept
     {
         return impl->GetMaximumSize();
     }
 
-    void Window::SetMinimumSize(int32_t width, int32_t height) noexcept
+    void Window::SetMinimumSize(uint32_t width, uint32_t height) noexcept
     {
-        impl->SetMinimumSize(SizeI(width, height));
+        impl->SetMinimumSize(Extent2D(width, height));
     }
 
-    void Window::SetMinimumSize(const SizeI& size) noexcept
+    void Window::SetMinimumSize(const Extent2D& size) noexcept
     {
         impl->SetMinimumSize(size);
     }
 
-    SizeI Window::GetMinimumSize() const noexcept
+    Extent2D Window::GetMinimumSize() const noexcept
     {
         return impl->GetMinimumSize();
     }

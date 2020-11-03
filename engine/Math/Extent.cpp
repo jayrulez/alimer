@@ -20,11 +20,20 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/GraphicsResource.h"
+#include "Math/Extent.h"
 
 namespace alimer
 {
-    GraphicsResource::GraphicsResource(GraphicsDevice& device, Type type) :
-        device{device}, type{type}
-    {}
+    const Extent2D Extent2D::Empty = {0, 0};
+    const Extent3D Extent3D::Empty = {0, 0, 0};
+
+    std::string Extent2D::ToString() const
+    {
+        return fmt::format("{} {}", width, height);
+    }
+
+    std::string Extent3D::ToString() const
+    {
+        return fmt::format("{} {} {}", width, height, depth);
+    }
 }

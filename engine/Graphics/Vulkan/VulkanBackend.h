@@ -23,6 +23,7 @@
 #pragma once
 
 #include "Core/Log.h"
+#include "Graphics/Graphics.h"
 #include "vk_mem_alloc.h"
 #include "volk.h"
 
@@ -34,6 +35,30 @@ namespace alimer
      * @return The string to return.
      */
     const std::string ToString(VkResult result);
+
+    class VulkanGraphics final : public Graphics
+    {
+    public:
+        VulkanGraphics(Window& window, const GraphicsSettings& settings);
+        ~VulkanGraphics() override;
+
+    private:
+        struct InstanceFeatures
+        {
+            bool debugUtils                   = false;
+            bool headless                     = false;
+            bool getPhysicalDeviceProperties2 = false;
+            bool getSurfaceCapabilities2      = false;
+        } instanceFeatues;
+        VkInstance instance{VK_NULL_HANDLE};
+#if defined(_DEBUG)
+        VkDebugUtilsMessengerEXT debug_utils_messenger{VK_NULL_HANDLE};
+#endif
+        VkSurfaceKHR     surface{VK_NULL_HANDLE};
+        VkPhysicalDevice physical_device{VK_NULL_HANDLE};
+        VkDevice         device{VK_NULL_HANDLE};
+        VmaAllocator     memory_allocator{VK_NULL_HANDLE};
+    };
 }
 
 /// @brief Helper macro to test the result of Vulkan calls which can return an error.
@@ -48,9 +73,9 @@ namespace alimer
         }                                                             \
     } while (0)
 
-#define VK_THROW(result, msg)                          \
-    do                                                 \
-    {                                                  \
-        LOGE("{}: {}", msg, alimer::ToString(result)); \
-        abort();                                       \
+#define VK_THROW(result, msg)                                        \
+    do                                                               \
+    {                                                                \
+        LOGE("Vulkan: {}, error {}", msg, alimer::ToString(result)); \
+        abort();                                                     \
     } while (0)

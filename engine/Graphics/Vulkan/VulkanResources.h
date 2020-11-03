@@ -20,11 +20,13 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
+#pragma once
+
+#include "Graphics/Resources.h"
+#include "vk_mem_alloc.h"
+#include "volk.h"
 
 namespace alimer
 {
-    Texture::Texture(GraphicsDevice& device) :
-        GraphicsResource(device, Type::Texture)
-    {}
+    
 }

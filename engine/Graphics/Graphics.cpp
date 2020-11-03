@@ -21,12 +21,30 @@
 //
 
 #include "Graphics/Graphics.h"
+#include "AlimerConfig.h"
 #include "Core/Log.h"
+
+#if defined(ALIMER_VULKAN)
+#    include "Graphics/Vulkan/VulkanBackend.h"
+#endif
 
 namespace alimer
 {
-    Graphics ::~Graphics()
+    Graphics::Graphics(Window& window, const GraphicsSettings& settings) :
+        window{window},
+        colorFormat(settings.colorFormat),
+        depthStencilFormat(settings.depthStencilFormat),
+        enableDebugLayer(settings.enableDebugLayer),
+        verticalSync(settings.verticalSync)
     {
-        Shutdown();
+    }
+
+    Graphics* Graphics::Create(Window& window, const GraphicsSettings& settings)
+    {
+#if defined(ALIMER_VULKAN)
+        return new VulkanGraphics(window, settings);
+#else
+        return nullptr;
+#endif
     }
 }

@@ -23,13 +23,12 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Graphics/PixelFormat.h"
+#include "Graphics/Resources.h"
 #include <string>
 
 namespace alimer
 {
     class Window;
-    struct GraphicsImpl;
 
 #ifdef _DEBUG
 #    define DEFAULT_ENABLE_DEBUG_LAYER true
@@ -47,19 +46,17 @@ namespace alimer
     };
 
     /// Defines a Graphics module
-    class ALIMER_API Graphics final : public Object
+    class ALIMER_API Graphics : public Object
     {
         ALIMER_OBJECT(Graphics, Object);
 
     public:
+        static Graphics* Create(Window& window, const GraphicsSettings& settings);
+
+    protected:
         /// Constructor
         Graphics(Window& window, const GraphicsSettings& settings);
-        virtual ~Graphics();
 
-    private:
-        void Shutdown();
-
-        GraphicsImpl* apiData{nullptr};
         Window&       window;
         PixelFormat   colorFormat;
         PixelFormat   depthStencilFormat;

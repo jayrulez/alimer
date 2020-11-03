@@ -22,16 +22,17 @@
 
 #pragma once
 
-#include "PlatformDef.h"
+#include "Core/Object.h"
+#include "Graphics/PixelFormat.h"
+#include "Math/Extent.h"
 #include <string>
-//#include "Graphics/Types.h"
 
 namespace alimer
 {
-    class GraphicsDevice;
+    class Graphics;
 
     /// Defines a base graphics resource class.
-    class ALIMER_API GraphicsResource
+    struct ALIMER_API GraphicsResource
     {
     public:
         enum class Type
@@ -42,7 +43,14 @@ namespace alimer
             SwapChain
         };
 
+        explicit GraphicsResource(Graphics& graphics, Type type);
         virtual ~GraphicsResource() = default;
+
+        GraphicsResource(GraphicsResource&) = delete;
+        GraphicsResource& operator=(GraphicsResource&) = delete;
+
+        GraphicsResource(GraphicsResource&&) noexcept;
+        GraphicsResource& operator=(GraphicsResource&&) noexcept;
 
         /// Unconditionally destroy the GPU resource.
         virtual void Destroy() = 0;
@@ -53,29 +61,38 @@ namespace alimer
             return type;
         }
 
-        /// Get the Device that created this resource.
-        GraphicsDevice& GetDevice() const
+        /// Get the Graphics that created this resource.
+        Graphics& GetGraphics() const
         {
-            return device;
+            return *graphics;
         }
 
-        /// Set the resource name.
-        virtual void SetName(const std::string& newName)
+        /// Set the name.
+        virtual void set_name(const std::string& newName)
         {
             name = newName;
         }
 
         /// Get the resource name
-        const std::string& GetName() const
+        const std::string& get_name() const
         {
             return name;
         }
 
     protected:
-        GraphicsResource(GraphicsDevice& device, Type type);
+        Graphics*   graphics;
+        Type        type;
+        std::string name;
+    };
 
-        GraphicsDevice& device;
-        Type            type;
-        std::string     name;
+    class ALIMER_API Texture final : public GraphicsResource, public Object
+    {
+        ALIMER_OBJECT(Texture, Object);
+
+    public:
+        Texture(Graphics& graphics);
+        ~Texture() = default;
+
+        void Destroy() override;
     };
 }

@@ -20,18 +20,23 @@
 // THE SOFTWARE.
 //
 
-#include "Math/Size.h"
+#include "Graphics/Resources.h"
 
 namespace alimer
 {
-    const Size  Size::Empty  = {0.0f, 0.0f};
-    const SizeI SizeI::Empty = {0, 0};
+    GraphicsResource::GraphicsResource(Graphics& graphics_, Type type_) : graphics(&graphics_), type(type_) {}
 
-    bool Size::IsEmpty() const { return (width == 0 && height == 0); }
+    GraphicsResource::GraphicsResource(GraphicsResource&& other) noexcept : graphics(other.graphics)
+    {
+        other.graphics = nullptr;
+    }
 
-    std::string Size::ToString() const { return fmt::format("{} {}", width, height); }
+    GraphicsResource& GraphicsResource::operator=(GraphicsResource&& other) noexcept
+    {
+        graphics       = other.graphics;
+        other.graphics = nullptr;
+        return *this;
+    }
 
-    bool SizeI::IsEmpty() const { return (width == 0 && height == 0); }
-
-    std::string SizeI::ToString() const { return fmt::format("{} {}", width, height); }
+    Texture::Texture(Graphics& graphics_) : GraphicsResource(graphics_, Type::Texture) {}
 }
