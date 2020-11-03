@@ -36,6 +36,26 @@ namespace alimer
      */
     const std::string ToString(VkResult result);
 
+    struct QueueFamilyIndices
+    {
+        uint32_t graphicsQueueFamilyIndex;
+        uint32_t computeQueueFamily;
+        uint32_t copyQueueFamily;
+    };
+
+    struct PhysicalDeviceExtensions
+    {
+        bool swapchain;
+        bool depthClipEnable;
+        bool maintenance_1;
+        bool maintenance_2;
+        bool maintenance_3;
+        bool get_memory_requirements2;
+        bool dedicated_allocation;
+        bool bind_memory2;
+        bool memory_budget;
+    };
+
     class VulkanGraphics final : public Graphics
     {
     public:
@@ -50,14 +70,30 @@ namespace alimer
             bool getPhysicalDeviceProperties2 = false;
             bool getSurfaceCapabilities2      = false;
         } instanceFeatues;
+
+        struct VulkanQueue
+        {
+            uint32_t familyIndex;
+            VkQueue  queue;
+        };
+
         VkInstance instance{VK_NULL_HANDLE};
 #if defined(_DEBUG)
         VkDebugUtilsMessengerEXT debug_utils_messenger{VK_NULL_HANDLE};
 #endif
-        VkSurfaceKHR     surface{VK_NULL_HANDLE};
-        VkPhysicalDevice physical_device{VK_NULL_HANDLE};
-        VkDevice         device{VK_NULL_HANDLE};
-        VmaAllocator     memory_allocator{VK_NULL_HANDLE};
+        VkSurfaceKHR surface{VK_NULL_HANDLE};
+
+        VkPhysicalDevice            physicalDevice{VK_NULL_HANDLE};
+        VkPhysicalDeviceProperties2 physicalDeviceProperties = {};
+        QueueFamilyIndices          queueFamilies{};
+        PhysicalDeviceExtensions    physicalDeviceExtensions{};
+
+        VkDevice device{VK_NULL_HANDLE};
+        VkQueue  graphicsQueue{VK_NULL_HANDLE};
+        VkQueue  computeQueue{VK_NULL_HANDLE};
+        VkQueue  copyQueue{VK_NULL_HANDLE};
+
+        VmaAllocator memory_allocator{VK_NULL_HANDLE};
     };
 }
 
