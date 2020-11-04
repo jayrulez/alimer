@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+    - 'README.md'    
+  pull_request:
+    branches: [ main ]
+
+
+jobs:
+  CheckSkipCI:
+    runs-on: ubuntu-latest
+    if: |
+      !contains(github.event.head_commit.message, '[skip ci]') &&
+      !contains(github.event.pull_request.title, '[skip ci]') &&
+      !contains(github.event.head_commit.message, '[skip-ci]') &&
+      !contains(github.event.pull_request.title, '[skip-ci]')
+    steps:
+      - run: exit 0
+
+  Windows:
+    runs-on: windows-latest
+    needs: [CheckSkipCI]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        generator:
+          - 'Visual Studio 16 2019'
+        arch:
+          - x64
+        build-type:
+          #- Debug
+          - RelWithDebInfo
+      
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: source-code
+          fetch-depth: 1
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+
+      - name: Generate
+        env:
+          URHO3D_FEATURES: ${{ matrix.env.URHO3D_FEATURES }}
+          URHO3D_BUILD_${{ matrix.env.LIB_TYPE }}_LIBS: ON
+        shell: bash
+        run: |
+          # Generate CMake cache.
+          mkdir cmake-build
+          cd cmake-build
+          cmake -G "${{ matrix.generator }}" -A ${{ matrix.arch }}   \
+            -DCMAKE_INSTALL_PREFIX=`pwd`/../SDK                       \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}               \
+            ../source-code        
+
+      - name: MSBuild
+        if: matrix.generator == 'Visual Studio 16 2019'
+        shell: powershell
+        run: |
+          cd cmake-build
+          msbuild /p:Configuration=${{ matrix.build-type }} Alimer.sln
+      - name: Build
+        if: matrix.generator != 'Visual Studio 16 2019'
+        shell: bash
+        run: |
+          cd cmake-build
+          cmake --build . --config ${{ matrix.build-type }}
+
+      - name: Install
+        shell: bash
+        run: |
+          cd cmake-build
+          cmake --build . --target install
+      - uses: actions/upload-artifact@v2
+        with:
+          name: 'Alimer-${{ github.job }}-${{ matrix.arch }}-(${{ matrix.generator }})-${{ matrix.build-type }}-${{ github.sha }}'
+          path: SDK

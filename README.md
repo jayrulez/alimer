@@ -2,8 +2,7 @@
 
 [![Language](https://img.shields.io/badge/Language%20-C++17-blue.svg?style=flat-square)](https://github.com/amerkoleci/alimer/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/amerkoleci/alimer/blob/master/LICENSE)
-[![Join the chat at https://gitter.im/alimer/Lobby](https://badges.gitter.im/alimer/Lobby.svg)](https://gitter.im/alimer/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Windows Build Status](https://github.com/amerkoleci/alimer/workflows/Windows/badge.svg)](https://github.com/amerkoleci/alimer/actions)
+[![Build](https://github.com/amerkoleci/alimer/workflows/Build/badge.svg)](https://github.com/amerkoleci/alimer/actions)
 
 **Alimer** is a cross-platform 2D and 3D game engine implemented in C++17, inspired by [Lumix](https://github.com/nem0/LumixEngine) and [Urho3D](https://github.com/urho3d/Urho3D)
 
