@@ -54,8 +54,9 @@ jobs:
           mkdir cmake-build
           cd cmake-build
           cmake -G "${{ matrix.generator }}" -A ${{ matrix.arch }}   \
-            -DCMAKE_INSTALL_PREFIX=`pwd`/../SDK                       \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}               \
+            -DCMAKE_SYSTEM_VERSION=10.0                      \
+            -DCMAKE_INSTALL_PREFIX=`pwd`/../SDK                      \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}              \
             ../source-code        
 
       - name: MSBuild

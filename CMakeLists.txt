@@ -1,6 +1,10 @@
 # CMake version
 cmake_minimum_required (VERSION 3.14)
 
+# Configure CMake global variables
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -158,7 +162,12 @@ endif ()
 message(STATUS "  Logging         ${ALIMER_LOGGING}")
 message(STATUS "  Profiling       ${ALIMER_PROFILING}")
 message(STATUS "  Threading       ${ALIMER_THREADING}")
-message(STATUS "  Graphics API:   ${ALIMER_GRAPHICS_API} (ALIMER_${ALIMER_GRAPHICS_API_UPPER})")
+if (ALIMER_D3D12)
+  message(STATUS "  Graphics API:   Direct3D12 (ALIMER_D3D12)")
+endif ()
+if (ALIMER_VULKAN)
+  message(STATUS "  Graphics API:   Vulkan (ALIMER_VULKAN)")
+endif ()
 message(STATUS "  Network         ${ALIMER_NETWORK}")
 message(STATUS "  Physics         ${ALIMER_PHYSICS}")
 
