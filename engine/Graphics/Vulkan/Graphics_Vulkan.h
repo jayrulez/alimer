@@ -19,19 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #pragma once
 
-#include "Core/Object.h"
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/Graphics.h"
+#include <memory>
 
 namespace alimer
 {
-    class ALIMER_API Texture : public GraphicsResource, public Object
-    {
-        ALIMER_OBJECT(Texture, Object);
-
-    public:
-        Texture();
-    };
+    bool IsVulkanBackendAvailable();
+    RefPtr<Graphics> CreateVulkanGraphics(WindowHandle window, const GraphicsSettings& settings);
 }

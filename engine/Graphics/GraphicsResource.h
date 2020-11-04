@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "Graphics/PixelFormat.h"
+#include "Graphics/Types.h"
 #include <string>
 
 namespace alimer
@@ -30,7 +30,7 @@ namespace alimer
     class Graphics;
 
     /// Defines a base graphics resource class.
-    struct ALIMER_API GraphicsResource
+    class ALIMER_API GraphicsResource 
     {
     public:
         enum class Type
@@ -38,40 +38,51 @@ namespace alimer
             Buffer,
             Texture,
             Sampler,
-            SwapChain
+            RenderPipeline,
+            AccelerationStructure,
         };
 
-        explicit GraphicsResource(Type type);
         virtual ~GraphicsResource() = default;
 
-        GraphicsResource(GraphicsResource&) = delete;
-        GraphicsResource& operator=(GraphicsResource&) = delete;
-        GraphicsResource(GraphicsResource&&) = delete;
-        GraphicsResource& operator=(GraphicsResource&&) = delete;
-
-        /// Unconditionally destroy the GPU resource.
         virtual void Destroy() = 0;
 
-        /// Get the resource type.
-        Type GetType() const
+        inline Type GetType() const
         {
             return type;
         }
+        inline bool IsTexture() const
+        {
+            return type == Type::Texture;
+        }
+        inline bool IsBuffer() const
+        {
+            return type == Type::Buffer;
+        }
+        inline bool IsSampler() const
+        {
+            return type == Type::Sampler;
+        }
+        inline bool IsAccelerationStructure() const
+        {
+            return type == Type::AccelerationStructure;
+        }
 
-        /// Set the name.
-        virtual void SetName(const std::string& newName)
+        /// Set the resource name.
+        virtual void SetName(const String& newName)
         {
             name = newName;
         }
 
         /// Get the resource name
-        const std::string& get_name() const
+        const String& GetName() const
         {
             return name;
         }
 
     protected:
+        GraphicsResource(Type type_);
+
         Type type;
-        std::string name;
+        String name;
     };
 }

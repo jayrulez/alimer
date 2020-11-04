@@ -25,7 +25,7 @@
 
 /** \mainpage Vulkan Memory Allocator
 
-<b>Version 3.0.0-development</b> (2020-06-24)
+<b>Version 3.0.0-development</b> (2020-11-03)
 
 Copyright (c) 2017-2020 Advanced Micro Devices, Inc. All rights reserved. \n
 License: MIT
@@ -142,6 +142,15 @@ before including these headers (like `WIN32_LEAN_AND_MEAN` or
 `WINVER` for Windows, `VK_USE_PLATFORM_WIN32_KHR` for Vulkan), you must define
 them before every `#include` of this library.
 
+You may need to configure the way you import Vulkan functions.
+
+- By default, VMA assumes you you link statically with Vulkan API. If this is not the case,
+  `#define VMA_STATIC_VULKAN_FUNCTIONS 0` before `#include` of the VMA implementation and use another way.
+- You can `#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1` and make sure `vkGetInstanceProcAddr` and `vkGetDeviceProcAddr` globals are defined.
+  All the remaining Vulkan functions will be fetched automatically.
+- Finally, you can provide your own pointers to all Vulkan functions needed by VMA using structure member
+  VmaAllocatorCreateInfo::pVulkanFunctions, if you fetched them in some custom way e.g. using some loader like [Volk](https://github.com/zeux/volk).
+
 
 \section quick_start_initialization Initialization
 
@@ -153,6 +162,7 @@ At program startup:
 
 \code
 VmaAllocatorCreateInfo allocatorInfo = {};
+allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
 allocatorInfo.physicalDevice = physicalDevice;
 allocatorInfo.device = device;
 allocatorInfo.instance = instance;
@@ -160,6 +170,13 @@ allocatorInfo.instance = instance;
 VmaAllocator allocator;
 vmaCreateAllocator(&allocatorInfo, &allocator);
 \endcode
+
+Only members `physicalDevice`, `device`, `instance` are required.
+However, you should inform the library which Vulkan version do you use by setting
+VmaAllocatorCreateInfo::vulkanApiVersion and which extensions did you enable
+by setting VmaAllocatorCreateInfo::flags (like #VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT for VK_KHR_buffer_device_address).
+Otherwise, VMA would use only features of Vulkan 1.0 core with no extensions.
+
 
 \section quick_start_resource_allocation Resource allocation
 
@@ -1981,6 +1998,8 @@ Features deliberately excluded from the scope of this library:
   explicit memory type index and dedicated allocation anyway, so they don't
   interact with main features of this library. Such special purpose allocations
   should be made manually, using `vkCreateBuffer()` and `vkAllocateMemory()`.
+- Sub-allocation of parts of one large buffer. Although recommended as a good practice,
+  it is the user's responsibility to implement such logic on top of VMA.
 - Recreation of buffers and images. Although the library has functions for
   buffer and image creation (vmaCreateBuffer(), vmaCreateImage()), you need to
   recreate these objects yourself after defragmentation. That's because the big
@@ -2447,7 +2466,7 @@ typedef struct VmaAllocatorCreateInfo
     It must be a value in the format as created by macro `VK_MAKE_VERSION` or a constant like: `VK_API_VERSION_1_1`, `VK_API_VERSION_1_0`.
     The patch version number specified is ignored. Only the major and minor versions are considered.
     It must be less or equal (preferably equal) to value as passed to `vkCreateInstance` as `VkApplicationInfo::apiVersion`.
-    Only versions 1.0 and 1.1 are supported by the current implementation.
+    Only versions 1.0, 1.1, 1.2 are supported by the current implementation.
     Leaving it initialized to zero is equivalent to `VK_API_VERSION_1_0`.
     */
     uint32_t vulkanApiVersion;
@@ -3185,7 +3204,12 @@ typedef struct VmaAllocationInfo {
     If the allocation is lost, it is equal to `VK_NULL_HANDLE`.
     */
     VkDeviceMemory VMA_NULLABLE_NON_DISPATCHABLE deviceMemory;
-    /** \brief Offset into deviceMemory object to the beginning of this allocation, in bytes. (deviceMemory, offset) pair is unique to this allocation.
+    /** \brief Offset in `VkDeviceMemory` object to the beginning of this allocation, in bytes. `(deviceMemory, offset)` pair is unique to this allocation.
+
+    You usually don't need to use this offset. If you create a buffer or an image together with the allocation using e.g. function
+    vmaCreateBuffer(), vmaCreateImage(), functions that operate on these resources refer to the beginning of the buffer or image,
+    not entire device memory block. Functions like vmaMapMemory(), vmaBindBufferMemory() also refer to the beginning of the allocation
+    and apply this offset automatically.
 
     It can change after call to vmaDefragment() if this allocation is passed to the function, or if allocation is lost.
     */
@@ -3880,13 +3904,17 @@ If the function succeeded, you must destroy both buffer and allocation when you
 no longer need them using either convenience function vmaDestroyBuffer() or
 separately, using `vkDestroyBuffer()` and vmaFreeMemory().
 
-If VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT flag was used,
+If #VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT flag was used,
 VK_KHR_dedicated_allocation extension is used internally to query driver whether
 it requires or prefers the new buffer to have dedicated allocation. If yes,
 and if dedicated allocation is possible (VmaAllocationCreateInfo::pool is null
-and VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT is not used), it creates dedicated
+and #VMA_ALLOCATION_CREATE_NEVER_ALLOCATE_BIT is not used), it creates dedicated
 allocation for this buffer, just like when using
-VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.
+#VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT.
+
+\note This function creates a new `VkBuffer`. Sub-allocation of parts of one large buffer,
+although recommended as a good practice, is out of scope of this library and could be implemented
+by the user as a higher-level logic on top of VMA.
 */
 VMA_CALL_PRE VkResult VMA_CALL_POST vmaCreateBuffer(
     VmaAllocator VMA_NOT_NULL allocator,

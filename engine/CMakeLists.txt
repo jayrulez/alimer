@@ -53,7 +53,8 @@ if (ALIMER_VULKAN)
 endif()
 
 if (ALIMER_D3D12)
-    define_engine_source_files(Graphics/D3D12)
+    #define_engine_source_files(Graphics/D3D)
+    #define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_IMGUI)
@@ -178,10 +179,14 @@ elseif (WIN32)
         UNICODE _UNICODE
     )
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/wd4244 /MP")
+    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/wd4244")
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 elseif(UNIX)
 endif ()
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /MP)
+endif()
 
 if(NOT (WINDOWS_STORE OR EMSCRIPTEN OR ANDROID))
     target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
@@ -194,7 +199,7 @@ if (ALIMER_D3D12)
 endif ()
 
 if (ALIMER_VULKAN)
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan spirv-cross-core)
+    target_link_libraries(${PROJECT_NAME} PRIVATE volk vma spirv-cross-core)
 endif()
 
 if (ALIMER_IMGUI)

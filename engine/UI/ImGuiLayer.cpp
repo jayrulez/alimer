@@ -75,7 +75,7 @@ namespace alimer
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 
-        renderer = graphics->GetImGuiRenderer();
+        //renderer = graphics->GetImGuiRenderer();
 
         // io.Fonts->AddFontDefault();
         // io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
@@ -83,7 +83,7 @@ namespace alimer
 
     ImGuiLayer ::~ImGuiLayer()
     {
-        renderer->Shutdown();
+        //renderer->Shutdown();
         ImGui::DestroyContext();
     }
 

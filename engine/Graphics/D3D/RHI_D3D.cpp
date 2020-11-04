@@ -19,25 +19,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#pragma once
-
-#include "Graphics/Texture.h"
-#include "VulkanUtils.h"
-#include "vk_mem_alloc.h"
+#include "RHI_D3D.h"
 
 namespace alimer
 {
-    struct VulkanTexture final : public Texture
-    {
-    public:
-        VulkanTexture(VulkanGraphics& graphics);
-        ~VulkanTexture() override;
-
-        void Destroy() override;
-
-        VkImage image{VK_NULL_HANDLE};
-        VmaAllocation allocation{VK_NULL_HANDLE};
-        VkImageLayout currentLayout{VK_IMAGE_LAYOUT_UNDEFINED};
-    };
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    PFN_CREATE_DXGI_FACTORY1 CreateDXGIFactory1;
+    PFN_CREATE_DXGI_FACTORY2 CreateDXGIFactory2;
+    PFN_DXGI_GET_DEBUG_INTERFACE1 DXGIGetDebugInterface1;
+#endif
 }

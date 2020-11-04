@@ -24,8 +24,6 @@
 
 #include "Core/Hash.h"
 #include "Core/Memory.h"
-
-#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -44,8 +42,4 @@ namespace alimer
     /** An associative container containing an ordered set of key-value pairs. Usually faster than Map for larger data sets. */
     template <typename K, typename V, typename H = HashType<K>, typename C = std::equal_to<K>, typename A = StdAlloc<std::pair<const K, V>>>
     using UnorderedMap = std::unordered_map<K, V, H, C, A>;
-
-    /** An associative container containing an ordered set of elements. */
-    template <typename T, typename P = std::less<T>, typename A = StdAlloc<T>>
-    using Set = std::set<T, P, A>;
 }
