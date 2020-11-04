@@ -2,7 +2,8 @@
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
-add_subdirectory(fmt)
+add_subdirectory(spdlog)
+set_property(TARGET spdlog PROPERTY FOLDER "ThirdParty")
 
 # spirv-cross
 set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")

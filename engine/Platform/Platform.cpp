@@ -65,7 +65,7 @@ namespace alimer::Platform
         argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 
         // Ignore the first argument containing the application full path
-        Vector<WString> arg_strings(argv + 1, argv + argc);
+        Vector<std::wstring> arg_strings(argv + 1, argv + argc);
         Vector<String>  args;
 
         for (auto& arg : arg_strings)

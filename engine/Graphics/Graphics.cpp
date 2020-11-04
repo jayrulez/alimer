@@ -26,7 +26,7 @@
 #include "AlimerConfig.h"
 #include "PlatformIncl.h"
 
-#if defined(ALIMER_D3D12) && defined(TODO)
+#if defined(ALIMER_D3D12)
 #    include "Graphics/D3D12/Graphics_D3D12.h"
 #endif
 #if defined(ALIMER_VULKAN)
@@ -41,9 +41,9 @@ namespace alimer
 
         if (availableDrivers.empty())
         {
-#if defined(ALIMER_D3D12) && defined(TODO)
-            if (GraphicsDevice_DX12::IsAvailable())
-                backendType = GraphicsBackendType::Direct3D12;
+#if defined(ALIMER_D3D12)
+            if (D3D12Graphics::IsAvailable())
+                availableDrivers.insert(GraphicsBackendType::Direct3D12);
 #endif
 
 #if defined(ALIMER_VULKAN)
@@ -73,11 +73,11 @@ namespace alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_D3D12) && defined(TODO)
+#if defined(ALIMER_D3D12)
             case GraphicsBackendType::Direct3D12:
-                if (GraphicsDevice_DX12::IsAvailable())
+                if (D3D12Graphics::IsAvailable())
                 {
-                    return MakeRefPtr<GraphicsDevice_DX12>(windowHandle, desc);
+                    return MakeRefPtr<D3D12Graphics>(windowHandle, desc);
                 }
                 break;
 #endif
@@ -218,44 +218,6 @@ namespace alimer
         return false;
     }
 
-    bool Graphics::IsFormatBlockCompressed(PixelFormat value) const
-    {
-        /*switch (value)
-        {
-        case PixelFormat::FORMAT_BC1_UNORM:
-        case PixelFormat::FORMAT_BC1_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC2_UNORM:
-        case PixelFormat::FORMAT_BC2_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC3_UNORM:
-        case PixelFormat::FORMAT_BC3_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC4_UNORM:
-        case PixelFormat::FORMAT_BC4_SNORM:
-        case PixelFormat::FORMAT_BC5_UNORM:
-        case PixelFormat::FORMAT_BC5_SNORM:
-        case PixelFormat::FORMAT_BC6H_UF16:
-        case PixelFormat::FORMAT_BC6H_SF16:
-        case PixelFormat::FORMAT_BC7_UNORM:
-        case PixelFormat::FORMAT_BC7_UNORM_SRGB:
-            return true;
-        }*/
-
-        return false;
-    }
-
-    bool Graphics::IsFormatStencilSupport(PixelFormat value) const
-    {
-        /*switch (value)
-        {
-        case PixelFormat::FORMAT_R32G8X24_TYPELESS:
-        case PixelFormat::FORMAT_D32_FLOAT_S8X24_UINT:
-        case PixelFormat::FORMAT_R24G8_TYPELESS:
-        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-            return true;
-        }*/
-
-        return false;
-    }
-
     float Graphics::GetScreenWidth() const
     {
         return (float) GetResolutionWidth() / 1.0f; // wiPlatform::GetDPIScaling();
@@ -264,121 +226,6 @@ namespace alimer
     float Graphics::GetScreenHeight() const
     {
         return (float) GetResolutionHeight() / 1.0f; //wiPlatform::GetDPIScaling();
-    }
-
-    bool Graphics::IsFormatUnorm(PixelFormat value) const
-    {
-        /* switch (value)
-        {
-        case PixelFormat::R8UNorm:
-        case PixelFormat::FORMAT_R16G16B16A16_UNORM:
-        case PixelFormat::FORMAT_R10G10B10A2_UNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_R16G16_UNORM:
-        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-        case PixelFormat::FORMAT_R8G8_UNORM:
-        case PixelFormat::FORMAT_D16_UNORM:
-        case PixelFormat::FORMAT_R16_UNORM:
-            return true;
-        }*/
-
-        return false;
-    }
-
-    uint32_t GetPixelFormatSize(PixelFormat value)
-    {
-        switch (value)
-        {
-            case PixelFormat::R8Unorm:
-            case PixelFormat::R8Snorm:
-            case PixelFormat::R8Uint:
-            case PixelFormat::R8Sint:
-                return 1;
-
-                /*case PixelFormat::FORMAT_R32G32B32A32_FLOAT:
-        case PixelFormat::FORMAT_R32G32B32A32_UINT:
-        case PixelFormat::FORMAT_R32G32B32A32_SINT:
-        case PixelFormat::FORMAT_BC1_UNORM:
-        case PixelFormat::FORMAT_BC1_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC2_UNORM:
-        case PixelFormat::FORMAT_BC2_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC3_UNORM:
-        case PixelFormat::FORMAT_BC3_UNORM_SRGB:
-        case PixelFormat::FORMAT_BC4_SNORM:
-        case PixelFormat::FORMAT_BC4_UNORM:
-        case PixelFormat::FORMAT_BC5_SNORM:
-        case PixelFormat::FORMAT_BC5_UNORM:
-        case PixelFormat::FORMAT_BC6H_UF16:
-        case PixelFormat::FORMAT_BC6H_SF16:
-        case PixelFormat::FORMAT_BC7_UNORM:
-        case PixelFormat::FORMAT_BC7_UNORM_SRGB:
-            return 16;
-
-        case PixelFormat::FORMAT_R32G32B32_FLOAT:
-        case PixelFormat::FORMAT_R32G32B32_UINT:
-        case PixelFormat::FORMAT_R32G32B32_SINT:
-            return 12;
-
-        case PixelFormat::FORMAT_R16G16B16A16_FLOAT:
-        case PixelFormat::FORMAT_R16G16B16A16_UNORM:
-        case PixelFormat::FORMAT_R16G16B16A16_UINT:
-        case PixelFormat::FORMAT_R16G16B16A16_SNORM:
-        case PixelFormat::FORMAT_R16G16B16A16_SINT:
-            return 8;
-
-        case PixelFormat::FORMAT_R32G32_FLOAT:
-        case PixelFormat::FORMAT_R32G32_UINT:
-        case PixelFormat::FORMAT_R32G32_SINT:
-        case PixelFormat::FORMAT_R32G8X24_TYPELESS:
-        case PixelFormat::FORMAT_D32_FLOAT_S8X24_UINT:
-            return 8;
-
-        case PixelFormat::FORMAT_R10G10B10A2_UNORM:
-        case PixelFormat::FORMAT_R10G10B10A2_UINT:
-        case PixelFormat::FORMAT_R11G11B10_FLOAT:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_R8G8B8A8_UINT:
-        case PixelFormat::FORMAT_R8G8B8A8_SNORM:
-        case PixelFormat::FORMAT_R8G8B8A8_SINT:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM:
-        case PixelFormat::FORMAT_B8G8R8A8_UNORM_SRGB:
-        case PixelFormat::FORMAT_R16G16_FLOAT:
-        case PixelFormat::FORMAT_R16G16_UNORM:
-        case PixelFormat::FORMAT_R16G16_UINT:
-        case PixelFormat::FORMAT_R16G16_SNORM:
-        case PixelFormat::FORMAT_R16G16_SINT:
-        case PixelFormat::FORMAT_R32_TYPELESS:
-        case PixelFormat::FORMAT_D32_FLOAT:
-        case PixelFormat::FORMAT_R32_FLOAT:
-        case PixelFormat::FORMAT_R32_UINT:
-        case PixelFormat::FORMAT_R32_SINT:
-        case PixelFormat::FORMAT_R24G8_TYPELESS:
-        case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-            return 4;
-
-        case PixelFormat::FORMAT_R8G8_UNORM:
-        case PixelFormat::FORMAT_R8G8_UINT:
-        case PixelFormat::FORMAT_R8G8_SNORM:
-        case PixelFormat::FORMAT_R8G8_SINT:
-        case PixelFormat::FORMAT_R16_TYPELESS:
-        case PixelFormat::FORMAT_R16_FLOAT:
-        case PixelFormat::FORMAT_D16_UNORM:
-        case PixelFormat::FORMAT_R16_UNORM:
-        case PixelFormat::FORMAT_R16_UINT:
-        case PixelFormat::FORMAT_R16_SNORM:
-        case PixelFormat::FORMAT_R16_SINT:
-            return 2;*/
-
-            default:
-                ALIMER_UNREACHABLE();
-                break;
-        }
-
-        return 16;
     }
 
     uint32_t GetVertexFormatNumComponents(VertexFormat format)

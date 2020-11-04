@@ -301,10 +301,6 @@ namespace alimer
 
         bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
-        bool IsFormatUnorm(PixelFormat value) const;
-        bool IsFormatBlockCompressed(PixelFormat value) const;
-        bool IsFormatStencilSupport(PixelFormat value) const;
-
         inline XMMATRIX GetScreenProjection() const
         {
             return XMMatrixOrthographicOffCenterLH(0, (float) GetScreenWidth(), (float) GetScreenHeight(), 0, -1, 1);

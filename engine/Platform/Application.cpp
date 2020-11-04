@@ -52,6 +52,7 @@ namespace alimer
 #endif
         RemoveSubsystem<Input>();
         RemoveSubsystem<Graphics>();
+        graphics.Reset();
         s_appCurrent = nullptr;
     }
 
@@ -89,9 +90,12 @@ namespace alimer
 
             // Init graphics device.
             GraphicsSettings settings{};
-            RegisterSubsystem(Graphics::Create(window->GetHandle(), settings));
+            settings.backendType = config.backendType;
+            settings.flags = config.deviceFlags;
+            graphics = Graphics::Create(window->GetHandle(), settings);
+            RegisterSubsystem(graphics);
 #if defined(ALIMER_IMGUI)
-            imguiLayer = std::make_unique<ImGuiLayer>(GetSubsystem<Graphics>());
+            imguiLayer = std::make_unique<ImGuiLayer>(graphics);
 #endif
         }
 
@@ -124,7 +128,7 @@ namespace alimer
         auto graphics = GetSubsystem<Graphics>();
         auto& commandList = graphics->BeginCommandList();
         commandList.PresentBegin();
-        OnDraw();
+        OnDraw(commandList);
         commandList.PresentEnd();
     }
 

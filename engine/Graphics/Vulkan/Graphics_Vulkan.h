@@ -24,7 +24,7 @@
 #pragma once
 
 #include "Graphics/Graphics.h"
-#include <memory>
+#include "VulkanBackend.h"
 
 namespace alimer
 {

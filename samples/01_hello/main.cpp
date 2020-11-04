@@ -21,101 +21,116 @@
 //
 
 #include "Core/Math.h"
+#include "Graphics/Graphics.h"
 #include "IO/FileSystem.h"
 #include "Math/Color.h"
 #include "Math/Matrix4x4.h"
 #include "Platform/Application.h"
 #include <DirectXMath.h>
-//#include "RHI/RHI.h"
 
 namespace alimer
 {
     class HelloWorldApp final : public Application
     {
     public:
-        HelloWorldApp(const Config& config) : Application(config) {}
+        HelloWorldApp(const Config& config)
+            : Application(config) {}
         ~HelloWorldApp() override;
 
         void Initialize() override;
-        void OnDraw() override;
+        void OnDraw(CommandList& commandList) override;
 
     private:
         // UniquePtr<Window> window2;
         // RefPtr<SwapChain> swapChain2;
 
-        /* RefPtr<GraphicsBuffer> vertexBuffer;
+        RefPtr<GraphicsBuffer> vertexBuffer;
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
         RefPtr<RenderPipeline> pipeline;
-        RefPtr<Sampler> sampler;*/
+        RefPtr<Sampler> sampler;
     };
 
     /* TODO: Until we fix resource creation */
-    // Shader* vertexShader;
-    // Shader* pixelShader;
-    // Texture* texture;
+    Shader* vertexShader;
+    Shader* pixelShader;
+    Texture* texture;
 
     HelloWorldApp::~HelloWorldApp()
     {
-        // delete vertexShader;
-        // delete pixelShader;
-        // delete texture;
+        delete vertexShader;
+        delete pixelShader;
+        delete texture;
     }
 
     struct Vertex
     {
         Float3 position;
-        Color  color;
+        Color color;
         Float2 uv;
     };
 
     void HelloWorldApp::Initialize()
     {
-#if TODO
         // window2 = MakeUnique<Window>("Window 2");
         // swapChain2 = graphicsDevice->CreateSwapChain(window2->GetHandle());
         // swapChain2->SetVerticalSync(false);
 
         auto shaderSource = File::ReadAllText("assets/Shaders/triangle.hlsl");
-        vertexShader      = new Shader();
-        pixelShader       = new Shader();
-        graphicsDevice->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", vertexShader);
-        graphicsDevice->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", pixelShader);
+        vertexShader = new Shader();
+        pixelShader = new Shader();
+        graphics->CreateShader(ShaderStage::Vertex, shaderSource.c_str(), "VSMain", vertexShader);
+        graphics->CreateShader(ShaderStage::Fragment, shaderSource.c_str(), "PSMain", pixelShader);
 
-        RenderPipelineDescriptor renderPipelineDesc              = {};
-        renderPipelineDesc.vs                                    = vertexShader;
-        renderPipelineDesc.ps                                    = pixelShader;
+        RenderPipelineDescriptor renderPipelineDesc = {};
+        renderPipelineDesc.vs = vertexShader;
+        renderPipelineDesc.ps = pixelShader;
         renderPipelineDesc.vertexDescriptor.attributes[0].format = VertexFormat::Float3;
         renderPipelineDesc.vertexDescriptor.attributes[1].format = VertexFormat::Float4;
         renderPipelineDesc.vertexDescriptor.attributes[2].format = VertexFormat::Float2;
-        renderPipelineDesc.colorAttachments[0].format            = graphicsDevice->GetBackBufferFormat();
+        renderPipelineDesc.colorAttachments[0].format = graphics->GetBackBufferFormat();
         // renderPipelineDesc.colorAttachments[0].blendEnable = true;
         // renderPipelineDesc.colorAttachments[0].srcColorBlendFactor = BlendFactor::One;
         // renderPipelineDesc.colorAttachments[0].dstColorBlendFactor = BlendFactor::SourceAlpha;
         // renderPipelineDesc.colorAttachments[0].srcAlphaBlendFactor = BlendFactor::One;
         // renderPipelineDesc.colorAttachments[0].dstAlphaBlendFactor = BlendFactor::OneMinusSourceAlpha;
-        pipeline = graphicsDevice->CreateRenderPipeline(&renderPipelineDesc);
+        pipeline = graphics->CreateRenderPipeline(&renderPipelineDesc);
 
         uint32_t pixels[4 * 4] = {
-            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
-            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            0xFFFFFFFF,
+            0x00000000,
+            0xFFFFFFFF,
+            0x00000000,
+            0x00000000,
+            0xFFFFFFFF,
+            0x00000000,
+            0xFFFFFFFF,
+            0xFFFFFFFF,
+            0x00000000,
+            0xFFFFFFFF,
+            0x00000000,
+            0x00000000,
+            0xFFFFFFFF,
+            0x00000000,
+            0xFFFFFFFF,
         };
-        TextureDesc textureDesc     = {};
-        textureDesc.Width           = 4;
-        textureDesc.Height          = 4;
-        textureDesc.format          = PixelFormat::FORMAT_R8G8B8A8_UNORM;
-        textureDesc.BindFlags       = BIND_SHADER_RESOURCE;
+        TextureDesc textureDesc = {};
+        textureDesc.Width = 4;
+        textureDesc.Height = 4;
+        textureDesc.format = PixelFormat::RGBA8Unorm;
+        textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+
         SubresourceData textureData = {};
-        textureData.pSysMem         = pixels;
-        textureData.SysMemPitch     = 4u * GetPixelFormatSize(textureDesc.format);
-        texture                     = new Texture();
-        graphicsDevice->CreateTexture(&textureDesc, &textureData, texture);
+        textureData.pSysMem = pixels;
+        textureData.SysMemPitch = 4u * GetFormatBlockSize(textureDesc.format);
+        texture = new Texture();
+        graphics->CreateTexture(&textureDesc, &textureData, texture);
 
         SamplerDescriptor samplerDesc = {};
-        samplerDesc.minFilter         = FilterMode::Nearest;
-        samplerDesc.magFilter         = FilterMode::Nearest;
-        samplerDesc.mipmapFilter      = FilterMode::Nearest;
-        sampler                       = graphicsDevice->CreateSampler(&samplerDesc);
+        samplerDesc.minFilter = FilterMode::Nearest;
+        samplerDesc.magFilter = FilterMode::Nearest;
+        samplerDesc.mipmapFilter = FilterMode::Nearest;
+        sampler = graphics->CreateSampler(&samplerDesc);
 
         /*Vertex quadVertices[] =
         {
@@ -127,59 +142,57 @@ namespace alimer
 
         float cubeData[] = {
             /* pos                  color                       uvs */
-            -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-            -1.0f, -1.0f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f,  1.0f,  1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f,  1.0f,  0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f,  -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-            -1.0f, 1.0f,  1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+            -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-            1.0f,  -1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f,  1.0f,  1.0f,  1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f,  -1.0f, 1.0f,  1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
+            1.0f, -1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
 
-            -1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, -1.0f, 1.0f,  0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 0.0f,
-            1.0f,  -1.0f, 1.0f,  0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 0.0f,
+            1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 1.0f,
 
-            -1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f,  1.0f,  1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f,
-            1.0f,  1.0f,  1.0f,  1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 1.0f};
+            -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f,
+            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 1.0f};
 
         GPUBufferDesc bufferDesc{};
-        bufferDesc.Usage     = USAGE_IMMUTABLE;
+        bufferDesc.Usage = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_VERTEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(cubeData);
         // bufferDesc.StructureByteStride = sizeof(Vertex);
-        vertexBuffer = graphicsDevice->CreateBuffer(bufferDesc, cubeData);
+        vertexBuffer = graphics->CreateBuffer(bufferDesc, cubeData);
 
         // Index buffer
-        const uint16_t indices[] = {0,  1,  2,  0,  2,  3,  6,  5,  4,  7,  6,  4,  8,  9,  10, 8,  10, 11,
+        const uint16_t indices[] = {0, 1, 2, 0, 2, 3, 6, 5, 4, 7, 6, 4, 8, 9, 10, 8, 10, 11,
                                     14, 13, 12, 15, 14, 12, 16, 17, 18, 16, 18, 19, 22, 21, 20, 23, 22, 20};
 
-        bufferDesc.Usage     = USAGE_IMMUTABLE;
+        bufferDesc.Usage = USAGE_IMMUTABLE;
         bufferDesc.BindFlags = BIND_INDEX_BUFFER;
         bufferDesc.ByteWidth = sizeof(indices);
-        indexBuffer          = graphicsDevice->CreateBuffer(bufferDesc, indices);
+        indexBuffer = graphics->CreateBuffer(bufferDesc, indices);
 
         GPUBufferDesc bd;
-        bd.Usage          = USAGE_DYNAMIC;
-        bd.ByteWidth      = sizeof(Matrix4x4);
-        bd.BindFlags      = BIND_CONSTANT_BUFFER;
+        bd.Usage = USAGE_DYNAMIC;
+        bd.ByteWidth = sizeof(Matrix4x4);
+        bd.BindFlags = BIND_CONSTANT_BUFFER;
         bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
-        constantBuffer = graphicsDevice->CreateBuffer(bd, nullptr);
-#endif        // TODO
+        constantBuffer = graphics->CreateBuffer(bd, nullptr);
     }
 
-    void HelloWorldApp::OnDraw()
+    void HelloWorldApp::OnDraw(CommandList& commandList)
     {
         static float time = 0.0f;
-#if TODO
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
 
-        float    aspect   = (float) (GetMainWindow()->GetSize().width / GetMainWindow()->GetSize().height);
-        XMMATRIX view     = XMMatrixLookAtLH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
-        XMMATRIX proj     = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
+        float aspect = (float) (GetWindow().GetSize().width / GetWindow().GetSize().height);
+        XMMATRIX view = XMMatrixLookAtLH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
+        XMMATRIX proj = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
         XMMATRIX viewProj = XMMatrixMultiply(world, XMMatrixMultiply(view, proj));
 
         // Matrix4x4 projectionMatrix;
@@ -201,9 +214,8 @@ namespace alimer
         commandList.BindResource(ShaderStage::Fragment, texture, 0);
         commandList.BindSampler(ShaderStage::Fragment, sampler, 0);
         commandList.DrawIndexed(36);
-#endif        // TODO
 
-        time += 0.03f;
+        time += 0.001f;
     }
 
     Application* CreateApplication()
@@ -212,14 +224,14 @@ namespace alimer
 
         // config.backendType = GraphicsBackendType::Direct3D11;
         // config.backendType = GraphicsBackendType::Direct3D12;
-        // config.backendType = GraphicsBackendType::Vulkan;
+        config.backendType = GraphicsBackendType::Vulkan;
 
 #ifdef _DEBUG
         // Direct3D12 has issue with debug layer
-        // if (config.backendType == GraphicsBackendType::Vulkan)
-        //{
-        //   config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
-        //}
+        if (config.backendType == GraphicsBackendType::Vulkan)
+        {
+            config.deviceFlags = GraphicsDeviceFlags::DebugRuntime;
+        }
 #endif
 
         config.title = "Spinning Cube";
@@ -229,4 +241,4 @@ namespace alimer
 
         return new HelloWorldApp(config);
     }
-}        // namespace Alimer
+} // namespace Alimer

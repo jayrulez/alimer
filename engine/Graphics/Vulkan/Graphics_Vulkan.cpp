@@ -21,17 +21,16 @@
 //
 // The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
+#include "Graphics_Vulkan.h"
 #include "AlimerConfig.h"
 #include "Core/Hash.h"
 #include "Core/Log.h"
-#include "Graphics/Graphics.h"
 #include "Graphics/Graphics_Internal.h"
 
 #ifndef NOMINMAX
 #    define NOMINMAX
 #endif
 
-#include <volk.h>
 #define VMA_IMPLEMENTATION
 #include "spirv_reflect.hpp"
 #include <vk_mem_alloc.h>
@@ -300,6 +299,9 @@ namespace alimer
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkFramebuffer> swapChainFramebuffers;
 
+        uint32_t swapChainSemaphoreIndex = 0;
+        std::vector<VkSemaphore> swapChainAcquireSemaphores;
+
         VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
 
         VkBuffer nullBuffer = VK_NULL_HANDLE;
@@ -364,19 +366,6 @@ namespace alimer
         /// A set of semaphores that can be reused.
         std::vector<VkSemaphore> recycledSemaphores;
 
-        static PFN_vkCreateRayTracingPipelinesKHR createRayTracingPipelinesKHR;
-        static PFN_vkCreateAccelerationStructureKHR createAccelerationStructureKHR;
-        static PFN_vkBindAccelerationStructureMemoryKHR bindAccelerationStructureMemoryKHR;
-        static PFN_vkDestroyAccelerationStructureKHR destroyAccelerationStructureKHR;
-        static PFN_vkGetAccelerationStructureMemoryRequirementsKHR getAccelerationStructureMemoryRequirementsKHR;
-        static PFN_vkGetAccelerationStructureDeviceAddressKHR getAccelerationStructureDeviceAddressKHR;
-        static PFN_vkGetRayTracingShaderGroupHandlesKHR getRayTracingShaderGroupHandlesKHR;
-        static PFN_vkCmdBuildAccelerationStructureKHR cmdBuildAccelerationStructureKHR;
-        static PFN_vkCmdTraceRaysKHR cmdTraceRaysKHR;
-
-        static PFN_vkCmdDrawMeshTasksNV cmdDrawMeshTasksNV;
-        static PFN_vkCmdDrawMeshTasksIndirectNV cmdDrawMeshTasksIndirectNV;
-
     public:
         static bool IsAvailable();
 
@@ -414,9 +403,6 @@ namespace alimer
         bool QueryRead(const GPUQuery* query, GPUQueryResult* result) override;
 
         void SetName(GPUResource* pResource, const char* name) override;
-
-        VkSemaphore RequestSemaphore();
-        void ReturnSemaphore(VkSemaphore semaphore);
 
         CommandList& BeginCommandList() override;
         void SubmitCommandLists() override;
@@ -528,7 +514,7 @@ namespace alimer
                     {
                         auto item = destroyer_bvhs.front();
                         destroyer_bvhs.pop_front();
-                        destroyAccelerationStructureKHR(device, item.first, nullptr);
+                        vkDestroyAccelerationStructureKHR(device, item.first, nullptr);
                     }
                     else
                     {
@@ -685,226 +671,8 @@ namespace alimer
         std::shared_ptr<AllocationHandler> allocationhandler;
     };
 
-    PFN_vkCreateRayTracingPipelinesKHR GraphicsDevice_Vulkan::createRayTracingPipelinesKHR = nullptr;
-    PFN_vkCreateAccelerationStructureKHR GraphicsDevice_Vulkan::createAccelerationStructureKHR = nullptr;
-    PFN_vkBindAccelerationStructureMemoryKHR GraphicsDevice_Vulkan::bindAccelerationStructureMemoryKHR = nullptr;
-    PFN_vkDestroyAccelerationStructureKHR GraphicsDevice_Vulkan::destroyAccelerationStructureKHR = nullptr;
-    PFN_vkGetAccelerationStructureMemoryRequirementsKHR GraphicsDevice_Vulkan::getAccelerationStructureMemoryRequirementsKHR = nullptr;
-    PFN_vkGetAccelerationStructureDeviceAddressKHR GraphicsDevice_Vulkan::getAccelerationStructureDeviceAddressKHR = nullptr;
-    PFN_vkGetRayTracingShaderGroupHandlesKHR GraphicsDevice_Vulkan::getRayTracingShaderGroupHandlesKHR = nullptr;
-    PFN_vkCmdBuildAccelerationStructureKHR GraphicsDevice_Vulkan::cmdBuildAccelerationStructureKHR = nullptr;
-    PFN_vkCmdTraceRaysKHR GraphicsDevice_Vulkan::cmdTraceRaysKHR = nullptr;
-
-    PFN_vkCmdDrawMeshTasksNV GraphicsDevice_Vulkan::cmdDrawMeshTasksNV = nullptr;
-    PFN_vkCmdDrawMeshTasksIndirectNV GraphicsDevice_Vulkan::cmdDrawMeshTasksIndirectNV = nullptr;
-
     namespace Vulkan_Internal
     {
-        // Converters:
-        constexpr VkFormat _ConvertFormat(PixelFormat value)
-        {
-            switch (value)
-            {
-                case PixelFormat::Invalid:
-                    return VK_FORMAT_UNDEFINED;
-                    // 8-bit formats
-                case PixelFormat::R8Unorm:
-                    return VK_FORMAT_R8_UNORM;
-                case PixelFormat::R8Snorm:
-                    return VK_FORMAT_R8_SNORM;
-                case PixelFormat::R8Uint:
-                    return VK_FORMAT_R8_UINT;
-                case PixelFormat::R8Sint:
-                    return VK_FORMAT_R8_SINT;
-
-                    /*case PixelFormat::FORMAT_R32G32B32A32_FLOAT:
-                return VK_FORMAT_R32G32B32A32_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R32G32B32A32_UINT:
-                return VK_FORMAT_R32G32B32A32_UINT;
-                break;
-            case PixelFormat::FORMAT_R32G32B32A32_SINT:
-                return VK_FORMAT_R32G32B32A32_SINT;
-                break;
-            case PixelFormat::FORMAT_R32G32B32_FLOAT:
-                return VK_FORMAT_R32G32B32_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R32G32B32_UINT:
-                return VK_FORMAT_R32G32B32_UINT;
-                break;
-            case PixelFormat::FORMAT_R32G32B32_SINT:
-                return VK_FORMAT_R32G32B32_SINT;
-                break;
-            case PixelFormat::FORMAT_R16G16B16A16_FLOAT:
-                return VK_FORMAT_R16G16B16A16_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R16G16B16A16_UNORM:
-                return VK_FORMAT_R16G16B16A16_UNORM;
-                break;
-            case PixelFormat::FORMAT_R16G16B16A16_UINT:
-                return VK_FORMAT_R16G16B16A16_UINT;
-                break;
-            case PixelFormat::FORMAT_R16G16B16A16_SNORM:
-                return VK_FORMAT_R16G16B16A16_SNORM;
-                break;
-            case PixelFormat::FORMAT_R16G16B16A16_SINT:
-                return VK_FORMAT_R16G16B16A16_SINT;
-            case PixelFormat::FORMAT_R32G32_FLOAT:
-                return VK_FORMAT_R32G32_SFLOAT;
-            case PixelFormat::FORMAT_R32G32_UINT:
-                return VK_FORMAT_R32G32_UINT;
-            case PixelFormat::FORMAT_R32G32_SINT:
-                return VK_FORMAT_R32G32_SINT;
-            case PixelFormat::FORMAT_R32G8X24_TYPELESS:
-                return VK_FORMAT_D32_SFLOAT_S8_UINT;
-                break;
-            case PixelFormat::FORMAT_D32_FLOAT_S8X24_UINT:
-                return VK_FORMAT_D32_SFLOAT_S8_UINT;
-                break;
-            case PixelFormat::FORMAT_R10G10B10A2_UNORM:
-                return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-                break;
-            case PixelFormat::FORMAT_R10G10B10A2_UINT:
-                return VK_FORMAT_A2B10G10R10_UINT_PACK32;
-                break;
-            case PixelFormat::FORMAT_R11G11B10_FLOAT:
-                return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
-                break;
-            case PixelFormat::FORMAT_R8G8B8A8_UNORM:
-                return VK_FORMAT_R8G8B8A8_UNORM;
-                break;
-            case PixelFormat::FORMAT_R8G8B8A8_UNORM_SRGB:
-                return VK_FORMAT_R8G8B8A8_SRGB;
-                break;
-            case PixelFormat::FORMAT_R8G8B8A8_UINT:
-                return VK_FORMAT_R8G8B8A8_UINT;
-                break;
-            case PixelFormat::FORMAT_R8G8B8A8_SNORM:
-                return VK_FORMAT_R8G8B8A8_SNORM;
-                break;
-            case PixelFormat::FORMAT_R8G8B8A8_SINT:
-                return VK_FORMAT_R8G8B8A8_SINT;
-                break;
-            case PixelFormat::FORMAT_R16G16_FLOAT:
-                return VK_FORMAT_R16G16_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R16G16_UNORM:
-                return VK_FORMAT_R16G16_UNORM;
-                break;
-            case PixelFormat::FORMAT_R16G16_UINT:
-                return VK_FORMAT_R16G16_UINT;
-                break;
-            case PixelFormat::FORMAT_R16G16_SNORM:
-                return VK_FORMAT_R16G16_SNORM;
-                break;
-            case PixelFormat::FORMAT_R16G16_SINT:
-                return VK_FORMAT_R16G16_SINT;
-                break;
-            case PixelFormat::FORMAT_R32_TYPELESS:
-                return VK_FORMAT_D32_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_D32_FLOAT:
-                return VK_FORMAT_D32_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R32_FLOAT:
-                return VK_FORMAT_R32_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_R32_UINT:
-                return VK_FORMAT_R32_UINT;
-                break;
-            case PixelFormat::FORMAT_R32_SINT:
-                return VK_FORMAT_R32_SINT;
-                break;
-            case PixelFormat::FORMAT_R24G8_TYPELESS:
-                return VK_FORMAT_D24_UNORM_S8_UINT;
-                break;
-            case PixelFormat::FORMAT_D24_UNORM_S8_UINT:
-                return VK_FORMAT_D24_UNORM_S8_UINT;
-                break;
-            case PixelFormat::FORMAT_R8G8_UNORM:
-                return VK_FORMAT_R8G8_UNORM;
-                break;
-            case PixelFormat::FORMAT_R8G8_UINT:
-                return VK_FORMAT_R8G8_UINT;
-                break;
-            case PixelFormat::FORMAT_R8G8_SNORM:
-                return VK_FORMAT_R8G8_SNORM;
-                break;
-            case PixelFormat::FORMAT_R8G8_SINT:
-                return VK_FORMAT_R8G8_SINT;
-                break;
-            case PixelFormat::FORMAT_R16_TYPELESS:
-                return VK_FORMAT_D16_UNORM;
-                break;
-            case PixelFormat::FORMAT_R16_FLOAT:
-                return VK_FORMAT_R16_SFLOAT;
-                break;
-            case PixelFormat::FORMAT_D16_UNORM:
-                return VK_FORMAT_D16_UNORM;
-                break;
-            case PixelFormat::FORMAT_R16_UNORM:
-                return VK_FORMAT_R16_UNORM;
-                break;
-            case PixelFormat::FORMAT_R16_UINT:
-                return VK_FORMAT_R16_UINT;
-                break;
-            case PixelFormat::FORMAT_R16_SNORM:
-                return VK_FORMAT_R16_SNORM;
-                break;
-            case PixelFormat::FORMAT_R16_SINT:
-                return VK_FORMAT_R16_SINT;
-            case PixelFormat::FORMAT_BC1_UNORM:
-                return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC1_UNORM_SRGB:
-                return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC2_UNORM:
-                return VK_FORMAT_BC2_UNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC2_UNORM_SRGB:
-                return VK_FORMAT_BC2_SRGB_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC3_UNORM:
-                return VK_FORMAT_BC3_UNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC3_UNORM_SRGB:
-                return VK_FORMAT_BC3_SRGB_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC4_UNORM:
-                return VK_FORMAT_BC4_UNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC4_SNORM:
-                return VK_FORMAT_BC4_SNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC5_UNORM:
-                return VK_FORMAT_BC5_UNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC5_SNORM:
-                return VK_FORMAT_BC5_SNORM_BLOCK;
-                break;
-            case PixelFormat::FORMAT_B8G8R8A8_UNORM:
-                return VK_FORMAT_B8G8R8A8_UNORM;
-                break;
-            case PixelFormat::FORMAT_B8G8R8A8_UNORM_SRGB:
-                return VK_FORMAT_B8G8R8A8_SRGB;
-                break;
-            case PixelFormat::FORMAT_BC6H_UF16:
-                return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-                break;
-            case PixelFormat::FORMAT_BC6H_SF16:
-                return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-            case PixelFormat::FORMAT_BC7_UNORM:
-                return VK_FORMAT_BC7_UNORM_BLOCK;
-            case PixelFormat::FORMAT_BC7_UNORM_SRGB:
-                return VK_FORMAT_BC7_SRGB_BLOCK;*/
-                default:
-                    ALIMER_UNREACHABLE();
-            }
-
-            return VK_FORMAT_UNDEFINED;
-        }
-
         constexpr VkFormat _ConvertVertexFormat(VertexFormat format)
         {
             switch (format)
@@ -2812,7 +2580,7 @@ namespace alimer
             }
 
             VkFormatProperties formatProperties = {0};
-            vkGetPhysicalDeviceFormatProperties(physicalDevice, _ConvertFormat(PixelFormat::RG11B10Float), &formatProperties);
+            vkGetPhysicalDeviceFormatProperties(physicalDevice, VulkanImageFormat(PixelFormat::RG11B10Float), &formatProperties);
             UAV_LOAD_FORMAT_R11G11B10_FLOAT = formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
             VkDeviceCreateInfo createInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
@@ -2850,25 +2618,6 @@ namespace alimer
         }
         res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
         assert(res == VK_SUCCESS);
-
-        if (RAYTRACING)
-        {
-            createRayTracingPipelinesKHR = (PFN_vkCreateRayTracingPipelinesKHR) vkGetDeviceProcAddr(device, "vkCreateRayTracingPipelinesKHR");
-            createAccelerationStructureKHR = (PFN_vkCreateAccelerationStructureKHR) vkGetDeviceProcAddr(device, "vkCreateAccelerationStructureKHR");
-            bindAccelerationStructureMemoryKHR = (PFN_vkBindAccelerationStructureMemoryKHR) vkGetDeviceProcAddr(device, "vkBindAccelerationStructureMemoryKHR");
-            destroyAccelerationStructureKHR = (PFN_vkDestroyAccelerationStructureKHR) vkGetDeviceProcAddr(device, "vkDestroyAccelerationStructureKHR");
-            getAccelerationStructureMemoryRequirementsKHR = (PFN_vkGetAccelerationStructureMemoryRequirementsKHR) vkGetDeviceProcAddr(device, "vkGetAccelerationStructureMemoryRequirementsKHR");
-            getAccelerationStructureDeviceAddressKHR = (PFN_vkGetAccelerationStructureDeviceAddressKHR) vkGetDeviceProcAddr(device, "vkGetAccelerationStructureDeviceAddressKHR");
-            getRayTracingShaderGroupHandlesKHR = (PFN_vkGetRayTracingShaderGroupHandlesKHR) vkGetDeviceProcAddr(device, "vkGetRayTracingShaderGroupHandlesKHR");
-            cmdBuildAccelerationStructureKHR = (PFN_vkCmdBuildAccelerationStructureKHR) vkGetDeviceProcAddr(device, "vkCmdBuildAccelerationStructureKHR");
-            cmdTraceRaysKHR = (PFN_vkCmdTraceRaysKHR) vkGetDeviceProcAddr(device, "vkCmdTraceRaysKHR");
-        }
-
-        if (MESH_SHADER)
-        {
-            cmdDrawMeshTasksNV = (PFN_vkCmdDrawMeshTasksNV) vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksNV");
-            cmdDrawMeshTasksIndirectNV = (PFN_vkCmdDrawMeshTasksIndirectNV) vkGetDeviceProcAddr(device, "vkCmdDrawMeshTasksIndirectNV");
-        }
 
         CreateBackBufferResources();
 
@@ -3157,11 +2906,9 @@ namespace alimer
             vkDestroyFence(device, frame.frameFence, nullptr);
             vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
             vkDestroyCommandPool(device, frame.copyCommandPool, nullptr);
-        }
 
-        for (auto semaphore : recycledSemaphores)
-        {
-            vkDestroySemaphore(device, semaphore, nullptr);
+            if (frame.swapchainReleaseSemaphore != VK_NULL_HANDLE)
+                vkDestroySemaphore(device, frame.swapchainReleaseSemaphore, nullptr);
         }
 
         vkDestroySemaphore(device, copySemaphore, nullptr);
@@ -3194,6 +2941,12 @@ namespace alimer
             vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
             vkDestroyImageView(device, swapChainImageViews[i], nullptr);
         }
+
+        for (size_t i = 0; i < swapChainAcquireSemaphores.size(); ++i)
+        {
+            vkDestroySemaphore(device, swapChainAcquireSemaphores[i], nullptr);
+        }
+
         vkDestroySwapchainKHR(device, swapChain, nullptr);
 
         allocationhandler->Update(~0, 0); // destroy all remaining
@@ -3228,7 +2981,7 @@ namespace alimer
         SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice, surface);
 
         VkSurfaceFormatKHR surfaceFormat = {};
-        surfaceFormat.format = _ConvertFormat(BACKBUFFER_FORMAT);
+        surfaceFormat.format = VulkanImageFormat(BACKBUFFER_FORMAT);
         bool valid = false;
 
         for (const auto& format : swapChainSupport.formats)
@@ -3299,6 +3052,11 @@ namespace alimer
 
         if (createInfo.oldSwapchain != VK_NULL_HANDLE)
         {
+            for (VkSemaphore semaphore : swapChainAcquireSemaphores)
+            {
+                vkDestroySemaphore(device, semaphore, nullptr);
+            }
+
             vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
         }
 
@@ -3306,9 +3064,17 @@ namespace alimer
         assert(res == VK_SUCCESS);
         assert(BACKBUFFER_COUNT <= imageCount);
         swapChainImages.resize(imageCount);
-        res = vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
-        assert(res == VK_SUCCESS);
+        VK_CHECK(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data()));
         swapChainImageFormat = surfaceFormat.format;
+
+        swapChainSemaphoreIndex = 0;
+        swapChainAcquireSemaphores.resize(imageCount);
+        VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+
+        for (uint32_t i = 0; i < imageCount; i++)
+        {
+            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &swapChainAcquireSemaphores[i]));
+        }
 
         if (debugUtils)
         {
@@ -3476,7 +3242,7 @@ namespace alimer
         }
         if (desc.BindFlags & BIND_SHADER_RESOURCE)
         {
-            if (desc.format == PixelFormat::Invalid)
+            if (desc.format == PixelFormat::Undefined)
             {
                 bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
@@ -3487,7 +3253,7 @@ namespace alimer
         }
         if (desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
-            if (desc.format == PixelFormat::Invalid)
+            if (desc.format == PixelFormat::Undefined)
             {
                 bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             }
@@ -3665,12 +3431,11 @@ namespace alimer
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-        VkImageCreateInfo imageInfo = {};
-        imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
         imageInfo.extent.width = pTexture->desc.Width;
         imageInfo.extent.height = pTexture->desc.Height;
         imageInfo.extent.depth = 1;
-        imageInfo.format = _ConvertFormat(pTexture->desc.format);
+        imageInfo.format = VulkanImageFormat(pTexture->desc.format);
         imageInfo.arrayLayers = pTexture->desc.ArraySize;
         imageInfo.mipLevels = pTexture->desc.MipLevels;
         imageInfo.samples = (VkSampleCountFlagBits) pTexture->desc.SampleCount;
@@ -3727,10 +3492,9 @@ namespace alimer
 
         if (pTexture->desc.Usage == USAGE_STAGING)
         {
-            VkBufferCreateInfo bufferInfo = {};
-            bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
             bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
-                              GetPixelFormatSize(pTexture->desc.format);
+                              GetFormatBlockSize(pTexture->desc.format);
 
             allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
             if (pDesc->Usage == USAGE_STAGING)
@@ -3797,7 +3561,7 @@ namespace alimer
                 {
                     const SubresourceData& subresourceData = pInitialData[initDataIdx++];
                     size_t cpysize = subresourceData.SysMemPitch * height;
-                    if (IsFormatBlockCompressed(pDesc->format))
+                    if (IsBlockCompressedFormat(pDesc->format))
                     {
                         cpysize /= 4;
                     }
@@ -3825,7 +3589,7 @@ namespace alimer
 
                     copyRegions.push_back(copyRegion);
 
-                    cpyoffset += Align(cpysize, GetPixelFormatSize(pDesc->format));
+                    cpyoffset += Align(cpysize, GetFormatBlockSize(pDesc->format));
                 }
             }
 
@@ -3914,7 +3678,7 @@ namespace alimer
             if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
             {
                 barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                if (IsFormatStencilSupport(pTexture->desc.format))
+                if (IsStencilFormat(pTexture->desc.format))
                 {
                     barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                 }
@@ -4242,6 +4006,7 @@ namespace alimer
         arguments.push_back(L"-spirv");
         arguments.push_back(L"-fspv-target-env=vulkan1.2");
         arguments.push_back(L"-fvk-use-dx-layout");
+        arguments.push_back(L"-fvk-use-dx-position-w");
         arguments.push_back(L"-flegacy-macro-expansion");
 
         if (stage == ShaderStage::Vertex || stage == ShaderStage::Domain || stage == ShaderStage::Geometry)
@@ -4541,7 +4306,7 @@ namespace alimer
             int subresource = attachment.subresource;
             auto texture_internal_state = to_internal(texture);
 
-            attachmentDescriptions[validAttachmentCount].format = _ConvertFormat(texdesc.format);
+            attachmentDescriptions[validAttachmentCount].format = VulkanImageFormat(texdesc.format);
             attachmentDescriptions[validAttachmentCount].samples = (VkSampleCountFlagBits) texdesc.SampleCount;
 
             switch (attachment.loadop)
@@ -4612,7 +4377,7 @@ namespace alimer
                     continue;
                 }
 
-                if (IsFormatStencilSupport(texdesc.format))
+                if (IsStencilFormat(texdesc.format))
                 {
                     switch (attachment.loadop)
                     {
@@ -4840,7 +4605,7 @@ namespace alimer
         info.maxGeometryCount = (uint32_t) internal_state->geometries.size();
         internal_state->info = info;
 
-        VkResult res = createAccelerationStructureKHR(device, &info, nullptr, &internal_state->resource);
+        VkResult res = vkCreateAccelerationStructureKHR(device, &info, nullptr, &internal_state->resource);
         assert(res == VK_SUCCESS);
 
         VkAccelerationStructureMemoryRequirementsInfoKHR meminfo = {};
@@ -4850,17 +4615,17 @@ namespace alimer
         meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_KHR;
         VkMemoryRequirements2 memrequirements = {};
         memrequirements.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-        getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements);
+        vkGetAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements);
 
         meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
         VkMemoryRequirements2 memrequirements_scratch_build = {};
         memrequirements_scratch_build.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-        getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_build);
+        vkGetAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_build);
 
         meminfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
         VkMemoryRequirements2 memrequirements_scratch_update = {};
         memrequirements_scratch_update.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
-        getAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_update);
+        vkGetAccelerationStructureMemoryRequirementsKHR(device, &meminfo, &memrequirements_scratch_update);
 
         // Main backing memory:
         VkBufferCreateInfo bufferInfo = {};
@@ -4880,17 +4645,15 @@ namespace alimer
         res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation, nullptr);
         assert(res == VK_SUCCESS);
 
-        VkBindAccelerationStructureMemoryInfoKHR bind_info = {};
-        bind_info.sType = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
-        bind_info.accelerationStructure = internal_state->resource;
-        bind_info.memory = internal_state->allocation->GetMemory();
-        res = bindAccelerationStructureMemoryKHR(device, 1, &bind_info);
+        VkBindAccelerationStructureMemoryInfoKHR bindInfo{VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR};
+        bindInfo.accelerationStructure = internal_state->resource;
+        bindInfo.memory = internal_state->allocation->GetMemory();
+        res = vkBindAccelerationStructureMemoryKHR(device, 1, &bindInfo);
         assert(res == VK_SUCCESS);
 
-        VkAccelerationStructureDeviceAddressInfoKHR addrinfo = {};
-        addrinfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+        VkAccelerationStructureDeviceAddressInfoKHR addrinfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR};
         addrinfo.accelerationStructure = internal_state->resource;
-        internal_state->as_address = getAccelerationStructureDeviceAddressKHR(device, &addrinfo);
+        internal_state->as_address = vkGetAccelerationStructureDeviceAddressKHR(device, &addrinfo);
 
         internal_state->scratch_offset = memrequirements.memoryRequirements.size;
 
@@ -4991,11 +4754,12 @@ namespace alimer
         info.basePipelineHandle = VK_NULL_HANDLE;
         info.basePipelineIndex = 0;
 
-        VkResult res = createRayTracingPipelinesKHR(device, VK_NULL_HANDLE, 1, &info, nullptr, &internal_state->pipeline);
+        VkResult res = vkCreateRayTracingPipelinesKHR(device, VK_NULL_HANDLE, 1, &info, nullptr, &internal_state->pipeline);
         assert(res == VK_SUCCESS);
 
         return res == VK_SUCCESS;
     }
+
     bool GraphicsDevice_Vulkan::CreateDescriptorTable(DescriptorTable* table)
     {
         auto internal_state = std::make_shared<DescriptorTable_Vulkan>();
@@ -5271,7 +5035,7 @@ namespace alimer
         view_desc.subresourceRange.layerCount = sliceCount;
         view_desc.subresourceRange.baseMipLevel = firstMip;
         view_desc.subresourceRange.levelCount = mipCount;
-        view_desc.format = _ConvertFormat(texture->desc.format);
+        view_desc.format = VulkanImageFormat(texture->desc.format);
 
         if (texture->desc.type == TextureDesc::TEXTURE_1D)
         {
@@ -5463,7 +5227,7 @@ namespace alimer
             case alimer::SRV:
             case alimer::UAV:
             {
-                if (desc.format == PixelFormat::Invalid)
+                if (desc.format == PixelFormat::Undefined)
                 {
                     return -1;
                 }
@@ -5472,7 +5236,7 @@ namespace alimer
                 srv_desc.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO;
                 srv_desc.buffer = internal_state->resource;
                 srv_desc.flags = 0;
-                srv_desc.format = _ConvertFormat(desc.format);
+                srv_desc.format = VulkanImageFormat(desc.format);
                 srv_desc.offset = Align(offset, device_properties.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break a lot of things! (index buffer, index offset?)
                 srv_desc.range = std::min(size, (uint64_t) desc.ByteWidth - srv_desc.offset);
 
@@ -5528,11 +5292,13 @@ namespace alimer
         auto internal_state = to_internal((RaytracingAccelerationStructure*) &instance->bottomlevel);
         desc->accelerationStructureReference = internal_state->as_address;
     }
+
     void GraphicsDevice_Vulkan::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
     {
-        VkResult res = getRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
+        VkResult res = vkGetRayTracingShaderGroupHandlesKHR(device, to_internal(rtpso)->pipeline, group_index, 1, SHADER_IDENTIFIER_SIZE, dest);
         assert(res == VK_SUCCESS);
     }
+
     void GraphicsDevice_Vulkan::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource, uint64_t offset)
     {
         auto table_internal = to_internal(table);
@@ -5890,28 +5656,6 @@ namespace alimer
         VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &nameInfo));
     }
 
-    VkSemaphore GraphicsDevice_Vulkan::RequestSemaphore()
-    {
-        VkSemaphore semaphore;
-        if (recycledSemaphores.empty())
-        {
-            VkSemaphoreCreateInfo info = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-            VK_CHECK(vkCreateSemaphore(device, &info, nullptr, &semaphore));
-        }
-        else
-        {
-            semaphore = recycledSemaphores.back();
-            recycledSemaphores.pop_back();
-        }
-
-        return semaphore;
-    }
-
-    void GraphicsDevice_Vulkan::ReturnSemaphore(VkSemaphore semaphore)
-    {
-        recycledSemaphores.push_back(semaphore);
-    }
-
     CommandList& GraphicsDevice_Vulkan::BeginCommandList()
     {
         std::atomic_uint32_t cmd = commandListsCount.fetch_add(1);
@@ -6233,7 +5977,8 @@ namespace alimer
 
     void Vulkan_CommandList::PresentBegin()
     {
-        VkSemaphore acquireSemaphore = device->RequestSemaphore();
+        VkSemaphore acquireSemaphore = device->swapChainAcquireSemaphores[device->swapChainSemaphoreIndex];
+        device->swapChainSemaphoreIndex = (device->swapChainSemaphoreIndex + 1) % device->swapChainAcquireSemaphores.size();
 
         VkResult res = vkAcquireNextImageKHR(
             device->GetVkDevice(),
@@ -6250,20 +5995,11 @@ namespace alimer
             {
                 device->CreateBackBufferResources();
                 PresentBegin();
-                device->ReturnSemaphore(acquireSemaphore);
                 return;
             }
         }
 
         assert(res == VK_SUCCESS);
-
-        // Recycle the old semaphore back into the semaphore manager.
-        VkSemaphore oldAcquireSemaphore = device->GetFrameResources().swapchainAcquireSemaphore;
-
-        if (oldAcquireSemaphore != VK_NULL_HANDLE)
-        {
-            device->ReturnSemaphore(oldAcquireSemaphore);
-        }
 
         device->GetFrameResources().swapchainAcquireSemaphore = acquireSemaphore;
 
@@ -7052,7 +6788,7 @@ namespace alimer
                 if (src_desc.BindFlags & BIND_DEPTH_STENCIL)
                 {
                     copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                    if (device->IsFormatStencilSupport(src_desc.format))
+                    if (IsStencilFormat(src_desc.format))
                     {
                         copy.srcSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                     }
@@ -7068,7 +6804,7 @@ namespace alimer
                 if (dst_desc.BindFlags & BIND_DEPTH_STENCIL)
                 {
                     copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                    if (device->IsFormatStencilSupport(dst_desc.format))
+                    if (IsStencilFormat(dst_desc.format))
                     {
                         copy.dstSubresource.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                     }
@@ -7318,7 +7054,7 @@ namespace alimer
                     if (desc.BindFlags & BIND_DEPTH_STENCIL)
                     {
                         barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                        if (device->IsFormatStencilSupport(desc.format))
+                        if (IsStencilFormat(desc.format))
                         {
                             barrierdesc.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                         }

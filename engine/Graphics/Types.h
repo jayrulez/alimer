@@ -428,7 +428,7 @@ namespace alimer
         uint32_t CPUAccessFlags = 0;
         uint32_t MiscFlags = 0;
         uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
-        PixelFormat format = PixelFormat::Invalid; // only needed for typed buffer!
+        PixelFormat format = PixelFormat::Undefined; // only needed for typed buffer!
     };
 
     struct GPUQueryDesc
@@ -1027,7 +1027,6 @@ namespace alimer
         std::vector<RootConstantRange> rootconstants;
     };
 
-    ALIMER_API uint32_t GetPixelFormatSize(PixelFormat value);
     ALIMER_API uint32_t GetVertexFormatNumComponents(VertexFormat format);
     ALIMER_API uint32_t GetVertexFormatComponentSize(VertexFormat format);
     ALIMER_API uint32_t GetVertexFormatSize(VertexFormat format);

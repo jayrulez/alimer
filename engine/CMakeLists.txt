@@ -53,8 +53,7 @@ if (ALIMER_VULKAN)
 endif()
 
 if (ALIMER_D3D12)
-    #define_engine_source_files(Graphics/D3D)
-    #define_engine_source_files(Graphics/D3D12)
+    define_engine_source_files(Graphics/D3D12)
 endif()
 
 if (ALIMER_IMGUI)
@@ -108,8 +107,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    fmt
     stb
+    spdlog
 )
 
 if (MSVC)

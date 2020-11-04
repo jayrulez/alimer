@@ -26,12 +26,17 @@
 
 #if ALIMER_PLATFORM_WINDOWS
 #    ifndef NOMINMAX
-#        define NOMINMAX        // prevent windows redefining min/max
+#        define NOMINMAX // prevent windows redefining min/max
 #    endif
-
 #    ifndef WIN32_LEAN_AND_MEAN
 #        define WIN32_LEAN_AND_MEAN
 #    endif
+#    define NODRAWTEXT
+#    define NOGDI
+#    define NOBITMAP
+#    define NOMCX
+#    define NOSERVICE
+#    define NOHELP
 #    include <windows.h>
 #elif ALIMER_PLATFORM_UWP
 #    pragma warning(push)

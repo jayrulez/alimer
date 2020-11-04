@@ -20,16 +20,17 @@ Alimer development, contributions and bugfixes by:
 
 Uses the following open-source and third-party libraries:
 
-- [Nothings](https://github.com/nothings/stb) single file libs.
-  - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
-- [glfw](https://www.glfw.org)
-- [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)
-- [volk](https://github.com/zeux/volk)
-- [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-- [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
-- [Dear ImGui](https://github.com/ocornut/imgui)
-- [fmt 7.0.3](https://fmt.dev)
-- [cxxopts](https://github.com/jarro2783/cxxopts)
+- [stb](https://github.com/nothings/stb): Single-file public domain (or MIT licensed) libraries
+- [glfw](https://github.com/glfw/glfw): A multi-platform library for OpenGL, OpenGL ES, Vulkan, window and input
+- [Dear ImGui](https://github.com/ocornut/imgui): Immediate Mode Graphical User Interface
+- [fmt](https://fmt.dev): A modern formatting library
+- [spdlog](https://github.com/gabime/spdlog): Fast C++ logging library
+- [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): Parses and converts SPIR-V to other shader languages
+- [vma](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator): Vulkan Memory Allocator
+- [volk](https://github.com/zeux/volk): Meta loader for Vulkan API
+- [vulkan](https://github.com/KhronosGroup/Vulkan-Docs): Sources for the formal documentation of the Vulkan API
+- [D3D12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator): D3D12 Memory Allocator
+- [cxxopts](https://github.com/jarro2783/cxxopts): Lightweight C++ command line option parser
 
 Additional inspiration, research or code used:
 

@@ -24,6 +24,7 @@
 
 #include "Assets/AssetManager.h"
 #include "Core/Containers.h"
+#include "Graphics/Types.h"
 #include "Platform/Window.h"
 #include <memory>
 
@@ -37,13 +38,14 @@ namespace alimer
         bool fullscreen = false;
         bool resizable = true;
 
-        // GraphicsBackendType backendType = GraphicsBackendType::Count;
-        // GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
+        GraphicsBackendType backendType = GraphicsBackendType::Count;
+        GraphicsDeviceFlags deviceFlags = GraphicsDeviceFlags::None;
 
         std::string rootDirectory = "Assets";
     };
 
-    class GraphicsDevice;
+    class CommandList;
+    class Graphics;
     class ImGuiLayer;
 
     class ALIMER_API Application : public Object
@@ -95,12 +97,8 @@ namespace alimer
         }
 
     protected:
-        virtual void Initialize()
-        {
-        }
-        virtual void OnDraw()
-        {
-        }
+        virtual void Initialize() {}
+        virtual void OnDraw(CommandList& commandList) {}
 
     private:
         void InitBeforeRun();
@@ -113,6 +111,7 @@ namespace alimer
         AssetManager assets;
         bool headless = false;
         std::unique_ptr<Window> window{nullptr};
+        RefPtr<Graphics> graphics;
         std::unique_ptr<ImGuiLayer> imguiLayer{nullptr};
     };
 

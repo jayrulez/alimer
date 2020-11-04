@@ -23,18 +23,16 @@
 #pragma once
 
 #include "Core/Memory.h"
-#include <fmt/format.h>
+#include <spdlog/fmt/fmt.h>
 
 namespace alimer
 {
-    using String  = std::string;
-    using WString = std::wstring;
+    using String = std::string;
 
     static constexpr uint32_t CONVERSION_BUFFER_LENGTH = 128u;
 
-    extern const std::string  kEmptyString;
-    extern const std::wstring kEmptyWString;
-    extern const char         kWhitespaceASCII[];
+    extern const std::string kEmptyString;
+    extern const char kWhitespaceASCII[];
 
     enum class WhitespaceHandling
     {
@@ -54,10 +52,10 @@ namespace alimer
                                                     SplitResult resultType);
 
 #ifdef _WIN32
-    ALIMER_API String ToUtf8(const wchar_t* wstr, size_t len);
-    ALIMER_API String ToUtf8(const WString& wstr);
+    ALIMER_API std::string ToUtf8(const wchar_t* wstr, size_t len);
+    ALIMER_API std::string ToUtf8(const std::wstring& wstr);
 
-    ALIMER_API WString ToUtf16(const char* str, size_t len);
-    ALIMER_API WString ToUtf16(const String& str);
+    ALIMER_API std::wstring ToUtf16(const char* str, size_t len);
+    ALIMER_API std::wstring ToUtf16(const std::string& str);
 #endif
 }

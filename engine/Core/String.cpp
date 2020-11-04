@@ -34,9 +34,8 @@
 
 namespace alimer
 {
-    const std::string  kEmptyString{};
-    const std::wstring kEmptyWString{};
-    const char         kWhitespaceASCII[] = " \f\n\r\t\v";
+    const std::string kEmptyString{};
+    const char kWhitespaceASCII[] = " \f\n\r\t\v";
 
     std::string TrimString(const std::string& input, const std::string& trimChars)
     {
@@ -96,31 +95,37 @@ namespace alimer
     }
 
 #ifdef _WIN32
-    String ToUtf8(const wchar_t* wstr, size_t len)
+    std::string ToUtf8(const wchar_t* wstr, size_t len)
     {
-        Vector<char> char_buffer;
-        auto         ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
+        std::vector<char> char_buffer;
+        auto ret = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
         if (ret < 0)
-            return "";
+            return kEmptyString;
         char_buffer.resize(ret);
         WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), char_buffer.data(), static_cast<int>(char_buffer.size()), nullptr,
                             nullptr);
-        return String(char_buffer.data(), char_buffer.size());
+        return std::string(char_buffer.data(), char_buffer.size());
     }
 
-    String ToUtf8(const WString& wstr) { return ToUtf8(wstr.data(), wstr.size()); }
-
-    WString ToUtf16(const char* str, size_t len)
+    std::string ToUtf8(const std::wstring& wstr)
     {
-        Vector<wchar_t> wchar_buffer;
-        auto            ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
+        return ToUtf8(wstr.data(), wstr.size());
+    }
+
+    std::wstring ToUtf16(const char* str, size_t len)
+    {
+        std::vector<wchar_t> wchar_buffer;
+        auto ret = MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), nullptr, 0);
         if (ret < 0)
             return L"";
         wchar_buffer.resize(ret);
         MultiByteToWideChar(CP_UTF8, 0, str, static_cast<int>(len), wchar_buffer.data(), static_cast<int>(wchar_buffer.size()));
-        return WString(wchar_buffer.data(), wchar_buffer.size());
+        return std::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    WString ToUtf16(const String& str) { return ToUtf16(str.data(), str.size()); }
+    std::wstring ToUtf16(const std::string& str)
+    {
+        return ToUtf16(str.data(), str.size());
+    }
 #endif
 }

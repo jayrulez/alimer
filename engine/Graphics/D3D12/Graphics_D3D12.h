@@ -26,42 +26,15 @@
 
 #include "AlimerConfig.h"
 #include "Graphics/Graphics.h"
-#include "Graphics/D3D/RHI_D3D.h"
+#include "D3D12Backend.h"
 #include "Graphics/Graphics_Internal.h"
-
-// Forward declare memory allocator classes
-namespace D3D12MA
-{
-    class Allocator;
-    class Allocation;
-};
-
-#include <d3d12.h>
-#include <wrl/client.h> // ComPtr
-
-#include <unordered_map>
-#include <deque>
-#include <atomic>
-#include <mutex>
 
 namespace alimer
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    using PFN_DXC_CREATE_INSTANCE = HRESULT(WINAPI*)(REFCLSID rclsid, REFIID riid, _COM_Outptr_ void** ppCompiler);
-
-    extern PFN_D3D12_GET_DEBUG_INTERFACE D3D12GetDebugInterface;
-    extern PFN_D3D12_CREATE_DEVICE D3D12CreateDevice;
-    extern PFN_D3D12_SERIALIZE_ROOT_SIGNATURE D3D12SerializeRootSignature;
-    extern PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER D3D12CreateRootSignatureDeserializer;
-    extern PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE D3D12SerializeVersionedRootSignature;
-    extern PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER D3D12CreateVersionedRootSignatureDeserializer;
-    extern PFN_DXC_CREATE_INSTANCE DxcCreateInstance;
-#endif
-
     class D3D12_CommandList;
-    class GraphicsDevice_DX12;
+    class D3D12Graphics;
 
-    class GraphicsDevice_DX12 final : public Graphics
+    class D3D12Graphics final : public Graphics
     {
         friend class D3D12_CommandList;
 
@@ -84,7 +57,7 @@ namespace alimer
 
             struct DescriptorTableFrameAllocator
             {
-                GraphicsDevice_DX12* device = nullptr;
+                D3D12Graphics* device = nullptr;
                 struct DescriptorHeap
                 {
                     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -113,7 +86,7 @@ namespace alimer
                     D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
                 };
 
-                void init(GraphicsDevice_DX12* device);
+                void init(D3D12Graphics* device);
                 void shutdown();
 
                 void reset();
@@ -125,13 +98,13 @@ namespace alimer
 
             struct ResourceFrameAllocator
             {
-                GraphicsDevice_DX12* device = nullptr;
+                D3D12Graphics* device = nullptr;
                 RefPtr<GraphicsBuffer>buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
 
-                void init(GraphicsDevice_DX12* device, size_t size);
+                void init(D3D12Graphics* device, size_t size);
 
                 uint8_t* allocate(size_t dataSize, size_t alignment);
                 void clear();
@@ -147,8 +120,8 @@ namespace alimer
 
     public:
         static bool IsAvailable();
-        GraphicsDevice_DX12(WindowHandle window, const GraphicsSettings& desc, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
-        ~GraphicsDevice_DX12() override;
+        D3D12Graphics(WindowHandle window, const GraphicsSettings& desc, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
+        ~D3D12Graphics() override;
 
         void GetAdapter(IDXGIAdapter1** ppAdapter);
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
