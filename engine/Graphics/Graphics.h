@@ -72,7 +72,7 @@ namespace alimer
     {
         void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is already applied
         const GraphicsBuffer* buffer = nullptr; // application can bind it to the GPU
-        uint32_t offset = 0; // allocation's offset from the GPUbuffer's beginning
+        uint64_t offset = 0; // allocation's offset from the GPUbuffer's beginning
 
         // Returns true if the allocation was successful
         inline bool IsValid() const
@@ -97,7 +97,7 @@ namespace alimer
         //	It is only alive for one frame and automatically invalidated after that.
         //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
         //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
-        virtual GPUAllocation AllocateGPU(const uint32_t size) = 0;
+        virtual GPUAllocation AllocateGPU(const uint64_t size) = 0;
         virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) = 0;
         virtual void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
 
@@ -120,9 +120,7 @@ namespace alimer
         virtual void BindStencilRef(uint32_t value) = 0;
         virtual void BindBlendFactor(float r, float g, float b, float a) = 0;
         virtual void BindShadingRate(ShadingRate rate) {}
-        virtual void BindShadingRateImage(const Texture* texture)
-        {
-        }
+        virtual void BindShadingRateImage(const Texture* texture) {}
 
         virtual void SetRenderPipeline(RenderPipeline* pipeline) = 0;
         virtual void BindComputeShader(const Shader* shader) = 0;
@@ -134,9 +132,7 @@ namespace alimer
         virtual void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) = 0;
         virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
         virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) {}
-        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset)
-        {
-        }
+        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset) {}
 
         virtual void QueryBegin(const GPUQuery* query) = 0;
         virtual void QueryEnd(const GPUQuery* query) = 0;
@@ -204,7 +200,7 @@ namespace alimer
     public:
         Graphics(WindowHandle window, const GraphicsSettings& desc);
         virtual ~Graphics() = default;
-        
+
         static std::set<GraphicsBackendType> GetAvailableBackends();
         static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc);
 
@@ -274,9 +270,10 @@ namespace alimer
         {
             return FRAMECOUNT;
         }
-        inline uint64_t GetFrameIndex() const
+
+        inline uint32_t GetFrameIndex() const
         {
-            return GetFrameCount() % BACKBUFFER_COUNT;
+            return GetFrameCount() % kMaxInflightFrames;
         }
 
         // Returns native resolution width of back buffer in pixels:

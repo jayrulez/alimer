@@ -4,6 +4,7 @@ cmake_minimum_required (VERSION 3.14)
 # Configure CMake global variables
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -107,16 +108,25 @@ elseif(ANDROID)
   find_package(Java REQUIRED)
 elseif(APPLE)
 elseif(WINDOWS_STORE)
+    # Disable run-time type information (RTTI)
+    string(REGEX REPLACE "/GR" "/GR-" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 elseif(WIN32)
-    option(ALIMER_USE_STATIC_CRT "Link against the static runtime libraries." ON)
+
+    # Disable run-time type information (RTTI)
+    string(REGEX REPLACE "/GR" "/GR-" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REGEX REPLACE "/GR" "/GR-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
     # Select static/dynamic runtime library
-	if (ALIMER_USE_STATIC_CRT)
-        replace_compile_flags("/MDd" "/MTd" Debug)
-        replace_compile_flags("/MD" "/MT" Dev Release)
-	else()
-        replace_compile_flags("/MTd" "/MDd" Debug)
-        replace_compile_flags("/MT" "/MD" Dev Release)
+    option(ALIMER_USE_STATIC_CRT "Link against the static runtime libraries." OFF)
+    if (ALIMER_USE_STATIC_CRT)
+        string(REGEX REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+		string(REGEX REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+        string(REGEX REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+		string(REGEX REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO }")
+        string(REGEX REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+		string(REGEX REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 	endif()
 elseif(UNIX)
   find_package(PkgConfig)
@@ -124,6 +134,27 @@ endif()
 
 set(ALIMER_BIN_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${CMAKE_BUILD_TYPE}")
 
+# Setup SDK install destinations
+set (DEST_BASE_INCLUDE_DIR include)
+set (DEST_INCLUDE_DIR ${DEST_BASE_INCLUDE_DIR}/alimer)
+set (DEST_THIRDPARTY_HEADERS_DIR ${DEST_INCLUDE_DIR}/ThirdParty)
+set (DEST_ARCHIVE_DIR lib)
+if (ANDROID)
+    set (DEST_LIBRARY_DIR ${DEST_ARCHIVE_DIR})
+else ()
+    set (DEST_LIBRARY_DIR bin)
+endif ()
+set (DEST_BIN_DIR bin)
+
+if (MSVC OR "${CMAKE_GENERATOR}" STREQUAL "Xcode")
+    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR}/$<CONFIG>)
+    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR}/$<CONFIG>)
+    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR}/$<CONFIG>)
+else ()
+    set (DEST_ARCHIVE_DIR_CONFIG ${DEST_ARCHIVE_DIR})
+    set (DEST_LIBRARY_DIR_CONFIG ${DEST_LIBRARY_DIR})
+    set (DEST_BIN_DIR_CONFIG ${DEST_BIN_DIR})
+endif ()
 
 # Third Party
 add_subdirectory(third_party)

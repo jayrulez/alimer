@@ -168,9 +168,9 @@ namespace alimer
 
         void init(GraphicsDevice_Vulkan* device, size_t size);
 
-        uint8_t* Allocate(const uint32_t size, VkDeviceSize alignment);
+        uint8_t* Allocate(const uint64_t size, VkDeviceSize alignment);
         void clear();
-        uint64_t calculateOffset(uint8_t* address);
+        uint64_t CalculateOffset(uint8_t* address);
     };
 
     class Vulkan_CommandList final : public CommandList
@@ -226,7 +226,7 @@ namespace alimer
         void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
         void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) override;
 
-        GPUAllocation AllocateGPU(const uint32_t size) override;
+        GPUAllocation AllocateGPU(const uint64_t size) override;
         void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) override;
 
         void QueryBegin(const GPUQuery* query) override;
@@ -1768,7 +1768,7 @@ namespace alimer
         buffer.Reset(newBuffer);
     }
 
-    uint8_t* ResourceFrameAllocator::Allocate(const uint32_t size, VkDeviceSize alignment)
+    uint8_t* ResourceFrameAllocator::Allocate(const uint64_t size, VkDeviceSize alignment)
     {
         dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
 
@@ -1787,7 +1787,7 @@ namespace alimer
         dataCur = dataBegin;
     }
 
-    uint64_t ResourceFrameAllocator::calculateOffset(uint8_t* address)
+    uint64_t ResourceFrameAllocator::CalculateOffset(uint8_t* address)
     {
         assert(address >= dataBegin && address < dataEnd);
         return static_cast<uint64_t>(address - dataBegin);
@@ -6843,7 +6843,7 @@ namespace alimer
         }
     }
 
-    GPUAllocation Vulkan_CommandList::AllocateGPU(const uint32_t size)
+    GPUAllocation Vulkan_CommandList::AllocateGPU(const uint64_t size)
     {
         ALIMER_ASSERT_MSG(size > 0, "Allocation size must be greater than zero");
 
@@ -6859,7 +6859,7 @@ namespace alimer
         assert(dest != nullptr);
 
         result.buffer = allocator.buffer;
-        result.offset = (uint32_t) allocator.calculateOffset(dest);
+        result.offset = allocator.CalculateOffset(dest);
         result.data = (void*) dest;
         return result;
     }
@@ -6953,9 +6953,9 @@ namespace alimer
             memcpy(dest, data, size);
 
             VkBufferCopy copyRegion = {};
-            copyRegion.size = size;
-            copyRegion.srcOffset = resourceBuffer[frameIndex].calculateOffset(dest);
+            copyRegion.srcOffset = resourceBuffer[frameIndex].CalculateOffset(dest);
             copyRegion.dstOffset = 0;
+            copyRegion.size = size;
 
             vkCmdCopyBuffer(GetDirectCommandList(),
                             to_internal(resourceBuffer[frameIndex].buffer.Get())->resource,

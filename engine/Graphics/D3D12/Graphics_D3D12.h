@@ -108,7 +108,7 @@ namespace alimer
 
                 uint8_t* allocate(size_t dataSize, size_t alignment);
                 void clear();
-                uint64_t calculateOffset(uint8_t* address);
+                uint64_t CalculateOffset(uint8_t* address);
             };
             ResourceFrameAllocator resourceBuffer[kCommandListCount];
         };

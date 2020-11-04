@@ -167,6 +167,12 @@ elseif(WINDOWS_STORE)
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:__cplusplus")
     # we need this when using /permissive
     target_compile_options(${PROJECT_NAME} PUBLIC "/Zc:twoPhase-")
+    # Use security checks only in debug
+    target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:DEBUG>:/sdl> $<$<NOT:$<CONFIG:DEBUG>>:/sdl->)
+     # Enable function-level linking
+	target_compile_options(${PROJECT_NAME} PUBLIC /Gy)
+    # Enable conformance mode
+    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/permissive-")
 elseif (WIN32)
     target_compile_definitions(${PROJECT_NAME} PUBLIC
         _CRT_SECURE_NO_WARNINGS
@@ -175,7 +181,15 @@ elseif (WIN32)
         UNICODE _UNICODE
     )
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/wd4244")
+    # Use security checks only in debug
+    target_compile_options(${PROJECT_NAME} PUBLIC $<$<CONFIG:DEBUG>:/GS> $<$<NOT:$<CONFIG:DEBUG>>:/GS->)
+
+     # Enable function-level linking
+	target_compile_options(${PROJECT_NAME} PUBLIC /Gy)
+
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/INCREMENTAL:NO")
+    # Enable conformance mode
+    set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "/permissive-")
     target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
 elseif(UNIX)
 endif ()

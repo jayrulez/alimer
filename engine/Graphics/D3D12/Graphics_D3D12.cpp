@@ -820,7 +820,7 @@ namespace alimer
         void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) override;
         void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
 
-        GPUAllocation AllocateGPU(const uint32_t size) override;
+        GPUAllocation AllocateGPU(const uint64_t size) override;
         void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) override;
         void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) override;
 
@@ -1047,7 +1047,7 @@ namespace alimer
         dataCur = dataBegin;
     }
 
-    uint64_t D3D12Graphics::FrameResources::ResourceFrameAllocator::calculateOffset(uint8_t* address)
+    uint64_t D3D12Graphics::FrameResources::ResourceFrameAllocator::CalculateOffset(uint8_t* address)
     {
         assert(address >= dataBegin && address < dataEnd);
         return static_cast<uint64_t>(address - dataBegin);
@@ -5411,7 +5411,7 @@ namespace alimer
         handle->ExecuteIndirect(device->drawIndexedInstancedIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
     }
 
-    GPUAllocation D3D12_CommandList::AllocateGPU(const uint32_t size)
+    GPUAllocation D3D12_CommandList::AllocateGPU(const uint64_t size)
     {
         ALIMER_ASSERT_MSG(size > 0, "Allocation size must be greater than zero");
 
@@ -5421,7 +5421,7 @@ namespace alimer
 
         GPUAllocation result{};
         result.buffer = allocator.buffer;
-        result.offset = (uint32_t) allocator.calculateOffset(dest);
+        result.offset = allocator.CalculateOffset(dest);
         result.data = (void*) dest;
         return result;
     }
@@ -5479,8 +5479,10 @@ namespace alimer
             uint8_t* dest = device->GetFrameResources().resourceBuffer[index].allocate(size, 1);
             memcpy(dest, data, size);
             handle->CopyBufferRegion(
-                internal_state_dst->resource.Get(), 0,
-                internal_state_src->resource.Get(), device->GetFrameResources().resourceBuffer[index].calculateOffset(dest),
+                internal_state_dst->resource.Get(), 
+                0u,
+                internal_state_src->resource.Get(), 
+                static_cast<UINT64>(device->GetFrameResources().resourceBuffer[index].CalculateOffset(dest)),
                 size);
 
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
