@@ -30,6 +30,18 @@
 #include "Platform/Platform.h"
 #include "UI/ImGuiLayer.h"
 
+#if defined(__ANDROID__)
+#    include <android/log.h>
+#    include <spdlog/sinks/android_sink.h>
+#endif
+
+#if ALIMER_PLATFORM_WINDOWS
+#    include <spdlog/sinks/basic_file_sink.h>
+#    include <spdlog/sinks/stdout_color_sinks.h>
+#else
+#    include <spdlog/sinks/stdout_color_sinks.h>
+#endif
+
 namespace alimer
 {
     static Application* s_appCurrent = nullptr;
@@ -41,6 +53,31 @@ namespace alimer
         , assets(config.rootDirectory)
     {
         ALIMER_ASSERT_MSG(s_appCurrent == nullptr, "Cannot create more than one Application");
+
+        std::vector<spdlog::sink_ptr> sinks;
+#if defined(__ANDROID__)
+        sinks.push_back(std::make_shared<spdlog::sinks::android_sink_mt>("Alimer"));
+#endif
+
+#ifdef _WIN32
+        sinks.push_back(std::make_shared<spdlog::sinks::wincolor_stdout_sink_mt>());
+        sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>("Log.txt", true));
+#else
+        sinks.push_back(std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>());
+#endif
+
+        auto logger = std::make_shared<spdlog::logger>("logger", sinks.begin(), sinks.end());
+
+#if defined(_DEBUG)
+        logger->set_level(spdlog::level::debug);
+#else
+        logger->set_level(spdlog::level::info);
+#endif
+
+        logger->set_pattern(LOGGER_FORMAT);
+        spdlog::set_default_logger(logger);
+
+        LOGI("Logger initialized");
 
         s_appCurrent = this;
     }

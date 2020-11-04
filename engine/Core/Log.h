@@ -22,46 +22,18 @@
 
 #pragma once
 
-#include "Core/Assert.h"
-#include "Core/String.h"
+#include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
-namespace alimer::Log
-{
-    enum class Level : uint32_t
-    {
-        Verbose,
-        Debug,
-        Info,
-        Warn,
-        Error,
-        Fatal,
-        Off,
-        Count
-    };
+#define LOGGER_FORMAT "[%^%l%$] %v"
+#define LOGD(...) spdlog::debug(__VA_ARGS__);
+#define LOGI(...) spdlog::info(__VA_ARGS__);
+#define LOGW(...) spdlog::warn(__VA_ARGS__);
+#define LOGE(...) spdlog::error("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__));
 
-    ALIMER_API void Write(Level level, const std::string& message);
-    ALIMER_API void Verbose(const std::string& message);
-    ALIMER_API void Debug(const std::string& message);
-    ALIMER_API void Info(const std::string& message);
-    ALIMER_API void Warn(const std::string& message);
-    ALIMER_API void Error(const std::string& message);
-    ALIMER_API void Fatal(const std::string& message);
-}
-
-#define LOGV(...) alimer::Log::Verbose(fmt::format(__VA_ARGS__));
-#define LOGD(...) alimer::Log::Debug(fmt::format(__VA_ARGS__));
-#define LOGI(...) alimer::Log::Info(fmt::format(__VA_ARGS__));
-#define LOGW(...) alimer::Log::Warn(fmt::format(__VA_ARGS__));
-#define LOGE(...)                                                                                    \
-    do                                                                                               \
-    {                                                                                                \
-        alimer::Log::Error(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
-        ALIMER_DEBUG_BREAK();                                                                        \
-    } while (0)
-
-#define ALIMER_FATAL(...)                                                                            \
-    do                                                                                               \
-    {                                                                                                \
-        alimer::Log::Fatal(fmt::format("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__))); \
-        ALIMER_DEBUG_BREAK();                                                                        \
+#define ALIMER_FATAL(...)                                                             \
+    do                                                                                \
+    {                                                                                 \
+        spdlog::critical("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)); \
+        ALIMER_DEBUG_BREAK();                                                         \
     } while (0)

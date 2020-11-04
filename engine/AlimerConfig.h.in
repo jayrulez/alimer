@@ -31,7 +31,6 @@
 #define ALIMER_VERSION_ALIAS "WIP"
 
 /* Build configuration */
-#cmakedefine ALIMER_LOGGING
 #cmakedefine ALIMER_PROFILING
 #cmakedefine ALIMER_THREADING
 #cmakedefine ALIMER_NETWORK

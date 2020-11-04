@@ -79,5 +79,5 @@ jobs:
           cmake --build . --target install
       - uses: actions/upload-artifact@v2
         with:
-          name: 'Alimer-${{ github.job }}-${{ matrix.arch }}-(${{ matrix.generator }})-${{ matrix.build-type }}-${{ github.sha }}'
+          name: 'Alimer_${{ github.job }}_${{ matrix.arch }}_${{ matrix.build-type }}_${{ github.sha }}'
           path: SDK
