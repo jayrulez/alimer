@@ -24,7 +24,7 @@
 #pragma once
 
 #include "Core/Object.h"
-#include "Graphics/GraphicsResource.h"
+#include "Graphics/Texture.h"
 #include "Platform/WindowHandle.h"
 #include <memory>
 #include <set>
@@ -68,101 +68,10 @@ namespace alimer
         }
     };
 
-    struct GPUAllocation
-    {
-        void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is already applied
-        const GraphicsBuffer* buffer = nullptr; // application can bind it to the GPU
-        uint64_t offset = 0; // allocation's offset from the GPUbuffer's beginning
-
-        // Returns true if the allocation was successful
-        inline bool IsValid() const
-        {
-            return data != nullptr && buffer != nullptr;
-        }
-    };
-
-    class ALIMER_API CommandList
-    {
-    public:
-        virtual ~CommandList() = default;
-
-        virtual void PresentBegin() = 0;
-        virtual void PresentEnd() = 0;
-
-        virtual void PushDebugGroup(const char* name) = 0;
-        virtual void PopDebugGroup() = 0;
-        virtual void InsertDebugMarker(const char* name) = 0;
-
-        // Allocates temporary memory that the CPU can write and GPU can read.
-        //	It is only alive for one frame and automatically invalidated after that.
-        //	The CPU pointer gets invalidated as soon as there is a Draw() or Dispatch() event on the same thread
-        //	This allocation can be used to provide temporary vertex buffer, index buffer or raw buffer data to shaders
-        virtual GPUAllocation AllocateGPU(const uint64_t size) = 0;
-        virtual void CopyResource(const GPUResource* pDst, const GPUResource* pSrc) = 0;
-        virtual void UpdateBuffer(GraphicsBuffer* buffer, const void* data, uint64_t size = 0) = 0;
-
-        virtual void RenderPassBegin(const RenderPass* renderpass) = 0;
-        virtual void RenderPassEnd() = 0;
-        virtual void SetViewport(float x, float y, float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
-        virtual void SetViewport(const Viewport& viewport) = 0;
-        virtual void SetViewports(uint32_t viewportCount, const Viewport* pViewports) = 0;
-        virtual void SetScissorRect(const ScissorRect& rect) = 0;
-        virtual void SetScissorRects(uint32_t scissorCount, const ScissorRect* rects) = 0;
-        virtual void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) = 0;
-        virtual void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) = 0;
-        virtual void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) = 0;
-        virtual void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) = 0;
-        virtual void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) = 0;
-        virtual void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot) = 0;
-        virtual void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides, const uint32_t* offsets) = 0;
-        virtual void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset) = 0;
-
-        virtual void BindStencilRef(uint32_t value) = 0;
-        virtual void BindBlendFactor(float r, float g, float b, float a) = 0;
-        virtual void BindShadingRate(ShadingRate rate) {}
-        virtual void BindShadingRateImage(const Texture* texture) {}
-
-        virtual void SetRenderPipeline(RenderPipeline* pipeline) = 0;
-        virtual void BindComputeShader(const Shader* shader) = 0;
-        virtual void Draw(uint32_t vertexCount, uint32_t instanceCount = 1, uint32_t firstVertex = 0, uint32_t firstInstance = 0) = 0;
-        virtual void DrawIndexed(uint32_t indexCount, uint32_t instanceCount = 1, uint32_t firstIndex = 0, int32_t baseVertex = 0, uint32_t firstInstance = 0) = 0;
-        virtual void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
-        virtual void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
-
-        virtual void Dispatch(uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ) = 0;
-        virtual void DispatchIndirect(const GraphicsBuffer* args, uint32_t args_offset) = 0;
-        virtual void DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ) {}
-        virtual void DispatchMeshIndirect(const GraphicsBuffer* args, uint32_t args_offset) {}
-
-        virtual void QueryBegin(const GPUQuery* query) = 0;
-        virtual void QueryEnd(const GPUQuery* query) = 0;
-        virtual void Barrier(const GPUBarrier* barriers, uint32_t numBarriers) = 0;
-        virtual void BuildRaytracingAccelerationStructure(const RaytracingAccelerationStructure* dst, const RaytracingAccelerationStructure* src = nullptr)
-        {
-        }
-        virtual void BindRaytracingPipelineState(const RaytracingPipelineState* rtpso)
-        {
-        }
-        virtual void DispatchRays(const DispatchRaysDesc* desc)
-        {
-        }
-
-        virtual void BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table)
-        {
-        }
-        virtual void BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset)
-        {
-        }
-        virtual void BindRootConstants(PipelineBindPoint bindPoint, uint32_t index, const void* srcData)
-        {
-        }
-    };
-
     struct GraphicsSettings final
     {
         std::string applicationName = "Alimer";
         GraphicsDeviceFlags flags = GraphicsDeviceFlags::None;
-        GraphicsBackendType backendType = GraphicsBackendType::Count;
         PixelFormat backbufferFormat = PixelFormat::RGB10A2Unorm;
         PixelFormat depthStencilFormat = PixelFormat::Depth32Float;
         bool verticalSync = false;
@@ -202,10 +111,10 @@ namespace alimer
         virtual ~Graphics() = default;
 
         static std::set<GraphicsBackendType> GetAvailableBackends();
-        static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc);
+        static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc, GraphicsBackendType backendType = GraphicsBackendType::Count);
 
         virtual RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData = nullptr) = 0;
-        virtual bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDesc* description, const SubresourceData* initialData);
         virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) = 0;
@@ -252,7 +161,7 @@ namespace alimer
 
         virtual void SetName(GPUResource* pResource, const char* name) = 0;
 
-        virtual CommandList& BeginCommandList() = 0;
+        virtual CommandBuffer& BeginCommandBuffer() = 0;
         virtual void SubmitCommandLists() = 0;
 
         virtual void WaitForGPU() = 0;
@@ -294,7 +203,7 @@ namespace alimer
 
         virtual void Resize(uint32_t width, uint32_t height) = 0;
 
-        virtual Texture GetBackBuffer() = 0;
+        virtual RefPtr<Texture> GetBackBuffer() = 0;
 
         bool CheckCapability(GRAPHICSDEVICE_CAPABILITY capability) const;
 
@@ -325,6 +234,7 @@ namespace alimer
         }
 
     protected:
+        virtual bool CreateTextureCore(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture** texture) = 0;
         virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;
 
         uint32_t backbufferWidth;

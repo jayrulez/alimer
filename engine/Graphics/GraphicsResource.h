@@ -30,7 +30,7 @@ namespace alimer
     class Graphics;
 
     /// Defines a base graphics resource class.
-    class ALIMER_API GraphicsResource 
+    class ALIMER_API GraphicsResource
     {
     public:
         enum class Type

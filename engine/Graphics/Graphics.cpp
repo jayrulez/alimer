@@ -29,7 +29,7 @@
 #if defined(ALIMER_D3D12)
 #    include "Graphics/D3D12/Graphics_D3D12.h"
 #endif
-#if defined(ALIMER_VULKAN)
+#if defined(ALIMER_VULKAN) 
 #    include "Graphics/Vulkan/Graphics_Vulkan.h"
 #endif
 
@@ -55,10 +55,8 @@ namespace alimer
         return availableDrivers;
     }
 
-    RefPtr<Graphics> Graphics::Create(WindowHandle windowHandle, const GraphicsSettings& desc)
+    RefPtr<Graphics> Graphics::Create(WindowHandle windowHandle, const GraphicsSettings& desc, GraphicsBackendType backendType)
     {
-        GraphicsBackendType backendType = desc.backendType;
-
         if (backendType == GraphicsBackendType::Count)
         {
             const auto availableDrivers = GetAvailableBackends();
@@ -82,15 +80,6 @@ namespace alimer
                 break;
 #endif
 
-#if defined(ALIMER_D3D11)
-            case GraphicsBackendType::Direct3D11:
-                if (GraphicsDevice_DX11::IsAvailable())
-                {
-                    return std::make_shared<GraphicsDevice_DX11>(windowHandle, desc);
-                }
-                break;
-#endif
-
 #if defined(ALIMER_VULKAN)
             case GraphicsBackendType::Vulkan:
                 if (IsVulkanBackendAvailable())
@@ -102,7 +91,7 @@ namespace alimer
 
             default:
                 LOGE("Graphics backend is not supported");
-                break;
+                return Create(windowHandle, desc, GraphicsBackendType::Count);
         }
 
         return nullptr;
@@ -127,6 +116,17 @@ namespace alimer
 #endif
         verticalSync = desc.verticalSync;
         BACKBUFFER_FORMAT = desc.backbufferFormat;
+    }
+
+    RefPtr<Texture> Graphics::CreateTexture(const TextureDesc* description, const SubresourceData* initialData)
+    {
+        RefPtr<Texture> texture;
+        if (!CreateTextureCore(description, initialData, texture.GetAddressOf()))
+        {
+            return nullptr;
+        }
+
+        return texture;
     }
 
     static RenderPipelineDescriptor RenderPipelineDescriptor_Defaults(const RenderPipelineDescriptor* desc)

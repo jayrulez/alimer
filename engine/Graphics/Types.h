@@ -34,13 +34,14 @@ using namespace DirectX;
 
 namespace alimer
 {
-    class CommandList;
     class Graphics;
     struct Shader;
     struct GPUResource;
     class GraphicsBuffer;
     class Sampler;
-    struct Texture;
+    class RenderPipeline;
+    class Texture;
+    class CommandBuffer;
     struct RootSignature;
 
     static constexpr uint32_t kMaxInflightFrames = 2;
@@ -762,16 +763,6 @@ namespace alimer
         }
     };
 
-    struct Texture : public GPUResource
-    {
-        TextureDesc desc;
-
-        const TextureDesc& GetDesc() const
-        {
-            return desc;
-        }
-    };
-
     struct GPUQuery : public GraphicsDeviceChild
     {
         GPUQueryDesc desc;
@@ -792,6 +783,21 @@ namespace alimer
             return desc;
         }
     };
+
+    struct GPUAllocation
+    {
+        void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is already applied
+        const GraphicsBuffer* buffer = nullptr; // application can bind it to the GPU
+        uint64_t offset = 0; // allocation's offset from the GPUbuffer's beginning
+
+        // Returns true if the allocation was successful
+        inline bool IsValid() const
+        {
+            return data != nullptr && buffer != nullptr;
+        }
+    };
+
+
 
     struct RaytracingAccelerationStructureDesc
     {

@@ -74,7 +74,7 @@ namespace alimer
                 bool dirty = false;
 
                 const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-                const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+                const GraphicsResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
                 int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
                 const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
                 int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
@@ -125,7 +125,7 @@ namespace alimer
 
         void GetAdapter(IDXGIAdapter1** ppAdapter);
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
-        bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
+        bool CreateTextureCore(const TextureDesc* description, const SubresourceData* initialData, Texture** texture) override;
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
@@ -152,7 +152,7 @@ namespace alimer
 
         void SetName(GPUResource* pResource, const char* name) override;
 
-        CommandList& BeginCommandList() override;
+        CommandBuffer& BeginCommandBuffer() override;
         void SubmitCommandLists() override;
 
         void WaitForGPU() override;
@@ -163,7 +163,7 @@ namespace alimer
         void PresentBegin(ID3D12GraphicsCommandList6* commandList);
         void PresentEnd(ID3D12GraphicsCommandList6* commandList);
 
-        Texture GetBackBuffer() override;
+        RefPtr<Texture> GetBackBuffer() override;
 
     private:
         D3D_FEATURE_LEVEL minFeatureLevel;

@@ -44,7 +44,7 @@ namespace alimer
         std::string rootDirectory = "Assets";
     };
 
-    class CommandList;
+    class CommandBuffer;
     class Graphics;
     class ImGuiLayer;
 
@@ -98,7 +98,7 @@ namespace alimer
 
     protected:
         virtual void Initialize() {}
-        virtual void OnDraw(CommandList& commandList) {}
+        virtual void OnDraw(CommandBuffer& commandBuffer) {}
 
     private:
         void InitBeforeRun();

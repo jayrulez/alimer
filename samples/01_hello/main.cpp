@@ -21,6 +21,7 @@
 //
 
 #include "Core/Math.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Graphics.h"
 #include "IO/FileSystem.h"
 #include "Math/Color.h"
@@ -38,7 +39,7 @@ namespace alimer
         ~HelloWorldApp() override;
 
         void Initialize() override;
-        void OnDraw(CommandList& commandList) override;
+        void OnDraw(CommandBuffer& commandBuffer) override;
 
     private:
         // UniquePtr<Window> window2;
@@ -48,19 +49,18 @@ namespace alimer
         RefPtr<GraphicsBuffer> indexBuffer;
         RefPtr<GraphicsBuffer> constantBuffer;
         RefPtr<RenderPipeline> pipeline;
+        RefPtr<Texture> texture;
         RefPtr<Sampler> sampler;
     };
 
     /* TODO: Until we fix resource creation */
     Shader* vertexShader;
     Shader* pixelShader;
-    Texture* texture;
 
     HelloWorldApp::~HelloWorldApp()
     {
         delete vertexShader;
         delete pixelShader;
-        delete texture;
     }
 
     struct Vertex
@@ -123,8 +123,7 @@ namespace alimer
         SubresourceData textureData = {};
         textureData.pSysMem = pixels;
         textureData.SysMemPitch = 4u * GetFormatBlockSize(textureDesc.format);
-        texture = new Texture();
-        graphics->CreateTexture(&textureDesc, &textureData, texture);
+        texture = graphics->CreateTexture(&textureDesc, &textureData);
 
         SamplerDescriptor samplerDesc = {};
         samplerDesc.minFilter = FilterMode::Nearest;
@@ -185,7 +184,7 @@ namespace alimer
         constantBuffer = graphics->CreateBuffer(bd, nullptr);
     }
 
-    void HelloWorldApp::OnDraw(CommandList& commandList)
+    void HelloWorldApp::OnDraw(CommandBuffer& commandBuffer)
     {
         static float time = 0.0f;
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
@@ -200,20 +199,20 @@ namespace alimer
 
         XMFLOAT4X4 worldViewProjection;
         XMStoreFloat4x4(&worldViewProjection, viewProj);
-        commandList.UpdateBuffer(constantBuffer, &worldViewProjection);
+        commandBuffer.UpdateBuffer(constantBuffer, &worldViewProjection);
 
         const GraphicsBuffer* vbs[] = {
             vertexBuffer,
         };
 
         uint32_t stride = sizeof(Vertex);
-        commandList.BindVertexBuffers(vbs, 0, 1, &stride, nullptr);
-        commandList.BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0);
-        commandList.SetRenderPipeline(pipeline);
-        commandList.BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0);
-        commandList.BindResource(ShaderStage::Fragment, texture, 0);
-        commandList.BindSampler(ShaderStage::Fragment, sampler, 0);
-        commandList.DrawIndexed(36);
+        commandBuffer.BindVertexBuffers(vbs, 0, 1, &stride, nullptr);
+        commandBuffer.BindIndexBuffer(indexBuffer, IndexFormat::UInt16, 0);
+        commandBuffer.SetRenderPipeline(pipeline);
+        commandBuffer.BindConstantBuffer(ShaderStage::Vertex, constantBuffer, 0);
+        commandBuffer.BindResource(ShaderStage::Fragment, texture, 0);
+        commandBuffer.BindSampler(ShaderStage::Fragment, sampler, 0);
+        commandBuffer.DrawIndexed(36);
 
         time += 0.001f;
     }

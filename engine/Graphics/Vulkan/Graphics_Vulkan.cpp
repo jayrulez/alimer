@@ -25,6 +25,8 @@
 #include "AlimerConfig.h"
 #include "Core/Hash.h"
 #include "Core/Log.h"
+
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Graphics_Internal.h"
 
 #ifndef NOMINMAX
@@ -144,7 +146,7 @@ namespace alimer
         bool dirty = false;
 
         const GraphicsBuffer* CBV[GPU_RESOURCE_HEAP_CBV_COUNT];
-        const GPUResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
+        const GraphicsResource* SRV[GPU_RESOURCE_HEAP_SRV_COUNT];
         int SRV_index[GPU_RESOURCE_HEAP_SRV_COUNT];
         const GPUResource* UAV[GPU_RESOURCE_HEAP_UAV_COUNT];
         int UAV_index[GPU_RESOURCE_HEAP_UAV_COUNT];
@@ -173,7 +175,7 @@ namespace alimer
         uint64_t CalculateOffset(uint8_t* address);
     };
 
-    class Vulkan_CommandList final : public CommandList
+    class Vulkan_CommandList final : public CommandBuffer
     {
         friend struct DescriptorTableFrameAllocator;
 
@@ -203,8 +205,8 @@ namespace alimer
         void SetViewports(uint32_t viewportCount, const Viewport* pViewports) override;
         void SetScissorRect(const ScissorRect& rect) override;
         void SetScissorRects(uint32_t scissorCount, const ScissorRect* rects) override;
-        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) override;
-        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) override;
+        void BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count) override;
         void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) override;
         void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) override;
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) override;
@@ -378,7 +380,7 @@ namespace alimer
         }
 
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
-        bool CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture) override;
+        bool CreateTextureCore(const TextureDesc* description, const SubresourceData* initialData, Texture** texture) override;
         bool CreateShader(ShaderStage stafe, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
@@ -404,7 +406,7 @@ namespace alimer
 
         void SetName(GPUResource* pResource, const char* name) override;
 
-        CommandList& BeginCommandList() override;
+        CommandBuffer& BeginCommandBuffer() override;
         void SubmitCommandLists() override;
 
         void WaitForGPU() override;
@@ -412,7 +414,7 @@ namespace alimer
 
         void Resize(uint32_t width, uint32_t height) override;
 
-        Texture GetBackBuffer() override;
+        RefPtr<Texture> GetBackBuffer() override;
 
         void SetVSyncEnabled(bool value) override
         {
@@ -1324,7 +1326,7 @@ namespace alimer
             GPUAllocation dynamic[kCommandListCount];
         };
 
-        struct Texture_Vulkan
+        struct Texture_Vulkan final : public Texture
         {
             std::shared_ptr<GraphicsDevice_Vulkan::AllocationHandler> allocationhandler;
             VmaAllocation allocation = nullptr;
@@ -1341,7 +1343,17 @@ namespace alimer
 
             VkSubresourceLayout subresourcelayout = {};
 
+            Texture_Vulkan(const TextureDesc& desc)
+                : Texture(desc)
+            {
+            }
+
             ~Texture_Vulkan()
+            {
+                Destroy();
+            }
+
+            void Destroy() override
             {
                 if (allocationhandler == nullptr)
                     return;
@@ -1626,10 +1638,16 @@ namespace alimer
             return static_cast<const Buffer_Vulkan*>(param);
         }
 
-        Texture_Vulkan* to_internal(const Texture* param)
+        Texture_Vulkan* to_internal(Texture* param)
         {
-            return static_cast<Texture_Vulkan*>(param->internal_state.get());
+            return static_cast<Texture_Vulkan*>(param);
         }
+
+        const Texture_Vulkan* to_internal(const Texture* param)
+        {
+            return static_cast<const Texture_Vulkan*>(param);
+        }
+
         const Sampler_Vulkan* to_internal(const Sampler* param)
         {
             return static_cast<const Sampler_Vulkan*>(param);
@@ -1969,8 +1987,8 @@ namespace alimer
                     imageInfos.back().imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
                     const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-                    const GPUResource* resource = SRV[original_binding];
-                    if (resource == nullptr || !resource->IsValid() || !resource->IsTexture())
+                    const GraphicsResource* resource = SRV[original_binding];
+                    if (resource == nullptr || !resource->IsTexture())
                     {
                         switch (viewtype)
                         {
@@ -2014,7 +2032,7 @@ namespace alimer
                             imageInfos.back().imageView = to_internal(texture)->srv;
                         }
 
-                        VkImageLayout layout = _ConvertImageLayout(texture->desc.layout);
+                        VkImageLayout layout = _ConvertImageLayout(texture->GetDesc().layout);
                         if (layout != VK_IMAGE_LAYOUT_GENERAL && layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                         {
                             // Means texture initial layout is not compatible, so it must have been transitioned
@@ -2121,8 +2139,8 @@ namespace alimer
                     texelBufferViews.back() = {};
 
                     const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-                    const GPUResource* resource = SRV[original_binding];
-                    if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+                    const GraphicsResource* resource = SRV[original_binding];
+                    if (resource == nullptr || !resource->IsBuffer())
                     {
                         texelBufferViews.back() = device->nullBufferView;
                     }
@@ -2180,8 +2198,8 @@ namespace alimer
                     {
                         // SRV
                         const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-                        const GPUResource* resource = SRV[original_binding];
-                        if (resource == nullptr || !resource->IsValid() || !resource->IsBuffer())
+                        const GraphicsResource* resource = SRV[original_binding];
+                        if (resource == nullptr || !resource->IsBuffer())
                         {
                             bufferInfos.back().buffer = device->nullBuffer;
                             bufferInfos.back().range = VK_WHOLE_SIZE;
@@ -2224,8 +2242,8 @@ namespace alimer
                     accelerationStructureViews.back().accelerationStructureCount = 1;
 
                     const uint32_t original_binding = x.binding - VULKAN_BINDING_SHIFT_T;
-                    const GPUResource* resource = SRV[original_binding];
-                    if (resource == nullptr || !resource->IsValid() || !resource->IsAccelerationStructure())
+                    const GraphicsResource* resource = SRV[original_binding];
+                    if (resource == nullptr || !resource->IsAccelerationStructure())
                     {
                         assert(0); // invalid acceleration structure!
                     }
@@ -3198,19 +3216,18 @@ namespace alimer
         }
     }
 
-    Texture GraphicsDevice_Vulkan::GetBackBuffer()
+    RefPtr<Texture> GraphicsDevice_Vulkan::GetBackBuffer()
     {
-        auto internal_state = std::make_shared<Texture_Vulkan>();
-        internal_state->resource = swapChainImages[swapChainImageIndex];
+        TextureDesc textureDesc{};
+        textureDesc.type = TextureDesc::TEXTURE_2D;
+        textureDesc.Width = swapChainExtent.width;
+        textureDesc.Height = swapChainExtent.height;
+        textureDesc.format = BACKBUFFER_FORMAT;
 
-        Texture result;
-        result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-        result.internal_state = internal_state;
-        result.desc.type = TextureDesc::TEXTURE_2D;
-        result.desc.Width = swapChainExtent.width;
-        result.desc.Height = swapChainExtent.height;
-        result.desc.format = BACKBUFFER_FORMAT;
-        return result;
+        RefPtr<Texture_Vulkan> texture(new Texture_Vulkan(textureDesc));
+        texture->resource = swapChainImages[swapChainImageIndex];
+
+        return texture;
     }
 
     RefPtr<GraphicsBuffer> GraphicsDevice_Vulkan::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
@@ -3414,48 +3431,39 @@ namespace alimer
         return result;
     }
 
-    bool GraphicsDevice_Vulkan::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
+    bool GraphicsDevice_Vulkan::CreateTextureCore(const TextureDesc* description, const SubresourceData* initialData, Texture** texture)
     {
-        auto internal_state = std::make_shared<Texture_Vulkan>();
-        internal_state->allocationhandler = allocationhandler;
-        pTexture->internal_state = internal_state;
-        pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-
-        pTexture->desc = *pDesc;
-
-        if (pTexture->desc.MipLevels == 0)
-        {
-            pTexture->desc.MipLevels = (uint32_t) log2(std::max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
-        }
+        RefPtr<Texture_Vulkan> result(new Texture_Vulkan(*description));
+        result->allocationhandler = allocationhandler;
 
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
         VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
-        imageInfo.extent.width = pTexture->desc.Width;
-        imageInfo.extent.height = pTexture->desc.Height;
+        imageInfo.extent.width = description->Width;
+        imageInfo.extent.height = description->Height;
         imageInfo.extent.depth = 1;
-        imageInfo.format = VulkanImageFormat(pTexture->desc.format);
-        imageInfo.arrayLayers = pTexture->desc.ArraySize;
-        imageInfo.mipLevels = pTexture->desc.MipLevels;
-        imageInfo.samples = (VkSampleCountFlagBits) pTexture->desc.SampleCount;
+        imageInfo.format = VulkanImageFormat(description->format);
+        imageInfo.arrayLayers = description->ArraySize;
+        imageInfo.mipLevels = description->MipLevels;
+        imageInfo.samples = (VkSampleCountFlagBits) description->SampleCount;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.usage = 0;
-        if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+        if (description->BindFlags & BIND_SHADER_RESOURCE)
         {
             imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
         }
-        if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if (description->BindFlags & BIND_UNORDERED_ACCESS)
         {
             imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         }
-        if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+        if (description->BindFlags & BIND_RENDER_TARGET)
         {
             imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
         }
-        if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+        if (description->BindFlags & BIND_DEPTH_STENCIL)
         {
             imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -3464,14 +3472,14 @@ namespace alimer
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         imageInfo.flags = 0;
-        if (pTexture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+        if (description->MiscFlags & RESOURCE_MISC_TEXTURECUBE)
         {
             imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
         }
 
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        switch (pTexture->desc.type)
+        switch (description->type)
         {
             case TextureDesc::TEXTURE_1D:
                 imageInfo.imageType = VK_IMAGE_TYPE_1D;
@@ -3481,7 +3489,7 @@ namespace alimer
                 break;
             case TextureDesc::TEXTURE_3D:
                 imageInfo.imageType = VK_IMAGE_TYPE_3D;
-                imageInfo.extent.depth = pTexture->desc.Depth;
+                imageInfo.extent.depth = description->Depth;
                 break;
             default:
                 assert(0);
@@ -3490,16 +3498,16 @@ namespace alimer
 
         VkResult res;
 
-        if (pTexture->desc.Usage == USAGE_STAGING)
+        if (description->Usage == USAGE_STAGING)
         {
             VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
             bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
-                              GetFormatBlockSize(pTexture->desc.format);
+                              GetFormatBlockSize(description->format);
 
             allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-            if (pDesc->Usage == USAGE_STAGING)
+            if (description->Usage == USAGE_STAGING)
             {
-                if (pDesc->CPUAccessFlags & CPU_ACCESS_READ)
+                if (description->CPUAccessFlags & CPU_ACCESS_READ)
                 {
                     allocInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
                     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -3512,7 +3520,7 @@ namespace alimer
                 }
             }
 
-            res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->staging_resource, &internal_state->allocation, nullptr);
+            res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &result->staging_resource, &result->allocation, nullptr);
             assert(res == VK_SUCCESS);
 
             imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
@@ -3522,22 +3530,22 @@ namespace alimer
 
             VkImageSubresource subresource = {};
             subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            vkGetImageSubresourceLayout(device, image, &subresource, &internal_state->subresourcelayout);
+            vkGetImageSubresourceLayout(device, image, &subresource, &result->subresourcelayout);
 
             vkDestroyImage(device, image, nullptr);
             return res == VK_SUCCESS;
         }
         else
         {
-            res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &internal_state->resource, &internal_state->allocation, nullptr);
+            res = vmaCreateImage(allocationhandler->allocator, &imageInfo, &allocInfo, &result->resource, &result->allocation, nullptr);
             assert(res == VK_SUCCESS);
         }
 
         // Issue data copy on request:
-        if (pInitialData != nullptr)
+        if (initialData != nullptr)
         {
             GPUBufferDesc uploadBufferDesc = {};
-            uploadBufferDesc.ByteWidth = (uint32_t) internal_state->allocation->GetSize();
+            uploadBufferDesc.ByteWidth = (uint32_t) result->allocation->GetSize();
             uploadBufferDesc.Usage = USAGE_STAGING;
 
             RefPtr<GraphicsBuffer> uploadBuffer = CreateBuffer(uploadBufferDesc, nullptr);
@@ -3553,15 +3561,15 @@ namespace alimer
 
             size_t cpyoffset = 0;
             uint32_t initDataIdx = 0;
-            for (uint32_t slice = 0; slice < pDesc->ArraySize; ++slice)
+            for (uint32_t slice = 0; slice < description->ArraySize; ++slice)
             {
-                uint32_t width = pDesc->Width;
-                uint32_t height = pDesc->Height;
-                for (uint32_t mip = 0; mip < pDesc->MipLevels; ++mip)
+                uint32_t width = description->Width;
+                uint32_t height = description->Height;
+                for (uint32_t mip = 0; mip < description->MipLevels; ++mip)
                 {
-                    const SubresourceData& subresourceData = pInitialData[initDataIdx++];
+                    const SubresourceData& subresourceData = initialData[initDataIdx++];
                     size_t cpysize = subresourceData.SysMemPitch * height;
-                    if (IsBlockCompressedFormat(pDesc->format))
+                    if (IsBlockCompressedFormat(description->format))
                     {
                         cpysize /= 4;
                     }
@@ -3589,7 +3597,7 @@ namespace alimer
 
                     copyRegions.push_back(copyRegion);
 
-                    cpyoffset += Align(cpysize, GetFormatBlockSize(pDesc->format));
+                    cpyoffset += Align(cpysize, GetFormatBlockSize(description->format));
                 }
             }
 
@@ -3614,7 +3622,7 @@ namespace alimer
 
                 VkImageMemoryBarrier barrier = {};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-                barrier.image = internal_state->resource;
+                barrier.image = result->resource;
                 barrier.oldLayout = imageInfo.initialLayout;
                 barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                 barrier.srcAccessMask = 0;
@@ -3636,10 +3644,10 @@ namespace alimer
                     0, nullptr,
                     1, &barrier);
 
-                vkCmdCopyBufferToImage(frame.copyCommandBuffer, upload_resource, internal_state->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t) copyRegions.size(), copyRegions.data());
+                vkCmdCopyBufferToImage(frame.copyCommandBuffer, upload_resource, result->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t) copyRegions.size(), copyRegions.data());
 
                 barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-                barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
+                barrier.newLayout = _ConvertImageLayout(description->layout);
                 barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
                 barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 
@@ -3670,15 +3678,15 @@ namespace alimer
 
             VkImageMemoryBarrier barrier = {};
             barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            barrier.image = internal_state->resource;
+            barrier.image = result->resource;
             barrier.oldLayout = imageInfo.initialLayout;
-            barrier.newLayout = _ConvertImageLayout(pTexture->desc.layout);
+            barrier.newLayout = _ConvertImageLayout(description->layout);
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+            if (description->BindFlags & BIND_DEPTH_STENCIL)
             {
                 barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-                if (IsStencilFormat(pTexture->desc.format))
+                if (IsStencilFormat(description->format))
                 {
                     barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
                 }
@@ -3698,24 +3706,25 @@ namespace alimer
             copyQueueLock.unlock();
         }
 
-        if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+        if (description->BindFlags & BIND_RENDER_TARGET)
         {
-            CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+        if (description->BindFlags & BIND_DEPTH_STENCIL)
         {
-            CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+        if (description->BindFlags & BIND_SHADER_RESOURCE)
         {
-            CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), SRV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if (description->BindFlags & BIND_UNORDERED_ACCESS)
         {
-            CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), UAV, 0, -1, 0, -1);
         }
 
-        return res == VK_SUCCESS;
+        *texture = result.Detach();
+        return true;
     }
 
     bool GraphicsDevice_Vulkan::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
@@ -4279,8 +4288,8 @@ namespace alimer
         alimer::CombineHash(renderpass->hash, pDesc->attachments.size());
         for (auto& attachment : pDesc->attachments)
         {
-            alimer::CombineHash(renderpass->hash, attachment.texture->desc.format);
-            alimer::CombineHash(renderpass->hash, attachment.texture->desc.SampleCount);
+            alimer::CombineHash(renderpass->hash, attachment.texture->GetDesc().format);
+            alimer::CombineHash(renderpass->hash, attachment.texture->GetDesc().SampleCount);
         }
 
         VkResult res;
@@ -4302,7 +4311,7 @@ namespace alimer
         for (auto& attachment : renderpass->desc.attachments)
         {
             const Texture* texture = attachment.texture;
-            const TextureDesc& texdesc = texture->desc;
+            const TextureDesc& texdesc = texture->GetDesc();
             int subresource = attachment.subresource;
             auto texture_internal_state = to_internal(texture);
 
@@ -4460,7 +4469,7 @@ namespace alimer
 
         if (validAttachmentCount > 0)
         {
-            const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+            const TextureDesc& texdesc = desc.attachments[0].texture->GetDesc();
             framebufferInfo.width = texdesc.Width;
             framebufferInfo.height = texdesc.Height;
             framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
@@ -4481,7 +4490,7 @@ namespace alimer
 
         if (validAttachmentCount > 0)
         {
-            const TextureDesc& texdesc = desc.attachments[0].texture->desc;
+            const TextureDesc& texdesc = desc.attachments[0].texture->GetDesc();
 
             internal_state->beginInfo.renderArea.offset = {0, 0};
             internal_state->beginInfo.renderArea.extent.width = texdesc.Width;
@@ -4495,7 +4504,7 @@ namespace alimer
                 if (desc.attachments[i].type == RenderPassAttachment::RESOLVE || attachment.texture == nullptr)
                     continue;
 
-                const ClearValue& clear = desc.attachments[i].texture->desc.clear;
+                const ClearValue& clear = desc.attachments[i].texture->GetDesc().clear;
                 if (desc.attachments[i].type == RenderPassAttachment::RENDERTARGET)
                 {
                     internal_state->clearColors[i].color.float32[0] = clear.color[0];
@@ -5035,11 +5044,11 @@ namespace alimer
         view_desc.subresourceRange.layerCount = sliceCount;
         view_desc.subresourceRange.baseMipLevel = firstMip;
         view_desc.subresourceRange.levelCount = mipCount;
-        view_desc.format = VulkanImageFormat(texture->desc.format);
+        view_desc.format = VulkanImageFormat(texture->GetDesc().format);
 
-        if (texture->desc.type == TextureDesc::TEXTURE_1D)
+        if (texture->GetDesc().type == TextureDesc::TEXTURE_1D)
         {
-            if (texture->desc.ArraySize > 1)
+            if (texture->GetDesc().ArraySize > 1)
             {
                 view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
             }
@@ -5048,13 +5057,13 @@ namespace alimer
                 view_desc.viewType = VK_IMAGE_VIEW_TYPE_1D;
             }
         }
-        else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+        else if (texture->GetDesc().type == TextureDesc::TEXTURE_2D)
         {
-            if (texture->desc.ArraySize > 1)
+            if (texture->GetDesc().ArraySize > 1)
             {
-                if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+                if (texture->GetDesc().MiscFlags & RESOURCE_MISC_TEXTURECUBE)
                 {
-                    if (texture->desc.ArraySize > 6 && sliceCount > 6)
+                    if (texture->GetDesc().ArraySize > 6 && sliceCount > 6)
                     {
                         view_desc.viewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
                     }
@@ -5073,7 +5082,7 @@ namespace alimer
                 view_desc.viewType = VK_IMAGE_VIEW_TYPE_2D;
             }
         }
-        else if (texture->desc.type == TextureDesc::TEXTURE_3D)
+        else if (texture->GetDesc().type == TextureDesc::TEXTURE_3D)
         {
             view_desc.viewType = VK_IMAGE_VIEW_TYPE_3D;
         }
@@ -5396,7 +5405,7 @@ namespace alimer
                     {
                         descriptor.imageinfo.imageView = internal_state->subresources_srv[subresource];
                     }
-                    VkImageLayout layout = _ConvertImageLayout(texture->desc.layout);
+                    VkImageLayout layout = _ConvertImageLayout(texture->GetDesc().layout);
                     if (layout != VK_IMAGE_LAYOUT_GENERAL && layout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
                     {
                         // Means texture initial layout is not compatible, so it must have been transitioned
@@ -5656,7 +5665,7 @@ namespace alimer
         VK_CHECK(vkSetDebugUtilsObjectNameEXT(device, &nameInfo));
     }
 
-    CommandList& GraphicsDevice_Vulkan::BeginCommandList()
+    CommandBuffer& GraphicsDevice_Vulkan::BeginCommandBuffer()
     {
         std::atomic_uint32_t cmd = commandListsCount.fetch_add(1);
         ALIMER_ASSERT(cmd < kCommandListCount);
@@ -6152,7 +6161,7 @@ namespace alimer
         vkCmdSetScissor(GetDirectCommandList(), 0, scissorCount, scissors);
     }
 
-    void Vulkan_CommandList::BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource)
+    void Vulkan_CommandList::BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource)
     {
         ALIMER_ASSERT(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
         if (descriptors[frameIndex].SRV[slot] != resource || descriptors[frameIndex].SRV_index[slot] != subresource)
@@ -6163,7 +6172,7 @@ namespace alimer
         }
     }
 
-    void Vulkan_CommandList::BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count)
+    void Vulkan_CommandList::BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count)
     {
         if (resources != nullptr)
         {
@@ -6534,7 +6543,7 @@ namespace alimer
                 multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
                 if (active_renderpass != nullptr && active_renderpass->desc.attachments.size() > 0)
                 {
-                    multisampling.rasterizationSamples = (VkSampleCountFlagBits) active_renderpass->desc.attachments[0].texture->desc.SampleCount;
+                    multisampling.rasterizationSamples = (VkSampleCountFlagBits) active_renderpass->desc.attachments[0].texture->GetDesc().SampleCount;
                 }
                 multisampling.minSampleShading = 1.0f;
                 VkSampleMask samplemask = pso->desc.sampleMask;

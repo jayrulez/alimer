@@ -163,13 +163,13 @@ namespace alimer
     }
 
     template <typename T>
-    inline bool IsPowerOfTwo(T value)
+    constexpr bool IsPowerOfTwo(T value)
     {
         return !(value & (value - 1)) && value;
     }
 
     /// Round up to next power of two.
-    inline uint32_t NextPowerOfTwo(uint32_t value)
+    constexpr uint32_t NextPowerOfTwo(uint32_t value)
     {
         // http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
         --value;
@@ -189,20 +189,20 @@ namespace alimer
         return (value - prev) > (next - value) ? next : prev;
     }
 
-    inline uint32_t AlignTo(uint32_t value, uint32_t alignment)
+    constexpr uint32_t AlignTo(uint32_t value, uint32_t alignment)
     {
         ALIMER_ASSERT(alignment > 0);
         return ((value + alignment - 1) / alignment) * alignment;
     }
 
-    inline uint64_t AlignTo(uint64_t value, uint64_t alignment)
+    constexpr uint64_t AlignTo(uint64_t value, uint64_t alignment)
     {
         ALIMER_ASSERT(alignment > 0);
         return ((value + alignment - 1) / alignment) * alignment;
     }
 
     /// Return a representation of the specified floating-point value as a single format bit layout.
-    inline unsigned FloatToRawIntBits(float value)
+    constexpr unsigned FloatToRawIntBits(float value)
     {
         unsigned u = *((unsigned*) &value);
         return u;

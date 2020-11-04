@@ -23,6 +23,7 @@
 #include "Platform/Application.h"
 #include "AlimerConfig.h"
 #include "Core/Log.h"
+#include "Graphics/CommandBuffer.h"
 #include "Graphics/Graphics.h"
 #include "IO/FileSystem.h"
 #include "Platform/Event.h"
@@ -127,9 +128,8 @@ namespace alimer
 
             // Init graphics device.
             GraphicsSettings settings{};
-            settings.backendType = config.backendType;
             settings.flags = config.deviceFlags;
-            graphics = Graphics::Create(window->GetHandle(), settings);
+            graphics = Graphics::Create(window->GetHandle(), settings, config.backendType);
             RegisterSubsystem(graphics);
 #if defined(ALIMER_IMGUI)
             imguiLayer = std::make_unique<ImGuiLayer>(graphics);
@@ -163,10 +163,10 @@ namespace alimer
     void Application::Tick()
     {
         auto graphics = GetSubsystem<Graphics>();
-        auto& commandList = graphics->BeginCommandList();
-        commandList.PresentBegin();
-        OnDraw(commandList);
-        commandList.PresentEnd();
+        auto& commandBuffer = graphics->BeginCommandBuffer();
+        commandBuffer.PresentBegin();
+        OnDraw(commandBuffer);
+        commandBuffer.PresentEnd();
     }
 
     const Config* Application::GetConfig()

@@ -26,6 +26,9 @@
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
 
+#include "Graphics/CommandBuffer.h"
+#include "Graphics/Texture.h"
+
 #include "D3D12MemAlloc.h"
 #include "d3dx12.h"
 
@@ -509,20 +512,49 @@ namespace alimer
                 allocationhandler->destroylocker.unlock();
             }
         };
-        struct Texture_DX12 : public Resource_DX12
+
+        struct Texture_DX12 final : public Texture
         {
+            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            D3D12MA::Allocation* allocation = nullptr;
+            ComPtr<ID3D12Resource> resource;
+            D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
+            D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
+            D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {};
+            std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> subresources_srv;
+            std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> subresources_uav;
+
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
+
+            GPUAllocation dynamic[kCommandListCount];
             D3D12_RENDER_TARGET_VIEW_DESC rtv = {};
             D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
             std::vector<D3D12_RENDER_TARGET_VIEW_DESC> subresources_rtv;
             std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> subresources_dsv;
 
+            Texture_DX12(const TextureDesc& desc)
+                : Texture(desc)
+            {
+
+            }
+
             ~Texture_DX12() override
+            {
+                Destroy();
+            }
+
+            void Destroy() override
             {
                 allocationhandler->destroylocker.lock();
                 uint64_t framecount = allocationhandler->framecount;
+                if (allocation)
+                    allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
+                if (resource)
+                    allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
                 allocationhandler->destroylocker.unlock();
             }
         };
+
         struct Sampler_DX12 : public Sampler
         {
             std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
@@ -698,10 +730,25 @@ namespace alimer
         {
             return static_cast<const Buffer_DX12*>(param);
         }
+        
+        Texture_DX12* to_internal(Texture* param)
+        {
+            return static_cast<Texture_DX12*>(param);
+        }
+
+        const Texture_DX12* to_internal(const Texture* param)
+        {
+            return static_cast<const Texture_DX12*>(param);
+        }
 
         const PipelineState_DX12* to_internal(const RenderPipeline* param)
         {
             return static_cast<const PipelineState_DX12*>(param);
+        }
+
+        const Sampler_DX12* to_internal(const Sampler* param)
+        {
+            return static_cast<const Sampler_DX12*>(param);
         }
 
         Resource_DX12* to_internal(const GPUResource* param)
@@ -709,14 +756,6 @@ namespace alimer
             return static_cast<Resource_DX12*>(param->internal_state.get());
         }
 
-        Texture_DX12* to_internal(const Texture* param)
-        {
-            return static_cast<Texture_DX12*>(param->internal_state.get());
-        }
-        const Sampler_DX12* to_internal(const Sampler* param)
-        {
-            return static_cast<const Sampler_DX12*>(param);
-        }
         Query_DX12* to_internal(const GPUQuery* param)
         {
             return static_cast<Query_DX12*>(param->internal_state.get());
@@ -776,7 +815,7 @@ namespace alimer
 
     using namespace DX12_Internal;
 
-    class D3D12_CommandList final : public CommandList
+    class D3D12_CommandList final : public CommandBuffer
     {
     public:
         void Reset();
@@ -794,8 +833,8 @@ namespace alimer
         void SetViewports(uint32_t viewportCount, const Viewport* pViewports) override;
         void SetScissorRect(const ScissorRect& rect) override;
         void SetScissorRects(uint32_t scissorCount, const ScissorRect* rects) override;
-        void BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) override;
-        void BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) override;
+        void BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count) override;
         void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) override;
         void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) override;
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) override;
@@ -1250,15 +1289,37 @@ namespace alimer
                             default:
                             case D3D12_DESCRIPTOR_RANGE_TYPE_SRV:
                             {
-                                const GPUResource* resource = SRV[x.BaseShaderRegister];
+                                const GraphicsResource* resource = SRV[x.BaseShaderRegister];
                                 const int subresource = SRV_index[x.BaseShaderRegister];
-                                if (resource == nullptr || !resource->IsValid())
+                                if (resource == nullptr)
                                 {
                                     device->device->CreateShaderResourceView(nullptr, &srv_desc, dst);
                                 }
+                                else if (resource->IsBuffer())
+                                {
+                                    const GraphicsBuffer* buffer = (const GraphicsBuffer*) resource;
+
+                                    auto internal_state = to_internal(buffer);
+
+                                    if (resource->IsAccelerationStructure())
+                                    {
+                                        device->device->CreateShaderResourceView(nullptr, &internal_state->srv, dst);
+                                    }
+                                    else
+                                    {
+                                        if (subresource < 0)
+                                        {
+                                            device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+                                        }
+                                        else
+                                        {
+                                            device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->subresources_srv[subresource], dst);
+                                        }
+                                    }
+                                }
                                 else
                                 {
-                                    auto internal_state = to_internal(resource);
+                                    auto internal_state = to_internal((const Texture*)resource);
 
                                     if (resource->IsAccelerationStructure())
                                     {
@@ -2079,22 +2140,20 @@ namespace alimer
         }
     }
 
-    Texture D3D12Graphics::GetBackBuffer()
+    RefPtr<Texture> D3D12Graphics::GetBackBuffer()
     {
-        auto internal_state = std::make_shared<Texture_DX12>();
-        internal_state->allocationhandler = allocationhandler;
-        internal_state->resource = backBuffers[backbufferIndex];
-        internal_state->rtv = {};
-        internal_state->rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+        D3D12_RESOURCE_DESC desc = backBuffers[backbufferIndex]->GetDesc();
+        TextureDesc textureDesc = _ConvertTextureDesc_Inv(desc);
 
-        D3D12_RESOURCE_DESC desc = internal_state->resource->GetDesc();
-        device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, nullptr);
+        RefPtr<Texture_DX12> texture(new Texture_DX12(textureDesc));
+        texture->allocationhandler = allocationhandler;
+        texture->resource = backBuffers[backbufferIndex];
+        texture->rtv = {};
+        texture->rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
-        Texture result;
-        result.type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-        result.internal_state = internal_state;
-        result.desc = _ConvertTextureDesc_Inv(desc);
-        return result;
+        device->GetCopyableFootprints(&desc, 0, 1, 0, &texture->footprint, nullptr, nullptr, nullptr);
+
+        return texture;
     }
 
     RefPtr<GraphicsBuffer> D3D12Graphics::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
@@ -2226,65 +2285,61 @@ namespace alimer
         return result;
     }
 
-    bool D3D12Graphics::CreateTexture(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture* pTexture)
+    bool D3D12Graphics::CreateTextureCore(const TextureDesc* description, const SubresourceData* initialData, Texture** texture)
     {
-        auto internal_state = std::make_shared<Texture_DX12>();
-        internal_state->allocationhandler = allocationhandler;
-        pTexture->internal_state = internal_state;
-        pTexture->type = GPUResource::GPU_RESOURCE_TYPE::TEXTURE;
-
-        pTexture->desc = *pDesc;
+        RefPtr<Texture_DX12> result(new Texture_DX12(*description));
+        result->allocationhandler = allocationhandler;
 
         HRESULT hr = E_FAIL;
 
         D3D12MA::ALLOCATION_DESC allocationDesc = {};
         allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-        D3D12_RESOURCE_DESC desc;
-        desc.Format = PixelFormatToDXGIFormat(pDesc->format);
-        desc.Width = pDesc->Width;
-        desc.Height = pDesc->Height;
-        desc.MipLevels = pDesc->MipLevels;
-        desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        desc.DepthOrArraySize = (UINT16) pDesc->ArraySize;
-        desc.SampleDesc.Count = pDesc->SampleCount;
-        desc.SampleDesc.Quality = 0;
-        desc.Alignment = 0;
-        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (pDesc->BindFlags & BIND_DEPTH_STENCIL)
+        D3D12_RESOURCE_DESC resourceDesc{};
+        resourceDesc.Format = PixelFormatToDXGIFormat(description->format);
+        resourceDesc.Width = description->Width;
+        resourceDesc.Height = description->Height;
+        resourceDesc.MipLevels = description->MipLevels;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        resourceDesc.DepthOrArraySize = (UINT16) description->ArraySize;
+        resourceDesc.SampleDesc.Count = description->SampleCount;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Alignment = 0;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        if (description->BindFlags & BIND_DEPTH_STENCIL)
         {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
             allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
-            if (!(pDesc->BindFlags & BIND_SHADER_RESOURCE))
+            if (!(description->BindFlags & BIND_SHADER_RESOURCE))
             {
-                desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
             }
         }
-        else if (desc.SampleDesc.Count == 1)
+        else if (resourceDesc.SampleDesc.Count == 1)
         {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
         }
-        if (pDesc->BindFlags & BIND_RENDER_TARGET)
+        if (description->BindFlags & BIND_RENDER_TARGET)
         {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
             allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
         }
-        if (pDesc->BindFlags & BIND_UNORDERED_ACCESS)
+        if (description->BindFlags & BIND_UNORDERED_ACCESS)
         {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         }
 
-        switch (pTexture->desc.type)
+        switch (description->type)
         {
             case TextureDesc::TEXTURE_1D:
-                desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+                resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
                 break;
             case TextureDesc::TEXTURE_2D:
-                desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+                resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
                 break;
             case TextureDesc::TEXTURE_3D:
-                desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-                desc.DepthOrArraySize = (UINT16) pDesc->Depth;
+                resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+                resourceDesc.DepthOrArraySize = (UINT16) description->Depth;
                 break;
             default:
                 assert(0);
@@ -2292,13 +2347,13 @@ namespace alimer
         }
 
         D3D12_CLEAR_VALUE optimizedClearValue = {};
-        optimizedClearValue.Color[0] = pTexture->desc.clear.color[0];
-        optimizedClearValue.Color[1] = pTexture->desc.clear.color[1];
-        optimizedClearValue.Color[2] = pTexture->desc.clear.color[2];
-        optimizedClearValue.Color[3] = pTexture->desc.clear.color[3];
-        optimizedClearValue.DepthStencil.Depth = pTexture->desc.clear.depthstencil.depth;
-        optimizedClearValue.DepthStencil.Stencil = pTexture->desc.clear.depthstencil.stencil;
-        optimizedClearValue.Format = desc.Format;
+        optimizedClearValue.Color[0] = description->clear.color[0];
+        optimizedClearValue.Color[1] = description->clear.color[1];
+        optimizedClearValue.Color[2] = description->clear.color[2];
+        optimizedClearValue.Color[3] = description->clear.color[3];
+        optimizedClearValue.DepthStencil.Depth = description->clear.depthstencil.depth;
+        optimizedClearValue.DepthStencil.Stencil = description->clear.depthstencil.stencil;
+        optimizedClearValue.Format = resourceDesc.Format;
         if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
         {
             optimizedClearValue.Format = DXGI_FORMAT_D16_UNORM;
@@ -2311,23 +2366,23 @@ namespace alimer
         {
             optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         }
-        bool useClearValue = pDesc->BindFlags & BIND_RENDER_TARGET || pDesc->BindFlags & BIND_DEPTH_STENCIL;
+        bool useClearValue = description->BindFlags & BIND_RENDER_TARGET || description->BindFlags & BIND_DEPTH_STENCIL;
 
-        D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(pTexture->desc.layout);
+        D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(description->layout);
 
-        if (pTexture->desc.Usage == USAGE_STAGING)
+        if (description->Usage == USAGE_STAGING)
         {
             UINT64 RequiredSize = 0;
-            device->GetCopyableFootprints(&desc, 0, 1, 0, &internal_state->footprint, nullptr, nullptr, &RequiredSize);
-            desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            desc.Width = RequiredSize;
-            desc.Height = 1;
-            desc.DepthOrArraySize = 1;
-            desc.Format = DXGI_FORMAT_UNKNOWN;
-            desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+            device->GetCopyableFootprints(&resourceDesc, 0, 1, 0, &result->footprint, nullptr, nullptr, &RequiredSize);
+            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+            resourceDesc.Width = RequiredSize;
+            resourceDesc.Height = 1;
+            resourceDesc.DepthOrArraySize = 1;
+            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+            resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-            if (pTexture->desc.CPUAccessFlags & CPU_ACCESS_READ)
+            if (description->CPUAccessFlags & CPU_ACCESS_READ)
             {
                 allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
                 resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -2341,33 +2396,28 @@ namespace alimer
 
         hr = allocationhandler->allocator->CreateResource(
             &allocationDesc,
-            &desc,
+            &resourceDesc,
             resourceState,
             useClearValue ? &optimizedClearValue : nullptr,
-            &internal_state->allocation,
-            IID_PPV_ARGS(&internal_state->resource));
+            &result->allocation,
+            IID_PPV_ARGS(&result->resource));
         assert(SUCCEEDED(hr));
 
-        if (pTexture->desc.MipLevels == 0)
-        {
-            pTexture->desc.MipLevels = (uint32_t) log2(Max(pTexture->desc.Width, pTexture->desc.Height)) + 1;
-        }
-
         // Issue data copy on request:
-        if (pInitialData != nullptr)
+        if (initialData != nullptr)
         {
-            uint32_t dataCount = pDesc->ArraySize * Max(1u, pDesc->MipLevels);
+            uint32_t dataCount = description->ArraySize * Max(1u, description->MipLevels);
             std::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
             for (uint32_t slice = 0; slice < dataCount; ++slice)
             {
-                data[slice] = _ConvertSubresourceData(pInitialData[slice]);
+                data[slice] = _ConvertSubresourceData(initialData[slice]);
             }
 
             UINT64 RequiredSize = 0;
             std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
             std::vector<UINT64> rowSizesInBytes(dataCount);
             std::vector<UINT> numRows(dataCount);
-            device->GetCopyableFootprints(&desc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
+            device->GetCopyableFootprints(&resourceDesc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(), &RequiredSize);
 
             GPUBufferDesc uploaddesc;
             uploaddesc.ByteWidth = (uint32_t) RequiredSize;
@@ -2404,7 +2454,7 @@ namespace alimer
 
                 for (UINT i = 0; i < dataCount; ++i)
                 {
-                    CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state->resource.Get(), i);
+                    CD3DX12_TEXTURE_COPY_LOCATION Dst(result->resource.Get(), i);
                     CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
                     frame.copyCommandList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
                 }
@@ -2412,24 +2462,25 @@ namespace alimer
             copyQueueLock.unlock();
         }
 
-        if (pTexture->desc.BindFlags & BIND_RENDER_TARGET)
+        if (description->BindFlags & BIND_RENDER_TARGET)
         {
-            CreateSubresource(pTexture, RTV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_DEPTH_STENCIL)
+        if (description->BindFlags & BIND_DEPTH_STENCIL)
         {
-            CreateSubresource(pTexture, DSV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_SHADER_RESOURCE)
+        if (description->BindFlags & BIND_SHADER_RESOURCE)
         {
-            CreateSubresource(pTexture, SRV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), SRV, 0, -1, 0, -1);
         }
-        if (pTexture->desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if (description->BindFlags & BIND_UNORDERED_ACCESS)
         {
-            CreateSubresource(pTexture, UAV, 0, -1, 0, -1);
+            CreateSubresource(result.Get(), UAV, 0, -1, 0, -1);
         }
 
-        return SUCCEEDED(hr);
+        *texture = result.Detach();
+        return true;
     }
 
     bool D3D12Graphics::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
@@ -3238,8 +3289,8 @@ namespace alimer
         CombineHash(renderpass->hash, pDesc->attachments.size());
         for (auto& attachment : pDesc->attachments)
         {
-            CombineHash(renderpass->hash, attachment.texture->desc.format);
-            CombineHash(renderpass->hash, attachment.texture->desc.SampleCount);
+            CombineHash(renderpass->hash, attachment.texture->GetDesc().format);
+            CombineHash(renderpass->hash, attachment.texture->GetDesc().SampleCount);
         }
 
         // Beginning barriers:
@@ -3879,6 +3930,7 @@ namespace alimer
     int D3D12Graphics::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
     {
         auto internal_state = to_internal(texture);
+        auto textureDesc = texture->GetDesc();
 
         switch (type)
         {
@@ -3904,11 +3956,11 @@ namespace alimer
                 break;
                 }
                 */
-                srv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
+                srv_desc.Format = PixelFormatToDXGIFormat(textureDesc.format);
 
-                if (texture->desc.type == TextureDesc::TEXTURE_1D)
+                if (textureDesc.type == TextureDesc::TEXTURE_1D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
                         srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
                         srv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -3923,17 +3975,17 @@ namespace alimer
                         srv_desc.Texture1D.MipLevels = mipCount;
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_2D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
-                        if (texture->desc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
+                        if (textureDesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE)
                         {
-                            if (texture->desc.ArraySize > 6)
+                            if (textureDesc.ArraySize > 6)
                             {
                                 srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
                                 srv_desc.TextureCubeArray.First2DArrayFace = firstSlice;
-                                srv_desc.TextureCubeArray.NumCubes = Min(texture->desc.ArraySize, sliceCount) / 6;
+                                srv_desc.TextureCubeArray.NumCubes = Min(textureDesc.ArraySize, sliceCount) / 6;
                                 srv_desc.TextureCubeArray.MostDetailedMip = firstMip;
                                 srv_desc.TextureCubeArray.MipLevels = mipCount;
                             }
@@ -3946,7 +3998,7 @@ namespace alimer
                         }
                         else
                         {
-                            if (texture->desc.SampleCount > 1)
+                            if (textureDesc.SampleCount > 1)
                             {
                                 srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMSARRAY;
                                 srv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -3964,7 +4016,7 @@ namespace alimer
                     }
                     else
                     {
-                        if (texture->desc.SampleCount > 1)
+                        if (textureDesc.SampleCount > 1)
                         {
                             srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
                         }
@@ -3976,7 +4028,7 @@ namespace alimer
                         }
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_3D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_3D)
                 {
                     srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
                     srv_desc.Texture3D.MostDetailedMip = firstMip;
@@ -4013,11 +4065,11 @@ namespace alimer
                 break;
                 }*/
 
-                uav_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
+                uav_desc.Format = PixelFormatToDXGIFormat(textureDesc.format);
 
-                if (texture->desc.type == TextureDesc::TEXTURE_1D)
+                if (textureDesc.type == TextureDesc::TEXTURE_1D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
                         uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
                         uav_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4030,9 +4082,9 @@ namespace alimer
                         uav_desc.Texture1D.MipSlice = firstMip;
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_2D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
                         uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
                         uav_desc.Texture2DArray.FirstArraySlice = firstSlice;
@@ -4045,7 +4097,7 @@ namespace alimer
                         uav_desc.Texture2D.MipSlice = firstMip;
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_3D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_3D)
                 {
                     uav_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
                     uav_desc.Texture3D.MipSlice = firstMip;
@@ -4083,11 +4135,11 @@ namespace alimer
                 break;
                 }*/
 
-                rtv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
+                rtv_desc.Format = PixelFormatToDXGIFormat(textureDesc.format);
 
-                if (texture->desc.type == TextureDesc::TEXTURE_1D)
+                if (textureDesc.type == TextureDesc::TEXTURE_1D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
                         rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE1DARRAY;
                         rtv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4100,11 +4152,11 @@ namespace alimer
                         rtv_desc.Texture1D.MipSlice = firstMip;
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_2D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
-                        if (texture->desc.SampleCount > 1)
+                        if (textureDesc.SampleCount > 1)
                         {
                             rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMSARRAY;
                             rtv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -4120,7 +4172,7 @@ namespace alimer
                     }
                     else
                     {
-                        if (texture->desc.SampleCount > 1)
+                        if (textureDesc.SampleCount > 1)
                         {
                             rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
                         }
@@ -4131,7 +4183,7 @@ namespace alimer
                         }
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_3D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_3D)
                 {
                     rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
                     rtv_desc.Texture3D.MipSlice = firstMip;
@@ -4168,11 +4220,11 @@ namespace alimer
                 dsv_desc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
                 break;
                 }*/
-                dsv_desc.Format = PixelFormatToDXGIFormat(texture->desc.format);
+                dsv_desc.Format = PixelFormatToDXGIFormat(textureDesc.format);
 
-                if (texture->desc.type == TextureDesc::TEXTURE_1D)
+                if (textureDesc.type == TextureDesc::TEXTURE_1D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
                         dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
                         dsv_desc.Texture1DArray.FirstArraySlice = firstSlice;
@@ -4185,11 +4237,11 @@ namespace alimer
                         dsv_desc.Texture1D.MipSlice = firstMip;
                     }
                 }
-                else if (texture->desc.type == TextureDesc::TEXTURE_2D)
+                else if (textureDesc.type == TextureDesc::TEXTURE_2D)
                 {
-                    if (texture->desc.ArraySize > 1)
+                    if (textureDesc.ArraySize > 1)
                     {
-                        if (texture->desc.SampleCount > 1)
+                        if (textureDesc.SampleCount > 1)
                         {
                             dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
                             dsv_desc.Texture2DMSArray.FirstArraySlice = firstSlice;
@@ -4205,7 +4257,7 @@ namespace alimer
                     }
                     else
                     {
-                        if (texture->desc.SampleCount > 1)
+                        if (textureDesc.SampleCount > 1)
                         {
                             dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
                         }
@@ -4449,7 +4501,7 @@ namespace alimer
                 }
                 else if (resource->IsTexture())
                 {
-                    auto internal_state = to_internal((const Texture*) resource);
+                    auto internal_state = to_internal((const Texture*)resource);
                     if (subresource < 0)
                     {
                         device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
@@ -4754,7 +4806,7 @@ namespace alimer
         prev_shadingrate = D3D12_SHADING_RATE_1X1;
     }
 
-    CommandList& D3D12Graphics::BeginCommandList()
+    CommandBuffer& D3D12Graphics::BeginCommandBuffer()
     {
         std::atomic_uint32_t cmd = commandListsCount.fetch_add(1);
         ALIMER_ASSERT(cmd < kCommandListCount);
@@ -4936,7 +4988,7 @@ namespace alimer
             auto texture_internal = to_internal(texture);
 
             D3D12_CLEAR_VALUE clear_value;
-            clear_value.Format = PixelFormatToDXGIFormat(texture->desc.format);
+            clear_value.Format = PixelFormatToDXGIFormat(texture->GetDesc().format);
 
             if (attachment.type == RenderPassAttachment::RENDERTARGET)
             {
@@ -4961,10 +5013,10 @@ namespace alimer
                         break;
                     case RenderPassAttachment::LOADOP_CLEAR:
                         RTVs[rt_count].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-                        clear_value.Color[0] = texture->desc.clear.color[0];
-                        clear_value.Color[1] = texture->desc.clear.color[1];
-                        clear_value.Color[2] = texture->desc.clear.color[2];
-                        clear_value.Color[3] = texture->desc.clear.color[3];
+                        clear_value.Color[0] = texture->GetDesc().clear.color[0];
+                        clear_value.Color[1] = texture->GetDesc().clear.color[1];
+                        clear_value.Color[2] = texture->GetDesc().clear.color[2];
+                        clear_value.Color[3] = texture->GetDesc().clear.color[3];
                         RTVs[rt_count].BeginningAccess.Clear.ClearValue = clear_value;
                         break;
                     case RenderPassAttachment::LOADOP_DONTCARE:
@@ -5011,8 +5063,8 @@ namespace alimer
                     case RenderPassAttachment::LOADOP_CLEAR:
                         DSV.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
                         DSV.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-                        clear_value.DepthStencil.Depth = texture->desc.clear.depthstencil.depth;
-                        clear_value.DepthStencil.Stencil = texture->desc.clear.depthstencil.stencil;
+                        clear_value.DepthStencil.Depth = texture->GetDesc().clear.depthstencil.depth;
+                        clear_value.DepthStencil.Stencil = texture->GetDesc().clear.depthstencil.stencil;
                         DSV.DepthBeginningAccess.Clear.ClearValue = clear_value;
                         DSV.StencilBeginningAccess.Clear.ClearValue = clear_value;
                         break;
@@ -5060,8 +5112,8 @@ namespace alimer
                                 // Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and EndRenderpass()!
                                 src_RTV.EndingAccess.Resolve.pSubresourceParameters = &resolve_subresources[resolve_src_counter];
                                 resolve_subresources[resolve_src_counter].SrcRect.left = 0;
-                                resolve_subresources[resolve_src_counter].SrcRect.right = (LONG) texture->desc.Width;
-                                resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG) texture->desc.Height;
+                                resolve_subresources[resolve_src_counter].SrcRect.right = (LONG) texture->GetDesc().Width;
+                                resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG) texture->GetDesc().Height;
                                 resolve_subresources[resolve_src_counter].SrcRect.top = 0;
 
                                 break;
@@ -5160,7 +5212,7 @@ namespace alimer
         handle->RSSetScissorRects(scissorCount, scissorRects);
     }
 
-    void D3D12_CommandList::BindResource(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource)
+    void D3D12_CommandList::BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource)
     {
         assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
         auto& descriptors = device->GetFrameResources().descriptors[index];
@@ -5172,7 +5224,7 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::BindResources(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count)
+    void D3D12_CommandList::BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count)
     {
         if (resources != nullptr)
         {
@@ -5299,7 +5351,7 @@ namespace alimer
             }
             else
             {
-                ALIMER_ASSERT(texture->desc.format == PixelFormat::R8Uint);
+                ALIMER_ASSERT(texture->GetDesc().format == PixelFormat::R8Uint);
                 handle->RSSetShadingRateImage(to_internal(texture)->resource.Get());
             }
         }
@@ -5479,9 +5531,9 @@ namespace alimer
             uint8_t* dest = device->GetFrameResources().resourceBuffer[index].allocate(size, 1);
             memcpy(dest, data, size);
             handle->CopyBufferRegion(
-                internal_state_dst->resource.Get(), 
+                internal_state_dst->resource.Get(),
                 0u,
-                internal_state_src->resource.Get(), 
+                internal_state_src->resource.Get(),
                 static_cast<UINT64>(device->GetFrameResources().resourceBuffer[index].CalculateOffset(dest)),
                 size);
 
