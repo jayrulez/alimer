@@ -453,7 +453,10 @@ namespace alimer
             {
             }
 
-            ~Buffer_DX12() override { Destroy(); }
+            ~Buffer_DX12() override
+            {
+                Destroy();
+            }
 
             void Destroy() override
             {
@@ -541,7 +544,10 @@ namespace alimer
             {
             }
 
-            ~Texture_DX12() override { Destroy(); }
+            ~Texture_DX12() override
+            {
+                Destroy();
+            }
 
             void Destroy() override
             {
@@ -711,28 +717,61 @@ namespace alimer
         };
 
         /* New Interface */
-        Buffer_DX12* to_internal(GraphicsBuffer* param) { return static_cast<Buffer_DX12*>(param); }
+        Buffer_DX12* to_internal(GraphicsBuffer* param)
+        {
+            return static_cast<Buffer_DX12*>(param);
+        }
 
-        const Buffer_DX12* to_internal(const GraphicsBuffer* param) { return static_cast<const Buffer_DX12*>(param); }
+        const Buffer_DX12* to_internal(const GraphicsBuffer* param)
+        {
+            return static_cast<const Buffer_DX12*>(param);
+        }
 
-        Texture_DX12* to_internal(Texture* param) { return static_cast<Texture_DX12*>(param); }
+        Texture_DX12* to_internal(Texture* param)
+        {
+            return static_cast<Texture_DX12*>(param);
+        }
 
-        const Texture_DX12* to_internal(const Texture* param) { return static_cast<const Texture_DX12*>(param); }
+        const Texture_DX12* to_internal(const Texture* param)
+        {
+            return static_cast<const Texture_DX12*>(param);
+        }
 
-        const PipelineState_DX12* to_internal(const RenderPipeline* param) { return static_cast<const PipelineState_DX12*>(param); }
+        const PipelineState_DX12* to_internal(const RenderPipeline* param)
+        {
+            return static_cast<const PipelineState_DX12*>(param);
+        }
 
-        const Sampler_DX12* to_internal(const Sampler* param) { return static_cast<const Sampler_DX12*>(param); }
+        const Sampler_DX12* to_internal(const Sampler* param)
+        {
+            return static_cast<const Sampler_DX12*>(param);
+        }
 
-        Resource_DX12* to_internal(const GPUResource* param) { return static_cast<Resource_DX12*>(param->internal_state.get()); }
+        Resource_DX12* to_internal(const GPUResource* param)
+        {
+            return static_cast<Resource_DX12*>(param->internal_state.get());
+        }
 
-        Query_DX12* to_internal(const GPUQuery* param) { return static_cast<Query_DX12*>(param->internal_state.get()); }
-        PipelineState_DX12* to_internal(const Shader* param) { return static_cast<PipelineState_DX12*>(param->internal_state.get()); }
-        BVH_DX12* to_internal(const RaytracingAccelerationStructure* param) { return static_cast<BVH_DX12*>(param->internal_state.get()); }
+        Query_DX12* to_internal(const GPUQuery* param)
+        {
+            return static_cast<Query_DX12*>(param->internal_state.get());
+        }
+        PipelineState_DX12* to_internal(const Shader* param)
+        {
+            return static_cast<PipelineState_DX12*>(param->internal_state.get());
+        }
+        BVH_DX12* to_internal(const RaytracingAccelerationStructure* param)
+        {
+            return static_cast<BVH_DX12*>(param->internal_state.get());
+        }
         RTPipelineState_DX12* to_internal(const RaytracingPipelineState* param)
         {
             return static_cast<RTPipelineState_DX12*>(param->internal_state.get());
         }
-        RenderPass_DX12* to_internal(const RenderPass* param) { return static_cast<RenderPass_DX12*>(param->internal_state.get()); }
+        RenderPass_DX12* to_internal(const RenderPass* param)
+        {
+            return static_cast<RenderPass_DX12*>(param->internal_state.get());
+        }
         DescriptorTable_DX12* to_internal(const DescriptorTable* param)
         {
             return static_cast<DescriptorTable_DX12*>(param->internal_state.get());
@@ -1036,7 +1075,10 @@ namespace alimer
         return retVal;
     }
 
-    void D3D12Graphics::FrameResources::ResourceFrameAllocator::clear() { dataCur = dataBegin; }
+    void D3D12Graphics::FrameResources::ResourceFrameAllocator::clear()
+    {
+        dataCur = dataBegin;
+    }
 
     uint64_t D3D12Graphics::FrameResources::ResourceFrameAllocator::CalculateOffset(uint8_t* address)
     {
@@ -1095,7 +1137,7 @@ namespace alimer
     {
         // This function allocatesGPU visible descriptor heaps that can fit the requested table sizes.
         //	First, they grow the heaps until the size fits the dx12 resource limits (tier 1 resource limit = 1 million, sampler limit is
-        //2048) 	When the limits are reached, and there is still a need to allocate, then completely new heap blocks are started
+        // 2048) 	When the limits are reached, and there is still a need to allocate, then completely new heap blocks are started
         //
         //	The function will automatically bind descriptor heaps when there was a new (growing or block allocation)
 
@@ -2483,11 +2525,26 @@ namespace alimer
             {
                 LPVOID address;
                 SIZE_T size;
-                LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return address; }
-                SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return size; }
-                HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) { return E_FAIL; }
-                ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
-                ULONG STDMETHODCALLTYPE Release(void) { return 0; }
+                LPVOID STDMETHODCALLTYPE GetBufferPointer() override
+                {
+                    return address;
+                }
+                SIZE_T STDMETHODCALLTYPE GetBufferSize() override
+                {
+                    return size;
+                }
+                HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject)
+                {
+                    return E_FAIL;
+                }
+                ULONG STDMETHODCALLTYPE AddRef(void)
+                {
+                    return 0;
+                }
+                ULONG STDMETHODCALLTYPE Release(void)
+                {
+                    return 0;
+                }
             };
             ShaderBlob blob;
             blob.address = (LPVOID)pShaderBytecode;
@@ -4866,12 +4923,16 @@ namespace alimer
         WaitForSingleObject(frameFenceEvent, INFINITE);
     }
 
-    void D3D12Graphics::ClearPipelineStateCache() {}
-
     /* D3D12_CommandList */
-    void D3D12_CommandList::PresentBegin() { device->PresentBegin(handle); }
+    void D3D12_CommandList::PresentBegin()
+    {
+        device->PresentBegin(handle);
+    }
 
-    void D3D12_CommandList::PresentEnd() { device->PresentEnd(handle); }
+    void D3D12_CommandList::PresentEnd()
+    {
+        device->PresentEnd(handle);
+    }
 
     void D3D12_CommandList::RenderPassBegin(const RenderPass* renderpass)
     {
@@ -5238,7 +5299,10 @@ namespace alimer
         handle->IASetIndexBuffer(&view);
     }
 
-    void D3D12_CommandList::BindStencilRef(uint32_t value) { handle->OMSetStencilRef(value); }
+    void D3D12_CommandList::BindStencilRef(uint32_t value)
+    {
+        handle->OMSetStencilRef(value);
+    }
 
     void D3D12_CommandList::BindBlendFactor(float r, float g, float b, float a)
     {
@@ -5921,10 +5985,19 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::PushDebugGroup(const char* name) { PIXBeginEvent(handle, PIX_COLOR_DEFAULT, name); }
+    void D3D12_CommandList::PushDebugGroup(const char* name)
+    {
+        PIXBeginEvent(handle, PIX_COLOR_DEFAULT, name);
+    }
 
-    void D3D12_CommandList::PopDebugGroup() { PIXEndEvent(handle); }
+    void D3D12_CommandList::PopDebugGroup()
+    {
+        PIXEndEvent(handle);
+    }
 
-    void D3D12_CommandList::InsertDebugMarker(const char* name) { PIXSetMarker(handle, PIX_COLOR_DEFAULT, name); }
+    void D3D12_CommandList::InsertDebugMarker(const char* name)
+    {
+        PIXSetMarker(handle, PIX_COLOR_DEFAULT, name);
+    }
 
 }

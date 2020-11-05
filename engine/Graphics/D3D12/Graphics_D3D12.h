@@ -112,7 +112,10 @@ namespace alimer
             ResourceFrameAllocator resourceBuffer[kCommandListCount];
         };
         FrameResources frames[BACKBUFFER_COUNT];
-        FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
+        FrameResources& GetFrameResources()
+        {
+            return frames[GetFrameCount() % BACKBUFFER_COUNT];
+        }
 
         D3D12_CommandList* commandLists[kCommandListCount] = {};
         std::atomic_uint32_t commandListsCount{0};
@@ -159,7 +162,6 @@ namespace alimer
         void SubmitCommandLists() override;
 
         void WaitForGPU() override;
-        void ClearPipelineStateCache() override;
 
         void Resize(uint32_t width, uint32_t height) override;
 

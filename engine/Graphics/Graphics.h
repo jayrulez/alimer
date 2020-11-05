@@ -151,7 +151,6 @@ namespace alimer
         virtual void SubmitCommandLists() = 0;
 
         virtual void WaitForGPU() = 0;
-        virtual void ClearPipelineStateCache(){};
 
         inline bool GetVSyncEnabled() const
         {
