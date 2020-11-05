@@ -351,6 +351,25 @@ namespace alimer
         }
     }
 
+    constexpr DXGI_FORMAT GetTypelessFormatFromDepthFormat(PixelFormat format)
+    {
+        switch (format)
+        {
+            case PixelFormat::Depth16Unorm:
+                return DXGI_FORMAT_R16_TYPELESS;
+            case PixelFormat::Depth32Float:
+                return DXGI_FORMAT_R32_TYPELESS;
+            case PixelFormat::Depth24UnormStencil8:
+                return DXGI_FORMAT_R24G8_TYPELESS;
+            case PixelFormat::Depth32FloatStencil8:
+                return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+            
+            default:
+                ALIMER_ASSERT(IsDepthFormat(format) == false);
+                return PixelFormatToDXGIFormat(format);
+        }
+    }
+
     constexpr PixelFormat PixelFormatFromDXGIFormat(DXGI_FORMAT value)
     {
         switch (value)

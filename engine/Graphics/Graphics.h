@@ -49,23 +49,17 @@ namespace alimer
         GPUBufferDesc desc;
     };
 
-    class ALIMER_API Sampler : public GraphicsResource, public RefCounted
+    class ALIMER_API Sampler : public RefCounted
     {
     public:
     protected:
-        Sampler()
-            : GraphicsResource(Type::Sampler)
-        {
-        }
+        Sampler() = default;
     };
 
-    class ALIMER_API RenderPipeline : public GraphicsResource, public RefCounted
+    class ALIMER_API RenderPipeline : public RefCounted
     {
     protected:
-        RenderPipeline()
-            : GraphicsResource(Type::RenderPipeline)
-        {
-        }
+        RenderPipeline() = default;
     };
 
     struct GraphicsSettings final
@@ -114,7 +108,7 @@ namespace alimer
         static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc, GraphicsBackendType backendType = GraphicsBackendType::Count);
 
         virtual RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData = nullptr) = 0;
-        virtual RefPtr<Texture> CreateTexture(const TextureDesc* description, const SubresourceData* initialData);
+        virtual RefPtr<Texture> CreateTexture(const TextureDescription* description, const SubresourceData* initialData);
         virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) = 0;
@@ -142,18 +136,10 @@ namespace alimer
         virtual int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
 
         virtual void WriteShadingRateValue(ShadingRate rate, void* dest){};
-        virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
-        {
-        }
-        virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
-        {
-        }
-        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0)
-        {
-        }
-        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler)
-        {
-        }
+        virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
+        virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
+        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
+        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) {}
 
         virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
         virtual void Unmap(const GPUResource* resource) = 0;
@@ -234,7 +220,7 @@ namespace alimer
         }
 
     protected:
-        virtual bool CreateTextureCore(const TextureDesc* pDesc, const SubresourceData* pInitialData, Texture** texture) = 0;
+        virtual bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData, Texture** texture) = 0;
         virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;
 
         uint32_t backbufferWidth;

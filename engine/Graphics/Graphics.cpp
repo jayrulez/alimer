@@ -21,15 +21,35 @@
 //
 // The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#include "Core/Log.h"
 #include "Graphics/Graphics.h"
 #include "AlimerConfig.h"
+#include "Core/Log.h"
 #include "PlatformIncl.h"
 
-#if defined(ALIMER_D3D12)
+//#define ALIMER_DISABLE_D3D12
+//#define ALIMER_DISABLE_VULKAN
+
+#if defined(ALIMER_D3D12) && !defined(ALIMER_DISABLE_D3D12)
+#    define ALIMER_ENABLE_D3D12 1
+#endif
+
+#if defined(ALIMER_VULKAN) && !defined(ALIMER_DISABLE_VULKAN)
+#    define ALIMER_ENABLE_VULKAN 1
+#endif
+
+#ifndef ALIMER_ENABLE_D3D12
+#    define ALIMER_ENABLE_D3D12 0
+#endif
+
+#ifndef ALIMER_ENABLE_VULKAN
+#    define ALIMER_ENABLE_VULKAN 0
+#endif
+
+#if ALIMER_ENABLE_D3D12
 #    include "Graphics/D3D12/Graphics_D3D12.h"
 #endif
-#if defined(ALIMER_VULKAN) 
+
+#if ALIMER_ENABLE_VULKAN
 #    include "Graphics/Vulkan/Graphics_Vulkan.h"
 #endif
 
@@ -41,12 +61,12 @@ namespace alimer
 
         if (availableDrivers.empty())
         {
-#if defined(ALIMER_D3D12)
+#if ALIMER_ENABLE_D3D12
             if (D3D12Graphics::IsAvailable())
                 availableDrivers.insert(GraphicsBackendType::Direct3D12);
 #endif
 
-#if defined(ALIMER_VULKAN)
+#if ALIMER_ENABLE_VULKAN
             if (IsVulkanBackendAvailable())
                 availableDrivers.insert(GraphicsBackendType::Vulkan);
 #endif
@@ -71,7 +91,7 @@ namespace alimer
 
         switch (backendType)
         {
-#if defined(ALIMER_D3D12)
+#if ALIMER_ENABLE_D3D12
             case GraphicsBackendType::Direct3D12:
                 if (D3D12Graphics::IsAvailable())
                 {
@@ -80,7 +100,7 @@ namespace alimer
                 break;
 #endif
 
-#if defined(ALIMER_VULKAN)
+#if ALIMER_ENABLE_VULKAN
             case GraphicsBackendType::Vulkan:
                 if (IsVulkanBackendAvailable())
                 {
@@ -118,7 +138,7 @@ namespace alimer
         BACKBUFFER_FORMAT = desc.backbufferFormat;
     }
 
-    RefPtr<Texture> Graphics::CreateTexture(const TextureDesc* description, const SubresourceData* initialData)
+    RefPtr<Texture> Graphics::CreateTexture(const TextureDescription* description, const SubresourceData* initialData)
     {
         RefPtr<Texture> texture;
         if (!CreateTextureCore(description, initialData, texture.GetAddressOf()))

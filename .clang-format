@@ -43,8 +43,8 @@ AlignEscapedNewlinesLeft: true
 AlignTrailingComments: false
 
 # If true, a space may be inserted after C style casts.
-SpaceAfterCStyleCast: true
-SpaceAfterTemplateKeyword: true
+SpaceAfterCStyleCast: false
+SpaceAfterTemplateKeyword: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true

@@ -19,34 +19,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
+// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
-#include "Graphics/Texture.h"
+#pragma once
+
+#include "D3D12Backend.h"
 
 namespace alimer
 {
-    Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(Type::Texture)
-        , description(desc)
-    {
-        if (description.mipLevels == 0)
-            description.mipLevels = (uint32_t)log2(Max(desc.width, desc.height)) + 1;
-    }
 
-    const char* ToString(TextureType value)
-    {
-#define CASE_STRING(ENUM_VALUE)     \
-    case TextureType::##ENUM_VALUE: \
-        return #ENUM_VALUE;
-
-        switch (value)
-        {
-            CASE_STRING(Type1D)
-            CASE_STRING(Type2D)
-            CASE_STRING(Type3D)
-            CASE_STRING(TypeCube)
-        }
-
-#undef CASE_STRING
-        return nullptr;
-    }
 }

@@ -125,7 +125,7 @@ namespace alimer
 
         void GetAdapter(IDXGIAdapter1** ppAdapter);
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
-        bool CreateTextureCore(const TextureDesc* description, const SubresourceData* initialData, Texture** texture) override;
+        bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData, Texture** texture) override;
         bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;

@@ -37,8 +37,6 @@ namespace alimer
         {
             Buffer,
             Texture,
-            Sampler,
-            RenderPipeline,
             AccelerationStructure,
         };
 
@@ -57,10 +55,6 @@ namespace alimer
         inline bool IsBuffer() const
         {
             return type == Type::Buffer;
-        }
-        inline bool IsSampler() const
-        {
-            return type == Type::Sampler;
         }
         inline bool IsAccelerationStructure() const
         {

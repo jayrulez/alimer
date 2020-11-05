@@ -114,11 +114,8 @@ namespace alimer
             0x00000000,
             0xFFFFFFFF,
         };
-        TextureDesc textureDesc = {};
-        textureDesc.Width = 4;
-        textureDesc.Height = 4;
-        textureDesc.format = PixelFormat::RGBA8Unorm;
-        textureDesc.BindFlags = BIND_SHADER_RESOURCE;
+
+        TextureDescription textureDesc = TextureDescription::Texure2D(PixelFormat::RGBA8Unorm, 4, 4, 1u);
 
         SubresourceData textureData = {};
         textureData.pSysMem = pixels;

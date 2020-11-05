@@ -20,33 +20,8 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
+#include "D3D12Texture.h"
 
 namespace alimer
 {
-    Texture::Texture(const TextureDescription& desc)
-        : GraphicsResource(Type::Texture)
-        , description(desc)
-    {
-        if (description.mipLevels == 0)
-            description.mipLevels = (uint32_t)log2(Max(desc.width, desc.height)) + 1;
-    }
-
-    const char* ToString(TextureType value)
-    {
-#define CASE_STRING(ENUM_VALUE)     \
-    case TextureType::##ENUM_VALUE: \
-        return #ENUM_VALUE;
-
-        switch (value)
-        {
-            CASE_STRING(Type1D)
-            CASE_STRING(Type2D)
-            CASE_STRING(Type3D)
-            CASE_STRING(TypeCube)
-        }
-
-#undef CASE_STRING
-        return nullptr;
-    }
 }

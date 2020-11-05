@@ -28,6 +28,7 @@
 #include "Core/Hash.h"
 #include "Core/String.h"
 #include "Graphics/PixelFormat.h"
+#include "Math/Extent.h"
 #include <DirectXMath.h>
 
 using namespace DirectX;
@@ -339,10 +340,7 @@ namespace alimer
         BIND_INDEX_BUFFER = 1 << 1,
         BIND_CONSTANT_BUFFER = 1 << 2,
         BIND_SHADER_RESOURCE = 1 << 3,
-        BIND_STREAM_OUTPUT = 1 << 4,
-        BIND_RENDER_TARGET = 1 << 5,
-        BIND_DEPTH_STENCIL = 1 << 6,
-        BIND_UNORDERED_ACCESS = 1 << 7,
+        BIND_UNORDERED_ACCESS = 1 << 4,
     };
     enum CPU_ACCESS
     {
@@ -379,29 +377,6 @@ namespace alimer
             float depth;
             uint32_t stencil;
         } depthstencil;
-    };
-
-    struct TextureDesc
-    {
-        enum TEXTURE_TYPE
-        {
-            TEXTURE_1D,
-            TEXTURE_2D,
-            TEXTURE_3D,
-        } type = TEXTURE_2D;
-        uint32_t Width = 1;
-        uint32_t Height = 1;
-        uint32_t Depth = 1;
-        uint32_t ArraySize = 1;
-        uint32_t MipLevels = 1;
-        PixelFormat format = PixelFormat::RGBA8Unorm;
-        uint32_t SampleCount = 1;
-        USAGE Usage = USAGE_DEFAULT;
-        uint32_t BindFlags = 0;
-        uint32_t CPUAccessFlags = 0;
-        uint32_t MiscFlags = 0;
-        ClearValue clear = {};
-        IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL;
     };
 
     struct SamplerDescriptor
