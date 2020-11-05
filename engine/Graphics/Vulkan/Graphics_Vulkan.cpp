@@ -54,55 +54,6 @@
 #    include <dxcapi.h>
 #endif
 
-const char* VkResultToString(VkResult result)
-{
-    switch (result)
-    {
-#define STR(r)   \
-    case VK_##r: \
-        return #r
-        STR(NOT_READY);
-        STR(TIMEOUT);
-        STR(EVENT_SET);
-        STR(EVENT_RESET);
-        STR(INCOMPLETE);
-        STR(ERROR_OUT_OF_HOST_MEMORY);
-        STR(ERROR_OUT_OF_DEVICE_MEMORY);
-        STR(ERROR_INITIALIZATION_FAILED);
-        STR(ERROR_DEVICE_LOST);
-        STR(ERROR_MEMORY_MAP_FAILED);
-        STR(ERROR_LAYER_NOT_PRESENT);
-        STR(ERROR_EXTENSION_NOT_PRESENT);
-        STR(ERROR_FEATURE_NOT_PRESENT);
-        STR(ERROR_INCOMPATIBLE_DRIVER);
-        STR(ERROR_TOO_MANY_OBJECTS);
-        STR(ERROR_FORMAT_NOT_SUPPORTED);
-        STR(ERROR_SURFACE_LOST_KHR);
-        STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
-        STR(SUBOPTIMAL_KHR);
-        STR(ERROR_OUT_OF_DATE_KHR);
-        STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
-        STR(ERROR_VALIDATION_FAILED_EXT);
-        STR(ERROR_INVALID_SHADER_NV);
-#undef STR
-        default:
-            return "UNKNOWN_ERROR";
-    }
-}
-
-/// Helper macro to test the result of Vulkan calls which can return an error.
-#define VK_CHECK(x)                                                   \
-    do                                                                \
-    {                                                                 \
-        VkResult err = x;                                             \
-        if (err)                                                      \
-        {                                                             \
-            LOGE("Detected Vulkan error: {}", VkResultToString(err)); \
-        }                                                             \
-    } while (0)
-
-#define VK_LOG_ERROR(result, message) LOGE("{} - Vulkan error: {}", message, VkResultToString(result));
-
 // Enabling ray tracing might crash RenderDoc:
 #define ENABLE_RAYTRACING_EXTENSION
 
@@ -300,9 +251,7 @@ namespace alimer
         std::vector<VkImage> swapChainImages;
         std::vector<VkImageView> swapChainImageViews;
         std::vector<VkFramebuffer> swapChainFramebuffers;
-
-        uint32_t swapChainSemaphoreIndex = 0;
-        std::vector<VkSemaphore> swapChainAcquireSemaphores;
+        std::vector<VkSemaphore> swapchainAcquireSemaphores;
 
         VkRenderPass defaultRenderPass = VK_NULL_HANDLE;
 
@@ -351,7 +300,6 @@ namespace alimer
             VkCommandBuffer transitionCommandBuffer = VK_NULL_HANDLE;
             std::vector<VkImageMemoryBarrier> loadedimagetransitions;
 
-            VkSemaphore swapchainAcquireSemaphore = VK_NULL_HANDLE;
             VkSemaphore swapchainReleaseSemaphore = VK_NULL_HANDLE;
         };
         FrameResources frames[BACKBUFFER_COUNT];
@@ -364,9 +312,6 @@ namespace alimer
 
         Vulkan_CommandList* commandLists[kCommandListCount] = {};
         std::atomic_uint32_t commandListsCount{0};
-
-        /// A set of semaphores that can be reused.
-        std::vector<VkSemaphore> recycledSemaphores;
 
     public:
         static bool IsAvailable();
@@ -2423,6 +2368,26 @@ namespace alimer
                         VK_LOG_ERROR(result, "Could not create debug utils messenger");
                     }
                 }
+
+                LOGI("Created VkInstance with version: {}.{}.{}",
+                     VK_VERSION_MAJOR(appInfo.apiVersion),
+                     VK_VERSION_MINOR(appInfo.apiVersion),
+                     VK_VERSION_PATCH(appInfo.apiVersion));
+
+                LOGI("Enabled Validation Layers:")
+                if (instanceCreateInfo.enabledLayerCount)
+                {
+                    for (uint32_t i = 0; i < instanceCreateInfo.enabledLayerCount; ++i)
+                    {
+                        LOGI("	\t{}", instanceCreateInfo.ppEnabledLayerNames[i]);
+                    }
+                }
+
+                LOGI("Enabled Instance Extensions:")
+                for (uint32_t i = 0; i < instanceCreateInfo.enabledExtensionCount; ++i)
+                {
+                    LOGI("	\t{}", instanceCreateInfo.ppEnabledExtensionNames[i]);
+                }
             }
         }
 
@@ -2522,7 +2487,18 @@ namespace alimer
             res = vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &deviceExtensionCount, availableDeviceExtensions.data());
             assert(res == VK_SUCCESS);
 
+            bool can_get_memory_requirements = checkDeviceExtensionSupport("VK_KHR_get_memory_requirements2", availableDeviceExtensions);
+            bool has_dedicated_allocation = checkDeviceExtensionSupport("VK_KHR_dedicated_allocation", availableDeviceExtensions);
+
             std::vector<const char*> enabled_deviceExtensions = required_deviceExtensions;
+            if (can_get_memory_requirements && has_dedicated_allocation)
+            {
+                enabled_deviceExtensions.push_back("VK_KHR_get_memory_requirements2");
+                enabled_deviceExtensions.push_back("VK_KHR_dedicated_allocation");
+
+                //LOGI("Dedicated Allocation enabled");
+            }
+
             if (checkDeviceExtensionSupport(VK_KHR_SPIRV_1_4_EXTENSION_NAME, availableDeviceExtensions))
             {
                 enabled_deviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
@@ -2609,23 +2585,28 @@ namespace alimer
 
             vkGetDeviceQueue(device, queueIndices.graphicsFamily, 0, &graphicsQueue);
             vkGetDeviceQueue(device, queueIndices.presentFamily, 0, &presentQueue);
-        }
 
-        allocationhandler = std::make_shared<AllocationHandler>();
-        allocationhandler->device = device;
-        allocationhandler->instance = instance;
+            // Initialize VMA:
+            allocationhandler = std::make_shared<AllocationHandler>();
+            allocationhandler->device = device;
+            allocationhandler->instance = instance;
 
-        // Initialize Vulkan Memory Allocator helper:
-        VmaAllocatorCreateInfo allocatorInfo = {};
-        allocatorInfo.physicalDevice = physicalDevice;
-        allocatorInfo.device = device;
-        allocatorInfo.instance = instance;
-        if (features_1_2.bufferDeviceAddress)
-        {
-            allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+            VmaAllocatorCreateInfo allocatorInfo = {};
+            allocatorInfo.physicalDevice = physicalDevice;
+            allocatorInfo.device = device;
+            allocatorInfo.instance = instance;
+            if (can_get_memory_requirements && has_dedicated_allocation)
+            {
+                allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+            }
+
+            if (features_1_2.bufferDeviceAddress)
+            {
+                allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+            }
+
+            VK_CHECK(vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator));
         }
-        res = vmaCreateAllocator(&allocatorInfo, &allocationhandler->allocator);
-        assert(res == VK_SUCCESS);
 
         CreateBackBufferResources();
 
@@ -2633,16 +2614,12 @@ namespace alimer
 
         // Create frame resources:
         {
+            VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+            //fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
             for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
             {
-                // Fence:
-                {
-                    VkFenceCreateInfo fenceInfo = {};
-                    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-                    //fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-                    VkResult res = vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].frameFence);
-                    assert(res == VK_SUCCESS);
-                }
+                VK_CHECK(vkCreateFence(device, &fenceInfo, nullptr, &frames[fr].frameFence));
 
                 // Create resources for transition command buffer:
                 {
@@ -2654,8 +2631,7 @@ namespace alimer
                     res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
                     assert(res == VK_SUCCESS);
 
-                    VkCommandBufferAllocateInfo commandBufferInfo = {};
-                    commandBufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+                    VkCommandBufferAllocateInfo commandBufferInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
                     commandBufferInfo.commandBufferCount = 1;
                     commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
                     commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -2915,8 +2891,7 @@ namespace alimer
             vkDestroyCommandPool(device, frame.transitionCommandPool, nullptr);
             vkDestroyCommandPool(device, frame.copyCommandPool, nullptr);
 
-            if (frame.swapchainReleaseSemaphore != VK_NULL_HANDLE)
-                vkDestroySemaphore(device, frame.swapchainReleaseSemaphore, nullptr);
+            vkDestroySemaphore(device, frame.swapchainReleaseSemaphore, nullptr);
         }
 
         vkDestroySemaphore(device, copySemaphore, nullptr);
@@ -2948,11 +2923,7 @@ namespace alimer
         {
             vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
             vkDestroyImageView(device, swapChainImageViews[i], nullptr);
-        }
-
-        for (size_t i = 0; i < swapChainAcquireSemaphores.size(); ++i)
-        {
-            vkDestroySemaphore(device, swapChainAcquireSemaphores[i], nullptr);
+            vkDestroySemaphore(device, swapchainAcquireSemaphores[i], nullptr);
         }
 
         vkDestroySwapchainKHR(device, swapChain, nullptr);
@@ -3060,9 +3031,9 @@ namespace alimer
 
         if (createInfo.oldSwapchain != VK_NULL_HANDLE)
         {
-            for (VkSemaphore semaphore : swapChainAcquireSemaphores)
+            for (uint32_t i = 0; i < imageCount; ++i)
             {
-                vkDestroySemaphore(device, semaphore, nullptr);
+                vkDestroySemaphore(device, swapchainAcquireSemaphores[i], nullptr);
             }
 
             vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
@@ -3074,14 +3045,23 @@ namespace alimer
         swapChainImages.resize(imageCount);
         VK_CHECK(vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data()));
         swapChainImageFormat = surfaceFormat.format;
+        swapchainAcquireSemaphores.resize(imageCount);
 
-        swapChainSemaphoreIndex = 0;
-        swapChainAcquireSemaphores.resize(imageCount);
         VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 
-        for (uint32_t i = 0; i < imageCount; i++)
+        for (uint32_t i = 0; i < imageCount; ++i)
         {
-            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &swapChainAcquireSemaphores[i]));
+            VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &swapchainAcquireSemaphores[i]));
+            if (debugUtils)
+            {
+                auto name = fmt::format("Swapchain AcquireSemaphore {}", i);
+                VkDebugUtilsObjectNameInfoEXT nameInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+                nameInfo.pObjectName = name.c_str();
+                nameInfo.objectType = VK_OBJECT_TYPE_SEMAPHORE;
+                nameInfo.objectHandle = (uint64_t)swapchainAcquireSemaphores[i];
+
+                vkSetDebugUtilsObjectNameEXT(device, &nameInfo);
+            }
         }
 
         if (debugUtils)
@@ -3171,8 +3151,7 @@ namespace alimer
             res = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
             assert(res == VK_SUCCESS);
 
-            VkImageView attachments[] = {
-                swapChainImageViews[i]};
+            VkImageView attachments[] = {swapChainImageViews[i]};
 
             VkFramebufferCreateInfo framebufferInfo = {};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -3441,6 +3420,8 @@ namespace alimer
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.usage = 0;
 
+        const bool isDepthStencil = IsDepthStencilFormat(description->format);
+
         if (any(description->usage & TextureUsage::Sampled))
         {
             imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -3452,14 +3433,17 @@ namespace alimer
         }
         if (any(description->usage & TextureUsage::RenderTarget))
         {
-            imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+            if (!isDepthStencil)
+            {
+                imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            }
+            else
+            {
+                imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            }
         }
-        if (any(description->usage & TextureUsage::DepthStencil))
-        {
-            imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            allocInfo.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-        }
+
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
@@ -3675,7 +3659,7 @@ namespace alimer
             barrier.newLayout = _ConvertImageLayout(description->layout);
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            if (any(description->usage & TextureUsage::DepthStencil))
+            if (isDepthStencil)
             {
                 barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                 if (IsStencilFormat(description->format))
@@ -3700,12 +3684,16 @@ namespace alimer
 
         if (any(description->usage & TextureUsage::RenderTarget))
         {
-            CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
+            if (!isDepthStencil)
+            {
+                CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
+            }
+            else
+            {
+                CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
+            }
         }
-        if (any(description->usage & TextureUsage::DepthStencil))
-        {
-            CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
-        }
+
         if (any(description->usage & TextureUsage::Sampled))
         {
             CreateSubresource(result.Get(), SRV, 0, -1, 0, -1);
@@ -4453,8 +4441,7 @@ namespace alimer
         res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &internal_state->renderpass);
         assert(res == VK_SUCCESS);
 
-        VkFramebufferCreateInfo framebufferInfo = {};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        VkFramebufferCreateInfo framebufferInfo{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
         framebufferInfo.renderPass = internal_state->renderpass;
         framebufferInfo.attachmentCount = validAttachmentCount;
         framebufferInfo.pAttachments = attachments;
@@ -4464,7 +4451,10 @@ namespace alimer
             const TextureDescription& texdesc = desc.attachments[0].texture->GetDescription();
             framebufferInfo.width = texdesc.width;
             framebufferInfo.height = texdesc.height;
-            framebufferInfo.layers = texdesc.MiscFlags & RESOURCE_MISC_TEXTURECUBE ? 6 : 1; // todo figure out better! can't use ArraySize here, it will crash!
+            if (texdesc.type == TextureType::TypeCube)
+                framebufferInfo.layers = 6u; // TODO: Is this correct?
+            else
+                framebufferInfo.layers = 1u;
         }
         else
         {
@@ -5758,13 +5748,6 @@ namespace alimer
         {
             auto& frame = GetFrameResources();
 
-            // Submit it to the queue with a release semaphore.
-            if (frame.swapchainReleaseSemaphore == VK_NULL_HANDLE)
-            {
-                VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-                VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frame.swapchainReleaseSemaphore));
-            }
-
             VkCommandBuffer commandBuffers[kCommandListCount];
             uint32_t counter = 0;
 
@@ -5776,10 +5759,15 @@ namespace alimer
                 counter++;
             }
 
-            VkSubmitInfo submitInfo = {};
-            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
 
-            VkSemaphore waitSemaphores[] = {frame.swapchainAcquireSemaphore, copySemaphore};
+            if (frame.swapchainReleaseSemaphore == VK_NULL_HANDLE)
+            {
+                VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+                VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frame.swapchainReleaseSemaphore));
+            }
+
+            VkSemaphore waitSemaphores[] = {swapchainAcquireSemaphores[swapChainImageIndex], copySemaphore};
             VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT};
             if (copyQueueUse)
             {
@@ -5793,7 +5781,6 @@ namespace alimer
             submitInfo.pWaitDstStageMask = waitStages;
             submitInfo.commandBufferCount = counter;
             submitInfo.pCommandBuffers = commandBuffers;
-
             submitInfo.signalSemaphoreCount = 1;
             submitInfo.pSignalSemaphores = &frame.swapchainReleaseSemaphore;
 
@@ -5975,8 +5962,8 @@ namespace alimer
 
     void Vulkan_CommandList::PresentBegin()
     {
-        VkSemaphore acquireSemaphore = device->swapChainAcquireSemaphores[device->swapChainSemaphoreIndex];
-        device->swapChainSemaphoreIndex = (device->swapChainSemaphoreIndex + 1) % device->swapChainAcquireSemaphores.size();
+        uint32_t semaphoreIndex = device->GetFrameIndex();
+        VkSemaphore acquireSemaphore = device->swapchainAcquireSemaphores[semaphoreIndex];
 
         VkResult res = vkAcquireNextImageKHR(
             device->GetVkDevice(),
@@ -5991,6 +5978,7 @@ namespace alimer
             // Handle outdated error in acquire.
             if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
             {
+                VK_CHECK(vkDeviceWaitIdle(device->device));
                 device->CreateBackBufferResources();
                 PresentBegin();
                 return;
@@ -5998,8 +5986,6 @@ namespace alimer
         }
 
         assert(res == VK_SUCCESS);
-
-        device->GetFrameResources().swapchainAcquireSemaphore = acquireSemaphore;
 
         VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
         VkRenderPassBeginInfo renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
@@ -6781,7 +6767,7 @@ namespace alimer
                 copy.dstOffset.y = 0;
                 copy.dstOffset.z = 0;
 
-                if (any(src_desc.usage & TextureUsage::DepthStencil))
+                if (IsDepthStencilFormat(src_desc.format))
                 {
                     copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                     if (IsStencilFormat(src_desc.format))
@@ -6793,11 +6779,12 @@ namespace alimer
                 {
                     copy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 }
+
                 copy.srcSubresource.baseArrayLayer = 0;
                 copy.srcSubresource.layerCount = src_desc.arrayLayers;
                 copy.srcSubresource.mipLevel = 0;
 
-                if (any(dst_desc.usage & TextureUsage::DepthStencil))
+                if (IsDepthStencilFormat(dst_desc.format))
                 {
                     copy.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                     if (IsStencilFormat(dst_desc.format))
@@ -7047,7 +7034,7 @@ namespace alimer
                     barrierdesc.newLayout = _ConvertImageLayout(barrier.image.layout_after);
                     barrierdesc.srcAccessMask = _ParseImageLayout(barrier.image.layout_before);
                     barrierdesc.dstAccessMask = _ParseImageLayout(barrier.image.layout_after);
-                    if (any(desc.usage & TextureUsage::DepthStencil))
+                    if (IsDepthStencilFormat(desc.format))
                     {
                         barrierdesc.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
                         if (IsStencilFormat(desc.format))

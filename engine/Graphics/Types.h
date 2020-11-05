@@ -350,12 +350,11 @@ namespace alimer
     enum RESOURCE_MISC_FLAG
     {
         RESOURCE_MISC_SHARED = 1 << 0,
-        RESOURCE_MISC_TEXTURECUBE = 1 << 1,
-        RESOURCE_MISC_INDIRECT_ARGS = 1 << 2,
-        RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 1 << 3,
-        RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 4,
-        RESOURCE_MISC_TILED = 1 << 5,
-        RESOURCE_MISC_RAY_TRACING = 1 << 0,
+        RESOURCE_MISC_INDIRECT_ARGS = 1 << 1,
+        RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS = 1 << 2,
+        RESOURCE_MISC_BUFFER_STRUCTURED = 1 << 3,
+        RESOURCE_MISC_TILED = 1 << 4,
+        RESOURCE_MISC_RAY_TRACING = 1 << 5,
     };
 
     // Descriptor structs:

@@ -40,8 +40,7 @@ namespace alimer
         None = 0,
         Sampled = 1 << 0,
         Storage = 1 << 1,
-        RenderTarget = 1 << 2,
-        DepthStencil = 1 << 3,
+        RenderTarget = 1 << 2
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
 

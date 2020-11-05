@@ -2220,7 +2220,6 @@ namespace alimer
         if (initialData != nullptr)
         {
             GPUBufferDesc uploadBufferDesc = {};
-            ;
             uploadBufferDesc.ByteWidth = desc.ByteWidth;
             uploadBufferDesc.Usage = USAGE_STAGING;
 
@@ -2338,7 +2337,10 @@ namespace alimer
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (any(description->usage & TextureUsage::DepthStencil))
+
+        const bool isDepthStencil = IsDepthStencilFormat(description->format);
+
+        if (any(description->usage & TextureUsage::RenderTarget) && isDepthStencil)
         {
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
             allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -2352,7 +2354,7 @@ namespace alimer
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
         }
 
-        if (any(description->usage & TextureUsage::RenderTarget))
+        if (any(description->usage & TextureUsage::RenderTarget) && !isDepthStencil)
         {
             resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
             allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
@@ -2383,7 +2385,8 @@ namespace alimer
         {
             optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
         }
-        bool useClearValue = any(description->usage & TextureUsage::RenderTarget) || any(description->usage & TextureUsage::DepthStencil);
+
+        bool useClearValue = any(description->usage & TextureUsage::RenderTarget);
 
         D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(description->layout);
 
@@ -2481,11 +2484,14 @@ namespace alimer
 
         if (any(description->usage & TextureUsage::RenderTarget))
         {
-            CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
-        }
-        if (any(description->usage & TextureUsage::DepthStencil))
-        {
-            CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
+            if (isDepthStencil)
+            {
+                CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
+            }
+            else
+            {
+                CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
+            }
         }
         if (any(description->usage & TextureUsage::Sampled))
         {
