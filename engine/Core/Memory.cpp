@@ -25,5 +25,5 @@
 namespace alimer
 {
     uint64_t ALIMER_THREADLOCAL MemoryCounter::Allocs = 0;
-    uint64_t ALIMER_THREADLOCAL MemoryCounter::Frees  = 0;
+    uint64_t ALIMER_THREADLOCAL MemoryCounter::Frees = 0;
 }

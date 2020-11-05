@@ -24,12 +24,12 @@
 #include "Core/Containers.h"
 
 #ifdef _WIN32
-#    include "PlatformIncl.h"
+#include "PlatformIncl.h"
 #else
-#    include <unistd.h>
-#    ifdef __linux__
-#        include <linux/limits.h>
-#    endif
+#include <unistd.h>
+#ifdef __linux__
+#include <linux/limits.h>
+#endif
 #endif
 
 namespace alimer
@@ -107,10 +107,7 @@ namespace alimer
         return std::string(char_buffer.data(), char_buffer.size());
     }
 
-    std::string ToUtf8(const std::wstring& wstr)
-    {
-        return ToUtf8(wstr.data(), wstr.size());
-    }
+    std::string ToUtf8(const std::wstring& wstr) { return ToUtf8(wstr.data(), wstr.size()); }
 
     std::wstring ToUtf16(const char* str, size_t len)
     {
@@ -123,9 +120,6 @@ namespace alimer
         return std::wstring(wchar_buffer.data(), wchar_buffer.size());
     }
 
-    std::wstring ToUtf16(const std::string& str)
-    {
-        return ToUtf16(str.data(), str.size());
-    }
+    std::wstring ToUtf16(const std::string& str) { return ToUtf16(str.data(), str.size()); }
 #endif
 }

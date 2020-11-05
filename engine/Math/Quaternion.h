@@ -39,9 +39,29 @@ namespace alimer
         float w;
 
         /// Constructor.
-        Quaternion() noexcept : x(0.0f), y(0.0f), z(0.0f), w(1.0f) {}
-        constexpr Quaternion(float x_, float y_, float z_, float w_) noexcept : x(x_), y(y_), z(z_), w(w_) {}
-        explicit Quaternion(_In_reads_(4) const float* data) noexcept : x(data[0]), y(data[1]), z(data[2]), w(data[3]) {}
+        Quaternion() noexcept
+            : x(0.0f)
+            , y(0.0f)
+            , z(0.0f)
+            , w(1.0f)
+        {
+        }
+
+        constexpr Quaternion(float x_, float y_, float z_, float w_) noexcept
+            : x(x_)
+            , y(y_)
+            , z(z_)
+            , w(w_)
+        {
+        }
+
+        explicit Quaternion(_In_reads_(4) const float* data) noexcept
+            : x(data[0])
+            , y(data[1])
+            , z(data[2])
+            , w(data[3])
+        {
+        }
 
         Quaternion(const Quaternion&) = default;
         Quaternion& operator=(const Quaternion&) = default;

@@ -24,15 +24,15 @@
 #include <cstdarg>
 #include <cstdio>
 #if defined(_WIN32) || defined(_WIN64)
-#    ifndef WIN32_LEAN_AND_MEAN
-#        define WIN32_LEAN_AND_MEAN
-#    endif
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <Windows.h>
-#    undef WIN32_LEAN_AND_MEAN
-#    undef NOMINMAX
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <Windows.h>
+    #undef WIN32_LEAN_AND_MEAN
+    #undef NOMINMAX
 #endif
 
 namespace alimer
@@ -40,7 +40,7 @@ namespace alimer
     AssertFailBehavior DefaultHandler(const char* condition, const char* msg, const char* file, const int line)
     {
         const uint64_t BufferSize = 2048;
-        char           buffer[BufferSize];
+        char buffer[BufferSize];
         snprintf(buffer, BufferSize, "%s(%d): Assert Failure: ", file, line);
 
         if (condition != nullptr)
@@ -70,15 +70,9 @@ namespace alimer
         return s_handler;
     }
 
-    AssertHandler GetAssertHandler()
-    {
-        return GetAssertHandlerInstance();
-    }
+    AssertHandler GetAssertHandler() { return GetAssertHandlerInstance(); }
 
-    void SetAssertHandler(AssertHandler newHandler)
-    {
-        GetAssertHandlerInstance() = newHandler;
-    }
+    void SetAssertHandler(AssertHandler newHandler) { GetAssertHandlerInstance() = newHandler; }
 
     AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, const int line, const char* msg, ...)
     {

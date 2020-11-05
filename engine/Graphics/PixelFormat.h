@@ -152,57 +152,54 @@ namespace alimer
     /// Get the number of bits per format.
     constexpr uint32_t GetFormatBitsPerPixel(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].bitsPerPixel;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].bitsPerPixel;
     }
 
     constexpr uint32_t GetFormatBlockSize(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].compression.blockSize;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compression.blockSize;
     }
 
     /// Check if the format has a depth component
     constexpr bool IsDepthFormat(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].bits.depth > 0;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].bits.depth > 0;
     }
 
     /// Check if the format has a stencil component
     constexpr bool IsStencilFormat(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].bits.stencil > 0;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].bits.stencil > 0;
     }
 
     /// Check if the format has depth or stencil components
-    constexpr bool IsDepthStencilFormat(PixelFormat format)
-    {
-        return IsDepthFormat(format) || IsStencilFormat(format);
-    }
+    constexpr bool IsDepthStencilFormat(PixelFormat format) { return IsDepthFormat(format) || IsStencilFormat(format); }
 
     /// Check if the format is a compressed format
     constexpr bool IsBlockCompressedFormat(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
         switch (format)
         {
-            case PixelFormat::BC1RGBAUnorm:
-            case PixelFormat::BC1RGBAUnormSrgb:
-            case PixelFormat::BC2RGBAUnorm:
-            case PixelFormat::BC2RGBAUnormSrgb:
-            case PixelFormat::BC3RGBAUnorm:
-            case PixelFormat::BC3RGBAUnormSrgb:
-            case PixelFormat::BC4RUnorm:
-            case PixelFormat::BC4RSnorm:
-            case PixelFormat::BC5RGUnorm:
-            case PixelFormat::BC5RGSnorm:
-            case PixelFormat::BC6HRGBUfloat:
-            case PixelFormat::BC6HRGBFloat:
-            case PixelFormat::BC7RGBAUnorm:
-            case PixelFormat::BC7RGBAUnormSrgb:
-                return true;
+        case PixelFormat::BC1RGBAUnorm:
+        case PixelFormat::BC1RGBAUnormSrgb:
+        case PixelFormat::BC2RGBAUnorm:
+        case PixelFormat::BC2RGBAUnormSrgb:
+        case PixelFormat::BC3RGBAUnorm:
+        case PixelFormat::BC3RGBAUnormSrgb:
+        case PixelFormat::BC4RUnorm:
+        case PixelFormat::BC4RSnorm:
+        case PixelFormat::BC5RGUnorm:
+        case PixelFormat::BC5RGSnorm:
+        case PixelFormat::BC6HRGBUfloat:
+        case PixelFormat::BC6HRGBFloat:
+        case PixelFormat::BC7RGBAUnorm:
+        case PixelFormat::BC7RGBAUnormSrgb:
+            return true;
         }
 
         return false;
@@ -211,56 +208,53 @@ namespace alimer
     /// Get the format compression ration along the x-axis
     constexpr uint32_t GetFormatBlockWidth(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].compression.blockWidth;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compression.blockWidth;
     }
 
     /// Get the format compression ration along the y-axis
     constexpr uint32_t GetFormatBlockHeight(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].compression.blockHeight;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].compression.blockHeight;
     }
 
     /// Get the format Type
     constexpr PixelFormatType GetFormatType(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].type;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].type;
     }
 
     constexpr const std::string& ToString(PixelFormat format)
     {
-        ALIMER_ASSERT(kFormatDesc[(uint32_t) format].format == format);
-        return kFormatDesc[(uint32_t) format].name;
+        ALIMER_ASSERT(kFormatDesc[(uint32_t)format].format == format);
+        return kFormatDesc[(uint32_t)format].name;
     }
 
     /// Check if a format represents sRGB color space.
-    constexpr bool IsSrgbFormat(PixelFormat format)
-    {
-        return (GetFormatType(format) == PixelFormatType::UnormSrgb);
-    }
+    constexpr bool IsSrgbFormat(PixelFormat format) { return (GetFormatType(format) == PixelFormatType::UnormSrgb); }
 
     /// Convert a SRGB format to linear. If the format is already linear no conversion will be made.
     constexpr PixelFormat SRGBToLinearFormat(PixelFormat format)
     {
         switch (format)
         {
-            case PixelFormat::BC1RGBAUnormSrgb:
-                return PixelFormat::BC1RGBAUnorm;
-            case PixelFormat::BC2RGBAUnormSrgb:
-                return PixelFormat::BC2RGBAUnorm;
-            case PixelFormat::BC3RGBAUnormSrgb:
-                return PixelFormat::BC3RGBAUnorm;
-            case PixelFormat::BGRA8UnormSrgb:
-                return PixelFormat::BGRA8Unorm;
-            case PixelFormat::RGBA8UnormSrgb:
-                return PixelFormat::RGBA8Unorm;
-            case PixelFormat::BC7RGBAUnormSrgb:
-                return PixelFormat::BC7RGBAUnorm;
-            default:
-                ALIMER_ASSERT(IsSrgbFormat(format) == false);
-                return format;
+        case PixelFormat::BC1RGBAUnormSrgb:
+            return PixelFormat::BC1RGBAUnorm;
+        case PixelFormat::BC2RGBAUnormSrgb:
+            return PixelFormat::BC2RGBAUnorm;
+        case PixelFormat::BC3RGBAUnormSrgb:
+            return PixelFormat::BC3RGBAUnorm;
+        case PixelFormat::BGRA8UnormSrgb:
+            return PixelFormat::BGRA8Unorm;
+        case PixelFormat::RGBA8UnormSrgb:
+            return PixelFormat::RGBA8Unorm;
+        case PixelFormat::BC7RGBAUnormSrgb:
+            return PixelFormat::BC7RGBAUnorm;
+        default:
+            ALIMER_ASSERT(IsSrgbFormat(format) == false);
+            return format;
         }
     }
 
@@ -269,20 +263,20 @@ namespace alimer
     {
         switch (format)
         {
-            case PixelFormat::BC1RGBAUnorm:
-                return PixelFormat::BC1RGBAUnormSrgb;
-            case PixelFormat::BC2RGBAUnorm:
-                return PixelFormat::BC2RGBAUnormSrgb;
-            case PixelFormat::BC3RGBAUnorm:
-                return PixelFormat::BC3RGBAUnormSrgb;
-            case PixelFormat::BGRA8Unorm:
-                return PixelFormat::BGRA8UnormSrgb;
-            case PixelFormat::RGBA8Unorm:
-                return PixelFormat::RGBA8UnormSrgb;
-            case PixelFormat::BC7RGBAUnorm:
-                return PixelFormat::BC7RGBAUnormSrgb;
-            default:
-                return format;
+        case PixelFormat::BC1RGBAUnorm:
+            return PixelFormat::BC1RGBAUnormSrgb;
+        case PixelFormat::BC2RGBAUnorm:
+            return PixelFormat::BC2RGBAUnormSrgb;
+        case PixelFormat::BC3RGBAUnorm:
+            return PixelFormat::BC3RGBAUnormSrgb;
+        case PixelFormat::BGRA8Unorm:
+            return PixelFormat::BGRA8UnormSrgb;
+        case PixelFormat::RGBA8Unorm:
+            return PixelFormat::RGBA8UnormSrgb;
+        case PixelFormat::BC7RGBAUnorm:
+            return PixelFormat::BC7RGBAUnormSrgb;
+        default:
+            return format;
         }
     }
 }

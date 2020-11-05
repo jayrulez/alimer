@@ -33,21 +33,15 @@ namespace alimer
         struct Context
         {
             /// Object factories.
-            std::unordered_map<StringId32, RefPtr<Object>>                 subsystems;
+            std::unordered_map<StringId32, RefPtr<Object>> subsystems;
             std::unordered_map<StringId32, std::unique_ptr<ObjectFactory>> factories;
 
-            WeakPtr<Input>    input;
+            WeakPtr<Input> input;
             WeakPtr<Graphics> graphics;
 
-            void RegisterSubsystem(Object* subsystem)
-            {
-                subsystems[subsystem->GetType()] = subsystem;
-            }
+            void RegisterSubsystem(Object* subsystem) { subsystems[subsystem->GetType()] = subsystem; }
 
-            void RemoveSubsystem(StringId32 subsystemType)
-            {
-                subsystems.erase(subsystemType);
-            }
+            void RemoveSubsystem(StringId32 subsystemType) { subsystems.erase(subsystemType); }
 
             Object* GetSubsystem(StringId32 type)
             {
@@ -55,10 +49,7 @@ namespace alimer
                 return it != subsystems.end() ? it->second.Get() : nullptr;
             }
 
-            void RegisterFactory(ObjectFactory* factory)
-            {
-                factories[factory->GetType()].reset(factory);
-            }
+            void RegisterFactory(ObjectFactory* factory) { factories[factory->GetType()].reset(factory); }
 
             RefPtr<Object> CreateObject(StringId32 type)
             {
@@ -74,9 +65,12 @@ namespace alimer
         }
     }
 
-    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_) :
-        type(typeName_), typeName(typeName_), baseTypeInfo(baseTypeInfo_)
-    {}
+    TypeInfo::TypeInfo(const char* typeName_, const TypeInfo* baseTypeInfo_)
+        : type(typeName_)
+        , typeName(typeName_)
+        , baseTypeInfo(baseTypeInfo_)
+    {
+    }
 
     bool TypeInfo::IsTypeOf(StringId32 type) const
     {
@@ -110,15 +104,9 @@ namespace alimer
     }
 
     /* Object */
-    bool Object::IsInstanceOf(StringId32 type) const
-    {
-        return GetTypeInfo()->IsTypeOf(type);
-    }
+    bool Object::IsInstanceOf(StringId32 type) const { return GetTypeInfo()->IsTypeOf(type); }
 
-    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const
-    {
-        return GetTypeInfo()->IsTypeOf(typeInfo);
-    }
+    bool Object::IsInstanceOf(const TypeInfo* typeInfo) const { return GetTypeInfo()->IsTypeOf(typeInfo); }
 
     void Object::RegisterSubsystem(Object* subsystem)
     {
@@ -148,25 +136,13 @@ namespace alimer
         details::context().RemoveSubsystem(subsystem->GetType());
     }
 
-    void Object::RemoveSubsystem(StringId32 type)
-    {
-        details::context().RemoveSubsystem(type);
-    }
+    void Object::RemoveSubsystem(StringId32 type) { details::context().RemoveSubsystem(type); }
 
-    Object* Object::GetSubsystem(StringId32 type)
-    {
-        return details::context().GetSubsystem(type);
-    }
+    Object* Object::GetSubsystem(StringId32 type) { return details::context().GetSubsystem(type); }
 
-    template <> Input* Object::GetSubsystem<Input>()
-    {
-        return details::context().input;
-    }
+    template <> Input* Object::GetSubsystem<Input>() { return details::context().input; }
 
-    template <> Graphics* Object::GetSubsystem<Graphics>()
-    {
-        return details::context().graphics;
-    }
+    template <> Graphics* Object::GetSubsystem<Graphics>() { return details::context().graphics; }
 
     void Object::RegisterFactory(ObjectFactory* factory)
     {
@@ -176,8 +152,5 @@ namespace alimer
         details::context().RegisterFactory(factory);
     }
 
-    RefPtr<Object> Object::CreateObject(StringId32 objectType)
-    {
-        return details::context().CreateObject(objectType);
-    }
+    RefPtr<Object> Object::CreateObject(StringId32 objectType) { return details::context().CreateObject(objectType); }
 }

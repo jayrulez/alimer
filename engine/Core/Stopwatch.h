@@ -30,7 +30,7 @@ namespace alimer
     {
     public:
         static constexpr uint64 TicksPerMillisecond = 10000;
-        static constexpr uint64 TicksPerSecond      = 10000000;
+        static constexpr uint64 TicksPerSecond = 10000000;
 
         /// Constructor.
         Stopwatch();
@@ -42,10 +42,7 @@ namespace alimer
         void Stop();
         void Restart();
 
-        bool IsRunning() const
-        {
-            return isRunning;
-        }
+        bool IsRunning() const { return isRunning; }
         uint64 GetElapsedTicks() const;
         uint64 GetElapsedMilliseconds() const;
 
@@ -53,7 +50,7 @@ namespace alimer
         static uint64 GetTimestamp();
 
     private:
-        bool   isRunning;
+        bool isRunning;
         uint64 elapsed;
         uint64 startTimeStamp;
     };

@@ -31,9 +31,9 @@
 #define LOGW(...) spdlog::warn(__VA_ARGS__);
 #define LOGE(...) spdlog::error("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__));
 
-#define ALIMER_FATAL(...)                                                             \
-    do                                                                                \
-    {                                                                                 \
-        spdlog::critical("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__)); \
-        ALIMER_DEBUG_BREAK();                                                         \
+#define ALIMER_FATAL(...)                                                                                                                  \
+    do                                                                                                                                     \
+    {                                                                                                                                      \
+        spdlog::critical("[{}:{}] {}", __FILE__, __LINE__, fmt::format(__VA_ARGS__));                                                      \
+        ALIMER_DEBUG_BREAK();                                                                                                              \
     } while (0)

@@ -24,7 +24,8 @@
 
 namespace alimer
 {
-    RefCounted::RefCounted() : refCount(new RefCount())
+    RefCounted::RefCounted()
+        : refCount(new RefCount())
     {
         // Hold a weak ref to self to avoid possible double delete of the refcount
         refCount->weakRefs++;

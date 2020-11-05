@@ -19,14 +19,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
+// The implementation is based on WickedEngine graphics code, MIT license
+// (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #pragma once
 
-
 #include "AlimerConfig.h"
-#include "Graphics/Graphics.h"
 #include "D3D12Backend.h"
+#include "Graphics/Graphics.h"
 #include "Graphics/Graphics_Internal.h"
 
 namespace alimer
@@ -47,7 +47,6 @@ namespace alimer
         std::mutex copyQueueLock;
         bool copyQueueUse = false;
         ID3D12Fence* copyFence = nullptr; // GPU only
-
 
         struct FrameResources
         {
@@ -99,7 +98,7 @@ namespace alimer
             struct ResourceFrameAllocator
             {
                 D3D12Graphics* device = nullptr;
-                RefPtr<GraphicsBuffer>buffer;
+                RefPtr<GraphicsBuffer> buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
@@ -116,7 +115,7 @@ namespace alimer
         FrameResources& GetFrameResources() { return frames[GetFrameCount() % BACKBUFFER_COUNT]; }
 
         D3D12_CommandList* commandLists[kCommandListCount] = {};
-        std::atomic_uint32_t commandListsCount{ 0 };
+        std::atomic_uint32_t commandListsCount{0};
 
     public:
         static bool IsAvailable();
@@ -132,18 +131,22 @@ namespace alimer
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
         bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** renderPipeline) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
-        bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh) override;
+        bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
+                                                   RaytracingAccelerationStructure* bvh) override;
         bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
         bool CreateDescriptorTable(DescriptorTable* table) override;
         bool CreateRootSignature(RootSignature* rootsig) override;
 
-        int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) override;
+        int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip,
+                              uint32_t mipCount) override;
         int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
         void WriteShadingRateValue(ShadingRate rate, void* dest) override;
-        void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
+        void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance,
+                                                        void* dest) override;
         void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
-        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
+        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource,
+                             int subresource = -1, uint64_t offset = 0) override;
         void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
 
         void Map(const GPUResource* resource, Mapping* mapping) override;

@@ -25,8 +25,8 @@
 namespace alimer
 {
     /* Float2 */
-    const Float2 Float2::Zero  = {0.0f, 0.0f};
-    const Float2 Float2::One   = {1.0f, 1.0f};
+    const Float2 Float2::Zero = {0.0f, 0.0f};
+    const Float2 Float2::One = {1.0f, 1.0f};
     const Float2 Float2::UnitX = {1.0f, 0.0f};
     const Float2 Float2::UnitY = {0.0f, 1.0f};
 
@@ -38,28 +38,28 @@ namespace alimer
     }
 
     /* Int2 */
-    const Int2 Int2::Zero  = {0, 0};
-    const Int2 Int2::One   = {1, 1};
+    const Int2 Int2::Zero = {0, 0};
+    const Int2 Int2::One = {1, 1};
     const Int2 Int2::UnitX = {1, 0};
     const Int2 Int2::UnitY = {0, 1};
 
     /* UInt2 */
-    const UInt2 UInt2::Zero  = {0, 0};
-    const UInt2 UInt2::One   = {1, 1};
+    const UInt2 UInt2::Zero = {0, 0};
+    const UInt2 UInt2::One = {1, 1};
     const UInt2 UInt2::UnitX = {1, 0};
     const UInt2 UInt2::UnitY = {0, 1};
 
     /* Float3 */
-    const Float3 Float3::Zero     = {0.0f, 0.0f, 0.0f};
-    const Float3 Float3::One      = {1.0f, 1.0f, 1.0f};
-    const Float3 Float3::UnitX    = {1.0f, 0.0f, 0.0f};
-    const Float3 Float3::UnitY    = {0.0f, 1.0f, 0.0f};
-    const Float3 Float3::UnitZ    = {0.0f, 0.0f, 1.0f};
-    const Float3 Float3::Up       = {0.0f, 1.0f, 0.0f};
-    const Float3 Float3::Down     = {0.0f, -1.0f, 0.0f};
-    const Float3 Float3::Right    = {1.0f, 0.0f, 0.f};
-    const Float3 Float3::Left     = {-1.0f, 0.0f, 0.0f};
-    const Float3 Float3::Forward  = {0.0f, 0.0f, -1.0f};
+    const Float3 Float3::Zero = {0.0f, 0.0f, 0.0f};
+    const Float3 Float3::One = {1.0f, 1.0f, 1.0f};
+    const Float3 Float3::UnitX = {1.0f, 0.0f, 0.0f};
+    const Float3 Float3::UnitY = {0.0f, 1.0f, 0.0f};
+    const Float3 Float3::UnitZ = {0.0f, 0.0f, 1.0f};
+    const Float3 Float3::Up = {0.0f, 1.0f, 0.0f};
+    const Float3 Float3::Down = {0.0f, -1.0f, 0.0f};
+    const Float3 Float3::Right = {1.0f, 0.0f, 0.f};
+    const Float3 Float3::Left = {-1.0f, 0.0f, 0.0f};
+    const Float3 Float3::Forward = {0.0f, 0.0f, -1.0f};
     const Float3 Float3::Backward = {0.0f, 0.0f, 1.0f};
 
     std::string Float3::ToString() const
@@ -70,8 +70,8 @@ namespace alimer
     }
 
     /* Float4 */
-    const Float4 Float4::Zero  = {0.f, 0.f, 0.f, 0.f};
-    const Float4 Float4::One   = {1.f, 1.f, 1.f, 1.f};
+    const Float4 Float4::Zero = {0.f, 0.f, 0.f, 0.f};
+    const Float4 Float4::One = {1.f, 1.f, 1.f, 1.f};
     const Float4 Float4::UnitX = {1.f, 0.f, 0.f, 0.f};
     const Float4 Float4::UnitY = {0.f, 1.f, 0.f, 0.f};
     const Float4 Float4::UnitZ = {0.f, 0.f, 1.f, 0.f};

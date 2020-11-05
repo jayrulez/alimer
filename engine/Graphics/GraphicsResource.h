@@ -44,34 +44,16 @@ namespace alimer
 
         virtual void Destroy() = 0;
 
-        inline Type GetType() const
-        {
-            return type;
-        }
-        inline bool IsTexture() const
-        {
-            return type == Type::Texture;
-        }
-        inline bool IsBuffer() const
-        {
-            return type == Type::Buffer;
-        }
-        inline bool IsAccelerationStructure() const
-        {
-            return type == Type::AccelerationStructure;
-        }
+        inline Type GetType() const { return type; }
+        inline bool IsTexture() const { return type == Type::Texture; }
+        inline bool IsBuffer() const { return type == Type::Buffer; }
+        inline bool IsAccelerationStructure() const { return type == Type::AccelerationStructure; }
 
         /// Set the resource name.
-        virtual void SetName(const String& newName)
-        {
-            name = newName;
-        }
+        virtual void SetName(const String& newName) { name = newName; }
 
         /// Get the resource name
-        const String& GetName() const
-        {
-            return name;
-        }
+        const String& GetName() const { return name; }
 
     protected:
         GraphicsResource(Type type_);

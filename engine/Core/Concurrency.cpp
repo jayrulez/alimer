@@ -23,7 +23,7 @@
 #include "Core/Concurrency.h"
 
 #ifndef _WIN32
-#    include <pthread.h>
+    #include <pthread.h>
 #endif
 
 namespace alimer
@@ -31,7 +31,7 @@ namespace alimer
     int32_t AtomicIncrement(volatile int32_t* value)
     {
 #if defined(_WIN32)
-        return _InterlockedIncrement((volatile long*) value);
+        return _InterlockedIncrement((volatile long*)value);
 #else
         return __sync_fetch_and_add(value, 1) + 1;
 #endif
@@ -40,7 +40,7 @@ namespace alimer
     int64_t AtomicIncrement(volatile int64_t* value)
     {
 #if defined(_WIN32)
-        return _InterlockedIncrement64((volatile long long*) value);
+        return _InterlockedIncrement64((volatile long long*)value);
 #else
         return __sync_fetch_and_add(value, 1) + 1;
 #endif
@@ -49,7 +49,7 @@ namespace alimer
     int32_t AtomicDecrement(volatile int32_t* value)
     {
 #if defined(_WIN32)
-        return _InterlockedDecrement((volatile long*) value);
+        return _InterlockedDecrement((volatile long*)value);
 #else
         return __sync_fetch_and_sub(value, 1) - 1;
 #endif
@@ -58,7 +58,7 @@ namespace alimer
     int64_t AtomicDecrement(volatile int64_t* value)
     {
 #if defined(_WIN32)
-        return _InterlockedDecrement64((volatile long long*) value);
+        return _InterlockedDecrement64((volatile long long*)value);
 #else
         return __sync_fetch_and_sub(value, 1) - 1;
 #endif
@@ -67,7 +67,7 @@ namespace alimer
     int32_t AtomicAdd(volatile int32_t* addend, int32_t value)
     {
 #if defined(_WIN32)
-        return _InterlockedExchangeAdd((volatile long*) addend, value);
+        return _InterlockedExchangeAdd((volatile long*)addend, value);
 #else
         return __sync_fetch_and_add(addend, value);
 #endif
@@ -76,7 +76,7 @@ namespace alimer
     int64_t AtomicAdd(volatile int64_t* addend, int64_t value)
     {
 #if defined(_WIN32)
-        return _InterlockedExchangeAdd64((volatile long long*) addend, value);
+        return _InterlockedExchangeAdd64((volatile long long*)addend, value);
 #else
         return __sync_fetch_and_add(addend, value);
 #endif
@@ -85,7 +85,7 @@ namespace alimer
     int32_t AtomicSubtract(volatile int32_t* addend, int32_t value)
     {
 #if defined(_WIN32)
-        return _InterlockedExchangeAdd((volatile long*) addend, -value);
+        return _InterlockedExchangeAdd((volatile long*)addend, -value);
 #else
         return __sync_fetch_and_sub(addend, value);
 #endif
@@ -94,7 +94,7 @@ namespace alimer
     int64_t AtomicSubtract(volatile int64_t* addend, int64_t value)
     {
 #if defined(_WIN32)
-        return _InterlockedExchangeAdd64((volatile long long*) addend, -value);
+        return _InterlockedExchangeAdd64((volatile long long*)addend, -value);
 #else
         return __sync_fetch_and_sub(addend, value);
 #endif
@@ -103,7 +103,7 @@ namespace alimer
     bool CompareAndExchange(volatile int32_t* dest, int32_t exchange, int32_t comperand)
     {
 #if defined(_WIN32)
-        return _InterlockedCompareExchange((volatile long*) dest, exchange, comperand) == comperand;
+        return _InterlockedCompareExchange((volatile long*)dest, exchange, comperand) == comperand;
 #else
         return __sync_bool_compare_and_swap(dest, comperand, exchange);
 #endif

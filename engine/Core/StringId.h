@@ -51,10 +51,10 @@ namespace alimer
         StringId32(const std::string& str) noexcept;
 
         /// Assign from another hash.
-        StringId32& operator =(const StringId32& rhs) noexcept = default;
+        StringId32& operator=(const StringId32& rhs) noexcept = default;
 
         /// Add a hash.
-        StringId32 operator +(const StringId32& rhs) const
+        StringId32 operator+(const StringId32& rhs) const
         {
             StringId32 ret;
             ret.value = value + rhs.value;
@@ -62,23 +62,23 @@ namespace alimer
         }
 
         /// Add-assign a hash.
-        StringId32& operator +=(const StringId32& rhs)
+        StringId32& operator+=(const StringId32& rhs)
         {
             value += rhs.value;
             return *this;
         }
 
         /// Test for equality with another hash.
-        bool operator ==(const StringId32& rhs) const { return value == rhs.value; }
+        bool operator==(const StringId32& rhs) const { return value == rhs.value; }
 
         /// Test for inequality with another hash.
-        bool operator !=(const StringId32& rhs) const { return value != rhs.value; }
+        bool operator!=(const StringId32& rhs) const { return value != rhs.value; }
 
         /// Test if less than another hash.
-        bool operator <(const StringId32& rhs) const { return value < rhs.value; }
+        bool operator<(const StringId32& rhs) const { return value < rhs.value; }
 
         /// Test if greater than another hash.
-        bool operator >(const StringId32& rhs) const { return value > rhs.value; }
+        bool operator>(const StringId32& rhs) const { return value > rhs.value; }
 
         /// Return true if nonzero hash value.
         explicit operator bool() const { return value != 0; }
@@ -102,12 +102,9 @@ namespace alimer
 
 namespace std
 {
-    template<>
-    class hash<alimer::StringId32> {
+    template <> class hash<alimer::StringId32>
+    {
     public:
-        size_t operator()(const alimer::StringId32& value) const
-        {
-            return value.Value();
-        }
+        size_t operator()(const alimer::StringId32& value) const { return value.Value(); }
     };
 }

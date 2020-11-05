@@ -40,20 +40,14 @@ namespace alimer
      */
     struct EnumClassHash
     {
-        template <typename T>
-        constexpr std::size_t operator()(T t) const
-        {
-            return static_cast<std::size_t>(t);
-        }
+        template <typename T> constexpr std::size_t operator()(T t) const { return static_cast<std::size_t>(t); }
     };
 
     /** Hasher that handles custom enums automatically. */
-    template <typename Key>
-    using HashType = typename std::conditional<std::is_enum<Key>::value, EnumClassHash, std::hash<Key>>::type;
+    template <typename Key> using HashType = typename std::conditional<std::is_enum<Key>::value, EnumClassHash, std::hash<Key>>::type;
 
     // Source: https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
-    template <class T>
-    constexpr void CombineHash(std::size_t& seed, const T& v)
+    template <class T> constexpr void CombineHash(std::size_t& seed, const T& v)
     {
         using HashType = typename std::conditional<std::is_enum<T>::value, EnumClassHash, std::hash<T>>::type;
 
@@ -62,8 +56,7 @@ namespace alimer
     }
 
     /** Generates a hash for the provided type. Type must have a std::hash specialization. */
-    template <class T>
-    constexpr size_t Hash(const T& v)
+    template <class T> constexpr size_t Hash(const T& v)
     {
         using HashType = typename std::conditional<std::is_enum<T>::value, EnumClassHash, std::hash<T>>::type;
 
@@ -74,7 +67,7 @@ namespace alimer
     constexpr size_t StringHash(const char* input)
     {
         // https://stackoverflow.com/questions/2111667/compile-time-string-hashing
-        size_t       hash  = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
+        size_t hash = sizeof(size_t) == 8 ? 0xcbf29ce484222325 : 0x811c9dc5;
         const size_t prime = sizeof(size_t) == 8 ? 0x00000100000001b3 : 0x01000193;
 
         while (*input)

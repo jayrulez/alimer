@@ -23,17 +23,17 @@
 #include "Core/Stopwatch.h"
 
 #if defined(_WIN32) || defined(WINAPI_FAMILY)
-#    include "PlatformIncl.h"
+    #include "PlatformIncl.h"
 #elif defined(__APPLE__)
-#    include <TargetConditionals.h>
-#    include <mach/mach_time.h>
+    #include <TargetConditionals.h>
+    #include <mach/mach_time.h>
 #elif defined(__EMSCRIPTEN__)
-#    include <emscripten/emscripten.h>
-#    include <emscripten/html5.h>
+    #include <emscripten/emscripten.h>
+    #include <emscripten/html5.h>
 #else
-#    include <sys/time.h>
-#    include <time.h>
-#    include <unistd.h>
+    #include <sys/time.h>
+    #include <time.h>
+    #include <unistd.h>
 #endif
 
 namespace alimer
@@ -41,7 +41,7 @@ namespace alimer
     struct TimerGlobalInitializer
     {
         uint64_t frequency;
-        bool     monotonic = false;
+        bool monotonic = false;
 
         TimerGlobalInitializer()
         {
@@ -56,7 +56,7 @@ namespace alimer
 #elif defined(__EMSCRIPTEN__)
             frequency = 1000000;
 #else
-#    if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
+    #if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
             struct timespec ts;
 
             if (clock_gettime(CLOCK_MONOTONIC, &ts) == 0)
@@ -65,7 +65,7 @@ namespace alimer
                 frequency = 1000000000;
             }
             else
-#    endif
+    #endif
             {
                 frequency = 1000000;
             }
@@ -75,7 +75,13 @@ namespace alimer
 
     TimerGlobalInitializer s_timeGlobalInitializer;
 
-    Stopwatch::Stopwatch() : isRunning(false), elapsed(0), startTimeStamp(0) { Reset(); }
+    Stopwatch::Stopwatch()
+        : isRunning(false)
+        , elapsed(0)
+        , startTimeStamp(0)
+    {
+        Reset();
+    }
 
     Stopwatch::~Stopwatch() {}
 
@@ -92,19 +98,19 @@ namespace alimer
 #elif defined(__EMSCRIPTEN__)
         return (uint64)(emscripten_get_now() * 1000.0);
 #else
-#    if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
+    #if defined(_POSIX_TIMERS) && defined(_POSIX_MONOTONIC_CLOCK)
         if (s_timeGlobalInitializer.monotonic)
         {
             struct timespec ts;
             clock_gettime(CLOCK_MONOTONIC, &ts);
-            return (uint64) ts.tv_sec * (uint64_t) 1000000000 + (uint64_t) ts.tv_nsec;
+            return (uint64)ts.tv_sec * (uint64_t)1000000000 + (uint64_t)ts.tv_nsec;
         }
         else
-#    endif
+    #endif
         {
             struct timeval tv;
             gettimeofday(&tv, NULL);
-            return (uint64) tv.tv_sec * (uint64_t) 1000000 + (uint64_t) tv.tv_usec;
+            return (uint64)tv.tv_sec * (uint64_t)1000000 + (uint64_t)tv.tv_usec;
         }
 
 #endif
@@ -112,8 +118,8 @@ namespace alimer
 
     void Stopwatch::Reset()
     {
-        elapsed        = 0;
-        isRunning      = false;
+        elapsed = 0;
+        isRunning = false;
         startTimeStamp = 0;
     }
 
@@ -123,7 +129,7 @@ namespace alimer
         if (!isRunning)
         {
             startTimeStamp = GetTimestamp();
-            isRunning      = true;
+            isRunning = true;
         }
     }
 
@@ -132,7 +138,7 @@ namespace alimer
         // Calling stop on a stopped Stopwatch is a no-op.
         if (isRunning)
         {
-            uint64 endTimeStamp      = GetTimestamp();
+            uint64 endTimeStamp = GetTimestamp();
             uint64 elapsedThisPeriod = endTimeStamp - startTimeStamp;
             elapsed += elapsedThisPeriod;
             isRunning = false;
@@ -152,9 +158,9 @@ namespace alimer
 
     void Stopwatch::Restart()
     {
-        elapsed        = 0;
+        elapsed = 0;
         startTimeStamp = GetTimestamp();
-        isRunning      = true;
+        isRunning = true;
     }
 
     uint64 Stopwatch::GetElapsedTicks() const
@@ -166,7 +172,7 @@ namespace alimer
             // If the Stopwatch is running, add elapsed time since
             // the Stopwatch is started last time.
             uint64 currentTimeStamp = GetTimestamp();
-            uint64 elapsedUntilNow  = currentTimeStamp - startTimeStamp;
+            uint64 elapsedUntilNow = currentTimeStamp - startTimeStamp;
             timeElapsed += elapsedUntilNow;
         }
 
@@ -175,7 +181,7 @@ namespace alimer
 
     uint64 Stopwatch::GetElapsedMilliseconds() const
     {
-        static double s_tickFrequency = (double) TicksPerSecond / s_timeGlobalInitializer.frequency;
+        static double s_tickFrequency = (double)TicksPerSecond / s_timeGlobalInitializer.frequency;
         return uint64(GetElapsedTicks() * s_tickFrequency) / TicksPerMillisecond;
     }
 }

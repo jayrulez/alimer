@@ -37,22 +37,26 @@ namespace alimer
 
         /// Constructor.
         Float2() noexcept
-            : x(0.0f), y(0.0f)
+            : x(0.0f)
+            , y(0.0f)
         {
         }
 
         constexpr explicit Float2(float value) noexcept
-            : x(value), y(value)
+            : x(value)
+            , y(value)
         {
         }
 
         constexpr Float2(float x_, float y_) noexcept
-            : x(x_), y(y_)
+            : x(x_)
+            , y(y_)
         {
         }
 
         explicit Float2(_In_reads_(2) const float* pArray) noexcept
-            : x(pArray[0]), y(pArray[1])
+            : x(pArray[0])
+            , y(pArray[1])
         {
         }
 
@@ -63,21 +67,12 @@ namespace alimer
         Float2& operator=(Float2&&) = default;
 
         // Comparison operators
-        bool operator==(const Float2& rhs) const noexcept
-        {
-            return x == rhs.x && y == rhs.y;
-        }
+        bool operator==(const Float2& rhs) const noexcept { return x == rhs.x && y == rhs.y; }
 
-        bool operator!=(const Float2& rhs) const noexcept
-        {
-            return x != rhs.x || y != rhs.y;
-        }
+        bool operator!=(const Float2& rhs) const noexcept { return x != rhs.x || y != rhs.y; }
 
         /// Return float data.
-        const float* Data() const
-        {
-            return &x;
-        }
+        const float* Data() const { return &x; }
 
         /// Return as string.
         std::string ToString() const;
@@ -99,15 +94,18 @@ namespace alimer
 
         Int2() = default;
         constexpr explicit Int2(int32_t value) noexcept
-            : x(value), y(value)
+            : x(value)
+            , y(value)
         {
         }
         constexpr Int2(int32_t _x, int32_t _y) noexcept
-            : x(_x), y(_y)
+            : x(_x)
+            , y(_y)
         {
         }
         explicit Int2(_In_reads_(2) const int32_t* pArray) noexcept
-            : x(pArray[0]), y(pArray[1])
+            : x(pArray[0])
+            , y(pArray[1])
         {
         }
 
@@ -133,7 +131,8 @@ namespace alimer
         uint32_t y;
 
         UInt2() noexcept
-            : x(0), y(0)
+            : x(0)
+            , y(0)
         {
         }
 
@@ -144,11 +143,13 @@ namespace alimer
         UInt2& operator=(UInt2&&) = default;
 
         constexpr UInt2(uint32_t _x, uint32_t _y) noexcept
-            : x(_x), y(_y)
+            : x(_x)
+            , y(_y)
         {
         }
         explicit UInt2(_In_reads_(2) const uint32_t* pArray) noexcept
-            : x(pArray[0]), y(pArray[1])
+            : x(pArray[0])
+            , y(pArray[1])
         {
         }
 
@@ -170,23 +171,33 @@ namespace alimer
 
         /// Constructor.
         Float3() noexcept
-            : x(0.0f), y(0.0f), z(0.0f)
+            : x(0.0f)
+            , y(0.0f)
+            , z(0.0f)
         {
         }
         constexpr explicit Float3(float value) noexcept
-            : x(value), y(value), z(value)
+            : x(value)
+            , y(value)
+            , z(value)
         {
         }
         constexpr Float3(float x_, float y_, float z_) noexcept
-            : x(x_), y(y_), z(z_)
+            : x(x_)
+            , y(y_)
+            , z(z_)
         {
         }
         explicit Float3(_In_reads_(3) const float* data) noexcept
-            : x(data[0]), y(data[1]), z(data[2])
+            : x(data[0])
+            , y(data[1])
+            , z(data[2])
         {
         }
         constexpr Float3(const Float2& vector, float z_) noexcept
-            : x(vector.x), y(vector.y), z(z_)
+            : x(vector.x)
+            , y(vector.y)
+            , z(z_)
         {
         }
 
@@ -197,20 +208,11 @@ namespace alimer
         Float3& operator=(Float3&&) = default;
 
         // Comparison operators
-        bool operator==(const Float3& rhs) const noexcept
-        {
-            return x == rhs.x && y == rhs.y && z == rhs.z;
-        }
-        bool operator!=(const Float3& rhs) const noexcept
-        {
-            return x != rhs.x || y != rhs.y || z != rhs.z;
-        }
+        bool operator==(const Float3& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
+        bool operator!=(const Float3& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z; }
 
         /// Return float data.
-        const float* Data() const
-        {
-            return &x;
-        }
+        const float* Data() const { return &x; }
 
         /// Return as string.
         std::string ToString() const;
@@ -243,27 +245,45 @@ namespace alimer
 
         /// Constructor.
         Float4() noexcept
-            : x(0.0f), y(0.0f), z(0.0f), w(0.0f)
+            : x(0.0f)
+            , y(0.0f)
+            , z(0.0f)
+            , w(0.0f)
         {
         }
         constexpr explicit Float4(float value) noexcept
-            : x(value), y(value), z(value), w(value)
+            : x(value)
+            , y(value)
+            , z(value)
+            , w(value)
         {
         }
         constexpr Float4(float x_, float y_, float z_, float w_) noexcept
-            : x(x_), y(y_), z(z_), w(w_)
+            : x(x_)
+            , y(y_)
+            , z(z_)
+            , w(w_)
         {
         }
         explicit Float4(_In_reads_(4) const float* data) noexcept
-            : x(data[0]), y(data[1]), z(data[2]), w(data[3])
+            : x(data[0])
+            , y(data[1])
+            , z(data[2])
+            , w(data[3])
         {
         }
         constexpr Float4(const Float2& vector, float z_, float w_) noexcept
-            : x(vector.x), y(vector.y), z(z_), w(w_)
+            : x(vector.x)
+            , y(vector.y)
+            , z(z_)
+            , w(w_)
         {
         }
         constexpr Float4(const Float3& vector, float w_) noexcept
-            : x(vector.x), y(vector.y), z(vector.z), w(w_)
+            : x(vector.x)
+            , y(vector.y)
+            , z(vector.z)
+            , w(w_)
         {
         }
 
@@ -274,20 +294,11 @@ namespace alimer
         Float4& operator=(Float4&&) = default;
 
         // Comparison operators
-        bool operator==(const Float4& rhs) const noexcept
-        {
-            return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
-        }
-        bool operator!=(const Float4& rhs) const noexcept
-        {
-            return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w;
-        }
+        bool operator==(const Float4& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
+        bool operator!=(const Float4& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
 
         /// Return float data.
-        const float* Data() const
-        {
-            return &x;
-        }
+        const float* Data() const { return &x; }
 
         /// Return as string.
         std::string ToString() const;
