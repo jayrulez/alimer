@@ -36,7 +36,8 @@ namespace alimer
     ALIMER_API AssertHandler GetAssertHandler();
     ALIMER_API void SetAssertHandler(AssertHandler newHandler);
 
-    ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line, const char* msg, ...);
+    ALIMER_API AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, int line,
+                                                      const char* msg, ...);
 }
 
 /** Assert macro */
@@ -50,54 +51,56 @@ namespace alimer
 
 #if ALIMER_ENABLE_ASSERT
 
-    #define ALIMER_ASSERT(cond)                                                                                                            \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
-            if (!(cond))                                                                                                                   \
-            {                                                                                                                              \
-                if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == alimer::AssertFailBehavior::Halt)                         \
-                    ALIMER_DEBUG_BREAK();                                                                                                  \
-            }                                                                                                                              \
+    #define ALIMER_ASSERT(cond)                                                                                        \
+        do                                                                                                             \
+        {                                                                                                              \
+            if (!(cond))                                                                                               \
+            {                                                                                                          \
+                if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, 0) == alimer::AssertFailBehavior::Halt)     \
+                    ALIMER_DEBUG_BREAK();                                                                              \
+            }                                                                                                          \
         } while (0)
 
-    #define ALIMER_ASSERT_MSG(cond, msg, ...)                                                                                              \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
-            if (!(cond))                                                                                                                   \
-            {                                                                                                                              \
-                if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) == alimer::AssertFailBehavior::Halt)        \
-                    ALIMER_DEBUG_BREAK();                                                                                                  \
-            }                                                                                                                              \
+    #define ALIMER_ASSERT_MSG(cond, msg, ...)                                                                          \
+        do                                                                                                             \
+        {                                                                                                              \
+            if (!(cond))                                                                                               \
+            {                                                                                                          \
+                if (alimer::ReportAssertFailure(#cond, __FILE__, __LINE__, (msg), __VA_ARGS__) ==                      \
+                    alimer::AssertFailBehavior::Halt)                                                                  \
+                    ALIMER_DEBUG_BREAK();                                                                              \
+            }                                                                                                          \
         } while (0)
 
-    #define ALIMER_ASSERT_FAIL(msg, ...)                                                                                                   \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
-            if (alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) == alimer::AssertFailBehavior::Halt)                \
-                ALIMER_DEBUG_BREAK();                                                                                                      \
+    #define ALIMER_ASSERT_FAIL(msg, ...)                                                                               \
+        do                                                                                                             \
+        {                                                                                                              \
+            if (alimer::ReportAssertFailure(0, __FILE__, __LINE__, (msg), __VA_ARGS__) ==                              \
+                alimer::AssertFailBehavior::Halt)                                                                      \
+                ALIMER_DEBUG_BREAK();                                                                                  \
         } while (0)
 
     #define ALIMER_VERIFY(cond) ALIMER_ASSERT(cond)
     #define ALIMER_VERIFY_MSG(cond, msg, ...) ALIMER_ASSERT_MSG(cond, msg, ##__VA_ARGS__)
 
 #else
-    #define ALIMER_ASSERT(condition)                                                                                                       \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
+    #define ALIMER_ASSERT(condition)                                                                                   \
+        do                                                                                                             \
+        {                                                                                                              \
         } while (0)
-    #define ALIMER_ASSERT_MSG(condition, msg, ...)                                                                                         \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
+    #define ALIMER_ASSERT_MSG(condition, msg, ...)                                                                     \
+        do                                                                                                             \
+        {                                                                                                              \
         } while (0)
-    #define ALIMER_ASSERT_FAIL(msg, ...)                                                                                                   \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
+    #define ALIMER_ASSERT_FAIL(msg, ...)                                                                               \
+        do                                                                                                             \
+        {                                                                                                              \
         } while (0)
     #define ALIMER_VERIFY(cond) (void)(cond)
-    #define ALIMER_VERIFY_MSG(cond, msg, ...)                                                                                              \
-        do                                                                                                                                 \
-        {                                                                                                                                  \
-            (void)(cond);                                                                                                                  \
-            ALIMER_UNUSED(msg);                                                                                                            \
+    #define ALIMER_VERIFY_MSG(cond, msg, ...)                                                                          \
+        do                                                                                                             \
+        {                                                                                                              \
+            (void)(cond);                                                                                              \
+            ALIMER_UNUSED(msg);                                                                                        \
         } while (0)
 #endif

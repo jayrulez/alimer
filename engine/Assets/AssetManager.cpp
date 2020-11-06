@@ -28,8 +28,8 @@
 
 namespace alimer
 {
-    AssetManager::AssetManager(const std::string& rootDirectory) :
-        rootDirectory{rootDirectory}
+    AssetManager::AssetManager(const std::string& rootDirectory)
+        : rootDirectory{ rootDirectory }
     {
         AddLoader(std::make_unique<TextureLoader>(*this));
     }

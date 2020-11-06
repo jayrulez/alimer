@@ -20,16 +20,38 @@
 // THE SOFTWARE.
 //
 
-#include "Graphics/Texture.h"
+#include "Graphics/Types.h"
 
 namespace alimer
 {
-    Texture::Texture(const TextureDescription& description_)
-        : GraphicsResource(Type::Texture)
-        , description(description_)
+    const char* ToString(GraphicsBackendType value)
     {
-        if (description.mipLevels == 0)
-            description.mipLevels = (uint32_t)log2(Max(description.width, description.height)) + 1;
+        switch (value)
+        {
+        case GraphicsBackendType::Direct3D12:
+            return "Direct3D12";
+        case GraphicsBackendType::Vulkan:
+            return "Vulkan";
+        }
+
+        return nullptr;
     }
 
+    const char* ToString(TextureType value)
+    {
+#define CASE_STRING(ENUM_VALUE)                                                                                        \
+    case TextureType::##ENUM_VALUE:                                                                                    \
+        return #ENUM_VALUE;
+
+        switch (value)
+        {
+            CASE_STRING(Type1D)
+            CASE_STRING(Type2D)
+            CASE_STRING(Type3D)
+            CASE_STRING(TypeCube)
+        }
+
+#undef CASE_STRING
+        return nullptr;
+    }
 }

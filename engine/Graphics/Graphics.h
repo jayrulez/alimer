@@ -19,7 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
+// The implementation is based on WickedEngine graphics code, MIT license
+// (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #pragma once
 
@@ -80,9 +81,6 @@ namespace alimer
         static constexpr uint32_t BACKBUFFER_COUNT = 2;
 
     protected:
-        uint64_t FRAMECOUNT = 0;
-        uint64_t frameIndex = 0;
-
         PixelFormat BACKBUFFER_FORMAT = PixelFormat::RGB10A2Unorm;
         bool TESSELLATION = false;
         bool CONSERVATIVE_RASTERIZATION = false;
@@ -105,21 +103,26 @@ namespace alimer
         virtual ~Graphics() = default;
 
         static std::set<GraphicsBackendType> GetAvailableBackends();
-        static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc, GraphicsBackendType backendType = GraphicsBackendType::Count);
+        static RefPtr<Graphics> Create(WindowHandle windowHandle, const GraphicsSettings& desc,
+                                       GraphicsBackendType backendType = GraphicsBackendType::Count);
 
         virtual RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData = nullptr) = 0;
-        virtual RefPtr<Texture> CreateTexture(const TextureDescription* description, const SubresourceData* initialData);
-        virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) = 0;
+        virtual RefPtr<Texture> CreateTexture(const TextureDescription* description,
+                                              const SubresourceData* initialData);
+        virtual bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength,
+                                  Shader* pShader) = 0;
         virtual bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) = 0;
         virtual RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) = 0;
         virtual bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) = 0;
         RefPtr<RenderPipeline> CreateRenderPipeline(const RenderPipelineDescriptor* descriptor);
         virtual bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) = 0;
-        virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc, RaytracingAccelerationStructure* bvh)
+        virtual bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
+                                                           RaytracingAccelerationStructure* bvh)
         {
             return false;
         }
-        virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+        virtual bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc,
+                                                   RaytracingPipelineState* rtpso)
         {
             return false;
         }
@@ -132,14 +135,25 @@ namespace alimer
             return false;
         }
 
-        virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount) = 0;
-        virtual int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) = 0;
+        virtual int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount,
+                                      uint32_t firstMip, uint32_t mipCount) = 0;
+        virtual int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset,
+                                      uint64_t size = ~0) = 0;
 
         virtual void WriteShadingRateValue(ShadingRate rate, void* dest){};
-        virtual void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) {}
+        virtual void WriteTopLevelAccelerationStructureInstance(
+            const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
+        {
+        }
         virtual void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) {}
-        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource, int subresource = -1, uint64_t offset = 0) {}
-        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) {}
+        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                                     const GPUResource* resource, int subresource = -1, uint64_t offset = 0)
+        {
+        }
+        virtual void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                                     const Sampler* sampler)
+        {
+        }
 
         virtual void Map(const GPUResource* resource, Mapping* mapping) = 0;
         virtual void Unmap(const GPUResource* resource) = 0;
@@ -152,17 +166,30 @@ namespace alimer
 
         virtual void WaitForGPU() = 0;
 
+        inline GraphicsBackendType GetBackendType() const
+        {
+            return caps.backendType;
+        }
+
+        /// Get the device caps.
+        inline const GraphicsDeviceCaps& GetCaps() const
+        {
+            return caps;
+        }
+
         inline bool GetVSyncEnabled() const
         {
             return verticalSync;
         }
+
         virtual void SetVSyncEnabled(bool value)
         {
             verticalSync = value;
         }
+
         inline uint64_t GetFrameCount() const
         {
-            return FRAMECOUNT;
+            return frameCount;
         }
 
         inline uint32_t GetFrameIndex() const
@@ -175,6 +202,7 @@ namespace alimer
         {
             return backbufferWidth;
         }
+
         // Returns native resolution height of back buffer in pixels:
         inline uint32_t GetResolutionHeight() const
         {
@@ -194,7 +222,7 @@ namespace alimer
 
         inline XMMATRIX GetScreenProjection() const
         {
-            return XMMatrixOrthographicOffCenterLH(0, (float) GetScreenWidth(), (float) GetScreenHeight(), 0, -1, 1);
+            return XMMatrixOrthographicOffCenterLH(0, (float)GetScreenWidth(), (float)GetScreenHeight(), 0, -1, 1);
         }
         inline PixelFormat GetBackBufferFormat() const
         {
@@ -219,12 +247,19 @@ namespace alimer
         }
 
     protected:
-        virtual bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData, Texture** texture) = 0;
-        virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline) = 0;
+        virtual bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData,
+                                       Texture** texture) = 0;
 
+        virtual bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor,
+                                              RenderPipeline** pipeline) = 0;
+
+        GraphicsDeviceCaps caps{};
         uint32_t backbufferWidth;
         uint32_t backbufferHeight;
         bool verticalSync = true;
+
+        uint64_t frameCount = 0;
+        uint64_t frameIndex = 0;
     };
 
     bool StencilTestEnabled(const DepthStencilStateDescriptor* descriptor);

@@ -27,39 +27,6 @@
 
 namespace alimer
 {
-    enum class TextureType : uint32_t
-    {
-        Type1D,
-        Type2D,
-        Type3D,
-        TypeCube
-    };
-
-    enum class TextureUsage : uint32_t
-    {
-        None = 0,
-        Sampled = 1 << 0,
-        Storage = 1 << 1,
-        RenderTarget = 1 << 2
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
-
-    enum class TextureSampleCount : uint32_t
-    {
-        /// 1 sample (no multi-sampling).
-        Count1 = 1,
-        /// 2 Samples.
-        Count2 = 2,
-        /// 4 Samples.
-        Count4 = 4,
-        /// 8 Samples.
-        Count8 = 8,
-        /// 16 Samples.
-        Count16 = 16,
-        /// 32 Samples.
-        Count32 = 32
-    };
-    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureSampleCount, uint32_t);
 
     struct TextureDescription
     {
@@ -80,15 +47,11 @@ namespace alimer
 
         TextureDescription() = default;
 
-        static inline TextureDescription Texure2D(
-            PixelFormat format,
-            uint32_t width,
-            uint32_t height,
-            uint32_t mipLevels,
-            uint32_t arrayLayers = 1,
-            TextureUsage usage = TextureUsage::Sampled,
-            TextureSampleCount sampleCount = TextureSampleCount::Count1,
-            IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL) noexcept
+        static inline TextureDescription Texure2D(PixelFormat format, uint32_t width, uint32_t height,
+                                                  uint32_t mipLevels, uint32_t arrayLayers = 1,
+                                                  TextureUsage usage = TextureUsage::Sampled,
+                                                  TextureSampleCount sampleCount = TextureSampleCount::Count1,
+                                                  IMAGE_LAYOUT layout = IMAGE_LAYOUT_GENERAL) noexcept
         {
             TextureDescription description;
             description.width = width;
@@ -110,7 +73,13 @@ namespace alimer
         ALIMER_OBJECT(Texture, Object);
 
     public:
-        Texture(const TextureDescription& desc);
+        Texture(const TextureDescription& description);
+
+        /// Get the number of mip-levels.
+        uint32_t GetMipLevels() const
+        {
+            return description.mipLevels;
+        }
 
         const TextureDescription& GetDescription() const
         {
@@ -120,6 +89,4 @@ namespace alimer
     protected:
         TextureDescription description;
     };
-
-    ALIMER_API const char* ToString(TextureType value);
 }

@@ -23,92 +23,51 @@
 #include "Platform/Window.h"
 
 #if defined(GLFW_BACKEND)
-#    include "Platform/glfw/GLFW_Window.h"
+    #include "Platform/glfw/GLFW_Window.h"
 #endif
 
 namespace alimer
 {
-    Window::Window(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags) :
-        impl(new WindowImpl(title, x, y, width, height, flags))
-    {}
-
-    bool Window::IsOpen() const noexcept
+    Window::Window(const String& title, int32_t x, int32_t y, uint32_t width, uint32_t height, WindowFlags flags)
+        : impl(new WindowImpl(title, x, y, width, height, flags))
     {
-        return impl != nullptr && impl->IsOpen();
     }
 
-    uint32_t Window::GetId() const noexcept
-    {
-        return impl->GetId();
-    }
+    bool Window::IsOpen() const noexcept { return impl != nullptr && impl->IsOpen(); }
 
-    WindowHandle Window::GetHandle() const
-    {
-        return impl->GetHandle();
-    }
+    uint32_t Window::GetId() const noexcept { return impl->GetId(); }
 
-    void Window::SetBrightness(float value)
-    {
-        return impl->SetBrightness(value);
-    }
+    WindowHandle Window::GetHandle() const { return impl->GetHandle(); }
 
-    float Window::GetBrightness() const noexcept
-    {
-        return impl->GetBrightness();
-    }
+    void Window::SetBrightness(float value) { return impl->SetBrightness(value); }
 
-    void Window::SetSize(uint32_t width, uint32_t height) noexcept
-    {
-        impl->SetSize(Extent2D(width, height));
-    }
+    float Window::GetBrightness() const noexcept { return impl->GetBrightness(); }
 
-    void Window::SetSize(const Extent2D& size) noexcept
-    {
-        impl->SetSize(size);
-    }
+    void Window::SetSize(uint32_t width, uint32_t height) noexcept { impl->SetSize(Extent2D(width, height)); }
 
-    Extent2D Window::GetSize() const noexcept
-    {
-        return impl->GetSize();
-    }
+    void Window::SetSize(const Extent2D& size) noexcept { impl->SetSize(size); }
+
+    Extent2D Window::GetSize() const noexcept { return impl->GetSize(); }
 
     void Window::SetMaximumSize(uint32_t width, uint32_t height) noexcept
     {
         impl->SetMaximumSize(Extent2D(width, height));
     }
 
-    void Window::SetMaximumSize(const Extent2D& size) noexcept
-    {
-        impl->SetMaximumSize(size);
-    }
+    void Window::SetMaximumSize(const Extent2D& size) noexcept { impl->SetMaximumSize(size); }
 
-    Extent2D Window::GetMaximumSize() const noexcept
-    {
-        return impl->GetMaximumSize();
-    }
+    Extent2D Window::GetMaximumSize() const noexcept { return impl->GetMaximumSize(); }
 
     void Window::SetMinimumSize(uint32_t width, uint32_t height) noexcept
     {
         impl->SetMinimumSize(Extent2D(width, height));
     }
 
-    void Window::SetMinimumSize(const Extent2D& size) noexcept
-    {
-        impl->SetMinimumSize(size);
-    }
+    void Window::SetMinimumSize(const Extent2D& size) noexcept { impl->SetMinimumSize(size); }
 
-    Extent2D Window::GetMinimumSize() const noexcept
-    {
-        return impl->GetMinimumSize();
-    }
+    Extent2D Window::GetMinimumSize() const noexcept { return impl->GetMinimumSize(); }
 
-    String Window::GetTitle() const noexcept
-    {
-        return impl->GetTitle();
-    }
+    std::string Window::GetTitle() const noexcept { return impl->GetTitle(); }
 
-    void Window::SetTitle(const String& str) noexcept
-    {
-        impl->SetTitle(str);
-    }
+    void Window::SetTitle(const std::string& str) noexcept { impl->SetTitle(str); }
 }

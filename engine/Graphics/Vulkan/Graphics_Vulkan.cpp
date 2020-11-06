@@ -31,7 +31,7 @@
 #include "Graphics/Graphics_Internal.h"
 
 #ifndef NOMINMAX
-    #define NOMINMAX
+#define NOMINMAX
 #endif
 
 #define VMA_IMPLEMENTATION
@@ -47,12 +47,12 @@
 #include <vector>
 
 #ifdef SDL2
-    #include "sdl2.h"
-    #include <SDL2/SDL_vulkan.h>
+#include "sdl2.h"
+#include <SDL2/SDL_vulkan.h>
 #endif
 
 #if !defined(ALIMER_DISABLE_SHADER_COMPILER) && defined(VK_USE_PLATFORM_WIN32_KHR)
-    #include <dxcapi.h>
+#include <dxcapi.h>
 #endif
 
 // Enabling ray tracing might crash RenderDoc:
@@ -164,7 +164,7 @@ namespace alimer
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) override;
         void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot) override;
         void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides,
-                               const uint32_t* offsets) override;
+            const uint32_t* offsets) override;
         void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset) override;
         void BindStencilRef(uint32_t value) override;
         void BindBlendFactor(float r, float g, float b, float a) override;
@@ -174,7 +174,7 @@ namespace alimer
 
         void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) override;
         void DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex,
-                         uint32_t firstInstance) override;
+            uint32_t firstInstance) override;
         void DrawInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
         void DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset) override;
 
@@ -224,7 +224,7 @@ namespace alimer
     private:
         bool debugUtils = false;
         VkInstance instance = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT debugUtilsMessenger{VK_NULL_HANDLE};
+        VkDebugUtilsMessengerEXT debugUtilsMessenger{ VK_NULL_HANDLE };
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
         VkDevice device = VK_NULL_HANDLE;
@@ -309,7 +309,7 @@ namespace alimer
         }
 
         Vulkan_CommandList* commandLists[kCommandListCount] = {};
-        std::atomic_uint32_t commandListsCount{0};
+        std::atomic_uint32_t commandListsCount{ 0 };
 
     public:
         static bool IsAvailable();
@@ -331,20 +331,20 @@ namespace alimer
         bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** renderPipeline) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
         bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
-                                                   RaytracingAccelerationStructure* bvh) override;
+            RaytracingAccelerationStructure* bvh) override;
         bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
         bool CreateDescriptorTable(DescriptorTable* table) override;
         bool CreateRootSignature(RootSignature* rootsig) override;
 
         int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip,
-                              uint32_t mipCount) override;
+            uint32_t mipCount) override;
         int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
 
         void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance,
-                                                        void* dest) override;
+            void* dest) override;
         void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
         void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource,
-                             int subresource = -1, uint64_t offset = 0) override;
+            int subresource = -1, uint64_t offset = 0) override;
         void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
 
         void Map(const GPUResource* resource, Mapping* mapping) override;
@@ -1038,7 +1038,7 @@ namespace alimer
         }
 
         // Validation layer helpers:
-        const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
+        const std::vector<const char*> validationLayers = { "VK_LAYER_KHRONOS_validation" };
         bool checkValidationLayerSupport()
         {
             uint32_t layerCount;
@@ -1072,9 +1072,9 @@ namespace alimer
         }
 
         VKAPI_ATTR VkBool32 VKAPI_CALL debugUtilsMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                                   VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                                                                   const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-                                                                   void* pUserData)
+            VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+            const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+            void* pUserData)
         {
             // Log debug messge
             if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
@@ -1721,7 +1721,7 @@ namespace alimer
         allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
         res = vmaCreateBuffer(device->allocationhandler->allocator, &bufferInfo, &allocInfo, &newBuffer->resource, &newBuffer->allocation,
-                              nullptr);
+            nullptr);
         assert(res == VK_SUCCESS);
 
         void* pData = newBuffer->allocation->GetMappedData();
@@ -1819,7 +1819,7 @@ namespace alimer
     {
         if (descriptorPool != VK_NULL_HANDLE)
         {
-            device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->FRAMECOUNT));
+            device->allocationhandler->destroyer_descriptorPools.push_back(std::make_pair(descriptorPool, device->frameCount));
             descriptorPool = VK_NULL_HANDLE;
         }
     }
@@ -1864,7 +1864,7 @@ namespace alimer
             descriptorSetLayout = cs_internal->descriptorSetLayout;
         }
 
-        VkDescriptorSetAllocateInfo allocInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+        VkDescriptorSetAllocateInfo allocInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
         allocInfo.descriptorPool = descriptorPool;
         allocInfo.descriptorSetCount = 1;
         allocInfo.pSetLayouts = &descriptorSetLayout;
@@ -2207,9 +2207,9 @@ namespace alimer
         vkUpdateDescriptorSets(device->device, (uint32_t)descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 
         vkCmdBindDescriptorSets(commandList->GetDirectCommandList(),
-                                graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS
-                                         : (raytracing ? VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR : VK_PIPELINE_BIND_POINT_COMPUTE),
-                                pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+            graphics ? VK_PIPELINE_BIND_POINT_GRAPHICS
+            : (raytracing ? VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR : VK_PIPELINE_BIND_POINT_COMPUTE),
+            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
     }
 
     VkDescriptorSet DescriptorTableFrameAllocator::commit(const DescriptorTable* table)
@@ -2235,7 +2235,7 @@ namespace alimer
         assert(res == VK_SUCCESS);
 
         vkUpdateDescriptorSetWithTemplate(device->device, descriptorSet, internal_state->updatetemplate,
-                                          internal_state->descriptors.data());
+            internal_state->descriptors.data());
 
         return descriptorSet;
     }
@@ -2258,10 +2258,10 @@ namespace alimer
             return false;
         }
 
-        VkApplicationInfo applicationInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+        VkApplicationInfo applicationInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
         applicationInfo.apiVersion = volkGetInstanceVersion();
 
-        VkInstanceCreateInfo instanceInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+        VkInstanceCreateInfo instanceInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
         instanceInfo.pApplicationInfo = &applicationInfo;
 
         VkInstance tempInstance;
@@ -2295,7 +2295,7 @@ namespace alimer
 
         // Create instance first
         {
-            VkApplicationInfo appInfo{VK_STRUCTURE_TYPE_APPLICATION_INFO};
+            VkApplicationInfo appInfo{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
             appInfo.pApplicationName = settings.applicationName.c_str();
             appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
             appInfo.pEngineName = "Alimer Engine";
@@ -2346,7 +2346,7 @@ namespace alimer
 
             // Create instance:
             {
-                VkInstanceCreateInfo instanceCreateInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+                VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
                 instanceCreateInfo.pApplicationInfo = &appInfo;
                 instanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensions.size());
                 instanceCreateInfo.ppEnabledExtensionNames = enabledExtensions.data();
@@ -2357,7 +2357,7 @@ namespace alimer
                     instanceCreateInfo.ppEnabledLayerNames = validationLayers.data();
                 }
 
-                VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+                VkDebugUtilsMessengerCreateInfoEXT debugUtilsCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
                 if (debugUtils)
                 {
                     debugUtilsCreateInfo.messageSeverity =
@@ -2382,29 +2382,29 @@ namespace alimer
                 }
 
                 LOGI("Created VkInstance with version: {}.{}.{}", VK_VERSION_MAJOR(appInfo.apiVersion),
-                     VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
+                    VK_VERSION_MINOR(appInfo.apiVersion), VK_VERSION_PATCH(appInfo.apiVersion));
 
                 LOGI("Enabled Validation Layers:")
-                if (instanceCreateInfo.enabledLayerCount)
-                {
-                    for (uint32_t i = 0; i < instanceCreateInfo.enabledLayerCount; ++i)
+                    if (instanceCreateInfo.enabledLayerCount)
                     {
-                        LOGI("	\t{}", instanceCreateInfo.ppEnabledLayerNames[i]);
+                        for (uint32_t i = 0; i < instanceCreateInfo.enabledLayerCount; ++i)
+                        {
+                            LOGI("	\t{}", instanceCreateInfo.ppEnabledLayerNames[i]);
+                        }
                     }
-                }
 
                 LOGI("Enabled Instance Extensions:")
-                for (uint32_t i = 0; i < instanceCreateInfo.enabledExtensionCount; ++i)
-                {
-                    LOGI("	\t{}", instanceCreateInfo.ppEnabledExtensionNames[i]);
-                }
+                    for (uint32_t i = 0; i < instanceCreateInfo.enabledExtensionCount; ++i)
+                    {
+                        LOGI("	\t{}", instanceCreateInfo.ppEnabledExtensionNames[i]);
+                    }
             }
         }
 
         // Surface creation:
         {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-            VkWin32SurfaceCreateInfoKHR createInfo = {VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR};
+            VkWin32SurfaceCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
             createInfo.hwnd = (HWND)window;
             createInfo.hinstance = GetModuleHandleW(nullptr);
 
@@ -2418,7 +2418,7 @@ namespace alimer
                 throw sdl2::SDLError("Error creating a vulkan surface");
             }
 #else
-    #error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
+#error WICKEDENGINE VULKAN DEVICE ERROR: PLATFORM NOT SUPPORTED
 #endif // _WIN32
         }
 
@@ -2475,7 +2475,7 @@ namespace alimer
             queueIndices = findQueueFamilies(physicalDevice, surface);
 
             std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-            std::set<int> uniqueQueueFamilies = {queueIndices.graphicsFamily, queueIndices.presentFamily, queueIndices.copyFamily};
+            std::set<int> uniqueQueueFamilies = { queueIndices.graphicsFamily, queueIndices.presentFamily, queueIndices.copyFamily };
 
             float queuePriority = 1.0f;
             for (int queueFamily : uniqueQueueFamilies)
@@ -2573,11 +2573,11 @@ namespace alimer
                 // MESH_SHADER = true;
             }
 
-            VkFormatProperties formatProperties = {0};
+            VkFormatProperties formatProperties = { 0 };
             vkGetPhysicalDeviceFormatProperties(physicalDevice, VulkanImageFormat(PixelFormat::RG11B10Float), &formatProperties);
             UAV_LOAD_FORMAT_R11G11B10_FLOAT = formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
-            VkDeviceCreateInfo createInfo{VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+            VkDeviceCreateInfo createInfo{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 
             createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
             createInfo.pQueueCreateInfos = queueCreateInfos.data();
@@ -2624,7 +2624,7 @@ namespace alimer
 
         // Create frame resources:
         {
-            VkFenceCreateInfo fenceInfo{VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+            VkFenceCreateInfo fenceInfo{ VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
             // fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
             for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
@@ -2641,7 +2641,7 @@ namespace alimer
                     res = vkCreateCommandPool(device, &poolInfo, nullptr, &frames[fr].transitionCommandPool);
                     assert(res == VK_SUCCESS);
 
-                    VkCommandBufferAllocateInfo commandBufferInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+                    VkCommandBufferAllocateInfo commandBufferInfo{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
                     commandBufferInfo.commandBufferCount = 1;
                     commandBufferInfo.commandPool = frames[fr].transitionCommandPool;
                     commandBufferInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -2692,7 +2692,7 @@ namespace alimer
 
         // Create copy semaphore
         {
-            VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+            VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
             res = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &copySemaphore);
             assert(res == VK_SUCCESS);
         }
@@ -2703,8 +2703,8 @@ namespace alimer
             bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
             bufferInfo.size = 4;
             bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-                               VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+                VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
             bufferInfo.flags = 0;
 
             VmaAllocationCreateInfo allocInfo = {};
@@ -2980,19 +2980,19 @@ namespace alimer
         }
         if (!valid)
         {
-            surfaceFormat = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+            surfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
             BACKBUFFER_FORMAT = PixelFormat::BGRA8Unorm;
         }
 
-        swapChainExtent = {backbufferWidth, backbufferHeight};
+        swapChainExtent = { backbufferWidth, backbufferHeight };
         swapChainExtent.width = std::max(swapChainSupport.capabilities.minImageExtent.width,
-                                         std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
+            std::min(swapChainSupport.capabilities.maxImageExtent.width, swapChainExtent.width));
         swapChainExtent.height = std::max(swapChainSupport.capabilities.minImageExtent.height,
-                                          std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
+            std::min(swapChainSupport.capabilities.maxImageExtent.height, swapChainExtent.height));
 
         uint32_t imageCount = BACKBUFFER_COUNT;
 
-        VkSwapchainCreateInfoKHR createInfo{VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
+        VkSwapchainCreateInfoKHR createInfo{ VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = surface;
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
@@ -3001,7 +3001,7 @@ namespace alimer
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-        uint32_t queueFamilyIndices[] = {(uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily};
+        uint32_t queueFamilyIndices[] = { (uint32_t)queueIndices.graphicsFamily, (uint32_t)queueIndices.presentFamily };
 
         if (queueIndices.graphicsFamily != queueIndices.presentFamily)
         {
@@ -3055,7 +3055,7 @@ namespace alimer
         swapChainImageFormat = surfaceFormat.format;
         swapchainAcquireSemaphores.resize(imageCount);
 
-        VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+        VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
         for (uint32_t i = 0; i < imageCount; ++i)
         {
@@ -3063,7 +3063,7 @@ namespace alimer
             if (debugUtils)
             {
                 auto name = fmt::format("Swapchain AcquireSemaphore {}", i);
-                VkDebugUtilsObjectNameInfoEXT nameInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+                VkDebugUtilsObjectNameInfoEXT nameInfo{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
                 nameInfo.pObjectName = name.c_str();
                 nameInfo.objectType = VK_OBJECT_TYPE_SEMAPHORE;
                 nameInfo.objectHandle = (uint64_t)swapchainAcquireSemaphores[i];
@@ -3074,7 +3074,7 @@ namespace alimer
 
         if (debugUtils)
         {
-            VkDebugUtilsObjectNameInfoEXT nameInfo{VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+            VkDebugUtilsObjectNameInfoEXT nameInfo{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
             nameInfo.pObjectName = "SWAPCHAIN";
             nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
             for (auto& x : swapChainImages)
@@ -3106,8 +3106,7 @@ namespace alimer
             subpass.colorAttachmentCount = 1;
             subpass.pColorAttachments = &colorAttachmentRef;
 
-            VkRenderPassCreateInfo renderPassInfo = {};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+            VkRenderPassCreateInfo renderPassInfo { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
             renderPassInfo.attachmentCount = 1;
             renderPassInfo.pAttachments = &colorAttachment;
             renderPassInfo.subpassCount = 1;
@@ -3137,8 +3136,7 @@ namespace alimer
         swapChainFramebuffers.resize(swapChainImages.size());
         for (size_t i = 0; i < swapChainImages.size(); ++i)
         {
-            VkImageViewCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            VkImageViewCreateInfo createInfo { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
             createInfo.image = swapChainImages[i];
             createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             createInfo.format = swapChainImageFormat;
@@ -3159,7 +3157,7 @@ namespace alimer
             res = vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]);
             assert(res == VK_SUCCESS);
 
-            VkImageView attachments[] = {swapChainImageViews[i]};
+            VkImageView attachments[] = { swapChainImageViews[i] };
 
             VkFramebufferCreateInfo framebufferInfo = {};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -3345,7 +3343,7 @@ namespace alimer
                 barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 vkCmdPipelineBarrier(frame.copyCommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-                                     nullptr, 1, &barrier, 0, nullptr);
+                    nullptr, 1, &barrier, 0, nullptr);
 
                 vkCmdCopyBuffer(frame.copyCommandBuffer, upload_resource, result->resource, 1, &copyRegion);
 
@@ -3379,7 +3377,7 @@ namespace alimer
                 barrier.dstQueueFamilyIndex = queueIndices.graphicsFamily;
 
                 vkCmdPipelineBarrier(frame.copyCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0,
-                                     nullptr, 1, &barrier, 0, nullptr);
+                    nullptr, 1, &barrier, 0, nullptr);
             }
             copyQueueLock.unlock();
         }
@@ -3398,7 +3396,7 @@ namespace alimer
     }
 
     bool GraphicsDevice_Vulkan::CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData,
-                                                  Texture** texture)
+        Texture** texture)
     {
         RefPtr<Texture_Vulkan> result(new Texture_Vulkan(*description));
         result->allocationhandler = allocationhandler;
@@ -3406,7 +3404,7 @@ namespace alimer
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-        VkImageCreateInfo imageInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+        VkImageCreateInfo imageInfo{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.extent.width = description->width;
         imageInfo.extent.height = description->height;
         imageInfo.extent.depth = 1u;
@@ -3474,9 +3472,9 @@ namespace alimer
 
         if (description->Usage == USAGE_STAGING)
         {
-            VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+            VkBufferCreateInfo bufferInfo{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
             bufferInfo.size = imageInfo.extent.width * imageInfo.extent.height * imageInfo.extent.depth * imageInfo.arrayLayers *
-                              GetFormatBlockSize(description->format);
+                GetFormatBlockSize(description->format);
 
             allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
             if (description->Usage == USAGE_STAGING)
@@ -3495,7 +3493,7 @@ namespace alimer
             }
 
             res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &result->staging_resource, &result->allocation,
-                                  nullptr);
+                nullptr);
             assert(res == VK_SUCCESS);
 
             imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
@@ -3561,8 +3559,8 @@ namespace alimer
                     copyRegion.imageSubresource.baseArrayLayer = slice;
                     copyRegion.imageSubresource.layerCount = 1;
 
-                    copyRegion.imageOffset = {0, 0, 0};
-                    copyRegion.imageExtent = {width, height, 1};
+                    copyRegion.imageOffset = { 0, 0, 0 };
+                    copyRegion.imageExtent = { width, height, 1 };
 
                     width = std::max(1u, width / 2);
                     height = std::max(1u, height / 2);
@@ -3608,10 +3606,10 @@ namespace alimer
                 barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 vkCmdPipelineBarrier(frame.copyCommandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-                                     nullptr, 0, nullptr, 1, &barrier);
+                    nullptr, 0, nullptr, 1, &barrier);
 
                 vkCmdCopyBufferToImage(frame.copyCommandBuffer, upload_resource, result->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                       (uint32_t)copyRegions.size(), copyRegions.data());
+                    (uint32_t)copyRegions.size(), copyRegions.data());
 
                 barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
                 barrier.newLayout = _ConvertImageLayout(description->layout);
@@ -3708,7 +3706,7 @@ namespace alimer
         std::memcpy(pShader->code.data(), pShaderBytecode, BytecodeLength);
         pShader->stage = stage;
 
-        VkShaderModuleCreateInfo moduleInfo{VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
+        VkShaderModuleCreateInfo moduleInfo{ VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
         moduleInfo.codeSize = pShader->code.size();
         moduleInfo.pCode = (uint32_t*)pShader->code.data();
 
@@ -3978,11 +3976,11 @@ namespace alimer
         std::wstring entryPointW = ToUtf16(entryPoint);
         std::vector<const wchar_t*> arguments;
         arguments.push_back(L"/Zpc"); // Column major
-    #ifdef _DEBUG
-                                      // arguments.push_back(L"/Zi");
-    #else
+#ifdef _DEBUG
+                                  // arguments.push_back(L"/Zi");
+#else
         arguments.push_back(L"/O3");
-    #endif
+#endif
         arguments.push_back(L"-spirv");
         arguments.push_back(L"-fspv-target-env=vulkan1.2");
         arguments.push_back(L"-fvk-use-dx-layout");
@@ -4028,7 +4026,7 @@ namespace alimer
 
         IDxcOperationResult* compileResult;
         dxcCompiler->Compile(sourceBlob, nullptr, entryPointW.c_str(), target, arguments.data(), (UINT32)arguments.size(), nullptr, 0,
-                             includeHandler, &compileResult);
+            includeHandler, &compileResult);
 
         HRESULT hr;
         compileResult->GetStatus(&hr);
@@ -4067,7 +4065,7 @@ namespace alimer
         RefPtr<Sampler_Vulkan> result(new Sampler_Vulkan());
         result->allocationhandler = allocationhandler;
 
-        VkSamplerCreateInfo createInfo = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+        VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         createInfo.flags = 0;
         createInfo.pNext = nullptr;
         createInfo.magFilter = _ConvertFilter(descriptor->magFilter);
@@ -4206,12 +4204,12 @@ namespace alimer
             insert_shader(descriptor->gs);
             insert_shader(descriptor->ps);
 
-            VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo{VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
+            VkDescriptorSetLayoutCreateInfo descriptorSetlayoutInfo{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
             descriptorSetlayoutInfo.pBindings = internal_state->layoutBindings.data();
             descriptorSetlayoutInfo.bindingCount = static_cast<uint32_t>(internal_state->layoutBindings.size());
             VK_CHECK(vkCreateDescriptorSetLayout(device, &descriptorSetlayoutInfo, nullptr, &internal_state->descriptorSetLayout));
 
-            VkPipelineLayoutCreateInfo pipelineLayoutInfo{VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+            VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
             pipelineLayoutInfo.pSetLayouts = &internal_state->descriptorSetLayout;
             pipelineLayoutInfo.setLayoutCount = 1;
             pipelineLayoutInfo.pushConstantRangeCount = 0;
@@ -4239,7 +4237,7 @@ namespace alimer
             shaderStages.push_back(to_internal(descriptor->ps)->stageInfo);
 
         // Input layout:
-        VkPipelineVertexInputStateCreateInfo vertexInputState{VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
+        VkPipelineVertexInputStateCreateInfo vertexInputState{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
         std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions;
         std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions;
 
@@ -4281,7 +4279,7 @@ namespace alimer
         vertexInputState.vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributeDescriptions.size());
         vertexInputState.pVertexAttributeDescriptions = vertexAttributeDescriptions.data();
 
-        VkPipelineInputAssemblyStateCreateInfo inputAssemblyState{VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyState{ VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
         inputAssemblyState.primitiveRestartEnable = VK_FALSE;
         switch (descriptor->primitiveTopology)
         {
@@ -4326,7 +4324,7 @@ namespace alimer
         scissorRect.offset.y = 0;
         scissorRect.extent.width = 1;
         scissorRect.extent.height = 1;
-        VkPipelineViewportStateCreateInfo viewportState{VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
+        VkPipelineViewportStateCreateInfo viewportState{ VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
         viewportState.pNext = nullptr;
         viewportState.flags = 0;
         viewportState.viewportCount = 1;
@@ -4337,10 +4335,10 @@ namespace alimer
         // Rasterization State:
         // depth clip will be enabled via Vulkan 1.1 extension VK_EXT_depth_clip_enable:
         VkPipelineRasterizationDepthClipStateCreateInfoEXT depthClipInfo{
-            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT};
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_DEPTH_CLIP_STATE_CREATE_INFO_EXT };
         depthClipInfo.depthClipEnable = descriptor->rasterizationState.depthClipEnable ? VK_TRUE : VK_FALSE;
 
-        VkPipelineRasterizationStateCreateInfo rasterizationState{VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
+        VkPipelineRasterizationStateCreateInfo rasterizationState{ VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
         rasterizationState.pNext = &depthClipInfo;
         rasterizationState.depthClampEnable = VK_TRUE;
         rasterizationState.rasterizerDiscardEnable = VK_FALSE;
@@ -4384,11 +4382,11 @@ namespace alimer
         multisampleState.alphaToOneEnable = VK_FALSE;
 
         // DepthStencilState
-        VkPipelineDepthStencilStateCreateInfo depthStencilState{VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
+        VkPipelineDepthStencilStateCreateInfo depthStencilState{ VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
         depthStencilState.depthTestEnable =
             (descriptor->depthStencilState.depthCompare != CompareFunction::Always || descriptor->depthStencilState.depthWriteEnabled)
-                ? VK_TRUE
-                : VK_FALSE;
+            ? VK_TRUE
+            : VK_FALSE;
         depthStencilState.depthWriteEnable = descriptor->depthStencilState.depthWriteEnabled ? VK_FALSE : VK_TRUE;
         depthStencilState.depthCompareOp = _ConvertComparisonFunc(descriptor->depthStencilState.depthCompare);
         depthStencilState.depthBoundsTestEnable = VK_FALSE;
@@ -4430,7 +4428,7 @@ namespace alimer
             colorBlendAttachments.push_back(colorBlendAttachment);
         }
 
-        VkPipelineColorBlendStateCreateInfo colorBlendState{VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
+        VkPipelineColorBlendStateCreateInfo colorBlendState{ VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
         colorBlendState.logicOpEnable = VK_FALSE;
         colorBlendState.logicOp = VK_LOGIC_OP_CLEAR;
         colorBlendState.attachmentCount = static_cast<uint32_t>(colorBlendAttachments.size());
@@ -4449,11 +4447,11 @@ namespace alimer
             // VK_DYNAMIC_STATE_DEPTH_BOUNDS,
             VK_DYNAMIC_STATE_STENCIL_REFERENCE,
         };
-        VkPipelineDynamicStateCreateInfo dynamicState{VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
+        VkPipelineDynamicStateCreateInfo dynamicState{ VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
         dynamicState.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
         dynamicState.pDynamicStates = dynamicStates;
 
-        VkGraphicsPipelineCreateInfo createInfo{VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
+        VkGraphicsPipelineCreateInfo createInfo{ VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         createInfo.pNext = nullptr;
         createInfo.flags = 0U;
         createInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
@@ -4671,7 +4669,7 @@ namespace alimer
         res = vkCreateRenderPass(device, &renderPassInfo, nullptr, &internal_state->renderpass);
         assert(res == VK_SUCCESS);
 
-        VkFramebufferCreateInfo framebufferInfo{VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO};
+        VkFramebufferCreateInfo framebufferInfo{ VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
         framebufferInfo.renderPass = internal_state->renderpass;
         framebufferInfo.attachmentCount = validAttachmentCount;
         framebufferInfo.pAttachments = attachments;
@@ -4704,7 +4702,7 @@ namespace alimer
         {
             const TextureDescription& texdesc = desc.attachments[0].texture->GetDescription();
 
-            internal_state->beginInfo.renderArea.offset = {0, 0};
+            internal_state->beginInfo.renderArea.offset = { 0, 0 };
             internal_state->beginInfo.renderArea.extent.width = texdesc.width;
             internal_state->beginInfo.renderArea.extent.height = texdesc.height;
             internal_state->beginInfo.clearValueCount = validAttachmentCount;
@@ -4741,7 +4739,7 @@ namespace alimer
     }
 
     bool GraphicsDevice_Vulkan::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
-                                                                      RaytracingAccelerationStructure* bvh)
+        RaytracingAccelerationStructure* bvh)
     {
         auto internal_state = std::make_shared<BVH_Vulkan>();
         internal_state->allocationhandler = allocationhandler;
@@ -4853,7 +4851,7 @@ namespace alimer
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = memrequirements.memoryRequirements.size + std::max(memrequirements_scratch_build.memoryRequirements.size,
-                                                                             memrequirements_scratch_update.memoryRequirements.size);
+            memrequirements_scratch_update.memoryRequirements.size);
         bufferInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_KHR | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         assert(features_1_2.bufferDeviceAddress == VK_TRUE);
         bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
@@ -4865,16 +4863,16 @@ namespace alimer
         allocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
         res = vmaCreateBuffer(allocationhandler->allocator, &bufferInfo, &allocInfo, &internal_state->buffer, &internal_state->allocation,
-                              nullptr);
+            nullptr);
         assert(res == VK_SUCCESS);
 
-        VkBindAccelerationStructureMemoryInfoKHR bindInfo{VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR};
+        VkBindAccelerationStructureMemoryInfoKHR bindInfo{ VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR };
         bindInfo.accelerationStructure = internal_state->resource;
         bindInfo.memory = internal_state->allocation->GetMemory();
         res = vkBindAccelerationStructureMemoryKHR(device, 1, &bindInfo);
         assert(res == VK_SUCCESS);
 
-        VkAccelerationStructureDeviceAddressInfoKHR addrinfo{VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR};
+        VkAccelerationStructureDeviceAddressInfoKHR addrinfo{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
         addrinfo.accelerationStructure = internal_state->resource;
         internal_state->as_address = vkGetAccelerationStructureDeviceAddressKHR(device, &addrinfo);
 
@@ -5246,7 +5244,7 @@ namespace alimer
     }
 
     int GraphicsDevice_Vulkan::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount,
-                                                 uint32_t firstMip, uint32_t mipCount)
+        uint32_t firstMip, uint32_t mipCount)
     {
         auto internal_state = to_internal(texture);
 
@@ -5460,8 +5458,8 @@ namespace alimer
             srv_desc.format = VulkanImageFormat(desc.format);
             srv_desc.offset =
                 Align(offset,
-                      device_properties.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break
-                                                                                          // a lot of things! (index buffer, index offset?)
+                    device_properties.properties.limits.minTexelBufferOffsetAlignment); // damn, if this needs alignment, that could break
+                                                                                        // a lot of things! (index buffer, index offset?)
             srv_desc.range = std::min(size, (uint64_t)desc.ByteWidth - srv_desc.offset);
 
             VkBufferView view;
@@ -5526,7 +5524,7 @@ namespace alimer
     }
 
     void GraphicsDevice_Vulkan::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
-                                                const GPUResource* resource, int subresource, uint64_t offset)
+        const GPUResource* resource, int subresource, uint64_t offset)
     {
         auto table_internal = to_internal(table);
         size_t remap = table_internal->resource_write_remap[rangeIndex];
@@ -5747,7 +5745,7 @@ namespace alimer
         }
     }
     void GraphicsDevice_Vulkan::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
-                                                const Sampler* sampler)
+        const Sampler* sampler)
     {
         auto table_internal = to_internal(table);
         size_t sampler_remap = table->resources.size() + (size_t)rangeIndex;
@@ -5830,7 +5828,7 @@ namespace alimer
             break;
         case GPU_QUERY_TYPE_TIMESTAMP:
             res = vkGetQueryPoolResults(device, querypool_timestamp, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
-                                        &result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+                &result->result_timestamp, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
             if (timestamps_to_reset.empty() || timestamps_to_reset.back() != (uint32_t)internal_state->query_index)
             {
                 timestamps_to_reset.push_back((uint32_t)internal_state->query_index);
@@ -5842,8 +5840,8 @@ namespace alimer
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
         case GPU_QUERY_TYPE_OCCLUSION:
             res = vkGetQueryPoolResults(device, querypool_occlusion, (uint32_t)internal_state->query_index, 1, sizeof(uint64_t),
-                                        &result->result_passed_sample_count, sizeof(uint64_t),
-                                        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
+                &result->result_passed_sample_count, sizeof(uint64_t),
+                VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_PARTIAL_BIT);
             if (occlusions_to_reset.empty() || occlusions_to_reset.back() != (uint32_t)internal_state->query_index)
             {
                 occlusions_to_reset.push_back((uint32_t)internal_state->query_index);
@@ -5859,7 +5857,7 @@ namespace alimer
         if (!debugUtils)
             return;
 
-        VkDebugUtilsObjectNameInfoEXT nameInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT};
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
         nameInfo.pObjectName = name;
         if (pResource->IsTexture())
         {
@@ -5962,7 +5960,7 @@ namespace alimer
                 for (auto& barrier : frame.loadedimagetransitions)
                 {
                     vkCmdPipelineBarrier(frame.transitionCommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                                         0, 0, nullptr, 0, nullptr, 1, &barrier);
+                        0, 0, nullptr, 0, nullptr, 1, &barrier);
                 }
                 frame.loadedimagetransitions.clear();
 
@@ -5994,16 +5992,16 @@ namespace alimer
                 counter++;
             }
 
-            VkSubmitInfo submitInfo{VK_STRUCTURE_TYPE_SUBMIT_INFO};
+            VkSubmitInfo submitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
             if (frame.swapchainReleaseSemaphore == VK_NULL_HANDLE)
             {
-                VkSemaphoreCreateInfo semaphoreInfo{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+                VkSemaphoreCreateInfo semaphoreInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
                 VK_CHECK(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &frame.swapchainReleaseSemaphore));
             }
 
-            VkSemaphore waitSemaphores[] = {swapchainAcquireSemaphores[swapChainImageIndex], copySemaphore};
-            VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT};
+            VkSemaphore waitSemaphores[] = { swapchainAcquireSemaphores[swapChainImageIndex], copySemaphore };
+            VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT };
             if (copyQueueUse)
             {
                 submitInfo.waitSemaphoreCount = 2;
@@ -6025,11 +6023,11 @@ namespace alimer
 
         // This acts as a barrier, following this we will be using the next frame's resources when calling
         // GetFrameResources()!
-        FRAMECOUNT++;
-        frameIndex = FRAMECOUNT % BACKBUFFER_COUNT;
+        frameCount++;
+        frameIndex = frameCount % BACKBUFFER_COUNT;
 
         // Initiate stalling CPU when GPU is behind by more frames than would fit in the backbuffers:
-        if (FRAMECOUNT >= BACKBUFFER_COUNT)
+        if (frameCount >= BACKBUFFER_COUNT)
         {
             VkResult res = vkWaitForFences(device, 1, &GetFrameResources().frameFence, true, UINT64_MAX);
             assert(res == VK_SUCCESS);
@@ -6038,7 +6036,7 @@ namespace alimer
             assert(res == VK_SUCCESS);
         }
 
-        allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
+        allocationhandler->Update(frameCount, BACKBUFFER_COUNT);
 
         // Restart transition command buffers:
         {
@@ -6047,8 +6045,7 @@ namespace alimer
             VkResult res = vkResetCommandPool(device, frame.transitionCommandPool, 0);
             assert(res == VK_SUCCESS);
 
-            VkCommandBufferBeginInfo beginInfo = {};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            VkCommandBufferBeginInfo beginInfo{VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
             beginInfo.pInheritanceInfo = nullptr; // Optional
 
@@ -6075,7 +6072,7 @@ namespace alimer
 
         for (uint32_t i = 0; i < ALIMER_STATIC_ARRAY_SIZE(commandPools); i++)
         {
-            VkCommandPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
+            VkCommandPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
             poolInfo.queueFamilyIndex = queueFamilyIndex;
 
             res = vkCreateCommandPool(device->GetVkDevice(), &poolInfo, nullptr, &commandPools[i]);
@@ -6114,7 +6111,7 @@ namespace alimer
 
         VK_CHECK(vkResetCommandPool(device->GetVkDevice(), commandPools[frameIndex], 0));
 
-        VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         beginInfo.pInheritanceInfo = nullptr;
 
@@ -6132,7 +6129,7 @@ namespace alimer
 
         // TODO: @see V-EZ set also line width, depth bias, depth bounds
 
-        float blendConstants[] = {1, 1, 1, 1};
+        float blendConstants[] = { 1, 1, 1, 1 };
         vkCmdSetBlendConstants(commandBuffers[frameIndex], blendConstants);
 
         // reset descriptor allocators:
@@ -6161,7 +6158,7 @@ namespace alimer
         VkSemaphore acquireSemaphore = device->swapchainAcquireSemaphores[semaphoreIndex];
 
         VkResult res = vkAcquireNextImageKHR(device->GetVkDevice(), device->swapChain, UINT64_MAX, acquireSemaphore, VK_NULL_HANDLE,
-                                             &device->swapChainImageIndex);
+            &device->swapChainImageIndex);
 
         if (res != VK_SUCCESS)
         {
@@ -6184,11 +6181,11 @@ namespace alimer
 
         assert(res == VK_SUCCESS);
 
-        VkClearValue clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-        VkRenderPassBeginInfo renderPassInfo{VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+        VkRenderPassBeginInfo renderPassInfo{ VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
         renderPassInfo.renderPass = device->defaultRenderPass;
         renderPassInfo.framebuffer = device->swapChainFramebuffers[device->swapChainImageIndex];
-        renderPassInfo.renderArea.offset = {0, 0};
+        renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = device->swapChainExtent;
         renderPassInfo.clearValueCount = 1;
         renderPassInfo.pClearValues = &clearColor;
@@ -6200,7 +6197,7 @@ namespace alimer
         vkCmdEndRenderPass(GetDirectCommandList());
         device->SubmitCommandLists();
 
-        VkPresentInfoKHR presentInfo{VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+        VkPresentInfoKHR presentInfo{ VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = &device->frames[device->swapChainImageIndex].swapchainReleaseSemaphore;
         presentInfo.swapchainCount = 1;
@@ -6224,7 +6221,7 @@ namespace alimer
         if (!device->debugUtils)
             return;
 
-        VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
         label.pLabelName = name;
         label.color[0] = 0;
         label.color[1] = 0;
@@ -6246,7 +6243,7 @@ namespace alimer
         if (!device->debugUtils)
             return;
 
-        VkDebugUtilsLabelEXT label{VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT};
+        VkDebugUtilsLabelEXT label{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
         label.pLabelName = name;
         label.color[0] = 0;
         label.color[1] = 0;
@@ -6398,7 +6395,7 @@ namespace alimer
     }
 
     void Vulkan_CommandList::BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count,
-                                               const uint32_t* strides, const uint32_t* offsets)
+        const uint32_t* strides, const uint32_t* offsets)
     {
         VkDeviceSize voffsets[8] = {};
         VkBuffer vbuffers[8] = {};
@@ -6429,7 +6426,7 @@ namespace alimer
         {
             auto internal_state = to_internal(indexBuffer);
             vkCmdBindIndexBuffer(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)offset,
-                                 format == IndexFormat::UInt16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+                format == IndexFormat::UInt16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
         }
     }
 
@@ -6440,7 +6437,7 @@ namespace alimer
 
     void Vulkan_CommandList::BindBlendFactor(float r, float g, float b, float a)
     {
-        float blendConstants[] = {r, g, b, a};
+        float blendConstants[] = { r, g, b, a };
         vkCmdSetBlendConstants(GetDirectCommandList(), blendConstants);
     }
 
@@ -6507,7 +6504,7 @@ namespace alimer
     }
 
     void Vulkan_CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex,
-                                         uint32_t firstInstance)
+        uint32_t firstInstance)
     {
         PrepareDraw();
         vkCmdDrawIndexed(GetDirectCommandList(), indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
@@ -6518,7 +6515,7 @@ namespace alimer
         PrepareDraw();
         auto internal_state = to_internal(args);
         vkCmdDrawIndirect(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)args_offset, 1,
-                          (uint32_t)sizeof(IndirectDrawArgsInstanced));
+            (uint32_t)sizeof(IndirectDrawArgsInstanced));
     }
 
     void Vulkan_CommandList::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset)
@@ -6526,7 +6523,7 @@ namespace alimer
         PrepareDraw();
         auto internal_state = to_internal(args);
         vkCmdDrawIndexedIndirect(GetDirectCommandList(), internal_state->resource, (VkDeviceSize)args_offset, 1,
-                                 (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
+            (uint32_t)sizeof(IndirectDrawArgsIndexedInstanced));
     }
 
     void Vulkan_CommandList::PrepareDispatch()
@@ -6576,7 +6573,7 @@ namespace alimer
                 copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 copy.imageSubresource.layerCount = 1;
                 vkCmdCopyBufferToImage(GetDirectCommandList(), internal_state_src->staging_resource, internal_state_dst->resource,
-                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
             }
             else if (dst_desc.Usage & USAGE_STAGING)
             {
@@ -6587,7 +6584,7 @@ namespace alimer
                 copy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
                 copy.imageSubresource.layerCount = 1;
                 vkCmdCopyImageToBuffer(GetDirectCommandList(), internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                       internal_state_dst->staging_resource, 1, &copy);
+                    internal_state_dst->staging_resource, 1, &copy);
             }
             else
             {
@@ -6638,7 +6635,7 @@ namespace alimer
                 copy.dstSubresource.mipLevel = 0;
 
                 vkCmdCopyImage(GetDirectCommandList(), internal_state_src->resource, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                               internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
+                    internal_state_dst->resource, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
             }
         }
         else if (pDst->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER && pSrc->type == GPUResource::GPU_RESOURCE_TYPE::BUFFER)
@@ -6766,7 +6763,7 @@ namespace alimer
             copyRegion.size = size;
 
             vkCmdCopyBuffer(GetDirectCommandList(), to_internal(resourceBuffer[frameIndex].buffer.Get())->resource,
-                            internal_state->resource, 1, &copyRegion);
+                internal_state->resource, 1, &copyRegion);
 
             // reverse barrier:
             std::swap(barrier.srcAccessMask, barrier.dstAccessMask);
@@ -6786,7 +6783,7 @@ namespace alimer
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
             vkCmdBeginQuery(GetDirectCommandList(), device->querypool_occlusion, (uint32_t)internal_state->query_index,
-                            VK_QUERY_CONTROL_PRECISE_BIT);
+                VK_QUERY_CONTROL_PRECISE_BIT);
             break;
         }
     }
@@ -6799,7 +6796,7 @@ namespace alimer
         {
         case GPU_QUERY_TYPE_TIMESTAMP:
             vkCmdWriteTimestamp(GetDirectCommandList(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, device->querypool_timestamp,
-                                internal_state->query_index);
+                internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
             vkCmdEndQuery(GetDirectCommandList(), device->querypool_occlusion, internal_state->query_index);
@@ -6904,7 +6901,7 @@ namespace alimer
         }
 
         vkCmdPipelineBarrier(GetDirectCommandList(), srcStage, dstStage, 0, memorybarrier_count, memorybarriers, bufferbarrier_count,
-                             bufferbarriers, imagebarrier_count, imagebarriers);
+            bufferbarriers, imagebarrier_count, imagebarriers);
     }
 
     bool IsVulkanBackendAvailable()

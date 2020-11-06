@@ -19,7 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
+// The implementation is based on WickedEngine graphics code, MIT license
+// (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #pragma once
 
@@ -222,12 +223,12 @@ namespace alimer
 
     enum GPU_QUERY_TYPE
     {
-        GPU_QUERY_TYPE_INVALID, // do not use! Indicates if query was not created.
-        GPU_QUERY_TYPE_EVENT, // has the GPU reached this point?
-        GPU_QUERY_TYPE_OCCLUSION, // how many samples passed depthstencil test?
+        GPU_QUERY_TYPE_INVALID,             // do not use! Indicates if query was not created.
+        GPU_QUERY_TYPE_EVENT,               // has the GPU reached this point?
+        GPU_QUERY_TYPE_OCCLUSION,           // how many samples passed depthstencil test?
         GPU_QUERY_TYPE_OCCLUSION_PREDICATE, // are there any samples that passed depthstencil test
-        GPU_QUERY_TYPE_TIMESTAMP, // retrieve time point of gpu execution
-        GPU_QUERY_TYPE_TIMESTAMP_DISJOINT, // timestamp frequency information
+        GPU_QUERY_TYPE_TIMESTAMP,           // retrieve time point of gpu execution
+        GPU_QUERY_TYPE_TIMESTAMP_DISJOINT,  // timestamp frequency information
     };
 
     enum class VertexFormat : uint32_t
@@ -278,30 +279,67 @@ namespace alimer
         RTV,
         DSV,
     };
+
+    
+    enum class TextureType : uint32_t
+    {
+        Type1D,
+        Type2D,
+        Type3D,
+        TypeCube
+    };
+
+    enum class TextureUsage : uint32_t
+    {
+        None = 0,
+        Sampled = 1 << 0,
+        Storage = 1 << 1,
+        RenderTarget = 1 << 2
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureUsage, uint32_t);
+
+    enum class TextureSampleCount : uint32_t
+    {
+        /// 1 sample (no multi-sampling).
+        Count1 = 1,
+        /// 2 Samples.
+        Count2 = 2,
+        /// 4 Samples.
+        Count4 = 4,
+        /// 8 Samples.
+        Count8 = 8,
+        /// 16 Samples.
+        Count16 = 16,
+        /// 32 Samples.
+        Count32 = 32
+    };
+    ALIMER_DEFINE_ENUM_FLAG_OPERATORS(TextureSampleCount, uint32_t);
+
     enum IMAGE_LAYOUT
     {
-        IMAGE_LAYOUT_UNDEFINED, // discard contents
-        IMAGE_LAYOUT_GENERAL, // supports everything
-        IMAGE_LAYOUT_RENDERTARGET, // render target, write enabled
-        IMAGE_LAYOUT_DEPTHSTENCIL, // depth stencil, write enabled
+        IMAGE_LAYOUT_UNDEFINED,             // discard contents
+        IMAGE_LAYOUT_GENERAL,               // supports everything
+        IMAGE_LAYOUT_RENDERTARGET,          // render target, write enabled
+        IMAGE_LAYOUT_DEPTHSTENCIL,          // depth stencil, write enabled
         IMAGE_LAYOUT_DEPTHSTENCIL_READONLY, // depth stencil, read only
-        IMAGE_LAYOUT_SHADER_RESOURCE, // shader resource, read only
-        IMAGE_LAYOUT_UNORDERED_ACCESS, // shader resource, write enabled
-        IMAGE_LAYOUT_COPY_SRC, // copy from
-        IMAGE_LAYOUT_COPY_DST, // copy to
-        IMAGE_LAYOUT_SHADING_RATE_SOURCE, // shading rate control per tile
+        IMAGE_LAYOUT_SHADER_RESOURCE,       // shader resource, read only
+        IMAGE_LAYOUT_UNORDERED_ACCESS,      // shader resource, write enabled
+        IMAGE_LAYOUT_COPY_SRC,              // copy from
+        IMAGE_LAYOUT_COPY_DST,              // copy to
+        IMAGE_LAYOUT_SHADING_RATE_SOURCE,   // shading rate control per tile
     };
+
     enum BUFFER_STATE
     {
-        BUFFER_STATE_GENERAL, // supports everything
-        BUFFER_STATE_VERTEX_BUFFER, // vertex buffer, read only
-        BUFFER_STATE_INDEX_BUFFER, // index buffer, read only
-        BUFFER_STATE_CONSTANT_BUFFER, // constant buffer, read only
+        BUFFER_STATE_GENERAL,           // supports everything
+        BUFFER_STATE_VERTEX_BUFFER,     // vertex buffer, read only
+        BUFFER_STATE_INDEX_BUFFER,      // index buffer, read only
+        BUFFER_STATE_CONSTANT_BUFFER,   // constant buffer, read only
         BUFFER_STATE_INDIRECT_ARGUMENT, // argument buffer to DrawIndirect() or DispatchIndirect()
-        BUFFER_STATE_SHADER_RESOURCE, // shader resource, read only
-        BUFFER_STATE_UNORDERED_ACCESS, // shader resource, write enabled
-        BUFFER_STATE_COPY_SRC, // copy from
-        BUFFER_STATE_COPY_DST, // copy to
+        BUFFER_STATE_SHADER_RESOURCE,   // shader resource, read only
+        BUFFER_STATE_UNORDERED_ACCESS,  // shader resource, write enabled
+        BUFFER_STATE_COPY_SRC,          // copy from
+        BUFFER_STATE_COPY_DST,          // copy to
         BUFFER_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
     };
 
@@ -402,7 +440,7 @@ namespace alimer
         uint32_t BindFlags = 0;
         uint32_t CPUAccessFlags = 0;
         uint32_t MiscFlags = 0;
-        uint32_t StructureByteStride = 0; // needed for typed and structured buffer types!
+        uint32_t StructureByteStride = 0;            // needed for typed and structured buffer types!
         PixelFormat format = PixelFormat::Undefined; // only needed for typed buffer!
     };
 
@@ -505,7 +543,7 @@ namespace alimer
         enum TYPE
         {
             MEMORY_BARRIER, // UAV accesses
-            IMAGE_BARRIER, // image layout transition
+            IMAGE_BARRIER,  // image layout transition
             BUFFER_BARRIER, // buffer state transition
         } type = MEMORY_BARRIER;
 
@@ -580,17 +618,16 @@ namespace alimer
             STOREOP_STORE,
             STOREOP_DONTCARE,
         } storeop = STOREOP_STORE;
-        IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL; // layout before the render pass
-        IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL; // layout after the render pass
+        IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL;      // layout before the render pass
+        IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL;        // layout after the render pass
         IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET; // layout within the render pass
 
-        static RenderPassAttachment RenderTarget(
-            const Texture* resource = nullptr,
-            LOAD_OPERATION load_op = LOADOP_LOAD,
-            STORE_OPERATION store_op = STOREOP_STORE,
-            IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
-            IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
-            IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL)
+        static RenderPassAttachment RenderTarget(const Texture* resource = nullptr,
+                                                 LOAD_OPERATION load_op = LOADOP_LOAD,
+                                                 STORE_OPERATION store_op = STOREOP_STORE,
+                                                 IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+                                                 IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_RENDERTARGET,
+                                                 IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL)
         {
             RenderPassAttachment attachment;
             attachment.type = RENDERTARGET;
@@ -603,13 +640,12 @@ namespace alimer
             return attachment;
         }
 
-        static RenderPassAttachment DepthStencil(
-            const Texture* resource = nullptr,
-            LOAD_OPERATION load_op = LOADOP_LOAD,
-            STORE_OPERATION store_op = STOREOP_STORE,
-            IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-            IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
-            IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_DEPTHSTENCIL)
+        static RenderPassAttachment DepthStencil(const Texture* resource = nullptr,
+                                                 LOAD_OPERATION load_op = LOADOP_LOAD,
+                                                 STORE_OPERATION store_op = STOREOP_STORE,
+                                                 IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
+                                                 IMAGE_LAYOUT subpass_layout = IMAGE_LAYOUT_DEPTHSTENCIL,
+                                                 IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_DEPTHSTENCIL)
         {
             RenderPassAttachment attachment;
             attachment.type = DEPTH_STENCIL;
@@ -622,10 +658,9 @@ namespace alimer
             return attachment;
         }
 
-        static RenderPassAttachment Resolve(
-            const Texture* resource = nullptr,
-            IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
-            IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL)
+        static RenderPassAttachment Resolve(const Texture* resource = nullptr,
+                                            IMAGE_LAYOUT initial_layout = IMAGE_LAYOUT_GENERAL,
+                                            IMAGE_LAYOUT final_layout = IMAGE_LAYOUT_GENERAL)
         {
             RenderPassAttachment attachment;
             attachment.type = RESOLVE;
@@ -693,7 +728,7 @@ namespace alimer
         size_t offset = 0;
         size_t size = 0;
         uint32_t rowpitch = 0; // output
-        void* data = nullptr; // output
+        void* data = nullptr;  // output
     };
 
     // Resources:
@@ -760,9 +795,10 @@ namespace alimer
 
     struct GPUAllocation
     {
-        void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is already applied
+        void* data = nullptr; // application can write to this. Reads might be not supported or slow. The offset is
+                              // already applied
         const GraphicsBuffer* buffer = nullptr; // application can bind it to the GPU
-        uint64_t offset = 0; // allocation's offset from the GPUbuffer's beginning
+        uint64_t offset = 0;                    // allocation's offset from the GPUbuffer's beginning
 
         // Returns true if the allocation was successful
         inline bool IsValid() const
@@ -770,8 +806,6 @@ namespace alimer
             return data != nullptr && buffer != nullptr;
         }
     };
-
-
 
     struct RaytracingAccelerationStructureDesc
     {
@@ -1007,6 +1041,23 @@ namespace alimer
         std::vector<RootConstantRange> rootconstants;
     };
 
+    struct GraphicsDeviceCaps
+    {
+        GraphicsBackendType backendType;
+
+        /// Gets the GPU device identifier.
+        uint32_t deviceId;
+
+        /// Gets the GPU vendor identifier.
+        uint32_t vendorId;
+
+        /// Gets the adapter name.
+        std::string adapterName;
+    };
+
+    ALIMER_API const char* ToString(GraphicsBackendType value);
+    ALIMER_API const char* ToString(TextureType value);
+
     ALIMER_API uint32_t GetVertexFormatNumComponents(VertexFormat format);
     ALIMER_API uint32_t GetVertexFormatComponentSize(VertexFormat format);
     ALIMER_API uint32_t GetVertexFormatSize(VertexFormat format);
@@ -1014,8 +1065,7 @@ namespace alimer
 
 namespace std
 {
-    template <>
-    struct hash<alimer::RasterizationStateDescriptor>
+    template <> struct hash<alimer::RasterizationStateDescriptor>
     {
         std::size_t operator()(const alimer::RasterizationStateDescriptor& desc) const noexcept
         {
@@ -1032,28 +1082,26 @@ namespace std
         }
     };
 
-    template <>
-    struct hash<alimer::StencilStateFaceDescriptor>
+    template <> struct hash<alimer::StencilStateFaceDescriptor>
     {
         std::size_t operator()(const alimer::StencilStateFaceDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            alimer::CombineHash(hash, (uint32_t) desc.compare);
-            alimer::CombineHash(hash, (uint32_t) desc.failOp);
-            alimer::CombineHash(hash, (uint32_t) desc.depthFailOp);
-            alimer::CombineHash(hash, (uint32_t) desc.passOp);
+            alimer::CombineHash(hash, (uint32_t)desc.compare);
+            alimer::CombineHash(hash, (uint32_t)desc.failOp);
+            alimer::CombineHash(hash, (uint32_t)desc.depthFailOp);
+            alimer::CombineHash(hash, (uint32_t)desc.passOp);
             return hash;
         }
     };
 
-    template <>
-    struct hash<alimer::DepthStencilStateDescriptor>
+    template <> struct hash<alimer::DepthStencilStateDescriptor>
     {
         std::size_t operator()(const alimer::DepthStencilStateDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
             alimer::CombineHash(hash, desc.depthWriteEnabled);
-            alimer::CombineHash(hash, (uint32_t) desc.depthCompare);
+            alimer::CombineHash(hash, (uint32_t)desc.depthCompare);
             alimer::CombineHash(hash, desc.stencilFront);
             alimer::CombineHash(hash, desc.stencilBack);
             alimer::CombineHash(hash, desc.stencilReadMask);
@@ -1062,33 +1110,30 @@ namespace std
         }
     };
 
-    template <>
-    struct hash<alimer::VertexBufferLayoutDescriptor>
+    template <> struct hash<alimer::VertexBufferLayoutDescriptor>
     {
         std::size_t operator()(const alimer::VertexBufferLayoutDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            alimer::CombineHash(hash, (uint32_t) desc.stride);
-            alimer::CombineHash(hash, (uint32_t) desc.stepMode);
+            alimer::CombineHash(hash, (uint32_t)desc.stride);
+            alimer::CombineHash(hash, (uint32_t)desc.stepMode);
             return hash;
         }
     };
 
-    template <>
-    struct hash<alimer::VertexAttributeDescriptor>
+    template <> struct hash<alimer::VertexAttributeDescriptor>
     {
         std::size_t operator()(const alimer::VertexAttributeDescriptor& desc) const noexcept
         {
             std::size_t hash = 0;
-            alimer::CombineHash(hash, (uint32_t) desc.format);
+            alimer::CombineHash(hash, (uint32_t)desc.format);
             alimer::CombineHash(hash, desc.offset);
             alimer::CombineHash(hash, desc.bufferIndex);
             return hash;
         }
     };
 
-    template <>
-    struct hash<alimer::VertexDescriptor>
+    template <> struct hash<alimer::VertexDescriptor>
     {
         std::size_t operator()(const alimer::VertexDescriptor& desc) const noexcept
         {
@@ -1106,8 +1151,7 @@ namespace std
         }
     };
 
-    template <>
-    struct hash<alimer::ColorAttachmentDescriptor>
+    template <> struct hash<alimer::ColorAttachmentDescriptor>
     {
         std::size_t operator()(const alimer::ColorAttachmentDescriptor& desc) const noexcept
         {
@@ -1125,8 +1169,7 @@ namespace std
         }
     };
 
-    template <>
-    struct hash<alimer::SamplerDescriptor>
+    template <> struct hash<alimer::SamplerDescriptor>
     {
         std::size_t operator()(const alimer::SamplerDescriptor& desc) const noexcept
         {

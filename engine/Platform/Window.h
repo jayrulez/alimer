@@ -30,15 +30,15 @@ namespace alimer
 {
     enum class WindowFlags : uint32_t
     {
-        None              = 0,
-        Fullscreen        = 1 << 0,
+        None = 0,
+        Fullscreen = 1 << 0,
         FullscreenDesktop = 1 << 1,
-        Hidden            = 1 << 2,
-        Borderless        = 1 << 3,
-        Resizable         = 1 << 4,
-        Minimized         = 1 << 5,
-        Maximized         = 1 << 6,
-        HighDpi           = 1 << 7,
+        Hidden = 1 << 2,
+        Borderless = 1 << 3,
+        Resizable = 1 << 4,
+        Minimized = 1 << 5,
+        Maximized = 1 << 6,
+        HighDpi = 1 << 7,
     };
     ALIMER_DEFINE_ENUM_FLAG_OPERATORS(WindowFlags, uint32_t);
 
@@ -52,8 +52,8 @@ namespace alimer
         constexpr static const int Centered = std::numeric_limits<int32_t>::max();
 
         /// Constructor.
-        Window(const String& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u, uint32_t height = 720u,
-               WindowFlags flags = WindowFlags::None);
+        Window(const String& title, int32_t x = Centered, int32_t y = Centered, uint32_t width = 1280u,
+               uint32_t height = 720u, WindowFlags flags = WindowFlags::None);
 
         /// Destructor.
         virtual ~Window() = default;
@@ -65,23 +65,23 @@ namespace alimer
         /// Get the native window handle.
         WindowHandle GetHandle() const;
 
-        void  SetBrightness(float value);
+        void SetBrightness(float value);
         float GetBrightness() const noexcept;
 
-        void     SetSize(uint32_t width, uint32_t height) noexcept;
-        void     SetSize(const Extent2D& size) noexcept;
+        void SetSize(uint32_t width, uint32_t height) noexcept;
+        void SetSize(const Extent2D& size) noexcept;
         Extent2D GetSize() const noexcept;
 
-        void     SetMaximumSize(uint32_t width, uint32_t height) noexcept;
-        void     SetMaximumSize(const Extent2D& size) noexcept;
+        void SetMaximumSize(uint32_t width, uint32_t height) noexcept;
+        void SetMaximumSize(const Extent2D& size) noexcept;
         Extent2D GetMaximumSize() const noexcept;
 
-        void     SetMinimumSize(uint32_t width, uint32_t height) noexcept;
-        void     SetMinimumSize(const Extent2D& size) noexcept;
+        void SetMinimumSize(uint32_t width, uint32_t height) noexcept;
+        void SetMinimumSize(const Extent2D& size) noexcept;
         Extent2D GetMinimumSize() const noexcept;
 
-        String GetTitle() const noexcept;
-        void   SetTitle(const String& str) noexcept;
+        std::string GetTitle() const noexcept;
+        void SetTitle(const std::string& str) noexcept;
 
     private:
         std::unique_ptr<WindowImpl> impl;

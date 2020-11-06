@@ -74,7 +74,8 @@ namespace alimer
 
     void SetAssertHandler(AssertHandler newHandler) { GetAssertHandlerInstance() = newHandler; }
 
-    AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, const int line, const char* msg, ...)
+    AssertFailBehavior ReportAssertFailure(const char* condition, const char* file, const int line, const char* msg,
+                                           ...)
     {
         const char* message = nullptr;
         if (msg != nullptr)

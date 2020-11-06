@@ -35,7 +35,9 @@ namespace alimer
     {
     public:
         HelloWorldApp(const Config& config)
-            : Application(config) {}
+            : Application(config)
+        {
+        }
         ~HelloWorldApp() override;
 
         void Initialize() override;
@@ -97,22 +99,8 @@ namespace alimer
         pipeline = graphics->CreateRenderPipeline(&renderPipelineDesc);
 
         uint32_t pixels[4 * 4] = {
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0x00000000,
-            0xFFFFFFFF,
-            0x00000000,
-            0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
+            0xFFFFFFFF, 0x00000000, 0xFFFFFFFF, 0x00000000, 0x00000000, 0xFFFFFFFF, 0x00000000, 0xFFFFFFFF,
         };
 
         TextureDescription textureDesc = TextureDescription::Texure2D(PixelFormat::RGBA8Unorm, 4, 4, 1u);
@@ -136,25 +124,30 @@ namespace alimer
             { { -0.5f, -0.5, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
         };*/
 
-        float cubeData[] = {
-            /* pos                  color                       uvs */
-            -1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+        float cubeData[] = {/* pos                  color                       uvs */
+                            -1.0f, -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  -1.0f, -1.0f,
+                            1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  0.0f,  0.0f,
+                            1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  0.0f,  1.0f,
 
-            -1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+                            -1.0f, -1.0f, 1.0f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  -1.0f, 1.0f,
+                            0.0f,  1.0f,  0.0f,  1.0f,  1.0f,  0.0f,  1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f,
+                            1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  0.0f,  1.0f,  0.0f,  1.0f,  0.0f,  1.0f,
 
-            -1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
-            -1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                            -1.0f, -1.0f, -1.0f, 0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,  -1.0f, 1.0f,  -1.0f,
+                            0.0f,  0.0f,  1.0f,  1.0f,  1.0f,  0.0f,  -1.0f, 1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+                            1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, 1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  0.0f,  1.0f,
 
-            1.0f, -1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
+                            1.0f,  -1.0f, -1.0f, 1.0f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  1.0f,  1.0f,  -1.0f,
+                            1.0f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  1.0f,  1.0f,  1.0f,  1.0f,  0.5f,  0.0f,
+                            1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  1.0f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f,
 
-            -1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 0.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 0.0f,
-            1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f, 1.0f,
+                            -1.0f, -1.0f, -1.0f, 0.0f,  0.5f,  1.0f,  1.0f,  0.0f,  0.0f,  -1.0f, -1.0f, 1.0f,
+                            0.0f,  0.5f,  1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  1.0f,
+                            1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, -1.0f, 0.0f,  0.5f,  1.0f,  1.0f,  0.0f,  1.0f,
 
-            -1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 0.0f,
-            1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.5f, 1.0f, 0.0f, 1.0f};
+                            -1.0f, 1.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  1.0f,  0.0f,  0.0f,  -1.0f, 1.0f,  1.0f,
+                            1.0f,  0.0f,  0.5f,  1.0f,  1.0f,  0.0f,  1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.5f,
+                            1.0f,  1.0f,  1.0f,  1.0f,  1.0f,  -1.0f, 1.0f,  0.0f,  0.5f,  1.0f,  0.0f,  1.0f};
 
         GPUBufferDesc bufferDesc{};
         bufferDesc.Usage = USAGE_IMMUTABLE;
@@ -164,7 +157,7 @@ namespace alimer
         vertexBuffer = graphics->CreateBuffer(bufferDesc, cubeData);
 
         // Index buffer
-        const uint16_t indices[] = {0, 1, 2, 0, 2, 3, 6, 5, 4, 7, 6, 4, 8, 9, 10, 8, 10, 11,
+        const uint16_t indices[] = {0,  1,  2,  0,  2,  3,  6,  5,  4,  7,  6,  4,  8,  9,  10, 8,  10, 11,
                                     14, 13, 12, 15, 14, 12, 16, 17, 18, 16, 18, 19, 22, 21, 20, 23, 22, 20};
 
         bufferDesc.Usage = USAGE_IMMUTABLE;
@@ -179,6 +172,8 @@ namespace alimer
         bd.CPUAccessFlags = CPU_ACCESS_WRITE;
 
         constantBuffer = graphics->CreateBuffer(bd, nullptr);
+
+        GetWindow().SetTitle(fmt::format("Alimer - {}", ToString(graphics->GetBackendType())));
     }
 
     void HelloWorldApp::OnDraw(CommandBuffer& commandBuffer)
@@ -186,7 +181,7 @@ namespace alimer
         static float time = 0.0f;
         XMMATRIX world = XMMatrixRotationX(time) * XMMatrixRotationY(time * 2) * XMMatrixRotationZ(time * .7f);
 
-        float aspect = (float) (GetWindow().GetSize().width / GetWindow().GetSize().height);
+        float aspect = (float)(GetWindow().GetSize().width / GetWindow().GetSize().height);
         XMMATRIX view = XMMatrixLookAtLH(XMVectorSet(0, 0, 5, 1), XMVectorZero(), XMVectorSet(0, 1, 0, 1));
         XMMATRIX proj = XMMatrixPerspectiveFovLH(Pi / 4.0f, aspect, 0.1f, 100);
         XMMATRIX viewProj = XMMatrixMultiply(world, XMMatrixMultiply(view, proj));
@@ -218,9 +213,8 @@ namespace alimer
     {
         Config config{};
 
-        // config.backendType = GraphicsBackendType::Direct3D11;
-        // config.backendType = GraphicsBackendType::Direct3D12;
-        config.backendType = GraphicsBackendType::Vulkan;
+        config.backendType = GraphicsBackendType::Direct3D12;
+        // config.backendType = GraphicsBackendType::Vulkan;
 
 #ifdef _DEBUG
         // Direct3D12 has issue with debug layer

@@ -27,8 +27,8 @@
 #include "Core/Log.h"
 #include "Math/MathHelper.h"
 
+#include "D3D12Texture.h"
 #include "Graphics/CommandBuffer.h"
-#include "Graphics/Texture.h"
 
 #include "D3D12MemAlloc.h"
 #include "d3dx12.h"
@@ -76,8 +76,8 @@ namespace alimer
             }
         }
 
-        inline D3D12_FILTER _ConvertFilter(FilterMode minFilter, FilterMode magFilter, FilterMode mipFilter, bool isComparison,
-                                           bool isAnisotropic)
+        inline D3D12_FILTER _ConvertFilter(FilterMode minFilter, FilterMode magFilter, FilterMode mipFilter,
+                                           bool isComparison, bool isAnisotropic)
         {
             D3D12_FILTER filter;
             D3D12_FILTER_REDUCTION_TYPE reduction =
@@ -261,11 +261,13 @@ namespace alimer
         {
             static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Red) == D3D12_COLOR_WRITE_ENABLE_RED,
                           "ColorWriteMask values must match");
-            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Green) == D3D12_COLOR_WRITE_ENABLE_GREEN,
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Green) ==
+                              D3D12_COLOR_WRITE_ENABLE_GREEN,
                           "ColorWriteMask values must match");
             static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Blue) == D3D12_COLOR_WRITE_ENABLE_BLUE,
                           "ColorWriteMask values must match");
-            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Alpha) == D3D12_COLOR_WRITE_ENABLE_ALPHA,
+            static_assert(static_cast<D3D12_COLOR_WRITE_ENABLE>(ColorWriteMask::Alpha) ==
+                              D3D12_COLOR_WRITE_ENABLE_ALPHA,
                           "ColorWriteMask values must match");
             return static_cast<uint8_t>(writeMask);
         }
@@ -292,33 +294,7 @@ namespace alimer
 
             return data;
         }
-        constexpr D3D12_RESOURCE_STATES _ConvertImageLayout(IMAGE_LAYOUT value)
-        {
-            switch (value)
-            {
-            case IMAGE_LAYOUT_UNDEFINED:
-            case IMAGE_LAYOUT_GENERAL:
-                return D3D12_RESOURCE_STATE_COMMON;
-            case IMAGE_LAYOUT_RENDERTARGET:
-                return D3D12_RESOURCE_STATE_RENDER_TARGET;
-            case IMAGE_LAYOUT_DEPTHSTENCIL:
-                return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-            case IMAGE_LAYOUT_DEPTHSTENCIL_READONLY:
-                return D3D12_RESOURCE_STATE_DEPTH_READ;
-            case IMAGE_LAYOUT_SHADER_RESOURCE:
-                return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-            case IMAGE_LAYOUT_UNORDERED_ACCESS:
-                return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-            case IMAGE_LAYOUT_COPY_SRC:
-                return D3D12_RESOURCE_STATE_COPY_SOURCE;
-            case IMAGE_LAYOUT_COPY_DST:
-                return D3D12_RESOURCE_STATE_COPY_DEST;
-            case IMAGE_LAYOUT_SHADING_RATE_SOURCE:
-                return D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE;
-            }
 
-            return D3D12_RESOURCE_STATE_COMMON;
-        }
         constexpr D3D12_RESOURCE_STATES _ConvertBufferState(BUFFER_STATE value)
         {
             switch (value)
@@ -396,34 +372,6 @@ namespace alimer
         }
 
         // Native -> Engine converters
-        constexpr TextureDescription _ConvertTextureDesc_Inv(const D3D12_RESOURCE_DESC& desc)
-        {
-            TextureDescription retVal;
-
-            switch (desc.Dimension)
-            {
-            case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
-                retVal.type = TextureType::Type1D;
-                retVal.arrayLayers = desc.DepthOrArraySize;
-                break;
-            default:
-            case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
-                retVal.type = TextureType::Type2D;
-                retVal.arrayLayers = desc.DepthOrArraySize;
-                break;
-            case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
-                retVal.type = TextureType::Type3D;
-                retVal.depth = desc.DepthOrArraySize;
-                break;
-            }
-            retVal.format = PixelFormatFromDXGIFormat(desc.Format);
-            retVal.width = (uint32_t)desc.Width;
-            retVal.height = desc.Height;
-            retVal.mipLevels = desc.MipLevels;
-
-            return retVal;
-        }
-
         inline D3D12_DEPTH_STENCILOP_DESC _ConvertStencilOpDesc(const StencilStateFaceDescriptor descriptor)
         {
             D3D12_DEPTH_STENCILOP_DESC desc;
@@ -479,7 +427,7 @@ namespace alimer
             }
 #endif
 
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             D3D12MA::Allocation* allocation = nullptr;
             ComPtr<ID3D12Resource> resource;
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
@@ -495,7 +443,7 @@ namespace alimer
 
         struct Resource_DX12
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             D3D12MA::Allocation* allocation = nullptr;
             ComPtr<ID3D12Resource> resource;
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
@@ -520,50 +468,9 @@ namespace alimer
             }
         };
 
-        struct Texture_DX12 final : public Texture
-        {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
-            D3D12MA::Allocation* allocation = nullptr;
-            ComPtr<ID3D12Resource> resource;
-            D3D12_CONSTANT_BUFFER_VIEW_DESC cbv = {};
-            D3D12_SHADER_RESOURCE_VIEW_DESC srv = {};
-            D3D12_UNORDERED_ACCESS_VIEW_DESC uav = {};
-            std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> subresources_srv;
-            std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> subresources_uav;
-
-            D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
-
-            GPUAllocation dynamic[kCommandListCount];
-            D3D12_RENDER_TARGET_VIEW_DESC rtv = {};
-            D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
-            std::vector<D3D12_RENDER_TARGET_VIEW_DESC> subresources_rtv;
-            std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> subresources_dsv;
-
-            Texture_DX12(const TextureDescription& desc)
-                : Texture(desc)
-            {
-            }
-
-            ~Texture_DX12() override
-            {
-                Destroy();
-            }
-
-            void Destroy() override
-            {
-                allocationhandler->destroylocker.lock();
-                uint64_t framecount = allocationhandler->framecount;
-                if (allocation)
-                    allocationhandler->destroyer_allocations.push_back(std::make_pair(allocation, framecount));
-                if (resource)
-                    allocationhandler->destroyer_resources.push_back(std::make_pair(resource, framecount));
-                allocationhandler->destroylocker.unlock();
-            }
-        };
-
         struct Sampler_DX12 : public Sampler
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             D3D12_SAMPLER_DESC descriptor;
 
             ~Sampler_DX12()
@@ -576,7 +483,7 @@ namespace alimer
 
         struct Query_DX12
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             GPU_QUERY_TYPE query_type = GPU_QUERY_TYPE_INVALID;
             uint32_t query_index = ~0;
 
@@ -590,10 +497,12 @@ namespace alimer
                     {
                     case GPU_QUERY_TYPE_OCCLUSION:
                     case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-                        allocationhandler->destroyer_queries_occlusion.push_back(std::make_pair(query_index, framecount));
+                        allocationhandler->destroyer_queries_occlusion.push_back(
+                            std::make_pair(query_index, framecount));
                         break;
                     case GPU_QUERY_TYPE_TIMESTAMP:
-                        allocationhandler->destroyer_queries_timestamp.push_back(std::make_pair(query_index, framecount));
+                        allocationhandler->destroyer_queries_timestamp.push_back(
+                            std::make_pair(query_index, framecount));
                         break;
                     }
                     allocationhandler->destroylocker.unlock();
@@ -603,7 +512,7 @@ namespace alimer
         struct PipelineState_DX12 : public RenderPipeline
         {
             RenderPipelineDescriptor desc;
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             ComPtr<ID3D12PipelineState> handle;
             ID3D12RootSignature* rootSignature = nullptr;
             D3D_PRIMITIVE_TOPOLOGY primitiveTopology;
@@ -638,7 +547,7 @@ namespace alimer
         };
         struct RTPipelineState_DX12
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             ComPtr<ID3D12StateObject> resource;
 
             Vector<std::wstring> export_strings;
@@ -665,7 +574,7 @@ namespace alimer
         };
         struct DescriptorTable_DX12
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
 
             struct Heap
             {
@@ -684,15 +593,17 @@ namespace alimer
                 allocationhandler->destroylocker.lock();
                 uint64_t framecount = allocationhandler->framecount;
                 if (sampler_heap.heap)
-                    allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(sampler_heap.heap, framecount));
+                    allocationhandler->destroyer_descriptorHeaps.push_back(
+                        std::make_pair(sampler_heap.heap, framecount));
                 if (resource_heap.heap)
-                    allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(resource_heap.heap, framecount));
+                    allocationhandler->destroyer_descriptorHeaps.push_back(
+                        std::make_pair(resource_heap.heap, framecount));
                 allocationhandler->destroylocker.unlock();
             }
         };
         struct RootSignature_DX12
         {
-            std::shared_ptr<D3D12Graphics::AllocationHandler> allocationhandler;
+            std::shared_ptr<D3D12GraphicsDevice::AllocationHandler> allocationhandler;
             ID3D12RootSignature* resource = nullptr;
             std::vector<D3D12_ROOT_PARAMETER> params;
 
@@ -727,14 +638,14 @@ namespace alimer
             return static_cast<const Buffer_DX12*>(param);
         }
 
-        Texture_DX12* to_internal(Texture* param)
+        D3D12Texture* to_internal(Texture* param)
         {
-            return static_cast<Texture_DX12*>(param);
+            return static_cast<D3D12Texture*>(param);
         }
 
-        const Texture_DX12* to_internal(const Texture* param)
+        const D3D12Texture* to_internal(const Texture* param)
         {
-            return static_cast<const Texture_DX12*>(param);
+            return static_cast<const D3D12Texture*>(param);
         }
 
         const PipelineState_DX12* to_internal(const RenderPipeline* param)
@@ -829,14 +740,16 @@ namespace alimer
         void SetViewports(uint32_t viewportCount, const Viewport* pViewports) override;
         void SetScissorRect(const ScissorRect& rect) override;
         void SetScissorRects(uint32_t scissorCount, const ScissorRect* rects) override;
-        void BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource = -1) override;
-        void BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count) override;
+        void BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot,
+                          int subresource = -1) override;
+        void BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot,
+                           uint32_t count) override;
         void BindUAV(ShaderStage stage, const GPUResource* resource, uint32_t slot, int subresource = -1) override;
         void BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count) override;
         void BindSampler(ShaderStage stage, const Sampler* sampler, uint32_t slot) override;
         void BindConstantBuffer(ShaderStage stage, const GraphicsBuffer* buffer, uint32_t slot) override;
-        void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count, const uint32_t* strides,
-                               const uint32_t* offsets) override;
+        void BindVertexBuffers(const GraphicsBuffer* const* vertexBuffers, uint32_t slot, uint32_t count,
+                               const uint32_t* strides, const uint32_t* offsets) override;
         void BindIndexBuffer(const GraphicsBuffer* indexBuffer, IndexFormat format, uint32_t offset) override;
         void BindStencilRef(uint32_t value) override;
         void BindBlendFactor(float r, float g, float b, float a) override;
@@ -871,7 +784,8 @@ namespace alimer
         void DispatchRays(const DispatchRaysDesc* desc) override;
 
         void BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table) override;
-        void BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset) override;
+        void BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer,
+                                uint32_t offset) override;
         void BindRootConstants(PipelineBindPoint bindPoint, uint32_t index, const void* srcData) override;
 
     private:
@@ -880,7 +794,7 @@ namespace alimer
         void PrepareRaytrace();
 
     public: // TODO: Make private when we fix
-        D3D12Graphics* device;
+        D3D12GraphicsDevice* device;
         uint32_t index = 0;
         ID3D12GraphicsCommandList6* handle = nullptr;
         ID3D12CommandAllocator* commandAllocators[kMaxInflightFrames] = {};
@@ -888,7 +802,8 @@ namespace alimer
         D3D12_VIEWPORT viewports[kMaxViewportAndScissorRects];
         D3D12_RECT scissorRects[kMaxViewportAndScissorRects];
         const RenderPass* active_renderpass = nullptr;
-        D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+        D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS
+        resolve_subresources[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
 
         D3D12_SHADING_RATE prev_shadingrate = {};
 
@@ -911,7 +826,7 @@ namespace alimer
     };
 
     // Allocators:
-    void D3D12Graphics::AllocationHandler::Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
+    void D3D12GraphicsDevice::AllocationHandler::Update(uint64_t FRAMECOUNT, uint32_t BACKBUFFER_COUNT)
     {
         destroylocker.lock();
         framecount = FRAMECOUNT;
@@ -1018,7 +933,7 @@ namespace alimer
         destroylocker.unlock();
     }
 
-    void D3D12Graphics::FrameResources::ResourceFrameAllocator::init(D3D12Graphics* device, size_t size)
+    void D3D12GraphicsDevice::FrameResources::ResourceFrameAllocator::init(D3D12GraphicsDevice* device, size_t size)
     {
         this->device = device;
 
@@ -1038,8 +953,9 @@ namespace alimer
 
         CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(size);
 
-        hr = device->allocationhandler->allocator->CreateResource(&allocationDesc, &resdesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
-                                                                  &newBuffer->allocation, IID_PPV_ARGS(&newBuffer->resource));
+        hr = device->allocationhandler->allocator->CreateResource(
+            &allocationDesc, &resdesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, &newBuffer->allocation,
+            IID_PPV_ARGS(&newBuffer->resource));
         assert(SUCCEEDED(hr));
 
         void* pData;
@@ -1059,7 +975,7 @@ namespace alimer
         buffer.Reset(newBuffer);
     }
 
-    uint8_t* D3D12Graphics::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
+    uint8_t* D3D12GraphicsDevice::FrameResources::ResourceFrameAllocator::allocate(size_t dataSize, size_t alignment)
     {
         dataCur = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(dataCur), alignment));
 
@@ -1075,18 +991,18 @@ namespace alimer
         return retVal;
     }
 
-    void D3D12Graphics::FrameResources::ResourceFrameAllocator::clear()
+    void D3D12GraphicsDevice::FrameResources::ResourceFrameAllocator::clear()
     {
         dataCur = dataBegin;
     }
 
-    uint64_t D3D12Graphics::FrameResources::ResourceFrameAllocator::CalculateOffset(uint8_t* address)
+    uint64_t D3D12GraphicsDevice::FrameResources::ResourceFrameAllocator::CalculateOffset(uint8_t* address)
     {
         assert(address >= dataBegin && address < dataEnd);
         return static_cast<uint64_t>(address - dataBegin);
     }
 
-    void D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::init(D3D12Graphics* device)
+    void D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::init(D3D12GraphicsDevice* device)
     {
         this->device = device;
 
@@ -1097,7 +1013,7 @@ namespace alimer
         heaps_sampler.resize(1);
     }
 
-    void D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::shutdown()
+    void D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::shutdown()
     {
         for (auto& x : heaps_resource)
         {
@@ -1109,7 +1025,7 @@ namespace alimer
         }
     }
 
-    void D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::reset()
+    void D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::reset()
     {
         dirty = true;
         heaps_bound = false;
@@ -1132,12 +1048,15 @@ namespace alimer
         memset(SAM, 0, sizeof(SAM));
     }
 
-    void D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources, uint32_t samplers,
-                                                                                     D3D12_CommandList* cmd)
+    void D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::request_heaps(uint32_t resources,
+                                                                                           uint32_t samplers,
+                                                                                           D3D12_CommandList* cmd)
     {
         // This function allocatesGPU visible descriptor heaps that can fit the requested table sizes.
-        //	First, they grow the heaps until the size fits the dx12 resource limits (tier 1 resource limit = 1 million, sampler limit is
-        // 2048) 	When the limits are reached, and there is still a need to allocate, then completely new heap blocks are started
+        //	First, they grow the heaps until the size fits the dx12 resource limits (tier 1 resource limit = 1 million,
+        // sampler limit is
+        // 2048) 	When the limits are reached, and there is still a need to allocate, then completely new heap blocks
+        // are started
         //
         //	The function will automatically bind descriptor heaps when there was a new (growing or block allocation)
 
@@ -1168,7 +1087,8 @@ namespace alimer
                 // Issue destruction of the old heap:
                 device->allocationhandler->destroylocker.lock();
                 uint64_t framecount = device->allocationhandler->framecount;
-                device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
+                device->allocationhandler->destroyer_descriptorHeaps.push_back(
+                    std::make_pair(heap.heap_GPU, framecount));
                 device->allocationhandler->destroylocker.unlock();
 
                 heap.heapDesc.NodeMask = 0;
@@ -1213,7 +1133,8 @@ namespace alimer
                 // Issue destruction of the old heap:
                 device->allocationhandler->destroylocker.lock();
                 uint64_t framecount = device->allocationhandler->framecount;
-                device->allocationhandler->destroyer_descriptorHeaps.push_back(std::make_pair(heap.heap_GPU, framecount));
+                device->allocationhandler->destroyer_descriptorHeaps.push_back(
+                    std::make_pair(heap.heap_GPU, framecount));
                 device->allocationhandler->destroylocker.unlock();
 
                 heap.heapDesc.NodeMask = 0;
@@ -1234,13 +1155,15 @@ namespace alimer
         if (!heaps_bound)
         {
             // definitely re-index the heap blocks!
-            ID3D12DescriptorHeap* heaps[] = {heaps_resource[current_resource_heap].heap_GPU, heaps_sampler[current_sampler_heap].heap_GPU};
+            ID3D12DescriptorHeap* heaps[] = {heaps_resource[current_resource_heap].heap_GPU,
+                                             heaps_sampler[current_sampler_heap].heap_GPU};
 
             cmd->handle->SetDescriptorHeaps(_countof(heaps), heaps);
         }
     }
 
-    void D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics, D3D12_CommandList* cmd)
+    void D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::validate(bool graphics,
+                                                                                      D3D12_CommandList* cmd)
     {
         if (!dirty)
             return;
@@ -1302,12 +1225,14 @@ namespace alimer
                                 {
                                     if (subresource < 0)
                                     {
-                                        device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+                                        device->device->CreateShaderResourceView(internal_state->resource.Get(),
+                                                                                 &internal_state->srv, dst);
                                     }
                                     else
                                     {
-                                        device->device->CreateShaderResourceView(internal_state->resource.Get(),
-                                                                                 &internal_state->subresources_srv[subresource], dst);
+                                        device->device->CreateShaderResourceView(
+                                            internal_state->resource.Get(),
+                                            &internal_state->subresources_srv[subresource], dst);
                                     }
                                 }
                             }
@@ -1323,12 +1248,14 @@ namespace alimer
                                 {
                                     if (subresource < 0)
                                     {
-                                        device->device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+                                        device->device->CreateShaderResourceView(internal_state->GetResource(),
+                                                                                 &internal_state->srv, dst);
                                     }
                                     else
                                     {
-                                        device->device->CreateShaderResourceView(internal_state->resource.Get(),
-                                                                                 &internal_state->subresources_srv[subresource], dst);
+                                        device->device->CreateShaderResourceView(
+                                            internal_state->GetResource(),
+                                            &internal_state->subresources_srv[subresource], dst);
                                     }
                                 }
                             }
@@ -1350,18 +1277,20 @@ namespace alimer
                                 D3D12_CPU_DESCRIPTOR_HANDLE src = {};
                                 if (subresource < 0)
                                 {
-                                    device->device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->uav,
-                                                                              dst);
+                                    device->device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr,
+                                                                              &internal_state->uav, dst);
                                 }
                                 else
                                 {
-                                    device->device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr,
-                                                                              &internal_state->subresources_uav[subresource], dst);
+                                    device->device->CreateUnorderedAccessView(
+                                        internal_state->resource.Get(), nullptr,
+                                        &internal_state->subresources_uav[subresource], dst);
                                 }
 
                                 if (src.ptr != 0)
                                 {
-                                    device->device->CopyDescriptorsSimple(1, dst, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                                    device->device->CopyDescriptorsSimple(1, dst, src,
+                                                                          D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                                 }
                             }
                         }
@@ -1382,7 +1311,8 @@ namespace alimer
                                 {
                                     GPUAllocation allocation = internal_state->dynamic[cmd->index];
                                     D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-                                    cbv.BufferLocation = to_internal(allocation.buffer)->resource->GetGPUVirtualAddress();
+                                    cbv.BufferLocation =
+                                        to_internal(allocation.buffer)->resource->GetGPUVirtualAddress();
                                     cbv.BufferLocation += (D3D12_GPU_VIRTUAL_ADDRESS)allocation.offset;
                                     cbv.SizeInBytes = (uint32_t)Align((size_t)buffer->GetDesc().ByteWidth,
                                                                       D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -1467,12 +1397,14 @@ namespace alimer
             }
         }
     }
-    D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::DescriptorHandles
-    D3D12Graphics::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table, D3D12_CommandList* cmd)
+    D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::DescriptorHandles
+    D3D12GraphicsDevice::FrameResources::DescriptorTableFrameAllocator::commit(const DescriptorTable* table,
+                                                                               D3D12_CommandList* cmd)
     {
         auto internal_state = to_internal(table);
 
-        request_heaps(internal_state->resource_heap.desc.NumDescriptors, internal_state->sampler_heap.desc.NumDescriptors, cmd);
+        request_heaps(internal_state->resource_heap.desc.NumDescriptors,
+                      internal_state->sampler_heap.desc.NumDescriptors, cmd);
 
         DescriptorHandles handles;
 
@@ -1485,7 +1417,8 @@ namespace alimer
             gpu_handle.ptr += heap.ringOffset * device->sampler_descriptor_size;
             heap.ringOffset += internal_state->sampler_heap.desc.NumDescriptors;
             device->device->CopyDescriptorsSimple(internal_state->sampler_heap.desc.NumDescriptors, cpu_handle,
-                                                  internal_state->sampler_heap.address, internal_state->sampler_heap.desc.Type);
+                                                  internal_state->sampler_heap.address,
+                                                  internal_state->sampler_heap.desc.Type);
             handles.sampler_handle = gpu_handle;
         }
 
@@ -1498,14 +1431,15 @@ namespace alimer
             gpu_handle.ptr += heap.ringOffset * device->resource_descriptor_size;
             heap.ringOffset += internal_state->resource_heap.desc.NumDescriptors;
             device->device->CopyDescriptorsSimple(internal_state->resource_heap.desc.NumDescriptors, cpu_handle,
-                                                  internal_state->resource_heap.address, internal_state->resource_heap.desc.Type);
+                                                  internal_state->resource_heap.address,
+                                                  internal_state->resource_heap.desc.Type);
             handles.resource_handle = gpu_handle;
         }
 
         return handles;
     }
 
-    bool D3D12Graphics::IsAvailable()
+    bool D3D12GraphicsDevice::IsAvailable()
     {
         static bool available = false;
         static bool available_initialized = false;
@@ -1529,7 +1463,8 @@ namespace alimer
             return false;
         }
 
-        DXGIGetDebugInterface1 = reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
+        DXGIGetDebugInterface1 =
+            reinterpret_cast<PFN_DXGI_GET_DEBUG_INTERFACE1>(GetProcAddress(dxgiDLL, "DXGIGetDebugInterface1"));
 
         static HMODULE d3d12DLL = LoadLibraryA("d3d12.dll");
         if (!d3d12DLL)
@@ -1544,13 +1479,15 @@ namespace alimer
             return false;
         }
 
-        D3D12SerializeRootSignature = (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeRootSignature");
-        D3D12CreateRootSignatureDeserializer =
-            (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(d3d12DLL, "D3D12CreateRootSignatureDeserializer");
-        D3D12SerializeVersionedRootSignature =
-            (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeVersionedRootSignature");
-        D3D12CreateVersionedRootSignatureDeserializer = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(
-            d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
+        D3D12SerializeRootSignature =
+            (PFN_D3D12_SERIALIZE_ROOT_SIGNATURE)GetProcAddress(d3d12DLL, "D3D12SerializeRootSignature");
+        D3D12CreateRootSignatureDeserializer = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(
+            d3d12DLL, "D3D12CreateRootSignatureDeserializer");
+        D3D12SerializeVersionedRootSignature = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(
+            d3d12DLL, "D3D12SerializeVersionedRootSignature");
+        D3D12CreateVersionedRootSignatureDeserializer =
+            (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(
+                d3d12DLL, "D3D12CreateVersionedRootSignatureDeserializer");
 
         static HMODULE dxcompilerDLL = LoadLibraryA("dxcompiler.dll");
         if (!dxcompilerDLL)
@@ -1570,7 +1507,8 @@ namespace alimer
         return false;
     }
 
-    D3D12Graphics::D3D12Graphics(WindowHandle window, const GraphicsSettings& desc, D3D_FEATURE_LEVEL minFeatureLevel)
+    D3D12GraphicsDevice::D3D12GraphicsDevice(WindowHandle window, const GraphicsSettings& desc,
+                                             D3D_FEATURE_LEVEL minFeatureLevel)
         : Graphics(window, desc)
         , minFeatureLevel{minFeatureLevel}
     {
@@ -1615,8 +1553,8 @@ namespace alimer
                 dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
 
                 DXGI_INFO_QUEUE_MESSAGE_ID hide[] = {
-                    80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's
-                          window resides. */
+                    80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on
+                          which the swapchain's window resides. */
                     ,
                 };
                 DXGI_INFO_QUEUE_FILTER filter = {};
@@ -1637,7 +1575,8 @@ namespace alimer
             HRESULT hr = dxgiFactory4.As(&dxgiFactory5);
             if (SUCCEEDED(hr))
             {
-                hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+                hr = dxgiFactory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing,
+                                                       sizeof(allowTearing));
             }
 
             if (FAILED(hr) || !allowTearing)
@@ -1675,8 +1614,10 @@ namespace alimer
             allocationhandler = std::make_shared<AllocationHandler>();
             allocationhandler->device = device;
 
-            hr = D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator);
-            assert(SUCCEEDED(hr));
+            ThrowIfFailed(D3D12MA::CreateAllocator(&allocatorDesc, &allocationhandler->allocator));
+
+            // Init capabilities
+            InitCapabilities(adapter.Get());
         }
 
         // Create command queue
@@ -1710,22 +1651,24 @@ namespace alimer
             swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
             swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
             // It is recommended to always allow tearing if tearing support is available.
-            swapChainDesc.Flags = (isTearingSupported) ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u;
+            swapChainDesc.Flags = isTearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0u;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
             fsSwapChainDesc.Windowed = !desc.fullscreen;
 
-            hr = dxgiFactory4->CreateSwapChainForHwnd(directQueue, window, &swapChainDesc, &fsSwapChainDesc, nullptr, &tempChain);
+            hr = dxgiFactory4->CreateSwapChainForHwnd(directQueue, window, &swapChainDesc, &fsSwapChainDesc, nullptr,
+                                                      &tempChain);
 
-            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER shortcut
+            // This class does not support exclusive full-screen mode and prevents DXGI from responding to the ALT+ENTER
+            // shortcut
             hr = dxgiFactory4->MakeWindowAssociation(window, DXGI_MWA_NO_ALT_ENTER);
 #else
             sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // All Windows Store apps must use this SwapEffect.
             sd.Scaling = DXGI_SCALING_ASPECT_RATIO_STRETCH;
 
-            hr = dxgiFactory4->CreateSwapChainForCoreWindow(directQueue, reinterpret_cast<IUnknown*>(window.Get()), &sd, nullptr,
-                                                            &_swtempChainapChain);
+            hr = dxgiFactory4->CreateSwapChainForCoreWindow(directQueue, reinterpret_cast<IUnknown*>(window.Get()), &sd,
+                                                            nullptr, &_swtempChainapChain);
 #endif
 
             if (FAILED(hr))
@@ -1780,9 +1723,10 @@ namespace alimer
                 copyQueueDesc.NodeMask = 0;
 
                 ThrowIfFailed(device->CreateCommandQueue(&copyQueueDesc, IID_PPV_ARGS(&frames[i].copyQueue)));
-                ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY, IID_PPV_ARGS(&frames[i].copyAllocator)));
-                ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[i].copyAllocator, nullptr,
-                                                        IID_PPV_ARGS(&frames[i].copyCommandList)));
+                ThrowIfFailed(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COPY,
+                                                             IID_PPV_ARGS(&frames[i].copyAllocator)));
+                ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COPY, frames[i].copyAllocator,
+                                                        nullptr, IID_PPV_ARGS(&frames[i].copyCommandList)));
                 ThrowIfFailed(frames[i].copyCommandList->Close());
             }
         }
@@ -1790,11 +1734,11 @@ namespace alimer
         ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&copyFence)));
 
         // Query features:
-
         TESSELLATION = true;
 
         hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &features_0, sizeof(features_0));
-        CONSERVATIVE_RASTERIZATION = features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
+        CONSERVATIVE_RASTERIZATION =
+            features_0.ConservativeRasterizationTier >= D3D12_CONSERVATIVE_RASTERIZATION_TIER_1;
         RASTERIZER_ORDERED_VIEWS = features_0.ROVsSupported == TRUE;
         RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS =
             features_0.VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation == TRUE;
@@ -1848,13 +1792,15 @@ namespace alimer
             cmd_desc.ByteStride = sizeof(IndirectDrawArgsInstanced);
             cmd_desc.NumArgumentDescs = 1;
             cmd_desc.pArgumentDescs = drawInstancedArgs;
-            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
+            hr = device->CreateCommandSignature(&cmd_desc, nullptr,
+                                                IID_PPV_ARGS(&drawInstancedIndirectCommandSignature));
             assert(SUCCEEDED(hr));
 
             cmd_desc.ByteStride = sizeof(IndirectDrawArgsIndexedInstanced);
             cmd_desc.NumArgumentDescs = 1;
             cmd_desc.pArgumentDescs = drawIndexedInstancedArgs;
-            hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
+            hr = device->CreateCommandSignature(&cmd_desc, nullptr,
+                                                IID_PPV_ARGS(&drawIndexedInstancedIndirectCommandSignature));
             assert(SUCCEEDED(hr));
 
             if (MESH_SHADER)
@@ -1865,7 +1811,8 @@ namespace alimer
                 cmd_desc.ByteStride = sizeof(IndirectDispatchArgs);
                 cmd_desc.NumArgumentDescs = 1;
                 cmd_desc.pArgumentDescs = dispatchMeshArgs;
-                hr = device->CreateCommandSignature(&cmd_desc, nullptr, IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
+                hr = device->CreateCommandSignature(&cmd_desc, nullptr,
+                                                    IID_PPV_ARGS(&dispatchMeshIndirectCommandSignature));
                 assert(SUCCEEDED(hr));
             }
         }
@@ -1898,15 +1845,15 @@ namespace alimer
 
             CD3DX12_RESOURCE_DESC resdesc = CD3DX12_RESOURCE_DESC::Buffer(timestamp_query_count * sizeof(uint64_t));
 
-            hr = allocationhandler->allocator->CreateResource(&allocationDesc, &resdesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                              &allocation_querypool_timestamp_readback,
+            hr = allocationhandler->allocator->CreateResource(&allocationDesc, &resdesc, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                              nullptr, &allocation_querypool_timestamp_readback,
                                                               IID_PPV_ARGS(&querypool_timestamp_readback));
             assert(SUCCEEDED(hr));
 
             resdesc = CD3DX12_RESOURCE_DESC::Buffer(occlusion_query_count * sizeof(uint64_t));
 
-            hr = allocationhandler->allocator->CreateResource(&allocationDesc, &resdesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
-                                                              &allocation_querypool_occlusion_readback,
+            hr = allocationhandler->allocator->CreateResource(&allocationDesc, &resdesc, D3D12_RESOURCE_STATE_COPY_DEST,
+                                                              nullptr, &allocation_querypool_occlusion_readback,
                                                               IID_PPV_ARGS(&querypool_occlusion_readback));
             assert(SUCCEEDED(hr));
         }
@@ -1914,9 +1861,18 @@ namespace alimer
         LOGI("Direct3D12 Graphics Device created");
     }
 
-    D3D12Graphics::~D3D12Graphics()
+    D3D12GraphicsDevice::~D3D12GraphicsDevice()
     {
         WaitForGPU();
+
+        ALIMER_ASSERT(frameCount == gpuFrameCount);
+        shuttingDown = true;
+
+
+        for (uint32_t i = 0; i < kMaxInflightFrames; ++i)
+        {
+            ProcessDeferredReleases(i);
+        }
 
         // SwapChain
         {
@@ -2023,14 +1979,14 @@ namespace alimer
             ComPtr<IDXGIDebug1> dxgiDebug1;
             if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgiDebug1))))
             {
-                dxgiDebug1->ReportLiveObjects(DXGI_DEBUG_ALL,
-                                              DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+                dxgiDebug1->ReportLiveObjects(
+                    DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
             }
 #endif
         }
     }
 
-    void D3D12Graphics::GetAdapter(IDXGIAdapter1** ppAdapter)
+    void D3D12GraphicsDevice::GetAdapter(IDXGIAdapter1** ppAdapter)
     {
         *ppAdapter = nullptr;
 
@@ -2041,8 +1997,9 @@ namespace alimer
         HRESULT hr = dxgiFactory4->QueryInterface(&dxgiFactory6);
         if (SUCCEEDED(hr))
         {
-            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(
-                     adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
+            for (UINT adapterIndex = 0;
+                 SUCCEEDED(dxgiFactory6->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
+                                                                    IID_PPV_ARGS(adapter.ReleaseAndGetAddressOf())));
                  adapterIndex++)
             {
                 DXGI_ADAPTER_DESC1 desc;
@@ -2059,8 +2016,8 @@ namespace alimer
                 {
     #ifdef _DEBUG
                     wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId,
-                               desc.Description);
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId,
+                               desc.DeviceId, desc.Description);
                     OutputDebugStringW(buff);
     #endif
                     break;
@@ -2073,8 +2030,8 @@ namespace alimer
 
         if (!adapter)
         {
-            for (UINT adapterIndex = 0; SUCCEEDED(dxgiFactory4->EnumAdapters1(adapterIndex, adapter.ReleaseAndGetAddressOf()));
-                 ++adapterIndex)
+            for (UINT adapterIndex = 0;
+                 SUCCEEDED(dxgiFactory4->EnumAdapters1(adapterIndex, adapter.ReleaseAndGetAddressOf())); ++adapterIndex)
             {
                 DXGI_ADAPTER_DESC1 desc;
                 adapter->GetDesc1(&desc);
@@ -2093,8 +2050,8 @@ namespace alimer
                 {
 #ifdef _DEBUG
                     wchar_t buff[256] = {};
-                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId, desc.DeviceId,
-                               desc.Description);
+                    swprintf_s(buff, L"Direct3D Adapter (%u): VID:%04X, PID:%04X - %ls\n", adapterIndex, desc.VendorId,
+                               desc.DeviceId, desc.Description);
                     OutputDebugStringW(buff);
 #endif
                     break;
@@ -2110,7 +2067,66 @@ namespace alimer
         *ppAdapter = adapter.Detach();
     }
 
-    void D3D12Graphics::Resize(uint32_t width, uint32_t height)
+    void D3D12GraphicsDevice::InitCapabilities(IDXGIAdapter1* adapter)
+    {
+        DXGI_ADAPTER_DESC1 desc;
+        ThrowIfFailed(adapter->GetDesc1(&desc));
+
+        caps.backendType = GraphicsBackendType::Direct3D12;
+        caps.deviceId = desc.DeviceId;
+        caps.vendorId = desc.VendorId;
+
+        std::wstring deviceName(desc.Description);
+        caps.adapterName = ToUtf8(deviceName);
+    }
+
+    void D3D12GraphicsDevice::DeferredRelease_(IUnknown* resource, bool forceDeferred)
+    {
+        if (resource == nullptr)
+            return;
+
+        if ((frameCount == gpuFrameCount && forceDeferred == false) || shuttingDown || device == nullptr)
+        {
+            // Free-for-all!
+            resource->Release();
+            return;
+        }
+
+        deferredReleases[frameIndex].push_back(resource);
+    }
+
+    void D3D12GraphicsDevice::DeferredRelease_(D3D12MA::Allocation* allocation, bool forceDeferred)
+    {
+        if (allocation == nullptr)
+            return;
+
+        if ((frameCount == gpuFrameCount && forceDeferred == false) || shuttingDown || device == nullptr)
+        {
+            // Free-for-all!
+            allocation->Release();
+            return;
+        }
+
+        deferredAllocationReleases[frameIndex].push_back(allocation);
+    }
+
+    void D3D12GraphicsDevice::ProcessDeferredReleases(uint64_t index)
+    {
+        for (size_t i = 0, count = deferredReleases[index].size(); i < count; ++i)
+        {
+            deferredReleases[index][i]->Release();
+        }
+
+        for (size_t i = 0, count = deferredAllocationReleases[index].size(); i < count; ++i)
+        {
+            deferredAllocationReleases[index][i]->Release();
+        }
+
+        deferredReleases[index].clear();
+        deferredAllocationReleases[index].clear();
+    }
+
+    void D3D12GraphicsDevice::Resize(uint32_t width, uint32_t height)
     {
         if ((width != backbufferWidth || height != backbufferHeight) && width > 0 && height > 0)
         {
@@ -2122,7 +2138,8 @@ namespace alimer
                 SafeRelease(backBuffers[i]);
             }
 
-            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height, PixelFormatToDXGIFormat(GetBackBufferFormat()), 0);
+            HRESULT hr = swapChain->ResizeBuffers(GetBackBufferCount(), width, height,
+                                                  PixelFormatToDXGIFormat(GetBackBufferFormat()), 0);
             assert(SUCCEEDED(hr));
 
             for (uint32_t i = 0; i < BACKBUFFER_COUNT; ++i)
@@ -2134,23 +2151,13 @@ namespace alimer
         }
     }
 
-    RefPtr<Texture> D3D12Graphics::GetBackBuffer()
+    RefPtr<Texture> D3D12GraphicsDevice::GetBackBuffer()
     {
-        D3D12_RESOURCE_DESC desc = backBuffers[backbufferIndex]->GetDesc();
-        TextureDescription textureDesc = _ConvertTextureDesc_Inv(desc);
-
-        RefPtr<Texture_DX12> texture(new Texture_DX12(textureDesc));
-        texture->allocationhandler = allocationhandler;
-        texture->resource = backBuffers[backbufferIndex];
-        texture->rtv = {};
-        texture->rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-
-        device->GetCopyableFootprints(&desc, 0, 1, 0, &texture->footprint, nullptr, nullptr, nullptr);
-
+        RefPtr<D3D12Texture> texture(new D3D12Texture(this, backBuffers[backbufferIndex]));
         return texture;
     }
 
-    RefPtr<GraphicsBuffer> D3D12Graphics::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
+    RefPtr<GraphicsBuffer> D3D12GraphicsDevice::CreateBuffer(const GPUBufferDesc& desc, const void* initialData)
     {
         RefPtr<Buffer_DX12> result(new Buffer_DX12(desc));
         result->allocationhandler = allocationhandler;
@@ -2207,8 +2214,8 @@ namespace alimer
 
         device->GetCopyableFootprints(&d3d12Desc, 0, 1, 0, &result->footprint, nullptr, nullptr, nullptr);
 
-        hr = allocationhandler->allocator->CreateResource(&allocationDesc, &d3d12Desc, resourceState, nullptr, &result->allocation,
-                                                          IID_PPV_ARGS(&result->resource));
+        hr = allocationhandler->allocator->CreateResource(&allocationDesc, &d3d12Desc, resourceState, nullptr,
+                                                          &result->allocation, IID_PPV_ARGS(&result->resource));
 
         if (FAILED(hr))
         {
@@ -2273,156 +2280,19 @@ namespace alimer
         return result;
     }
 
-    bool D3D12Graphics::CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData, Texture** texture)
+    bool D3D12GraphicsDevice::CreateTextureCore(const TextureDescription* description,
+                                                const SubresourceData* initialData, Texture** texture)
     {
-        RefPtr<Texture_DX12> result(new Texture_DX12(*description));
-        result->allocationhandler = allocationhandler;
-
-        // const uint32_t arrayMultiplier = (description->type == TextureType::TypeCube) ? 6 : 1;
-
-        HRESULT hr = E_FAIL;
-
-        D3D12MA::ALLOCATION_DESC allocationDesc = {};
-        allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
-
-        D3D12_RESOURCE_DESC resourceDesc{};
-        switch (description->type)
+        RefPtr<D3D12Texture> result(new D3D12Texture(this, *description));
+        if (!result->Init(initialData != nullptr))
         {
-        case TextureType::Type1D:
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-            break;
-        case TextureType::Type2D:
-        case TextureType::TypeCube:
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-            break;
-        case TextureType::Type3D:
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-            break;
-        default:
-            ALIMER_UNREACHABLE();
-            break;
+            return false;
         }
 
-        resourceDesc.Alignment = 0;
-        resourceDesc.Width = AlignTo(description->width, GetFormatBlockWidth(description->format));
-        resourceDesc.Height = AlignTo(description->width, GetFormatBlockHeight(description->format));
-        switch (description->type)
+        if (initialData)
         {
-        case TextureType::Type1D:
-        case TextureType::Type2D:
-            resourceDesc.DepthOrArraySize = (UINT16)description->arrayLayers;
-            break;
-        case TextureType::TypeCube:
-            resourceDesc.DepthOrArraySize = (UINT16)(description->arrayLayers * 6);
-            break;
-        case TextureType::Type3D:
-            resourceDesc.DepthOrArraySize = (UINT16)description->depth;
-            break;
-        default:
-            ALIMER_UNREACHABLE();
-            break;
-        }
-
-        resourceDesc.MipLevels = description->mipLevels;
-        if (IsDepthFormat(description->format) && any(description->usage & (TextureUsage::Sampled | TextureUsage::Storage)))
-        {
-            resourceDesc.Format = GetTypelessFormatFromDepthFormat(description->format);
-        }
-        else
-        {
-            resourceDesc.Format = PixelFormatToDXGIFormat(description->format);
-        }
-
-        resourceDesc.SampleDesc.Count = static_cast<UINT>(description->sampleCount);
-        resourceDesc.SampleDesc.Quality = 0;
-        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-        const bool isDepthStencil = IsDepthStencilFormat(description->format);
-
-        if (any(description->usage & TextureUsage::RenderTarget) && isDepthStencil)
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-            allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
-            if (!any(description->usage & TextureUsage::Sampled))
-            {
-                resourceDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-            }
-        }
-        else if (resourceDesc.SampleDesc.Count == 1)
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS;
-        }
-
-        if (any(description->usage & TextureUsage::RenderTarget) && !isDepthStencil)
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-            allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
-        }
-
-        if (any(description->usage & TextureUsage::Storage))
-        {
-            resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        }
-
-        D3D12_CLEAR_VALUE optimizedClearValue = {};
-        optimizedClearValue.Color[0] = description->clear.color[0];
-        optimizedClearValue.Color[1] = description->clear.color[1];
-        optimizedClearValue.Color[2] = description->clear.color[2];
-        optimizedClearValue.Color[3] = description->clear.color[3];
-        optimizedClearValue.DepthStencil.Depth = description->clear.depthstencil.depth;
-        optimizedClearValue.DepthStencil.Stencil = description->clear.depthstencil.stencil;
-        optimizedClearValue.Format = resourceDesc.Format;
-        if (optimizedClearValue.Format == DXGI_FORMAT_R16_TYPELESS)
-        {
-            optimizedClearValue.Format = DXGI_FORMAT_D16_UNORM;
-        }
-        else if (optimizedClearValue.Format == DXGI_FORMAT_R32_TYPELESS)
-        {
-            optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-        }
-        else if (optimizedClearValue.Format == DXGI_FORMAT_R32G8X24_TYPELESS)
-        {
-            optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-        }
-
-        bool useClearValue = any(description->usage & TextureUsage::RenderTarget);
-
-        D3D12_RESOURCE_STATES resourceState = _ConvertImageLayout(description->layout);
-
-        if (description->Usage == USAGE_STAGING)
-        {
-            UINT64 RequiredSize = 0;
-            device->GetCopyableFootprints(&resourceDesc, 0, 1, 0, &result->footprint, nullptr, nullptr, &RequiredSize);
-            resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resourceDesc.Width = RequiredSize;
-            resourceDesc.Height = 1;
-            resourceDesc.DepthOrArraySize = 1;
-            resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-            resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-            if (description->CPUAccessFlags & CPU_ACCESS_READ)
-            {
-                allocationDesc.HeapType = D3D12_HEAP_TYPE_READBACK;
-                resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
-            }
-            else
-            {
-                allocationDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
-                resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-            }
-        }
-
-        hr = allocationhandler->allocator->CreateResource(&allocationDesc, &resourceDesc, resourceState,
-                                                          useClearValue ? &optimizedClearValue : nullptr, &result->allocation,
-                                                          IID_PPV_ARGS(&result->resource));
-        assert(SUCCEEDED(hr));
-
-        // Issue data copy on request:
-        if (initialData != nullptr)
-        {
-            auto mipLevels = result->resource->GetDesc().MipLevels;
+            auto d3dResourceDesc = result->GetResource()->GetDesc();
+            auto mipLevels = result->GetMipLevels();
             uint32_t dataCount = description->arrayLayers * mipLevels;
             std::vector<D3D12_SUBRESOURCE_DATA> data(dataCount);
             for (uint32_t slice = 0; slice < dataCount; ++slice)
@@ -2434,8 +2304,8 @@ namespace alimer
             std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> layouts(dataCount);
             std::vector<UINT64> rowSizesInBytes(dataCount);
             std::vector<UINT> numRows(dataCount);
-            device->GetCopyableFootprints(&resourceDesc, 0, dataCount, 0, layouts.data(), numRows.data(), rowSizesInBytes.data(),
-                                          &RequiredSize);
+            device->GetCopyableFootprints(&d3dResourceDesc, 0, dataCount, 0, layouts.data(), numRows.data(),
+                                          rowSizesInBytes.data(), &RequiredSize);
 
             GPUBufferDesc uploaddesc;
             uploaddesc.ByteWidth = (uint32_t)RequiredSize;
@@ -2454,7 +2324,8 @@ namespace alimer
                     return 0;
                 D3D12_MEMCPY_DEST DestData = {pData + layouts[i].Offset, layouts[i].Footprint.RowPitch,
                                               layouts[i].Footprint.RowPitch * numRows[i]};
-                MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i], layouts[i].Footprint.Depth);
+                MemcpySubresource(&DestData, &data[i], (SIZE_T)rowSizesInBytes[i], numRows[i],
+                                  layouts[i].Footprint.Depth);
             }
 
             copyQueueLock.lock();
@@ -2472,7 +2343,7 @@ namespace alimer
 
                 for (UINT i = 0; i < dataCount; ++i)
                 {
-                    CD3DX12_TEXTURE_COPY_LOCATION Dst(result->resource.Get(), i);
+                    CD3DX12_TEXTURE_COPY_LOCATION Dst(result->GetResource(), i);
                     CD3DX12_TEXTURE_COPY_LOCATION Src(upload_resource, layouts[i]);
                     frame.copyCommandList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
                 }
@@ -2480,31 +2351,12 @@ namespace alimer
             copyQueueLock.unlock();
         }
 
-        if (any(description->usage & TextureUsage::RenderTarget))
-        {
-            if (isDepthStencil)
-            {
-                CreateSubresource(result.Get(), DSV, 0, -1, 0, -1);
-            }
-            else
-            {
-                CreateSubresource(result.Get(), RTV, 0, -1, 0, -1);
-            }
-        }
-        if (any(description->usage & TextureUsage::Sampled))
-        {
-            CreateSubresource(result.Get(), SRV, 0, -1, 0, -1);
-        }
-        if (any(description->usage & TextureUsage::Storage))
-        {
-            CreateSubresource(result.Get(), UAV, 0, -1, 0, -1);
-        }
-
         *texture = result.Detach();
         return true;
     }
 
-    bool D3D12Graphics::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader)
+    bool D3D12GraphicsDevice::CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength,
+                                           Shader* pShader)
     {
         auto internal_state = std::make_shared<PipelineState_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -2551,7 +2403,8 @@ namespace alimer
             blob.size = BytecodeLength;
 
             ComPtr<IDxcContainerReflection> container_reflection;
-            hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection), (void**)&container_reflection);
+            hr = DxcCreateInstance(CLSID_DxcContainerReflection, __uuidof(IDxcContainerReflection),
+                                   (void**)&container_reflection);
             assert(SUCCEEDED(hr));
             hr = container_reflection->Load(&blob);
             assert(SUCCEEDED(hr));
@@ -2687,7 +2540,8 @@ namespace alimer
 
                 ID3DBlob* rootSigBlob;
                 ID3DBlob* rootSigError;
-                hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &rootSigError);
+                hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob,
+                                                 &rootSigError);
                 if (FAILED(hr))
                 {
                     OutputDebugStringA((char*)rootSigError->GetBufferPointer());
@@ -2721,7 +2575,8 @@ namespace alimer
         return SUCCEEDED(hr);
     }
 
-    bool D3D12Graphics::CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader)
+    bool D3D12GraphicsDevice::CreateShader(ShaderStage stage, const char* source, const char* entryPoint,
+                                           Shader* pShader)
     {
 #if defined(ALIMER_DISABLE_SHADER_COMPILER)
         pShader->internal_state = nullptr;
@@ -2734,7 +2589,8 @@ namespace alimer
         ThrowIfFailed(dxcLibrary->CreateIncludeHandler(&includeHandler));
 
         ComPtr<IDxcBlobEncoding> sourceBlob;
-        ThrowIfFailed(dxcLibrary->CreateBlobWithEncodingOnHeapCopy(source, (UINT32)strlen(source), CP_UTF8, &sourceBlob));
+        ThrowIfFailed(
+            dxcLibrary->CreateBlobWithEncodingOnHeapCopy(source, (UINT32)strlen(source), CP_UTF8, &sourceBlob));
 
         std::wstring entryPointW = ToUtf16(entryPoint);
         Vector<const wchar_t*> arguments;
@@ -2782,7 +2638,8 @@ namespace alimer
         {
             ComPtr<IDxcBlobEncoding> errors;
             ThrowIfFailed(result->GetErrorBuffer(&errors));
-            std::string message = std::string("DXC compile failed with ") + static_cast<char*>(errors->GetBufferPointer());
+            std::string message =
+                std::string("DXC compile failed with ") + static_cast<char*>(errors->GetBufferPointer());
             LOGE("{}", message);
             return false;
         }
@@ -2794,14 +2651,15 @@ namespace alimer
 #endif
     }
 
-    RefPtr<Sampler> D3D12Graphics::CreateSampler(const SamplerDescriptor* descriptor)
+    RefPtr<Sampler> D3D12GraphicsDevice::CreateSampler(const SamplerDescriptor* descriptor)
     {
         RefPtr<Sampler_DX12> result(new Sampler_DX12());
         result->allocationhandler = allocationhandler;
 
         D3D12_SAMPLER_DESC desc;
-        desc.Filter = _ConvertFilter(descriptor->minFilter, descriptor->magFilter, descriptor->mipmapFilter,
-                                     descriptor->compareFunction != CompareFunction::Undefined, descriptor->maxAnisotropy > 1);
+        desc.Filter =
+            _ConvertFilter(descriptor->minFilter, descriptor->magFilter, descriptor->mipmapFilter,
+                           descriptor->compareFunction != CompareFunction::Undefined, descriptor->maxAnisotropy > 1);
         desc.AddressU = _ConvertAddressMode(descriptor->addressModeU);
         desc.AddressV = _ConvertAddressMode(descriptor->addressModeV);
         desc.AddressW = _ConvertAddressMode(descriptor->addressModeW);
@@ -2848,7 +2706,7 @@ namespace alimer
         return result;
     }
 
-    bool D3D12Graphics::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
+    bool D3D12GraphicsDevice::CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery)
     {
         auto internal_state = std::make_shared<Query_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -2894,7 +2752,8 @@ namespace alimer
         return SUCCEEDED(hr);
     }
 
-    bool D3D12Graphics::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** pipeline)
+    bool D3D12GraphicsDevice::CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor,
+                                                       RenderPipeline** pipeline)
     {
         RefPtr<PipelineState_DX12> internal_state(new PipelineState_DX12());
         internal_state->allocationhandler = allocationhandler;
@@ -2998,7 +2857,8 @@ namespace alimer
 
             ID3DBlob* rootSigBlob;
             ID3DBlob* rootSigError;
-            HRESULT hr = D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &rootSigError);
+            HRESULT hr =
+                D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootSigBlob, &rootSigError);
             if (FAILED(hr))
             {
                 assert(0);
@@ -3064,8 +2924,10 @@ namespace alimer
 
         DepthStencilStateDescriptor depthStencilState = descriptor->depthStencilState;
         CD3DX12_DEPTH_STENCIL_DESC dss = {};
-        dss.DepthEnable = depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
-        dss.DepthWriteMask = depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+        dss.DepthEnable =
+            depthStencilState.depthCompare != CompareFunction::Always || depthStencilState.depthWriteEnabled;
+        dss.DepthWriteMask =
+            depthStencilState.depthWriteEnabled ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
         dss.DepthFunc = _ConvertComparisonFunc(depthStencilState.depthCompare);
         dss.StencilEnable = StencilTestEnabled(&depthStencilState) ? TRUE : FALSE;
         dss.StencilReadMask = depthStencilState.stencilReadMask;
@@ -3086,7 +2948,8 @@ namespace alimer
             bd.RenderTarget[i].SrcBlendAlpha = _ConvertBlend(descriptor->colorAttachments[i].srcAlphaBlendFactor);
             bd.RenderTarget[i].DestBlendAlpha = _ConvertBlend(descriptor->colorAttachments[i].dstAlphaBlendFactor);
             bd.RenderTarget[i].BlendOpAlpha = _ConvertBlendOp(descriptor->colorAttachments[i].alphaBlendOp);
-            bd.RenderTarget[i].RenderTargetWriteMask = _ConvertColorWriteMask(descriptor->colorAttachments[i].colorWriteMask);
+            bd.RenderTarget[i].RenderTargetWriteMask =
+                _ConvertColorWriteMask(descriptor->colorAttachments[i].colorWriteMask);
         }
         stream.BD = bd;
 
@@ -3108,7 +2971,8 @@ namespace alimer
             inputElementDesc->SemanticIndex = i;
             inputElementDesc->Format = D3DConvertVertexFormat(attrDesc->format);
             inputElementDesc->InputSlot = attrDesc->bufferIndex;
-            inputElementDesc->AlignedByteOffset = attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
+            inputElementDesc->AlignedByteOffset =
+                attrDesc->offset; // D3D11_APPEND_ALIGNED_ELEMENT; // attrDesc->offset;
             if (layoutDesc->stepMode == InputStepMode::Vertex)
             {
                 inputElementDesc->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
@@ -3149,7 +3013,8 @@ namespace alimer
                 break;
             }*/
 
-            formats.RTFormats[formats.NumRenderTargets] = PixelFormatToDXGIFormat(descriptor->colorAttachments[i].format);
+            formats.RTFormats[formats.NumRenderTargets] =
+                PixelFormatToDXGIFormat(descriptor->colorAttachments[i].format);
             formats.NumRenderTargets++;
         }
 
@@ -3290,7 +3155,7 @@ namespace alimer
         return true;
     }
 
-    bool D3D12Graphics::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
+    bool D3D12GraphicsDevice::CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass)
     {
         auto internal_state = std::make_shared<RenderPass_DX12>();
         renderpass->internal_state = internal_state;
@@ -3313,11 +3178,12 @@ namespace alimer
 
             auto texture_internal = to_internal(attachment.texture);
 
-            D3D12_RESOURCE_BARRIER& barrierdesc = internal_state->barrierdescs_begin[internal_state->num_barriers_begin++];
+            D3D12_RESOURCE_BARRIER& barrierdesc =
+                internal_state->barrierdescs_begin[internal_state->num_barriers_begin++];
 
             barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrierdesc.Transition.pResource = texture_internal->resource.Get();
+            barrierdesc.Transition.pResource = texture_internal->GetResource();
             barrierdesc.Transition.StateBefore = _ConvertImageLayout(attachment.initial_layout);
             if (attachment.type == RenderPassAttachment::RESOLVE)
             {
@@ -3348,7 +3214,7 @@ namespace alimer
 
             barrierdesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
             barrierdesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            barrierdesc.Transition.pResource = texture_internal->resource.Get();
+            barrierdesc.Transition.pResource = texture_internal->GetResource();
             if (attachment.type == RenderPassAttachment::RESOLVE)
             {
                 barrierdesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RESOLVE_DEST;
@@ -3369,8 +3235,8 @@ namespace alimer
 
         return true;
     }
-    bool D3D12Graphics::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
-                                                              RaytracingAccelerationStructure* bvh)
+    bool D3D12GraphicsDevice::CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
+                                                                    RaytracingAccelerationStructure* bvh)
     {
         auto internal_state = std::make_shared<BVH_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3416,8 +3282,9 @@ namespace alimer
                 if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
                 {
                     geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-                    geometry.Triangles.VertexBuffer.StartAddress = to_internal(x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() +
-                                                                   (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
+                    geometry.Triangles.VertexBuffer.StartAddress =
+                        to_internal(x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() +
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
                     geometry.Triangles.VertexBuffer.StrideInBytes = (UINT64)x.triangles.vertexStride;
                     geometry.Triangles.VertexCount = x.triangles.vertexCount;
                     geometry.Triangles.VertexFormat = D3DConvertVertexFormat(x.triangles.vertexFormat);
@@ -3431,15 +3298,17 @@ namespace alimer
 
                     if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
                     {
-                        geometry.Triangles.Transform3x4 = to_internal(x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
-                                                          (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+                        geometry.Triangles.Transform3x4 =
+                            to_internal(x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
+                            (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
                     }
                 }
                 else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
                 {
                     geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
                     geometry.AABBs.AABBs.StartAddress =
-                        to_internal(x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
+                        to_internal(x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() +
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
                     geometry.AABBs.AABBs.StrideInBytes = (UINT64)x.aabbs.stride;
                     geometry.AABBs.AABBCount = x.aabbs.count;
                 }
@@ -3454,8 +3323,9 @@ namespace alimer
             internal_state->desc.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
             internal_state->desc.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
-            internal_state->desc.InstanceDescs = to_internal(pDesc->toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
-                                                 (D3D12_GPU_VIRTUAL_ADDRESS)pDesc->toplevel.offset;
+            internal_state->desc.InstanceDescs =
+                to_internal(pDesc->toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
+                (D3D12_GPU_VIRTUAL_ADDRESS)pDesc->toplevel.offset;
             internal_state->desc.NumDescs = (UINT)pDesc->toplevel.count;
         }
         break;
@@ -3486,7 +3356,8 @@ namespace alimer
         allocationDesc.Flags = D3D12MA::ALLOCATION_FLAG_COMMITTED;
 
         HRESULT hr = allocationhandler->allocator->CreateResource(&allocationDesc, &desc, resourceState, nullptr,
-                                                                  &internal_state->allocation, IID_PPV_ARGS(&internal_state->resource));
+                                                                  &internal_state->allocation,
+                                                                  IID_PPV_ARGS(&internal_state->resource));
         assert(SUCCEEDED(hr));
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
@@ -3497,14 +3368,15 @@ namespace alimer
         internal_state->srv = srv_desc;
 
         GPUBufferDesc scratch_desc;
-        scratch_desc.ByteWidth =
-            (uint32_t)Max(internal_state->info.ScratchDataSizeInBytes, internal_state->info.UpdateScratchDataSizeInBytes);
+        scratch_desc.ByteWidth = (uint32_t)Max(internal_state->info.ScratchDataSizeInBytes,
+                                               internal_state->info.UpdateScratchDataSizeInBytes);
 
         internal_state->scratch = CreateBuffer(scratch_desc, nullptr);
         return internal_state->scratch != nullptr;
     }
 
-    bool D3D12Graphics::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso)
+    bool D3D12GraphicsDevice::CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc,
+                                                            RaytracingPipelineState* rtpso)
     {
         auto internal_state = std::make_shared<RTPipelineState_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3631,7 +3503,7 @@ namespace alimer
 
         return SUCCEEDED(hr);
     }
-    bool D3D12Graphics::CreateDescriptorTable(DescriptorTable* table)
+    bool D3D12GraphicsDevice::CreateDescriptorTable(DescriptorTable* table)
     {
         auto internal_state = std::make_shared<DescriptorTable_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3656,7 +3528,8 @@ namespace alimer
             range.BaseShaderRegister = x.slot;
             range.NumDescriptors = x.count;
             range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-            range.RegisterSpace = 0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
+            range.RegisterSpace =
+                0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
             internal_state->resource_heap.desc.NumDescriptors += range.NumDescriptors;
 
             switch (x.binding)
@@ -3709,7 +3582,8 @@ namespace alimer
             range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
             range.BaseShaderRegister = x.slot;
             range.NumDescriptors = x.count;
-            range.RegisterSpace = 0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
+            range.RegisterSpace =
+                0; // this will be filled by root signature depending on the table position (to mirror Vulkan behaviour)
             range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
             internal_state->sampler_heap.desc.NumDescriptors += range.NumDescriptors;
 
@@ -3741,9 +3615,11 @@ namespace alimer
 
         if (internal_state->resource_heap.desc.NumDescriptors > 0)
         {
-            hr = device->CreateDescriptorHeap(&internal_state->resource_heap.desc, IID_PPV_ARGS(&internal_state->resource_heap.heap));
+            hr = device->CreateDescriptorHeap(&internal_state->resource_heap.desc,
+                                              IID_PPV_ARGS(&internal_state->resource_heap.heap));
             assert(SUCCEEDED(hr));
-            internal_state->resource_heap.address = internal_state->resource_heap.heap->GetCPUDescriptorHandleForHeapStart();
+            internal_state->resource_heap.address =
+                internal_state->resource_heap.heap->GetCPUDescriptorHandleForHeapStart();
 
             uint32_t slot = 0;
             for (auto& x : table->resources)
@@ -3757,9 +3633,11 @@ namespace alimer
         }
         if (internal_state->sampler_heap.desc.NumDescriptors > 0)
         {
-            hr = device->CreateDescriptorHeap(&internal_state->sampler_heap.desc, IID_PPV_ARGS(&internal_state->sampler_heap.heap));
+            hr = device->CreateDescriptorHeap(&internal_state->sampler_heap.desc,
+                                              IID_PPV_ARGS(&internal_state->sampler_heap.heap));
             assert(SUCCEEDED(hr));
-            internal_state->sampler_heap.address = internal_state->sampler_heap.heap->GetCPUDescriptorHandleForHeapStart();
+            internal_state->sampler_heap.address =
+                internal_state->sampler_heap.heap->GetCPUDescriptorHandleForHeapStart();
 
             uint32_t slot = 0;
             for (auto& x : table->samplers)
@@ -3774,7 +3652,7 @@ namespace alimer
 
         return SUCCEEDED(hr);
     }
-    bool D3D12Graphics::CreateRootSignature(RootSignature* rootsig)
+    bool D3D12GraphicsDevice::CreateRootSignature(RootSignature* rootsig)
     {
         auto internal_state = std::make_shared<RootSignature_DX12>();
         internal_state->allocationhandler = allocationhandler;
@@ -3855,7 +3733,8 @@ namespace alimer
         {
             auto table_internal = to_internal(&x);
 
-            if (table_internal->resource_heap.desc.NumDescriptors == 0 && table_internal->sampler_heap.desc.NumDescriptors == 0)
+            if (table_internal->resource_heap.desc.NumDescriptors == 0 &&
+                table_internal->sampler_heap.desc.NumDescriptors == 0)
             {
                 // No real bind point
                 internal_state->table_bind_point_remap.push_back(-1);
@@ -3938,8 +3817,8 @@ namespace alimer
         return SUCCEEDED(hr);
     }
 
-    int D3D12Graphics::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount,
-                                         uint32_t firstMip, uint32_t mipCount)
+    int D3D12GraphicsDevice::CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice,
+                                               uint32_t sliceCount, uint32_t firstMip, uint32_t mipCount)
     {
         auto internal_state = to_internal(texture);
         auto textureDesc = texture->GetDescription();
@@ -4260,7 +4139,8 @@ namespace alimer
         return -1;
     }
 
-    int D3D12Graphics::CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size)
+    int D3D12GraphicsDevice::CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset,
+                                               uint64_t size)
     {
         auto internal_state = to_internal(buffer);
         const GPUBufferDesc& desc = buffer->GetDesc();
@@ -4358,7 +4238,7 @@ namespace alimer
         return -1;
     }
 
-    void D3D12Graphics::WriteShadingRateValue(ShadingRate rate, void* dest)
+    void D3D12GraphicsDevice::WriteShadingRateValue(ShadingRate rate, void* dest)
     {
         D3D12_SHADING_RATE _rate = _ConvertShadingRate(rate);
         if (!features_6.AdditionalShadingRatesSupported)
@@ -4369,8 +4249,8 @@ namespace alimer
         *(uint8_t*)dest = _rate;
     }
 
-    void D3D12Graphics::WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance,
-                                                                   void* dest)
+    void D3D12GraphicsDevice::WriteTopLevelAccelerationStructureInstance(
+        const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest)
     {
         D3D12_RAYTRACING_INSTANCE_DESC* desc = (D3D12_RAYTRACING_INSTANCE_DESC*)dest;
         desc->AccelerationStructure = to_internal(&instance->bottomlevel)->resource->GetGPUVirtualAddress();
@@ -4381,7 +4261,8 @@ namespace alimer
         desc->Flags = instance->Flags;
     }
 
-    void D3D12Graphics::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest)
+    void D3D12GraphicsDevice::WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index,
+                                                    void* dest)
     {
         auto internal_state = to_internal(rtpso);
 
@@ -4389,12 +4270,13 @@ namespace alimer
         HRESULT hr = internal_state->resource.As(&stateObjectProperties);
         assert(SUCCEEDED(hr));
 
-        void* identifier = stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
+        void* identifier =
+            stateObjectProperties->GetShaderIdentifier(internal_state->group_strings[group_index].c_str());
         memcpy(dest, identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     }
 
-    void D3D12Graphics::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource,
-                                        int subresource, uint64_t offset)
+    void D3D12GraphicsDevice::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                                              const GPUResource* resource, int subresource, uint64_t offset)
     {
         auto table_internal = to_internal(table);
         D3D12_CPU_DESCRIPTOR_HANDLE dst = table_internal->resource_heap.address;
@@ -4482,18 +4364,20 @@ namespace alimer
                 auto internal_state = to_internal((const Texture*)resource);
                 if (subresource < 0)
                 {
-                    device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->srv, dst);
+                    device->CreateShaderResourceView(internal_state->GetResource(), &internal_state->srv, dst);
                 }
                 else
                 {
-                    device->CreateShaderResourceView(internal_state->resource.Get(), &internal_state->subresources_srv[subresource], dst);
+                    device->CreateShaderResourceView(internal_state->GetResource(),
+                                                     &internal_state->subresources_srv[subresource], dst);
                 }
             }
             else if (resource->IsBuffer())
             {
                 const GraphicsBuffer* buffer = (const GraphicsBuffer*)resource;
                 auto internal_state = to_internal(buffer);
-                D3D12_SHADER_RESOURCE_VIEW_DESC srv = subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
+                D3D12_SHADER_RESOURCE_VIEW_DESC srv =
+                    subresource < 0 ? internal_state->srv : internal_state->subresources_srv[subresource];
                 switch (binding)
                 {
                 default:
@@ -4560,11 +4444,12 @@ namespace alimer
                 auto internal_state = to_internal((const Texture*)resource);
                 if (subresource < 0)
                 {
-                    device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr, &internal_state->uav, dst);
+                    device->CreateUnorderedAccessView(internal_state->GetResource(), nullptr, &internal_state->uav,
+                                                      dst);
                 }
                 else
                 {
-                    device->CreateUnorderedAccessView(internal_state->resource.Get(), nullptr,
+                    device->CreateUnorderedAccessView(internal_state->GetResource(), nullptr,
                                                       &internal_state->subresources_uav[subresource], dst);
                 }
             }
@@ -4595,7 +4480,8 @@ namespace alimer
         }
     }
 
-    void D3D12Graphics::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler)
+    void D3D12GraphicsDevice::WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                                              const Sampler* sampler)
     {
         auto table_internal = to_internal(table);
         D3D12_CPU_DESCRIPTOR_HANDLE dst = table_internal->sampler_heap.address;
@@ -4619,7 +4505,7 @@ namespace alimer
         }
     }
 
-    void D3D12Graphics::Map(const GPUResource* resource, Mapping* mapping)
+    void D3D12GraphicsDevice::Map(const GPUResource* resource, Mapping* mapping)
     {
         auto internal_state = to_internal(resource);
         D3D12_RANGE read_range = {};
@@ -4640,12 +4526,12 @@ namespace alimer
             mapping->rowpitch = 0;
         }
     }
-    void D3D12Graphics::Unmap(const GPUResource* resource)
+    void D3D12GraphicsDevice::Unmap(const GPUResource* resource)
     {
         auto internal_state = to_internal(resource);
         internal_state->resource->Unmap(0, nullptr);
     }
-    bool D3D12Graphics::QueryRead(const GPUQuery* query, GPUQueryResult* result)
+    bool D3D12GraphicsDevice::QueryRead(const GPUQuery* query, GPUQueryResult* result)
     {
         auto internal_state = to_internal(query);
 
@@ -4687,7 +4573,7 @@ namespace alimer
         return true;
     }
 
-    void D3D12Graphics::SetName(GPUResource* pResource, const char* name)
+    void D3D12GraphicsDevice::SetName(GPUResource* pResource, const char* name)
     {
         auto internal_state = to_internal(pResource);
         if (internal_state->resource != nullptr)
@@ -4698,7 +4584,7 @@ namespace alimer
     }
 
     /* CommandList */
-    void D3D12Graphics::PresentBegin(ID3D12GraphicsCommandList6* commandList)
+    void D3D12GraphicsDevice::PresentBegin(ID3D12GraphicsCommandList6* commandList)
     {
         D3D12_RESOURCE_BARRIER barrier = {};
         barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
@@ -4723,7 +4609,7 @@ namespace alimer
         commandList->BeginRenderPass(1, &RTV, nullptr, D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES);
     }
 
-    void D3D12Graphics::PresentEnd(ID3D12GraphicsCommandList6* commandList)
+    void D3D12GraphicsDevice::PresentEnd(ID3D12GraphicsCommandList6* commandList)
     {
         commandList->EndRenderPass();
 
@@ -4754,8 +4640,9 @@ namespace alimer
         {
 #ifdef _DEBUG
             char buff[64] = {};
-            sprintf_s(buff, "Device Lost on Present: Reason code 0x%08X\n",
-                      static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
+            sprintf_s(
+                buff, "Device Lost on Present: Reason code 0x%08X\n",
+                static_cast<unsigned int>((hr == DXGI_ERROR_DEVICE_REMOVED) ? device->GetDeviceRemovedReason() : hr));
             OutputDebugStringA(buff);
 #endif
             // HandleDeviceLost();
@@ -4786,7 +4673,7 @@ namespace alimer
         prev_shadingrate = D3D12_SHADING_RATE_1X1;
     }
 
-    CommandBuffer& D3D12Graphics::BeginCommandBuffer()
+    CommandBuffer& D3D12GraphicsDevice::BeginCommandBuffer()
     {
         std::atomic_uint32_t cmd = commandListsCount.fetch_add(1);
         ALIMER_ASSERT(cmd < kCommandListCount);
@@ -4800,14 +4687,14 @@ namespace alimer
             HRESULT hr;
             for (uint32_t fr = 0; fr < BACKBUFFER_COUNT; ++fr)
             {
-                hr =
-                    device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandLists[cmd]->commandAllocators[fr]));
+                hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                                    IID_PPV_ARGS(&commandLists[cmd]->commandAllocators[fr]));
                 frames[fr].descriptors[cmd].init(this);
                 frames[fr].resourceBuffer[cmd].init(this, 1024 * 1024); // 1 MB starting size
             }
 
-            hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandLists[cmd]->commandAllocators[0], nullptr,
-                                           IID_PPV_ARGS(&commandLists[cmd]->handle));
+            hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandLists[cmd]->commandAllocators[0],
+                                           nullptr, IID_PPV_ARGS(&commandLists[cmd]->handle));
             hr = commandLists[cmd]->handle->Close();
 
             std::wstringstream wss;
@@ -4857,7 +4744,7 @@ namespace alimer
         return *commandLists[cmd];
     }
 
-    void D3D12Graphics::SubmitCommandLists()
+    void D3D12GraphicsDevice::SubmitCommandLists()
     {
         // Sync up copy queue:
         copyQueueLock.lock();
@@ -4870,9 +4757,9 @@ namespace alimer
             frame.copyQueue->ExecuteCommandLists(1, commandlists);
 
             // Signal and increment the fence value.
-            HRESULT hr = frame.copyQueue->Signal(copyFence, FRAMECOUNT);
+            HRESULT hr = frame.copyQueue->Signal(copyFence, frameCount);
             assert(SUCCEEDED(hr));
-            hr = frame.copyQueue->Wait(copyFence, FRAMECOUNT);
+            hr = frame.copyQueue->Wait(copyFence, frameCount);
             assert(SUCCEEDED(hr));
         }
 
@@ -4898,29 +4785,50 @@ namespace alimer
             directQueue->ExecuteCommandLists(counter, cmdLists);
         }
 
-        // This acts as a barrier, following this we will be using the next frame's resources when calling GetFrameResources()!
-        HRESULT hr = directQueue->Signal(frameFence, ++FRAMECOUNT);
+        // This acts as a barrier, following this we will be using the next frame's resources when calling
+        // GetFrameResources()!
+        ThrowIfFailed(directQueue->Signal(frameFence, ++frameCount));
 
-        // Determine the last frame that we should not wait on:
-        uint64_t GPUFrameCount = frameFence->GetCompletedValue();
-
-        // Wait if too many frames are being incomplete:
-        if ((FRAMECOUNT - GPUFrameCount) >= BACKBUFFER_COUNT)
+        // Wait for the GPU to catch up before we stomp an executing command buffer
+        const uint64 gpuLag = frameCount - gpuFrameCount;
+        ALIMER_ASSERT(gpuLag <= kMaxInflightFrames);
+        if (gpuLag >= kMaxInflightFrames)
         {
-            hr = frameFence->SetEventOnCompletion(GPUFrameCount + 1, frameFenceEvent);
-            WaitForSingleObject(frameFenceEvent, INFINITE);
+            if (frameFence->GetCompletedValue() < gpuFrameCount + 1)
+            {
+                ThrowIfFailed(frameFence->SetEventOnCompletion(gpuFrameCount + 1, frameFenceEvent));
+                WaitForSingleObject(frameFenceEvent, INFINITE);
+            }
+            ++gpuFrameCount;
         }
 
-        allocationhandler->Update(FRAMECOUNT, BACKBUFFER_COUNT);
+        frameIndex = frameCount % kMaxInflightFrames;
+
+        allocationhandler->Update(frameCount, BACKBUFFER_COUNT);
 
         copyQueueLock.unlock();
     }
 
-    void D3D12Graphics::WaitForGPU()
+    void D3D12GraphicsDevice::WaitForGPU()
     {
-        directQueue->Signal(frameFence, ++FRAMECOUNT);
-        frameFence->SetEventOnCompletion(FRAMECOUNT, frameFenceEvent);
-        WaitForSingleObject(frameFenceEvent, INFINITE);
+        // Wait for the GPU to fully catch up with the CPU
+        ALIMER_ASSERT(frameCount >= gpuFrameCount);
+        if (frameCount > gpuFrameCount)
+        {
+            if (frameFence->GetCompletedValue() < frameCount)
+            {
+                ThrowIfFailed(frameFence->SetEventOnCompletion(frameCount, frameFenceEvent));
+                WaitForSingleObject(frameFenceEvent, INFINITE);
+            }
+            gpuFrameCount = frameCount;
+        }
+
+        // Clean up what we can now
+        for (uint32_t i = 1; i < kMaxInflightFrames; ++i)
+        {
+            uint64 frameIdx = (i + frameIndex) % kMaxInflightFrames;
+            ProcessDeferredReleases(frameIdx);
+        }
     }
 
     /* D3D12_CommandList */
@@ -4973,14 +4881,16 @@ namespace alimer
 
                 if (subresource < 0 || texture_internal->subresources_rtv.empty())
                 {
-                    device->device->CreateRenderTargetView(texture_internal->resource.Get(), &texture_internal->rtv,
+                    device->device->CreateRenderTargetView(texture_internal->GetResource(), &texture_internal->rtv,
                                                            RTVs[rt_count].cpuDescriptor);
                 }
                 else
                 {
-                    assert(texture_internal->subresources_rtv.size() > size_t(subresource) && "Invalid RTV subresource!");
-                    device->device->CreateRenderTargetView(texture_internal->resource.Get(),
-                                                           &texture_internal->subresources_rtv[subresource], RTVs[rt_count].cpuDescriptor);
+                    assert(texture_internal->subresources_rtv.size() > size_t(subresource) &&
+                           "Invalid RTV subresource!");
+                    device->device->CreateRenderTargetView(texture_internal->GetResource(),
+                                                           &texture_internal->subresources_rtv[subresource],
+                                                           RTVs[rt_count].cpuDescriptor);
                 }
 
                 switch (attachment.loadop)
@@ -5023,13 +4933,16 @@ namespace alimer
 
                 if (subresource < 0 || texture_internal->subresources_dsv.empty())
                 {
-                    device->device->CreateDepthStencilView(texture_internal->resource.Get(), &texture_internal->dsv, DSV.cpuDescriptor);
+                    device->device->CreateDepthStencilView(texture_internal->GetResource(), &texture_internal->dsv,
+                                                           DSV.cpuDescriptor);
                 }
                 else
                 {
-                    assert(texture_internal->subresources_dsv.size() > size_t(subresource) && "Invalid DSV subresource!");
-                    device->device->CreateDepthStencilView(texture_internal->resource.Get(),
-                                                           &texture_internal->subresources_dsv[subresource], DSV.cpuDescriptor);
+                    assert(texture_internal->subresources_dsv.size() > size_t(subresource) &&
+                           "Invalid DSV subresource!");
+                    device->device->CreateDepthStencilView(texture_internal->GetResource(),
+                                                           &texture_internal->subresources_dsv[subresource],
+                                                           DSV.cpuDescriptor);
                 }
 
                 switch (attachment.loadop)
@@ -5086,15 +4999,18 @@ namespace alimer
                                 src_RTV.EndingAccess.Resolve.Format = clear_value.Format;
                                 src_RTV.EndingAccess.Resolve.ResolveMode = D3D12_RESOLVE_MODE_AVERAGE;
                                 src_RTV.EndingAccess.Resolve.SubresourceCount = 1;
-                                src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->resource.Get();
-                                src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->resource.Get();
+                                src_RTV.EndingAccess.Resolve.pDstResource = texture_internal->GetResource();
+                                src_RTV.EndingAccess.Resolve.pSrcResource = src_internal->GetResource();
 
-                                // Due to a API bug, this resolve_subresources array must be kept alive between BeginRenderpass() and
-                                // EndRenderpass()!
-                                src_RTV.EndingAccess.Resolve.pSubresourceParameters = &resolve_subresources[resolve_src_counter];
+                                // Due to a API bug, this resolve_subresources array must be kept alive between
+                                // BeginRenderpass() and EndRenderpass()!
+                                src_RTV.EndingAccess.Resolve.pSubresourceParameters =
+                                    &resolve_subresources[resolve_src_counter];
                                 resolve_subresources[resolve_src_counter].SrcRect.left = 0;
-                                resolve_subresources[resolve_src_counter].SrcRect.right = (LONG)texture->GetDescription().width;
-                                resolve_subresources[resolve_src_counter].SrcRect.bottom = (LONG)texture->GetDescription().height;
+                                resolve_subresources[resolve_src_counter].SrcRect.right =
+                                    (LONG)texture->GetDescription().width;
+                                resolve_subresources[resolve_src_counter].SrcRect.bottom =
+                                    (LONG)texture->GetDescription().height;
                                 resolve_subresources[resolve_src_counter].SrcRect.top = 0;
 
                                 break;
@@ -5193,7 +5109,8 @@ namespace alimer
         handle->RSSetScissorRects(scissorCount, scissorRects);
     }
 
-    void D3D12_CommandList::BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot, int subresource)
+    void D3D12_CommandList::BindResource(ShaderStage stage, const GraphicsResource* resource, uint32_t slot,
+                                         int subresource)
     {
         assert(slot < GPU_RESOURCE_HEAP_SRV_COUNT);
         auto& descriptors = device->GetFrameResources().descriptors[index];
@@ -5205,7 +5122,8 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot, uint32_t count)
+    void D3D12_CommandList::BindResources(ShaderStage stage, const GraphicsResource* const* resources, uint32_t slot,
+                                          uint32_t count)
     {
         if (resources != nullptr)
         {
@@ -5228,7 +5146,8 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot, uint32_t count)
+    void D3D12_CommandList::BindUAVs(ShaderStage stage, const GPUResource* const* resources, uint32_t slot,
+                                     uint32_t count)
     {
         if (resources != nullptr)
         {
@@ -5270,7 +5189,8 @@ namespace alimer
         {
             if (vertexBuffers[i] != nullptr)
             {
-                res[i].BufferLocation = vertexBuffers[i] != nullptr ? to_internal(vertexBuffers[i])->resource->GetGPUVirtualAddress() : 0;
+                res[i].BufferLocation =
+                    vertexBuffers[i] != nullptr ? to_internal(vertexBuffers[i])->resource->GetGPUVirtualAddress() : 0;
                 res[i].SizeInBytes = vertexBuffers[i]->GetDesc().ByteWidth;
                 if (offsets != nullptr)
                 {
@@ -5334,7 +5254,7 @@ namespace alimer
             else
             {
                 ALIMER_ASSERT(texture->GetDescription().format == PixelFormat::R8Uint);
-                handle->RSSetShadingRateImage(to_internal(texture)->resource.Get());
+                handle->RSSetShadingRateImage(to_internal(texture)->GetResource());
             }
         }
     }
@@ -5419,14 +5339,15 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+    void D3D12_CommandList::Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
+                                 uint32_t firstInstance)
     {
         PrepareDraw();
         handle->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
-    void D3D12_CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex,
-                                        uint32_t firstInstance)
+    void D3D12_CommandList::DrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex,
+                                        int32_t baseVertex, uint32_t firstInstance)
     {
         PrepareDraw();
         handle->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
@@ -5436,15 +5357,16 @@ namespace alimer
     {
         PrepareDraw();
         auto internal_state = to_internal(args);
-        handle->ExecuteIndirect(device->drawInstancedIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        handle->ExecuteIndirect(device->drawInstancedIndirectCommandSignature, 1, internal_state->resource.Get(),
+                                args_offset, nullptr, 0);
     }
 
     void D3D12_CommandList::DrawIndexedInstancedIndirect(const GraphicsBuffer* args, uint32_t args_offset)
     {
         PrepareDraw();
         auto internal_state = to_internal(args);
-        handle->ExecuteIndirect(device->drawIndexedInstancedIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset,
-                                nullptr, 0);
+        handle->ExecuteIndirect(device->drawIndexedInstancedIndirectCommandSignature, 1, internal_state->resource.Get(),
+                                args_offset, nullptr, 0);
     }
 
     GPUAllocation D3D12_CommandList::AllocateGPU(const uint64_t size)
@@ -5514,8 +5436,9 @@ namespace alimer
 
             uint8_t* dest = device->GetFrameResources().resourceBuffer[index].allocate(size, 1);
             memcpy(dest, data, size);
-            handle->CopyBufferRegion(internal_state_dst->resource.Get(), 0u, internal_state_src->resource.Get(),
-                                     static_cast<UINT64>(device->GetFrameResources().resourceBuffer[index].CalculateOffset(dest)), size);
+            handle->CopyBufferRegion(
+                internal_state_dst->resource.Get(), 0u, internal_state_src->resource.Get(),
+                static_cast<UINT64>(device->GetFrameResources().resourceBuffer[index].CalculateOffset(dest)), size);
 
             barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
             barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COMMON;
@@ -5533,10 +5456,12 @@ namespace alimer
     {
         PrepareDispatch();
         auto internal_state = to_internal(args);
-        handle->ExecuteIndirect(device->dispatchIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        handle->ExecuteIndirect(device->dispatchIndirectCommandSignature, 1, internal_state->resource.Get(),
+                                args_offset, nullptr, 0);
     }
 
-    void D3D12_CommandList::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY, uint32_t threadGroupCountZ)
+    void D3D12_CommandList::DispatchMesh(uint32_t threadGroupCountX, uint32_t threadGroupCountY,
+                                         uint32_t threadGroupCountZ)
     {
         PrepareDraw();
         handle->DispatchMesh(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
@@ -5548,7 +5473,8 @@ namespace alimer
         PrepareDraw();
 
         auto internal_state = to_internal(args);
-        handle->ExecuteIndirect(device->dispatchMeshIndirectCommandSignature, 1, internal_state->resource.Get(), args_offset, nullptr, 0);
+        handle->ExecuteIndirect(device->dispatchMeshIndirectCommandSignature, 1, internal_state->resource.Get(),
+                                args_offset, nullptr, 0);
     }
 
     void D3D12_CommandList::CopyResource(const GPUResource* pDst, const GPUResource* pSrc)
@@ -5557,13 +5483,15 @@ namespace alimer
         auto internal_state_dst = to_internal(pDst);
         D3D12_RESOURCE_DESC desc_src = internal_state_src->resource->GetDesc();
         D3D12_RESOURCE_DESC desc_dst = internal_state_dst->resource->GetDesc();
-        if (desc_dst.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_src.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+        if (desc_dst.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
+            desc_src.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
         {
             CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), 0);
             CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), internal_state_src->footprint);
             handle->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
         }
-        else if (desc_src.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc_dst.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+        else if (desc_src.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
+                 desc_dst.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
         {
             CD3DX12_TEXTURE_COPY_LOCATION Src(internal_state_src->resource.Get(), internal_state_dst->footprint);
             CD3DX12_TEXTURE_COPY_LOCATION Dst(internal_state_dst->resource.Get(), 0);
@@ -5608,7 +5536,8 @@ namespace alimer
             handle->BeginQuery(device->querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            handle->BeginQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            handle->BeginQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+                               internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
             handle->BeginQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
@@ -5626,7 +5555,8 @@ namespace alimer
             handle->EndQuery(device->querypool_timestamp, D3D12_QUERY_TYPE_TIMESTAMP, internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION_PREDICATE:
-            handle->EndQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION, internal_state->query_index);
+            handle->EndQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_BINARY_OCCLUSION,
+                             internal_state->query_index);
             break;
         case GPU_QUERY_TYPE_OCCLUSION:
             handle->EndQuery(device->querypool_occlusion, D3D12_QUERY_TYPE_OCCLUSION, internal_state->query_index);
@@ -5663,7 +5593,7 @@ namespace alimer
             {
                 barrierDesc.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
                 barrierDesc.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                barrierDesc.Transition.pResource = to_internal(barrier.image.texture)->resource.Get();
+                barrierDesc.Transition.pResource = to_internal(barrier.image.texture)->GetResource();
                 barrierDesc.Transition.StateBefore = _ConvertImageLayout(barrier.image.layout_before);
                 barrierDesc.Transition.StateAfter = _ConvertImageLayout(barrier.image.layout_after);
                 barrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -5711,15 +5641,17 @@ namespace alimer
                 {
                     geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
                 }
-                if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
+                if (x._flags &
+                    RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_NO_DUPLICATE_ANYHIT_INVOCATION)
                 {
                     geometry.Flags |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
                 }
 
                 if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::TRIANGLES)
                 {
-                    geometry.Triangles.VertexBuffer.StartAddress = to_internal(x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() +
-                                                                   (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
+                    geometry.Triangles.VertexBuffer.StartAddress =
+                        to_internal(x.triangles.vertexBuffer)->resource->GetGPUVirtualAddress() +
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.vertexByteOffset;
                     geometry.Triangles.IndexBuffer =
                         to_internal(x.triangles.indexBuffer)->resource->GetGPUVirtualAddress() +
                         (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.indexOffset *
@@ -5727,22 +5659,25 @@ namespace alimer
 
                     if (x._flags & RaytracingAccelerationStructureDesc::BottomLevel::Geometry::FLAG_USE_TRANSFORM)
                     {
-                        geometry.Triangles.Transform3x4 = to_internal(x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
-                                                          (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
+                        geometry.Triangles.Transform3x4 =
+                            to_internal(x.triangles.transform3x4Buffer)->resource->GetGPUVirtualAddress() +
+                            (D3D12_GPU_VIRTUAL_ADDRESS)x.triangles.transform3x4BufferOffset;
                     }
                 }
                 else if (x.type == RaytracingAccelerationStructureDesc::BottomLevel::Geometry::PROCEDURAL_AABBS)
                 {
                     geometry.AABBs.AABBs.StartAddress =
-                        to_internal(x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
+                        to_internal(x.aabbs.aabbBuffer)->resource->GetGPUVirtualAddress() +
+                        (D3D12_GPU_VIRTUAL_ADDRESS)x.aabbs.offset;
                 }
             }
         }
         break;
         case RaytracingAccelerationStructureDesc::TOPLEVEL:
         {
-            desc.Inputs.InstanceDescs = to_internal(dst->desc.toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
-                                        (D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.toplevel.offset;
+            desc.Inputs.InstanceDescs =
+                to_internal(dst->desc.toplevel.instanceBuffer)->resource->GetGPUVirtualAddress() +
+                (D3D12_GPU_VIRTUAL_ADDRESS)dst->desc.toplevel.offset;
         }
         break;
         }
@@ -5805,7 +5740,8 @@ namespace alimer
         if (desc->miss.buffer != nullptr)
         {
             dispatchrays_desc.MissShaderTable.StartAddress =
-                to_internal(desc->miss.buffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)desc->miss.offset;
+                to_internal(desc->miss.buffer)->resource->GetGPUVirtualAddress() +
+                (D3D12_GPU_VIRTUAL_ADDRESS)desc->miss.offset;
             dispatchrays_desc.MissShaderTable.SizeInBytes = desc->miss.size;
             dispatchrays_desc.MissShaderTable.StrideInBytes = desc->miss.stride;
         }
@@ -5813,7 +5749,8 @@ namespace alimer
         if (desc->hitgroup.buffer != nullptr)
         {
             dispatchrays_desc.HitGroupTable.StartAddress =
-                to_internal(desc->hitgroup.buffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)desc->hitgroup.offset;
+                to_internal(desc->hitgroup.buffer)->resource->GetGPUVirtualAddress() +
+                (D3D12_GPU_VIRTUAL_ADDRESS)desc->hitgroup.offset;
             dispatchrays_desc.HitGroupTable.SizeInBytes = desc->hitgroup.size;
             dispatchrays_desc.HitGroupTable.StrideInBytes = desc->hitgroup.stride;
         }
@@ -5821,7 +5758,8 @@ namespace alimer
         if (desc->callable.buffer != nullptr)
         {
             dispatchrays_desc.CallableShaderTable.StartAddress =
-                to_internal(desc->callable.buffer)->resource->GetGPUVirtualAddress() + (D3D12_GPU_VIRTUAL_ADDRESS)desc->callable.offset;
+                to_internal(desc->callable.buffer)->resource->GetGPUVirtualAddress() +
+                (D3D12_GPU_VIRTUAL_ADDRESS)desc->callable.offset;
             dispatchrays_desc.CallableShaderTable.SizeInBytes = desc->callable.size;
             dispatchrays_desc.CallableShaderTable.StrideInBytes = desc->callable.stride;
         }
@@ -5829,7 +5767,8 @@ namespace alimer
         handle->DispatchRays(&dispatchrays_desc);
     }
 
-    void D3D12_CommandList::BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space, const DescriptorTable* table)
+    void D3D12_CommandList::BindDescriptorTable(PipelineBindPoint bindPoint, uint32_t space,
+                                                const DescriptorTable* table)
     {
         const RootSignature* rootsig = nullptr;
         switch (bindPoint)
@@ -5881,7 +5820,8 @@ namespace alimer
         }
     }
 
-    void D3D12_CommandList::BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index, const GraphicsBuffer* buffer, uint32_t offset)
+    void D3D12_CommandList::BindRootDescriptor(PipelineBindPoint bindPoint, uint32_t index,
+                                               const GraphicsBuffer* buffer, uint32_t offset)
     {
         const RootSignature* rootsig = nullptr;
         switch (bindPoint)
@@ -5974,12 +5914,14 @@ namespace alimer
         {
         default:
         case PipelineBindPoint::Graphics:
-            handle->SetGraphicsRoot32BitConstants(rootsig_internal->root_constant_bind_remap + index, range.size / sizeof(uint32_t),
-                                                  srcData, range.offset / sizeof(uint32_t));
+            handle->SetGraphicsRoot32BitConstants(rootsig_internal->root_constant_bind_remap + index,
+                                                  range.size / sizeof(uint32_t), srcData,
+                                                  range.offset / sizeof(uint32_t));
             break;
         case PipelineBindPoint::Compute:
         case PipelineBindPoint::Raytracing:
-            handle->SetComputeRoot32BitConstants(rootsig_internal->root_constant_bind_remap + index, range.size / sizeof(uint32_t), srcData,
+            handle->SetComputeRoot32BitConstants(rootsig_internal->root_constant_bind_remap + index,
+                                                 range.size / sizeof(uint32_t), srcData,
                                                  range.offset / sizeof(uint32_t));
             break;
         }

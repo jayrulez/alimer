@@ -67,12 +67,21 @@ namespace alimer
         Float2& operator=(Float2&&) = default;
 
         // Comparison operators
-        bool operator==(const Float2& rhs) const noexcept { return x == rhs.x && y == rhs.y; }
+        bool operator==(const Float2& rhs) const noexcept
+        {
+            return x == rhs.x && y == rhs.y;
+        }
 
-        bool operator!=(const Float2& rhs) const noexcept { return x != rhs.x || y != rhs.y; }
+        bool operator!=(const Float2& rhs) const noexcept
+        {
+            return x != rhs.x || y != rhs.y;
+        }
 
         /// Return float data.
-        const float* Data() const { return &x; }
+        const float* Data() const
+        {
+            return &x;
+        }
 
         /// Return as string.
         std::string ToString() const;
@@ -208,11 +217,20 @@ namespace alimer
         Float3& operator=(Float3&&) = default;
 
         // Comparison operators
-        bool operator==(const Float3& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z; }
-        bool operator!=(const Float3& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z; }
+        bool operator==(const Float3& rhs) const noexcept
+        {
+            return x == rhs.x && y == rhs.y && z == rhs.z;
+        }
+        bool operator!=(const Float3& rhs) const noexcept
+        {
+            return x != rhs.x || y != rhs.y || z != rhs.z;
+        }
 
         /// Return float data.
-        const float* Data() const { return &x; }
+        const float* Data() const
+        {
+            return &x;
+        }
 
         /// Return as string.
         std::string ToString() const;
@@ -294,11 +312,20 @@ namespace alimer
         Float4& operator=(Float4&&) = default;
 
         // Comparison operators
-        bool operator==(const Float4& rhs) const noexcept { return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w; }
-        bool operator!=(const Float4& rhs) const noexcept { return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w; }
+        bool operator==(const Float4& rhs) const noexcept
+        {
+            return x == rhs.x && y == rhs.y && z == rhs.z && w == rhs.w;
+        }
+        bool operator!=(const Float4& rhs) const noexcept
+        {
+            return x != rhs.x || y != rhs.y || z != rhs.z || w != rhs.w;
+        }
 
         /// Return float data.
-        const float* Data() const { return &x; }
+        const float* Data() const
+        {
+            return &x;
+        }
 
         /// Return as string.
         std::string ToString() const;

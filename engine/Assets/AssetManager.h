@@ -38,8 +38,8 @@ namespace alimer
         /// Destructor.
         ~AssetManager();
 
-        void         AddLoader(std::unique_ptr<AssetLoader> loader);
-        void         RemoveLoader(const AssetLoader* loader);
+        void AddLoader(std::unique_ptr<AssetLoader> loader);
+        void RemoveLoader(const AssetLoader* loader);
         AssetLoader* GetLoader(StringId32 type);
 
         /// Load content from name.
@@ -53,7 +53,6 @@ namespace alimer
 
     protected:
         std::string rootDirectory;
-
         std::unordered_map<StringId32, std::unique_ptr<AssetLoader>> loaders;
     };
 }

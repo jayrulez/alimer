@@ -28,9 +28,9 @@
 #include <limits>
 
 #ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4244) // Conversion from 'double' to 'float'
-#pragma warning(disable : 4702) // unreachable code
+    #pragma warning(push)
+    #pragma warning(disable : 4244) // Conversion from 'double' to 'float'
+    #pragma warning(disable : 4702) // unreachable code
 #endif
 
 namespace alimer
@@ -125,5 +125,5 @@ namespace alimer
 }
 
 #ifdef _MSC_VER
-#pragma warning(pop)
+    #pragma warning(pop)
 #endif

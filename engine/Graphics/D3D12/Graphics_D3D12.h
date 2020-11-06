@@ -32,9 +32,8 @@
 namespace alimer
 {
     class D3D12_CommandList;
-    class D3D12Graphics;
 
-    class D3D12Graphics final : public Graphics
+    class D3D12GraphicsDevice final : public Graphics
     {
         friend class D3D12_CommandList;
 
@@ -56,7 +55,7 @@ namespace alimer
 
             struct DescriptorTableFrameAllocator
             {
-                D3D12Graphics* device = nullptr;
+                D3D12GraphicsDevice* device = nullptr;
                 struct DescriptorHeap
                 {
                     D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -85,7 +84,7 @@ namespace alimer
                     D3D12_GPU_DESCRIPTOR_HANDLE resource_handle = {};
                 };
 
-                void init(D3D12Graphics* device);
+                void init(D3D12GraphicsDevice* device);
                 void shutdown();
 
                 void reset();
@@ -97,13 +96,13 @@ namespace alimer
 
             struct ResourceFrameAllocator
             {
-                D3D12Graphics* device = nullptr;
+                D3D12GraphicsDevice* device = nullptr;
                 RefPtr<GraphicsBuffer> buffer;
                 uint8_t* dataBegin = nullptr;
                 uint8_t* dataCur = nullptr;
                 uint8_t* dataEnd = nullptr;
 
-                void init(D3D12Graphics* device, size_t size);
+                void init(D3D12GraphicsDevice* device, size_t size);
 
                 uint8_t* allocate(size_t dataSize, size_t alignment);
                 void clear();
@@ -122,35 +121,54 @@ namespace alimer
 
     public:
         static bool IsAvailable();
-        D3D12Graphics(WindowHandle window, const GraphicsSettings& desc, D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
-        ~D3D12Graphics() override;
+        D3D12GraphicsDevice(WindowHandle window, const GraphicsSettings& desc,
+                            D3D_FEATURE_LEVEL minFeatureLevel = D3D_FEATURE_LEVEL_11_0);
+        ~D3D12GraphicsDevice() override;
 
-        void GetAdapter(IDXGIAdapter1** ppAdapter);
+        template <typename T> void DeferredRelease(T*& resource, bool forceDeferred = false)
+        {
+            IUnknown* base = resource;
+            DeferredRelease_(base, forceDeferred);
+            resource = nullptr;
+        }
+
+        void DeferredRelease(D3D12MA::Allocation*& allocation, bool forceDeferred = false)
+        {
+            DeferredRelease_(allocation, forceDeferred);
+            allocation = nullptr;
+        }
+
         RefPtr<GraphicsBuffer> CreateBuffer(const GPUBufferDesc& desc, const void* initialData) override;
-        bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData, Texture** texture) override;
-        bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength, Shader* pShader) override;
+        bool CreateTextureCore(const TextureDescription* description, const SubresourceData* initialData,
+                               Texture** texture) override;
+        bool CreateShader(ShaderStage stage, const void* pShaderBytecode, size_t BytecodeLength,
+                          Shader* pShader) override;
         bool CreateShader(ShaderStage stage, const char* source, const char* entryPoint, Shader* pShader) override;
         RefPtr<Sampler> CreateSampler(const SamplerDescriptor* descriptor) override;
         bool CreateQuery(const GPUQueryDesc* pDesc, GPUQuery* pQuery) override;
-        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor, RenderPipeline** renderPipeline) override;
+        bool CreateRenderPipelineCore(const RenderPipelineDescriptor* descriptor,
+                                      RenderPipeline** renderPipeline) override;
         bool CreateRenderPass(const RenderPassDesc* pDesc, RenderPass* renderpass) override;
         bool CreateRaytracingAccelerationStructure(const RaytracingAccelerationStructureDesc* pDesc,
                                                    RaytracingAccelerationStructure* bvh) override;
-        bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc, RaytracingPipelineState* rtpso) override;
+        bool CreateRaytracingPipelineState(const RaytracingPipelineStateDesc* pDesc,
+                                           RaytracingPipelineState* rtpso) override;
         bool CreateDescriptorTable(DescriptorTable* table) override;
         bool CreateRootSignature(RootSignature* rootsig) override;
 
-        int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount, uint32_t firstMip,
-                              uint32_t mipCount) override;
-        int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset, uint64_t size = ~0) override;
+        int CreateSubresource(Texture* texture, SUBRESOURCE_TYPE type, uint32_t firstSlice, uint32_t sliceCount,
+                              uint32_t firstMip, uint32_t mipCount) override;
+        int CreateSubresource(GraphicsBuffer* buffer, SUBRESOURCE_TYPE type, uint64_t offset,
+                              uint64_t size = ~0) override;
 
         void WriteShadingRateValue(ShadingRate rate, void* dest) override;
-        void WriteTopLevelAccelerationStructureInstance(const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance,
-                                                        void* dest) override;
+        void WriteTopLevelAccelerationStructureInstance(
+            const RaytracingAccelerationStructureDesc::TopLevel::Instance* instance, void* dest) override;
         void WriteShaderIdentifier(const RaytracingPipelineState* rtpso, uint32_t group_index, void* dest) override;
-        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const GPUResource* resource,
-                             int subresource = -1, uint64_t offset = 0) override;
-        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex, const Sampler* sampler) override;
+        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                             const GPUResource* resource, int subresource = -1, uint64_t offset = 0) override;
+        void WriteDescriptor(const DescriptorTable* table, uint32_t rangeIndex, uint32_t arrayIndex,
+                             const Sampler* sampler) override;
 
         void Map(const GPUResource* resource, Mapping* mapping) override;
         void Unmap(const GPUResource* resource) override;
@@ -168,15 +186,32 @@ namespace alimer
         void PresentBegin(ID3D12GraphicsCommandList6* commandList);
         void PresentEnd(ID3D12GraphicsCommandList6* commandList);
 
+        ID3D12Device5* GetD3DDevice() const
+        {
+            return device;
+        }
+
+        D3D12MA::Allocator* GetAllocator() const
+        {
+            return allocationhandler->allocator;
+        }
+
         RefPtr<Texture> GetBackBuffer() override;
 
     private:
+        void GetAdapter(IDXGIAdapter1** ppAdapter);
+        void InitCapabilities(IDXGIAdapter1* adapter);
+        void DeferredRelease_(IUnknown* resource, bool forceDeferred = false);
+        void DeferredRelease_(D3D12MA::Allocation* allocation, bool forceDeferred = false);
+        void ProcessDeferredReleases(uint64_t index);
+
         D3D_FEATURE_LEVEL minFeatureLevel;
 
         UINT dxgiFactoryFlags = 0;
         ComPtr<IDXGIFactory4> dxgiFactory4;
         bool isTearingSupported = false;
 
+        bool shuttingDown = false;
         ID3D12Device5* device = nullptr;
         ID3D12CommandQueue* directQueue;
         ID3D12Fence* frameFence;
@@ -209,6 +244,10 @@ namespace alimer
         ID3D12DescriptorHeap* descriptorheap_DSV = nullptr;
         D3D12_CPU_DESCRIPTOR_HANDLE rtv_descriptor_heap_start = {};
         D3D12_CPU_DESCRIPTOR_HANDLE dsv_descriptor_heap_start = {};
+
+        uint64_t gpuFrameCount = 0;
+        std::vector<IUnknown*> deferredReleases[kMaxInflightFrames];
+        std::vector<D3D12MA::Allocation*> deferredAllocationReleases[kMaxInflightFrames];
 
     public:
         // TODO:

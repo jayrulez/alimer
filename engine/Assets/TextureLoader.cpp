@@ -22,10 +22,12 @@
 
 #include "TextureLoader.h"
 #include "AssetManager.h"
-//#include "Graphics/Texture.h"
+#include "Graphics/Texture.h"
 
 namespace alimer
 {
-    TextureLoader::TextureLoader(AssetManager& assets) :
-        AssetLoader(assets, {} /* Texture::GetTypeStatic()*/) {}
+    TextureLoader::TextureLoader(AssetManager& assets)
+        : AssetLoader(assets, Texture::GetTypeStatic())
+    {
+    }
 }

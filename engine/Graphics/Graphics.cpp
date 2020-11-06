@@ -19,7 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 //
-// The implementation is based on WickedEngine graphics code, MIT license (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
+// The implementation is based on WickedEngine graphics code, MIT license
+// (https://github.com/turanszkij/WickedEngine/blob/master/LICENSE.md)
 
 #include "Graphics/Graphics.h"
 #include "AlimerConfig.h"
@@ -30,27 +31,27 @@
 //#define ALIMER_DISABLE_VULKAN
 
 #if defined(ALIMER_D3D12) && !defined(ALIMER_DISABLE_D3D12)
-#    define ALIMER_ENABLE_D3D12 1
+    #define ALIMER_ENABLE_D3D12 1
 #endif
 
 #if defined(ALIMER_VULKAN) && !defined(ALIMER_DISABLE_VULKAN)
-#    define ALIMER_ENABLE_VULKAN 1
+    #define ALIMER_ENABLE_VULKAN 1
 #endif
 
 #ifndef ALIMER_ENABLE_D3D12
-#    define ALIMER_ENABLE_D3D12 0
+    #define ALIMER_ENABLE_D3D12 0
 #endif
 
 #ifndef ALIMER_ENABLE_VULKAN
-#    define ALIMER_ENABLE_VULKAN 0
+    #define ALIMER_ENABLE_VULKAN 0
 #endif
 
 #if ALIMER_ENABLE_D3D12
-#    include "Graphics/D3D12/Graphics_D3D12.h"
+    #include "Graphics/D3D12/Graphics_D3D12.h"
 #endif
 
 #if ALIMER_ENABLE_VULKAN
-#    include "Graphics/Vulkan/Graphics_Vulkan.h"
+    #include "Graphics/Vulkan/Graphics_Vulkan.h"
 #endif
 
 namespace alimer
@@ -62,7 +63,7 @@ namespace alimer
         if (availableDrivers.empty())
         {
 #if ALIMER_ENABLE_D3D12
-            if (D3D12Graphics::IsAvailable())
+            if (D3D12GraphicsDevice::IsAvailable())
                 availableDrivers.insert(GraphicsBackendType::Direct3D12);
 #endif
 
@@ -75,7 +76,8 @@ namespace alimer
         return availableDrivers;
     }
 
-    RefPtr<Graphics> Graphics::Create(WindowHandle windowHandle, const GraphicsSettings& desc, GraphicsBackendType backendType)
+    RefPtr<Graphics> Graphics::Create(WindowHandle windowHandle, const GraphicsSettings& desc,
+                                      GraphicsBackendType backendType)
     {
         if (backendType == GraphicsBackendType::Count)
         {
@@ -83,7 +85,7 @@ namespace alimer
 
             if (availableDrivers.find(GraphicsBackendType::Direct3D12) != availableDrivers.end())
                 backendType = GraphicsBackendType::Direct3D12;
-            //else if (availableDrivers.find(GraphicsBackendType::Metal) != availableDrivers.end())
+            // else if (availableDrivers.find(GraphicsBackendType::Metal) != availableDrivers.end())
             //   backendType = GraphicsBackendType::Metal;
             else
                 backendType = GraphicsBackendType::Vulkan;
@@ -92,26 +94,26 @@ namespace alimer
         switch (backendType)
         {
 #if ALIMER_ENABLE_D3D12
-            case GraphicsBackendType::Direct3D12:
-                if (D3D12Graphics::IsAvailable())
-                {
-                    return MakeRefPtr<D3D12Graphics>(windowHandle, desc);
-                }
-                break;
+        case GraphicsBackendType::Direct3D12:
+            if (D3D12GraphicsDevice::IsAvailable())
+            {
+                return MakeRefPtr<D3D12GraphicsDevice>(windowHandle, desc);
+            }
+            break;
 #endif
 
 #if ALIMER_ENABLE_VULKAN
-            case GraphicsBackendType::Vulkan:
-                if (IsVulkanBackendAvailable())
-                {
-                    return CreateVulkanGraphics(windowHandle, desc);
-                }
-                break;
+        case GraphicsBackendType::Vulkan:
+            if (IsVulkanBackendAvailable())
+            {
+                return CreateVulkanGraphics(windowHandle, desc);
+            }
+            break;
 #endif
 
-            default:
-                LOGE("Graphics backend is not supported");
-                return Create(windowHandle, desc, GraphicsBackendType::Count);
+        default:
+            LOGE("Graphics backend is not supported");
+            return Create(windowHandle, desc, GraphicsBackendType::Count);
         }
 
         return nullptr;
@@ -159,7 +161,8 @@ namespace alimer
         for (uint32_t i = 0; i < kMaxVertexAttributes; ++i)
         {
             // to use computed offsets, *all* attr offsets must be 0.
-            if (desc->vertexDescriptor.attributes[i].format != VertexFormat::Invalid && desc->vertexDescriptor.attributes[i].offset != 0)
+            if (desc->vertexDescriptor.attributes[i].format != VertexFormat::Invalid &&
+                desc->vertexDescriptor.attributes[i].offset != 0)
             {
                 useAutOffset = false;
             }
@@ -210,84 +213,85 @@ namespace alimer
     {
         switch (capability)
         {
-            case GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
-                return TESSELLATION;
-            case GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
-                return CONSERVATIVE_RASTERIZATION;
-            case GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
-                return RASTERIZER_ORDERED_VIEWS;
-            case GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON:
-                return UAV_LOAD_FORMAT_COMMON;
-            case GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT:
-                return UAV_LOAD_FORMAT_R11G11B10_FLOAT;
-            case GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS:
-                return RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
-            case GRAPHICSDEVICE_CAPABILITY_RAYTRACING:
-                return RAYTRACING;
-            case GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE:
-                return RAYTRACING_INLINE;
-            case GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT:
-                return DESCRIPTOR_MANAGEMENT;
-            case GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING:
-                return VARIABLE_RATE_SHADING;
-            case GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2:
-                return VARIABLE_RATE_SHADING_TIER2;
-            case GRAPHICSDEVICE_CAPABILITY_MESH_SHADER:
-                return MESH_SHADER;
+        case GRAPHICSDEVICE_CAPABILITY_TESSELLATION:
+            return TESSELLATION;
+        case GRAPHICSDEVICE_CAPABILITY_CONSERVATIVE_RASTERIZATION:
+            return CONSERVATIVE_RASTERIZATION;
+        case GRAPHICSDEVICE_CAPABILITY_RASTERIZER_ORDERED_VIEWS:
+            return RASTERIZER_ORDERED_VIEWS;
+        case GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_COMMON:
+            return UAV_LOAD_FORMAT_COMMON;
+        case GRAPHICSDEVICE_CAPABILITY_UAV_LOAD_FORMAT_R11G11B10_FLOAT:
+            return UAV_LOAD_FORMAT_R11G11B10_FLOAT;
+        case GRAPHICSDEVICE_CAPABILITY_RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS:
+            return RENDERTARGET_AND_VIEWPORT_ARRAYINDEX_WITHOUT_GS;
+        case GRAPHICSDEVICE_CAPABILITY_RAYTRACING:
+            return RAYTRACING;
+        case GRAPHICSDEVICE_CAPABILITY_RAYTRACING_INLINE:
+            return RAYTRACING_INLINE;
+        case GRAPHICSDEVICE_CAPABILITY_DESCRIPTOR_MANAGEMENT:
+            return DESCRIPTOR_MANAGEMENT;
+        case GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING:
+            return VARIABLE_RATE_SHADING;
+        case GRAPHICSDEVICE_CAPABILITY_VARIABLE_RATE_SHADING_TIER2:
+            return VARIABLE_RATE_SHADING_TIER2;
+        case GRAPHICSDEVICE_CAPABILITY_MESH_SHADER:
+            return MESH_SHADER;
         }
         return false;
     }
 
     float Graphics::GetScreenWidth() const
     {
-        return (float) GetResolutionWidth() / 1.0f; // wiPlatform::GetDPIScaling();
+        return (float)GetResolutionWidth() / 1.0f; // wiPlatform::GetDPIScaling();
     }
 
     float Graphics::GetScreenHeight() const
     {
-        return (float) GetResolutionHeight() / 1.0f; //wiPlatform::GetDPIScaling();
+        return (float)GetResolutionHeight() / 1.0f; // wiPlatform::GetDPIScaling();
     }
 
+    
     uint32_t GetVertexFormatNumComponents(VertexFormat format)
     {
         switch (format)
         {
-            case VertexFormat::UChar4:
-            case VertexFormat::Char4:
-            case VertexFormat::UChar4Norm:
-            case VertexFormat::Char4Norm:
-            case VertexFormat::UShort4:
-            case VertexFormat::Short4:
-            case VertexFormat::UShort4Norm:
-            case VertexFormat::Short4Norm:
-            case VertexFormat::Half4:
-            case VertexFormat::Float4:
-            case VertexFormat::UInt4:
-            case VertexFormat::Int4:
-                return 4;
-            case VertexFormat::Float3:
-            case VertexFormat::UInt3:
-            case VertexFormat::Int3:
-                return 3;
-            case VertexFormat::UChar2:
-            case VertexFormat::Char2:
-            case VertexFormat::UChar2Norm:
-            case VertexFormat::Char2Norm:
-            case VertexFormat::UShort2:
-            case VertexFormat::Short2:
-            case VertexFormat::UShort2Norm:
-            case VertexFormat::Short2Norm:
-            case VertexFormat::Half2:
-            case VertexFormat::Float2:
-            case VertexFormat::UInt2:
-            case VertexFormat::Int2:
-                return 2;
-            case VertexFormat::Float:
-            case VertexFormat::UInt:
-            case VertexFormat::Int:
-                return 1;
-            default:
-                ALIMER_UNREACHABLE();
+        case VertexFormat::UChar4:
+        case VertexFormat::Char4:
+        case VertexFormat::UChar4Norm:
+        case VertexFormat::Char4Norm:
+        case VertexFormat::UShort4:
+        case VertexFormat::Short4:
+        case VertexFormat::UShort4Norm:
+        case VertexFormat::Short4Norm:
+        case VertexFormat::Half4:
+        case VertexFormat::Float4:
+        case VertexFormat::UInt4:
+        case VertexFormat::Int4:
+            return 4;
+        case VertexFormat::Float3:
+        case VertexFormat::UInt3:
+        case VertexFormat::Int3:
+            return 3;
+        case VertexFormat::UChar2:
+        case VertexFormat::Char2:
+        case VertexFormat::UChar2Norm:
+        case VertexFormat::Char2Norm:
+        case VertexFormat::UShort2:
+        case VertexFormat::Short2:
+        case VertexFormat::UShort2Norm:
+        case VertexFormat::Short2Norm:
+        case VertexFormat::Half2:
+        case VertexFormat::Float2:
+        case VertexFormat::UInt2:
+        case VertexFormat::Int2:
+            return 2;
+        case VertexFormat::Float:
+        case VertexFormat::UInt:
+        case VertexFormat::Int:
+            return 1;
+        default:
+            ALIMER_UNREACHABLE();
         }
     }
 
@@ -295,42 +299,42 @@ namespace alimer
     {
         switch (format)
         {
-            case VertexFormat::UChar2:
-            case VertexFormat::UChar4:
-            case VertexFormat::Char2:
-            case VertexFormat::Char4:
-            case VertexFormat::UChar2Norm:
-            case VertexFormat::UChar4Norm:
-            case VertexFormat::Char2Norm:
-            case VertexFormat::Char4Norm:
-                return sizeof(char);
-            case VertexFormat::UShort2:
-            case VertexFormat::UShort4:
-            case VertexFormat::UShort2Norm:
-            case VertexFormat::UShort4Norm:
-            case VertexFormat::Short2:
-            case VertexFormat::Short4:
-            case VertexFormat::Short2Norm:
-            case VertexFormat::Short4Norm:
-            case VertexFormat::Half2:
-            case VertexFormat::Half4:
-                return sizeof(uint16_t);
-            case VertexFormat::Float:
-            case VertexFormat::Float2:
-            case VertexFormat::Float3:
-            case VertexFormat::Float4:
-                return sizeof(float);
-            case VertexFormat::UInt:
-            case VertexFormat::UInt2:
-            case VertexFormat::UInt3:
-            case VertexFormat::UInt4:
-            case VertexFormat::Int:
-            case VertexFormat::Int2:
-            case VertexFormat::Int3:
-            case VertexFormat::Int4:
-                return sizeof(int32_t);
-            default:
-                ALIMER_UNREACHABLE();
+        case VertexFormat::UChar2:
+        case VertexFormat::UChar4:
+        case VertexFormat::Char2:
+        case VertexFormat::Char4:
+        case VertexFormat::UChar2Norm:
+        case VertexFormat::UChar4Norm:
+        case VertexFormat::Char2Norm:
+        case VertexFormat::Char4Norm:
+            return sizeof(char);
+        case VertexFormat::UShort2:
+        case VertexFormat::UShort4:
+        case VertexFormat::UShort2Norm:
+        case VertexFormat::UShort4Norm:
+        case VertexFormat::Short2:
+        case VertexFormat::Short4:
+        case VertexFormat::Short2Norm:
+        case VertexFormat::Short4Norm:
+        case VertexFormat::Half2:
+        case VertexFormat::Half4:
+            return sizeof(uint16_t);
+        case VertexFormat::Float:
+        case VertexFormat::Float2:
+        case VertexFormat::Float3:
+        case VertexFormat::Float4:
+            return sizeof(float);
+        case VertexFormat::UInt:
+        case VertexFormat::UInt2:
+        case VertexFormat::UInt3:
+        case VertexFormat::UInt4:
+        case VertexFormat::Int:
+        case VertexFormat::Int2:
+        case VertexFormat::Int3:
+        case VertexFormat::Int4:
+            return sizeof(int32_t);
+        default:
+            ALIMER_UNREACHABLE();
         }
     }
 
@@ -341,6 +345,13 @@ namespace alimer
 
     bool StencilTestEnabled(const DepthStencilStateDescriptor* descriptor)
     {
-        return descriptor->stencilBack.compare != CompareFunction::Always || descriptor->stencilBack.failOp != StencilOperation::Keep || descriptor->stencilBack.depthFailOp != StencilOperation::Keep || descriptor->stencilBack.passOp != StencilOperation::Keep || descriptor->stencilFront.compare != CompareFunction::Always || descriptor->stencilFront.failOp != StencilOperation::Keep || descriptor->stencilFront.depthFailOp != StencilOperation::Keep || descriptor->stencilFront.passOp != StencilOperation::Keep;
+        return descriptor->stencilBack.compare != CompareFunction::Always ||
+               descriptor->stencilBack.failOp != StencilOperation::Keep ||
+               descriptor->stencilBack.depthFailOp != StencilOperation::Keep ||
+               descriptor->stencilBack.passOp != StencilOperation::Keep ||
+               descriptor->stencilFront.compare != CompareFunction::Always ||
+               descriptor->stencilFront.failOp != StencilOperation::Keep ||
+               descriptor->stencilFront.depthFailOp != StencilOperation::Keep ||
+               descriptor->stencilFront.passOp != StencilOperation::Keep;
     }
 }
